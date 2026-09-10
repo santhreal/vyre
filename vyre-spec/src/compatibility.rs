@@ -69,28 +69,13 @@ impl fmt::Display for ProtocolDomain {
     }
 }
 
-/// Fixed-width semantic version for a protocol contract.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ProtocolVersion {
-    /// Breaking change version component.
-    pub major: u32,
-    /// Backward-compatible addition component.
-    pub minor: u32,
-    /// Backward-compatible bugfix component.
-    pub patch: u32,
+crate::semver_triple! {
+    /// Fixed-width semantic version for a protocol contract.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct ProtocolVersion;
 }
 
 impl ProtocolVersion {
-    /// Construct a protocol version from explicit numeric parts.
-    #[must_use]
-    pub const fn new(major: u32, minor: u32, patch: u32) -> Self {
-        Self {
-            major,
-            minor,
-            patch,
-        }
-    }
-
     /// Fixed current version for v1.0.0.
     pub const V1_0_0: Self = Self::new(1, 0, 0);
     /// Fixed current version for v1.1.0.
@@ -127,11 +112,6 @@ impl ProtocolVersion {
     }
 }
 
-impl fmt::Display for ProtocolVersion {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
-    }
-}
 
 /// Compatibility disposition for a version pair under a protocol domain.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

@@ -141,15 +141,7 @@ fn catalog_bundle_refuses_duplicate_identities_and_version_collisions_by_name() 
     let ns = ExtensionNamespace::new("test.collision.refusal").unwrap();
     let ver = ExtensionSemVer::new(1, 0, 0);
 
-    let proof_a = ExtensionProofFields {
-        host_shareable: true,
-        is_pure: true,
-        cse_eligible: true,
-        is_divergent: false,
-        may_alias: false,
-        terminates: true,
-        target_capability: "cuda_sm90".into(),
-    };
+    let proof_a = ExtensionProofFields::pure_terminating("cuda_sm90");
     let digest_a = ExtensionSchema::compute_digest(ns.as_str(), &ver, &[], &[], &[], &proof_a);
     let id_a = ExtensionIdentity::new(ns.clone(), ver, digest_a);
 
@@ -229,15 +221,8 @@ fn catalog_bundle_refuses_empty_required_proof_fields() {
     let ns = ExtensionNamespace::new("test.proof.missing").unwrap();
     let ver = ExtensionSemVer::new(1, 0, 0);
 
-    let empty_proof = ExtensionProofFields {
-        host_shareable: true,
-        is_pure: true,
-        cse_eligible: true,
-        is_divergent: false,
-        may_alias: false,
-        terminates: true,
-        target_capability: "   ".into(), // Blank/whitespace target capability
-    };
+    // Blank/whitespace target capability.
+    let empty_proof = ExtensionProofFields::pure_terminating("   ");
     let digest = ExtensionSchema::compute_digest(ns.as_str(), &ver, &[], &[], &[], &empty_proof);
     let id = ExtensionIdentity::new(ns, ver, digest);
 

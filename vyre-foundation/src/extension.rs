@@ -609,24 +609,8 @@ mod tests {
         let ver_a = ExtensionSemVer::new(1, 0, 0);
         let ver_b = ExtensionSemVer::new(1, 0, 0);
 
-        let proof_a = ExtensionProofFields {
-            host_shareable: true,
-            is_pure: true,
-            cse_eligible: true,
-            is_divergent: false,
-            may_alias: false,
-            terminates: true,
-            target_capability: "generic".into(),
-        };
-        let proof_b = ExtensionProofFields {
-            host_shareable: true,
-            is_pure: true,
-            cse_eligible: true,
-            is_divergent: false,
-            may_alias: false,
-            terminates: true,
-            target_capability: "generic".into(),
-        };
+        let proof_a = ExtensionProofFields::pure_terminating("generic");
+        let proof_b = ExtensionProofFields::pure_terminating("generic");
 
         let digest_a = ExtensionSchema::compute_digest(name_a, &ver_a, &[], &[], &[], &proof_a);
         let digest_b = ExtensionSchema::compute_digest(name_b, &ver_b, &[], &[], &[], &proof_b);

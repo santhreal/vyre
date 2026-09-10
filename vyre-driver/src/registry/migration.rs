@@ -32,39 +32,16 @@ use std::sync::OnceLock;
 use crate::diagnostics::{Diagnostic, OpLocation};
 use rustc_hash::FxHashMap;
 
-/// Semantic version triple used for op versioning.
-///
-/// The registry's current `Dialect::version` is still a single `u32`;
-/// the triple form is the canonical representation for per-op
-/// evolution: minor bumps are backward-compatible additions and patch
-/// bumps are bug fixes. The `Ord` impl is lexicographic major→minor→
-/// patch so ordinary comparison works for chain resolution.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Semver {
-    /// Breaking-change counter.
-    pub major: u32,
-    /// Backwards-compatible-feature counter.
-    pub minor: u32,
-    /// Patch counter.
-    pub patch: u32,
-}
-
-impl Semver {
-    /// Construct a new semver triple.
-    #[must_use]
-    pub const fn new(major: u32, minor: u32, patch: u32) -> Self {
-        Self {
-            major,
-            minor,
-            patch,
-        }
-    }
-}
-
-impl std::fmt::Display for Semver {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
-    }
+vyre_spec::semver_triple! {
+    /// Semantic version triple used for op versioning.
+    ///
+    /// The registry's current `Dialect::version` is still a single `u32`; the
+    /// triple form is the canonical representation for per-op evolution: minor
+    /// bumps are backward-compatible additions and patch bumps are bug fixes.
+    /// The derived `Ord` is lexicographic major to minor to patch, so ordinary
+    /// comparison works for chain resolution.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct Semver;
 }
 
 /// Typed attribute value carried in an [`AttrMap`].

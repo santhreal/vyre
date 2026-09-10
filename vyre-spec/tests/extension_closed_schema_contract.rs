@@ -88,15 +88,7 @@ fn runtime_derived_proof_field_set_is_exhaustive() {
 fn canonical_schema_digest_and_identity_round_trip() {
     let namespace = ExtensionNamespace::new("org.vyre.test.extension").expect("valid namespace");
     let version = ExtensionSemVer::new(1, 2, 3);
-    let proof_fields = ExtensionProofFields {
-        host_shareable: true,
-        is_pure: true,
-        cse_eligible: true,
-        is_divergent: false,
-        may_alias: false,
-        terminates: true,
-        target_capability: "sm_90a".into(),
-    };
+    let proof_fields = ExtensionProofFields::pure_terminating("sm_90a");
 
     let digest =
         ExtensionSchema::compute_digest(namespace.as_str(), &version, &[], &[], &[], &proof_fields);
