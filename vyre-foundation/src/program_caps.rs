@@ -85,6 +85,27 @@ impl RequiredCapabilities {
         Self::NONE
     }
 
+    /// Feed the capability set into a composite-version hasher.
+    ///
+    /// Four callers hashed a capability set into an operation version, each
+    /// with its own copy of the field order. The order is part of the version
+    /// identity, so a copy that drifted would have changed one caller's
+    /// version and not the others.
+    pub(crate) fn hash_into(&self, hasher: &mut blake3::Hasher) {
+        hasher.update(&[
+            self.subgroup_ops as u8,
+            self.f16 as u8,
+            self.bf16 as u8,
+            self.f64 as u8,
+            self.async_dispatch as u8,
+            self.indirect_dispatch as u8,
+            self.tensor_ops as u8,
+            self.trap as u8,
+            self.distributed_collectives as u8,
+        ]);
+        hasher.update(&self.static_storage_bytes.to_le_bytes());
+    }
+
     /// Enable subgroup operations.
     #[must_use]
     pub const fn with_subgroup_ops(mut self) -> Self {

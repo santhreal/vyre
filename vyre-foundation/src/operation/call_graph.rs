@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::operation::semantics::OperationEffects;
+use crate::operation::semantics::{truncate_to_u64, OperationEffects};
 use crate::program_caps::{scan as scan_capabilities, RequiredCapabilities};
 use crate::visit::collect_call_op_ids;
 
@@ -247,29 +247,10 @@ impl CallGraphClosure {
         hasher.update(b"vyre-foundation::call_graph_closure::composite_version::v1\n");
         hasher.update(id.as_bytes());
         hasher.update(&base_version.to_le_bytes());
-        hasher.update(&[
-            eff.reads as u8,
-            eff.writes as u8,
-            eff.atomics as u8,
-            eff.synchronizes as u8,
-        ]);
-        hasher.update(&[
-            caps.subgroup_ops as u8,
-            caps.f16 as u8,
-            caps.bf16 as u8,
-            caps.f64 as u8,
-            caps.async_dispatch as u8,
-            caps.indirect_dispatch as u8,
-            caps.tensor_ops as u8,
-            caps.trap as u8,
-            caps.distributed_collectives as u8,
-        ]);
-        hasher.update(&caps.static_storage_bytes.to_le_bytes());
+        eff.hash_into(&mut hasher);
+        caps.hash_into(&mut hasher);
         hasher.update(&self.closure_identity.to_le_bytes());
-        let hash_bytes = hasher.finalize();
-        let mut bytes = [0u8; 8];
-        bytes.copy_from_slice(&hash_bytes.as_bytes()[..8]);
-        Some(u64::from_le_bytes(bytes))
+        Some(truncate_to_u64(&hasher))
     }
 }
 
@@ -360,31 +341,12 @@ fn compute_closure_identity(
             }
         }
         if let Some(eff) = transitive_effects.get(id) {
-            hasher.update(&[
-                eff.reads as u8,
-                eff.writes as u8,
-                eff.atomics as u8,
-                eff.synchronizes as u8,
-            ]);
+            eff.hash_into(&mut hasher);
         }
         if let Some(caps) = transitive_capabilities.get(id) {
-            hasher.update(&[
-                caps.subgroup_ops as u8,
-                caps.f16 as u8,
-                caps.bf16 as u8,
-                caps.f64 as u8,
-                caps.async_dispatch as u8,
-                caps.indirect_dispatch as u8,
-                caps.tensor_ops as u8,
-                caps.trap as u8,
-                caps.distributed_collectives as u8,
-            ]);
-            hasher.update(&caps.static_storage_bytes.to_le_bytes());
+            caps.hash_into(&mut hasher);
         }
         hasher.update(&[unclosed_or_cyclic.contains(id) as u8]);
     }
-    let hash_bytes = hasher.finalize();
-    let mut bytes = [0u8; 8];
-    bytes.copy_from_slice(&hash_bytes.as_bytes()[..8]);
-    u64::from_le_bytes(bytes)
+    truncate_to_u64(&hasher)
 }

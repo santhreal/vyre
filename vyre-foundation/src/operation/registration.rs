@@ -10,9 +10,12 @@ use crate::operation::records::{
     AbsenceDecision, ConformanceProvider, ContractProvider, LoweringProvider, OperationFixtures,
     SemanticDescriptor,
 };
-use crate::operation::semantic_op::SemanticOperation;
+use crate::operation::semantic_op::{
+    canonical_program, composed_schedule_constraints, conformance_provider_of, local_capabilities,
+    local_effects, lowering_provider_of, SemanticOperation,
+};
 use crate::operation::semantics::{OperationEffects, OperationTier};
-use crate::program_caps::{scan as scan_capabilities, RequiredCapabilities};
+use crate::program_caps::RequiredCapabilities;
 
 /// One semantic operation identity and all target-neutral catalog policy.
 pub struct OperationRegistration {
@@ -241,7 +244,7 @@ impl OperationRegistration {
     /// Build the canonical program and stamp its stable operation identity.
     #[must_use]
     pub fn program(&self) -> Option<Program> {
-        self.build.map(|build| build().with_entry_op_id(self.id))
+        canonical_program(self.id, self.build)
     }
 
     /// Derive the effective neutral schedule constraints from the recorded
@@ -251,28 +254,19 @@ impl OperationRegistration {
     ///
     /// Returns a stable conflict when the recorded decision contradicts semantics.
     pub fn schedule_constraints(&self) -> Result<GeometryRequirements, GeometryConstraintConflict> {
-        match self.program() {
-            Some(program) => self
-                .geometry_requirements
-                .compose(GeometryRequirements::from_program(&program)?),
-            None => Ok(self.geometry_requirements),
-        }
+        composed_schedule_constraints(self.geometry_requirements, self.program().as_ref())
     }
 
     /// Direct (local) required capabilities without call-graph transitive propagation.
     #[must_use]
     pub fn direct_required_capabilities(&self) -> Option<RequiredCapabilities> {
-        self.explicit_capabilities
-            .or_else(|| self.program().map(|program| scan_capabilities(&program)))
+        local_capabilities(self.explicit_capabilities, self.program().as_ref())
     }
 
     /// Direct (local) memory and synchronization effects without call-graph transitive propagation.
     #[must_use]
     pub fn direct_effects(&self) -> Option<OperationEffects> {
-        self.explicit_effects.or_else(|| {
-            self.program()
-                .map(|program| OperationEffects::from_program(&program))
-        })
+        local_effects(self.explicit_effects, self.program().as_ref())
     }
 
     /// Derive target-neutral capability requirements from the canonical program.
@@ -290,47 +284,25 @@ impl OperationRegistration {
     /// Extract the production semantic descriptor from this registration.
     #[must_use]
     pub fn descriptor(&'static self) -> SemanticDescriptor {
-        SemanticDescriptor {
-            id: self.id,
-            semantic_version: self.semantic_version,
-            signature: self.signature.as_ref(),
-            tier: self.tier,
-            category: self.category,
-            laws: self.laws,
-            numeric: self.numeric,
-            geometry_requirements: self.geometry_requirements,
-            explicit_effects: self.explicit_effects,
-            explicit_capabilities: self.explicit_capabilities,
-            absence: self.absence,
-        }
+        SemanticOperation::from(self).descriptor()
     }
 
     /// Extract the lowering provider from this registration.
     #[must_use]
     pub fn lowering_provider(&self) -> LoweringProvider {
-        LoweringProvider {
-            id: self.id,
-            build: self.build,
-        }
+        lowering_provider_of(self.id, self.build)
     }
 
     /// Extract the conformance case provider from this registration.
     #[must_use]
     pub fn conformance_provider(&self) -> ConformanceProvider {
-        ConformanceProvider {
-            id: self.id,
-            test_inputs: self.test_inputs,
-            expected_output: self.expected_output,
-        }
+        conformance_provider_of(self.id, self.test_inputs, self.expected_output)
     }
 
     /// Extract the contract provider from this registration.
     #[must_use]
     pub fn contract_provider(&'static self) -> ContractProvider {
-        ContractProvider {
-            id: self.id,
-            contract: None,
-        }
+        SemanticOperation::from(self).contract_provider()
     }
 
     /// Construct the canonical semantic contract record.

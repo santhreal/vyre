@@ -9,7 +9,7 @@ use crate::operation::records::{
     SemanticDescriptor,
 };
 use crate::operation::registry::OperationRegistry;
-use crate::operation::semantics::{OperationEffects, OperationTier};
+use crate::operation::semantics::{truncate_to_u64, OperationEffects, OperationTier};
 use crate::program_caps::{scan as scan_capabilities, RequiredCapabilities};
 
 /// One immutable semantic record used by validation, inlining, conformance,
@@ -52,7 +52,7 @@ impl SemanticOperation {
     /// Build the canonical program and stamp its stable operation identity.
     #[must_use]
     pub fn program(self) -> Option<Program> {
-        self.build.map(|build| build().with_entry_op_id(self.id))
+        canonical_program(self.id, self.build)
     }
 
     /// Derive the effective neutral schedule constraints from the recorded
@@ -62,12 +62,7 @@ impl SemanticOperation {
     ///
     /// Returns a stable conflict when the recorded decision contradicts semantics.
     pub fn schedule_constraints(self) -> Result<GeometryRequirements, GeometryConstraintConflict> {
-        match self.program() {
-            Some(program) => self
-                .geometry_requirements
-                .compose(GeometryRequirements::from_program(&program)?),
-            None => Ok(self.geometry_requirements),
-        }
+        composed_schedule_constraints(self.geometry_requirements, self.program().as_ref())
     }
 
     /// Derive target-neutral capability requirements transitively over `Expr::Call`.
@@ -81,8 +76,7 @@ impl SemanticOperation {
     /// Direct (local) capability requirements without call-graph transitive propagation.
     #[must_use]
     pub fn direct_required_capabilities(self) -> Option<RequiredCapabilities> {
-        self.explicit_capabilities
-            .or_else(|| self.program().map(|program| scan_capabilities(&program)))
+        local_capabilities(self.explicit_capabilities, self.program().as_ref())
     }
 
     /// Derive target-neutral effects transitively over `Expr::Call`.
@@ -96,10 +90,7 @@ impl SemanticOperation {
     /// Direct (local) memory and synchronization effects without call-graph transitive propagation.
     #[must_use]
     pub fn direct_effects(self) -> Option<OperationEffects> {
-        self.explicit_effects.or_else(|| {
-            self.program()
-                .map(|program| OperationEffects::from_program(&program))
-        })
+        local_effects(self.explicit_effects, self.program().as_ref())
     }
 
     /// Direct callees invoked by this operation via `Expr::Call`.
@@ -145,31 +136,12 @@ impl SemanticOperation {
                 hasher.update(self.id.as_bytes());
                 hasher.update(&self.semantic_version.to_le_bytes());
                 if let Some(eff) = self.direct_effects() {
-                    hasher.update(&[
-                        eff.reads as u8,
-                        eff.writes as u8,
-                        eff.atomics as u8,
-                        eff.synchronizes as u8,
-                    ]);
+                    eff.hash_into(&mut hasher);
                 }
                 if let Some(caps) = self.direct_required_capabilities() {
-                    hasher.update(&[
-                        caps.subgroup_ops as u8,
-                        caps.f16 as u8,
-                        caps.bf16 as u8,
-                        caps.f64 as u8,
-                        caps.async_dispatch as u8,
-                        caps.indirect_dispatch as u8,
-                        caps.tensor_ops as u8,
-                        caps.trap as u8,
-                        caps.distributed_collectives as u8,
-                    ]);
-                    hasher.update(&caps.static_storage_bytes.to_le_bytes());
+                    caps.hash_into(&mut hasher);
                 }
-                let hash_bytes = hasher.finalize();
-                let mut bytes = [0u8; 8];
-                bytes.copy_from_slice(&hash_bytes.as_bytes()[..8]);
-                u64::from_le_bytes(bytes)
+                truncate_to_u64(&hasher)
             })
     }
 
@@ -194,20 +166,13 @@ impl SemanticOperation {
     /// Extract the lowering provider from this operation.
     #[must_use]
     pub fn lowering_provider(self) -> LoweringProvider {
-        LoweringProvider {
-            id: self.id,
-            build: self.build,
-        }
+        lowering_provider_of(self.id, self.build)
     }
 
     /// Extract the conformance case provider from this operation.
     #[must_use]
     pub fn conformance_provider(self) -> ConformanceProvider {
-        ConformanceProvider {
-            id: self.id,
-            test_inputs: self.test_inputs,
-            expected_output: self.expected_output,
-        }
+        conformance_provider_of(self.id, self.test_inputs, self.expected_output)
     }
 
     /// Extract the contract provider from this operation.
@@ -232,6 +197,67 @@ impl SemanticOperation {
             absence: self.absence,
             program: self.program(),
         })
+    }
+}
+
+/// Build the canonical program for `id` and stamp its stable identity.
+///
+/// A registration and the semantic record derived from it must agree on what
+/// the canonical program is, so both read it from here.
+pub(super) fn canonical_program(id: &'static str, build: Option<fn() -> Program>) -> Option<Program> {
+    build.map(|build| build().with_entry_op_id(id))
+}
+
+/// Compose the recorded schedule decision with what the program requires.
+///
+/// # Errors
+///
+/// Returns a stable conflict when the recorded decision contradicts semantics.
+pub(super) fn composed_schedule_constraints(
+    declared: GeometryRequirements,
+    program: Option<&Program>,
+) -> Result<GeometryRequirements, GeometryConstraintConflict> {
+    match program {
+        Some(program) => declared.compose(GeometryRequirements::from_program(program)?),
+        None => Ok(declared),
+    }
+}
+
+/// Local capability requirements: the explicit record, else a program scan.
+pub(super) fn local_capabilities(
+    explicit: Option<RequiredCapabilities>,
+    program: Option<&Program>,
+) -> Option<RequiredCapabilities> {
+    explicit.or_else(|| program.map(scan_capabilities))
+}
+
+/// Local memory and synchronization effects: the explicit record, else what
+/// the program does.
+pub(super) fn local_effects(
+    explicit: Option<OperationEffects>,
+    program: Option<&Program>,
+) -> Option<OperationEffects> {
+    explicit.or_else(|| program.map(OperationEffects::from_program))
+}
+
+/// The lowering provider for one operation identity.
+pub(super) fn lowering_provider_of(
+    id: &'static str,
+    build: Option<fn() -> Program>,
+) -> LoweringProvider {
+    LoweringProvider { id, build }
+}
+
+/// The conformance case provider for one operation identity.
+pub(super) fn conformance_provider_of(
+    id: &'static str,
+    test_inputs: Option<OperationFixtures>,
+    expected_output: Option<OperationFixtures>,
+) -> ConformanceProvider {
+    ConformanceProvider {
+        id,
+        test_inputs,
+        expected_output,
     }
 }
 

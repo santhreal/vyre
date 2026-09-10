@@ -130,6 +130,19 @@ impl OperationEffects {
         synchronizes: true,
     };
 
+    /// Feed the effect set into a composite-version hasher.
+    ///
+    /// The field order is part of the version identity, so it is stated here
+    /// and not at each site that hashes an operation.
+    pub(crate) fn hash_into(&self, hasher: &mut blake3::Hasher) {
+        hasher.update(&[
+            self.reads as u8,
+            self.writes as u8,
+            self.atomics as u8,
+            self.synchronizes as u8,
+        ]);
+    }
+
     /// Read-write storage access with synchronization barrier.
     pub const READ_WRITE_SYNCHRONIZES: Self = Self {
         reads: true,
@@ -180,4 +193,16 @@ impl OperationEffects {
         effects.synchronizes = stats.has_node_barrier() || stats.distributed_collectives();
         effects
     }
+}
+
+/// Take the leading eight bytes of a digest as a little-endian `u64`.
+///
+/// Every composite version in the operation catalog is a truncated BLAKE3
+/// digest. Which end is taken and in which byte order is part of the version
+/// identity, so it is stated once.
+pub(crate) fn truncate_to_u64(hasher: &blake3::Hasher) -> u64 {
+    let digest = hasher.finalize();
+    let mut bytes = [0u8; 8];
+    bytes.copy_from_slice(&digest.as_bytes()[..8]);
+    u64::from_le_bytes(bytes)
 }

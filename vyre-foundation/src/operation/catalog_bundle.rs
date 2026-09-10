@@ -228,26 +228,10 @@ impl OperationCatalogBundle {
                 hasher.update(&[sig.bytes_extraction as u8]);
             }
             if let Some(eff) = desc.explicit_effects {
-                hasher.update(&[
-                    eff.reads as u8,
-                    eff.writes as u8,
-                    eff.atomics as u8,
-                    eff.synchronizes as u8,
-                ]);
+                eff.hash_into(&mut hasher);
             }
             if let Some(caps) = desc.explicit_capabilities {
-                hasher.update(&[
-                    caps.subgroup_ops as u8,
-                    caps.f16 as u8,
-                    caps.bf16 as u8,
-                    caps.f64 as u8,
-                    caps.async_dispatch as u8,
-                    caps.indirect_dispatch as u8,
-                    caps.tensor_ops as u8,
-                    caps.trap as u8,
-                    caps.distributed_collectives as u8,
-                ]);
-                hasher.update(&caps.static_storage_bytes.to_le_bytes());
+                caps.hash_into(&mut hasher);
             }
             if lowering_providers.contains_key(id) {
                 hasher.update(b":lowering:present\n");
