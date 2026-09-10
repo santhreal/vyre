@@ -1,4 +1,4 @@
-//! Contract tests for Security, Tenant Labels & Capability Handles (Row 119).
+//! Contract tests for Security, Tenant Labels & Capability Handles.
 
 use std::collections::BTreeSet;
 use vyre_foundation::security::*;

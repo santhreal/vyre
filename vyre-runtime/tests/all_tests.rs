@@ -271,7 +271,7 @@ pub mod uring_ingest_telemetry_invariants;
 /// Integration tests from `tests/failure_domains_and_recovery_contracts.rs`.
 #[path = "failure_domains_and_recovery_contracts.rs"]
 pub mod failure_domains_and_recovery_contracts;
-/// Integration tests from `tests/tenant_capability_contracts.rs` (Row 119).
+/// Integration tests from `tests/tenant_capability_contracts.rs`.
 #[path = "tenant_capability_contracts.rs"]
 pub mod tenant_capability_contracts;
 /// Integration tests from `tests/uring_smoke.rs`.
@@ -279,13 +279,13 @@ pub mod tenant_capability_contracts;
 #[path = "uring_smoke.rs"]
 pub mod uring_smoke;
 
-/// Integration tests from `tests/external_resource_admission_contracts.rs` (Row 111).
+/// Integration tests from `tests/external_resource_admission_contracts.rs`.
 #[path = "external_resource_admission_contracts.rs"]
 pub mod external_resource_admission_contracts;
 /// Integration tests from `tests/rolling_upgrade_compatibility_contracts.rs`.
 #[path = "rolling_upgrade_compatibility_contracts.rs"]
 pub mod rolling_upgrade_compatibility_contracts;
 
-/// Integration tests from `tests/runtime_quota_and_concurrency_contracts.rs` (Row 92).
+/// Integration tests from `tests/runtime_quota_and_concurrency_contracts.rs`.
 #[path = "runtime_quota_and_concurrency_contracts.rs"]
 pub mod runtime_quota_and_concurrency_contracts;

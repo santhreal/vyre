@@ -1,4 +1,4 @@
-//! Memory zeroization, cryptographic discard, and tenant cache namespace isolation (Row 119).
+//! Memory zeroization, cryptographic discard, and tenant cache namespace isolation.
 
 use super::label::{ConfidentialityLevel, TenantId};
 use core::ops::{Deref, DerefMut};

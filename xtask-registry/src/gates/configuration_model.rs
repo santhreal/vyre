@@ -1,4 +1,4 @@
-//! `cargo xtask configuration-model` - typed configuration space closure (Rows 81, 115).
+//! `cargo xtask configuration-model` - typed configuration space closure.
 //!
 //! Reads every member manifest into one model: which package declares each
 //! capability, which package a facade row forwards it to, the cells a build can

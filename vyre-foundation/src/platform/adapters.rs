@@ -1,4 +1,4 @@
-//! Small typed platform adapters without path-string policy in domain logic (Row 118).
+//! Small typed platform adapters without path-string policy in domain logic.
 
 use std::fs::{self, File};
 use std::io::{Read, Write};

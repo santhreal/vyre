@@ -34,15 +34,15 @@ pub use geometry::{
     ElementPolicy, GeometryConstraintConflict, GeometryRequirements, LaunchGeometry, Uniformity,
 };
 
-/// Canonical binary codec and verification for schema registry records (Row 121).
+/// Canonical binary codec and verification for schema registry records.
 mod canonical_codec;
-/// Typed configuration schema and resolution (Row 123).
+/// Typed configuration schema and resolution.
 pub mod config_schema;
-/// Explicit failure domains and recovery classes (Row 122).
+/// Explicit failure domains and recovery classes.
 pub mod failure_domain;
-/// Typed region-based SSA intermediate representation (Row 103).
+/// Typed region-based SSA intermediate representation.
 pub mod region_ssa;
-/// Compiler data substrate, arenas, interners, and query engine (Row 89).
+/// Compiler data substrate, arenas, interners, and query engine.
 pub mod substrate;
 
 pub mod ir {
@@ -123,7 +123,7 @@ pub mod ir {
     };
 }
 
-/// Causal Introspection & Unified Causal-Span Schema (Row 117).
+/// Causal Introspection & Unified Causal-Span Schema.
 pub mod causal;
 /// CPU reference registration contract.
 pub mod cpu_op;
@@ -137,18 +137,18 @@ pub mod match_result;
 mod memory_model;
 /// Optimizer performance counters.
 pub mod perf;
-/// Source-derived platform support matrix, wire types, and adapters (Row 118).
+/// Source-derived platform support matrix, wire types, and adapters.
 pub mod platform;
 /// Program capability analysis.
 pub mod program_caps;
 /// Single owner of scalar operator semantics, shared by the literal folder
 /// and the reference interpreter.
 pub(crate) mod scalar_ops;
-/// Security, Tenant Isolation, Capability Handles & Quota Authority (Row 119).
+/// Security, Tenant Isolation, Capability Handles & Quota Authority.
 pub mod security;
-/// Closed orthogonal semantic type system (Row 102).
+/// Closed orthogonal semantic type system.
 pub mod types;
-/// Single declarative verifier and certified compilation gate (Row 104).
+/// Single declarative verifier and certified compilation gate.
 pub mod verifier;
 
 /// Inventory-registered algebraic-law registry (`algebraic_law_registry::laws_for_op`).

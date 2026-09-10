@@ -82,7 +82,7 @@ pub enum CellVerdict {
     },
     /// Measurement is within the declared equivalence band; statistically indistinguishable.
     ///
-    /// Row 47 invariant: Statistically indistinguishable is NEVER classified as a Win.
+    /// Invariant: a statistically indistinguishable result is never classified as a Win.
     StatisticallyIndistinguishable {
         /// Measured speedup ratio.
         speedup_x: f64,

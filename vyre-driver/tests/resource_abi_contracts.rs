@@ -1,5 +1,5 @@
 //! Tests for domain-neutral semantic resource ABI, zero-copy import/export,
-//! layout transitions, and timeline synchronization (Row 111).
+//! layout transitions, and timeline synchronization.
 //!
 //! Acceptance criteria:
 //! 1. Domain-neutral typed image, plane, subresource, and timeline capabilities.

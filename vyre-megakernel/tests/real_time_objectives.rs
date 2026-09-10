@@ -1,4 +1,4 @@
-//! Tests for versioned real-time objective family, measurement boundaries, and hard-constraint verification (Row 110).
+//! Tests for versioned real-time objective family, measurement boundaries, and hard-constraint verification.
 //!
 //! Acceptance criteria:
 //! 1. Versioned real-time objective family (deadlines, jitter, queueing, arrival traces, memory ceilings, energy policies).

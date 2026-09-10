@@ -36,7 +36,7 @@ pub mod metal_simd_scan_plan_registry;
 #[path = "resident_async.rs"]
 pub mod resident_async;
 
-/// Integration tests from `tests/external_resource_metal_contracts.rs` (Row 111).
+/// Integration tests from `tests/external_resource_metal_contracts.rs`.
 #[path = "external_resource_metal_contracts.rs"]
 pub mod external_resource_metal_contracts;
 /// Integration tests from `tests/target_compiler.rs`.

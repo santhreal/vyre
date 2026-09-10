@@ -1,4 +1,4 @@
-//! External resource admission, layout/usage transition execution, and timeline synchronization (Row 111).
+//! External resource admission, layout/usage transition execution, and timeline synchronization.
 //!
 //! Interactive graphics requires buffers and images to cross compute, rendering, and presentation
 //! boundaries without host copies or implicit global waits.

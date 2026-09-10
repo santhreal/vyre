@@ -37,7 +37,7 @@ pub(crate) mod egraph_device_image;
 /// CUDA launch-wave planning for resident e-graph device images.
 pub(crate) mod egraph_kernel_plan;
 mod egraph_readback;
-/// CUDA external resource import/export and timeline synchronization (Row 111).
+/// CUDA external resource import/export and timeline synchronization.
 mod external_resource;
 mod instrumentation;
 /// Cross-process persistent CUDA JIT cache wiring (E4 + E5): configures

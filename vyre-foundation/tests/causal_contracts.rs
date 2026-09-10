@@ -1,4 +1,4 @@
-//! Contract tests for Causal Introspection & Unified Causal-Span Schema (Row 117).
+//! Contract tests for Causal Introspection & Unified Causal-Span Schema.
 
 use vyre_foundation::causal::*;
 

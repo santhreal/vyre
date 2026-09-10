@@ -1,4 +1,4 @@
-//! Contract and regression tests for compiler data substrate, arenas, and query engine (Row 89).
+//! Contract and regression tests for compiler data substrate, arenas, and query engine.
 //!
 //! Tests verify:
 //! 1. Hash-consed arenas and canonical interners for strings, types, constants, layouts, expressions, nodes, and regions.

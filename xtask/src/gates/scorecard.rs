@@ -16,7 +16,7 @@ use crate::gate_metadata::GATE_METADATA;
 /// Path of the canonical engineering scorecard artifact.
 pub const SCORECARD_PATH: &str = "docs/generated/engineering-scorecard.toml";
 
-/// All 22 canonical engineering axes specified in Backlog Row 100.
+/// The 22 canonical engineering axes.
 pub const ENGINEERING_AXES: &[&str] = &[
     "semantic_correctness",
     "numerical_legality",
@@ -312,7 +312,7 @@ fn evaluate_axes_for_crate(
 mod tests {
     use super::*;
 
-    /// WHY: Section 182 / Backlog Row 100 requires newly added crates to appear in the scorecard dynamically.
+    /// WHY: a newly added crate must appear in the scorecard dynamically.
     #[test]
     fn newly_added_crate_dynamically_appears_in_scorecard() {
         let root = structure_gate::workspace_root();
@@ -338,7 +338,7 @@ mod tests {
         assert_eq!(
             ENGINEERING_AXES.len(),
             22,
-            "Row 100 requires exactly 22 engineering axes"
+            "the scorecard declares exactly 22 engineering axes"
         );
 
         let root = structure_gate::workspace_root();

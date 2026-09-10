@@ -695,6 +695,6 @@ fn operations_and_oracle_available_in_all_configurations() {
         !backends
             .iter()
             .any(|reg| reg.id == "cpu-ref" || reg.reference_oracle),
-        "reference backend (cpu-ref) must not be in live_backend_registry (Row 87: OracleSession is separate)"
+        "reference backend (cpu-ref) must not be in live_backend_registry (OracleSession is separate)"
     );
 }

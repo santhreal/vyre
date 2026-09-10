@@ -1,4 +1,4 @@
-//! Single declarative semantic verifier and proof certificate system (Row 104).
+//! Single declarative semantic verifier and proof certificate system.
 //!
 //! Provides [`DeclarativeVerifier`](crate::verifier::DeclarativeVerifier),
 //! [`VerificationCertificate`](crate::verifier::VerificationCertificate),

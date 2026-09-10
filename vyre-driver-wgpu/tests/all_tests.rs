@@ -512,7 +512,7 @@ pub mod wgpu_subgroup_scan_plan_registry;
 #[path = "wgsl_scan_uniformity_certificates.rs"]
 pub mod wgsl_scan_uniformity_certificates;
 
-/// Integration tests from `tests/external_resource_wgpu_contracts.rs` (Row 111).
+/// Integration tests from `tests/external_resource_wgpu_contracts.rs`.
 #[path = "external_resource_wgpu_contracts.rs"]
 pub mod external_resource_wgpu_contracts;
 /// Integration tests from `tests/widening_cast_64_parity.rs`.

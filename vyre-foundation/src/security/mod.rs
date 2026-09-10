@@ -1,4 +1,4 @@
-//! Security, Tenant Isolation, Capability Handles & Quota Authority (Row 119).
+//! Security, Tenant Isolation, Capability Handles & Quota Authority.
 //!
 //! Provides explicit tenant and confidentiality labels, unforgeable generation-bound
 //! capability tokens, automatic zeroization on drop, and bounded hostile compilation quotas.

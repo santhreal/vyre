@@ -13,7 +13,7 @@ pub(crate) mod body_path_map;
 pub(crate) mod candidate_report;
 /// Loop-carrier diagnostics.
 pub(crate) mod carriers;
-/// Causal receipt and critical-path inspection report (Row 117).
+/// Causal receipt and critical-path inspection report.
 pub(crate) mod causal_report;
 /// Source-level assignment traversal.
 /// Five-level compiler view and structural diffs.

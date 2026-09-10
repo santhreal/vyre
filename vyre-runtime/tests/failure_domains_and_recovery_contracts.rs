@@ -1,6 +1,6 @@
 //! Tests for explicit failure domains, atomic guarded states, prepare/commit journals, and restart budgets.
 //!
-//! WHY: proves Row 122:
+//! WHY: proves the explicit failure domain and recovery contract:
 //! - Poisoned locks transition atomically to typed PoisonedTerminal state and reject further operations.
 //! - State can be rebuilt cleanly from canonical input via explicit recover().
 //! - Prepare/commit journals guarantee side effect idempotency under repeated calls.

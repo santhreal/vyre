@@ -1,4 +1,4 @@
-//! Cross-backend and reference interpreter parity contracts for grid folding (Row 124).
+//! Cross-backend and reference interpreter parity contracts for grid folding.
 //!
 //! WHY: A 1D program whose launch grid exceeds the single-axis workgroup ceiling
 //! must fold across grid axes (x -> y -> z) while computing the exact same

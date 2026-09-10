@@ -1,5 +1,5 @@
 //! Domain-neutral resource, image, view, plane, sampler, external memory,
-//! and timeline synchronization capabilities (Row 111).
+//! and timeline synchronization capabilities.
 //!
 //! Interactive graphics requires buffers and images to cross compute, rendering,
 //! and presentation boundaries without host copies or implicit global waits.
@@ -987,7 +987,7 @@ impl ResourceUsageTransition {
     }
 }
 
-/// Admitted resource descriptor record capturing complete specification state (Row 111).
+/// Admitted resource descriptor record capturing complete specification state.
 ///
 /// An admitted resource records:
 /// 1. Device identity (`device_id`)

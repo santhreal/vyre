@@ -39,7 +39,7 @@ pub mod artifact_admission;
 mod semantic_execution;
 pub use semantic_execution::RegisteredSemanticExecutor;
 
-/// External resource admission, layout/usage transition execution, and timeline synchronization (Row 111).
+/// External resource admission, layout/usage transition execution, and timeline synchronization.
 mod external_resource_admission;
 /// Paged resource residency contracts, geometry validation, and candidate planning.
 pub mod paged_resource;
@@ -65,9 +65,9 @@ pub mod persistent_executor;
 /// Content-addressed authenticated artifact cache.
 pub mod pipeline_cache;
 
-/// Atomic guarded state machines, prepare/commit journals, and restart budgets (Row 122).
+/// Atomic guarded state machines, prepare/commit journals, and restart budgets.
 pub mod atomic_recovery;
-/// Generation-scoped cache namespaces and rolling upgrade coordination (Row 120).
+/// Generation-scoped cache namespaces and rolling upgrade coordination.
 mod generation_namespace;
 /// Structured artifact-session recovery without message parsing or recompilation.
 pub mod recovery;

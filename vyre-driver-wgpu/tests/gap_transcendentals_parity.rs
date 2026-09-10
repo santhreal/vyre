@@ -352,7 +352,7 @@ fn assert_strict_parity(op: UnOp, inputs: &[f32]) -> Result<(), TestCaseError> {
 }
 
 proptest! {
-    // Row 136 states 1000 cases each. The count is declared here rather than
+    // The sweep runs 1000 cases each. The count is declared here rather than
     // left to `PROPTEST_CASES` so a plain `cargo test` run is the proving run.
     #![proptest_config(ProptestConfig {
         cases: 1000,

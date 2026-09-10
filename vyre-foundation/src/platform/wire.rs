@@ -1,69 +1,123 @@
-//! Fixed-width canonical wire types and checked host size conversions (Row 118).
+//! Fixed-width canonical wire types and checked host size conversions.
 
 use core::fmt;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-/// Error during checked numeric conversion between host usize/isize and fixed wire types.
-#[derive(Clone, Debug, Eq, PartialEq, Error)]
+/// Rejection of a conversion between a host size and a fixed wire field.
+///
+/// Every variant is reachable from a conversion below. A diagnostic nothing
+/// constructs cannot fail on the thing it names, so none is kept for
+/// symmetry.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Error)]
 pub enum ConversionError {
-    /// Host value exceeded 32-bit integer capacity.
-    #[error("host value {val} overflows 32-bit integer range")]
+    /// The value does not fit the 32-bit wire field it was destined for.
+    #[error(
+        "host value {val} does not fit a 32-bit wire field. Fix: bound the count before encoding, or move the field to a 64-bit canonical integer and revise the wire schema version."
+    )]
     Overflow32 {
-        /// Value that overflowed.
-        val: u128,
-    },
-    /// Host value was negative when unsigned was required.
-    #[error("negative host value {val} cannot be converted to unsigned integer")]
-    NegativeToUnsigned {
-        /// Negative value.
+        /// The value that did not fit.
         val: i128,
     },
-    /// 64-bit integer overflows host usize on a 32-bit platform.
-    #[error("64-bit value {val} overflows 32-bit host pointer width")]
+    /// The value does not fit the 64-bit wire field it was destined for.
+    #[error(
+        "host value {val} does not fit a 64-bit wire field. Fix: bound the count before encoding; a host with a pointer wider than 64 bits cannot write this record without a wire schema revision."
+    )]
+    Overflow64 {
+        /// The value that did not fit.
+        val: i128,
+    },
+    /// The wire value exceeds what this host can address.
+    #[error(
+        "wire value {val} exceeds the addressable range of a {host_pointer_bits}-bit host. Fix: read this record on a 64-bit host, or reject the payload; truncating the value would index a different element."
+    )]
     OverflowHostPointer {
-        /// Value that overflowed host pointer capacity.
+        /// The value the wire carried.
         val: u64,
+        /// Pointer width of the host that refused it.
+        host_pointer_bits: u32,
     },
 }
 
 /// Checked conversion from host `usize` to fixed canonical `u32`.
+///
+/// # Errors
+///
+/// Returns [`ConversionError::Overflow32`] when the value does not fit.
 #[inline]
 pub fn checked_usize_to_u32(val: usize) -> Result<u32, ConversionError> {
-    u32::try_from(val).map_err(|_| ConversionError::Overflow32 { val: val as u128 })
+    u32::try_from(val).map_err(|_| ConversionError::Overflow32 {
+        val: i128::try_from(val).unwrap_or(i128::MAX),
+    })
 }
 
 /// Checked conversion from host `usize` to fixed canonical `u64`.
+///
+/// Widening on every host this crate builds for, and still checked: a host
+/// whose pointer is wider than 64 bits would truncate the value into the wire
+/// field, and a truncated length is a different record under the same name.
+///
+/// # Errors
+///
+/// Returns [`ConversionError::Overflow64`] when the value does not fit.
 #[inline]
-pub const fn checked_usize_to_u64(val: usize) -> u64 {
-    val as u64
+pub fn checked_usize_to_u64(val: usize) -> Result<u64, ConversionError> {
+    u64::try_from(val).map_err(|_| ConversionError::Overflow64 {
+        val: i128::try_from(val).unwrap_or(i128::MAX),
+    })
 }
 
 /// Checked conversion from fixed `u64` to host `usize`.
+///
+/// # Errors
+///
+/// Returns [`ConversionError::OverflowHostPointer`] when the wire value
+/// exceeds what this host can address.
 #[inline]
 pub fn checked_u64_to_usize(val: u64) -> Result<usize, ConversionError> {
-    usize::try_from(val).map_err(|_| ConversionError::OverflowHostPointer { val })
+    usize::try_from(val).map_err(|_| ConversionError::OverflowHostPointer {
+        val,
+        host_pointer_bits: usize::BITS,
+    })
 }
 
 /// Checked conversion from host `isize` to fixed canonical `i32`.
+///
+/// # Errors
+///
+/// Returns [`ConversionError::Overflow32`] when the value does not fit.
 #[inline]
 pub fn checked_isize_to_i32(val: isize) -> Result<i32, ConversionError> {
     i32::try_from(val).map_err(|_| ConversionError::Overflow32 {
-        val: val.unsigned_abs() as u128,
+        val: i128::from(val as i64),
     })
 }
 
 /// Checked conversion from host `isize` to fixed canonical `i64`.
+///
+/// Checked for the same reason as [`checked_usize_to_u64`].
+///
+/// # Errors
+///
+/// Returns [`ConversionError::Overflow64`] when the value does not fit.
 #[inline]
-pub const fn checked_isize_to_i64(val: isize) -> i64 {
-    val as i64
+pub fn checked_isize_to_i64(val: isize) -> Result<i64, ConversionError> {
+    i64::try_from(val).map_err(|_| ConversionError::Overflow64 {
+        val: i128::try_from(val).unwrap_or(i128::MAX),
+    })
 }
 
 /// Checked conversion from fixed `i64` to host `isize`.
+///
+/// # Errors
+///
+/// Returns [`ConversionError::OverflowHostPointer`] when the wire value
+/// exceeds what this host can address.
 #[inline]
 pub fn checked_i64_to_isize(val: i64) -> Result<isize, ConversionError> {
     isize::try_from(val).map_err(|_| ConversionError::OverflowHostPointer {
         val: val.unsigned_abs(),
+        host_pointer_bits: usize::BITS,
     })
 }
 

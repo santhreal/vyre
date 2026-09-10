@@ -1,4 +1,4 @@
-//! Contract tests for Causal Receipt Diagnostics & Reporting (Row 117).
+//! Contract tests for Causal Receipt Diagnostics & Reporting.
 
 use vyre_debug::CausalReceiptReport;
 use vyre_foundation::causal::{CausalEvent, CausalPhase, CausalReceipt, CausalSpanId, TraceId};

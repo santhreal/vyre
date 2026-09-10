@@ -1,15 +1,15 @@
 //! Execution topology candidate model, legality, independence, and ranking contracts.
 //!
-//! WHY: DEDUP Rows 177.1-177.5 require a neutral execution-topology candidate model in
-//! `CandidatePlan` and `vyre-megakernel`:
-//! - 177.1: Represent sequential stages, concurrent independent submissions, and resident
+//! WHY: `CandidatePlan` and `vyre-megakernel` carry a neutral execution-topology
+//! candidate model:
+//! - Represent sequential stages, concurrent independent submissions, and resident
 //!   partitions with enforceable capability. Unknown device facts reject dependent topologies.
-//! - 177.2: Reuse independence analysis; reject RAW/WAR/WAW conflicts, shared output aliases,
+//! - Reuse independence analysis; reject RAW/WAR/WAW conflicts, shared output aliases,
 //!   cross-arm control dependencies, and device-wide barriers.
-//! - 177.3: Avoid unenforceable SM-id masking: generate fixed spatial masks only with hardware
+//! - Avoid unenforceable SM-id masking: generate fixed spatial masks only with hardware
 //!   capability; otherwise use concurrent queues or bounded resident work queues with progress.
-//! - 177.4: Model asymmetric joins without inventing unbacked barriers.
-//! - 177.5: Price aggregate registers, scratch, live bytes, occupancy, queue overlap, and join cost.
+//! - Model asymmetric joins without inventing unbacked barriers.
+//! - Price aggregate registers, scratch, live bytes, occupancy, queue overlap, and join cost.
 //!   Retain sequential baseline; test empty, imbalanced, conflicting, and occupancy-limited arms.
 
 #![forbid(unsafe_code)]
@@ -39,7 +39,7 @@ fn device_default() -> DeviceFacts {
 }
 
 // ============================================================================
-// 1. Sequential baseline retention (Row 177.1, 177.5)
+// 1. Sequential baseline retention
 // ============================================================================
 
 #[test]
@@ -61,7 +61,7 @@ fn sequential_baseline_is_always_legal_and_retained() {
 }
 
 // ============================================================================
-// 2. Unknown device facts reject dependent topologies without guessing (Row 177.1)
+// 2. Unknown device facts reject dependent topologies without guessing
 // ============================================================================
 
 #[test]
@@ -89,7 +89,7 @@ fn unknown_device_facts_reject_dependent_topologies() {
 }
 
 // ============================================================================
-// 3. Arm independence and conflict analysis (Row 177.2)
+// 3. Arm independence and conflict analysis
 // ============================================================================
 
 #[test]
@@ -135,7 +135,7 @@ fn raw_waw_conflicts_reject_concurrent_execution() {
 }
 
 // ============================================================================
-// 4. Avoid unenforceable SM-id masking (Row 177.3)
+// 4. Avoid unenforceable SM-id masking
 // ============================================================================
 
 #[test]
@@ -185,7 +185,7 @@ fn bounded_work_queue_rejected_without_cooperative_launch() {
 }
 
 // ============================================================================
-// 5. Occupancy & scratch budgeting across resident partitions (Row 177.5)
+// 5. Occupancy & scratch budgeting across resident partitions
 // ============================================================================
 
 #[test]
@@ -260,7 +260,7 @@ fn artifact_encoding_preserves_the_pinned_schema_and_compiled_topology_schedule(
 }
 
 // ============================================================================
-// 7. Asymmetric joins without cooperative launch (Row 177.4)
+// 7. Asymmetric joins without cooperative launch
 // ============================================================================
 
 #[test]
@@ -286,7 +286,7 @@ fn asymmetric_join_rejected_without_cooperative_launch() {
 }
 
 // ============================================================================
-// 8. Cost model ranking and topology selection (Row 177.5)
+// 8. Cost model ranking and topology selection
 // ============================================================================
 
 #[test]

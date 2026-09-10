@@ -257,7 +257,7 @@ pub fn solve(
         }
     }
 
-    // Row 81: a compiler-self-use domain cannot enter the default consumer
+    // A compiler-self-use domain cannot enter the default consumer
     // closure. The domain packages declare their own publication class, so the
     // rule reads it rather than repeating a list of them.
     let internal: BTreeMap<&str, &str> = roster

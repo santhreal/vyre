@@ -1,4 +1,4 @@
-//! Tests for single declarative verifier, certified wrapper, and compiler gate (Row 104).
+//! Tests for single declarative verifier, certified wrapper, and compiler gate.
 //!
 //! Acceptance criteria:
 //! 1. A test derives the invariant set from the certificate type at run time and fails
@@ -174,7 +174,7 @@ fn invariant_set_derived_at_runtime_fails_if_any_invariant_carries_no_check() {
     assert_eq!(
         all_categories.len(),
         12,
-        "Row 104 requires exactly 12 canonical invariant categories"
+        "the certificate declares exactly 12 canonical invariant categories"
     );
 
     // Construct a comprehensive semantic module

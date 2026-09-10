@@ -1,4 +1,4 @@
-//! Causal receipt and critical-path inspection report (Row 117).
+//! Causal receipt and critical-path inspection report.
 
 use std::collections::BTreeMap;
 use vyre_foundation::causal::CausalReceipt;

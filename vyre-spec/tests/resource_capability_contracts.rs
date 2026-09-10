@@ -1,5 +1,5 @@
 //! Tests for domain-neutral resource, image, view, sampler, external memory,
-//! and timeline synchronization capabilities (Row 111).
+//! and timeline synchronization capabilities.
 //!
 //! Acceptance criteria:
 //! 1. Every format class, usage flag, sync protocol, and external memory kind is enumerated.

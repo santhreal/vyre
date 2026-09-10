@@ -1,4 +1,4 @@
-//! Contract tests for Row 107: Compositional schedule calculus.
+//! Contract tests for the compositional schedule calculus.
 //!
 //! Verifies the compositional schedule calculus operators, runtime closure against source,
 //! type-level unrepresentability, algebraic normalization, isomorphism deduplication,

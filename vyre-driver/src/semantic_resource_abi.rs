@@ -1,5 +1,5 @@
 //! Domain-neutral semantic resource ABI, logical image/view types, zero-copy import/export,
-//! and timeline synchronization (Row 111).
+//! and timeline synchronization.
 //!
 //! Interactive graphics requires buffers and images to cross compute, rendering, and presentation
 //! boundaries without host copies or implicit global waits.
@@ -144,7 +144,7 @@ pub fn authenticate_external_import(
     Ok(())
 }
 
-/// A selected execution schedule of layout/usage transitions and synchronization points (Row 111).
+/// A selected execution schedule of layout/usage transitions and synchronization points.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct ResourceTransitionSchedule {
     /// Ordered sequence of resource layout and usage transitions.

@@ -1,4 +1,4 @@
-//! Explicit tenant, authority, confidentiality, and retention labels (Row 119).
+//! Explicit tenant, authority, confidentiality, and retention labels.
 
 use core::fmt;
 use serde::{Deserialize, Serialize};

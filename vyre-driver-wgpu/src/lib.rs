@@ -10,7 +10,7 @@ mod device_buffer;
 mod dispatch_timeout;
 pub mod emit;
 pub mod engine;
-/// WGPU external resource import/export and timeline synchronization (Row 111).
+/// WGPU external resource import/export and timeline synchronization.
 mod external_resource;
 mod materializer;
 mod numeric;

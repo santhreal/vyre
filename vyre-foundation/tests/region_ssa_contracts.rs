@@ -1,4 +1,4 @@
-//! Contract tests for Row 103: Typed region-based SSA.
+//! Contract tests for the typed region-based SSA representation.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, Expr, Node, Program};
 use vyre_foundation::region_ssa::{

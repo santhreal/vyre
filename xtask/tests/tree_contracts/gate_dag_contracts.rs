@@ -170,7 +170,7 @@ fn gate_dag_gate_reports_complete_coverage() {
     );
 }
 
-/// WHY: Row 96 requires a test that derives the registered gate set at run time and fails
+/// WHY: the registered gate set is derived at run time, so the contract fails
 /// when a gate has no baseline row, no mutation suite reference, or no owner, so adding a gate
 /// without those turns the suite red.
 #[test]
@@ -230,7 +230,7 @@ fn runtime_registered_gate_set_has_owner_proof_and_baseline() {
     }
 }
 
-/// WHY: Row 96 requires proving that a gate missing owner, proof, or baseline fails the contract.
+/// WHY: a gate missing owner, proof, or baseline must fail the contract.
 #[test]
 fn runtime_gate_validation_fails_on_missing_owner_proof_or_baseline() {
     let mut desc = *descriptor_by_name("architecture-contract");

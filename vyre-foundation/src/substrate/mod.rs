@@ -1,4 +1,4 @@
-//! Compiler data substrate, arenas, interners, and query engine (Backlog Row 89).
+//! Compiler data substrate, arenas, interners, and query engine.
 //!
 //! Provides immutable hash-consed arenas, stable typed IDs, canonical interners
 //! for strings, types, constants, and layouts, stage-specific read-only views for

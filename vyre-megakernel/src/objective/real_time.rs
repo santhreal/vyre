@@ -1,4 +1,4 @@
-//! Real-time interactive objective family, measurement boundaries, and hard-constraint verification (Row 110).
+//! Real-time interactive objective family, measurement boundaries, and hard-constraint verification.
 //!
 //! Throughput-oriented GPU compilation can fail an interactive application when mean kernel duration
 //! omits queueing, submission, command encoding, pipeline creation, synchronization, wake-up,
@@ -156,7 +156,7 @@ pub enum WorkloadArrivalTrace {
     },
 }
 
-/// Versioned real-time objective specification (Row 110).
+/// Versioned real-time objective specification.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct RealTimeObjective {
     version: u16,

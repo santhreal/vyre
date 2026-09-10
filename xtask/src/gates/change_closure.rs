@@ -356,7 +356,7 @@ fn extract_file_closures(
 mod tests {
     use super::*;
 
-    /// WHY: Section 182 / Backlog Row 101 requires adding an unrecorded enum variant to fail closure.
+    /// WHY: adding an unrecorded enum variant must fail closure.
     #[test]
     fn adding_unrecorded_variant_fails_closure() {
         let manifest = ChangeClosureManifest {

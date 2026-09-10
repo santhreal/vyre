@@ -1,4 +1,4 @@
-//! Causal Introspection & Unified Causal-Span Schema (Backlog Row 117).
+//! Causal Introspection & Unified Causal-Span Schema.
 //!
 //! Provides stable typed identities connecting source regions to schedule operators,
 //! physical instructions, payload entries, resources, measurements, and diagnostics.

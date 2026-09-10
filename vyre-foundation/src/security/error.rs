@@ -1,4 +1,4 @@
-//! Security and capability errors (Row 119).
+//! Security and capability errors.
 
 use thiserror::Error;
 

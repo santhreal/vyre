@@ -1,4 +1,4 @@
-//! Hostile compilation quota enforcement and diagnostic redaction (Row 119).
+//! Hostile compilation quota enforcement and diagnostic redaction.
 
 use serde::{Deserialize, Serialize};
 

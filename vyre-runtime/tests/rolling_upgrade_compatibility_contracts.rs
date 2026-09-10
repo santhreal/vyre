@@ -1,6 +1,6 @@
 //! Tests for generation-scoped namespaces, rolling upgrades, crash interruption, and rollback atomicity.
 //!
-//! WHY: proves Row 120:
+//! WHY: proves the rolling upgrade compatibility contract:
 //! - Generation-scoped cache namespaces prevent cross-version key contamination.
 //! - Rolling upgrade allows concurrent old/new generation operation during transition.
 //! - Commit cleanly drains and reclaims resources from the old generation.

@@ -1,4 +1,4 @@
-//! Concrete CUDA zero-copy external resource import, export, and timeline synchronization (Row 111).
+//! Concrete CUDA zero-copy external resource import, export, and timeline synchronization.
 //!
 //! Interactive graphics requires buffers and images to cross compute, rendering, and presentation
 //! boundaries without host copies or implicit global waits.

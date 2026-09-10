@@ -1,4 +1,4 @@
-//! Contracts for the CUDA host input ABI (Row 125).
+//! Contracts for the CUDA host input ABI.
 //!
 //! One answer decides which declarations a caller fills:
 //! `BufferDecl::consumes_host_input`. The CUDA backend accepts exactly one input

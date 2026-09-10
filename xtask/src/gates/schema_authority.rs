@@ -1,4 +1,4 @@
-//! The `schema-authority` gate: schema version authority and typed decode enforcement (Row 121).
+//! The `schema-authority` gate: schema version authority and typed decode enforcement.
 //!
 //! Enforces that:
 //! 1. All persisted, transmitted, cached, signed, and conformance records derive schema identity

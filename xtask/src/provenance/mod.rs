@@ -1,4 +1,4 @@
-//! Dependency & Release-Provenance Authority (Row 116).
+//! Dependency & Release-Provenance Authority.
 //!
 //! Defines one dependency and release-provenance authority covering Rust crates,
 //! native tools, toolchain versions, code generators, benchmark baselines, and schemas.
@@ -171,7 +171,7 @@ pub struct BuildScriptContract {
     pub has_bounded_reads: bool,
 }
 
-/// Comprehensive release provenance record authority (Row 116).
+/// Comprehensive release provenance record authority.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ReleaseProvenanceAuthority {
     /// Schema version for fail-closed verification.

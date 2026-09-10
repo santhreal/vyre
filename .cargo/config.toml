@@ -11,6 +11,24 @@ PROPTEST_DISABLE_FAILURE_PERSISTENCE = "1"
 # file lets each checkout and CI runner choose an isolated writable directory
 # without exporting a build override from this wrapper.
 
+# Host-portability cells. The canonical identity bytes are proven on a 32-bit
+# host and on a big-endian host by building and executing those cells rather
+# than asserting them. Each entry names the cross linker the target needs
+# and, where the host cannot execute the binary directly, the user-mode
+# emulator that runs it. Emulation proves host arithmetic, byte order and
+# decoding only; device support and performance are never claimed from an
+# emulated run.
+[target.i686-unknown-linux-gnu]
+linker = "gcc"
+
+[target.powerpc-unknown-linux-gnu]
+linker = "powerpc-linux-gnu-gcc"
+runner = ["qemu-ppc-static", "-L", "/usr/powerpc-linux-gnu"]
+
+[target.s390x-unknown-linux-gnu]
+linker = "s390x-linux-gnu-gcc"
+runner = ["qemu-s390x-static", "-L", "/usr/s390x-linux-gnu"]
+
 [alias]
 xtask = "run -p xtask --bin xtask --"
 check-vyre = "run -p xtask --bin xtask -- abstraction-gate"

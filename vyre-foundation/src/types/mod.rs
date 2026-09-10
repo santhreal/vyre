@@ -1,4 +1,4 @@
-//! Closed, orthogonal semantic type system (Row 102).
+//! Closed, orthogonal semantic type system.
 //!
 //! Separates value representation (`ScalarType`, `VectorType`, `TensorType`, `RecordType`, `VariantType`),
 //! shape semantics ([`ShapeInterner`](crate::types::ShapeInterner), [`ShapeId`](crate::types::ShapeId), [`ShapeExprId`](crate::types::ShapeExprId)),

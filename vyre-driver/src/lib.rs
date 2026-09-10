@@ -225,7 +225,7 @@ pub mod numeric;
 /// Eliminates per-file kernel-launch overhead for streams of
 /// many small scan jobs.
 pub mod persistent;
-/// Domain-neutral semantic resource ABI, logical image/view types, and zero-copy timeline synchronization (Row 111).
+/// Domain-neutral semantic resource ABI, logical image/view types, and zero-copy timeline synchronization.
 mod semantic_resource_abi;
 /// Production-path support certificate for backend operations.
 mod support_certificate;

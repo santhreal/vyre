@@ -20,6 +20,16 @@ pub mod corpus;
 #[path = "support/opaque_echo_extension.rs"]
 pub mod opaque_echo_extension;
 
+/// Shared fixture module from `tests/contract_cases/ir_arbitrary.rs`.
+///
+/// Hoisted here rather than included by each consumer: the wire round-trip and
+/// program-stats suites both draw from it, and a `#[path]` include in each one
+/// compiles a second copy of the module whose unused half is reported as dead
+/// code. One module means the union of both suites' uses counts.
+#[allow(missing_docs)]
+#[path = "contract_cases/ir_arbitrary.rs"]
+pub mod ir_arbitrary;
+
 /// Integration tests from `tests/adversarial_graph_canonical_laws.rs`.
 #[path = "adversarial_graph_canonical_laws.rs"]
 pub mod adversarial_graph_canonical_laws;
@@ -230,6 +240,10 @@ pub mod graph_delta_contract;
 /// Integration tests from `tests/graph_invariants.rs`.
 #[path = "graph_invariants.rs"]
 pub mod graph_invariants;
+
+/// Integration tests from `tests/host_identity_invariance.rs`.
+#[path = "host_identity_invariance.rs"]
+pub mod host_identity_invariance;
 
 /// Integration tests from `tests/inline_buffer_reference_arguments.rs`.
 #[path = "inline_buffer_reference_arguments.rs"]
@@ -524,7 +538,6 @@ pub mod program_rebuild_preserves_metadata;
 pub mod program_soa_facts;
 
 /// Integration tests from `tests/program_stats_proptest.rs`.
-#[allow(dead_code)]
 #[path = "program_stats_proptest.rs"]
 pub mod program_stats_proptest;
 
@@ -780,7 +793,6 @@ pub mod wire_roundtrip_exhaustive;
 pub mod wire_roundtrip_non_composable;
 
 /// Integration tests from `tests/wire_roundtrip_proptest.rs`.
-#[allow(dead_code)]
 #[path = "wire_roundtrip_proptest.rs"]
 pub mod wire_roundtrip_proptest;
 
@@ -808,7 +820,7 @@ pub mod security_contracts;
 #[path = "declarative_schema_registry_contracts.rs"]
 pub mod declarative_schema_registry_contracts;
 
-/// Integration tests from `tests/typed_configuration_schema_contracts.rs` (Row 123).
+/// Integration tests from `tests/typed_configuration_schema_contracts.rs`.
 #[path = "typed_configuration_schema_contracts.rs"]
 pub mod typed_configuration_schema_contracts;
 
@@ -816,7 +828,7 @@ pub mod typed_configuration_schema_contracts;
 #[path = "resource_abi_contract.rs"]
 pub mod resource_abi_contract;
 
-/// Integration tests from `tests/compiler_substrate_contract.rs` (Row 89).
+/// Integration tests from `tests/compiler_substrate_contract.rs`.
 #[path = "compiler_substrate_contract.rs"]
 pub mod compiler_substrate_contract;
 /// Integration tests from `tests/region_fusion_contracts.rs`.

@@ -1,4 +1,4 @@
-//! Tree contracts for Dependency & Release-Provenance Authority (Row 116).
+//! Tree contracts for Dependency & Release-Provenance Authority.
 
 use xtask::checkout::checkout_root;
 use xtask::provenance::*;

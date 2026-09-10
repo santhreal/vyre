@@ -3,7 +3,7 @@
 use core::fmt;
 use serde::{Deserialize, Serialize};
 
-/// The six canonical compiler and runtime lifecycle phases (Row 117).
+/// The six canonical compiler and runtime lifecycle phases.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CausalPhase {

@@ -1,4 +1,4 @@
-//! Reference interleaving and race freedom contracts (Row 105).
+//! Reference interleaving and race freedom contracts.
 //!
 //! Asserts:
 //! 1. Data races are detected and reported by bounded interleaving search rather than passing by luck.

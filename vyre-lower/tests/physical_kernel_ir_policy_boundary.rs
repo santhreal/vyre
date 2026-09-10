@@ -1,4 +1,4 @@
-//! Contract tests for Row 107: Physical Kernel IR & Legalization Isolation.
+//! Contract tests for physical kernel IR and legalization isolation.
 //!
 //! Verifies:
 //! 1. No physical kernel IR type in `vyre-lower::descriptor` reuses semantic policy types.

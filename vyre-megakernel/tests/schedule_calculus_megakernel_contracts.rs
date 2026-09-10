@@ -1,4 +1,4 @@
-//! Acceptance criteria contracts for Row 107 in vyre-megakernel:
+//! Schedule calculus contracts in vyre-megakernel:
 //! 1. The unfused baseline is present in the candidate set for every workload the search runs.
 //!    Assert it, and assert that a search which drops it fails.
 //! 2. Schedule enumeration is deterministic: the same program and budget yield the same candidate

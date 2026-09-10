@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Mode of causal trace recording (Row 117).
+/// Mode of causal trace recording.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CausalTraceMode {

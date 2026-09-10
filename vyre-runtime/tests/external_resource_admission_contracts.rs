@@ -1,5 +1,5 @@
 //! Integration tests for external resource admission, transition execution,
-//! and timeline synchronization contracts (Row 111).
+//! and timeline synchronization contracts.
 //!
 //! Acceptance criteria:
 //! 1. External resource admission authenticates dimensions, row pitch, and memory capability before allocation.

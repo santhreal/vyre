@@ -39,7 +39,7 @@ pub enum InvariantCategory {
 }
 
 impl InvariantCategory {
-    /// The twelve canonical invariant categories defined by Row 104.
+    /// The twelve canonical invariant categories.
     pub const CANONICAL: &'static [InvariantCategory] = &[
         InvariantCategory::StructuralClosure,
         InvariantCategory::DominanceUseDef,

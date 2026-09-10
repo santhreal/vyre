@@ -1,4 +1,4 @@
-//! Contract tests for Row 108: Proof-producing multi-level optimization framework.
+//! Contract tests for the proof-producing multi-level optimization framework.
 
 use smallvec::SmallVec;
 use std::sync::Arc;
@@ -16,11 +16,13 @@ use vyre_foundation::optimizer::region_law::{laws_for_family, REGION_LAWS};
 use vyre_foundation::optimizer::rewrite_contract::RewriteWitness;
 use vyre_foundation::schedule::{ScheduleOp, SchedulePlan, ScheduleResourceBounds, ScheduleTree};
 use vyre_spec::RegionLawFamily;
-#[allow(dead_code)]
+/// The node language these contracts parameterise the e-graph with.
+///
+/// No case constructs one: every contract here drives rule composition,
+/// scheduling and law lookup, which name the language in a signature and never
+/// hold a node. The type carries no variant so that stays true.
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
-enum TestLang {
-    Leaf(u32),
-}
+enum TestLang {}
 
 impl ENodeLang for TestLang {
     fn children(&self) -> EChildren {

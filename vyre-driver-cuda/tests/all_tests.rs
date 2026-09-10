@@ -699,7 +699,7 @@ pub mod unsupported_ir_errors;
 #[path = "vectorized_memory_live_cuda.rs"]
 pub mod vectorized_memory_live_cuda;
 
-/// Integration tests from `tests/external_resource_cuda_contracts.rs` (Row 111).
+/// Integration tests from `tests/external_resource_cuda_contracts.rs`.
 #[path = "external_resource_cuda_contracts.rs"]
 pub mod external_resource_cuda_contracts;
 /// Integration tests from `tests/widening_cast_64_cuda_parity.rs`.
@@ -707,11 +707,11 @@ pub mod external_resource_cuda_contracts;
 #[path = "widening_cast_64_cuda_parity.rs"]
 pub mod widening_cast_64_cuda_parity;
 
-/// Integration tests from `tests/input_abi_contracts.rs` (Row 125).
+/// Integration tests from `tests/input_abi_contracts.rs`.
 #[path = "input_abi_contracts.rs"]
 pub mod input_abi_contracts;
 
-/// Integration tests from `tests/cross_backend_grid_folding_parity.rs` (Row 124).
+/// Integration tests from `tests/cross_backend_grid_folding_parity.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "cross_backend_grid_folding_parity.rs"]
 pub mod cross_backend_grid_folding_parity;

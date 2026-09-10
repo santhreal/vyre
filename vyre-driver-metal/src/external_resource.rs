@@ -1,4 +1,4 @@
-//! Concrete Metal zero-copy external resource import, export, and shared event synchronization (Row 111).
+//! Concrete Metal zero-copy external resource import, export, and shared event synchronization.
 //!
 //! Interactive graphics requires buffers and images to cross compute, rendering, and presentation
 //! boundaries without host copies or implicit global waits.

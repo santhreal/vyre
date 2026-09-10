@@ -30,7 +30,7 @@ pub const MAGIC: &[u8; 4] = b"VYRE";
 /// 2 was never released; versions go 1 to 3 directly.
 /// Rev 7 adds Tile values and tile operation node variants.
 /// Rev 8 adds schedule-free logical identity and synchronization variants.
-/// Rev 9 establishes the closed orthogonal semantic type system and fixed-width output ranges (Row 102).
+/// Rev 9 establishes the closed orthogonal semantic type system and fixed-width output ranges.
 pub const WIRE_FORMAT_VERSION: u16 = 9;
 /// Oldest schema version this decoder reads.
 ///

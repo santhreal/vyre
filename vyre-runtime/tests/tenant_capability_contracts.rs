@@ -1,4 +1,4 @@
-//! Contract tests for Tenant Security & Capability Integration (Row 119).
+//! Contract tests for Tenant Security & Capability Integration.
 
 use std::collections::BTreeSet;
 use vyre_foundation::security::{CapabilityAuthenticator, Permission, SecurityError};

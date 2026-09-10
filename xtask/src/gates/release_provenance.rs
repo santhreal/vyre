@@ -1,4 +1,4 @@
-//! The `release-provenance` gate: dependency and release provenance authority (Row 116).
+//! The `release-provenance` gate: dependency and release provenance authority.
 //!
 //! Holds the workspace lockfile, third-party dependencies, native toolchain inputs,
 //! code generators, benchmark baselines, schemas, and build script contracts to the

@@ -1,13 +1,14 @@
-//! Integration contract proofs for Backlog Row 92:
+//! Integration contract proofs for runtime quota and concurrency:
 //! - Mandatory finite session quotas and runtime-derived prohibition of unbounded constructors.
 //! - Structured concurrency cancellation termination within measured bounds.
 //! - Worker and device quarantine on unreturnable driver calls without abandoning live resources.
-//! - Source-derived enumeration of `unsafe` modules ensuring zero unauthorized unsafe code.
+//! - Agreement between the crate-root record of files permitted to grant
+//!   `unsafe_code` back and the grants present in source.
 //! - Recovery agreement with artifact identity parity.
 
 #![forbid(unsafe_code)]
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -274,7 +275,7 @@ fn runtime_closure_no_public_constructor_produces_unbounded_quota() {
                         || trimmed.contains("pub const fn unbounded")
                     {
                         panic!(
-                            "Found forbidden `unbounded` constructor in {}:{}: `{line}`. Fix: remove unbounded constructor in accordance with Backlog Row 92.",
+                            "Found forbidden `unbounded` constructor in {}:{}: `{line}`. Fix: remove unbounded constructor in accordance with the bounded-channel policy.",
                             path.display(),
                             idx + 1
                         );
@@ -357,76 +358,109 @@ fn unreturnable_driver_call_quarantines_worker_without_abandoning_live_resources
     assert_eq!(quarantine.quarantined_count(), 1);
 }
 
+/// Closes the class "unsafe permission wider than the thing it permits".
+///
+/// The crate root denies `unsafe_code` and records the files allowed to grant
+/// it back. This derives that set from `lib.rs` at run time and compares it
+/// against the grants actually present in the tree, so adding a grant to a new
+/// file is red until the root records it, and dropping the last grant from a
+/// recorded file is red too. It also requires every grant to sit beside a
+/// stated caller obligation: a `SAFETY:` comment for a block or an `unsafe
+/// impl`, a `# Safety` doc section for an `unsafe fn`.
+///
+/// It does not prove an obligation is the correct one, and it does not prove a
+/// block upholds it. Only review does.
 #[test]
-fn runtime_source_derived_unsafe_module_enumeration_and_justification() {
+fn runtime_unsafe_permission_matches_the_recorded_set_and_every_grant_states_an_obligation() {
     let root = vyre_workspace_root();
     let src_dir = root.join("vyre-runtime/src");
 
-    let mut unsafe_files = BTreeMap::new();
+    let lib = fs::read_to_string(src_dir.join("lib.rs")).unwrap();
+    assert!(
+        lib.contains("#![deny(unsafe_code)]"),
+        "vyre-runtime/src/lib.rs must carry `#![deny(unsafe_code)]` so a new `unsafe` block \
+         outside the recorded files is a compile error. Fix: restore the crate-root attribute."
+    );
 
-    fn scan_unsafe(dir: &Path, unsafe_files: &mut BTreeMap<String, Vec<usize>>) {
+    let recorded: BTreeSet<String> = lib
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("// unsafe-permitted:"))
+        .map(|path| path.trim().to_string())
+        .collect();
+    assert!(
+        !recorded.is_empty(),
+        "vyre-runtime/src/lib.rs records no `// unsafe-permitted:` path. Fix: name every file \
+         allowed to grant `unsafe_code` back, one per line, beside the crate-root deny."
+    );
+
+    let mut granted: BTreeSet<String> = BTreeSet::new();
+    let mut unstated: Vec<String> = Vec::new();
+
+    fn scan_unsafe(
+        dir: &Path,
+        src_dir: &Path,
+        granted: &mut BTreeSet<String>,
+        unstated: &mut Vec<String>,
+    ) {
         for entry in fs::read_dir(dir).unwrap() {
             let path = entry.unwrap().path();
             if path.is_dir() {
-                scan_unsafe(&path, unsafe_files);
-            } else if path.extension().is_some_and(|ext| ext == "rs") {
-                let content = fs::read_to_string(&path).unwrap();
-                let mut lines_with_unsafe = Vec::new();
-                let mut in_comment = false;
-                for (idx, line) in content.lines().enumerate() {
-                    let trimmed = line.trim();
-                    if trimmed.starts_with("/*") {
-                        in_comment = true;
-                    }
-                    if in_comment {
-                        if trimmed.contains("*/") {
-                            in_comment = false;
-                        }
-                        continue;
-                    }
-                    if trimmed.starts_with("//") {
-                        continue;
-                    }
-                    if line.contains("unsafe ")
-                        || line.contains("unsafe{")
-                        || line.contains("allow(unsafe_code)")
-                    {
-                        lines_with_unsafe.push(idx + 1);
-                    }
+                scan_unsafe(&path, src_dir, granted, unstated);
+                continue;
+            }
+            if !path.extension().is_some_and(|ext| ext == "rs") {
+                continue;
+            }
+            let content = fs::read_to_string(&path).unwrap();
+            let relative = path
+                .strip_prefix(src_dir)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .replace('\\', "/");
+            let lines: Vec<&str> = content.lines().collect();
+
+            for (idx, line) in lines.iter().enumerate() {
+                let trimmed = line.trim();
+                if trimmed.contains("allow(unsafe_code)") && !trimmed.starts_with("//") {
+                    granted.insert(relative.clone());
                 }
-                if !lines_with_unsafe.is_empty() {
-                    let path_str = path.to_str().unwrap().replace('\\', "/");
-                    unsafe_files.insert(path_str, lines_with_unsafe);
+
+                let is_block = trimmed.contains("unsafe {");
+                let is_item = trimmed.contains("unsafe fn ") || trimmed.contains("unsafe impl ");
+                if trimmed.starts_with("//") || (!is_block && !is_item) {
+                    continue;
+                }
+
+                // A block discharges its obligation in a `SAFETY:` comment; an
+                // `unsafe fn` states the caller's in a `# Safety` doc section.
+                let wants_doc_section = trimmed.contains("unsafe fn ");
+                let stated = lines[..idx].iter().rev().take(24).any(|prior| {
+                    let prior = prior.trim();
+                    prior.contains("SAFETY:")
+                        || (wants_doc_section && prior.starts_with("/// # Safety"))
+                });
+                if !stated {
+                    unstated.push(format!("{relative}:{}", idx + 1));
                 }
             }
         }
     }
 
-    scan_unsafe(&src_dir, &mut unsafe_files);
-
-    // Permitted authoritative unsafe module whitelist with recorded justification
-    let authoritative_unsafe_whitelist: &[(&str, &str)] = &[
-        (
-            "vyre-runtime/src/uring/raw_platform.rs",
-            "Linux kernel io_uring syscalls, mmap, munmap, futex_waitv, and raw buffer pointer abstraction",
-        ),
-    ];
-
-    for (file_path, lines) in &unsafe_files {
-        let is_whitelisted = authoritative_unsafe_whitelist
-            .iter()
-            .any(|(whitelisted, _)| file_path.ends_with(whitelisted));
-
-        assert!(
-            is_whitelisted,
-            "Source file `{file_path}` contains unauthorized `unsafe` code at line(s) {lines:?}! Fix: move all unsafe FFI, mmap, and io_uring operations into `raw_platform.rs` in accordance with Backlog Row 92."
-        );
-    }
+    scan_unsafe(&src_dir, &src_dir, &mut granted, &mut unstated);
 
     assert_eq!(
-        unsafe_files.len(),
-        1,
-        "Exactly 1 module in vyre-runtime may contain unsafe code (`raw_platform.rs`); found: {unsafe_files:?}"
+        granted, recorded,
+        "the files granting `unsafe_code` back disagree with the set recorded at the crate root. \
+         Fix: keep the grant where the unsafe construct is and record it with a \
+         `// unsafe-permitted:` line in vyre-runtime/src/lib.rs, or drop the grant."
+    );
+
+    assert!(
+        unstated.is_empty(),
+        "these `unsafe` constructs state no obligation for their caller: {unstated:?}. Fix: \
+         write a `SAFETY:` comment above the block naming what the caller must uphold, or a \
+         `/// # Safety` doc section on the function."
     );
 }
 

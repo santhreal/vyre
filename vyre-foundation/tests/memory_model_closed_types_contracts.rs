@@ -1,4 +1,4 @@
-//! Closed orthogonal memory model and concurrency contract tests (Row 105).
+//! Closed orthogonal memory model and concurrency contract tests.
 //!
 //! Asserts:
 //! 1. Every closed type variant space is derived from source at run time and verified complete.

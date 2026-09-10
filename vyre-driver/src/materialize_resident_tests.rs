@@ -500,7 +500,7 @@ fn target_descriptor_order_does_not_reorder_program_inputs() {
     assert_eq!(gathered, vec![node_bytes.as_slice(), out_bytes.as_slice()]);
 }
 
-/// WHY: Section 169.5 / Row 174.5 requires proving exact group/slot lookup, bidirectional
+/// WHY: proves exact group/slot lookup, bidirectional
 /// predecessor lineage resolution, and fail-closed missing identities across multi-stage execution.
 #[test]
 fn bidirectional_retained_lineage_and_exact_slot_resolution_fails_closed() {

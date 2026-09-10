@@ -1,4 +1,4 @@
-//! Integration tests for CUDA zero-copy external resource import and synchronization (Row 111).
+//! Integration tests for CUDA zero-copy external resource import and synchronization.
 //!
 //! Acceptance criteria:
 //! 1. Pre-allocation authentication rejects unsupported combinations before any CUDA driver allocation.

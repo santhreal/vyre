@@ -1,4 +1,4 @@
-//! Unforgeable, generation-bound, least-privilege capability handles (Row 119).
+//! Unforgeable, generation-bound, least-privilege capability handles.
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;

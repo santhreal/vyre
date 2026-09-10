@@ -2,7 +2,7 @@
 //!
 //! Proves that the graphics consumer application receives no compiler-internal
 //! special case, passes, or intrinsic bypasses, and compiles strictly through
-//! the public Row 76 facade.
+//! the public facade.
 
 #![forbid(unsafe_code)]
 

@@ -421,7 +421,7 @@ fn test_runtime_derivation_of_row47_required_fields_and_missing_field_detection(
     assert_eq!(
         field_names.len(),
         15,
-        "Row 47 specifies exactly 15 required measurement fields"
+        "a measurement record declares exactly 15 required fields"
     );
 
     let expected_fields: BTreeSet<&'static str> = [

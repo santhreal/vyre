@@ -1,6 +1,6 @@
 //! Tests for typed configuration schema, partition bounds, precedence resolution, and secret redaction.
 //!
-//! WHY: proves Row 123:
+//! WHY: proves the typed configuration schema contract:
 //! - Precedence order (Explicit > CLI > TOML > Environment > Default) is strictly enforced.
 //! - Secret fields are strictly redacted from display, inspection views, diagnostics, and receipts.
 //! - Behavior-affecting and semantic compile inputs alter artifact identity; operational policy, diagnostics, and credentials do not.
