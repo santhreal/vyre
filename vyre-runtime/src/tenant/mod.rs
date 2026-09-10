@@ -39,6 +39,7 @@
 mod counters;
 mod error;
 mod handle;
+mod observe;
 mod quiesce;
 mod quota;
 mod registry;
