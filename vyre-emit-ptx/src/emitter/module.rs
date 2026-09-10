@@ -2,8 +2,8 @@ use std::fmt::Write as _;
 
 use rustc_hash::FxHashSet;
 use vyre_lower::{
-    DescriptorTrapTag, KernelDescriptor, KernelOpKind, MemoryClass, TRAP_SIDECAR_NAME,
-    TRAP_SIDECAR_WORDS,
+    BindingVisibility, DescriptorTrapTag, KernelDescriptor, KernelOpKind, MemoryClass,
+    TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
 
 use super::param_identifier::sanitize_param_name;
@@ -31,6 +31,35 @@ pub(super) fn descriptor_grid_sync_barrier_count(desc: &KernelDescriptor) -> u32
         .count()
         .try_into()
         .unwrap_or(u32::MAX)
+}
+
+/// Binding slots whose loads may take the read-only data cache.
+///
+/// Eligibility is the declaration, not a load-count heuristic:
+/// `BindingVisibility::ReadOnly` states that the kernel does not write the
+/// slot, and `ld.global.nc` is never slower than `ld.global` for a slot that
+/// satisfies it. The three global-resident classes all lower to the `global`
+/// address space here (this backend has no `.const` state-space path;
+/// `MemoryClass::Constant` pointers reach the body through `cvta.to.global`),
+/// so all three are eligible and only shared and scratch memory are not.
+///
+/// The other half of the promise is enforced where it can be broken: a store
+/// to one of these slots is refused at emission, and a dispatch that binds one
+/// allocation to a read-only slot and to a writable slot is refused by
+/// `vyre_driver::ReadOnlyAliasCheck`.
+pub(super) fn read_only_cache_slots(desc: &KernelDescriptor) -> FxHashSet<u32> {
+    desc.bindings
+        .slots
+        .iter()
+        .filter(|binding| {
+            matches!(binding.visibility, BindingVisibility::ReadOnly)
+                && matches!(
+                    binding.memory_class,
+                    MemoryClass::Global | MemoryClass::Constant | MemoryClass::Uniform
+                )
+        })
+        .map(|binding| binding.slot)
+        .collect()
 }
 
 pub(super) struct ModuleBuilder {
@@ -158,11 +187,7 @@ impl ModuleBuilder {
         self.text.push_str("    .param .u64 params_buf");
         self.text.push_str("\n) {\n");
 
-        let read_only_cache_slots = vyre_lower::analyses::analyze_texture_promote(desc)
-            .candidates
-            .into_iter()
-            .map(|candidate| candidate.binding_slot)
-            .collect::<FxHashSet<_>>();
+        let read_only_cache_slots = read_only_cache_slots(desc);
         let mut body_ctx = BodyCtx::new(
             desc,
             &desc.bindings,

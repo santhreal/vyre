@@ -194,6 +194,7 @@ impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_driver::Suppor
 impl<'a> vyre_driver::ExtractionDevice<'a>
 impl<'a> vyre_driver::PeerTransferPlanner<'a>
 impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::Target
+impl<'name> vyre_driver::read_only_alias::ReadOnlyAliasCheck<'name>
 impl<A: vyre_driver::EnforceGate, B: vyre_driver::EnforceGate> vyre_driver::Chain<A, B>
 impl<A: vyre_driver::EnforceGate, B: vyre_driver::EnforceGate> vyre_driver::EnforceGate for vyre_driver::Chain<A, B>
 impl<K, S> core::default::Default for vyre_driver::reservation_policy::ReusableIndexScratch<K, S> where S: core::default::Default
@@ -901,6 +902,7 @@ pub fn vyre_driver::materialize::ExecutableModule::config(&self) -> &vyre_driver
 pub fn vyre_driver::materialize::ExecutableModule::program(&self) -> &vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_driver::materialize::InstanceCore::absorb_outputs(&self, plan: &vyre_driver::BindingPlan, program: &vyre_foundation::ir_inner::model::program::definition::Program, produced: alloc::vec::Vec<alloc::vec::Vec<u8>>, state: &mut alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>, missing: impl core::ops::function::Fn(usize, &str) -> vyre_driver::BackendError) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::materialize::InstanceCore::absorb_outputs_for_module(&self, module_index: usize, plan: &vyre_driver::BindingPlan, program: &vyre_foundation::ir_inner::model::program::definition::Program, produced: alloc::vec::Vec<alloc::vec::Vec<u8>>, state: &mut alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>, missing: impl core::ops::function::Fn(usize, &str) -> vyre_driver::BackendError) -> core::result::Result<(), vyre_driver::BackendError>
+pub fn vyre_driver::materialize::InstanceCore::absorbed_value_for_module_binding(&self, module_index: usize, binding: &vyre_driver::Binding) -> core::result::Result<vyre_megakernel::identity::ArtifactValueId, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::InstanceCore::accept(&self, bindings: &vyre_driver::BindingSet) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::materialize::InstanceCore::completion(&self, state: &alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>, device_ns: core::option::Option<u64>) -> core::result::Result<vyre_driver::Completion, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::InstanceCore::completion_with(&self, state: &alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>, device_ns: core::option::Option<u64>, messages: &vyre_driver::materialize::InstanceMessages) -> core::result::Result<vyre_driver::Completion, vyre_driver::BackendError>
@@ -1099,6 +1101,8 @@ pub fn vyre_driver::pipeline_fusion::decide_cross_pipeline_fusion(earlier: &vyre
 pub fn vyre_driver::program_vsa_fingerprint(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> alloc::vec::Vec<u32>
 pub fn vyre_driver::program_vsa_fingerprint_words(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> [u32; 8]
 pub fn vyre_driver::push_lower_hex(bytes: &[u8], out: &mut alloc::string::String)
+pub fn vyre_driver::read_only_alias::ReadOnlyAliasCheck<'name>::new() -> Self
+pub fn vyre_driver::read_only_alias::ReadOnlyAliasCheck<'name>::observe(&mut self, name: &'name str, access: vyre_spec::buffer_access::BufferAccess, handle: core::option::Option<vyre_driver::ResidentHandle>) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::record_launch_measurement(program: &vyre_foundation::ir_inner::model::program::definition::Program, config: &vyre_driver::DispatchConfig, limits: vyre_driver::validation::LaunchGeometryLimits, element_count: u32, observed_workgroup: [u32; 3], elapsed_ns: u64) -> bool
 pub fn vyre_driver::record_speculative_variant_race(store: &mut vyre_driver::autotune_store::AutotuneStore, keys: vyre_driver::SpeculativeVariantKeys<'_>, race: vyre_driver::SpeculativeVariantRace) -> vyre_driver::SpeculativeVariantDecision
 pub fn vyre_driver::reduction_offsets(subgroup_size: u32) -> alloc::vec::Vec<u32>
@@ -1292,6 +1296,7 @@ pub mod vyre_driver::parity_harness
 pub mod vyre_driver::persistent
 pub mod vyre_driver::pgo
 pub mod vyre_driver::pipeline_fusion
+pub mod vyre_driver::read_only_alias
 pub mod vyre_driver::reservation_policy
 pub mod vyre_driver::resident_transfer_fixtures
 pub mod vyre_driver::resident_transfer_fusion
@@ -1358,6 +1363,7 @@ pub struct vyre_driver::PipelineCacheSnapshot
 pub struct vyre_driver::PipelineDeviceFingerprint
 pub struct vyre_driver::PipelineFeatureFlags(pub u32)
 pub struct vyre_driver::ProductionPathFact
+pub struct vyre_driver::ReadOnlyAliasCheck<'name>
 pub struct vyre_driver::RegexAcceleratorCapability
 pub struct vyre_driver::RegexAcceleratorEvidence
 pub struct vyre_driver::ResidentDispatchStep<'a>
@@ -1461,6 +1467,7 @@ pub struct vyre_driver::persistent::RingAtomics
 pub struct vyre_driver::pgo::BackendLatency
 pub struct vyre_driver::pgo::PgoTable
 pub struct vyre_driver::pgo::RouteDecision
+pub struct vyre_driver::read_only_alias::ReadOnlyAliasCheck<'name>
 pub struct vyre_driver::reservation_policy::ReservationPolicy
 pub struct vyre_driver::reservation_policy::ReusableIndexScratch<K, S>
 pub struct vyre_driver::resident_transfer_fixtures::UploadRequest

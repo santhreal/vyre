@@ -279,6 +279,10 @@ pub mod persistent_contracts;
 #[path = "pipeline_fusion_contracts.rs"]
 pub mod pipeline_fusion_contracts;
 
+/// Integration tests from `tests/read_only_alias_contracts.rs`.
+#[path = "read_only_alias_contracts.rs"]
+pub mod read_only_alias_contracts;
+
 /// Integration tests from `tests/reference_oracle_loses_to_a_device.rs`.
 #[path = "reference_oracle_loses_to_a_device.rs"]
 pub mod reference_oracle_loses_to_a_device;

@@ -101,6 +101,9 @@ impl BodyCtx<'_> {
             );
             return self.bind_result(op, result_reg);
         }
+        // Reached only for an atomic that writes: the identity form above
+        // returns after emitting a load.
+        self.reject_store_to_read_only_slot(binding_slot, "a read-modify-write atomic")?;
         let _ = writeln!(
             self.text,
             "    @{in_bounds} atom.{space}.{mnemonic}.{type_suffix}    {result_reg}, [{addr}], {value_reg};"
@@ -271,6 +274,7 @@ impl BodyCtx<'_> {
             .operands
             .get(3)
             .ok_or_else(|| EmitError::InvalidDescriptor("AtomicCAS missing new value".into()))?;
+        self.reject_store_to_read_only_slot(binding_slot, "a compare-and-swap atomic")?;
         let binding = self.binding_for_slot(binding_slot)?;
         let element_type = binding.element_type.clone();
         let memory_class = binding.memory_class;

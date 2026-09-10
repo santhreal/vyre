@@ -117,6 +117,8 @@ pub(crate) mod pipeline;
 /// reads/writes can fuse into one launch with a workgroup-bounded
 /// fence instead of a full grid-sync.
 pub mod pipeline_fusion;
+/// The dispatch-boundary rule that makes a read-only binding declaration true.
+pub mod read_only_alias;
 /// Read-only semantic operation projections, migrations, and policy.
 pub(crate) mod registry;
 /// Backend-neutral reservation policy adapters.
@@ -315,6 +317,7 @@ pub use program_walks::{
     IndirectDispatch, OutputBindingLayout, OutputLayout, TailMaskPolicy,
 };
 pub use program_walks::{auto_grid, enforce_output_budget, output_binding_layouts_into};
+pub use read_only_alias::ReadOnlyAliasCheck;
 pub use registry::DEPRECATED_OP_CODE;
 pub use registry::{
     deprecation_diagnostic, AttrMap, AttrValue, Deprecation, Migration, MigrationError,

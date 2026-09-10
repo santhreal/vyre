@@ -134,7 +134,7 @@ impl BodyCtx<'_> {
                 )?;
                 let guard =
                     self.store_guard_for_index(binding_slot, index_op_id, memory_class, None)?;
-                self.emit_store_value(guard, address, &element_type, value_reg)?;
+                self.emit_store_value(binding_slot, guard, address, &element_type, value_reg)?;
             }
             VectorLoadGlobal { width } => {
                 let (binding_slot, index_op_id) = read_two_operands(op, "VectorLoadGlobal")?;
@@ -154,13 +154,12 @@ impl BodyCtx<'_> {
                 for _ in 0..*width {
                     regs.push(self.alloc(vector_ty));
                 }
-                let (mnemonic_prefix, cache_suffix) = if load_space == ".global"
-                    && self.read_only_cache_slots.contains(&binding_slot)
-                {
-                    ("ld.global", ".nc")
-                } else {
-                    ("ld.global", "")
-                };
+                let (mnemonic_prefix, cache_suffix) =
+                    super::vector::vector_load_mnemonic_parts(load_space).ok_or_else(|| {
+                        EmitError::InvalidDescriptor(format!(
+                            "unsupported PTX vector load space `{load_space}` for VectorLoadGlobal"
+                        ))
+                    })?;
                 let _ = write!(
                     self.text,
                     "    {mnemonic_prefix}{cache_suffix}.v{}.{}    ",
@@ -194,6 +193,7 @@ impl BodyCtx<'_> {
                     EmitError::InvalidDescriptor("VectorStoreGlobal missing index".into())
                 })?;
                 let binding = self.binding_for_slot(binding_slot)?;
+                self.reject_store_to_read_only_slot(binding_slot, "VectorStoreGlobal")?;
                 let element_type = binding.element_type.clone();
                 let elem_ty = PtxType::from_dtype(&element_type)?;
                 let vector_ty = match (element_type.min_bytes(), elem_ty) {

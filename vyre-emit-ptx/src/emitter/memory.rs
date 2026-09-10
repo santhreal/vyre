@@ -103,13 +103,41 @@ impl BodyCtx<'_> {
         }
     }
 
+    /// Refuse a write to a slot whose loads take the read-only data cache.
+    ///
+    /// `ld.global.nc` reads a cache that is not coherent with stores issued by
+    /// the same kernel, so a slot that is both loaded through it and stored to
+    /// returns stale data with no diagnostic. The slot set is exactly the
+    /// `BindingVisibility::ReadOnly` declarations, so reaching this refusal
+    /// means the descriptor stores through a binding it declared read-only.
+    ///
+    /// Every store this backend emits passes through here, the vector-store
+    /// paths, or the atomic path; there is no fourth store emitter.
+    pub(super) fn reject_store_to_read_only_slot(
+        &self,
+        binding_slot: u32,
+        op: &'static str,
+    ) -> Result<(), EmitError> {
+        if !self.read_only_cache_slots.contains(&binding_slot) {
+            return Ok(());
+        }
+        Err(EmitError::InvalidBinding {
+            slot: binding_slot,
+            reason: format!(
+                "{op} writes a binding declared read-only, whose loads are emitted as ld.global.nc against a cache that is not coherent with this kernel's stores. Fix: declare the binding BufferAccess::ReadWrite, or write through a separate binding."
+            ),
+        })
+    }
+
     pub(super) fn emit_store_value(
         &mut self,
+        binding_slot: u32,
         guard: Option<(String, Reg)>,
         address: MemAddress,
         element_type: &DataType,
         value_reg: Reg,
     ) -> Result<(), EmitError> {
+        self.reject_store_to_read_only_slot(binding_slot, "a store")?;
         match element_type {
             DataType::U8 | DataType::I8 => self.emit_raw_store(guard, address, "u8", value_reg),
             DataType::U16 | DataType::I16 => self.emit_raw_store(guard, address, "u16", value_reg),

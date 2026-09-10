@@ -60,8 +60,8 @@ fn vectorized_dynamic_affine_sparse_scatter_emits_packed_v4_ptx_and_matches_refe
     let ptx = vyre_driver_cuda::codegen::program_to_ptx(&program, &DispatchConfig::default())
         .expect("Fix: CUDA PTX emission must support dynamic affine sparse scatter vectorization.");
     assert!(
-        ptx.contains("ld.global.v4.u32") || ptx.contains("ld.global.nc.v4.u32"),
-        "Fix: dynamic affine sparse scatter input must emit a packed v4 global load.\n{ptx}"
+        ptx.contains("ld.global.nc.v4.u32"),
+        "Fix: a dynamic affine sparse scatter must load its read-only input as one packed v4 read-only-cache global load.\n{ptx}"
     );
     assert!(
         !ptx.contains("st.global.v2.u32") && !ptx.contains("st.global.v4.u32"),

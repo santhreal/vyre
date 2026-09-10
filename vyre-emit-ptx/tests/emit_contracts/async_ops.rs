@@ -35,7 +35,10 @@ fn async_load_emits_bounded_sync_copy() {
     let s = emit_with_target(&kernel, ComputeCapability::SM_70).unwrap();
     assert!(s.contains("// async_load tag=tile0"));
     assert!(s.contains(".shared .align 4 .b8 shared_buf_1[256];"));
-    assert!(s.contains("ld.global.u32"));
+    assert!(
+        s.contains("ld.global.nc.u32"),
+        "Fix: `src` is declared read-only, so the synchronous fallback reads it through the read-only data cache. PTX:\n{s}"
+    );
     assert!(s.contains("st.shared.u32"));
     assert!(
         s.contains("%tid.x") && s.contains("setp.ne.u32"),
