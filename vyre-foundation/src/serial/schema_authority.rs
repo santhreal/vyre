@@ -10,7 +10,6 @@
 //! 4. Platform-independent signed payload digest algorithms ([`CanonicalDigest`]).
 //! 5. Cross-language JSON schema generation and export ([`export_schema_json`]).
 
-use std::fmt;
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use thiserror::Error;
@@ -54,38 +53,17 @@ impl SchemaId {
     }
 }
 
-/// Canonical semantic schema version (Major.Minor.Patch).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct CanonicalSchemaVersion {
-    /// Breaking format modifications.
-    pub major: u32,
-    /// Non-breaking additive extensions.
-    pub minor: u32,
-    /// Bug fixes or non-structural adjustments.
-    pub patch: u32,
+vyre_spec::semver_triple! {
+    /// Canonical semantic schema version (Major.Minor.Patch).
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+    pub struct CanonicalSchemaVersion;
 }
 
 impl CanonicalSchemaVersion {
-    /// Construct a canonical version.
-    #[must_use]
-    pub const fn new(major: u32, minor: u32, patch: u32) -> Self {
-        Self {
-            major,
-            minor,
-            patch,
-        }
-    }
-
     /// True if `self` can read data encoded by `encoded_version`.
     #[must_use]
     pub const fn is_compatible_with(&self, encoded_version: &Self) -> bool {
         self.major == encoded_version.major && self.minor >= encoded_version.minor
-    }
-}
-
-impl fmt::Display for CanonicalSchemaVersion {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
     }
 }
 

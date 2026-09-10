@@ -83,6 +83,71 @@ pub mod operation {
     inventory::collect!(ConformanceProvider);
 }
 
+/// The accepted metadata strings the pass attribute maps onto variant names.
+///
+/// Each axis is one table pairing an accepted string with the variant it
+/// names, the fixture pass that declares that string, and that pass's name.
+/// The stub enum below, the coverage passes in `tests/pass_matrix.rs`, and the
+/// assertion over them expand from these rows, so one row is the only place a
+/// string and a variant are paired. `src/pass/mod.rs` owns the accepted set: a
+/// value added there and not here leaves the stub without the variant, which
+/// turns the `tests/ui/bad_pass_phase.stderr` accepted list red.
+#[macro_export]
+macro_rules! pass_axis_rows {
+    (phase, $emit:ident) => {
+        $emit! { PassPhase, phase,
+            "unclassified" => Unclassified as PhaseUnclassified named "phase.unclassified",
+            "canonicalization" => Canonicalization as PhaseCanonicalization named "phase.canonicalization",
+            "scalar_algebra" => ScalarAlgebra as PhaseScalarAlgebra named "phase.scalar_algebra",
+            "loop" => Loop as PhaseLoop named "phase.loop",
+            "memory" => Memory as PhaseMemory named "phase.memory",
+            "fusion_cse" => FusionCse as PhaseFusionCse named "phase.fusion_cse",
+            "sync" => Sync as PhaseSync named "phase.sync",
+            "specialization" => Specialization as PhaseSpecialization named "phase.specialization",
+            "cleanup" => Cleanup as PhaseCleanup named "phase.cleanup",
+            "dataflow" => Dataflow as PhaseDataflow named "phase.dataflow",
+            "megakernel" => Megakernel as PhaseMegakernel named "phase.megakernel",
+        }
+    };
+    (boundary_class, $emit:ident) => {
+        $emit! { PassBoundaryClass, boundary_class,
+            "unknown" => Unknown as BoundaryUnknown named "boundary.unknown",
+            "abi_preserving" => AbiPreserving as BoundaryAbiPreserving named "boundary.abi_preserving",
+            "abi_changing" => AbiChanging as BoundaryAbiChanging named "boundary.abi_changing",
+            "backend_aware" => BackendAware as BoundaryBackendAware named "boundary.backend_aware",
+            "runtime_aware" => RuntimeAware as BoundaryRuntimeAware named "boundary.runtime_aware",
+            "domain_specific" => DomainSpecific as BoundaryDomainSpecific named "boundary.domain_specific",
+        }
+    };
+    (cost_model_family, $emit:ident) => {
+        $emit! { CostModelFamily, cost_model_family,
+            "unknown" => Unknown as CostUnknown named "cost.unknown",
+            "scalar" => Scalar as CostScalar named "cost.scalar",
+            "loop" => Loop as CostLoop named "cost.loop",
+            "memory" => Memory as CostMemory named "cost.memory",
+            "fusion" => Fusion as CostFusion named "cost.fusion",
+            "sync" => Sync as CostSync named "cost.sync",
+            "dataflow" => Dataflow as CostDataflow named "cost.dataflow",
+            "megakernel" => Megakernel as CostMegakernel named "cost.megakernel",
+        }
+    };
+}
+
+/// Declares one stub axis enum from its row table. The variant doc is the
+/// accepted string that selects it.
+#[macro_export]
+macro_rules! declare_pass_axis_enum {
+    (
+        $enum_name:ident, $argument:ident,
+        $($accepted:literal => $variant:ident as $fixture:ident named $pass_name:literal,)+
+    ) => {
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+        pub enum $enum_name {
+            $(#[doc = $accepted] $variant,)+
+        }
+    };
+}
+
 /// The `::vyre::optimizer` paths an expansion names.
 pub mod optimizer {
     use super::ir::Program;
@@ -109,71 +174,9 @@ pub mod optimizer {
         pub cost_model_family: CostModelFamily,
     }
 
-    /// Pipeline phase, mirroring the real enum's variant names because the
-    /// attribute writes one of them into every expansion.
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub enum PassPhase {
-        /// No phase declared.
-        Unclassified,
-        /// Normalizes IR shape.
-        Canonicalization,
-        /// Rewrites scalar arithmetic.
-        ScalarAlgebra,
-        /// Rewrites loop structure.
-        Loop,
-        /// Rewrites memory access.
-        Memory,
-        /// Fuses nodes and eliminates common subexpressions.
-        FusionCse,
-        /// Places synchronization.
-        Sync,
-        /// Specializes against known facts.
-        Specialization,
-        /// Removes what earlier phases left.
-        Cleanup,
-        /// Rewrites dataflow structure.
-        Dataflow,
-        /// Builds the megakernel schedule.
-        Megakernel,
-    }
-
-    /// What a pass may change across a boundary.
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub enum PassBoundaryClass {
-        /// No class declared.
-        Unknown,
-        /// Leaves the buffer ABI intact.
-        AbiPreserving,
-        /// Changes the buffer ABI.
-        AbiChanging,
-        /// Reads backend facts.
-        BackendAware,
-        /// Reads runtime facts.
-        RuntimeAware,
-        /// Holds only for one domain.
-        DomainSpecific,
-    }
-
-    /// Which cost model ranks a pass.
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub enum CostModelFamily {
-        /// No family declared.
-        Unknown,
-        /// Scalar arithmetic cost.
-        Scalar,
-        /// Loop trip-count cost.
-        Loop,
-        /// Memory traffic cost.
-        Memory,
-        /// Fusion cost.
-        Fusion,
-        /// Synchronization cost.
-        Sync,
-        /// Dataflow cost.
-        Dataflow,
-        /// Megakernel schedule cost.
-        Megakernel,
-    }
+    pass_axis_rows!(phase, declare_pass_axis_enum);
+    pass_axis_rows!(boundary_class, declare_pass_axis_enum);
+    pass_axis_rows!(cost_model_family, declare_pass_axis_enum);
 
     /// Device facts a pass may compile against. The macro names this type in
     /// every expansion, so the stub carries the fields the generated code and

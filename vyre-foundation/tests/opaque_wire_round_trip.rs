@@ -140,34 +140,14 @@ fn opaque_node_survives_optimizer_rewrite() {
 
 #[test]
 fn unregistered_opaque_kind_fails_loudly() {
-    #[derive(Debug)]
-    struct UnregisteredExprExt;
-    impl ExprNode for UnregisteredExprExt {
-        fn extension_kind(&self) -> &'static str {
-            "test.extension.unregistered"
-        }
-        fn debug_identity(&self) -> &str {
-            "unregistered"
-        }
-        fn result_type(&self) -> Option<DataType> {
-            None
-        }
-        fn cse_safe(&self) -> bool {
-            true
-        }
-        fn stable_fingerprint(&self) -> [u8; 32] {
-            [0; 32]
-        }
-        fn validate_extension(&self) -> Result<(), String> {
-            Ok(())
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
-        fn wire_payload(&self) -> Vec<u8> {
-            Vec::new()
-        }
-    }
+    vyre_test_support::test_expr_extension!(
+        UnregisteredExprExt,
+        kind: "test.extension.unregistered",
+        identity: "unregistered",
+        result_type: None,
+        cse_safe: true,
+        fingerprint: 0,
+    );
 
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],

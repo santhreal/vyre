@@ -196,35 +196,13 @@ impl core::fmt::Display for ExtensionNamespace {
     }
 }
 
-/// Semantic version for an extension schema.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
-)]
-pub struct ExtensionSemVer {
-    /// Major version.
-    pub major: u32,
-    /// Minor version.
-    pub minor: u32,
-    /// Patch version.
-    pub patch: u32,
-}
-
-impl ExtensionSemVer {
-    /// Construct a new semantic version.
-    #[must_use]
-    pub const fn new(major: u32, minor: u32, patch: u32) -> Self {
-        Self {
-            major,
-            minor,
-            patch,
-        }
-    }
-}
-
-impl core::fmt::Display for ExtensionSemVer {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
-    }
+crate::semver_triple! {
+    /// Semantic version for an extension schema.
+    #[derive(
+        Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize,
+        serde::Deserialize,
+    )]
+    pub struct ExtensionSemVer;
 }
 
 /// 256-bit cryptographic digest over a canonical extension schema definition.
@@ -627,6 +605,29 @@ pub struct ExtensionProofFields {
     pub target_capability: String,
 }
 
+impl ExtensionProofFields {
+    /// Proof fields for an extension that is host-shareable, pure,
+    /// CSE-eligible, uniform, non-aliasing, and bounded, requiring
+    /// `target_capability`.
+    ///
+    /// Every field is stated here rather than defaulted, so this is one named
+    /// decision and not a permissive default: an extension that diverges,
+    /// aliases, or may not terminate cannot be described by it and states its
+    /// own fields.
+    #[must_use]
+    pub fn pure_terminating(target_capability: impl Into<String>) -> Self {
+        Self {
+            host_shareable: true,
+            is_pure: true,
+            cse_eligible: true,
+            is_divergent: false,
+            may_alias: false,
+            terminates: true,
+            target_capability: target_capability.into(),
+        }
+    }
+}
+
 /// Exhaustive enumeration of all required proof fields on an extension schema.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
@@ -714,15 +715,7 @@ mod tests {
 
         let ns_a = ExtensionNamespace::new(name_a).expect("valid namespace");
         let ver = ExtensionSemVer::new(1, 0, 0);
-        let proof = ExtensionProofFields {
-            host_shareable: true,
-            is_pure: true,
-            cse_eligible: true,
-            is_divergent: false,
-            may_alias: false,
-            terminates: true,
-            target_capability: "generic".into(),
-        };
+        let proof = ExtensionProofFields::pure_terminating("generic");
         let digest = ExtensionSchema::compute_digest(name_a, &ver, &[], &[], &[], &proof);
         let identity = ExtensionIdentity::new(ns_a, ver, digest);
         assert!(!identity.to_canonical_string().is_empty());

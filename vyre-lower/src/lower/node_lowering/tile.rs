@@ -3,7 +3,7 @@
 use crate::descriptor::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 use crate::error::LowerError;
 use vyre_foundation::ir::{
-    BinOp, DataType, Expr, Ident, Layout, Node, Residency, SubgroupReduceOp, Tile,
+    row_major_coords, BinOp, DataType, Expr, Ident, Layout, Node, Residency, SubgroupReduceOp, Tile,
 };
 
 use crate::lower::scope::TileBinding;
@@ -431,13 +431,7 @@ impl LowerCtx {
             }
         } else {
             for idx in 0..total_elements {
-                let mut coords = Vec::with_capacity(tile_type.extents.len());
-                let mut temp = idx as u32;
-                for &extent in tile_type.extents.iter().rev() {
-                    coords.push(temp % extent);
-                    temp /= extent;
-                }
-                coords.reverse();
+                let coords = row_major_coords(idx as u32, &tile_type.extents);
 
                 let mut sum_id: Option<u32> = None;
                 for (i, &coord_c) in coords.iter().enumerate() {

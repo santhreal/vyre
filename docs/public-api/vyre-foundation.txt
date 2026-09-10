@@ -226,7 +226,9 @@ impl core::hash::Hash for vyre_foundation::region_ssa::ScalarLiteral
 impl core::ops::bit::BitOr for vyre_foundation::lower::ProgramEffects
 impl core::ops::bit::BitOrAssign for vyre_foundation::lower::ProgramEffects
 impl core::ops::deref::Deref for vyre_foundation::ir::Ident
+impl core::ops::deref::Deref for vyre_foundation::ir::ProgramGraphBuilder
 impl core::ops::deref::Deref for vyre_foundation::security::SanitizedBuffer
+impl core::ops::deref::DerefMut for vyre_foundation::ir::ProgramGraphBuilder
 impl core::ops::deref::DerefMut for vyre_foundation::security::SanitizedBuffer
 impl core::ops::drop::Drop for vyre_foundation::perf::SpanGuard
 impl core::ops::drop::Drop for vyre_foundation::platform::ScratchDir
@@ -2093,15 +2095,10 @@ pub fn vyre_foundation::ir::ProgramGraph::schedule(&self) -> alloc::vec::Vec<vyr
 pub fn vyre_foundation::ir::ProgramGraph::structural_sharing_metrics(&self) -> vyre_foundation::ir::ProgramGraphSharingMetrics
 pub fn vyre_foundation::ir::ProgramGraph::to_wire(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::ir::ProgramGraphError>
 pub fn vyre_foundation::ir::ProgramGraph::values(&self) -> &[vyre_foundation::ir::ProgramGraphValue]
-pub fn vyre_foundation::ir::ProgramGraphBuilder::add_bounded_loop(&mut self, name_prefix: &str, body: &vyre_foundation::ir::ProgramGraph, loop_carried_inputs: &[vyre_foundation::ir::GraphValueId], step_inputs: &[vyre_foundation::ir::GraphValueId], bounds: vyre_foundation::ir::ControlBounds) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir::GraphValueId>, vyre_foundation::ir::ProgramGraphError>
-pub fn vyre_foundation::ir::ProgramGraphBuilder::add_conditional_branch(&mut self, name_prefix: &str, condition: vyre_foundation::ir::GraphValueId, then_graph: &vyre_foundation::ir::ProgramGraph, else_graph: &vyre_foundation::ir::ProgramGraph, inputs: &[vyre_foundation::ir::GraphValueId]) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir::GraphValueId>, vyre_foundation::ir::ProgramGraphError>
-pub fn vyre_foundation::ir::ProgramGraphBuilder::add_effect_barrier(&mut self, name: impl core::convert::Into<alloc::string::String>, effect: vyre_foundation::ir::ExternalEffect, inputs: alloc::vec::Vec<vyre_foundation::ir::GraphInput>, outputs: alloc::vec::Vec<vyre_foundation::ir::GraphOutput>) -> core::result::Result<(vyre_foundation::ir::GraphNodeId, alloc::vec::Vec<vyre_foundation::ir::GraphValueId>), vyre_foundation::ir::ProgramGraphError>
-pub fn vyre_foundation::ir::ProgramGraphBuilder::add_node(&mut self, name: impl core::convert::Into<alloc::string::String>, program: vyre_foundation::ir::Program, inputs: alloc::vec::Vec<vyre_foundation::ir::GraphInput>, outputs: alloc::vec::Vec<vyre_foundation::ir::GraphOutput>) -> core::result::Result<(vyre_foundation::ir::GraphNodeId, alloc::vec::Vec<vyre_foundation::ir::GraphValueId>), vyre_foundation::ir::ProgramGraphError>
-pub fn vyre_foundation::ir::ProgramGraphBuilder::add_registered_operation(&mut self, name: impl core::convert::Into<alloc::string::String>, program: vyre_foundation::ir::Program, inputs: alloc::vec::Vec<vyre_foundation::ir::GraphInput>, outputs: alloc::vec::Vec<vyre_foundation::ir::GraphOutput>) -> core::result::Result<(vyre_foundation::ir::GraphNodeId, alloc::vec::Vec<vyre_foundation::ir::GraphValueId>), vyre_foundation::ir::ProgramGraphError>
 pub fn vyre_foundation::ir::ProgramGraphBuilder::build(self) -> core::result::Result<vyre_foundation::ir::ProgramGraph, vyre_foundation::ir::ProgramGraphError>
 pub fn vyre_foundation::ir::ProgramGraphBuilder::constant(&mut self, name: impl core::convert::Into<alloc::string::String>, dtype: vyre_spec::data_type::DataType, shape: alloc::vec::Vec<vyre_foundation::ir::ShapeDim>) -> core::result::Result<vyre_foundation::ir::GraphValueId, vyre_foundation::ir::ProgramGraphError>
-pub fn vyre_foundation::ir::ProgramGraphBuilder::finish(self) -> core::result::Result<vyre_foundation::ir::ProgramGraph, vyre_foundation::ir::ProgramGraphError>
-pub fn vyre_foundation::ir::ProgramGraphBuilder::inline_subgraph(&mut self, name_prefix: &str, subgraph: &vyre_foundation::ir::ProgramGraph, input_mapping: &alloc::collections::btree::map::BTreeMap<vyre_foundation::ir::GraphValueId, vyre_foundation::ir::GraphValueId>) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir::GraphValueId>, vyre_foundation::ir::ProgramGraphError>
+pub fn vyre_foundation::ir::ProgramGraphBuilder::deref(&self) -> &Self::Target
+pub fn vyre_foundation::ir::ProgramGraphBuilder::deref_mut(&mut self) -> &mut Self::Target
 pub fn vyre_foundation::ir::ProgramGraphBuilder::input(&mut self, name: impl core::convert::Into<alloc::string::String>, dtype: vyre_spec::data_type::DataType, shape: alloc::vec::Vec<vyre_foundation::ir::ShapeDim>) -> core::result::Result<vyre_foundation::ir::GraphValueId, vyre_foundation::ir::ProgramGraphError>
 pub fn vyre_foundation::ir::ProgramGraphBuilder::new() -> Self
 pub fn vyre_foundation::ir::ProgramGraphBuilder::retained_state(&mut self, name: impl core::convert::Into<alloc::string::String>, dtype: vyre_spec::data_type::DataType, shape: alloc::vec::Vec<vyre_foundation::ir::ShapeDim>) -> core::result::Result<vyre_foundation::ir::GraphValueId, vyre_foundation::ir::ProgramGraphError>
@@ -2160,6 +2157,7 @@ pub fn vyre_foundation::ir::eval::fold_unary_literal(op: &vyre_spec::un_op::UnOp
 pub fn vyre_foundation::ir::expr_variant_name(item: &vyre_foundation::ir::Expr) -> &'static str
 pub fn vyre_foundation::ir::node_op_id(node: &vyre_foundation::ir::Node) -> &'static str
 pub fn vyre_foundation::ir::node_variant_name(item: &vyre_foundation::ir::Node) -> &'static str
+pub fn vyre_foundation::ir::row_major_coords(index: u32, extents: &[u32]) -> alloc::vec::Vec<u32>
 pub fn vyre_foundation::ir::verify_program_obligations(program: &vyre_foundation::ir::Program) -> core::result::Result<(), vyre_foundation::ir::ObligationError>
 pub fn vyre_foundation::launch_covers_full_input_span(program: &vyre_foundation::ir::Program) -> bool
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::canonical_region_count(&self) -> usize
@@ -4103,6 +4101,9 @@ pub fn vyre_foundation::visit::walk_nodes_mut(program: &mut vyre_foundation::ir:
 pub macro vyre_foundation::declare_operation!
 pub macro vyre_foundation::define_dialect!
 pub macro vyre_foundation::diagnostic_conversions!
+pub macro vyre_foundation::node_visitor_arm!
+pub macro vyre_foundation::node_visitor_uniform_arm!
+pub macro vyre_foundation::node_visitor_uniform_arms!
 pub macro vyre_foundation::rewrite_rules!
 pub mod vyre_foundation
 pub mod vyre_foundation::algebraic_law_registry
@@ -4773,6 +4774,7 @@ pub type vyre_foundation::extension::ExprExtensionDeserializer = fn(&[u8]) -> co
 pub type vyre_foundation::extension::NodeExtensionDeserializer = fn(&[u8]) -> core::result::Result<alloc::sync::Arc<dyn vyre_foundation::ir::NodeExtension>, alloc::string::String>
 pub type vyre_foundation::ir::Ident::Target = str
 pub type vyre_foundation::ir::OpId = alloc::sync::Arc<str>
+pub type vyre_foundation::ir::ProgramGraphBuilder::Target = vyre_foundation::ir::ProgramGraph
 pub type vyre_foundation::lower::ProgramEffects::Output = vyre_foundation::lower::ProgramEffects
 pub type vyre_foundation::operation::OperationContractBuilder = fn() -> vyre_spec::op_contract::SemanticContractRecord
 pub type vyre_foundation::operation::OperationFixtures = fn() -> alloc::vec::Vec<alloc::vec::Vec<alloc::vec::Vec<u8>>>

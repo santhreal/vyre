@@ -1,18 +1,19 @@
 //! Contract tests proving tile program lowerings match reference execution.
 //!
 //! Every tile operation lowers to neutral kernel descriptor ops whose simulated
-//! evaluation reproduces the reference oracle index for index.
+//! evaluation reproduces the reference oracle index for index. The programs are
+//! `vyre_test_support::tile_programs::tile_cases`, which the reference contract
+//! runs on the oracle, so the two sides of that comparison are the same
+//! programs and the same expected values.
 
 use std::collections::HashMap;
 use vyre_foundation::ir::stats::{
     NODE_KIND_TILE_DECL, NODE_KIND_TILE_ELEMENTWISE, NODE_KIND_TILE_LOAD, NODE_KIND_TILE_MATMUL,
     NODE_KIND_TILE_REDUCE, NODE_KIND_TILE_STORE,
 };
-use vyre_foundation::ir::{
-    BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Layout, Node, Program, Residency,
-    SubgroupReduceOp, Tile, UnOp,
-};
+use vyre_foundation::ir::{BinOp, UnOp};
 use vyre_lower::{lower, verify, KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
+use vyre_test_support::tile_programs::tile_cases;
 
 fn simulate_descriptor(
     desc: &KernelDescriptor,
@@ -147,175 +148,22 @@ fn simulate_descriptor(
         .unwrap_or_default()
 }
 
-fn case_load_store_roundtrip() -> (Program, Vec<Vec<f32>>, Vec<f32>) {
-    let tile = Tile::new(
-        DataType::F32,
-        vec![2, 2],
-        Layout::RowMajor,
-        Residency::Register,
-    );
-    let prog = Program::wrapped(
-        vec![
-            BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::output("out", 1, DataType::F32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::tile_load(
-                "t",
-                tile,
-                "in",
-                vec![Expr::u32(0), Expr::u32(0)],
-                Layout::RowMajor,
-            ),
-            Node::tile_store("out", vec![Expr::u32(0), Expr::u32(0)], "t"),
-        ],
-    );
-    let inputs = vec![vec![1.0f32, 2.0, 3.0, 4.0]];
-    let expected = vec![1.0f32, 2.0, 3.0, 4.0];
-    (prog, inputs, expected)
-}
-
-fn case_matmul_2x2() -> (Program, Vec<Vec<f32>>, Vec<f32>) {
-    let tile_a = Tile::new(
-        DataType::F32,
-        vec![2, 2],
-        Layout::RowMajor,
-        Residency::Register,
-    );
-    let tile_b = Tile::new(
-        DataType::F32,
-        vec![2, 2],
-        Layout::RowMajor,
-        Residency::Register,
-    );
-    let tile_acc = Tile::new(
-        DataType::F32,
-        vec![2, 2],
-        Layout::RowMajor,
-        Residency::Register,
-    );
-    let prog = Program::wrapped(
-        vec![
-            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::storage("b", 1, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::output("out", 2, DataType::F32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::tile_decl("c", tile_acc),
-            Node::tile_load(
-                "t_a",
-                tile_a,
-                "a",
-                vec![Expr::u32(0), Expr::u32(0)],
-                Layout::RowMajor,
-            ),
-            Node::tile_load(
-                "t_b",
-                tile_b,
-                "b",
-                vec![Expr::u32(0), Expr::u32(0)],
-                Layout::RowMajor,
-            ),
-            Node::tile_matmul("c", "t_a", "t_b"),
-            Node::tile_store("out", vec![Expr::u32(0), Expr::u32(0)], "c"),
-        ],
-    );
-    let inputs = vec![vec![1.0f32, 2.0, 3.0, 4.0], vec![5.0f32, 6.0, 7.0, 8.0]];
-    let expected = vec![19.0f32, 22.0, 43.0, 50.0];
-    (prog, inputs, expected)
-}
-
-fn case_reduce_axis_1() -> (Program, Vec<Vec<f32>>, Vec<f32>) {
-    let tile_a = Tile::new(
-        DataType::F32,
-        vec![2, 2],
-        Layout::RowMajor,
-        Residency::Register,
-    );
-    let prog = Program::wrapped(
-        vec![
-            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::output("out", 1, DataType::F32).with_count(2),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::tile_load(
-                "t_a",
-                tile_a,
-                "a",
-                vec![Expr::u32(0), Expr::u32(0)],
-                Layout::RowMajor,
-            ),
-            Node::tile_reduce("max_per_row", "t_a", SubgroupReduceOp::Max, 1),
-            Node::tile_store("out", vec![Expr::u32(0)], "max_per_row"),
-        ],
-    );
-    let inputs = vec![vec![1.0f32, 5.0, 2.0, 8.0]];
-    let expected = vec![5.0f32, 8.0];
-    (prog, inputs, expected)
-}
-
-fn case_broadcast_elementwise() -> (Program, Vec<Vec<f32>>, Vec<f32>) {
-    let tile_a = Tile::new(
-        DataType::F32,
-        vec![2, 2],
-        Layout::RowMajor,
-        Residency::Register,
-    );
-    let prog = Program::wrapped(
-        vec![
-            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::output("out", 1, DataType::F32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::tile_load(
-                "t_a",
-                tile_a,
-                "a",
-                vec![Expr::u32(0), Expr::u32(0)],
-                Layout::RowMajor,
-            ),
-            Node::tile_reduce("row_max", "t_a", SubgroupReduceOp::Max, 1),
-            Node::tile_elementwise(
-                "diff",
-                vec![Ident::from("t_a"), Ident::from("row_max")],
-                vec![Node::let_bind(
-                    "diff",
-                    Expr::sub(Expr::var("t_a"), Expr::var("row_max")),
-                )],
-            ),
-            Node::tile_store("out", vec![Expr::u32(0)], "diff"),
-        ],
-    );
-    let inputs = vec![vec![10.0f32, 20.0, 30.0, 40.0]];
-    let expected = vec![-10.0f32, 0.0, -10.0, 0.0];
-    (prog, inputs, expected)
-}
-
 #[test]
 fn tile_lowering_suite_covers_all_tile_node_kinds_and_matches_reference() {
-    let cases = [
-        ("load_store_roundtrip", case_load_store_roundtrip()),
-        ("matmul_2x2", case_matmul_2x2()),
-        ("reduce_axis_1", case_reduce_axis_1()),
-        ("broadcast_elementwise", case_broadcast_elementwise()),
-    ];
-
     let mut covered_kinds = 0u32;
 
-    for (name, (prog, inputs, expected)) in cases {
-        let stats = prog.stats();
+    for case in tile_cases() {
+        let name = case.name;
+        let stats = case.program.stats();
         covered_kinds |= stats.node_kinds_present;
 
-        let desc = lower(&prog).unwrap_or_else(|e| panic!("case {name} lowering failed: {e}"));
+        let desc =
+            lower(&case.program).unwrap_or_else(|e| panic!("case {name} lowering failed: {e}"));
         verify(&desc).unwrap_or_else(|e| panic!("case {name} verify failed: {e:?}"));
 
-        let actual = simulate_descriptor(&desc, &inputs, expected.len());
+        let actual = simulate_descriptor(&desc, &case.inputs, case.expected.len());
         assert_eq!(
-            actual, expected,
+            actual, case.expected,
             "case {name} simulated output did not match expected"
         );
     }

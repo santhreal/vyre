@@ -4,7 +4,7 @@
 //! element conversion, matrix multiplication, and reduction across both
 //! sequential and hashmap execution engines.
 
-use vyre_foundation::ir::{Layout, SubgroupReduceOp, Tile};
+use vyre_foundation::ir::{row_major_coords, Layout, SubgroupReduceOp, Tile};
 
 use crate::error::ReferenceError;
 
@@ -69,13 +69,7 @@ pub(crate) fn load_elements(
         }
     } else {
         for idx in 0..total_elements {
-            let mut coords = Vec::with_capacity(tile_type.extents.len());
-            let mut temp = idx as u32;
-            for &extent in tile_type.extents.iter().rev() {
-                coords.push(temp % extent);
-                temp /= extent;
-            }
-            coords.reverse();
+            let coords = row_major_coords(idx as u32, &tile_type.extents);
             let mut global_idx = 0u32;
             for (i, &c) in coords.iter().enumerate() {
                 let base = origin_coords.get(i).copied().unwrap_or(0);

@@ -689,6 +689,25 @@ impl ProofMethod {
             | Self::ReferenceOracleWitness { .. } => true,
         }
     }
+
+    /// Witness count for a witnessed method, or `None` when the method is not
+    /// witness-based.
+    ///
+    /// The match is exhaustive with no catch-all: a new method has to state
+    /// whether it reports a witness count before it compiles.
+    #[must_use]
+    pub const fn witness_count(&self) -> Option<u64> {
+        match self {
+            Self::WitnessedU32 { count, .. } => Some(*count),
+            Self::ExhaustiveU8
+            | Self::ExhaustiveU16
+            | Self::ExhaustiveFloat { .. }
+            | Self::SmtQfBv { .. }
+            | Self::DecisionProcedure { .. }
+            | Self::ReferenceOracleWitness { .. }
+            | Self::None => None,
+        }
+    }
 }
 impl Default for ProofMethod {
     /// No method stated, so nothing is proven.

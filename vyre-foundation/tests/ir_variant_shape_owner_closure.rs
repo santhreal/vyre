@@ -550,12 +550,14 @@ fn fixture_buffers() -> Vec<BufferDecl> {
 // ---------------------------------------------------------------------------
 
 /// Every implementation of `visit::NodeVisitor` in this workspace, with why it
-/// still writes the enum out by hand.
+/// still enumerates the enum.
 ///
-/// A type here restates one hook per `Node` variant. That is a second
-/// enumeration of the enum, and outside `vyre-foundation` `Node` is
-/// `#[non_exhaustive]`, so nothing tells its author when a variant is added:
-/// the new variant simply never reaches whatever the visitor was counting.
+/// A type here states one hook per `Node` variant, whether it writes the
+/// signature out or names the hook in the arm table the crate declares them
+/// from. That is a second enumeration of the enum, and outside
+/// `vyre-foundation` `Node` is `#[non_exhaustive]`, so nothing tells its author
+/// when a variant is added: the new variant simply never reaches whatever the
+/// visitor was counting.
 ///
 /// A scan that wants one or two variants and descent for the rest wants
 /// `visit::try_for_each_node`, which takes a closure and gets its
@@ -572,7 +574,8 @@ const RECORDED_NODE_VISITORS: &[(&str, &str)] = &[
     (
         "CountingNodeVisitor",
         "The trait's own test. It exists to prove dispatch reaches every hook, \
-         so it must implement every hook.",
+         so it must implement every hook, and it declares them from the shared \
+         arm table.",
     ),
     (
         "AsyncResumeRejector",
@@ -861,12 +864,16 @@ fn scan_node_visitor_implementations(hooks: &BTreeSet<String>) -> BTreeMap<Strin
             continue;
         };
         for (name, body) in impl_blocks_for_trait(&source, "NodeVisitor") {
-            // Every hook is abstract, so an implementor states the whole enum.
-            // A block that defines none of them is a trait of the same name in
-            // another crate, not this one.
+            // Every hook is abstract, so an implementor states the whole enum,
+            // either as a method or as a hook name in the
+            // `node_visitor_uniform_arms!` list it declares them from. A block
+            // that states none of them is a trait of the same name in another
+            // crate, not this one.
             let per_variant = hooks
                 .iter()
-                .filter(|hook| body.contains(&format!("fn {hook}(")))
+                .filter(|hook| {
+                    body.contains(&format!("fn {hook}(")) || body.contains(&format!("{hook},"))
+                })
                 .count();
             if per_variant > 0 {
                 found.insert(

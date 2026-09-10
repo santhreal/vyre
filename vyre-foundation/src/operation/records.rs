@@ -58,32 +58,13 @@ impl AbsenceDecision {
 /// Deterministic fixture input cases. One case contains declaration-ordered buffers.
 pub type OperationFixtures = fn() -> Vec<Vec<Vec<u8>>>;
 
-/// Production semantic descriptor containing typed identity, signature, tier, laws,
-/// numeric contract, geometry constraints, explicit effects and capabilities.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SemanticDescriptor {
-    /// Stable operation identifier.
-    pub id: &'static str,
-    /// Semantic schema version.
-    pub semantic_version: u32,
-    /// Explicit callable signature when the operation is used through `Expr::Call`.
-    pub signature: Option<&'static Signature>,
-    /// Semantic tier.
-    pub tier: OperationTier,
-    /// Derived dialect/category namespace.
-    pub category: Option<&'static str>,
-    /// Algebraic or semantic law identifiers.
-    pub laws: &'static [&'static str],
-    /// What the result is allowed to be.
-    pub numeric: NumericContract,
-    /// Recorded target-neutral schedule constraints.
-    pub geometry_requirements: GeometryRequirements,
-    /// Optional explicit closed effects.
-    pub explicit_effects: Option<OperationEffects>,
-    /// Optional explicit closed capabilities.
-    pub explicit_capabilities: Option<RequiredCapabilities>,
-    /// Recorded decision when the operation declares no unconditional law.
-    pub absence: Option<AbsenceDecision>,
+declare_operation_record! {
+    /// Production semantic descriptor containing typed identity, signature, tier, laws,
+    /// numeric contract, geometry constraints, explicit effects and capabilities.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct SemanticDescriptor {
+        signature: Option<&'static Signature>,
+    }
 }
 
 /// Implementation constructor and lowering provider.

@@ -19,8 +19,7 @@ use vyre_runtime::paged_resource::{
 };
 use vyre_runtime::resource_residency::{StateId, StateLease};
 use vyre_runtime::retained_page_cache::{
-    RetainedPageCache, RetainedPageCacheError, RetainedPageCacheKey, RetainedPageLayout,
-    RetainedPageLimits,
+    RetainedPageCache, RetainedPageCacheError, RetainedPageLimits,
 };
 use vyre_runtime::routed_work_queue::{
     BoundedRoutedWorkQueue, InterDeviceRoutedExchange, InterDeviceRoutedItem, RoutedQueueLimits,
@@ -307,39 +306,8 @@ fn proof_content_addressed_sharing_and_page_scrubbing() {
     let cache = RetainedPageCache::new(limits, 1);
 
     // Two different callers with identical content identity in the same trust group
-    let caller_1_key = RetainedPageCacheKey {
-        content_id: [42u8; 32],
-        schema_id: [1u8; 32],
-        payload_digest: [99u8; 32],
-        config_digest: [7u8; 32],
-        dtype: DataType::F32,
-        layout: RetainedPageLayout {
-            feature_channels: 1,
-            unit_dimension: 64,
-            units_per_page: 8,
-        },
-        device_generation: 1,
-        cache_schema_version: 1,
-        isolation_domain: "caller_1".to_string(),
-        trust_domain: Some("shared_workspace".to_string()),
-    };
-
-    let caller_2_key = RetainedPageCacheKey {
-        content_id: [42u8; 32],
-        schema_id: [1u8; 32],
-        payload_digest: [99u8; 32],
-        config_digest: [7u8; 32],
-        dtype: DataType::F32,
-        layout: RetainedPageLayout {
-            feature_channels: 1,
-            unit_dimension: 64,
-            units_per_page: 8,
-        },
-        device_generation: 1,
-        cache_schema_version: 1,
-        isolation_domain: "caller_2".to_string(),
-        trust_domain: Some("shared_workspace".to_string()),
-    };
+    let caller_1_key = test_retained_key("caller_1", Some("shared_workspace"), 1);
+    let caller_2_key = test_retained_key("caller_2", Some("shared_workspace"), 1);
 
     let sequence = vec![1, 2, 3, 4, 5];
 

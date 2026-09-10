@@ -12,40 +12,21 @@ use crate::operation::registry::OperationRegistry;
 use crate::operation::semantics::{truncate_to_u64, OperationEffects, OperationTier};
 use crate::program_caps::{scan as scan_capabilities, RequiredCapabilities};
 
-/// One immutable semantic record used by validation, inlining, conformance,
-/// documentation, and target-facet joins.
-#[derive(Clone, Copy, Debug)]
-pub struct SemanticOperation {
-    /// Stable operation identifier.
-    pub id: &'static str,
-    /// Semantic schema version.
-    pub semantic_version: u32,
-    /// Explicit callable signature when the operation is used through `Expr::Call`.
-    pub signature: Option<&'static Signature>,
-    /// Semantic tier.
-    pub tier: OperationTier,
-    /// Derived dialect/category namespace.
-    pub category: Option<&'static str>,
-    /// Optional neutral program builder.
-    pub build: Option<fn() -> Program>,
-    /// Deterministic fixture inputs.
-    pub test_inputs: Option<OperationFixtures>,
-    /// Deterministic fixture outputs.
-    pub expected_output: Option<OperationFixtures>,
-    /// Algebraic or semantic law identifiers.
-    pub laws: &'static [&'static str],
-    /// What the result is allowed to be.
-    pub numeric: NumericContract,
-    /// Recorded target-neutral schedule constraints.
-    pub geometry_requirements: GeometryRequirements,
-    /// Source file that owns the registration.
-    pub source_file: &'static str,
-    /// Optional explicit closed effects.
-    pub explicit_effects: Option<OperationEffects>,
-    /// Optional explicit closed capabilities.
-    pub explicit_capabilities: Option<RequiredCapabilities>,
-    /// Recorded decision when the operation declares no unconditional law.
-    pub absence: Option<AbsenceDecision>,
+declare_operation_record! {
+    /// One immutable semantic record used by validation, inlining, conformance,
+    /// documentation, and target-facet joins.
+    #[derive(Clone, Copy, Debug)]
+    pub struct SemanticOperation {
+        signature: Option<&'static Signature>,
+        /// Optional neutral program builder.
+        build: Option<fn() -> Program>,
+        /// Deterministic fixture inputs.
+        test_inputs: Option<OperationFixtures>,
+        /// Deterministic fixture outputs.
+        expected_output: Option<OperationFixtures>,
+        /// Source file that owns the registration.
+        source_file: &'static str,
+    }
 }
 
 impl SemanticOperation {
@@ -187,16 +168,7 @@ impl SemanticOperation {
     /// Construct the canonical semantic contract record.
     #[must_use]
     pub fn contract_record(self) -> vyre_spec::SemanticContractRecord {
-        build_contract_record(&ContractFacts {
-            id: self.id,
-            signature: self.signature,
-            effects: self.direct_effects(),
-            capabilities: self.direct_required_capabilities(),
-            numeric: self.numeric,
-            laws: self.laws,
-            absence: self.absence,
-            program: self.program(),
-        })
+        build_contract_record(&contract_facts_of!(self, self.signature))
     }
 }
 

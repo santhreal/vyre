@@ -11,7 +11,7 @@
 //! fails is only informative while both ran the same program and the same
 //! binding layout.
 
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// `out[i] = a[i] + b[i]`, written once so the two binding orders below cannot
 /// diverge in what they compute.
@@ -74,6 +74,29 @@ pub fn elementwise_fma_program(count: u32) -> Program {
                 Expr::mul(Expr::load("a", Expr::gid_x()), Expr::u32(2)),
                 Expr::u32(1),
             ),
+        )],
+    )
+}
+
+/// `out[0] = in[0]` over `count`-element `u32` bindings named `in` and `out`.
+///
+/// The smallest program with one read binding and one written binding, which is
+/// what a case about identity rather than arithmetic needs: a lowering
+/// equivalence proof, a pipeline fingerprint, an ABI shape. Those cases each
+/// built it, so the shape a fingerprint was taken over and the shape a lowering
+/// was compared against were separate programs that only happened to agree.
+#[must_use]
+pub fn single_element_copy_program(count: u32) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::U32).with_count(count),
+            BufferDecl::output("out", 1, DataType::U32).with_count(count),
+        ],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::load("in", Expr::u32(0)),
         )],
     )
 }

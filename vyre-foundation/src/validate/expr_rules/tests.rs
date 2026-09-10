@@ -57,41 +57,14 @@ inventory::submit! {
     .with_uncharacterized()
 }
 
-#[derive(Debug)]
-struct TestExprExtension;
-
-impl ExprNode for TestExprExtension {
-    fn extension_kind(&self) -> &'static str {
-        "test.expr"
-    }
-
-    fn debug_identity(&self) -> &str {
-        "test-expr"
-    }
-
-    fn result_type(&self) -> Option<DataType> {
-        Some(DataType::U32)
-    }
-
-    fn cse_safe(&self) -> bool {
-        true
-    }
-
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        [7; 32]
-    }
-
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn wire_payload(&self) -> Vec<u8> {
-        Vec::new()
-    }
-}
+vyre_test_support::test_expr_extension!(
+    TestExprExtension,
+    kind: "test.expr",
+    identity: "test-expr",
+    result_type: Some(DataType::U32),
+    cse_safe: true,
+    fingerprint: 7,
+);
 
 #[test]
 fn expr_match_guard_stays_exhaustive() {

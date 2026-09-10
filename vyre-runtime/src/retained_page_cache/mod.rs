@@ -22,9 +22,6 @@
 mod contract;
 mod manager;
 
-#[cfg(test)]
-mod tests;
-
 use std::sync::Arc;
 
 pub use contract::{

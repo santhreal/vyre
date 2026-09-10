@@ -7,7 +7,7 @@
 use crate::ring_expectations::assert_ring_fault;
 use vyre_runtime::resident_work_queue::{
     io::ResidentIoQueue,
-    protocol::{self, control, debug, ProtocolError, SLOT_WORDS},
+    protocol::{control, debug, ProtocolError, SLOT_WORDS},
     ResidentWorkQueue,
 };
 use vyre_runtime::{PipelineError, RingEncodingFault};
@@ -72,23 +72,5 @@ fn megakernel_io_queue_new_rejects_u32_max() {
         &err,
         RingEncodingFault::Capacity,
         "u32::MAX slots exceeds the compiled 64-slot poll window",
-    );
-}
-
-#[test]
-fn batch_publish_rejects_slot_index_overflow_before_allocating_extra_ring() {
-    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
-    let err = ResidentWorkQueue::batch_publish(
-        &mut ring,
-        u32::MAX,
-        0,
-        &[(protocol::opcode::NOP, vec![])],
-        0,
-    )
-    .expect_err("batch publish slot-index overflow must be rejected");
-    assert_ring_fault(
-        &err,
-        RingEncodingFault::Overflow,
-        "start_slot u32::MAX plus the fence slot overflows u32",
     );
 }

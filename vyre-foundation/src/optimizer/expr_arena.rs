@@ -625,34 +625,15 @@ mod tests {
         use crate::ir::DataType;
         use crate::ir::ExprNode;
 
-        #[derive(Debug)]
-        struct DummyOpaque;
-        impl ExprNode for DummyOpaque {
-            fn extension_kind(&self) -> &'static str {
-                "dummy"
-            }
-            fn debug_identity(&self) -> &str {
-                "dummy"
-            }
-            fn result_type(&self) -> Option<DataType> {
-                Some(DataType::U32)
-            }
-            fn cse_safe(&self) -> bool {
-                true
-            }
-            fn stable_fingerprint(&self) -> [u8; 32] {
-                [0u8; 32]
-            }
-            fn validate_extension(&self) -> Result<(), String> {
-                Ok(())
-            }
-            fn as_any(&self) -> &dyn std::any::Any {
-                self
-            }
-            fn wire_payload(&self) -> Vec<u8> {
-                Vec::new()
-            }
-        }
+        vyre_test_support::test_expr_extension!(
+            DummyOpaque,
+            kind: "dummy",
+            identity: "dummy",
+            result_type: Some(DataType::U32),
+            cse_safe: true,
+            fingerprint: 0,
+        );
+
         let arc_a: Arc<dyn ExprNode> = Arc::new(DummyOpaque);
         let arc_b: Arc<dyn ExprNode> = Arc::new(DummyOpaque);
         assert!(!Arc::ptr_eq(&arc_a, &arc_b), "two distinct Arc allocations");

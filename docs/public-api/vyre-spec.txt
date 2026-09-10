@@ -29,7 +29,6 @@
 #[non_exhaustive] pub enum vyre_spec::SubgroupReduceOp
 #[non_exhaustive] pub enum vyre_spec::TernaryOp
 #[non_exhaustive] pub enum vyre_spec::UnOp
-#[non_exhaustive] pub enum vyre_spec::Verification
 #[non_exhaustive] pub enum vyre_spec::schema_registry::FieldType
 #[non_exhaustive] pub struct vyre_spec::IntrinsicDescriptor
 impl core::cmp::Eq for vyre_spec::AlgebraicLaw
@@ -109,6 +108,7 @@ impl vyre_spec::ExtensionDataTypeId
 impl vyre_spec::ExtensionIdentity
 impl vyre_spec::ExtensionNamespace
 impl vyre_spec::ExtensionProofFieldKind
+impl vyre_spec::ExtensionProofFields
 impl vyre_spec::ExtensionRuleConditionId
 impl vyre_spec::ExtensionSchema
 impl vyre_spec::ExtensionSchemaDigest
@@ -159,7 +159,6 @@ impl vyre_spec::TimelineSyncProtocol
 impl vyre_spec::TransformDecision
 impl vyre_spec::TypeId
 impl vyre_spec::UnOp
-impl vyre_spec::Verification
 impl vyre_spec::analysis::AnalysisFactRecord
 impl vyre_spec::schema_registry::SchemaDefinition
 impl vyre_spec::schema_registry::SchemaId
@@ -272,6 +271,7 @@ pub const fn vyre_spec::OperationContract::none() -> Self
 pub const fn vyre_spec::PgNodeKind::from_u32(value: u32) -> core::option::Option<Self>
 pub const fn vyre_spec::ProofMethod::has_executable_proof(&self) -> bool
 pub const fn vyre_spec::ProofMethod::name(&self) -> &'static str
+pub const fn vyre_spec::ProofMethod::witness_count(&self) -> core::option::Option<u64>
 pub const fn vyre_spec::ProtocolDomain::as_str(self) -> &'static str
 pub const fn vyre_spec::ProtocolVersion::new(major: u32, minor: u32, patch: u32) -> Self
 pub const fn vyre_spec::RangeContract::unbounded() -> Self
@@ -746,6 +746,7 @@ pub fn vyre_spec::ExtensionNamespace::as_str(&self) -> &str
 pub fn vyre_spec::ExtensionNamespace::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_spec::ExtensionNamespace::new(namespace: impl core::convert::Into<alloc::string::String>) -> core::result::Result<Self, &'static str>
 pub fn vyre_spec::ExtensionNumericalContract::default() -> Self
+pub fn vyre_spec::ExtensionProofFields::pure_terminating(target_capability: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_spec::ExtensionSchema::compute_digest(namespace: &str, version: &vyre_spec::ExtensionSemVer, fields: &[vyre_spec::ExtensionField], operands: &[vyre_spec::ExtensionOperand], result_types: &[vyre_spec::DataType], proof_fields: &vyre_spec::ExtensionProofFields) -> vyre_spec::ExtensionSchemaDigest
 pub fn vyre_spec::ExtensionSchema::cse_eligible(&self) -> bool
 pub fn vyre_spec::ExtensionSchema::is_divergent(&self) -> bool
@@ -823,7 +824,6 @@ pub fn vyre_spec::TransformDecision::has_decision(&self) -> bool
 pub fn vyre_spec::TransformDecision::laws(&self) -> &[vyre_spec::GuardedLaw]
 pub fn vyre_spec::TransformDecision::opaque_reason(&self) -> core::option::Option<&str>
 pub fn vyre_spec::TransformDecision::validate(&self) -> core::result::Result<(), vyre_spec::ContractValidationError>
-pub fn vyre_spec::Verification::witness_count(&self) -> core::option::Option<u64>
 pub fn vyre_spec::all_algebraic_laws() -> &'static [vyre_spec::AlgebraicLaw]
 pub fn vyre_spec::all_sync_protocols() -> alloc::vec::Vec<vyre_spec::TimelineSyncProtocol>
 pub fn vyre_spec::analysis::AnalysisFactCodecError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -869,6 +869,7 @@ pub fn vyre_spec::soundness::validate_dynamic_pipeline(contract: vyre_spec::soun
 pub fn vyre_spec::soundness::validate_dynamic_primitive(contract: vyre_spec::soundness::PrecisionContract, primitive: &vyre_spec::soundness::DynamicPrimitiveSoundness) -> core::result::Result<(), vyre_spec::soundness::DynamicSoundnessViolation>
 pub fn vyre_spec::soundness::validate_pipeline(contract: vyre_spec::soundness::PrecisionContract, primitives: &[vyre_spec::soundness::PrimitiveSoundness]) -> core::result::Result<vyre_spec::soundness::Soundness, vyre_spec::soundness::SoundnessViolation>
 pub fn vyre_spec::soundness::validate_primitive(contract: vyre_spec::soundness::PrecisionContract, primitive: vyre_spec::soundness::PrimitiveSoundness) -> core::result::Result<(), vyre_spec::soundness::SoundnessViolation>
+pub macro vyre_spec::semver_triple!
 pub mod vyre_spec
 pub mod vyre_spec::analysis
 pub mod vyre_spec::c11_expr_token
@@ -1911,13 +1912,6 @@ pub vyre_spec::UnOp::Unpack4High
 pub vyre_spec::UnOp::Unpack4Low
 pub vyre_spec::UnOp::Unpack8High
 pub vyre_spec::UnOp::Unpack8Low
-pub vyre_spec::Verification::ExhaustiveFloat
-pub vyre_spec::Verification::ExhaustiveFloat::typ: vyre_spec::FloatType
-pub vyre_spec::Verification::ExhaustiveU16
-pub vyre_spec::Verification::ExhaustiveU8
-pub vyre_spec::Verification::WitnessedU32
-pub vyre_spec::Verification::WitnessedU32::count: u64
-pub vyre_spec::Verification::WitnessedU32::seed: u64
 pub vyre_spec::analysis::AnalysisFactCodecError::Malformed
 pub vyre_spec::analysis::AnalysisFactCodecError::Malformed::message: alloc::string::String
 pub vyre_spec::analysis::AnalysisFactCodecError::UnsupportedVersion

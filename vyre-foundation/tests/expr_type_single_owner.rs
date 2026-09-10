@@ -89,35 +89,14 @@ fn expr_variants_from_source() -> BTreeSet<String> {
     variants
 }
 
-#[derive(Debug)]
-struct GateExtension;
-
-impl ExprNode for GateExtension {
-    fn extension_kind(&self) -> &'static str {
-        "test.expr_type_single_owner.extension"
-    }
-    fn debug_identity(&self) -> &str {
-        "expr-type-owner-gate"
-    }
-    fn result_type(&self) -> Option<DataType> {
-        Some(DataType::I32)
-    }
-    fn cse_safe(&self) -> bool {
-        true
-    }
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        [7; 32]
-    }
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    fn wire_payload(&self) -> Vec<u8> {
-        Vec::new()
-    }
-}
+vyre_test_support::test_expr_extension!(
+    GateExtension,
+    kind: "test.expr_type_single_owner.extension",
+    identity: "expr-type-owner-gate",
+    result_type: Some(DataType::I32),
+    cse_safe: true,
+    fingerprint: 7,
+);
 
 fn f32_operand() -> Expr {
     Expr::var(F32_LOCAL)

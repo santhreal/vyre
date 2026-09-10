@@ -144,6 +144,8 @@ mod region_law;
 mod resource_capability;
 /// Declarative schema registry for all persisted and wire formats.
 pub mod schema_registry;
+/// The one declaration of a `major.minor.patch` version record.
+mod semver_triple;
 /// Canonical semiring selector for dataflow and algebraic kernels.
 mod semiring;
 /// Soundness markers and precision contracts for cross-engine analysis data.
@@ -165,7 +167,6 @@ mod tests;
 mod un_op;
 /// Conformance verification driver  -  runs the law + invariant battery.
 /// Specification element.
-mod verification;
 
 /// See [`adversarial_input::AdversarialInput`].
 /// Specification element.
@@ -321,9 +322,6 @@ pub use test_descriptor::TestDescriptor;
 /// See [`un_op::UnOp`].
 /// Specification element.
 pub use un_op::UnOp;
-/// See [`verification::Verification`].
-/// Specification element.
-pub use verification::Verification;
 
 /// Intrinsic descriptors.
 /// Specification element.

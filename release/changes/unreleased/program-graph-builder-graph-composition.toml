@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`ProgramGraphBuilder` reaches node and subgraph composition through `Deref<Target = ProgramGraph>` instead of mirroring six `ProgramGraph` signatures, so each signature is declared once. `finish` is gone and `build` carries the validation it duplicated."

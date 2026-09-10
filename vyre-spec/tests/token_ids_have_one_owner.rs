@@ -23,7 +23,9 @@
 //! round-trip suites cover.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
+
+use vyre_test_support::monorepo::vyre_workspace_root;
 
 /// Crate directory allowed to declare token ids.
 const OWNER: &str = "vyre-spec";
@@ -40,7 +42,7 @@ const MINIMUM_OWNED_FILES: usize = 4;
 
 #[test]
 fn no_file_outside_the_owner_declares_a_token_id() {
-    let root = checkout_root();
+    let root = vyre_workspace_root();
     let owned = Path::new(OWNER);
 
     let offenders: BTreeMap<String, Vec<String>> = declarations(&root)
@@ -60,7 +62,7 @@ fn no_file_outside_the_owner_declares_a_token_id() {
 
 #[test]
 fn the_walk_actually_reaches_the_owner() {
-    let root = checkout_root();
+    let root = vyre_workspace_root();
     let owned = Path::new(OWNER);
 
     let found: BTreeMap<String, Vec<String>> = declarations(&root)
@@ -120,29 +122,6 @@ pub const TOK_TAIL: u32 = 9;
     );
 }
 
-/// Absolute root of the checkout this test runs in.
-///
-/// Resolved from the working directory rather than `CARGO_MANIFEST_DIR`: a
-/// target directory shared by several checkouts computes the same unit hash for
-/// a member in each of them, so a compiled-in path can name a different tree
-/// than the one under test.
-fn checkout_root() -> PathBuf {
-    let start = std::env::current_dir().expect("Fix: the working directory must be readable");
-    for candidate in start.ancestors() {
-        let manifest = candidate.join("Cargo.toml");
-        let Ok(text) = std::fs::read_to_string(&manifest) else {
-            continue;
-        };
-        if text.lines().any(|line| line.trim_start() == "[workspace]") {
-            return candidate.to_path_buf();
-        }
-    }
-    panic!(
-        "Fix: no ancestor of `{}` declares a `[workspace]`; this gate reports on \
-         a workspace and has nothing to measure outside one",
-        start.display()
-    );
-}
 
 /// Every `TOK_`-prefixed declaration in the checkout, keyed by root-relative path.
 fn declarations(root: &Path) -> BTreeMap<String, Vec<String>> {

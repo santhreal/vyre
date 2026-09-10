@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`ExtensionProofFields::pure_terminating` is the single constructor for a host-shareable, pure, terminating extension proof record."

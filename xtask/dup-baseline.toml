@@ -128,8 +128,8 @@ total_lines = 1171
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 1714
-total_lines = 136076
+duplicate_lines = 1702
+total_lines = 147627
 
 [[crate]]
 name = "vyre-libs"
@@ -248,13 +248,13 @@ total_lines = 3438
 
 [[crate]]
 name = "vyre-lower"
-duplicate_lines = 53
-total_lines = 20564
+duplicate_lines = 43
+total_lines = 23465
 
 [[crate]]
 name = "vyre-macros"
-duplicate_lines = 41
-total_lines = 2070
+duplicate_lines = 22
+total_lines = 2393
 
 [[crate]]
 name = "vyre-megakernel"
@@ -278,8 +278,8 @@ total_lines = 1133
 
 [[crate]]
 name = "vyre-runtime"
-duplicate_lines = 103
-total_lines = 39616
+duplicate_lines = 90
+total_lines = 41299
 
 [[crate]]
 name = "vyre-pass-engine"

@@ -40,7 +40,9 @@ pub(crate) mod node_bodies;
 /// Which buffers a `Node` variant names, split by direction.
 pub(crate) mod node_buffers;
 pub(crate) mod node_parts;
-/// The exhaustive `Node` visitor contract and its traversal entry points.
+/// The exhaustive `Node` visitor contract, its traversal entry points, and the
+/// one declaration of each visitor method's parameter list.
+#[macro_use]
 pub(crate) mod node_visitor;
 /// Explicit-worklist traversals over nodes and expressions.
 pub(crate) mod walk;

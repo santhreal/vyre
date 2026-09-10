@@ -47,44 +47,13 @@ pub(crate) const NODE_KIND: &str = "test.opaque.echo_node";
 /// makes that property fail on the payload rather than on the round trip.
 pub(crate) const REFUSED_NODE_PREFIX: [u8; 2] = [0xDE, 0xAD];
 
-/// An expression extension whose wire payload is exactly its own bytes.
-#[derive(Debug)]
-pub(crate) struct EchoExpr {
-    /// The bytes this node writes to the wire and reads back.
-    pub(crate) payload: Vec<u8>,
-}
-
-impl ExprNode for EchoExpr {
-    fn extension_kind(&self) -> &'static str {
-        EXPR_KIND
-    }
-
-    fn debug_identity(&self) -> &str {
-        "echo-expr"
-    }
-
-    fn result_type(&self) -> Option<DataType> {
-        Some(DataType::U32)
-    }
-
-    fn cse_safe(&self) -> bool {
-        true
-    }
-
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        *blake3::hash(&self.payload).as_bytes()
-    }
-
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    fn wire_payload(&self) -> Vec<u8> {
-        self.payload.clone()
-    }
-}
+vyre_test_support::test_payload_expr_extension!(
+    EchoExpr,
+    kind: EXPR_KIND,
+    identity: "echo-expr",
+    result_type: Some(DataType::U32),
+    cse_safe: true,
+);
 
 fn deserialize_echo_expr(bytes: &[u8]) -> Result<Arc<dyn ExprNode>, String> {
     Ok(Arc::new(EchoExpr {
@@ -99,36 +68,13 @@ inventory::submit! {
     }
 }
 
-/// A statement extension whose wire payload is exactly its own bytes.
-#[derive(Debug)]
-pub(crate) struct EchoNode {
-    /// The bytes this node writes to the wire and reads back.
-    pub(crate) payload: Vec<u8>,
-}
-
-impl NodeExtension for EchoNode {
-    fn extension_kind(&self) -> &'static str {
-        NODE_KIND
-    }
-
-    fn debug_identity(&self) -> &str {
-        "echo-node"
-    }
-
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        *blake3::hash(&self.payload).as_bytes()
-    }
-
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    fn wire_payload(&self) -> Vec<u8> {
-        self.payload.clone()
-    }
-}
+vyre_test_support::test_payload_node_extension!(
+    EchoNode,
+    kind: NODE_KIND,
+    identity: "echo-node",
+    is_pure: false,
+    is_divergent: true,
+);
 
 fn deserialize_echo_node(bytes: &[u8]) -> Result<Arc<dyn NodeExtension>, String> {
     if bytes.starts_with(&REFUSED_NODE_PREFIX) {
