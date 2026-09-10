@@ -1,0 +1,288 @@
+{
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"11228c3a072a6775dcd8dfd2b05c691d4d46da85","commit_timestamp":"1789018394","parent_commit":"87c28374432ff627bf04a1b232bb48b644ddcd63","dirty":true,"source_fingerprint":"git:11228c3a072a6775dcd8dfd2b05c691d4d46da85:dirty=true:worktree=071d26465647e28352727ec3d4bb735e35669f987f68aa10a08f08d3653e1f6f"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "schema_version": 1,
+  "unattributed_count": 56,
+  "attributed_count": 21,
+  "artifacts": [
+    {
+      "path": "release/evidence/benchmarks/bench-release-axes.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/bench-release-axes.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/compiler-grade-thesis-workloads.json",
+      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
+      "recapture": "declare `release/evidence/benchmarks/compiler-grade-thesis-workloads.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
+    },
+    {
+      "path": "release/evidence/benchmarks/cpu-only-100x-proof.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/cpu-only-100x-proof.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/cuda-ptx-patterns.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/cuda-ptx-patterns.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/cuda-release-suite.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/cuda-release-suite.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/dataflow-analysis-release.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/dataflow-analysis-release.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/frontier-leaderboard.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/frontier-leaderboard.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/megakernel-condition-100x-proof.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/megakernel-condition-100x-proof.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/megakernel-condition-cuda.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/megakernel-condition-cuda.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/megakernel-default-routing.json",
+      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
+      "recapture": "declare `release/evidence/benchmarks/megakernel-default-routing.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
+    },
+    {
+      "path": "release/evidence/benchmarks/megakernel-latency-cuda.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/megakernel-latency-cuda.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/release-workload-matrix.json",
+      "reason": "carries no provenance record, and `release-workload-matrix` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-workload-matrix --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/release-workload-matrix.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/resident-optimizer-pipeline.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/resident-optimizer-pipeline.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-fallback-suite.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-fallback-suite.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-01-condition-eval.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-02-string-bitmap-scatter.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-02-string-bitmap-scatter.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-03-offset-count-aggregation.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-03-offset-count-aggregation.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-04-metadata-conditions.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-04-metadata-conditions.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-05-entropy-window.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-05-entropy-window.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-06-quantified-condition-loops.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-06-quantified-condition-loops.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-07-alias-reaching-def.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-07-alias-reaching-def.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-08-ifds-witness.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-08-ifds-witness.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-09-ast-motif-traversal.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-09-ast-motif-traversal.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-10-megakernel-queued-batches.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-10-megakernel-queued-batches.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-11-semantic-optimizer-impact.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-11-semantic-optimizer-impact.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-12-sparse-output-compaction.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-12-sparse-output-compaction.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-13-callgraph-reachability.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-13-callgraph-reachability.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-14-compound-fused-filter.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-14-compound-fused-filter.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-15-adaptive-routing.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-15-adaptive-routing.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-16-quantized-linear.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-16-quantized-linear.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/wgpu-workload-17-egraph-saturation.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/wgpu-workload-17-egraph-saturation.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/whole-app-dense-numerical-pipeline.json",
+      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
+      "recapture": "declare `release/evidence/benchmarks/whole-app-dense-numerical-pipeline.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
+    },
+    {
+      "path": "release/evidence/benchmarks/whole-app-interactive-event-pipeline.json",
+      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
+      "recapture": "declare `release/evidence/benchmarks/whole-app-interactive-event-pipeline.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
+    },
+    {
+      "path": "release/evidence/benchmarks/whole-app-irregular-stateful-traversal.json",
+      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
+      "recapture": "declare `release/evidence/benchmarks/whole-app-irregular-stateful-traversal.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
+    },
+    {
+      "path": "release/evidence/benchmarks/whole-application-domain-matrix.json",
+      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
+      "recapture": "declare `release/evidence/benchmarks/whole-application-domain-matrix.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-01-condition-eval.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-01-condition-eval.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-02-string-bitmap-scatter.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-03-offset-count-aggregation.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-04-metadata-conditions.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-04-metadata-conditions.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-05-entropy-window.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-05-entropy-window.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-06-quantified-condition-loops.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-07-alias-reaching-def.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-07-alias-reaching-def.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-08-ifds-witness.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-08-ifds-witness.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-09-ast-motif-traversal.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-09-ast-motif-traversal.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-10-megakernel-queued-batches.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-12-sparse-output-compaction.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-13-callgraph-reachability.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-13-callgraph-reachability.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-14-compound-fused-filter.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-14-compound-fused-filter.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-15-adaptive-routing.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-15-adaptive-routing.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-16-quantized-linear.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-16-quantized-linear.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/benchmarks/workload-17-egraph-saturation.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-17-egraph-saturation.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/conformance/release-all-backends-certificate.json",
+      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
+      "recapture": "declare `release/evidence/conformance/release-all-backends-certificate.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
+    },
+    {
+      "path": "release/evidence/docs/vyre-readme-contracts.json",
+      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
+      "recapture": "declare `release/evidence/docs/vyre-readme-contracts.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
+    },
+    {
+      "path": "release/evidence/optimization/optimizer-impact-cuda.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/optimization/optimizer-impact-cuda.json` with the provenance it wrote"
+    },
+    {
+      "path": "release/evidence/optimization/pass-family-benchmark-manifest.json",
+      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
+      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/optimization/pass-family-benchmark-manifest.json` with the provenance it wrote"
+    }
+  ]
+}
