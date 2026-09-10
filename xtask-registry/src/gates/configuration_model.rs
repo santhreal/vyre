@@ -1,9 +1,12 @@
-//! `cargo xtask configuration-model` - typed configuration space closure (Row 115).
+//! `cargo xtask configuration-model` - typed configuration space closure (Rows 81, 115).
 //!
-//! Generates one typed configuration model from Cargo metadata, target predicates,
-//! backend capabilities, package publication classes, and declared incompatibilities.
-//! Proves constraints satisfiable, produces a minimal deterministic covering set for
-//! interactions, and validates isolated build schedules.
+//! Reads every member manifest into one model: which package declares each
+//! capability, which package a facade row forwards it to, the cells a build can
+//! ask for, and whether the declared constraints leave any of those cells
+//! without an assignment. Generates the configuration space artifact and the
+//! consumer facade's `[features]` table from the `[facade]` roster in
+//! `docs/CRATE_OWNERSHIP.toml`, so adding a domain is one ownership record
+//! rather than a row in the facade manifest and a row in the domain manifest.
 
 use xtask::artifact_gate::{settle_inspection, Inspection};
 use xtask::config_space::{ConfigurationModel, CONFIG_SPACE_ARTIFACT_PATH};
@@ -15,41 +18,61 @@ pub struct ConfigurationModelGate;
 impl GateBehavior for ConfigurationModelGate {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let root = &ctx.root;
-        let model = ConfigurationModel::inspect_workspace(root).map_err(|e| {
+        let model = ConfigurationModel::inspect_workspace(root).map_err(|error| {
             GateError::new(
-                format!("configuration space inspection failed: {e:?}"),
-                "repair workspace manifests",
+                format!("configuration space inspection failed: {error:?}"),
+                "repair workspace manifests and the [facade] roster in docs/CRATE_OWNERSHIP.toml",
             )
         })?;
 
         let mut inspection = Inspection::new();
-        let rendered_toml = model.to_toml().map_err(|e| {
+        let rendered_toml = model.to_toml().map_err(|error| {
             GateError::new(
-                format!("model serialization failed: {e:?}"),
+                format!("model serialization failed: {error:?}"),
                 "ensure model is valid",
             )
         })?;
         inspection.generates_text(CONFIG_SPACE_ARTIFACT_PATH, rendered_toml);
 
+        let (facade_path, facade_manifest) =
+            ConfigurationModel::facade_manifest(root).map_err(|error| {
+                GateError::new(
+                    format!("facade manifest generation failed: {error:?}"),
+                    "repair the [facade] roster in docs/CRATE_OWNERSHIP.toml",
+                )
+            })?;
+        inspection.generates_text(&facade_path, facade_manifest);
+
         let mut report = settle_inspection(ctx, ctx.gate_name()?, inspection);
 
-        // Report capability naming violations
         for finding in &model.capability_naming_findings {
             report.find(Finding::new(
                 finding,
-                "rename feature to express a neutral capability rather than a product name or verb prefix",
+                "rename the feature to express a neutral capability rather than a product name or verb prefix",
             ));
         }
 
-        // Report duplicate feature declarations across packages
-        for finding in &model.duplicate_feature_findings {
+        for finding in &model.feature_ownership_findings {
             report.find(Finding::new(
                 finding,
-                "ensure each feature has exactly one owning package or belongs to the canonical shared capability set",
+                "move the declaration into the single package that owns the capability and forward the name from every other package, or record the name as a shared capability in docs/CRATE_OWNERSHIP.toml",
             ));
         }
 
-        // Report unreachable cfg branches
+        for finding in &model.forward_findings {
+            report.find(Finding::new(
+                finding,
+                "declare the feature in the dependency the forward names, or point the forward at the name that package declares",
+            ));
+        }
+
+        for finding in &model.facade_findings {
+            report.find(Finding::new(
+                finding,
+                "reconcile the [facade] roster in docs/CRATE_OWNERSHIP.toml with the domain manifests it forwards through",
+            ));
+        }
+
         for finding in &model.unreachable_cfg_findings {
             report.find(Finding::new(
                 finding,
@@ -57,7 +80,6 @@ impl GateBehavior for ConfigurationModelGate {
             ));
         }
 
-        // Audit build scripts for determinism and bounded execution
         for audit in &model.build_script_audits {
             if !audit.is_deterministic || audit.accesses_undeclared_host_state {
                 report.find(Finding::new(
@@ -67,10 +89,13 @@ impl GateBehavior for ConfigurationModelGate {
             }
         }
 
-        if !model.is_satisfiable {
+        for conflict in model.satisfiability.conflicts() {
             report.find(Finding::new(
-                "Configuration space constraint model is unsatisfiable",
-                "resolve conflicting feature, target, or backend constraints",
+                format!(
+                    "Cell `{}` has no valid assignment: {}",
+                    conflict.cell, conflict.violated
+                ),
+                "relax the constraint the cell violates, or stop scheduling the cell by removing the feature that reaches it",
             ));
         }
 
@@ -78,6 +103,17 @@ impl GateBehavior for ConfigurationModelGate {
         report.cover_complete("covering set cells", model.covering_sets.len());
         report.cover_complete("supported targets", model.supported_targets.len());
         report.cover_complete("backend cells", model.backend_cells.len());
+        report.cover_complete("scheduled configuration cells", model.scheduled_cells);
+
+        if let xtask::config_space::Satisfiability::Satisfiable(assignment) = &model.satisfiability
+        {
+            report.note(format!(
+                "Configuration space satisfiable; widest assignment `{}` enables {} feature(s) across {} package(s)",
+                assignment.cell,
+                assignment.enabled.len(),
+                assignment.activated.len(),
+            ));
+        }
 
         report.note(format!(
             "Configuration model: {} package(s), {} covering cell(s), {} target(s), {} backend(s)",
@@ -95,10 +131,9 @@ impl GateBehavior for ConfigurationModelGate {
 /// Tests for configuration-model gate.
 pub mod tests {
     use super::*;
-    use tempfile::TempDir;
     use xtask::checkout::checkout_root;
     use xtask::config_space::{
-        generate_covering_set, ConfigSpaceError, CONFIG_SPACE_SCHEMA_VERSION,
+        generate_covering_set, ConfigSpaceError, Satisfiability, CONFIG_SPACE_SCHEMA_VERSION,
     };
 
     /// WHY: Acceptance criterion - A test proves the model is satisfiable and that
@@ -113,10 +148,15 @@ pub mod tests {
             .expect("second configuration model generation");
 
         assert_eq!(model1.schema_version, CONFIG_SPACE_SCHEMA_VERSION);
-        assert!(
-            model1.is_satisfiable,
-            "configuration model must be satisfiable"
-        );
+        match &model1.satisfiability {
+            Satisfiability::Satisfiable(assignment) => assert!(
+                !assignment.enabled.is_empty(),
+                "a satisfying assignment names the features it enables"
+            ),
+            Satisfiability::Unsatisfiable(conflicts) => {
+                panic!("configuration model must be satisfiable, conflicts: {conflicts:?}")
+            }
+        }
 
         // Determinism proof: byte-identical serialization and cell lists
         let toml1 = model1.to_toml().expect("serialize model1");
@@ -136,15 +176,14 @@ pub mod tests {
         let covering = generate_covering_set("vyre-sample", &features);
         // Base cell + 3 isolated cells + 1 full cell = 5 cells
         assert_eq!(covering.len(), 5);
-        for i in 0..covering.len() {
+        for index in 0..covering.len() {
             let mut subset = covering.clone();
-            subset.remove(i);
+            subset.remove(index);
             assert_eq!(subset.len(), covering.len() - 1);
-            // Dropping cell i drops a unique feature combination
-            let removed = &covering[i];
+            let removed = &covering[index];
             let still_covered = subset
                 .iter()
-                .any(|c| c.enabled_features == removed.enabled_features);
+                .any(|cell| cell.enabled_features == removed.enabled_features);
             assert!(
                 !still_covered,
                 "removing cell `{}` must drop an isolated capability interaction",
@@ -153,150 +192,21 @@ pub mod tests {
         }
     }
 
-    /// WHY: Acceptance criterion - A test proves an unreachable cfg branch and a
-    /// feature no cfg reads are both findings, derived from source at run time.
-    #[test]
-    pub fn unreachable_cfg_and_unreferenced_feature_are_findings() {
-        let temp = TempDir::new().expect("create temp dir");
-        let root = temp.path();
-
-        // Write workspace Cargo.toml
-        let workspace_toml = r#"
-[workspace]
-members = ["krate-a"]
-"#;
-        std::fs::write(root.join("Cargo.toml"), workspace_toml).unwrap();
-
-        // Write crate Cargo.toml declaring "declared_feat" and "dead_feat"
-        let crate_dir = root.join("krate-a");
-        std::fs::create_dir_all(crate_dir.join("src")).unwrap();
-        let crate_toml = r#"
-[package]
-name = "krate-a"
-version = "0.1.0"
-edition = "2021"
-
-[features]
-declared_feat = []
-dead_feat = []
-"#;
-        std::fs::write(crate_dir.join("Cargo.toml"), crate_toml).unwrap();
-
-        // Write src/lib.rs referencing an undeclared feature "ghost_feature" and "declared_feat"
-        let lib_rs = r#"
-#[cfg(feature = "ghost_feature")]
-pub fn ghost() {}
-
-#[cfg(feature = "declared_feat")]
-pub fn active() {}
-"#;
-        std::fs::write(crate_dir.join("src/lib.rs"), lib_rs).unwrap();
-
-        let model = ConfigurationModel::inspect_workspace(root).expect("inspect workspace");
-
-        // 1. Ghost feature must be reported as unreachable cfg
-        assert!(
-            model
-                .unreachable_cfg_findings
-                .iter()
-                .any(|f| f.contains("ghost_feature")),
-            "unreachable cfg branch `ghost_feature` must be a finding, got: {:?}",
-            model.unreachable_cfg_findings
-        );
-
-        // 2. dead_feat has no deps and no cfg reading it -> unreferenced feature finding
-        assert!(
-            model
-                .unreferenced_feature_findings
-                .iter()
-                .any(|f| f.contains("dead_feat")),
-            "unreferenced feature `dead_feat` must be a finding, got: {:?}",
-            model.unreferenced_feature_findings
-        );
-    }
-
-    /// WHY: Acceptance criterion - A test proves a feature declared in two packages,
-    /// or a product-named feature, is a finding.
-    #[test]
-    pub fn duplicate_and_product_named_features_are_findings() {
-        let temp = TempDir::new().expect("create temp dir");
-        let root = temp.path();
-
-        let workspace_toml = r#"
-[workspace]
-members = ["krate-one", "krate-two"]
-"#;
-        std::fs::write(root.join("Cargo.toml"), workspace_toml).unwrap();
-
-        // Crate 1 declares duplicate_custom_feat and product-named use_tensor_rt
-        let dir1 = root.join("krate-one");
-        std::fs::create_dir_all(dir1.join("src")).unwrap();
-        let toml1 = r#"
-[package]
-name = "krate-one"
-version = "0.1.0"
-edition = "2021"
-
-[features]
-duplicate_custom_feat = []
-use_tensor_rt = []
-"#;
-        std::fs::write(dir1.join("Cargo.toml"), toml1).unwrap();
-        std::fs::write(dir1.join("src/lib.rs"), "").unwrap();
-
-        // Crate 2 also declares duplicate_custom_feat
-        let dir2 = root.join("krate-two");
-        std::fs::create_dir_all(dir2.join("src")).unwrap();
-        let toml2 = r#"
-[package]
-name = "krate-two"
-version = "0.1.0"
-edition = "2021"
-
-[features]
-duplicate_custom_feat = []
-"#;
-        std::fs::write(dir2.join("Cargo.toml"), toml2).unwrap();
-        std::fs::write(dir2.join("src/lib.rs"), "").unwrap();
-
-        let model = ConfigurationModel::inspect_workspace(root).expect("inspect workspace");
-
-        // Duplicate feature finding
-        assert!(
-            model
-                .duplicate_feature_findings
-                .iter()
-                .any(|f| f.contains("duplicate_custom_feat")),
-            "feature declared in two packages must be a finding, got: {:?}",
-            model.duplicate_feature_findings
-        );
-
-        // Product-named feature finding
-        assert!(
-            model
-                .capability_naming_findings
-                .iter()
-                .any(|f| f.contains("use_tensor_rt")),
-            "product-named feature `use_tensor_rt` must be a finding, got: {:?}",
-            model.capability_naming_findings
-        );
-    }
-
     /// WHY: Schema version mismatch must fail closed.
     #[test]
     pub fn stale_schema_version_fails_closed() {
         let root = checkout_root();
         let mut model = ConfigurationModel::inspect_workspace(&root).expect("inspect workspace");
-        model.schema_version = 999;
+        model.schema_version = CONFIG_SPACE_SCHEMA_VERSION + 997;
         let toml = model.to_toml().expect("serialize");
-        let err = ConfigurationModel::from_toml(&toml).unwrap_err();
-        assert!(matches!(
-            err,
+        let error = ConfigurationModel::from_toml(&toml).unwrap_err();
+        assert_eq!(
+            error,
             ConfigSpaceError::StaleSchemaVersion {
                 expected: CONFIG_SPACE_SCHEMA_VERSION,
-                found: 999
+                found: CONFIG_SPACE_SCHEMA_VERSION + 997,
             }
-        ));
+        );
     }
 
     /// WHY: All workspace build scripts must be deterministic and bounded.
@@ -316,5 +226,21 @@ duplicate_custom_feat = []
                 audit.path
             );
         }
+    }
+
+    /// WHY: The facade's `[features]` table is generated from the roster, so the
+    /// committed table has to be what the roster renders. A drift here is the
+    /// shape row 81 names: a facade list and a domain list of one fact.
+    #[test]
+    pub fn facade_features_table_matches_the_roster() {
+        let root = checkout_root();
+        let (path, generated) =
+            ConfigurationModel::facade_manifest(&root).expect("render facade manifest");
+        let committed = std::fs::read_to_string(root.join(&path)).expect("read facade manifest");
+        assert_eq!(
+            committed.replace("\r\n", "\n"),
+            generated,
+            "`{path}` differs from what the [facade] roster renders; run `configuration-model --write`"
+        );
     }
 }

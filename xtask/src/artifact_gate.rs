@@ -736,10 +736,18 @@ fn provenance_findings(gate: &str, path: &Path, fingerprint: Option<&str>) -> Ve
         .collect()
 }
 
-/// One finding per line on which `committed` and `generated` disagree.
+/// One finding for an artifact that disagrees with what the tree generates.
 ///
 /// Split out from the read so the comparison is provable without a filesystem,
 /// and so a caller already holding both texts can reuse it.
+///
+/// A stale artifact is one defect: it was not regenerated. The comparison is
+/// positional, so a single inserted line offsets every line after it and a
+/// per-line finding count reports that one defect once per line of the file.
+/// `configuration-model` reported 8384 findings for one unregenerated
+/// artifact that way, which buries every other finding the gate produced and
+/// makes the count useless as a pin. The finding names the first line that
+/// disagrees, so the diagnosis survives, and counts the rest.
 #[must_use]
 pub fn divergences(gate: &str, path: &Path, committed: &str, generated: &str) -> Vec<Finding> {
     // A checkout that materialised the artifact with CRLF endings is not a tree
@@ -755,9 +763,9 @@ pub fn divergences(gate: &str, path: &Path, committed: &str, generated: &str) ->
     );
     let committed_lines: Vec<&str> = committed.lines().collect();
     let generated_lines: Vec<&str> = generated.lines().collect();
-    let mut findings = Vec::new();
+    let mut first: Option<(u32, String)> = None;
+    let mut disagreeing = 0usize;
     for index in 0..committed_lines.len().max(generated_lines.len()) {
-        let line = u32::try_from(index + 1).unwrap_or(u32::MAX);
         let message = match (committed_lines.get(index), generated_lines.get(index)) {
             (Some(left), Some(right)) if left == right => continue,
             (Some(left), Some(right)) => {
@@ -771,19 +779,27 @@ pub fn divergences(gate: &str, path: &Path, committed: &str, generated: &str) ->
             }
             (None, None) => continue,
         };
-        findings.push(Finding::at(path.to_path_buf(), line, message, fix.clone()));
+        disagreeing += 1;
+        if first.is_none() {
+            first = Some((u32::try_from(index + 1).unwrap_or(u32::MAX), message));
+        }
     }
     // Two texts differing only in a trailing newline yield identical line
     // sequences, so the loop finds nothing and the gate would report a clean
     // artifact it has already decided is wrong.
-    if findings.is_empty() {
-        findings.push(Finding::in_file(
+    let Some((line, message)) = first else {
+        return vec![Finding::in_file(
             path.to_path_buf(),
             "the artifact and the tree agree line for line but not byte for byte; the trailing newline differs",
             fix,
-        ));
-    }
-    findings
+        )];
+    };
+    let message = if disagreeing == 1 {
+        message
+    } else {
+        format!("{disagreeing} lines disagree with what the tree generates; the first is {message}")
+    };
+    vec![Finding::at(path.to_path_buf(), line, message, fix)]
 }
 
 #[cfg(test)]

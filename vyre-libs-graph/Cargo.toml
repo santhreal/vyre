@@ -23,9 +23,9 @@ default = ["graph"]
 graph = []
 topology = ["graph"]
 graph-dispatch = ["graph"]
-analysis = ["graph"]
-reasoning = ["graph"]
-visual = ["graph", "dep:vyre-libs-visual", "vyre-libs-visual?/visual"]
+dense-reachability = ["graph"]
+impact-mask = ["graph"]
+interactive-graphics = ["graph", "dep:vyre-libs-visual", "vyre-libs-visual?/visual"]
 
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
