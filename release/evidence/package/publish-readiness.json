@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ab2e2b4ba58b45dc748e13ab540a57116d15ff8ff539182ce68210e5bfc7273a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/gate-findings","commit":"db3d0e2a981956148e5b67bd90c3936c3ff041c3","commit_timestamp":"1789023058","parent_commit":"1d1240d7f392bddc9a8939d0fc75fd76b0104d5a","dirty":true,"source_fingerprint":"git:db3d0e2a981956148e5b67bd90c3936c3ff041c3:dirty=true:worktree=003859ffa70243d9d1c4bb81e4c61437fff0f3778acad5dccae208b31e0b9020"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 3,
   "release_train": {
     "vyre": "0.8.0",
@@ -1641,384 +1641,265 @@
       "package": "vyre-libs-builder",
       "manifest": "vyre-libs-builder/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 44,
-      "file_list_digest": "blake3:2aba00594c26dd7c6b211e7cb1000f14392a1db1be1990f5853984b712b37971",
+      "file_count": 46,
+      "file_list_digest": "blake3:34252ff8b389a3f71da17750529de88ecd0a65512d9e3846a4f7baaa671561a9",
       "rust_source_count": 36,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-device",
       "manifest": "vyre-libs-device/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 13,
-      "file_list_digest": "blake3:2444dc837d96e99a83b59756354a5a47f86a32ec12b559cdcf8bc42322fddb2f",
+      "file_count": 15,
+      "file_list_digest": "blake3:68a86542d101b0dc657865285ee7fd603d364aeada3bb18e78ab2e9c195895c4",
       "rust_source_count": 6,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-fixpoint",
       "manifest": "vyre-libs-fixpoint/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 15,
-      "file_list_digest": "blake3:4830d91057aea32f4bfc179eb3376eaa520c8b94858f7e0b92eb77d835062528",
+      "file_count": 17,
+      "file_list_digest": "blake3:933df0038e225658c26ccda94ded21ce6537e61969cdd5a9ef1e17bf5ae7dc02",
       "rust_source_count": 5,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-hash",
       "manifest": "vyre-libs-hash/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 30,
-      "file_list_digest": "blake3:56068ef400533dca776f5edba0cec648473bba881678f30f466132112ddb28dc",
+      "file_count": 32,
+      "file_list_digest": "blake3:20d0009c83d8c27e27ab0a0b76edab5c6eb035cfc1cbf61af09e7f51236734f8",
       "rust_source_count": 13,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-reduce",
       "manifest": "vyre-libs-reduce/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 42,
-      "file_list_digest": "blake3:2ddf682f0c81e3fde6db887e0938cf5584ee3c2b08b424df2285e40666749811",
+      "file_count": 44,
+      "file_list_digest": "blake3:34eeb42168fa514c7ba5729c89350d54e725d6aee6046dbaea4bc43385ec45c9",
       "rust_source_count": 25,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-bitset",
       "manifest": "vyre-libs-bitset/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 38,
-      "file_list_digest": "blake3:37d1698c9dff1c4cad173055e35b72d64a018e548ef91203d35ccf7a3fda87c0",
+      "file_count": 40,
+      "file_list_digest": "blake3:39fb6ad82b834e36baca26559d6f3c9a5fe54c28f22e74379c4a80659d798d71",
       "rust_source_count": 21,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-math",
       "manifest": "vyre-libs-math/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 118,
-      "file_list_digest": "blake3:a64845681ecee2bf62151686a808607908e2aec6fcc1786f5aff1a1a7ded50eb",
+      "file_count": 120,
+      "file_list_digest": "blake3:333b592641821eb128869e09ca6c0fb92d15eec28ab0f0f6112372cfd7407c3e",
       "rust_source_count": 104,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
-      "forbidden_files": [
-        "src/math/SKILL.md"
-      ],
+      "missing_required_files": [],
+      "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT",
-        "contains internal or unsafe package paths: src/math/SKILL.md"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-nn",
       "manifest": "vyre-libs-nn/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 144,
-      "file_list_digest": "blake3:41aa007e49f6b6e2d1a329a8d15738f0faec1b7c3afa5bd3c7e305acde07320f",
+      "file_count": 145,
+      "file_list_digest": "blake3:fc5c28a538d61ea83155e85bdec5dbd475d243926951cf2a48d58e5dfcb2b16f",
       "rust_source_count": 102,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
-      "forbidden_files": [
-        "src/nn/SKILL.md"
-      ],
+      "missing_required_files": [],
+      "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT",
-        "contains internal or unsafe package paths: src/nn/SKILL.md"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-pattern",
       "manifest": "vyre-libs-pattern/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 73,
-      "file_list_digest": "blake3:40866de70a13f50128793d7756183bb1b74344a2473e8eb0b6dfc91b06d449cf",
+      "file_count": 74,
+      "file_list_digest": "blake3:000f37ad372cc930f1ac2e6a64d2e829ebf274329ce2b915373a8156c7d71b2a",
       "rust_source_count": 56,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
-      "forbidden_files": [
-        "src/pattern/SKILL.md"
-      ],
+      "missing_required_files": [],
+      "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT",
-        "contains internal or unsafe package paths: src/pattern/SKILL.md"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-rule",
       "manifest": "vyre-libs-rule/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 16,
-      "file_list_digest": "blake3:dddfdddba18fcdf7cd2ff6aef47879b90ce3cc5599c8ea6f41be35fe4ec4e3e3",
+      "file_count": 18,
+      "file_list_digest": "blake3:d54db1863f9f4fc501235a3f3da0cae2301d22e56a934199813efa15c7fa33b4",
       "rust_source_count": 9,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-text",
       "manifest": "vyre-libs-text/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 28,
-      "file_list_digest": "blake3:9e90dbdd8f351fd5d92b0e7abe597f2afe10a4c04905384f3031f827b4e47cc9",
+      "file_count": 30,
+      "file_list_digest": "blake3:e6a6bcbe2123a25bf5a103574c8d87082f8c1e7c6f83cb7ef984a6fabcc5c842",
       "rust_source_count": 11,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-decode",
       "manifest": "vyre-libs-decode/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 23,
-      "file_list_digest": "blake3:af717d710694b4bca12744a02a2bcb6ceaf1da84a1bd08cb8f5a2b4606d2eda9",
+      "file_count": 25,
+      "file_list_digest": "blake3:0c4a92de66da4debf4a197f1c8179700465b5c6d23e2ead5da77194561a192bf",
       "rust_source_count": 12,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-parsing",
       "manifest": "vyre-libs-parsing/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 55,
-      "file_list_digest": "blake3:d822c54c89223d58d5f31a496b43db0e85a385fbc3da5b0a5ea5ab217cdba893",
+      "file_count": 57,
+      "file_list_digest": "blake3:24080c1e3b4e55280719e573d933f78798d82a42e58475f53489a2c5e7f9a2c9",
       "rust_source_count": 42,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-vfs",
       "manifest": "vyre-libs-vfs/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 10,
-      "file_list_digest": "blake3:cf16abc98515e58e6db4cbe97a76ddb40d2bb9700caf6871762f664c4f84a495",
+      "file_count": 12,
+      "file_list_digest": "blake3:90e31ae9a28dedd5bc80d614566cf405c7dc95dbdf346f9242a5e1de7081104b",
       "rust_source_count": 3,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-visual",
       "manifest": "vyre-libs-visual/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 34,
-      "file_list_digest": "blake3:c01b52849977a1f780be7b099f998678095fe38412ad8ecf99706f0fd7ae89e6",
+      "file_count": 36,
+      "file_list_digest": "blake3:d8212bb4d9dec78259d5c8b4b969a711edae0f760ad8aca9c7606829f988bac0",
       "rust_source_count": 23,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-graph",
       "manifest": "vyre-libs-graph/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 198,
-      "file_list_digest": "blake3:6c8e7a8651f5368f2c6ecf0e4b6ffe24a440489ba9f032541e9e4c2e188a0f8b",
+      "file_count": 200,
+      "file_list_digest": "blake3:b46cef577d84ffd9819f76e6a4deaee4d5c02fc21f669fef328e3a2849b8b75b",
       "rust_source_count": 143,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-analysis",
       "manifest": "vyre-libs-analysis/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 26,
-      "file_list_digest": "blake3:69f0af50c8ad84785813d58a4d795b7a78ff30eb5a0bf9a1433cec3845190069",
+      "file_count": 28,
+      "file_list_digest": "blake3:794251ea6a115360b5517f08215e6c7e3dcf6d80f5a368cb74b64de34a75b3b3",
       "rust_source_count": 16,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-encoding",
       "manifest": "vyre-libs-encoding/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 32,
-      "file_list_digest": "blake3:1eed7a171e829182da65be222e20084b0ed47bcbf47bfc5cd28e58d8295898b7",
+      "file_count": 34,
+      "file_list_digest": "blake3:8a6b335abcd28b7ba80f94790376aece7382cb24cd77531fa66fcbb9c469b7f1",
       "rust_source_count": 15,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-reasoning",
       "manifest": "vyre-libs-reasoning/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 27,
-      "file_list_digest": "blake3:d53403f22c42dea2865576865c0f7d29cfa021cbb26695550c250df99a2dd789",
+      "file_count": 29,
+      "file_list_digest": "blake3:c7f6ab1bd260945395d79051bc61008d28ad10cca154b8ddc6d7fd6cbc568e25",
       "rust_source_count": 15,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-scheduling",
       "manifest": "vyre-libs-scheduling/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 21,
-      "file_list_digest": "blake3:ae9ea4a06b13f120ea4da832e3ac8fb6f813af3de6caed84cad5e12269605039",
+      "file_count": 23,
+      "file_list_digest": "blake3:433ebb71214b66ca70e45c3758fe4b199dd8b59be0313506ed4ded90c56f9ff9",
       "rust_source_count": 10,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-security",
       "manifest": "vyre-libs-security/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 46,
-      "file_list_digest": "blake3:98be33008605341ba309eab67a3bd4cb192ec41a305790e995491792efad05d2",
+      "file_count": 48,
+      "file_list_digest": "blake3:684e0d0df015a3c816ed57e471a09876200f3821f7dfef4f5c811aa4bfb40d9d",
       "rust_source_count": 34,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs-solvers",
       "manifest": "vyre-libs-solvers/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 59,
-      "file_list_digest": "blake3:46e9ad8b5c1cb280c9a12d5d15b4784f96779af59025a1efdbd02dfc7a913adf",
+      "file_count": 61,
+      "file_list_digest": "blake3:dfa251c73f5135fe866208f6fe4ca59bb4e4756e208273055aa935b8c7b4839f",
       "rust_source_count": 31,
-      "missing_required_files": [
-        "LICENSE-APACHE",
-        "LICENSE-MIT"
-      ],
+      "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
-      "blockers": [
-        "missing required package files: LICENSE-APACHE, LICENSE-MIT"
-      ]
+      "blockers": []
     },
     {
       "package": "vyre-libs",
@@ -4299,31 +4180,5 @@
       "source": "workspace"
     }
   ],
-  "blockers": [
-    "package `vyre-libs-builder` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-device` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-fixpoint` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-hash` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-reduce` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-bitset` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-math` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-math` archive: contains internal or unsafe package paths: src/math/SKILL.md",
-    "package `vyre-libs-nn` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-nn` archive: contains internal or unsafe package paths: src/nn/SKILL.md",
-    "package `vyre-libs-pattern` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-pattern` archive: contains internal or unsafe package paths: src/pattern/SKILL.md",
-    "package `vyre-libs-rule` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-text` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-decode` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-parsing` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-vfs` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-visual` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-graph` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-analysis` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-encoding` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-reasoning` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-scheduling` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-security` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT",
-    "package `vyre-libs-solvers` archive: missing required package files: LICENSE-APACHE, LICENSE-MIT"
-  ]
+  "blockers": []
 }
