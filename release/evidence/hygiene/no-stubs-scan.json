@@ -1,11 +1,11 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"58a981e513fdc27b75eda1afb0559736035ad0ae","commit_timestamp":"1789033760","parent_commit":"1711d15f369f3a89c1caa9eeebbc1aaabf4a28d3","dirty":false,"source_fingerprint":"git:58a981e513fdc27b75eda1afb0559736035ad0ae:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"c5e305aa5b4acb24f0cb8cbf758beca9362bb3ee","commit_timestamp":"1789039500","parent_commit":"14d1044d5a72608ef198971fdd44f04b498a193e","dirty":true,"source_fingerprint":"git:c5e305aa5b4acb24f0cb8cbf758beca9362bb3ee:dirty=true:worktree=193a5e414803dee8c472ff81c0ab82976896a775236e89de7b974c50a17e1e0e"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
     {
       "path": "conform/vyre-conform-spec/src/schema.rs",
-      "line": 165,
+      "line": 173,
       "pattern": "placeholder_text",
       "text": "/// Construct an unsigned certificate with deterministic placeholder fields."
     },
@@ -89,7 +89,7 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 175,
+      "line": 198,
       "pattern": "placeholder_text",
       "text": "// op whose fixture carried a placeholder for a backend-allocated output"
     },
@@ -245,19 +245,19 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 284,
+      "line": 337,
       "pattern": "stub_text",
       "text": "/// pattern table row reading `text: \"todo!(\",` is that spelling, not a stub."
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 313,
+      "line": 366,
       "pattern": "placeholder_text",
       "text": "/// The family covers an unfinished item, a placeholder, and the macros and"
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 321,
+      "line": 374,
       "pattern": "FIXME",
       "text": "| \"FIXME\""
     },
@@ -269,13 +269,13 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 286,
+      "line": 293,
       "pattern": "placeholder_text",
       "text": "/// platform is prose and compiles nothing. That also drops the placeholder"
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 289,
+      "line": 296,
       "pattern": "placeholder_text",
       "text": "/// accepts only `[a-z0-9_]` there, so anything else is a placeholder rather than"
     }

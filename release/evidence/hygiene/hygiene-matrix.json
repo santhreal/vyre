@@ -1,10 +1,10 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"58a981e513fdc27b75eda1afb0559736035ad0ae","commit_timestamp":"1789033760","parent_commit":"1711d15f369f3a89c1caa9eeebbc1aaabf4a28d3","dirty":false,"source_fingerprint":"git:58a981e513fdc27b75eda1afb0559736035ad0ae:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"c5e305aa5b4acb24f0cb8cbf758beca9362bb3ee","commit_timestamp":"1789039500","parent_commit":"14d1044d5a72608ef198971fdd44f04b498a193e","dirty":true,"source_fingerprint":"git:c5e305aa5b4acb24f0cb8cbf758beca9362bb3ee:dirty=true:worktree=193a5e414803dee8c472ff81c0ab82976896a775236e89de7b974c50a17e1e0e"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4863,
+  "scanned_files": 4788,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -50,7 +50,7 @@
     },
     {
       "pattern": "documented_panic_contract",
-      "count": 208
+      "count": 210
     },
     {
       "pattern": "expect_call",
@@ -172,7 +172,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 62
+      "count": 64
     },
     {
       "owner_lane": "driver_shared",
@@ -471,7 +471,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 62
+      "count": 64
     },
     {
       "owner_lane": "driver_shared",
@@ -1753,7 +1753,7 @@
     },
     {
       "path": "conform/vyre-conform-spec/src/schema.rs",
-      "line": 165,
+      "line": 173,
       "pattern": "placeholder_text",
       "owner_lane": "testing_evidence",
       "surface": "production",
@@ -3312,8 +3312,28 @@
       "release_blocker": false
     },
     {
+      "path": "vyre-reference/src/error.rs",
+      "line": 46,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "driver_shared",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-reference/src/error.rs",
+      "line": 53,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "driver_shared",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 175,
+      "line": 198,
       "pattern": "placeholder_text",
       "owner_lane": "driver_shared",
       "surface": "production",
@@ -5713,7 +5733,7 @@
     },
     {
       "path": "vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs",
-      "line": 476,
+      "line": 504,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -6123,7 +6143,7 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/tests.rs",
-      "line": 1746,
+      "line": 1866,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6603,7 +6623,7 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 284,
+      "line": 337,
       "pattern": "stub_text",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -6613,7 +6633,7 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 313,
+      "line": 366,
       "pattern": "placeholder_text",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -6623,7 +6643,7 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 321,
+      "line": 374,
       "pattern": "FIXME",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -6803,7 +6823,7 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 286,
+      "line": 293,
       "pattern": "placeholder_text",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -6813,7 +6833,7 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 289,
+      "line": 296,
       "pattern": "placeholder_text",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -6878,7 +6898,7 @@
     },
     {
       "path": "conform/vyre-conform-spec/src/schema.rs",
-      "line": 165,
+      "line": 173,
       "pattern": "placeholder_text",
       "text": "/// Construct an unsigned certificate with deterministic placeholder fields."
     },
@@ -7817,8 +7837,20 @@
       "text": ".unwrap_or_else(|error| panic!(\"invalid segment reduce witness input: {error}\"));"
     },
     {
+      "path": "vyre-reference/src/error.rs",
+      "line": 46,
+      "pattern": "documented_panic_contract",
+      "text": "None => panic!("
+    },
+    {
+      "path": "vyre-reference/src/error.rs",
+      "line": 53,
+      "pattern": "documented_panic_contract",
+      "text": "Some(_) => panic!("
+    },
+    {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 175,
+      "line": 198,
       "pattern": "placeholder_text",
       "text": "// op whose fixture carried a placeholder for a backend-allocated output"
     },
@@ -9335,7 +9367,7 @@
     },
     {
       "path": "vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs",
-      "line": 476,
+      "line": 504,
       "pattern": "source_inspection_test",
       "text": "test `source_derived_quota_space_closure_fails_on_unrecorded_fields` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "source_derived_quota_space_closure_fails_on_unrecorded_fields"
@@ -9622,7 +9654,7 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/tests.rs",
-      "line": 1746,
+      "line": 1866,
       "pattern": "source_inspection_test",
       "text": "test `every_xtask_crate_carries_the_release_tooling_rules` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_xtask_crate_carries_the_release_tooling_rules"
@@ -9922,19 +9954,19 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 284,
+      "line": 337,
       "pattern": "stub_text",
       "text": "/// pattern table row reading `text: \"todo!(\",` is that spelling, not a stub."
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 313,
+      "line": 366,
       "pattern": "placeholder_text",
       "text": "/// The family covers an unfinished item, a placeholder, and the macros and"
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 321,
+      "line": 374,
       "pattern": "FIXME",
       "text": "| \"FIXME\""
     },
@@ -10046,13 +10078,13 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 286,
+      "line": 293,
       "pattern": "placeholder_text",
       "text": "/// platform is prose and compiles nothing. That also drops the placeholder"
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 289,
+      "line": 296,
       "pattern": "placeholder_text",
       "text": "/// accepts only `[a-z0-9_]` there, so anything else is a placeholder rather than"
     },

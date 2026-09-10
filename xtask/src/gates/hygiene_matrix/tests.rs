@@ -1408,6 +1408,126 @@ pub fn pack(haystack: &[u8]) -> Vec<u8> {
     );
 }
 
+/// A `const` block is the strongest closure over a variant space Rust offers, and a
+/// `panic!` inside one is a build failure rather than a run-time fault.
+///
+/// Its `# Panics` section is the same declared contract a function's is, so the walk
+/// must recognize a `const`/`static` item with a block initializer as an enclosing
+/// item. Matching only `fn` reported the contract as undocumented and left no edit to
+/// the documented item that could clear the finding, which pushes the author toward
+/// deleting the compile-time check.
+#[test]
+fn documented_panic_contract_is_recognized_inside_a_const_block() {
+    for opening in [
+        "pub const ALL: [Class; 2] = {",
+        "const ALL: [Class; 2] = {",
+        "pub(crate) const ALL: [Class; 2] = {",
+        "pub static ALL: [Class; 2] = {",
+    ] {
+        let source = format!(
+            "\
+/// Every class, in declaration order.
+///
+/// # Panics
+/// Panics while the crate compiles when COUNT disagrees with the chain.
+{opening}
+    match Class::First.successor() {{
+        Some(next) => [Class::First, next],
+        None => panic!(\"Fix: correct COUNT.\"),
+    }}
+}};
+"
+        );
+        let panic_line = source
+            .lines()
+            .position(|line| line.contains("panic!("))
+            .expect("Fix: keep the panic site in the const-block fixture.");
+
+        assert!(
+            has_documented_panic_contract(&source, panic_line),
+            "Fix: a panic inside a const item documenting `# Panics` must not be a release blocker; opening={opening}"
+        );
+    }
+}
+
+/// Widening the walk to const items must not exempt an undocumented one.
+#[test]
+fn undocumented_panic_inside_a_const_block_stays_a_blocker() {
+    let source = "\
+/// Every class, in declaration order.
+pub const ALL: [Class; 2] = {
+    match Class::First.successor() {
+        Some(next) => [Class::First, next],
+        None => panic!(\"Fix: correct COUNT.\"),
+    }
+};
+";
+    let panic_line = source
+        .lines()
+        .position(|line| line.contains("panic!("))
+        .expect("Fix: keep the panic site in the undocumented const fixture.");
+
+    assert!(
+        !has_documented_panic_contract(source, panic_line),
+        "Fix: a const item with no `# Panics` section must stay a release blocker."
+    );
+}
+
+/// A `const` with no block initializer encloses nothing.
+///
+/// `const COUNT: usize = 8;` cannot contain a panic site, so treating it as an
+/// enclosing item would let its docs answer for the next item down the file.
+#[test]
+fn a_const_without_a_block_body_is_not_an_enclosing_item() {
+    assert!(
+        !is_const_block_item_line("const COUNT: usize = 8;"),
+        "Fix: a const with no block initializer must not open an enclosing item."
+    );
+    assert!(
+        !is_const_block_item_line("let mut classes = [Class::First; 2];"),
+        "Fix: a local binding must not open an enclosing item."
+    );
+    assert!(
+        is_fn_signature_line("pub const fn successor(self) -> Option<Self> {"),
+        "Fix: a `const fn` must still open an enclosing item."
+    );
+    assert!(
+        !is_fn_signature_line("pub const ALL: [Class; 2] = {"),
+        "Fix: a const item must not read as a function signature."
+    );
+}
+
+/// A function-local `static` is declared by the function around it.
+///
+/// A cached accessor is the house shape for a process-wide registry: a documented
+/// `pub fn` wrapping `static R: LazyLock<_> = LazyLock::new(|| ...panic...)`. The
+/// inner static carries no docs of its own, so ending the walk there reports the
+/// function's declared contract as undocumented and no edit can clear it.
+#[test]
+fn a_local_static_does_not_hide_the_contract_of_the_function_around_it() {
+    let source = "\
+/// Return the process-wide registry.
+///
+/// # Panics
+/// Panics if the static inventory fails validation.
+pub fn global() -> &'static Self {
+    static REGISTRY: LazyLock<Registry> = LazyLock::new(|| {
+        Registry::build().unwrap_or_else(|error| panic!(\"invalid registry: {error}\"))
+    });
+    &REGISTRY
+}
+";
+    let panic_line = source
+        .lines()
+        .position(|line| line.contains("panic!("))
+        .expect("Fix: keep the panic site in the cached-accessor fixture.");
+
+    assert!(
+        has_documented_panic_contract(source, panic_line),
+        "Fix: a local static must not hide the `# Panics` section of its function."
+    );
+}
+
 /// Restricted visibility may contain spaces inside `pub(in path)`.
 ///
 /// The panic-contract walk must parse that visibility without widening the

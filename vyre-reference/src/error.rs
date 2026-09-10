@@ -30,6 +30,13 @@ impl ReferenceErrorClass {
     /// Derived from [`Self::successor`], whose match has no catch-all arm, so
     /// a new class does not compile until it is placed in the chain and the
     /// array length is corrected.
+    ///
+    /// # Panics
+    ///
+    /// Panics when [`Self::COUNT`] disagrees with the length of the successor
+    /// chain, in either direction. The expression is a `const`, so the panic
+    /// is evaluated while the crate is compiled and reports as a build
+    /// failure naming the correction. It cannot be reached at run time.
     pub const ALL: [Self; Self::COUNT] = {
         let mut classes = [Self::MissingValue; Self::COUNT];
         let mut index = 1;
