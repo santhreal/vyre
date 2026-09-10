@@ -277,7 +277,7 @@ impl StructuredWorkerScope {
         }
 
         // Operation hung or exceeded deadline  -  quarantine worker
-        let elapsed = start.elapsed().as_micros() as u64;
+        let elapsed = u64::try_from(start.elapsed().as_micros()).unwrap_or(u64::MAX);
         self.quarantine.quarantine_worker(
             worker_id,
             format!("Driver call hung after {elapsed}µs (deadline: {deadline_micros}µs)"),

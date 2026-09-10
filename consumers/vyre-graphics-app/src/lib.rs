@@ -598,15 +598,15 @@ impl BenchmarkHarness {
                 .handle_event(event)
                 .map_err(|error| format!("interactive event refused: {error}"))?;
             let sub_time = sub_t0.elapsed();
-            cpu_sub_times.push(sub_time.as_nanos() as u64);
+            cpu_sub_times.push(u64::try_from(sub_time.as_nanos()).unwrap_or(u64::MAX));
 
             let frame_t0 = Instant::now();
             let _ = renderer.render_frame();
             let frame_time = frame_t0.elapsed();
             let total_latency = t0.elapsed();
 
-            latencies.push(total_latency.as_nanos() as u64);
-            frame_times.push(frame_time.as_nanos() as u64);
+            latencies.push(u64::try_from(total_latency.as_nanos()).unwrap_or(u64::MAX));
+            frame_times.push(u64::try_from(frame_time.as_nanos()).unwrap_or(u64::MAX));
         }
 
         latencies.sort_unstable();
@@ -651,13 +651,13 @@ impl BenchmarkHarness {
             frame_time_ns_p99: frame_times[p99_idx],
             frame_time_jitter_ns: jitter,
             cpu_submission_time_ns: cpu_sub_times.iter().sum::<u64>() / samples as u64,
-            compile_pipeline_time_ns: compile_pipeline_time.as_nanos() as u64,
+            compile_pipeline_time_ns: u64::try_from(compile_pipeline_time.as_nanos()).unwrap_or(u64::MAX),
             missed_deadlines_60hz: missed_60,
             missed_deadlines_120hz: missed_120,
             missed_deadlines_144hz: missed_144,
             missed_deadlines_240hz: missed_240,
-            empty_work_latency_ns: empty_work_latency.as_nanos() as u64,
-            device_loss_recovery_latency_ns: dev_loss_recovery_latency.as_nanos() as u64,
+            empty_work_latency_ns: u64::try_from(empty_work_latency.as_nanos()).unwrap_or(u64::MAX),
+            device_loss_recovery_latency_ns: u64::try_from(dev_loss_recovery_latency.as_nanos()).unwrap_or(u64::MAX),
             total_memory_bytes: renderer.retained_framebuffer.len() * 4,
         })
     }

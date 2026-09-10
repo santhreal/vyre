@@ -688,3 +688,286 @@ rejects each one and accepts the clean copy. The source it reads is the fixture
 it just generated, not the checkout, and the assertion is the compiler's verdict
 on that fixture.
 """
+
+[[gate]]
+file = "consumers/vyre-model-compiler/tests/absence_proofs.rs"
+tests = ["proves_absence_of_physical_kernels_and_target_source", "proves_absence_of_schedule_templates_and_hints", "proves_absence_of_compiler_rewrites_and_passes"]
+reason = """
+Assert that the downstream model-compiler package declares no physical kernel,
+no target-specific source, no schedule template or hint, and no compiler rewrite
+pass. Absence of a declaration produces no execution, so nothing a running
+program observes distinguishes a package that never had one from a package that
+grew one. The file set is walked at run time, so a file added to the package is
+judged on arrival.
+"""
+
+[[gate]]
+file = "consumers/vyre-model-compiler/tests/checkpoint_ingestion.rs"
+tests = ["covered_dtypes_match_the_safetensors_declaration"]
+reason = """
+Holds the ingestion coverage table equal to the variant set of
+`SafetensorDtype`. Rust publishes no variant list at run time, so the enum
+declaration in vyre-safetensors is the only place the full set exists, and a
+variant added there without a covering row would otherwise reach a caller as an
+unhandled dtype.
+"""
+
+[[gate]]
+file = "vyre/tests/downstream_workflow_fixture.rs"
+tests = ["public_seam_carries_zero_callbacks_zero_handles_and_zero_domain_vocabulary"]
+reason = """
+Asserts that the facade's public seam declares no callback parameter, no native
+OS or driver handle, and no model-domain vocabulary. A type the seam does not
+declare is never constructed, so no execution witnesses its absence; the
+declarations are what a downstream crate compiles against.
+"""
+
+[[gate]]
+file = "vyre/tests/facade_boundary.rs"
+tests = ["facade_exposes_zero_internal_implementation_symbols", "facade_compiler_module_is_curated_not_whole_crate_alias"]
+reason = """
+Judge which re-exports `vyre/src/lib.rs` states: that no re-export originates in
+an optimizer pass, a search planner, a lowering stage, a concrete driver or a
+runtime worker, and that the compiler module is an enumerated namespace rather
+than a whole-crate alias. A `pub use` is resolved by the compiler, so the
+published set has no run-time representation this crate can enumerate.
+"""
+
+[[gate]]
+file = "vyre-aot/tests/compile_request_fidelity.rs"
+tests = ["the_crate_constructs_no_compile_input_of_its_own", "every_public_target_compile_entry_point_consumes_a_validated_request"]
+reason = """
+Assert that no file in vyre-aot constructs a compile input of its own and that
+every public function returning an artifact envelope for a named target takes a
+validated request. A fabricated input is indistinguishable from a caller's once
+constructed, and a signature is erased before any call happens, so both the
+file set and the signature set are read from the crate's source at run time.
+"""
+
+[[gate]]
+file = "vyre-bench/tests/application_domain_release_evidence_contracts.rs"
+tests = ["test_every_record_field_has_a_recorded_source"]
+reason = """
+Holds the recorded-source table equal to the field set of
+`WholeApplicationRecord`. Struct fields carry no run-time listing, so the
+declaration is the only full field set, and a field added without a source entry
+would otherwise be serialized into evidence with no stated origin.
+"""
+
+[[gate]]
+file = "vyre-bench/tests/application_domain_release_evidence_contracts.rs"
+tests = ["test_producer_carries_no_measurement_constants"]
+reason = """
+Asserts that the whole-application producers state no literal timestamp, host
+string, schedule or device claim. A constant that replaces a measurement
+produces a well-formed record, so a run cannot tell it from a measured one; only
+the absence of the literal in the producer source can.
+"""
+
+[[gate]]
+file = "vyre-bench/tests/application_domain_release_evidence_contracts.rs"
+tests = ["test_no_test_writes_into_tracked_evidence_paths"]
+reason = """
+Asserts that no test in vyre-bench calls the tracked-evidence writer against the
+repository evidence directory. A test that did would leave the same artifact the
+one producer leaves, so no observation after the fact attributes it; the call
+site is the only witness. The test file set is read at run time.
+"""
+
+[[gate]]
+file = "vyre-bench/tests/evidence_receipt_contracts.rs"
+tests = ["compiler_source_crates_name_zero_workload_or_expert_baselines"]
+reason = """
+Asserts that no compiler-side crate names a benchmark workload or an expert
+baseline. A reference that exists only as a string or an import compiles into no
+observable call, so the declaration is the only artifact that carries the
+coupling.
+"""
+
+[[gate]]
+file = "vyre-driver/tests/concrete_driver_dependency_boundaries.rs"
+tests = ["concrete_driver_source_files_have_no_forbidden_production_imports"]
+reason = """
+Asserts that no concrete driver imports a semantic library, a schedule search
+stage, application policy or a peer driver. An import that is never called links
+in without any run-time trace, and the crate list and layer assignments are read
+from `docs/CRATE_OWNERSHIP.toml` at run time so a driver added there is judged
+without an edit here.
+"""
+
+[[gate]]
+file = "vyre-driver/tests/external_resource_path_agreement.rs"
+tests = ["every_concrete_driver_publishes_its_external_resource_surface_at_one_path", "concrete_drivers_agree_on_the_external_resource_path"]
+reason = """
+Assert that every concrete driver publishes its external-resource surface at one
+shared module path. A path is a compile-time fact: two drivers publishing the
+same contract at different paths both work at run time and only diverge for a
+caller reading the second one. The crate list is the concrete-backend layer of
+`docs/CRATE_OWNERSHIP.toml`.
+"""
+
+[[gate]]
+file = "vyre-driver/tests/float_lowering_refusal.rs"
+tests = ["every_wrapper_dispatch_entry_point_refuses_a_mode_the_backend_does_not_lower"]
+reason = """
+Holds the set of dispatch entry points this suite calls equal to the set the
+registry wrapper guards. The refusals themselves are exercised by calling them;
+what has no run-time witness is that no guarded entry point was left out, since
+an uncalled method produces nothing to observe. The guarded set is read from the
+wrapper source at run time.
+"""
+
+[[gate]]
+file = "vyre-emit-naga/tests/physical_ir_variant_exhaustiveness.rs"
+tests = ["runtime_enumerates_all_kernel_op_kind_variants_from_source"]
+reason = """
+Enumerates every `KernelOpKind` variant and asserts the Naga emitter reaches a
+deliberate decision for each. Rust exposes no variant list at run time, so the
+enum declaration is the only complete set; without it the suite would cover
+whichever variants someone remembered.
+"""
+
+[[gate]]
+file = "vyre-emit-ptx/tests/physical_ir_variant_exhaustiveness.rs"
+tests = ["runtime_enumerates_all_kernel_op_kind_variants_from_source"]
+reason = """
+Enumerates every `KernelOpKind` variant and asserts the PTX emitter reaches a
+deliberate decision for each. Rust exposes no variant list at run time, so the
+enum declaration is the only complete set; without it the suite would cover
+whichever variants someone remembered.
+"""
+
+[[gate]]
+file = "vyre-foundation/tests/buffer_decl_boundary.rs"
+tests = ["output_byte_range_converts_from_no_signed_range"]
+reason = """
+Asserts that no signed range implements `IntoOutputByteRange`. An implementation
+that does not exist cannot be called, so no execution witnesses its absence,
+while one added would convert a negative bound with `as` into an extent just
+below `u64::MAX`. The admitted set is read from the source on every run.
+"""
+
+[[gate]]
+file = "vyre-foundation/tests/schedule_calculus_contracts.rs"
+tests = ["schedule_calculus_operator_set_is_closed_against_source_at_runtime"]
+reason = """
+Holds the exercised schedule-calculus operator set equal to the operators the
+source declares. The operator set has no run-time listing, so an operator added
+without a case would leave the suite green over a smaller set than the calculus
+carries.
+"""
+
+[[gate]]
+file = "vyre-lower/tests/physical_ir_emitter_exhaustive_decisions.rs"
+tests = ["no_catch_all_wildcard_arms_in_emitter_dispatch_modules"]
+reason = """
+Asserts that no emitter dispatch module carries a catch-all match arm. A
+wildcard arm produces a silent downgrade rather than an error, so a run observes
+a plausible result instead of a refusal, and the arm exists only in the match
+declaration. The emitter module set is read at run time.
+"""
+
+[[gate]]
+file = "vyre-lower/tests/physical_kernel_ir_policy_boundary.rs"
+tests = ["no_physical_kernel_ir_type_reuses_a_semantic_policy_type", "no_backend_name_appears_in_shared_legalization_paths"]
+reason = """
+Assert that no physical-kernel-IR type reuses a semantic policy type and that no
+backend name appears in a shared legalization or capability path. Both are
+properties of declarations: a reused type compiles and runs, and a backend name
+in a shared path only shows up as a wrong decision on some other backend
+later.
+"""
+
+[[gate]]
+file = "vyre-runtime/tests/generic_runtime_contracts.rs"
+tests = ["proof_runtime_public_surface_contains_no_model_concepts"]
+reason = """
+Asserts that the runtime's public surface declares no model, token, expert,
+attention or safetensors concept. A concept the surface does not declare is
+never constructed, so its absence produces no observation; the published
+declarations are the artifact that carries it.
+"""
+
+[[gate]]
+file = "vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs"
+tests = ["runtime_closure_no_public_constructor_produces_unbounded_quota"]
+reason = """
+Exercises every standard quota constructor and every non-finite rejection by
+calling them, then asserts vyre-runtime declares no constructor named
+`unbounded`. The calls are behaviour; the closure over constructor names is not,
+because a constructor nobody calls cannot be observed and Rust publishes no
+function list at run time.
+"""
+
+[[gate]]
+file = "vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs"
+tests = ["runtime_unsafe_permission_matches_the_recorded_set_and_every_grant_states_an_obligation"]
+reason = """
+Holds the recorded `unsafe` permission set equal to the modules whose source
+carries an unsafe block or an allow attribute, and requires each grant to state
+its obligation. An `unsafe` block compiles into ordinary code with no run-time
+marker, so the declaration is the only place the grant exists.
+"""
+
+[[gate]]
+file = "vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs"
+tests = ["source_derived_quota_space_closure_fails_on_unrecorded_fields"]
+reason = """
+Holds the quota coverage table equal to the fields the quota structs declare.
+Struct fields carry no run-time listing, so a limit added without a covering row
+would otherwise ship unbounded with the suite still green.
+"""
+
+[[gate]]
+file = "vyre-spec/tests/one_public_path_per_item.rs"
+tests = ["no_item_is_published_at_two_paths", "the_walk_actually_reaches_the_crate"]
+reason = """
+Assert that no item vyre-spec publishes is reachable at two public paths, and
+that the module walk that judges it reached the crate rather than an empty set.
+A second path compiles, renders and imports exactly like the first, so nothing a
+running program observes separates them. The module tree is read from
+`vyre-spec/src` at run time.
+"""
+
+[[gate]]
+file = "xtask/tests/test_source_paths.rs"
+tests = ["tests_are_declared_under_cfg_test"]
+reason = """
+Asserts that every `src/**/tests.rs` in the workspace is declared under
+`#[cfg(test)]`, which is what makes the name-based skip in `is_test_source_path`
+sound. A module the predicate skips is not compiled into the build being judged,
+so no run reveals that one of them ships; the declaration is the witness. The
+file set is derived from the workspace at run time.
+"""
+
+[[gate]]
+file = "xtask/src/gates/platform_support_matrix.rs"
+tests = ["every_driver_crate_reaches_the_roster_under_its_declared_identifier"]
+reason = """
+Holds the platform-support roster equal to the driver crates present in the
+checkout, each under the backend identifier its own source declares. A crate
+that declares an identifier and never registers it produces no run-time entry to
+compare against, so the declared constant is the set the document owes rows
+to.
+"""
+
+[[gate]]
+file = "xtask/src/gates/platform_support_matrix.rs"
+tests = ["every_declared_variant_reaches_the_document", "a_cell_with_no_recorded_run_is_published_as_unproven", "disagreeing_identity_digests_are_a_finding"]
+reason = """
+Judge the gate that renders the platform-support document, whose input is the
+`HostOs` and `HostArch` declarations and the tier match in the platform source.
+Reading them is the subject under test rather than a substitute for running it:
+the assertions are on the document and the findings the gate produces, and the
+cell space has no run-time listing to derive instead.
+"""
+
+[[gate]]
+file = "xtask-registry/src/gates/lego_audit/semantic_organization.rs"
+tests = ["file_roles_classify_every_vyre_libs_file_uniquely", "new_unregistered_nested_file_fails_role_closure", "overlapping_file_roles_fails_role_closure"]
+reason = """
+Judge the file-role closure that classifies every composition-domain source
+file, including that an unregistered nested file and two overlapping roles both
+fail it. The subject under test is a rule over the file tree, so the tree is its
+input; a role assignment produces no run-time artifact to observe instead.
+"""

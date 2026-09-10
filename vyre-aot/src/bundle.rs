@@ -43,6 +43,10 @@ const METRIC_RECORD_WORDS: u32 = 8;
 const MAX_BUNDLE_MANIFEST_BYTES: u64 = 1024 * 1024;
 const MAX_COMPRESSED_ENVELOPE_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_ENVELOPE_BYTES: usize = 64 * 1024 * 1024;
+/// Bound on the compressed weights file one bundle carries.
+const MAX_COMPRESSED_WEIGHTS_BYTES: u64 = 16 * 1024 * 1024 * 1024;
+/// Bound on the weights a bundle decompresses to.
+const MAX_WEIGHTS_BYTES: usize = 64 * 1024 * 1024 * 1024;
 
 /// Files written for one deployable artifact envelope.
 #[derive(Debug, Clone)]
@@ -259,7 +263,11 @@ pub fn read_bundle_weights(bundle_dir: &Path) -> Result<Vec<u8>, BundleError> {
             manifest.weights_compression
         )));
     }
-    let compressed = fs::read(bundle_dir.join(&manifest.weights_file))?;
+    let compressed = read_bytes_bounded(
+        &bundle_dir.join(&manifest.weights_file),
+        MAX_COMPRESSED_WEIGHTS_BYTES,
+        "weights",
+    )?;
     let weights = brotli_decompress(&compressed)?;
     if sha256_hex(&weights) != manifest.weights_sha256_hex {
         return Err(BundleError::InvalidArtifact(
@@ -593,11 +601,19 @@ fn brotli_compress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
     Ok(out)
 }
 
+/// Decompress packaged weights, refusing an expansion past
+/// [`MAX_WEIGHTS_BYTES`].
+///
+/// The compressed bytes are read before the manifest digest can confirm them, so
+/// an expansion ratio is whatever the file on disk claims. Streaming into the
+/// same bounded sink the envelope path uses caps the allocation at the declared
+/// limit instead of at the ratio.
 fn brotli_decompress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
-    let mut out = Vec::new();
+    let mut output = BoundedOutput {
+        bytes: Vec::new(),
+        max_bytes: MAX_WEIGHTS_BYTES,
+    };
     let mut reader = brotli::Decompressor::new(input, 4096);
-    reader
-        .read_to_end(&mut out)
-        .map_err(|e| BundleError::Brotli(format!("{e:?}")))?;
-    Ok(out)
+    io::copy(&mut reader, &mut output).map_err(|error| BundleError::Brotli(format!("{error:?}")))?;
+    Ok(output.bytes)
 }
