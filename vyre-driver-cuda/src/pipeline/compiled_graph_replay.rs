@@ -117,8 +117,31 @@ impl CudaCompiledPipeline {
         config: &DispatchConfig,
         outputs: &mut Vec<OutputBuffers>,
     ) -> Result<(), BackendError> {
+        self.dispatch_resident_batches_timed_into(resident_batches, config, outputs, None)
+    }
+
+    /// Submit every resident item on ONE stream and, when asked, report each
+    /// item's device duration.
+    ///
+    /// The items are enqueued back to back before any of them is awaited, so
+    /// item N's start event retires when item N-1's kernel ends while item N's
+    /// kernel is already submitted. Its event pair therefore spans the kernel,
+    /// not the host latency of submitting it, and the device stays busy across
+    /// the whole batch. Timing each item through a separate submit-and-wait
+    /// charges every item the launch front-end latency of an idle stream, which
+    /// on a 9 us kernel is close to a fifth of the reported figure.
+    pub(crate) fn dispatch_resident_batches_timed_into(
+        &self,
+        resident_batches: &[SmallVec<[crate::backend::CudaResidentBuffer; 8]>],
+        config: &DispatchConfig,
+        outputs: &mut Vec<OutputBuffers>,
+        mut device_ns_by_item: Option<&mut Vec<Option<u64>>>,
+    ) -> Result<(), BackendError> {
         if resident_batches.is_empty() {
             outputs.clear();
+            if let Some(rows) = device_ns_by_item.as_deref_mut() {
+                rows.clear();
+            }
             return Ok(());
         }
         if !dispatch_configs_share_launch_shape(&self.compiled_config, config) {
@@ -126,6 +149,7 @@ impl CudaCompiledPipeline {
                 resident_batches,
                 config,
                 outputs,
+                device_ns_by_item,
             );
         }
 
@@ -139,11 +163,17 @@ impl CudaCompiledPipeline {
                 self.module_key,
                 (self.static_params.ptr != 0).then_some(self.static_params.ptr),
                 &self.prepared,
+                device_ns_by_item.is_some(),
             );
         let resident_dispatch = resident_dispatch?;
         let output_handles = resident_dispatch.output_handles;
         let output_readbacks = resident_dispatch.output_readbacks;
+        let item_timing = resident_dispatch.item_timing;
         resident_dispatch.pending.await_timed_result()?;
+        if let Some(rows) = device_ns_by_item {
+            self.backend
+                .collect_batch_item_device_ns(item_timing, rows)?;
+        }
         self.backend.download_resident_readback_batches_many_into(
             &output_handles,
             &output_readbacks,
@@ -156,6 +186,7 @@ impl CudaCompiledPipeline {
         resident_batches: &[SmallVec<[crate::backend::CudaResidentBuffer; 8]>],
         config: &DispatchConfig,
         outputs: &mut Vec<OutputBuffers>,
+        device_ns_by_item: Option<&mut Vec<Option<u64>>>,
     ) -> Result<(), BackendError> {
         let mut dispatches = SmallVec::<[CudaResidentDispatch; 8]>::new();
         reserve_smallvec(
@@ -182,16 +213,31 @@ impl CudaCompiledPipeline {
         }
 
         resize_vec_slots(outputs, dispatches.len(), "dynamic resident output")?;
+        let mut rows = Vec::new();
+        if device_ns_by_item.is_some() {
+            rows.try_reserve_exact(dispatches.len()).map_err(|error| {
+                BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: failed to reserve {} dynamic resident batch timing slot(s): {error}. Submit a smaller resident batch.",
+                        dispatches.len()
+                    ),
+                }
+            })?;
+        }
         for (dispatch, item_outputs) in dispatches.into_iter().zip(outputs.iter_mut()) {
             let output_handles =
                 dispatch.resident_output_handles("dynamic persistent batch readback")?;
             let output_readbacks = dispatch.output_readbacks;
-            dispatch.pending.await_timed_result()?;
+            let (_, device_ns) = dispatch.pending.await_timed_result()?;
+            rows.push(device_ns);
             self.backend.download_resident_readbacks_many_into(
                 &output_handles,
                 &output_readbacks,
                 item_outputs,
             )?;
+        }
+        if let Some(slot) = device_ns_by_item {
+            *slot = rows;
         }
         Ok(())
     }

@@ -298,6 +298,52 @@ pub trait CompiledPipeline: sealed::Sealed + Send + Sync {
         Ok(())
     }
 
+    /// Dispatch several resident-handle submissions and report each item's
+    /// device duration.
+    ///
+    /// A backend that can submit the whole batch before awaiting any of it
+    /// overrides this. Item N's timing then starts when item N-1's work ends
+    /// while item N is already submitted, so what it reports is the item's
+    /// device time and not the host latency of submitting it. The default
+    /// dispatches each item through its own submit-and-wait, which charges
+    /// every item the launch latency of a stream that has nothing else on it.
+    ///
+    /// `device_ns_by_item` is replaced with one entry per batch item, in
+    /// submission order, holding `None` for an item whose backend exposes no
+    /// device timer.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError`] when any item cannot complete dispatch.
+    fn dispatch_persistent_handles_batched_timed(
+        &self,
+        batches: &[&[Resource]],
+        config: &DispatchConfig,
+        outputs: &mut Vec<OutputBuffers>,
+        device_ns_by_item: &mut Vec<Option<u64>>,
+    ) -> Result<(), BackendError> {
+        crate::backend::resize_batch_output_slots(
+            outputs,
+            batches.len(),
+            "compiled resident batch outputs",
+        )?;
+        device_ns_by_item.clear();
+        device_ns_by_item
+            .try_reserve_exact(batches.len())
+            .map_err(|error| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: failed to reserve {} resident batch timing slot(s): {error}. Submit a smaller resident batch.",
+                    batches.len()
+                ),
+            })?;
+        for (batch, slot) in batches.iter().zip(outputs.iter_mut()) {
+            let timed = self.dispatch_persistent_handles_timed(batch, config)?;
+            device_ns_by_item.push(timed.device_ns);
+            crate::replace_output_buffers_preserving_slots(timed.outputs, slot);
+        }
+        Ok(())
+    }
+
     /// Dispatch several fixed megakernel ABI resident-resource rows directly.
     ///
     /// Megakernel resident dispatch always submits exactly four resources:

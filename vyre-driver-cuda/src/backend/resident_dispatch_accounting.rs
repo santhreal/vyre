@@ -56,6 +56,15 @@ pub(crate) struct CudaResidentBatchDispatch {
     pub(crate) pending: crate::stream::CudaPendingDispatch,
     pub(crate) output_handles: SmallVec<[SmallVec<[CudaResidentBuffer; 8]>; 8]>,
     pub(crate) output_readbacks: SmallVec<[SmallVec<[CudaOutputReadback; 8]>; 8]>,
+    /// One timing-event pair per submitted item, in submission order.
+    ///
+    /// Empty when the caller asked for no per-item timing. Every item's launch
+    /// is enqueued on ONE stream before any of them is awaited, so an item's
+    /// start event retires when the previous item's kernel ends and its own
+    /// kernel is already submitted: the pair spans the kernel and not the host
+    /// latency of submitting it. Reading the elapsed time requires the whole
+    /// submission to have completed, which only the pending handle can prove.
+    pub(crate) item_timing: SmallVec<[(crate::stream::CudaEvent, crate::stream::CudaEvent); 8]>,
 }
 
 pub(crate) fn checked_resident_dispatch_capacity_mul(

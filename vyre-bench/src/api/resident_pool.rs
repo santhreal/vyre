@@ -180,7 +180,14 @@ impl ResidentInputPool {
         Ok(&self.sets[index])
     }
 
-    /// Dispatch the first `batch_len` resident sets through one materialized artifact.
+    /// Dispatch the first `batch_len` resident sets through one materialized
+    /// artifact, as one batch.
+    ///
+    /// The whole batch is submitted before any item is awaited, so an item is
+    /// already enqueued when the item before it finishes and each item's device
+    /// timer covers its own launch instead of a host round trip. `wall_ns_total`
+    /// covers the whole batch, which is what a per-item host window cannot
+    /// describe once the items overlap.
     pub fn dispatch_artifact_batch_timed(
         &self,
         ctx: &BenchContext,
@@ -199,24 +206,23 @@ impl ResidentInputPool {
                 self.sets.len()
             )));
         }
+        let mut sets = Vec::with_capacity(batch_len);
+        sets.extend(self.sets[..batch_len].iter().map(Vec::as_slice));
         let started = std::time::Instant::now();
-        let mut outputs = Vec::with_capacity(batch_len);
-        let mut device_ns_by_item = Some(Vec::with_capacity(batch_len));
-        for resources in &self.sets[..batch_len] {
-            let timed = ctx.dispatch_resident_timed(program, resources, config)?;
-            device_ns_by_item = match (
-                device_ns_by_item,
-                timed.device_ns.filter(|&ns| ns > 0),
-            ) {
+        let dispatched = ctx.dispatch_resident_batch_timed(program, &sets, config)?;
+        let wall_ns_total = elapsed_ns(started);
+        let mut outputs = Vec::with_capacity(dispatched.len());
+        let mut device_ns_by_item = Some(Vec::with_capacity(dispatched.len()));
+        for (item_outputs, device_ns) in dispatched {
+            device_ns_by_item = match (device_ns_by_item, device_ns.filter(|&ns| ns > 0)) {
                 (Some(mut rows), Some(ns)) => {
                     rows.push(ns);
                     Some(rows)
                 }
                 _ => None,
             };
-            outputs.push(timed.outputs);
+            outputs.push(item_outputs);
         }
-        let wall_ns_total = elapsed_ns(started);
         Ok(ResidentBatchDispatch {
             outputs,
             wall_ns_total,

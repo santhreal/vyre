@@ -232,6 +232,41 @@ impl BenchContext {
         ))
     }
 
+    /// Dispatch several resident sets of one program as a single batch.
+    ///
+    /// Every set runs the same program over its own resources, so the batch is
+    /// submitted before any item is awaited and the items run back to back on
+    /// the device. Output readback happens after the whole batch completes.
+    /// Results are returned in submission order.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`vyre_driver::BackendError`] when the session is unavailable,
+    /// a set does not satisfy the program ABI, or any item's dispatch fails.
+    pub fn dispatch_resident_batch_timed(
+        &self,
+        prog: &vyre::ir::Program,
+        sets: &[&[vyre_driver::Resource]],
+        _config: &DispatchConfig,
+    ) -> Result<Vec<(vyre_driver::OutputBuffers, Option<u64>)>, vyre_driver::BackendError> {
+        let session = self.artifact_session_for(prog)?;
+        let mut batches = Vec::with_capacity(sets.len());
+        for resources in sets {
+            batches.push(bindings_for_program_resources(&session, prog, resources)?);
+        }
+        let completions = session
+            .submit_resident_batch_and_wait(batches)
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        let mut dispatched = Vec::with_capacity(completions.len());
+        for completion in &completions {
+            let outputs = session
+                .program_outputs(prog, completion)
+                .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+            dispatched.push((outputs, completion.device_ns));
+        }
+        Ok(dispatched)
+    }
+
     pub fn dispatch_resident_sequence_read_ranges_into(
         &self,
         steps: &[vyre_driver::ResidentDispatchStep<'_>],
