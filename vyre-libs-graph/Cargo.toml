@@ -31,18 +31,8 @@ interactive-graphics = ["graph", "dep:vyre-libs-visual", "vyre-libs-visual?/visu
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
 vyre-megakernel.workspace = true
-vyre-spec.workspace = true
 vyre-primitives = { workspace = true, features = ["inventory-registry"] }
-smallvec.workspace = true
 inventory.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-thiserror.workspace = true
-tracing.workspace = true
-libm.workspace = true
-rustc-hash.workspace = true
-blake3.workspace = true
-rayon.workspace = true
 vyre-libs-builder = { workspace = true }
 vyre-libs-bitset = { workspace = true }
 vyre-libs-reduce = { workspace = true }
@@ -55,7 +45,7 @@ vyre-libs-visual = { workspace = true, optional = true }
 proptest.workspace = true
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
-vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
+vyre-test-support = { workspace = true, features = ["semantic-parity"] }
 vyre-driver-reference = { workspace = true }
 
 [[test]]

@@ -3338,6 +3338,7 @@ dependencies = [
  "vyre-megakernel",
  "vyre-runtime",
  "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -3777,20 +3778,10 @@ dependencies = [
 name = "vyre-libs-analysis"
 version = "0.8.0"
 dependencies = [
- "blake3",
- "inventory",
- "libm",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
  "tracing",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs-builder",
- "vyre-libs-device",
  "vyre-libs-encoding",
  "vyre-libs-fixpoint",
  "vyre-libs-graph",
@@ -3806,24 +3797,13 @@ dependencies = [
 name = "vyre-libs-bitset"
 version = "0.8.0"
 dependencies = [
- "blake3",
  "inventory",
- "libm",
  "proptest",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-foundation",
  "vyre-libs-builder",
  "vyre-libs-reduce",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
- "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -3831,47 +3811,27 @@ dependencies = [
 name = "vyre-libs-builder"
 version = "0.8.0"
 dependencies = [
- "blake3",
  "inventory",
- "libm",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
  "thiserror 2.0.19",
- "tracing",
  "vyre-foundation",
  "vyre-megakernel",
  "vyre-primitives",
- "vyre-reference",
  "vyre-spec",
- "vyre-test-support",
 ]
 
 [[package]]
 name = "vyre-libs-decode"
 version = "0.8.0"
 dependencies = [
- "blake3",
  "inventory",
- "libm",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
  "thiserror 2.0.19",
- "tracing",
  "vyre-foundation",
  "vyre-libs-builder",
  "vyre-libs-parsing",
  "vyre-libs-pattern",
  "vyre-libs-text",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
- "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -3879,43 +3839,18 @@ dependencies = [
 name = "vyre-libs-device"
 version = "0.8.0"
 dependencies = [
- "blake3",
- "inventory",
- "libm",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-foundation",
  "vyre-libs-builder",
- "vyre-megakernel",
- "vyre-primitives",
- "vyre-spec",
 ]
 
 [[package]]
 name = "vyre-libs-encoding"
 version = "0.8.0"
 dependencies = [
- "blake3",
- "inventory",
- "libm",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs-bitset",
  "vyre-libs-builder",
- "vyre-libs-device",
- "vyre-libs-fixpoint",
  "vyre-libs-graph",
  "vyre-libs-hash",
  "vyre-libs-math",
@@ -3926,7 +3861,6 @@ dependencies = [
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
- "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -3934,41 +3868,20 @@ dependencies = [
 name = "vyre-libs-fixpoint"
 version = "0.8.0"
 dependencies = [
- "blake3",
  "inventory",
- "libm",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-driver",
  "vyre-foundation",
- "vyre-libs-bitset",
  "vyre-libs-builder",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
- "vyre-spec",
 ]
 
 [[package]]
 name = "vyre-libs-graph"
 version = "0.8.0"
 dependencies = [
- "blake3",
  "inventory",
- "libm",
  "proptest",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs-bitset",
@@ -3981,7 +3894,6 @@ dependencies = [
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
- "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -3989,22 +3901,11 @@ dependencies = [
 name = "vyre-libs-hash"
 version = "0.8.0"
 dependencies = [
- "blake3",
  "inventory",
- "libm",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-foundation",
  "vyre-libs-builder",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
- "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -4012,22 +3913,12 @@ dependencies = [
 name = "vyre-libs-math"
 version = "0.8.0"
 dependencies = [
- "blake3",
  "inventory",
- "libm",
  "proptest",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-foundation",
  "vyre-libs-builder",
  "vyre-libs-fixpoint",
  "vyre-libs-reduce",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
@@ -4038,17 +3929,10 @@ dependencies = [
 name = "vyre-libs-nn"
 version = "0.8.0"
 dependencies = [
- "blake3",
  "inventory",
  "libm",
  "proptest",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
  "thiserror 2.0.19",
- "tracing",
  "vyre-foundation",
  "vyre-libs-builder",
  "vyre-libs-math",
@@ -4067,21 +3951,13 @@ version = "0.8.0"
 dependencies = [
  "blake3",
  "inventory",
- "libm",
  "rayon",
  "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-foundation",
  "vyre-libs-builder",
  "vyre-libs-hash",
- "vyre-libs-pattern",
  "vyre-libs-reduce",
  "vyre-libs-text",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
@@ -4092,26 +3968,14 @@ dependencies = [
 name = "vyre-libs-pattern"
 version = "0.8.0"
 dependencies = [
- "blake3",
  "inventory",
- "libm",
- "rayon",
  "regex-syntax",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-foundation",
- "vyre-libs-bitset",
  "vyre-libs-builder",
  "vyre-libs-hash",
  "vyre-libs-math",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
- "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -4119,26 +3983,14 @@ dependencies = [
 name = "vyre-libs-reasoning"
 version = "0.8.0"
 dependencies = [
- "blake3",
- "inventory",
- "libm",
  "proptest",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs-analysis",
  "vyre-libs-builder",
  "vyre-libs-graph",
  "vyre-megakernel",
- "vyre-primitives",
  "vyre-reference",
- "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -4146,23 +3998,13 @@ dependencies = [
 name = "vyre-libs-reduce"
 version = "0.8.0"
 dependencies = [
- "blake3",
  "inventory",
- "libm",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs-builder",
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
- "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -4170,20 +4012,10 @@ dependencies = [
 name = "vyre-libs-rule"
 version = "0.8.0"
 dependencies = [
- "blake3",
- "inventory",
- "libm",
- "proptest",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
  "smallvec",
  "thiserror 2.0.19",
- "tracing",
  "vyre-foundation",
  "vyre-libs-builder",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
@@ -4194,27 +4026,15 @@ dependencies = [
 name = "vyre-libs-scheduling"
 version = "0.8.0"
 dependencies = [
- "blake3",
- "inventory",
- "libm",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs-builder",
- "vyre-libs-device",
  "vyre-libs-graph",
  "vyre-libs-math",
  "vyre-libs-parsing",
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
- "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -4224,21 +4044,15 @@ version = "0.8.0"
 dependencies = [
  "blake3",
  "inventory",
- "libm",
  "proptest",
- "rayon",
- "rustc-hash 2.1.3",
  "serde",
  "serde_json",
- "smallvec",
  "thiserror 2.0.19",
- "tracing",
  "vyre-foundation",
  "vyre-libs-bitset",
  "vyre-libs-builder",
  "vyre-libs-graph",
  "vyre-libs-reduce",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
@@ -4249,28 +4063,16 @@ dependencies = [
 name = "vyre-libs-solvers"
 version = "0.8.0"
 dependencies = [
- "blake3",
- "inventory",
- "libm",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs-bitset",
  "vyre-libs-builder",
- "vyre-libs-device",
  "vyre-libs-fixpoint",
  "vyre-libs-graph",
  "vyre-libs-math",
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
- "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -4278,24 +4080,13 @@ dependencies = [
 name = "vyre-libs-text"
 version = "0.8.0"
 dependencies = [
- "blake3",
  "inventory",
- "libm",
  "proptest",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-foundation",
  "vyre-libs-builder",
  "vyre-libs-reduce",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
- "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -4303,45 +4094,21 @@ dependencies = [
 name = "vyre-libs-vfs"
 version = "0.8.0"
 dependencies = [
- "blake3",
  "inventory",
- "libm",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-foundation",
  "vyre-libs-builder",
- "vyre-megakernel",
- "vyre-primitives",
- "vyre-spec",
 ]
 
 [[package]]
 name = "vyre-libs-visual"
 version = "0.8.0"
 dependencies = [
- "blake3",
  "inventory",
- "libm",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "tracing",
  "vyre-foundation",
  "vyre-libs-builder",
  "vyre-libs-math",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
- "vyre-spec",
- "vyre-test-support",
 ]
 
 [[package]]
@@ -4463,7 +4230,6 @@ dependencies = [
  "vyre-driver-wgpu",
  "vyre-foundation",
  "vyre-libs",
- "vyre-libs-builder",
  "vyre-lower",
  "vyre-megakernel",
  "vyre-primitives",

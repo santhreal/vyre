@@ -26,20 +26,8 @@ solvers = []
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
 vyre-megakernel.workspace = true
-vyre-spec.workspace = true
 vyre-primitives = { workspace = true, features = ["inventory-registry"] }
-smallvec.workspace = true
-inventory.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-thiserror.workspace = true
-tracing.workspace = true
-libm.workspace = true
-rustc-hash.workspace = true
-blake3.workspace = true
-rayon.workspace = true
 vyre-libs-builder = { workspace = true }
-vyre-libs-device = { workspace = true }
 vyre-libs-math = { workspace = true, features = ["math-kernels"] }
 vyre-libs-graph = { workspace = true }
 
@@ -47,7 +35,7 @@ vyre-libs-bitset = { workspace = true, features = ["bitset"] }
 vyre-libs-fixpoint = { workspace = true, features = ["fixpoint"] }
 [dev-dependencies]
 vyre-primitives = { workspace = true, features = ["hardware"] }
-vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
+vyre-test-support = { workspace = true, features = ["semantic-parity"] }
 vyre-reference = { workspace = true }
 vyre-driver-reference = { workspace = true }
 
