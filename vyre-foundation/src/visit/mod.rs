@@ -69,9 +69,10 @@ pub enum VisitOrder {
 
 pub use evaluatable::Evaluatable;
 pub use expr_parts::{
-    any_subexpr, bin_op_magnitude, expr_buffer_ref, expr_children, expr_combine, expr_is_leaf,
-    expr_magnitude, for_each_subexpr, push_expr_children, un_op_magnitude, ExprBufferRef,
-    ExprChildren, ExprCombine, ExprMagnitude,
+    any_subexpr, bin_op_magnitude, expr_buffer_name_mut, expr_buffer_ref, expr_children,
+    expr_combine, expr_is_leaf, expr_magnitude, for_each_subexpr, push_expr_children,
+    push_expr_children_mut, un_op_magnitude, ExprBufferName, ExprBufferRef, ExprChildren,
+    ExprCombine, ExprMagnitude, ExprStackMut,
 };
 pub use expr_visitor::{
     visit_expr, visit_expr_buffer_accesses, visit_postorder, visit_preorder,
@@ -80,9 +81,10 @@ pub use expr_visitor::{
 pub use lowerable::Lowerable;
 pub(crate) use node_parts::map_bodies_cow;
 pub use node_parts::{
-    child_bodies, child_bodies_mut, node_bound_name, node_buffer_refs, node_combine, node_operands,
-    node_scalars, node_shape, node_tag, node_variadic_operands, BufferRefs, NameBinding,
-    NodeCombine, NodeScalars, NodeShape,
+    child_bodies, child_bodies_mut, node_bound_name, node_buffer_names_mut, node_buffer_refs,
+    node_combine, node_operands, node_scalars, node_shape, node_tag, node_variadic_operands,
+    push_node_operands_mut, BufferNamesMut, BufferRefs, NameBinding, NodeCombine, NodeScalars,
+    NodeShape,
 };
 pub use node_visitor::{
     visit_node, visit_node_postorder, visit_node_preorder, walk_node_children_default, NodeVisitor,

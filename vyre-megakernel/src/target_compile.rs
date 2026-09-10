@@ -1,6 +1,11 @@
 //! Target compilation, emission, and attachment boundaries.
 
-use vyre_foundation::{execution_plan::fusion::merge_programs_shared, ir::Program};
+use std::collections::BTreeMap;
+
+use vyre_foundation::{
+    execution_plan::fusion::{merge_programs_shared, rename_buffer},
+    ir::Program,
+};
 use vyre_lower::PhysicalSchedule;
 
 use crate::target_bindings::{
@@ -53,13 +58,78 @@ fn selected_modules(artifact: &Artifact) -> Result<Vec<SelectedModule>, TargetCo
 }
 
 /// Form one generated semantic Program for a compiler-selected fusion group.
-fn fuse_selected_module(module: &SelectedModule) -> Result<Program, TargetCompileError> {
-    merge_programs_shared(&module.programs).map_err(|error| {
+fn fuse_selected_module(
+    artifact: &Artifact,
+    module: &SelectedModule,
+) -> Result<Program, TargetCompileError> {
+    let unified = unify_intra_group_value_names(artifact, module)?;
+    let programs = unified.as_deref().unwrap_or(&module.programs);
+    merge_programs_shared(programs).map_err(|error| {
         TargetCompileError::Unsupported(format!(
             "fusion group {} cannot form one target module: {error}",
             module.group.0
         ))
     })
+}
+
+/// Give one buffer name to each value a group produces for its own members.
+///
+/// Fusion unifies buffers by name, so a value that never leaves the group is
+/// one buffer only when the producing and consuming members spell it the same
+/// way. They rarely do: each member's buffer names come from the Program its
+/// caller built, so a producer writing `sum_out` and a consumer reading `s_in`
+/// merged into a module with two buffers, no read-after-write barrier between
+/// the arms, and a read-only declaration whose bytes the launch demanded from
+/// the caller for a value it computes itself.
+///
+/// Members arrive sorted by node identity, which is a dependency order within
+/// a group because a graph node is admitted only after the nodes it reads, so
+/// one forward pass sees every producer before its consumers.
+///
+/// Returns `None` when every edge already agrees, which is every
+/// single-member group, so the common case clones nothing.
+fn unify_intra_group_value_names(
+    artifact: &Artifact,
+    module: &SelectedModule,
+) -> Result<Option<Vec<Program>>, TargetCompileError> {
+    let mut produced: BTreeMap<crate::ArtifactValueId, &str> = BTreeMap::new();
+    let mut unified: Option<Vec<Program>> = None;
+    for (arm, node) in module.nodes.iter().enumerate() {
+        let Some(entry) = artifact
+            .abi()
+            .entries
+            .iter()
+            .find(|entry| entry.node == *node)
+        else {
+            continue;
+        };
+        for binding in &entry.input_bindings {
+            let Some(&producer) = produced.get(&binding.value) else {
+                continue;
+            };
+            if producer == binding.buffer.as_str() {
+                continue;
+            }
+            let programs = unified.get_or_insert_with(|| module.programs.clone());
+            let source = programs.get(arm).ok_or_else(|| {
+                TargetCompileError::InvalidArtifact(format!(
+                    "fusion group {} lists node {} without a decoded Program",
+                    module.group.0, node.0
+                ))
+            })?;
+            let renamed = rename_buffer(source, &binding.buffer, producer).map_err(|error| {
+                TargetCompileError::Unsupported(format!(
+                    "fusion group {} cannot route value {} from `{producer}` to node {}: {error}",
+                    module.group.0, binding.value.0, node.0
+                ))
+            })?;
+            programs[arm] = renamed;
+        }
+        for binding in &entry.output_bindings {
+            produced.insert(binding.value, binding.buffer.as_str());
+        }
+    }
+    Ok(unified)
 }
 
 /// Target-native bytes and the exact emitted entry metadata.
@@ -88,7 +158,7 @@ pub fn compile_selected_modules(
     let mut images = Vec::with_capacity(modules.len());
     let mut entries = Vec::with_capacity(modules.len());
     for module in modules {
-        let program = fuse_selected_module(&module)?;
+        let program = fuse_selected_module(artifact, &module)?;
         let source_region = module.nodes.first().ok_or_else(|| {
             TargetCompileError::InvalidArtifact(format!(
                 "fusion group {} has no source region for schedule lowering",
