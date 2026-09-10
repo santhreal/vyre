@@ -1,8 +1,8 @@
 //! Unit tests for host oracle elimination gate (Part 2).
 
-use super::host_oracle_elimination_test_fixtures::{incrementing_oracle_body, oracle_body};
+use super::host_oracle_elimination_test_fixtures::incrementing_oracle_body;
 use super::host_oracle_elimination_tests_part1::analyze_files;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 #[test]
 fn mutation_catches_spoofed_module_from_le_bytes_helper() {
