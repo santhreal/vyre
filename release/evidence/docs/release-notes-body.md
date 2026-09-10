@@ -9179,6 +9179,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The source-derived variant enumeration records a variant that carries an
   attribute, so a closure test over an enum whose variants declare
   `#[error(..)]` derives the full member set instead of an empty one.
+- The hygiene scanner recognises a source read resolved from a declaration
+  marker and a search written with `match_indices`, so a test that walks the
+  checkout through either is no longer classified as inspecting nothing.
 - The WGPU stream-sharding error is now nameable as
   `engine::multi_gpu::StreamShardError` without changing existing signatures.
 - Every registered backend either honors strict-IEEE float lowering or refuses

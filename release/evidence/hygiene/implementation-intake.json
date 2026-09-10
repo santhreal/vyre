@@ -1,7 +1,7 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"2266679d03f10e0f9a6c0f57e9403a0f3a75b1be","commit_timestamp":"1789058206","parent_commit":"e59835f70328a259bdd154cbe098fe6aa7111c65","dirty":true,"source_fingerprint":"git:2266679d03f10e0f9a6c0f57e9403a0f3a75b1be:dirty=true:worktree=0347e5672720ca9148b425ec6be6e20e5bd6553d0a5eae845da8eeb3df45f904"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"5f6cf9ef935abe9bf2024884dd19f3d0ec5a6674","commit_timestamp":"1789060281","parent_commit":"16f40bdf4dd3645780a75b7aa268f53ce60c937c","dirty":true,"source_fingerprint":"git:5f6cf9ef935abe9bf2024884dd19f3d0ec5a6674:dirty=true:worktree=8e3c80cb1064c6e30a7976eedc88d0997f6baf27262a98a8028c866a95cbcd36"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
-  "release_blocker_count": 2,
+  "release_blocker_count": 0,
   "intake_summary": [
     {
       "owner_lane": "bench_harness",
@@ -64,16 +64,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 57
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": true,
-      "count": 2
+      "count": 64
     },
     {
       "owner_lane": "coordination",
@@ -82,7 +73,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 51
+      "count": 54
     },
     {
       "owner_lane": "coordination",
@@ -91,7 +82,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 42
+      "count": 50
     },
     {
       "owner_lane": "coordination",
@@ -100,7 +91,7 @@
       "hot_path": false,
       "pattern": "panic_macro",
       "release_blocker": false,
-      "count": 37
+      "count": 39
     },
     {
       "owner_lane": "coordination",
@@ -109,7 +100,7 @@
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 1
+      "count": 4
     },
     {
       "owner_lane": "coordination",
@@ -163,7 +154,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 64
+      "count": 69
     },
     {
       "owner_lane": "driver_shared",
@@ -262,7 +253,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 6
+      "count": 4
     },
     {
       "owner_lane": "runtime_resident_work_queue",
@@ -427,7 +418,5 @@
       "count": 1
     }
   ],
-  "blockers": [
-    "2 release-blocking hygiene finding(s) remain; implementation-intake.json groups them by owner lane, surface, risk, hot-path flag, and pattern"
-  ]
+  "blockers": []
 }

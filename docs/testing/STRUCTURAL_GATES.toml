@@ -807,26 +807,6 @@ wrapper source at run time.
 """
 
 [[gate]]
-file = "vyre-emit-naga/tests/physical_ir_variant_exhaustiveness.rs"
-tests = ["runtime_enumerates_all_kernel_op_kind_variants_from_source"]
-reason = """
-Enumerates every `KernelOpKind` variant and asserts the Naga emitter reaches a
-deliberate decision for each. Rust exposes no variant list at run time, so the
-enum declaration is the only complete set; without it the suite would cover
-whichever variants someone remembered.
-"""
-
-[[gate]]
-file = "vyre-emit-ptx/tests/physical_ir_variant_exhaustiveness.rs"
-tests = ["runtime_enumerates_all_kernel_op_kind_variants_from_source"]
-reason = """
-Enumerates every `KernelOpKind` variant and asserts the PTX emitter reaches a
-deliberate decision for each. Rust exposes no variant list at run time, so the
-enum declaration is the only complete set; without it the suite would cover
-whichever variants someone remembered.
-"""
-
-[[gate]]
 file = "vyre-foundation/tests/buffer_decl_boundary.rs"
 tests = ["output_byte_range_converts_from_no_signed_range"]
 reason = """
@@ -848,7 +828,7 @@ carries.
 
 [[gate]]
 file = "vyre-lower/tests/physical_ir_emitter_exhaustive_decisions.rs"
-tests = ["no_catch_all_wildcard_arms_in_emitter_dispatch_modules"]
+tests = ["emitter_dispatch_names_every_variant_rather_than_falling_through_a_catch_all"]
 reason = """
 Asserts that no emitter dispatch module carries a catch-all match arm. A
 wildcard arm produces a silent downgrade rather than an error, so a run observes
@@ -973,4 +953,37 @@ A hardcoded list of variants goes stale in silence, which for an exhaustiveness
 contract is the same as having no contract. The enum declaration is the only
 statement of the variant space; the type produces no run-time listing to
 enumerate instead.
+"""
+
+[[gate]]
+file = "vyre-test-support/src/monorepo.rs"
+tests = ["a_resolved_declaring_file_holds_the_declaration_it_searched_for", "a_marker_no_file_declares_is_reported_rather_than_guessed"]
+reason = """
+Cover the resolver every other row in this registry depends on: it answers with
+the source file that declares a marker, and refuses a marker no file declares.
+Both subjects are the workspace source itself, so the walk is the contract
+rather than a way of observing one. A resolver that returned a first hit, an
+empty path, or a file without the declaration would let every roster test
+derive its member set from the wrong file and still pass.
+"""
+
+[[gate]]
+file = "vyre-libs/tests/facade_reexport_closure.rs"
+tests = ["the_facade_re_exports_every_module_its_partition_crates_publish", "link_anchor_references_every_partition_crate"]
+reason = """
+Hold the facade's re-export list equal to the modules its partition crates
+publish, and its link anchors equal to the partition crate roster. A module a
+partition crate publishes and the facade omits is absent from the facade, and an
+absent item is nothing a running program can reach or name. Rust has no
+reflection over another crate's module list, so the published set exists only in
+each crate root's source.
+"""
+
+[[gate]]
+file = "vyre-libs-hash/tests/fnv1a64_builder_parity.rs"
+tests = ["the_rows_are_every_builder_the_source_publishes"]
+reason = """
+Holds the parity row set equal to the FNV-1a64 builders the source publishes. A
+builder with no row is never called by this suite, so no execution witnesses the
+gap; the published family is a declaration and the only complete listing of it.
 """

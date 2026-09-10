@@ -273,8 +273,8 @@ total_lines = 30891
 
 [[crate]]
 name = "vyre-registry-link"
-duplicate_lines = 29
-total_lines = 1142
+duplicate_lines = 0
+total_lines = 1133
 
 [[crate]]
 name = "vyre-runtime"
@@ -283,8 +283,8 @@ total_lines = 39616
 
 [[crate]]
 name = "vyre-pass-engine"
-duplicate_lines = 109
-total_lines = 6965
+duplicate_lines = 107
+total_lines = 6908
 
 [[crate]]
 name = "vyre-test-support"

@@ -518,3 +518,95 @@ fn source_inspection_test_scanner_combines_split_read_and_path_facts() {
     assert_eq!(findings.len(), 1);
     assert!(findings[0].text.contains("freezes_architecture_spelling"));
 }
+
+/// WHY: every fact the scanner collects keyed off a literal ending in `.rs`, so
+/// a test that resolves its file from a declaration marker named no path and
+/// scanned as inspecting nothing. Two rows declared for that family in the
+/// structural-gate registry were reported stale while the tests they name still
+/// walk this checkout, which is the silent direction: the gate stops covering
+/// the file and asks for the exemption to be deleted.
+#[test]
+fn source_inspection_resolved_from_a_declaration_marker_is_detected() {
+    let resolved = r#"
+            #[test]
+            fn every_declared_law_has_a_recorded_derivation() {
+                let path = vyre_test_support::monorepo::declaring_source_file("pub enum AlgebraicLaw {");
+                let source = std::fs::read_to_string(&path).unwrap();
+                assert!(source.contains("Commutative"));
+            }
+        "#;
+    let mut findings = Vec::new();
+    scan_source_inspection_tests(
+        Path::new("vyre-foundation/tests/law_derived_region_alternatives.rs"),
+        resolved,
+        &mut findings,
+    );
+
+    assert_eq!(
+        findings.len(),
+        1,
+        "a path resolved from a marker is still a path into this checkout"
+    );
+    assert!(findings[0]
+        .text
+        .contains("every_declared_law_has_a_recorded_derivation"));
+}
+
+/// The fixture exemption still applies to a marker-resolved read: a test that
+/// authors its own tree and resolves nothing from the checkout is exercising an
+/// analyzer, not inspecting this source.
+#[test]
+fn a_marker_resolver_over_an_authored_tree_is_not_inspecting_this_checkout() {
+    let authored = r#"
+            #[test]
+            fn the_analyzer_finds_the_declaration() {
+                let root = tempfile::tempdir().unwrap();
+                std::fs::create_dir_all(root.path().join("src")).unwrap();
+                std::fs::write(root.path().join("src/lib.rs"), "pub enum Law {}").unwrap();
+                let found = analyze(root.path());
+                assert!(found.contains("Law"));
+            }
+        "#;
+    let mut findings = Vec::new();
+    scan_source_inspection_tests(Path::new("xtask/tests/analyzer.rs"), authored, &mut findings);
+
+    assert!(
+        findings.is_empty(),
+        "a test that writes the tree it reads asserts behavior: {findings:?}"
+    );
+}
+
+/// WHY: text inspection was recognised from a hardcoded list of five string
+/// methods, written out twice. `match_indices` was in neither copy, so a test
+/// that read two emitter dispatch modules and searched each for every declared
+/// variant scanned as inspecting nothing, and the registry row declared for it
+/// reported as stale.
+#[test]
+fn a_whole_identifier_search_is_text_inspection() {
+    let searching = r#"
+            #[test]
+            fn emitter_dispatch_names_every_variant() {
+                let source = std::fs::read_to_string("vyre-emit-ptx/src/emitter/dispatch.rs").unwrap();
+                assert!(names_variant(&source, "LoopCarrierEnd"));
+            }
+
+            fn names_variant(content: &str, variant: &str) -> bool {
+                content.match_indices(variant).count() > 0
+            }
+        "#;
+    let mut findings = Vec::new();
+    scan_source_inspection_tests(
+        Path::new("vyre-lower/tests/emitter_decisions.rs"),
+        searching,
+        &mut findings,
+    );
+
+    assert_eq!(
+        findings.len(),
+        1,
+        "searching source for an identifier is inspecting it"
+    );
+    assert!(findings[0]
+        .text
+        .contains("emitter_dispatch_names_every_variant"));
+}

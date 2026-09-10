@@ -126,6 +126,13 @@ where
 
 /// An admitted import is zero-copy at the exact dimensions and pitch, and its
 /// transition schedule executes with no copies and no device-wide waits.
+///
+/// # Panics
+///
+/// Panics when the descriptor is refused or the schedule does not execute.
+/// Admission and execution are the contract this case exists to prove, so a
+/// backend that fails either has failed the suite and reporting it as a
+/// recoverable error would let a caller continue past a broken import path.
 fn assert_admits_zero_copy_and_executes_schedule<P>(case: &ExternalImportContractCase<P::Handle>)
 where
     P: ExternalImportPolicy,
@@ -172,6 +179,12 @@ where
 
 /// Device loss invalidates the record, its dependent view and its dependent
 /// artifact, and every later schedule against it is refused.
+///
+/// # Panics
+///
+/// Panics when the import, the dependent view registration, or the dependent
+/// artifact registration is refused. Invalidation cannot be observed without
+/// all three in place, so a failure there leaves the case proving nothing.
 fn assert_device_loss_invalidates_dependents<P>(case: &ExternalImportContractCase<P::Handle>)
 where
     P: ExternalImportPolicy,

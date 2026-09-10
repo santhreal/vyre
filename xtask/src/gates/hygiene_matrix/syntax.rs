@@ -18,8 +18,33 @@ const CHECKOUT_RESOLVERS: &[&str] = &[
     "CARGO_MANIFEST_DIR",
 ];
 
+/// Markers for a function that resolves a Rust source path from a marker.
+///
+/// `declaring_source_file("pub enum ScheduleOp {")` returns the `.rs` file that
+/// declares a construct, so a test using it reads this checkout's source while
+/// naming no path at all. Every fact below keys off a literal ending in `.rs`,
+/// so that whole family scanned as inspecting nothing and the rows declared for
+/// it in the structural-gate registry read as stale.
+const RUST_SOURCE_RESOLVERS: &[&str] = &["declaring_source_file"];
+
 /// Markers for a temporary root a test creates for itself.
 const TEMPORARY_ROOTS: &[&str] = &["temp_dir", "tempdir", "TempDir", "tempfile"];
+
+/// String methods that search text.
+///
+/// One list, read both by the typed method visitor and by the token scan that
+/// covers macro bodies. Two lists is how `match_indices` came to be recognised
+/// by neither: a test that read two emitter dispatch modules and searched them
+/// for every declared variant scanned as inspecting nothing, and the row
+/// declared for it read as stale.
+const TEXT_INSPECTION_METHODS: &[&str] = &[
+    "contains",
+    "split",
+    "matches",
+    "match_indices",
+    "starts_with",
+    "ends_with",
+];
 
 /// Markers for a function that writes the tree it later reads.
 const TREE_WRITERS: &[&str] = &["fs::write", "create_dir_all"];
@@ -55,6 +80,7 @@ fn checkout_rooted_rust_read(tokens: &str) -> bool {
     for statement in tokens.split(';') {
         let names_root = CHECKOUT_RESOLVERS
             .iter()
+            .chain(RUST_SOURCE_RESOLVERS)
             .any(|resolver| statement.contains(resolver))
             || rooted
                 .iter()
@@ -64,6 +90,9 @@ fn checkout_rooted_rust_read(tokens: &str) -> bool {
         }
         if statement.contains("\"rs\"")
             || statement.contains(".rs\"")
+            || RUST_SOURCE_RESOLVERS
+                .iter()
+                .any(|resolver| statement.contains(resolver))
             || (statement.contains("extension()") && statement.contains("==\"rs\""))
         {
             return true;
@@ -206,7 +235,10 @@ impl<'ast> Visit<'ast> for RustSourceFactsVisitor {
         let mut named = BTreeSet::new();
         collect_macro_identifiers(expression.tokens.clone(), &mut named);
         self.calls_read_to_string |= named.contains("read_to_string");
-        self.mentions_rust_path |= macro_names_rust_path(&expression.tokens);
+        self.mentions_rust_path |= macro_names_rust_path(&expression.tokens)
+            || RUST_SOURCE_RESOLVERS
+                .iter()
+                .any(|resolver| named.contains(*resolver));
         self.callees.extend(named);
         syn::visit::visit_macro(self, expression);
     }
@@ -230,6 +262,12 @@ impl<'ast> Visit<'ast> for RustSourceFactsVisitor {
             if segment.ident == "read_to_string" {
                 self.calls_read_to_string = true;
             }
+            if RUST_SOURCE_RESOLVERS
+                .iter()
+                .any(|resolver| segment.ident == resolver)
+            {
+                self.mentions_rust_path = true;
+            }
         }
         syn::visit::visit_expr_path(self, expression);
     }
@@ -239,10 +277,7 @@ impl<'ast> Visit<'ast> for RustSourceFactsVisitor {
         if method == "read_to_string" {
             self.calls_read_to_string = true;
         }
-        if matches!(
-            method.as_str(),
-            "contains" | "split" | "matches" | "starts_with" | "ends_with"
-        ) {
+        if TEXT_INSPECTION_METHODS.contains(&method.as_str()) {
             self.inspects_text = true;
         }
         self.callees.insert(method);
@@ -320,16 +355,13 @@ impl SourceInspectionFunctionCollector {
             }
             facts.reads_rust_source |= facts.calls_read_to_string && facts.mentions_rust_path;
         }
-        facts.inspects_text |= [
-            ".contains(",
-            ".split(",
-            ".matches(",
-            ".starts_with(",
-            ".ends_with(",
-        ]
-        .iter()
-        .chain(SOURCE_TEXT_PARSERS.iter())
-        .any(|needle| tokens.contains(needle));
+        facts.inspects_text |= TEXT_INSPECTION_METHODS
+            .iter()
+            .map(|method| format!(".{method}("))
+            .any(|needle| tokens.contains(&needle))
+            || SOURCE_TEXT_PARSERS
+                .iter()
+                .any(|needle| tokens.contains(needle));
         if !is_test && facts.calls_read_to_string && facts.mentions_rust_path {
             facts.reads_rust_source = true;
         }
