@@ -87,3 +87,7 @@ pub mod physical_kernel_ir_policy_boundary;
 /// Integration tests from `tests/physical_ir_emitter_exhaustive_decisions.rs`.
 #[path = "physical_ir_emitter_exhaustive_decisions.rs"]
 pub mod physical_ir_emitter_exhaustive_decisions;
+
+/// Integration tests from `tests/fragment_operand_provenance.rs`.
+#[path = "fragment_operand_provenance.rs"]
+pub mod fragment_operand_provenance;

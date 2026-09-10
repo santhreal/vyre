@@ -4,13 +4,22 @@
 //! result-id based. This module owns the name → result-id transition
 //! rules so branch isolation and loop-carried state are explicit.
 
-use vyre_foundation::ir::{DataType, Ident};
+use vyre_foundation::ir::{DataType, Ident, Layout, Residency};
 
-/// Tile binding in lowering scope carrying extents, element type, and SSA result IDs.
+/// Tile binding in lowering scope carrying extents, element type, layout,
+/// residency, and SSA result IDs.
+///
+/// Layout and residency are recorded because they decide which operations may
+/// consume the binding. A fragment operand comes from a subgroup-resident tile
+/// whose element order the layout states; a scalar binding is register-private
+/// to one invocation and states so here, so an operation that requires a
+/// fragment cannot receive a scalar id under a tile name.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct TileBinding {
     pub(super) extents: Vec<u32>,
     pub(super) element: DataType,
+    pub(super) layout: Layout,
+    pub(super) residency: Residency,
     pub(super) results: Vec<u32>,
 }
 
@@ -43,6 +52,8 @@ impl VarScope {
             TileBinding {
                 extents: vec![1],
                 element: DataType::F32,
+                layout: Layout::RowMajor,
+                residency: Residency::Register,
                 results: vec![result],
             },
         );
@@ -54,6 +65,8 @@ impl VarScope {
         name: Ident,
         extents: Vec<u32>,
         element: DataType,
+        layout: Layout,
+        residency: Residency,
         results: Vec<u32>,
     ) {
         if let Some(&first) = results.first() {
@@ -64,6 +77,8 @@ impl VarScope {
             TileBinding {
                 extents,
                 element,
+                layout,
+                residency,
                 results,
             },
         );
@@ -78,6 +93,8 @@ impl VarScope {
             self.bindings.get(name).map(|&id| TileBinding {
                 extents: vec![1],
                 element: DataType::F32,
+                layout: Layout::RowMajor,
+                residency: Residency::Register,
                 results: vec![id],
             })
         })
