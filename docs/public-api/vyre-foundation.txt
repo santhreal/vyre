@@ -1465,6 +1465,7 @@ pub fn vyre_foundation::allocation::try_reserve_hash_set_to_capacity<T, S>(set: 
 pub fn vyre_foundation::allocation::try_reserve_smallvec_to_capacity<A>(vec: &mut smallvec::SmallVec<A>, target_capacity: usize) -> core::result::Result<(), smallvec::CollectionAllocErr> where A: smallvec::Array
 pub fn vyre_foundation::allocation::try_reserve_string_to_capacity(string: &mut alloc::string::String, target_capacity: usize) -> core::result::Result<(), alloc::collections::TryReserveError>
 pub fn vyre_foundation::allocation::try_reserve_vec_to_capacity<T>(vec: &mut alloc::vec::Vec<T>, target_capacity: usize) -> core::result::Result<(), alloc::collections::TryReserveError>
+pub fn vyre_foundation::axis_coverage(points: u64, workgroup: [u32; 3]) -> [u64; 3]
 pub fn vyre_foundation::causal::CausalEvent::new(span_id: vyre_foundation::causal::CausalSpanId, parent_id: core::option::Option<vyre_foundation::causal::CausalSpanId>, phase: vyre_foundation::causal::CausalPhase, stage_name: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::causal::CausalPhase::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::causal::CausalReceipt::explain_decision(&self, span_id: vyre_foundation::causal::CausalSpanId) -> core::option::Option<&vyre_foundation::causal::CounterfactualDecision>

@@ -393,3 +393,59 @@ fn persisted_transform_preconditions_provenance_and_final_state_replay_fail_clos
         assert!(malformed.validate().is_err());
     }
 }
+
+/// WHY: a phase carries one coverage and one workgroup, and every consumer
+/// derives its launch from the pair. A flat coverage under a shape with y or z
+/// lanes launches one workgroup on those axes, so a program addressing them
+/// computes only the first `shape[1]` columns of every row: a wrong answer, not
+/// a narrow launch. This closes the whole shape space rather than the square
+/// case, and it states what a one-axis shape must keep.
+#[test]
+fn a_selected_workgroup_carries_coverage_on_every_axis_it_occupies() {
+    for shape in [
+        [32, 1, 1],
+        [64, 1, 1],
+        [16, 16, 1],
+        [8, 4, 1],
+        [4, 4, 4],
+        [16, 2, 8],
+    ] {
+        let mut selected = schedule();
+        let points = selected.phases[1]
+            .grid
+            .iter()
+            .copied()
+            .fold(1u64, u64::saturating_mul);
+        selected
+            .apply(ScheduleTransform::SetWorkgroup {
+                phase: SchedulePhaseId(1),
+                shape,
+            })
+            .unwrap_or_else(|error| panic!("setting workgroup {shape:?} must be legal: {error}"));
+        selected.validate().unwrap();
+        let phase = &selected.phases[1];
+        assert_eq!(phase.workgroup, shape);
+        let covered = phase.grid.iter().copied().fold(1u64, u64::saturating_mul);
+        assert!(
+            covered >= points,
+            "workgroup {shape:?} left coverage {:?} below the {points} points the phase covered",
+            phase.grid
+        );
+        for axis in 0..3 {
+            if shape[axis] > 1 {
+                assert!(
+                    phase.grid[axis] > 1 || points <= 1,
+                    "workgroup {shape:?} occupies axis {axis} and coverage {:?} states one point there",
+                    phase.grid
+                );
+            } else {
+                assert_eq!(
+                    phase.grid[axis],
+                    if axis == 0 { points } else { 1 },
+                    "workgroup {shape:?} leaves axis {axis} unoccupied and coverage {:?} spread onto it",
+                    phase.grid
+                );
+            }
+        }
+    }
+}

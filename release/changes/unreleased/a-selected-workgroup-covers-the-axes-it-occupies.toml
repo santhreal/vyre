@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A compiled launch whose workgroup occupies more than one axis now covers its domain on every axis it occupies, so a program that reads two grid axes computes every element instead of the first workgroup of columns."

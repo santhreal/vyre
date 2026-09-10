@@ -34584,7 +34584,7 @@ seam = "foundation-ir"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 8828
+exported_item_count = 8829
 
   [[package.item]]
   path = "alloc::string::String::from(err: vyre_foundation::serial::wire::encode::WireEncodeErr) -> alloc::string::String"
@@ -40293,6 +40293,13 @@ exported_item_count = 8828
 
   [[package.item]]
   path = "vyre_foundation::allocation::try_reserve_vec_to_capacity<T>(vec: &mut alloc::vec::Vec<T>, target_capacity: usize) -> core::result::Result<(), alloc::collections::TryReserveError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::axis_coverage(points: u64, workgroup: [u32; 3]) -> [u64; 3]"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
