@@ -37,6 +37,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [package.metadata.vyre]
 publication_class = "stable-consumer-sdk"
+publication_contract = "consumer-seam:vyre-graphics-app"
 [features]
 default = []
 cuda = ["dep:vyre-driver-cuda"]

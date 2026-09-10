@@ -58,6 +58,7 @@ fs2.workspace = true
 
 [package.metadata.vyre]
 publication_class = "extension-sdk"
+publication_contract = "extension-point:external_ir_extension"
 
 [lints]
 workspace = true

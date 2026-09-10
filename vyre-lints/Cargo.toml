@@ -1,6 +1,7 @@
 [package]
 name = "vyre-lints"
 version = "0.8.0"
+publish = false
 autotests = false
 edition = "2021"
 license = "MIT OR Apache-2.0"

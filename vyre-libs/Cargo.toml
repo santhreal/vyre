@@ -242,6 +242,7 @@ structure-gate = { path = "../structure-gate" }
 
 [package.metadata.vyre]
 publication_class = "stable-consumer-sdk"
+publication_contract = "consumer-seam:vyre-graphics-app"
 
 [lints]
 workspace = true

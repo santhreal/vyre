@@ -58,6 +58,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [package.metadata.vyre]
 publication_class = "extension-sdk"
+publication_contract = "consumer-seam:vyre-graphics-app"
 
 [lints]
 workspace = true

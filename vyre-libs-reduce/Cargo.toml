@@ -14,6 +14,7 @@ documentation = "https://docs.rs/vyre-libs-reduce"
 
 [package.metadata.vyre]
 publication_class = "extension-sdk"
+publication_contract = "closure:vyre-libs"
 
 [lints]
 workspace = true

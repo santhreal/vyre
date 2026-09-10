@@ -17,6 +17,7 @@ ignored = ["vyre-spec"]
 
 [package.metadata.vyre]
 publication_class = "internal-engine"
+publication_contract = "closure:vyre-driver-cuda"
 
 [lints]
 workspace = true

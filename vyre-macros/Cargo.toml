@@ -33,6 +33,7 @@ trybuild = { workspace = true }
 
 [package.metadata.vyre]
 publication_class = "extension-sdk"
+publication_contract = "closure:vyre-foundation"
 
 [lints]
 workspace = true

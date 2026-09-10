@@ -28,6 +28,7 @@ thiserror.workspace = true
 
 [package.metadata.vyre]
 publication_class = "internal-engine"
+publication_contract = "closure:vyre"
 
 [lints]
 workspace = true
