@@ -524,6 +524,144 @@ fn fused_multi_node_binding_resolution_uses_exact_name_ownership_over_colliding_
         "descriptor slots in fused kernel must be distinct"
     );
 }
+/// WHY: a fused module owns the storage for every value that never leaves the
+/// group, so each of those buffers has to state the exact element count the
+/// graph contract resolves to. Nothing sizes them afterwards: the merge marks
+/// the carrier live-out precisely so launch planning stops asking a host for
+/// bytes the module computes itself.
+///
+/// Proves: for every selected module in the emitted bundle, every buffer the
+/// module Program declares as live-out or as its inlining result carries the
+/// resolved element count of the value bound to it, and the module Program
+/// survives canonical wire admission. The buffer set is read back out of the
+/// bundle, so every arm of every group is covered rather than the one buffer
+/// that happened to collide, and the fixture's element count differs from its
+/// workgroup width so a count taken from the launch geometry is still red.
+///
+/// Does not prove: that a dispatch input keeps its runtime-sized declaration,
+/// that a value resolving to zero elements is representable, or anything about
+/// element widths other than `U32` or shapes of rank other than one.
+#[test]
+fn fused_module_owned_buffers_state_resolved_element_counts_for_every_arm() {
+    const ITEMS: u64 = 48;
+    const ARMS: usize = 3;
+
+    let contract = |access, lifetime| vyre_foundation::ir::ValueContract {
+        dtype: DataType::U32,
+        shape: vec![vyre_foundation::ir::ShapeDim::Symbol("items".into())],
+        access,
+        lifetime,
+    };
+
+    let mut graph = ProgramGraph::new();
+    let mut carried = graph
+        .add_external_value(
+            "seed",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        )
+        .expect("external seed value must be admitted");
+
+    for arm in 0..ARMS {
+        let in_buffer = format!("arm{arm}_in");
+        let out_buffer = format!("arm{arm}_out");
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage(&in_buffer, 0, BufferAccess::ReadOnly, DataType::U32),
+                BufferDecl::storage(&out_buffer, 1, BufferAccess::WriteOnly, DataType::U32),
+            ],
+            [32, 1, 1],
+            vec![Node::store(
+                out_buffer.as_str(),
+                Expr::u32(0),
+                Expr::add(
+                    Expr::load(in_buffer.as_str(), Expr::u32(0)),
+                    Expr::u32(arm as u32),
+                ),
+            )],
+        );
+        let lifetime = if arm + 1 == ARMS {
+            ValueLifetime::Output
+        } else {
+            ValueLifetime::Invocation
+        };
+        let (_node, outputs) = graph
+            .add_node(
+                format!("arm{arm}"),
+                program,
+                vec![GraphInput {
+                    buffer: in_buffer,
+                    value: carried,
+                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                }],
+                vec![GraphOutput {
+                    buffer: out_buffer,
+                    name: format!("chained{arm}"),
+                    contract: contract(BufferAccess::WriteOnly, lifetime),
+                    retained_successor_of: None,
+                }],
+            )
+            .expect("chained arm must be admitted");
+        carried = outputs[0];
+    }
+
+    let mut symbols = std::collections::BTreeMap::new();
+    symbols.insert("items".into(), ITEMS);
+    let request = vyre_megakernel::CompileRequest::new(
+        graph,
+        vyre_megakernel::ExternalFacts::new(vyre_megakernel::Digest([0; 32]), symbols),
+        vyre_megakernel::DeviceFacts::unknown(),
+        vyre_megakernel::SearchBudget::new(128, 1_000_000, 8, 0, 1_000_000_000),
+        vyre_megakernel::CompileObjective::minimize_latency()
+            .with_bound(vyre_megakernel::ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("chained request must validate");
+
+    let artifact = vyre_megakernel::compile(&request).expect("compilation must succeed");
+    let payload = compile_selected_modules(&artifact, format(1), profile(1), |selected, _prof| {
+        Ok(EmittedTargetModule {
+            entry_point: format!("fused_entry_{}", selected.group.0),
+            resource_bindings: selected.canonical_bindings.clone(),
+            bytes: vec![1, 2, 3],
+        })
+    })
+    .expect("selected module compilation must succeed");
+
+    let bundle = TargetModuleBundle::from_bytes(payload.bytes())
+        .expect("emitted module bundle must be admissible");
+    let mut widest_module = 0;
+    let mut owned_buffers = 0;
+    for image in &bundle.modules {
+        widest_module = widest_module.max(image.nodes.len());
+        let program = Program::from_wire(&image.program)
+            .expect("emitted module Program must decode from its own wire bytes");
+        for buffer in program.buffers() {
+            if buffer.access() == BufferAccess::Workgroup
+                || !(buffer.is_pipeline_live_out() || buffer.is_output())
+            {
+                continue;
+            }
+            owned_buffers += 1;
+            assert_eq!(
+                u64::from(buffer.count()),
+                ITEMS,
+                "module-owned buffer `{}` in group {} must state the resolved element count of the value it carries",
+                buffer.name(),
+                image.group.0
+            );
+        }
+    }
+
+    assert!(
+        widest_module > 1,
+        "fixture must fuse at least two arms into one module to exercise a carrier"
+    );
+    assert!(
+        owned_buffers > 0,
+        "fused module must own at least one live-out carrier"
+    );
+}
+
 /// WHY: entry metadata must reject duplicate (group, slot) bindings.
 #[test]
 fn target_payload_rejects_duplicate_slot_within_entry() {

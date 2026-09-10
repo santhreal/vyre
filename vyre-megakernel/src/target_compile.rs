@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use vyre_foundation::{
     execution_plan::fusion::{merge_programs_shared, rename_buffer},
-    ir::Program,
+    ir::{BufferAccess, BufferDecl, Program},
 };
 use vyre_lower::PhysicalSchedule;
 
@@ -64,12 +64,148 @@ fn fuse_selected_module(
 ) -> Result<Program, TargetCompileError> {
     let unified = unify_intra_group_value_names(artifact, module)?;
     let programs = unified.as_deref().unwrap_or(&module.programs);
-    merge_programs_shared(programs).map_err(|error| {
+    let fused = merge_programs_shared(programs).map_err(|error| {
         TargetCompileError::Unsupported(format!(
             "fusion group {} cannot form one target module: {error}",
             module.group.0
         ))
-    })
+    })?;
+    size_module_owned_buffers(artifact, module, &fused)
+}
+
+/// True when the module, not a dispatch slot, has to state this buffer's size.
+///
+/// A runtime-sized storage declaration (`count = 0`) says a dispatch supplies
+/// the bytes and their length. That holds for an input, and for an output the
+/// dispatch layer rebinds with the host's capacity. It does not hold for a
+/// buffer the module publishes as live-out or as its inlining result: the wire
+/// format admits neither without a concrete positive element count, because no
+/// host slot is left to size them.
+fn needs_module_owned_size(buffer: &BufferDecl) -> bool {
+    buffer.count() == 0
+        && buffer.access() != BufferAccess::Workgroup
+        && (buffer.is_pipeline_live_out() || buffer.is_output())
+}
+
+/// Value the group's entry ABI binds to `buffer`, output side first.
+///
+/// One name reaches both sides of a fused group: the producer writes the value
+/// and, after name unification, the consumer reads it under the same name. The
+/// output binding names the value the module computes into that storage, so it
+/// wins, the same precedence descriptor projection resolves bindings under.
+fn group_value_for_buffer(
+    artifact: &Artifact,
+    module: &SelectedModule,
+    buffer: &str,
+) -> Option<crate::ArtifactValueId> {
+    let mut first_input = None;
+    let mut last_output = None;
+    for node in &module.nodes {
+        let Some(entry) = artifact
+            .abi()
+            .entries
+            .iter()
+            .find(|entry| entry.node == *node)
+        else {
+            continue;
+        };
+        if first_input.is_none() {
+            first_input = entry
+                .input_bindings
+                .iter()
+                .find(|binding| binding.buffer.as_str() == buffer)
+                .map(|binding| binding.value);
+        }
+        if let Some(output) = entry
+            .output_bindings
+            .iter()
+            .find(|binding| binding.buffer.as_str() == buffer)
+            .map(|binding| binding.value)
+        {
+            last_output = Some(output);
+        }
+    }
+    last_output.or(first_input)
+}
+
+/// State the exact element count of every buffer the fused module owns.
+///
+/// An arm declares its storage runtime-sized because a dispatch sizes it.
+/// Fusing a producer with its consumer removes that source for the value
+/// between them: the merge unifies the two declarations into one `ReadWrite`
+/// carrier the module writes before it reads and marks it live-out so launch
+/// planning allocates the carrier instead of demanding host bytes for a value
+/// the module computes itself. Nothing sizes that allocation afterwards, so a
+/// carrier left at the arm's `count = 0` is an allocation with no length and
+/// wire admission rejects it.
+///
+/// The artifact already resolved every value's extent against the validated
+/// symbol bindings, so the count comes from the resource record for the value
+/// the group's ABI binds to the buffer, converted through the buffer's own
+/// element width so a declaration that reinterprets the value's element type
+/// stays exact.
+fn size_module_owned_buffers(
+    artifact: &Artifact,
+    module: &SelectedModule,
+    fused: &Program,
+) -> Result<Program, TargetCompileError> {
+    if !fused.buffers().iter().any(needs_module_owned_size) {
+        return Ok(fused.clone());
+    }
+    let mut buffers = Vec::with_capacity(fused.buffers().len());
+    for buffer in fused.buffers() {
+        let value = needs_module_owned_size(buffer)
+            .then(|| group_value_for_buffer(artifact, module, buffer.name()))
+            .flatten();
+        let Some(value) = value else {
+            buffers.push(buffer.clone());
+            continue;
+        };
+        let byte_count = artifact
+            .resources()
+            .iter()
+            .find(|record| record.value == value)
+            .map(|record| record.byte_count)
+            .ok_or_else(|| {
+                TargetCompileError::InvalidArtifact(format!(
+                    "fusion group {} owns buffer `{}` for value {} that the artifact resource set omits",
+                    module.group.0,
+                    buffer.name(),
+                    value.0
+                ))
+            })?;
+        let element_bytes = buffer
+            .element()
+            .size_bytes()
+            .filter(|width| *width != 0)
+            .map(|width| width as u64)
+            .ok_or_else(|| {
+                TargetCompileError::Unsupported(format!(
+                    "fusion group {} cannot size module-owned buffer `{}`: its element type has no fixed nonzero width. Fix: lower the carrier to a fixed-width GPU storage type before fusion.",
+                    module.group.0,
+                    buffer.name()
+                ))
+            })?;
+        if byte_count % element_bytes != 0 {
+            return Err(TargetCompileError::InvalidArtifact(format!(
+                "fusion group {} owns buffer `{}` whose value {} spans {byte_count} bytes, not a whole number of {element_bytes}-byte elements",
+                module.group.0,
+                buffer.name(),
+                value.0
+            )));
+        }
+        let count = u32::try_from(byte_count / element_bytes).map_err(|_| {
+            TargetCompileError::Unsupported(format!(
+                "fusion group {} owns buffer `{}` with more elements than a buffer declaration can state. Fix: split the value across groups.",
+                module.group.0,
+                buffer.name()
+            ))
+        })?;
+        let mut sized = buffer.clone();
+        sized.count = count;
+        buffers.push(sized);
+    }
+    Ok(fused.with_rewritten_buffers(buffers))
 }
 
 /// Give one buffer name to each value a group produces for its own members.
