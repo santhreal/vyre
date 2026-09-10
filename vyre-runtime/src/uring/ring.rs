@@ -17,7 +17,7 @@ pub(crate) use super::raw_platform::IOSQE_FIXED_FILE;
 
 /// Orchestrator for the `io_uring` ring.
 ///
-/// Lifetime: [`MappedRing`] owns the descriptor and the three mapped regions,
+/// Lifetime: `MappedRing` owns the descriptor and the three mapped regions,
 /// and releases them in reverse order when this value drops.
 ///
 /// Thread-safety: `Send + Sync` holds because every ring header word is read

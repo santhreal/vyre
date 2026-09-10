@@ -1,6 +1,7 @@
 //! Conformance registry holding all identity-joined conformance-case providers.
 
 use std::collections::BTreeMap;
+use std::sync::LazyLock;
 
 use super::records::ConformanceProvider;
 use super::registration::OperationRegistration;
@@ -13,9 +14,24 @@ pub struct ConformanceRegistry {
 }
 
 impl ConformanceRegistry {
-    /// Compute the conformance registry from global inventory submissions.
+    /// Return the process-wide conformance registry, built once from the
+    /// global inventory.
+    ///
+    /// The walk grows with the registration count, so it happens here and
+    /// once. Every caller probes this one rather than reading the inventory
+    /// again.
     #[must_use]
-    pub fn from_registry() -> Self {
+    pub fn global() -> &'static Self {
+        static REGISTRY: LazyLock<ConformanceRegistry> =
+            LazyLock::new(ConformanceRegistry::from_registry);
+        &REGISTRY
+    }
+
+    /// Compute the conformance registry from global inventory submissions.
+    ///
+    /// Reachable only through `global`, which runs it once.
+    #[must_use]
+    pub(crate) fn from_registry() -> Self {
         let mut providers = BTreeMap::new();
 
         for prov in inventory::iter::<ConformanceProvider> {

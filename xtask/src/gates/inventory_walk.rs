@@ -125,6 +125,12 @@ fn frozen_regions(lines: &[&str]) -> Vec<bool> {
 /// A region stays open until its body has opened and closed again, because a
 /// signature that wraps its parameters over several lines carries no brace on the
 /// line that declares it.
+///
+/// An initializer that delegates by name opens no body at all:
+/// `LazyLock::new(Registry::build);` is one statement. Leaving it open held a
+/// depth taken inside the accessor, and the next builder's body then read as
+/// closed the first time a loop inside it ended, so every walk after the first
+/// reported while the first stayed clean.
 fn regions_of(lines: &[&str], named: &BTreeSet<String>) -> Vec<bool> {
     let mut frozen = vec![false; lines.len()];
     let mut open = None;
@@ -143,11 +149,12 @@ fn regions_of(lines: &[&str], named: &BTreeSet<String>) -> Vec<bool> {
         if open.is_some() {
             frozen[index] = true;
         }
+        let statement = code.brace_delta == 0 && code.code.contains(';');
         depth += code.brace_delta;
         if let Some(open_depth) = open {
             if depth > open_depth {
                 body_started = true;
-            } else if body_started {
+            } else if body_started || statement {
                 open = None;
             }
         }
@@ -227,8 +234,7 @@ fn frozen_initializer_names(lines: &[&str]) -> BTreeSet<String> {
 
 /// The function or method a line declares, when it declares one.
 fn declared_name(code: &str) -> Option<String> {
-    let rest = code.trim_start();
-    let rest = rest.strip_prefix("pub ").unwrap_or(rest);
+    let rest = strip_visibility(code.trim_start());
     let rest = rest
         .strip_prefix("const ")
         .or_else(|| rest.strip_prefix("async "))
@@ -236,6 +242,29 @@ fn declared_name(code: &str) -> Option<String> {
     let name = rest.strip_prefix("fn ")?;
     let name = name.split(['(', '<']).next()?.trim();
     (!name.is_empty()).then(|| name.to_owned())
+}
+
+/// The declaration with any visibility qualifier removed.
+///
+/// `pub(crate)` and `pub(super)` declare a function exactly as `pub` does.
+/// Reading only the bare form put every restricted function outside the freeze
+/// rule, so a builder narrowed to its crate and named by a `LazyLock` still
+/// reported as a per-lookup scan, and the advice it printed was the shape the
+/// code already had.
+fn strip_visibility(code: &str) -> &str {
+    let Some(rest) = code.strip_prefix("pub") else {
+        return code;
+    };
+    if let Some(scoped) = rest.strip_prefix('(') {
+        return match scoped.split_once(')') {
+            Some((_, tail)) => tail.trim_start(),
+            None => code,
+        };
+    }
+    if rest.starts_with(' ') {
+        return rest.trim_start();
+    }
+    code
 }
 
 #[cfg(test)]
@@ -314,6 +343,78 @@ impl Registry {
             "a builder the initializer names runs once: {:?}",
             report.findings
         );
+    }
+
+    /// WHY: narrowing a builder to `pub(crate)` is the ordinary way to make a
+    /// cached probe the only public route to a registry, which is exactly what
+    /// this rule asks for. Reading only the bare `pub` form left every
+    /// restricted declaration unrecognized, so the builder read as loose code
+    /// and the gate printed advice describing the shape it already had. The
+    /// case runs every visibility form a declaration can carry, so a parser
+    /// that learns one of them does not leave the rest reported.
+    #[test]
+    fn a_builder_a_lock_names_is_clean_under_every_visibility() {
+        for visibility in ["", "pub ", "pub(crate) ", "pub(super) ", "pub(in crate::a) "] {
+            let report = run(&format!(
+                r"
+static REGISTRY: LazyLock<Registry> = LazyLock::new(Registry::build);
+
+impl Registry {{
+    {visibility}fn build() -> Self {{
+        let rows: Vec<&Row> = inventory::iter::<Row>.into_iter().collect();
+        Self {{ rows }}
+    }}
+}}
+"
+            ));
+
+            assert!(
+                report.findings.is_empty(),
+                "`{visibility}fn build` is the same once-only builder: {:?}",
+                report.findings
+            );
+        }
+    }
+
+    /// WHY: this is the shape the rule asks a crate to adopt: a public cached
+    /// accessor holding the lock, and a builder beside it that the lock names.
+    /// The accessor's `LazyLock::new(Type::build);` is a statement with no
+    /// body, and treating it as an open block held a depth measured inside the
+    /// accessor. The builder's own body then read as closed as soon as its
+    /// first loop ended, so a builder with two walks reported the second and
+    /// stayed silent about the first. Two walks is the minimum that shows it.
+    #[test]
+    fn a_builder_beside_its_cached_accessor_is_clean_for_every_walk() {
+        let report = run(r"
+impl Registry {
+    pub fn global() -> &'static Self {
+        static REGISTRY: LazyLock<Registry> =
+            LazyLock::new(Registry::build);
+        &REGISTRY
+    }
+
+    pub(crate) fn build() -> Self {
+        let mut rows = BTreeMap::new();
+
+        for row in inventory::iter::<Row> {
+            rows.insert(row.id, row);
+        }
+
+        for legacy in inventory::iter::<LegacyRow> {
+            rows.entry(legacy.id).or_insert_with(|| legacy.row());
+        }
+
+        Self { rows }
+    }
+}
+");
+
+        assert!(
+            report.findings.is_empty(),
+            "every walk in the builder the lock names runs once: {:?}",
+            report.findings
+        );
+        assert_eq!(report.notes, vec![note(2)]);
     }
 
     /// WHY: a builder that outgrew one function is still a builder. Splitting the

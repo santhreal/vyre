@@ -367,7 +367,7 @@ fn the_precedence_view_carries_the_same_backends() {
 fn every_live_operation_has_descriptor_lowering_and_conformance_provider() {
     let registry = live_operation_registry();
     let bundle = registry.catalog_bundle();
-    let conformance = vyre_foundation::operation::ConformanceRegistry::from_registry();
+    let conformance = vyre_foundation::operation::ConformanceRegistry::global();
 
     let all_registered_ids: BTreeSet<&'static str> = registry.iter().map(|op| op.id).collect();
 

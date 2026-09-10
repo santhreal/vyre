@@ -144,7 +144,7 @@ fn an_id_naming_no_crate_is_refused_whatever_it_declares() {
 /// Catalog bundle collects registered descriptors and lowering providers and computes a stable digest.
 #[test]
 fn catalog_bundle_assembly_and_descriptor_lookup() {
-    let bundle = OperationCatalogBundle::from_registry();
+    let bundle = OperationCatalogBundle::global();
     assert!(!bundle.is_empty());
     assert!(bundle.len() > 0);
     let digest = bundle.digest();
@@ -176,7 +176,7 @@ fn catalog_bundle_assembly_and_descriptor_lookup() {
 fn every_registered_operation_has_descriptor_lowering_and_conformance_provider() {
     let registry = OperationRegistry::global();
     let bundle = registry.catalog_bundle();
-    let conformance = ConformanceRegistry::from_registry();
+    let conformance = ConformanceRegistry::global();
 
     let all_registered_ids: BTreeSet<&'static str> = registry.iter().map(|op| op.id).collect();
 

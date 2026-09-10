@@ -17,7 +17,7 @@
 //! the interpreter, and a rule that convicted it would be switched off rather
 //! than obeyed.
 //!
-//! [`EXEMPT_LAYERS`] names the layers that may link one; every other layer the
+//! `EXEMPT_LAYERS` names the layers that may link one; every other layer the
 //! architecture manifest declares ships and is held to the rule. Deriving it
 //! that way rather than listing the shipped layers is what makes a new layer
 //! fail closed: it is subject to the rule the moment a `[[layer]]` row exists,
