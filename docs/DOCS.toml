@@ -179,7 +179,7 @@ kind = "architecture"
 section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
-covers = ["vyre-libs/src/parsing/**"]
+covers = ["vyre-libs-parsing/src/**"]
 nav = true
 
 [[page]]
@@ -750,7 +750,7 @@ kind = "reference"
 section = "API and operation reference"
 authority = "self"
 generation = "manual"
-covers = ["vyre-foundation/src/ir_inner/model/program_graph.rs", "vyre-spec/src/buffer_access.rs", "vyre-spec/src/data_type/**"]
+covers = ["vyre-foundation/src/ir_inner/model/program_graph/**", "vyre-spec/src/buffer_access.rs", "vyre-spec/src/data_type/**"]
 nav = true
 
 [[page]]

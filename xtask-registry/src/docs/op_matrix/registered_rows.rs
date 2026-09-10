@@ -178,7 +178,7 @@ fn owner_paths(
 }
 
 /// `vyre-libs::graph::toposort` becomes the directory that carries the
-/// code today, `vyre-libs/src/graph`.
+/// code today, `vyre-libs-graph/src/graph`.
 ///
 /// Operation ids are frozen, so the id names the crate an operation was minted
 /// under and not the crate it lives in: the composition move left 154 ids whose
@@ -212,25 +212,44 @@ fn namespace_source_dir(root: &Path, owners: &mut BTreeMap<String, String>, id: 
 }
 
 /// Read one namespace and domain out of the checkout.
+///
+/// The candidate trees are the id's own crate followed by every composition
+/// crate this checkout ships, walked rather than written down: the facade was
+/// split into one crate per domain, and a list of the twenty-two names would
+/// have to be edited again on the next split to keep resolving.
 fn resolve_source_dir(root: &Path, crate_name: &str, domain: &str) -> String {
     let minted = format!("{crate_name}/src/{domain}");
-    if carries_rust_source(&root.join(&minted)) {
-        return minted;
+    let own = format!("{crate_name}/src");
+    let mut candidates = vec![own.clone()];
+    candidates.extend(
+        composition_crate_sources(root)
+            .into_iter()
+            .filter(|source| *source != own),
+    );
+
+    for source in &candidates {
+        let moved = format!("{source}/{domain}");
+        if carries_rust_source(&root.join(&moved)) {
+            return moved;
+        }
     }
-    let moved = format!("vyre-libs/src/{domain}");
-    if carries_rust_source(&root.join(&moved)) {
-        return moved;
-    }
+    // `matching` and `scan` are frozen id namespaces whose code is the pattern
+    // domain. The id cannot be renamed, so the alias is resolved here.
     if (crate_name == "vyre-libs" || crate_name == "vyre-primitives")
         && (domain == "matching" || domain == "scan")
     {
-        let pattern = "vyre-libs/src/pattern".to_string();
-        if carries_rust_source(&root.join(&pattern)) {
-            return pattern;
+        for source in &candidates {
+            let pattern = format!("{source}/pattern");
+            if carries_rust_source(&root.join(&pattern)) {
+                return pattern;
+            }
         }
     }
-    for relative in [format!("{crate_name}/src"), "vyre-libs/src".to_string()] {
-        if let Some(found) = source_directory_named(&root.join(&relative), domain) {
+    // A domain is not always a top-level module: the optimizer and quantization
+    // ops moved under `nn`, so each candidate tree is searched whole once its
+    // top-level answer holds no code.
+    for relative in &candidates {
+        if let Some(found) = source_directory_named(&root.join(relative), domain) {
             let found = found.to_string_lossy().replace('\\', "/");
             let root_prefix = format!("{}/", root.to_string_lossy().replace('\\', "/"));
             return found
@@ -240,6 +259,27 @@ fn resolve_source_dir(root: &Path, crate_name: &str, domain: &str) -> String {
         }
     }
     minted
+}
+
+/// Every `vyre-libs*` crate in the checkout that ships a `src` tree, as
+/// `<crate>/src`, shallowest name first for a stable answer.
+fn composition_crate_sources(root: &Path) -> Vec<String> {
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return Vec::new();
+    };
+    let mut sources: Vec<String> = entries
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let is_composition = name == "vyre-libs"
+                || name
+                    .strip_prefix("vyre-libs-")
+                    .is_some_and(|domain| !domain.is_empty());
+            (is_composition && entry.path().join("src").is_dir()).then(|| format!("{name}/src"))
+        })
+        .collect();
+    sources.sort();
+    sources
 }
 
 /// Suites that judge one operation, per tier.

@@ -183,8 +183,8 @@ write = [
   "release/evidence/benchmarks/**",
 ]
 avoid = [
-  "vyre-libs/src/parsing/**",
-  "vyre-libs/src/security/**",
+  "vyre-libs-parsing/src/**",
+  "vyre-libs-security/src/**",
   "vyre-primitives/src/**",
 ]
 required_commands = [
@@ -209,10 +209,10 @@ required_commands = [
 purpose = "Graph/dataflow compiler seam: frontier policies, CSR contracts, semiring formulations, relation facts, and compressed domains."
 layer = "Graph/flow compiler seam"
 write = [
-  "vyre-libs/src/bitset/**",
-  "vyre-libs/src/analysis/**",
-  "vyre-libs/src/graph/**",
-  "vyre-libs/src/security/**",
+  "vyre-libs-bitset/src/**",
+  "vyre-libs-analysis/src/**",
+  "vyre-libs-graph/src/**",
+  "vyre-libs-security/src/**",
 ]
 avoid = [
   "vyre-driver-cuda/src/**",
@@ -229,7 +229,7 @@ purpose = "Frontend seam: source validation, syntax parsing, source diagnostics,
 layer = "Frontend research seam"
 write = [
   "vyre-foundation/src/vast/mod.rs",
-  "vyre-libs/src/parsing/**",
+  "vyre-libs-parsing/src/**",
   "vyre-libs/tests/*parser*",
   "vyre-libs/tests/*frontend*",
   "docs/ARCHITECTURE.md",
@@ -247,8 +247,8 @@ required_commands = [
 purpose = "Literal, regex, automata, decode-scan, and static scan primitives with shared result compaction."
 layer = "Scan/static analysis"
 write = [
-  "vyre-libs/src/pattern/**",
-  "vyre-libs/src/decode/**",
+  "vyre-libs-pattern/src/**",
+  "vyre-libs-decode/src/**",
   "vyre-libs/tests/*scan*",
   "vyre-libs/tests/*regex*",
 ]
@@ -260,14 +260,14 @@ required_commands = [
 purpose = "Scan/automata seam: literal, regex, DFA/NFA/PFAC-style planners, resident automata databases, streaming scan state, and scan-to-flow finding relations."
 layer = "Scan/automata seam"
 write = [
-  "vyre-libs/src/pattern/**",
-  "vyre-libs/src/text/**",
+  "vyre-libs-pattern/src/**",
+  "vyre-libs-text/src/**",
   "vyre-libs/tests/*scan*",
   "vyre-libs/tests/*regex*",
   "release/evidence/benchmarks/**",
 ]
 avoid = [
-  "vyre-libs/src/parsing/**",
+  "vyre-libs-parsing/src/**",
   "vyre-runtime/src/resident_work_queue/**",
 ]
 required_commands = [
@@ -278,8 +278,8 @@ required_commands = [
 purpose = "Security predicate tables, taint/dataflow facts, borrow facts, semiring fixpoint, and static-analysis convergence proof."
 layer = "Security/dataflow"
 write = [
-  "vyre-libs/src/security/**",
-  "vyre-libs/src/analysis/**",
+  "vyre-libs-security/src/**",
+  "vyre-libs-analysis/src/**",
   "vyre-foundation/src/pass_math/**",
 ]
 required_commands = [
@@ -297,8 +297,8 @@ write = [
   "vyre-driver-cuda/src/**",
   "vyre-driver-wgpu/src/**",
   "vyre-runtime/src/**",
-  "vyre-libs/src/security/**",
-  "vyre-libs/src/pattern/**",
+  "vyre-libs-security/src/**",
+  "vyre-libs-pattern/src/**",
   "scripts/**",
   "release/evidence/**",
 ]
@@ -313,9 +313,9 @@ required_commands = [
 purpose = "Attention, tiled matmul, tensor-core policy, quantized linear paths, and research primitive promotion gates."
 layer = "NN/math"
 write = [
-  "vyre-libs/src/nn/**",
-  "vyre-libs/src/math/**",
-  "vyre-libs/tests/*quantized*",
+  "vyre-libs-nn/src/**",
+  "vyre-libs-math/src/**",
+  "vyre-libs-nn/tests/*quantized*",
   "vyre-libs/tests/*attention*",
 ]
 required_commands = [
@@ -327,15 +327,15 @@ required_commands = [
 purpose = "Sparse math and AI seam: tensor-core policy, quantized matmul, GraphBLAS/cuSPARSE-style baselines, semiring GEMM, sparse workload evidence, and NN claim boundaries."
 layer = "Sparse math/AI seam"
 write = [
-  "vyre-libs/src/math/**",
-  "vyre-libs/src/nn/**",
+  "vyre-libs-math/src/**",
+  "vyre-libs-nn/src/**",
   "vyre-libs/tests/*gemm*",
   "vyre-libs/tests/*attention*",
   "vyre-bench/src/**",
 ]
 avoid = [
-  "vyre-libs/src/security/**",
-  "vyre-libs/src/parsing/**",
+  "vyre-libs-security/src/**",
+  "vyre-libs-parsing/src/**",
 ]
 required_commands = [
   "cargo_full test -p vyre-libs matmul",
@@ -390,8 +390,8 @@ write = [
   "vyre-driver/src/launch_fusion.rs",
 ]
 avoid = [
-  "vyre-libs/src/parsing/**",
-  "vyre-libs/src/security/**",
+  "vyre-libs-parsing/src/**",
+  "vyre-libs-security/src/**",
   "release/evidence/**",
 ]
 required_commands = [
@@ -415,8 +415,8 @@ write = [
 avoid = [
   "vyre-driver-cuda/src/backend/**",
   "vyre-driver-wgpu/src/backend_dispatch.rs",
-  "vyre-libs/src/parsing/**",
-  "vyre-libs/src/security/**",
+  "vyre-libs-parsing/src/**",
+  "vyre-libs-security/src/**",
 ]
 required_commands = [
   "cargo_full test -p xtask",

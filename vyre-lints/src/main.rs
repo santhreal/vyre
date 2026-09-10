@@ -196,7 +196,7 @@ const LINTS: &[Lint] = &[
             // happened to pick one of them.
             fixed_roots(
                 workspace,
-                &["vyre-primitives/src/hardware", "vyre-libs/src/device"],
+                &["vyre-primitives/src/hardware", "vyre-libs-device/src/device"],
             )
         },
         missing_root_fix:

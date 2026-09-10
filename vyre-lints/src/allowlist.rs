@@ -96,6 +96,7 @@ pub fn load(path: &Path) -> Result<Allowlist> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeSet;
 
     #[test]
     fn empty_allowlist_contains_nothing() {
@@ -158,16 +159,58 @@ mod tests {
         assert_eq!(Allowlist::empty().measured_roots(), ["vyre-libs/src"]);
     }
 
-    /// The shipped configuration is what the pinned count was measured
-    /// against, so assert it directly rather than trusting a future edit.
+    /// WHY: the rule applies only inside a measured root, so a composition
+    /// crate this tree ships and the shipped config omits is scanned by
+    /// nothing, and the lint reports zero over it forever. The split of the
+    /// `vyre-libs` facade into one crate per domain is exactly that event: it
+    /// moved every construction site out of the single root the config named.
+    ///
+    /// The expected set is walked out of the workspace rather than restated
+    /// here, so a twenty-fourth composition crate turns this red until the
+    /// config records it.
     #[test]
-    fn the_shipped_configuration_declares_its_measured_roots() {
-        let shipped =
-            vyre_test_support::monorepo::vyre_workspace_root().join("vyre-lints/allowlist.toml");
+    fn the_shipped_configuration_measures_every_composition_crate() {
+        let root = vyre_test_support::monorepo::vyre_workspace_root();
+        let shipped = root.join("vyre-lints/allowlist.toml");
 
-        let a = load(&shipped).expect("shipped allowlist loads");
+        let declared: BTreeSet<String> = load(&shipped)
+            .expect("shipped allowlist loads")
+            .measured_roots()
+            .iter()
+            .cloned()
+            .collect();
+        let present: BTreeSet<String> = composition_crate_roots(&root);
 
-        assert_eq!(a.measured_roots(), ["vyre-libs/src"]);
+        assert!(
+            !present.is_empty(),
+            "the walk found no composition crate, so this test judges nothing"
+        );
+        let unmeasured: Vec<&String> = present.difference(&declared).collect();
+        let absent: Vec<&String> = declared.difference(&present).collect();
+        assert!(
+            unmeasured.is_empty() && absent.is_empty(),
+            "Fix: measured_roots must name every composition source tree this \
+             workspace ships. Unmeasured: {unmeasured:?}. Named but not in the \
+             tree: {absent:?}."
+        );
+    }
+
+    /// Every `vyre-libs*` crate directory that ships a `src` tree, as
+    /// `<crate>/src`.
+    fn composition_crate_roots(root: &Path) -> BTreeSet<String> {
+        std::fs::read_dir(root)
+            .expect("workspace root reads")
+            .filter_map(|entry| entry.ok())
+            .filter_map(|entry| {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                let is_composition = name == "vyre-libs"
+                    || name
+                        .strip_prefix("vyre-libs-")
+                        .is_some_and(|domain| !domain.is_empty());
+                (is_composition && entry.path().join("src").is_dir())
+                    .then(|| format!("{name}/src"))
+            })
+            .collect()
     }
 
     /// WHY: an exemption is keyed on a path, so a rename or a file split leaves

@@ -89,6 +89,15 @@ pub(crate) fn load_structural_gates(vyre_root: &Path) -> StructuralGateArtifact 
 ///
 /// Derived from the same scan that produced the findings, so the registry
 /// cannot outlive the gates it exempts.
+///
+/// A row whose file matches nothing in the tree is reported as that, and not as
+/// a file carrying no source-inspecting test. The two have opposite fixes: a
+/// file that exists and inspects nothing holds a row that should go, while a
+/// path that matches nothing usually holds a live contract that moved, and
+/// deleting the row would drop a reviewed decision about a test still running
+/// under another path. The split of the `vyre-libs` facade into one crate per
+/// domain moved six such rows, and each read as an instruction to delete a gate
+/// that had not gone anywhere.
 pub(crate) fn stale_declaration_blockers(
     vyre_root: &Path,
     declarations: &[StructuralGateDeclaration],
@@ -109,6 +118,13 @@ pub(crate) fn stale_declaration_blockers(
     }
     let mut blockers = Vec::new();
     for declaration in declarations {
+        if !vyre_root.join(&declaration.file).is_file() {
+            blockers.push(format!(
+                "{STRUCTURAL_GATE_SOURCE}: `{}` names `{}`, which matches nothing in the tree. Fix: point the row at the path the file moved to, or delete it once the test itself is gone; a row naming no file exempts nothing while reading as a reviewed decision.",
+                declaration.test, declaration.file
+            ));
+            continue;
+        }
         match inspecting.get(&declaration.file) {
             None => blockers.push(format!(
                 "{STRUCTURAL_GATE_SOURCE}: `{}` names `{}`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",

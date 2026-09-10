@@ -8,9 +8,10 @@ inventory this rule operates over.
 
 ## The rule
 
-Before inventing a new sub-op, scan the domain folders under `vyre-libs/src/`
-for a primitive that already does the work. Invent a new sub-op only when
-nothing existing maps and the new sub-op will be reused by two or more callers.
+Before inventing a new sub-op, scan the domain folders under
+`vyre-libs-<domain>/src/<domain>/` for a primitive that already does the work.
+Invent a new sub-op only when nothing existing maps and the new sub-op will be
+reused by two or more callers.
 
 The Gate 1 budget is met by reuse, not by bespoke splitting. When
 attention has eight loops, the answer is not four attention-private
@@ -195,7 +196,7 @@ not the other is not owned.
 ## When the primitive does not exist yet
 
 1. Write the primitive in its own file under the owning domain
-   (`vyre-libs/src/<domain>/<primitive>.rs`, not inside the consuming
+   (`vyre-libs-<domain>/src/<domain>/<primitive>.rs`, not inside the consuming
    op's file), behind that domain's cargo feature.
 2. Submit one `OperationRegistration` so the universal harness discovers
    it.

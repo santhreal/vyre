@@ -143,7 +143,7 @@ which is consumed by cargo before any code runs.
 """
 
 [[gate]]
-file = "vyre-libs/tests/quantized_dispatch_variant_coverage_gate.rs"
+file = "vyre-libs-solvers/tests/quantized_dispatch_variant_coverage_gate.rs"
 tests = ["every_published_quantized_entry_point_has_a_readback_contract_row"]
 reason = """
 Derives the published quantized dispatch entry points from the `pub use
@@ -348,7 +348,7 @@ from the owner only once a device reads a buffer laid out by the other copy.
 """
 
 [[gate]]
-file = "vyre-libs/tests/graph_single_source_contracts.rs"
+file = "vyre-libs-graph/tests/graph_single_source_contracts.rs"
 tests = ["the_wrapper_set_is_derived_and_not_empty"]
 reason = """
 Floor check for the dispatch-wrapper pairing the rules below are taken over. Its
@@ -357,7 +357,7 @@ source walk; without it every rule in the file would pass by judging nothing.
 """
 
 [[gate]]
-file = "vyre-libs/tests/graph_single_source_contracts.rs"
+file = "vyre-libs-graph/tests/graph_single_source_contracts.rs"
 tests = [
   "every_dispatch_wrapper_names_the_graph_primitive_it_wraps",
   "every_dispatch_wrapper_names_its_primitive_cpu_reference",
@@ -371,7 +371,7 @@ agrees.
 """
 
 [[gate]]
-file = "vyre-libs/tests/graph_single_source_contracts.rs"
+file = "vyre-libs-graph/tests/graph_single_source_contracts.rs"
 tests = ["no_dispatch_wrapper_is_shadowed_by_an_older_module_path"]
 reason = """
 Asserts the module a wrapper was migrated from no longer exists. A stale module
@@ -380,7 +380,7 @@ and the next edit lands in whichever copy the author opens.
 """
 
 [[gate]]
-file = "vyre-libs/tests/graph_single_source_contracts.rs"
+file = "vyre-libs-graph/tests/graph_single_source_contracts.rs"
 tests = ["the_dispatch_module_declares_every_wrapper_once"]
 reason = """
 Counts the `mod` declaration for each wrapper in the dispatch module. Module
