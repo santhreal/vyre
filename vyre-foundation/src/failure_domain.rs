@@ -367,7 +367,10 @@ pub enum Reclaimed {
 /// The poison flag is cleared here rather than by the caller, so one panic
 /// costs one recovery instead of one per acquisition for the life of the
 /// process, and clearing the flag stays with the record of who accepted the
-/// state and why. See [`report_reclaimed`] for why the state is kept.
+/// state and why. The state is kept because discarding it loses the only
+/// record of something the process already did, such as an external handle the
+/// device still holds or a committed idempotency key, which leaks the handle
+/// or lets a retry repeat a side effect.
 pub fn reclaim_poisoned_mutex_observed<'a, T>(
     mutex: &'a Mutex<T>,
     owner: &str,

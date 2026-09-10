@@ -203,8 +203,8 @@ fn dep_package(key: &str, value: &Value, workspace_deps: &BTreeMap<String, Strin
 /// on the target it names.
 fn scan_manifest(
     package: &str,
-    layer: Layer,
-    layers: &BTreeMap<String, Layer>,
+    layer: Layer<'_>,
+    layers: &BTreeMap<String, Layer<'_>>,
     members: &BTreeSet<&str>,
     workspace_deps: &BTreeMap<String, String>,
     table: &Value,
