@@ -10,6 +10,7 @@ mod diff;
 mod error;
 mod legality;
 mod normalize;
+mod phase_lookup;
 mod preconditions;
 mod tree;
 mod typed;
