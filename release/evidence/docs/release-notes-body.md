@@ -1108,6 +1108,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Candidate resource verification reports a register allocation above the
   occupancy budget as spill traffic and rejects only an allocation above the
   target's architectural register ceiling.
+- `vyre_driver_cuda::registered_device` returns the device generation every
+  registered CUDA facet runs on, so telemetry for work submitted through the
+  registry is read from the handle that records it rather than from a privately
+  acquired backend that reports zero.
 - `vyre_foundation::extension::CatalogBundle` is renamed
   `ExtensionCatalogBundle` and `operation::CatalogBundle` is renamed
   `OperationCatalogBundle`.
@@ -1289,6 +1293,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   folds until the file passed the thousand-line cap. A scan leaves every lane
   holding a prefix; a tree reduction leaves one value. They share a staging
   convention and nothing else.
+- The reduce-sum crossover benchmark binds its device-resident input once and
+  re-seeds only the caller-seeded accumulator, so a repeat dispatch of the same
+  program moves no input bytes.
 - A grid-stride tree reduction publishes its result buffer instead of reading
   it from the dispatch inputs, and the single-block and fused two-pass forms
   present the same signature, so one caller dispatch works at every count: pass
@@ -5258,6 +5265,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   with more than one group. A value an entry produces without reading it is no
   longer requested from the caller as a host input, because an inter-group
   intermediate is device state rather than a caller buffer.
+- A descriptor slot the kernel both loads from and stores to is projected as
+  read-write whichever graph direction names it, so a node that lists an
+  accumulator only as an output keeps its input identity and the dispatch no
+  longer fails with `absent from this module's requested directional resource
+  projection`.
 - The device-test gate asks per test target whether a workflow step compiles
   it, so a target admitted by `device-tests` in a package other steps already
   build with that feature is reported instead of silently running nowhere; the
@@ -5575,6 +5587,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   it reported seven graph launches and zero kernel launches per run, and every
   consumer of that counter read zero device work for a pipeline that was
   executing.
+- A CUDA graph replay records the thread slots it schedules and the logical
+  elements it covers, so a graph-dispatched pipeline reports its real occupancy
+  instead of leaving `logical_thread_utilization_bps` at zero for a device that
+  was fully scheduled.
 - Semantic execution resolves each graph value to its artifact ABI value by
   resource name. Reading the graph number as the artifact number returned a
   whole-grid fence carrier under the output's name whenever compilation
@@ -5759,6 +5775,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   module it belongs to and is declared without an attribute. The fusion tests
   had two declaring owners, the parent module and the file they prove; only the
   file that proves them declares them now.
+- Every per-module array a submission indexes is built in dependency-stage then
+  fusion-group order, so a graph whose arms record before the group that joins
+  them no longer resolves one module's program buffers against another module's
+  resources and fails with `Program buffer is absent from the canonical
+  artifact ABI`.
 - A certificate regression test that verified a bundle through a live GPU
   backend now compiles only where the device is, so the CPU-only host matrix
   reaches every package after `vyre-conform` instead of aborting inside the
@@ -6102,6 +6123,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A resident batch is submitted in full before any item is awaited, so
   consecutive launches run back to back on one stream and each item's device
   time covers its own launch instead of a host round trip.
+- A resident CUDA dispatch of a grid-sync program whose grid exceeds
+  cooperative thread residency now takes the segmented route instead of failing
+  the launch.
+- A CUDA resident dispatch no longer zero-fills a bound read-write output
+  before launch, so a value one dispatch leaves on the device is readable by
+  the next.
 - The WGPU resident pipeline cache keys entries by canonical pipeline identity
   instead of a 64-bit FxHash of the program wire, so a resident dispatch cannot
   be answered by a pipeline compiled for another adapter, ABI, naga build or
@@ -6179,6 +6206,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   midpoint and from luma as a single non-negative magnitude, so neither the
   contrast nor the saturate stage evaluates a wrapping subtraction as the
   unused arm of a select.
+- A compiled launch whose workgroup occupies more than one axis now covers its
+  domain on every axis it occupies, so a program that reads two grid axes
+  computes every element instead of the first workgroup of columns.
 - A single-invocation operation guards its serial body on `workgroup_id.x == 0
   && local_id.x == 0`, so a fusion that widens the arm still admits one
   invocation instead of repeating the same read-modify-write from every
