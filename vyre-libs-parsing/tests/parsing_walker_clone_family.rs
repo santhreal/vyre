@@ -11,27 +11,29 @@
 //! helper that quietly grows a per-caller special case turns them red.
 //!
 //! What these do not catch: a deliberate IR change. That is the point at which
-//! a human decides the new IR is correct and re-pins the affected constant.
+//! a human decides the new IR is correct and re-blesses the golden.
 //!
-//! Constants were re-recorded for deliberate IR/ABI changes. The two `shunting`
-//! entries moved when every child region that had named itself by suffixing its
-//! parent operation id took the `anonymous::` prefix instead: a phase boundary
-//! inside one operation has no operation to name it with, and an audit reading
-//! such a name as an id was demanding a registration for a building block that
-//! must not exist. The `python/decorators` entry moved when the dotted-name walk
-//! gained one owner: the decorator copy was missing the
-//! `cursor != INVALID_POS` guard, which is the defect the collapse fixed.
-//! All 9 canonical fingerprints moved uniformly when VIR0 wire format rev 7
-//! integrated first-class Tile values into the IR serialization framing header.
+//! # Why the pin is structural IR and not `Program::fingerprint`
+//!
+//! `clone_family_entry_points_emit_the_pinned_ir` compares each entry point's
+//! canonicalized buffer roster and node tree against a checked-in golden.
+//! `Program::fingerprint` is BLAKE3 over `canonical_wire_bytes`, and those
+//! bytes open with `WIRE_FORMAT_VERSION`, so a serialization revision moves
+//! every digest in the tree while no program's meaning moves, and the
+//! difference is reported as 32 opaque bytes. The golden is a function of the
+//! IR model, so a changed operand, a dropped node, a reordered data dependence
+//! or a changed buffer moves it and a wire revision does not.
 
 #![cfg(feature = "parsing")]
 #![forbid(unsafe_code)]
 
+use std::path::PathBuf;
+
 use crate::harness;
 
-use harness::ir_fingerprint::assert_pinned_ir_fingerprints;
 use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_foundation::operation::OperationRegistry;
+use vyre_foundation::visit::{any_descendant, child_bodies, for_each_node};
 use vyre_libs_parsing::parsing::core::ast::shunting::{
     ast_shunting_yard, ast_shunting_yard_with_capacity,
 };
@@ -43,6 +45,9 @@ use vyre_libs_parsing::parsing::python::parse::decorators::python312_extract_dec
 use vyre_libs_parsing::parsing::python::parse::structure::{
     python312_extract_imports, python312_extract_structure, python312_extract_with_blocks,
 };
+use vyre_test_support::structural_ir::{
+    golden_contains, render_structural_ir, write_golden, StructuralIrGolden,
+};
 
 const TOKENS: u32 = 16;
 
@@ -53,27 +58,11 @@ const TOKENS: u32 = 16;
 /// Every `Node::Loop` in `nodes` whose induction variable is `var`, in
 /// depth-first order.
 fn loops<'a>(nodes: &'a [Node], var: &str, out: &mut Vec<&'a Node>) {
-    for node in nodes {
-        match node {
-            Node::Loop {
-                var: name, body, ..
-            } => {
-                if name.as_str() == var {
-                    out.push(node);
-                }
-                loops(body, var, out);
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                loops(then, var, out);
-                loops(otherwise, var, out);
-            }
-            Node::Block(children) => loops(children, var, out),
-            Node::Region { body, .. } => loops(body, var, out),
-            _ => {}
+    for_each_node(nodes, |node| {
+        if matches!(node, Node::Loop { var: name, .. } if name.as_str() == var) {
+            out.push(node);
         }
-    }
+    });
 }
 
 fn only_loop<'a>(program: &'a Program, var: &str) -> &'a Node {
@@ -97,25 +86,11 @@ fn all_loops<'a>(program: &'a Program, var: &str) -> Vec<&'a Node> {
 /// Every `Node::Let` in `nodes` whose bound name is `name`, in depth-first
 /// order.
 fn lets<'a>(nodes: &'a [Node], name: &str, out: &mut Vec<&'a Node>) {
-    for node in nodes {
-        match node {
-            Node::Let { name: bound, .. } => {
-                if bound.as_str() == name {
-                    out.push(node);
-                }
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                lets(then, name, out);
-                lets(otherwise, name, out);
-            }
-            Node::Loop { body, .. } => lets(body, name, out),
-            Node::Block(children) => lets(children, name, out),
-            Node::Region { body, .. } => lets(body, name, out),
-            _ => {}
+    for_each_node(nodes, |node| {
+        if matches!(node, Node::Let { name: bound, .. } if bound.as_str() == name) {
+            out.push(node);
         }
-    }
+    });
 }
 
 fn only_let<'a>(program: &'a Program, name: &str) -> &'a Node {
@@ -347,9 +322,10 @@ fn go_brace_span_scan_has_one_owner() {
     let brace_scans: Vec<&Node> = scans
         .iter()
         .copied()
-        .filter(|node| match node {
-            Node::Loop { body, .. } => assignments_to(body, "brace_done"),
-            _ => false,
+        .filter(|node| {
+            child_bodies(node)
+                .into_iter()
+                .any(|body| assignments_to(body, "brace_done"))
         })
         .collect();
     assert_eq!(
@@ -372,15 +348,10 @@ fn go_brace_span_scan_has_one_owner() {
 }
 
 fn assignments_to(nodes: &[Node], target: &str) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::Assign { name, .. } => name.as_str() == target,
-        Node::If {
-            then, otherwise, ..
-        } => assignments_to(then, target) || assignments_to(otherwise, target),
-        Node::Loop { body, .. } => assignments_to(body, target),
-        Node::Block(children) => assignments_to(children, target),
-        Node::Region { body, .. } => assignments_to(body, target),
-        _ => false,
+    nodes.iter().any(|root| {
+        any_descendant(root, &mut |node| {
+            matches!(node, Node::Assign { name, .. } if name.as_str() == target)
+        })
     })
 }
 
@@ -461,65 +432,83 @@ fn entry_points() -> Vec<(&'static str, Program)> {
     ]
 }
 
-/// Canonical wire fingerprints for every entry point the clone-family merges
-/// pass through. All 9 entries reflect the canonical wire format revision 8
-/// framing header, and all 9 moved together when the revision advanced from 7
-/// to 8: the header is part of the fingerprinted bytes, so a revision bump
-/// moves every program in the tree and moves none of them relative to each
-/// other. Prior historical moves: `python/decorators` moved when the missing
-/// `cursor != INVALID_POS` guard was fixed in the unified dotted-name walk, and
-/// the two `shunting` entries moved when anonymous child regions replaced op-id
-/// suffix naming. All five `python/*` entries moved together when every
-/// sentinel-indexed token load was folded into range before it issued: the
-/// index expression changed at each load site, the values did not, and the `go`
-/// and `core` entries stayed put because they index nothing with a sentinel.
-/// The two `go` entries and the two `core/ast/shunting` entries then moved
-/// together while all five `python/*` entries held. Those four are exactly the
-/// entries the sentinel fold left untouched. The single-owner properties the
-/// family collapse depends on are asserted structurally by the tests above, so
-/// this table reports drift and does not carry that proof.
-const EXPECTED: &[(&str, &str)] = &[
-    (
-        "python/structure",
-        "90c653cbed45a54cecc33e30acdb367e6c95eba0ecf868dffd43fb7a0727c184",
-    ),
-    (
-        "python/imports",
-        "f5b058bca56f0a2996d0c2a0cf7944f425627ce0e32e966dd0306dc2cf5440ca",
-    ),
-    (
-        "python/with_blocks",
-        "05e511a329bd7ef98bd8bcdc548ca1eca541f3a1c7d38100660a70f8424877c4",
-    ),
-    (
-        "python/calls",
-        "5d1f96be87f50de4a0df36cebf9ed279093cfb147618a7d320f71833f3ce30d1",
-    ),
-    (
-        "python/decorators",
-        "51f7aa1c6b17defcff462e6ddb1cbf4c0f3f5e528742547c8cc91697bb113fdb",
-    ),
-    (
-        "go/packages_and_imports",
-        "63b78d3b9817fae37c591922f65ef04eb6ffd56f53f5681634be984b87543928",
-    ),
-    (
-        "go/declarations",
-        "489261c8c1c00b5372d9e087f00d92bb13725aaea0efb9daf71c735c8fd9c8b5",
-    ),
-    (
-        "core/ast/shunting",
-        "207be932a4702ac8ae1b5383b74f9bc2dd4ba6af29dd9dc140fd91da75c0f1af",
-    ),
-    (
-        "core/ast/shunting_with_capacity",
-        "3a2fc2b976c3e90265dbb3aaa847afd26a4675c776e12481b04610a95d8cb3f4",
-    ),
-];
-
-#[test]
-fn clone_family_entry_points_emit_the_pinned_ir() {
-    assert_pinned_ir_fingerprints(&entry_points(), EXPECTED);
+/// Path of the structural IR golden.
+fn golden_path() -> PathBuf {
+    harness::crate_dir().join("tests/golden/parsing_walker_clone_family_ir.txt")
 }
 
-// ---------------------------------------------------------------------------
+/// The structural IR golden for the entry points these merges touch.
+fn golden() -> StructuralIrGolden {
+    StructuralIrGolden::new(
+        "vyre-libs-parsing/parsing-walker-clone-family-structural-ir/v1",
+        "the parsing/ token-walk clone families",
+        golden_path(),
+    )
+}
+
+/// Every entry point's structural IR, rendered in golden order.
+fn render_corpus() -> String {
+    golden().render(entry_points())
+}
+
+/// The structural IR of every clone-family entry point, against the golden.
+///
+/// The golden carries the canonicalized buffer roster and node tree of each
+/// entry point: node kinds, field names, operand expressions, literal values,
+/// identifier text, region generators and nesting. A changed operand, a
+/// dropped node, a reordered data dependence or a changed buffer moves it. A
+/// wire format revision does not, because nothing here reads the wire
+/// encoding. The single-owner properties the family collapse depends on are
+/// asserted structurally by the tests above, so this rule reports drift and
+/// does not carry that proof.
+#[test]
+fn clone_family_entry_points_emit_the_pinned_ir() {
+    golden().assert_matches(&render_corpus());
+}
+
+/// A golden that no longer names an entry point silently stopped covering it.
+#[test]
+fn the_golden_names_every_entry_point() {
+    let corpus = std::fs::read_to_string(golden_path()).expect("structural IR golden must exist");
+    for (id, _) in entry_points() {
+        assert!(
+            golden_contains(&corpus, id),
+            "Fix: the structural IR golden is missing `{id}`; re-bless it."
+        );
+    }
+}
+
+/// The rendering must be a pure function of the program.
+///
+/// A renderer that read an address, a cache or an iteration order would match
+/// the golden once and diverge on the next run, which reads as an IR change.
+#[test]
+fn structural_ir_is_deterministic_across_builds() {
+    assert_eq!(render_corpus(), render_corpus());
+}
+
+#[test]
+#[ignore = "bless: rewrites the pinned structural IR golden; run deliberately and review the diff"]
+fn bless_pinned_structural_ir_golden() {
+    golden().bless(&render_corpus());
+}
+
+/// Write the full structural IR of every entry point under the test target
+/// directory, for reading a digest move the histograms do not explain.
+///
+/// The golden pins a digest over this rendering rather than the rendering
+/// itself. This is how a maintainer gets the text: run it on both sides of the
+/// change and diff the two trees.
+#[test]
+#[ignore = "diagnostic: writes the full structural IR rendering, for diffing a digest move"]
+fn dump_full_structural_ir() {
+    let out =
+        std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("parsing_walker_structural_ir");
+    for (id, program) in entry_points() {
+        write_golden(
+            &out.join(format!("{}.ir.txt", id.replace('/', "_"))),
+            &render_structural_ir(&program),
+        );
+    }
+    println!("wrote the full structural IR to {}", out.display());
+}

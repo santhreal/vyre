@@ -1,11 +1,10 @@
-//! Source-reading, enum-declaration and structural-IR helpers the
-//! `vyre-libs-nn` contract tests share.
+//! Source-reading and enum-declaration helpers the `vyre-libs-nn` contract
+//! tests share.
 //!
 //! This module is compiled once per including test binary, and no binary uses
 //! every helper: `scan_cpu_api_boundary` wants only
-//! `assert_no_cpu_named_api_exports`,
-//! `nn_attention_clone_family_ir_invariance` only `structural_ir` plus the
-//! source readers, and
+//! `assert_no_cpu_named_api_exports`, and
+//! `nn_attention_clone_family_ir_invariance`,
 //! `attention_layout_launch_domain`, `flash_attention_plan_shared_memory` and
 //! `dedup_conv_ast_walk_family_guard` only the source readers. Each
 //! unused-in-this-binary helper is live in a sibling binary, so `dead_code`
@@ -17,8 +16,6 @@
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
-
-pub(crate) mod structural_ir;
 
 /// This crate's directory, resolved from the working directory at run time.
 pub(crate) fn crate_dir() -> PathBuf {
