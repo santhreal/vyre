@@ -9305,6 +9305,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   in every binary that reads it: the release conformance run covered 356 of 359
   registered operations and reported the geometry and optimization operations
   the op matrix requires as missing, when they were only unlinked.
+- The logical-span scale walk listed the node variants it descends into and
+  ended in a catch-all, so a nesting variant added to `Node` would have stopped
+  the descent there without a build failure and the widening factor would have
+  been read from part of the program. It takes its children from
+  `visit::child_bodies`, keeps the arms that bind or forget a name, and forgets
+  the loop variable and the names a loop body rebinds before entering any
+  child.
 - The Criterion release-macro test no longer asserts that every synthetic macro
   spec carries a 100x CPU-SOTA contract. It held a second, weaker copy of a
   rule the `release-workload-matrix` gate owns, and it read the pin per case

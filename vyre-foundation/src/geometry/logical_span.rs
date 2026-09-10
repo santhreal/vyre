@@ -41,7 +41,7 @@ use std::collections::{HashMap, HashSet};
 use crate::ir::{BufferAccess, Expr, Node, Program};
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::op_signature::BinOp;
-use crate::visit::{any_subexpr, node_operands, node_variadic_operands};
+use crate::visit::{any_subexpr, child_bodies, node_operands, node_variadic_operands};
 
 /// Largest axis-0 logical index a program can affect, when every effect it
 /// performs is dominated by a constant bound on that index.
@@ -192,34 +192,21 @@ impl Scale<'_> {
         match node {
             Node::Let { name, value } => facts.learn(name, value),
             Node::Assign { name, .. } => facts.forget(name),
-            Node::If {
-                then, otherwise, ..
-            } => {
-                let mut taken = facts.clone();
-                self.nodes(then, &mut taken);
-                let mut alternate = facts.clone();
-                self.nodes(otherwise, &mut alternate);
-            }
-            Node::Loop { var, body, .. } => {
-                let mut inner = facts.clone();
-                inner.forget(var);
-                let mut rebound = HashSet::new();
-                rebound_names(body, &mut rebound);
-                for name in &rebound {
-                    inner.forget(name);
-                }
-                self.nodes(body, &mut inner);
-            }
-            Node::Block(body) | Node::TileElementwise { body, .. } => {
-                let mut inner = facts.clone();
-                self.nodes(body, &mut inner);
-            }
-            Node::Region { body, .. } => {
-                let mut inner = facts.clone();
-                self.nodes(body, &mut inner);
-            }
             Node::TileLoad { tile: name, .. } | Node::TileDecl { name, .. } => facts.forget(name),
             _ => {}
+        }
+        let mut entering = facts.clone();
+        if let Node::Loop { var, body, .. } = node {
+            entering.forget(var);
+            let mut rebound = HashSet::new();
+            rebound_names(body, &mut rebound);
+            for name in &rebound {
+                entering.forget(name);
+            }
+        }
+        for body in child_bodies(node) {
+            let mut inner = entering.clone();
+            self.nodes(body, &mut inner);
         }
     }
 }
