@@ -5063,6 +5063,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   profile instead of unknown device facts, so a case that uses subgroup
   intrinsics is measured on a device that has them rather than recorded as a
   validation failure.
+- A benchmark report counts its cases in one place, so the printed pass and
+  fail pair equals the per-case tally, and a case whose performance contract
+  failed reads as failed in every run instead of only when budgets are
+  enforced.
 - Every `vyre-bench` integration test that calls `execute_suite` is behind
   `device-tests`. `execute_suite` runs a real benchmark case and dispatches on
   the device the case selects, so on a hosted runner with no CUDA driver the
@@ -5890,6 +5894,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The Metal parity gate resolves vyre-conform and the driver crate to their
   workspace member directories instead of joining the package name onto the
   checkout root.
+- A launch span derived from declared buffers now scales each declaration by
+  the logical points the program addresses per element, so a byte scan over a
+  packed `u32` haystack covers every byte instead of the first quarter and
+  reports the whole match set, and the irregular AC scan benchmarks bind the
+  haystack extent they upload so their logical domain resolves.
 - The contributor and crate documentation names the tree as it stands:
   CONTRIBUTING.md carries no host-local build settings, the placement charter
   points at docs/architecture/crates.md, and the vyre-primitives page lists
@@ -6069,6 +6078,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   instead of a hand-written array. A new failure class no longer compiles until
   it is placed in the chain, so a class cannot be added and left out of the
   list in silence.
+- The register-exhaustion benchmark reduces its live values through a balanced
+  tree, so its program stays within the IR wire format decode depth and reaches
+  the device instead of failing artifact preparation.
 - The registered CUDA backend resolves one shared device handle for both its
   dispatch facet and its materializer facet. Each facet used to call
   `CudaBackend::acquire()` on every request, so a seven-stage resident
