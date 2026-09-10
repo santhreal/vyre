@@ -9,19 +9,47 @@
 //!
 //! The match below is the only place the variants are enumerated, and it has no
 //! wildcard arm. Adding a `KernelOpKind` fails to compile until someone states
-//! both facts for it.
+//! every fact for it.
 
 use crate::KernelOpKind;
+
+/// How often, and under what condition, an op runs the bodies it names.
+///
+/// A dispatch-level transform reads this to decide whether a nested body can be
+/// promoted to its container's level. A body that runs exactly once, with no
+/// operand selecting it, carries the same execution conditions as the sequence
+/// it sits in; a branch arm and a loop body do not.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NestedBodyControl {
+    /// Every named body runs once, in operand order, whenever the op runs.
+    Unconditional,
+    /// A condition operand selects which named body runs.
+    Conditional,
+    /// A named body runs once per iteration.
+    Repeated,
+}
+
+/// The child bodies an op names, and the condition it runs them under.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NestedBodies {
+    /// Index of the first operand that names a child body.
+    ///
+    /// Child indices run to the end of the operand list, so the start is the
+    /// whole answer.
+    pub start: usize,
+    /// Execution condition the op imposes on the bodies it names.
+    pub control: NestedBodyControl,
+}
 
 /// What every consumer of an op kind needs to know about it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OpFacts {
-    /// Index of the first operand that names a child body, or `None` when the
-    /// op names no child body.
+    /// The child bodies the op names, or `None` when it names none.
     ///
-    /// Child indices run to the end of the operand list, so the start is the
-    /// whole answer.
-    pub child_body_start: Option<usize>,
+    /// One field rather than an index beside a separate control enum: an op
+    /// that names a body always runs it under some condition, and a pair of
+    /// independent fields admits the two states that contradict each other.
+    pub nested_bodies: Option<NestedBodies>,
     /// True when the op must be kept even if every result id it produces is
     /// unused, because its nested bodies, its memory effects or its backend
     /// contract carry observable behavior.
@@ -31,12 +59,30 @@ pub struct OpFacts {
 /// The facts for one op kind.
 #[must_use]
 pub fn facts_for(kind: &KernelOpKind) -> OpFacts {
-    let (child_body_start, retained_effect) = match kind {
+    let (nested_bodies, retained_effect) = match kind {
         // Structured control flow: child indices follow the condition or the
         // loop bounds, and the nested body is the observable behavior.
-        KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse => (Some(1), true),
-        KernelOpKind::StructuredForLoop { .. } => (Some(2), true),
-        KernelOpKind::StructuredBlock | KernelOpKind::Region { .. } => (Some(0), true),
+        KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse => (
+            Some(NestedBodies {
+                start: 1,
+                control: NestedBodyControl::Conditional,
+            }),
+            true,
+        ),
+        KernelOpKind::StructuredForLoop { .. } => (
+            Some(NestedBodies {
+                start: 2,
+                control: NestedBodyControl::Repeated,
+            }),
+            true,
+        ),
+        KernelOpKind::StructuredBlock | KernelOpKind::Region { .. } => (
+            Some(NestedBodies {
+                start: 0,
+                control: NestedBodyControl::Unconditional,
+            }),
+            true,
+        ),
 
         // No child body, but kept: a memory effect, a protocol step, a
         // control-flow exit, or a body this crate cannot see through.
@@ -87,7 +133,7 @@ pub fn facts_for(kind: &KernelOpKind) -> OpFacts {
         | KernelOpKind::SubgroupReduce { .. } => (None, false),
     };
     OpFacts {
-        child_body_start,
+        nested_bodies,
         retained_effect,
     }
 }
@@ -183,8 +229,8 @@ mod tests {
         ] {
             let facts = facts_for(&kind);
             assert!(
-                facts.child_body_start.is_some() && facts.retained_effect,
-                "Fix: {kind:?} carries a child body, so it must report both a child-body start and a retained effect."
+                facts.nested_bodies.is_some() && facts.retained_effect,
+                "Fix: {kind:?} carries a child body, so it must report both its nested bodies and a retained effect."
             );
         }
     }

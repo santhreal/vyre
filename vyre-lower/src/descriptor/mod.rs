@@ -40,6 +40,7 @@ use vyre_foundation::schedule::{
 
 mod async_transaction;
 mod binding_layout;
+mod dispatch_split;
 mod intent;
 mod kernel;
 mod kernel_op;
@@ -56,6 +57,7 @@ pub use async_transaction::AsyncTransactionError;
 pub use binding_layout::{
     descriptor_trap_tags, DescriptorTrapTag, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
+pub use dispatch_split::{body_contains_grid_fence, dispatch_segments};
 pub use intent::{
     scan_construct_intent_mapping, DESCRIPTOR_INTENT_SCHEMA_VERSION, SCAN_CONSTRUCT_INTENT_MAPPINGS,
 };
@@ -63,6 +65,40 @@ pub use physical_schedule::PHYSICAL_SCHEDULE_VERSION;
 pub use storage_layout::{
     StorageLayout, StorageLayoutError, StorageLifetime, StorageRegion, STORAGE_LAYOUT_VERSION,
 };
+
+/// Failure to cut a descriptor at its whole-grid fences.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[non_exhaustive]
+pub enum DispatchSplitError {
+    /// A fence sits in a nested body whose execution conditions differ from its
+    /// container's, so no launch boundary expresses it.
+    ///
+    /// A branch arm runs for some invocations and a loop body runs once per
+    /// iteration; one boundary would synchronize neither. There is no correct
+    /// cut, so the descriptor is refused with the construct named.
+    #[error("whole-grid fence sits inside a {construct}, which no launch boundary expresses. Fix: place the fence at dispatch level, or unroll the construct so each fence is a distinct dispatch-level fence.")]
+    FenceUnderNestedControl {
+        /// Construct the fence could not be promoted out of.
+        construct: &'static str,
+    },
+    /// A segment reads a result no op ahead of it defines.
+    #[error("dispatch segment reads result {result}, which no operation ahead of it defines. Fix: emit the descriptor in SSA order so every operand is defined before it is read.")]
+    UnresolvedCarrier {
+        /// Result id the segment reads.
+        result: u32,
+    },
+    /// A value crossing a launch boundary is produced by an op that cannot run
+    /// twice.
+    ///
+    /// A launch boundary ends every register, so the producing operation is
+    /// recomputed in the reading segment. An operation with a retained effect
+    /// run twice is a second effect, not a second copy of a value.
+    #[error("dispatch segment reads result {result} across a launch boundary from an operation with a retained effect, which cannot be recomputed. Fix: publish the value through storage the later segment reads.")]
+    EffectfulCarrier {
+        /// Result id the segment reads.
+        result: u32,
+    },
+}
 
 /// One synchronization boundary the selected schedule placed on a phase.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

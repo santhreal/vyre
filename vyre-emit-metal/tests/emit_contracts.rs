@@ -203,3 +203,49 @@ fn readonly_binding_emits_const_device_pointer() {
         &msl[..msl.len().min(800)]
     );
 }
+
+/// WHY: the MSL writer runs with `fake_missing_bindings` off, so an entry point
+/// absent from the resource map fails the write. A whole-grid fence cuts the
+/// descriptor into one Naga entry point per dispatch segment, and the map used
+/// to hold only the first name, which made every grid-synchronizing program
+/// fail to emit for Metal.
+#[test]
+fn every_dispatch_segment_of_a_fenced_descriptor_reaches_the_msl_source() {
+    let fenced = descriptor("grid_sync_two_segments")
+        .slot(global_rw(0, DataType::U32, "out").with_count(1))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(11),
+                    LiteralValue::U32(22),
+                ])
+                .op(lit(0, 0))
+                .op(lit(1, 1))
+                .op(effect(KernelOpKind::StoreGlobal, [0, 0, 1]))
+                .op(effect(
+                    KernelOpKind::Barrier {
+                        ordering: vyre_foundation::ir::MemoryOrdering::GridSync,
+                    },
+                    [],
+                ))
+                .op(lit(2, 2))
+                .op(effect(KernelOpKind::StoreGlobal, [0, 0, 2])),
+        )
+        .build();
+    let msl = emit(&fenced).expect("Fix: a grid-synchronizing descriptor must emit MSL");
+    for name in vyre_emit_naga::grid_segment_entry_points(&fenced)
+        .expect("Fix: segment entry-point names must resolve")
+    {
+        assert!(
+            msl.contains(&name) || (name == "main" && msl.contains("main_")),
+            "Fix: segment entry point `{name}` must appear in the MSL source: {msl}"
+        );
+    }
+    assert_eq!(
+        msl.matches("kernel void").count(),
+        2,
+        "Fix: two dispatch segments must produce two Metal kernel functions: {msl}"
+    );
+}

@@ -228,10 +228,12 @@ impl std::fmt::Display for FullReport {
     }
 }
 pub use descriptor::{
-    descriptor_trap_tags, scan_construct_intent_mapping, AsyncTransaction, AsyncTransactionError,
-    AsyncWaitSpec, BarrierPhase, BindingLayout, BindingSlot, BindingVisibility, DescriptorIntent,
+    body_contains_grid_fence, descriptor_trap_tags, dispatch_segments,
+    scan_construct_intent_mapping, AsyncTransaction, AsyncTransactionError, AsyncWaitSpec,
+    BarrierPhase, BindingLayout, BindingSlot, BindingVisibility, DescriptorIntent,
     DescriptorIntentError, DescriptorIntentEvidence, DescriptorIntentKind, DescriptorIntentSet,
-    DescriptorIntentStrategy, DescriptorTrapTag, Dispatch, FragmentOperand, FragmentValue,
+    DescriptorIntentStrategy, DescriptorTrapTag, Dispatch, DispatchSplitError, FragmentOperand,
+    FragmentValue,
     GridIndexSpace, IntentAnnotatedDescriptor, KernelBody, KernelDescriptor, KernelOp,
     KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixSpecError,
     MatrixTileShape, MemoryClass, MemoryProxyFence, OpaqueExprData, OpaqueNodeData,
@@ -249,7 +251,7 @@ pub use level_stage::registered_level_stage;
 /// `verify` accepts. A shared slot below this value is rejected with
 /// `VerifyErrorKind::WorkgroupBindingInHostRange`.
 pub use lower::{lower, WORKGROUP_SLOT_BASE};
-pub use op_facts::{facts_for, OpFacts};
+pub use op_facts::{facts_for, NestedBodies, NestedBodyControl, OpFacts};
 pub use target::{
     required_subgroup_capabilities, validate_workgroup_size, EmissionTargetCapabilities,
     SubgroupCapabilities, WorkgroupLimitViolation, WorkgroupLimits,

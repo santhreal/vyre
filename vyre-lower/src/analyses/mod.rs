@@ -122,8 +122,8 @@ pub fn child_body_operands<'a>(
     operands: &'a [u32],
 ) -> impl Iterator<Item = u32> + 'a {
     let start = crate::op_facts::facts_for(kind)
-        .child_body_start
-        .unwrap_or(operands.len());
+        .nested_bodies
+        .map_or(operands.len(), |bodies| bodies.start);
     operands.iter().skip(start).copied()
 }
 

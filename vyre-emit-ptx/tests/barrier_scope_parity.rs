@@ -42,7 +42,8 @@ enum Scope {
     /// A full barrier within the issuing workgroup: PTX `bar.sync 0`, WGSL flags
     /// taken from the address spaces the barrier orders.
     WorkgroupBarrier,
-    /// Not an instruction on either backend.
+    /// Not a barrier instruction on either backend: PTX refuses it, and the
+    /// Naga route turns it into a launch boundary between entry points.
     Refused,
 }
 
@@ -281,15 +282,33 @@ fn wgsl_fence_orderings_always_fence_storage() {
     }
 }
 
-/// `GridSync` has no WGSL instruction and no cooperative launch on wgpu, so it
-/// must be cut into sequential dispatches by the planner. The emitter refusal is
-/// the backstop, and it must say where the cut belongs.
+/// `GridSync` has no WGSL instruction. On the Naga route it is a launch
+/// boundary: the descriptor is cut into one compute entry point per dispatch
+/// segment and no barrier instruction is emitted for it. Degrading it to a
+/// workgroup-scope barrier would leave the kernel with no cross-workgroup
+/// synchronization while still emitting, which is the silent failure this pins.
 #[test]
-fn wgsl_refuses_grid_sync_and_names_the_planner_cut() {
-    let error = naga_barriers(&storage_only(MemoryOrdering::GridSync))
-        .expect_err("Fix: GridSync must never lower to a workgroup-scope WGSL barrier.");
-    assert!(
-        error.contains("splitting"),
-        "Fix: the GridSync refusal must direct the caller to dispatch splitting: {error}"
+fn wgsl_lowers_grid_sync_to_a_launch_boundary_and_never_a_barrier() {
+    let desc = storage_only(MemoryOrdering::GridSync);
+    assert_eq!(
+        naga_barriers(&desc).expect("Fix: a dispatch-level GridSync must emit on the Naga route"),
+        Vec::<naga::Barrier>::new(),
+        "Fix: GridSync must never lower to a workgroup-scope WGSL barrier."
+    );
+    let verified = vyre_lower::verify_descriptor(&desc)
+        .unwrap_or_else(|error| panic!("descriptor `{}` must verify: {error:?}", desc.id));
+    let names: Vec<String> = vyre_emit_naga::emit(&verified)
+        .expect("Fix: a dispatch-level GridSync must emit on the Naga route")
+        .entry_points
+        .into_iter()
+        .map(|entry| entry.name)
+        .collect();
+    assert_eq!(
+        names,
+        vec![
+            "main".to_owned(),
+            format!("{}1", vyre_emit_naga::GRID_SEGMENT_ENTRY_PREFIX)
+        ],
+        "Fix: the fence separates two dispatch segments, so the module carries one entry point for each."
     );
 }
