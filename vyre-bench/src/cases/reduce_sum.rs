@@ -1,7 +1,7 @@
 use crate::api::case::{
-    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
-    BenchRequirements, BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase,
-    WorkloadClass,
+    host_input_bundle, prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer,
+    BenchMetadata, BenchRequirements, BenchRun, Correctness, DeterminismClass,
+    PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use vyre::ir::Program;
@@ -15,15 +15,46 @@ const LARGE_COUNT: u32 = 1 << 20;
 const ROUTE_ATOMIC: u64 = 0;
 const ROUTE_TREE: u64 = 1;
 
-struct ReductionSizePrepared {
-    count: u32,
-    tree_tile: u32,
-    tree_grid: Option<[u32; 3]>,
+/// One reduction route the case measures at a given size.
+///
+/// The route owns the host input bundle it is dispatched with, derived from
+/// its own program. A route added here is measured, is fingerprinted, and is
+/// checked for ABI arity without anything else naming it.
+pub struct ReductionRoute {
+    /// Route name in diagnostics.
+    pub name: &'static str,
+    /// Route discriminant recorded in the selected-route metric.
+    pub route_id: u64,
+    /// The program dispatched for this route.
+    pub program: Program,
+    /// Grid the launch pins, when the program's shape does not imply it.
+    pub grid: Option<[u32; 3]>,
+    /// Host bytes bound in artifact ABI slot order.
+    pub inputs: Vec<Vec<u8>>,
+}
+
+/// One measured input size and every route that reduces it.
+pub struct ReductionSizePrepared {
+    /// Element count reduced at this size.
+    pub count: u32,
+    /// Tile width the tree route reduces within.
+    pub tree_tile: u32,
+    /// The atomic route, then the fused tree route.
+    pub routes: [ReductionRoute; 2],
     values: Vec<u32>,
-    atomic_program: Program,
-    tree_program: Program,
-    inputs: [Vec<u8>; 2],
     expected: Vec<u8>,
+}
+
+impl ReductionSizePrepared {
+    /// The atomic route.
+    fn atomic(&self) -> &ReductionRoute {
+        &self.routes[0]
+    }
+
+    /// The fused tree route.
+    fn tree(&self) -> &ReductionRoute {
+        &self.routes[1]
+    }
 }
 
 struct ReduceSumPrepared {
@@ -87,8 +118,8 @@ impl BenchCase for ReduceSumBench {
         let profile = ctx.preferred_backend.device_profile();
         let tree_blocks = profile.grid_stride_workgroups();
         let tile_ceiling = tree_tile_ceiling(&profile);
-        let small = prepare_size(SMALL_COUNT, tree_blocks, tile_ceiling);
-        let large = prepare_size(LARGE_COUNT, tree_blocks, tile_ceiling);
+        let small = prepare_size(SMALL_COUNT, tree_blocks, tile_ceiling)?;
+        let large = prepare_size(LARGE_COUNT, tree_blocks, tile_ceiling)?;
 
         let pool = crate::cases::cpu_baselines::baseline_pool();
         let mut durations = Vec::with_capacity(11);
@@ -122,9 +153,13 @@ impl BenchCase for ReduceSumBench {
         for size in [&prepared.small, &prepared.large] {
             hasher.update(&size.count.to_le_bytes());
             hasher.update(&size.tree_tile.to_le_bytes());
-            hasher.update(&size.tree_grid.unwrap_or([0; 3])[0].to_le_bytes());
-            hasher.update(&size.atomic_program.fingerprint());
-            hasher.update(&size.tree_program.fingerprint());
+            // Every route, not the two this case happens to declare: a route
+            // added to the roster changes the workload and must change the
+            // fingerprint that names it.
+            for route in &size.routes {
+                hasher.update(&route.grid.unwrap_or([0; 3])[0].to_le_bytes());
+                hasher.update(&route.program.fingerprint());
+            }
         }
         Some(*hasher.finalize().as_bytes())
     }
@@ -241,7 +276,11 @@ fn tree_tile_ceiling(profile: &vyre_driver::DeviceProfile) -> u32 {
     1u32 << admitted.ilog2()
 }
 
-fn prepare_size(count: u32, tree_blocks: u32, tile_ceiling: u32) -> ReductionSizePrepared {
+fn prepare_size(
+    count: u32,
+    tree_blocks: u32,
+    tile_ceiling: u32,
+) -> Result<ReductionSizePrepared, BenchError> {
     let values: Vec<u32> = (0..count)
         .map(|index| index.wrapping_mul(17).wrapping_add(3) & 0xff)
         .collect();
@@ -249,29 +288,42 @@ fn prepare_size(count: u32, tree_blocks: u32, tile_ceiling: u32) -> ReductionSiz
     let tree_tile = count.min(tile_ceiling).max(1).next_power_of_two();
     let tree_blocks =
         grid_stride_tree::grid_stride_tree_sum_u32_blocks(count, tree_tile, tree_blocks);
-    ReductionSizePrepared {
+
+    let value_bytes = crate::cases::byte_pack::u32_bytes(&values);
+    let out_seed = crate::cases::byte_pack::u32_bytes(&[0]);
+    let named: [(&str, &[u8]); 2] = [("values", &value_bytes), ("out", &out_seed)];
+
+    let atomic_program = sum::reduce_sum("values", "out", count);
+    let tree_program =
+        grid_stride_tree::grid_stride_tree_sum_u32("values", "out", count, tree_tile, tree_blocks);
+
+    Ok(ReductionSizePrepared {
         count,
         tree_tile,
-        // The tree program's grid is a contract of the program at every block
-        // count: pass 1 strides the input over exactly this many blocks and
-        // sizes its partial buffer to them. Leaving the launch to inference
-        // spans the widest declared buffer instead, which is the whole input.
-        tree_grid: Some([tree_blocks, 1, 1]),
-        values: values.clone(),
-        atomic_program: sum::reduce_sum("values", "out", count),
-        tree_program: grid_stride_tree::grid_stride_tree_sum_u32(
-            "values",
-            "out",
-            count,
-            tree_tile,
-            tree_blocks,
-        ),
-        inputs: [
-            crate::cases::byte_pack::u32_bytes(&values),
-            crate::cases::byte_pack::u32_bytes(&[0]),
+        routes: [
+            ReductionRoute {
+                name: "atomic",
+                route_id: ROUTE_ATOMIC,
+                inputs: host_input_bundle(&atomic_program, &named)?,
+                program: atomic_program,
+                grid: None,
+            },
+            ReductionRoute {
+                name: "tree",
+                route_id: ROUTE_TREE,
+                inputs: host_input_bundle(&tree_program, &named)?,
+                program: tree_program,
+                // The tree program's grid is a contract of the program at every
+                // block count: pass 1 strides the input over exactly this many
+                // blocks and sizes its partial buffer to them. Leaving the
+                // launch to inference spans the widest declared buffer instead,
+                // which is the whole input.
+                grid: Some([tree_blocks, 1, 1]),
+            },
         ],
+        values,
         expected: crate::cases::byte_pack::u32_bytes(&[expected]),
-    }
+    })
 }
 
 fn measure_size(
@@ -279,23 +331,8 @@ fn measure_size(
     prepared: &ReductionSizePrepared,
     size_name: &str,
 ) -> Result<MeasuredSize, BenchError> {
-    let atomic = ctx
-        .dispatch_timed(
-            &prepared.atomic_program,
-            &prepared.inputs,
-            &ctx.dispatch_config,
-        )
-        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-    verify_route_output(size_name, "atomic", &atomic.outputs, &prepared.expected)?;
-
-    let mut tree_config = ctx.dispatch_config.clone();
-    if let Some(grid) = prepared.tree_grid {
-        tree_config.grid_override = Some(grid);
-    }
-    let tree = ctx
-        .dispatch_timed(&prepared.tree_program, &prepared.inputs, &tree_config)
-        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-    verify_route_output(size_name, "tree", &tree.outputs, &prepared.expected)?;
+    let atomic = dispatch_route(ctx, prepared.atomic(), size_name, &prepared.expected)?;
+    let tree = dispatch_route(ctx, prepared.tree(), size_name, &prepared.expected)?;
 
     let (atomic_ns, tree_ns) = match (atomic.device_ns, tree.device_ns) {
         (Some(a), Some(t)) if a > 0 && t > 0 => (a, t),
@@ -316,9 +353,9 @@ fn measure_size(
         )));
     }
     let (selected_route, selected) = if atomic_ns <= tree_ns {
-        (ROUTE_ATOMIC, atomic)
+        (prepared.atomic().route_id, atomic)
     } else {
-        (ROUTE_TREE, tree)
+        (prepared.tree().route_id, tree)
     };
 
     Ok(MeasuredSize {
@@ -328,6 +365,24 @@ fn measure_size(
         device_timing: true,
         selected,
     })
+}
+
+/// Dispatch one route with the host input bundle that route declares.
+fn dispatch_route(
+    ctx: &BenchContext,
+    route: &ReductionRoute,
+    size_name: &str,
+    expected: &[u8],
+) -> Result<TimedDispatchResult, BenchError> {
+    let mut config = ctx.dispatch_config.clone();
+    if let Some(grid) = route.grid {
+        config.grid_override = Some(grid);
+    }
+    let result = ctx
+        .dispatch_timed(&route.program, &route.inputs, &config)
+        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+    verify_route_output(size_name, route.name, &result.outputs, expected)?;
+    Ok(result)
 }
 
 fn verify_route_output(
@@ -397,27 +452,29 @@ mod tests {
         let compute_units = 170;
 
         for tile_ceiling in [1024, 256] {
-            let small = prepare_size(SMALL_COUNT, compute_units, tile_ceiling);
+            let small = prepare_size(SMALL_COUNT, compute_units, tile_ceiling)
+                .expect("small reduction size prepares");
             assert_eq!(small.count, 32);
             assert_eq!(small.tree_tile, 32);
-            assert_eq!(small.inputs[0].len(), 32 * 4);
+            assert_eq!(small.atomic().inputs[0].len(), 32 * 4);
             assert_eq!(small.expected.len(), 4);
             assert_eq!(
-                small.tree_grid,
+                small.tree().grid,
                 Some([1, 1, 1]),
                 "Fix: 32 elements at tile 32 need one block, and the launch pins it rather than letting the widest buffer infer a wider grid"
             );
 
-            let large = prepare_size(LARGE_COUNT, compute_units, tile_ceiling);
+            let large = prepare_size(LARGE_COUNT, compute_units, tile_ceiling)
+                .expect("large reduction size prepares");
             assert_eq!(large.count, 1 << 20);
             assert_eq!(
                 large.tree_tile, tile_ceiling,
                 "Fix: a million elements fill whatever tile the device admits"
             );
-            assert_eq!(large.inputs[0].len(), (1 << 20) * 4);
+            assert_eq!(large.atomic().inputs[0].len(), (1 << 20) * 4);
             assert_eq!(large.expected.len(), 4);
             assert_eq!(
-                large.tree_grid,
+                large.tree().grid,
                 Some([compute_units, 1, 1]),
                 "Fix: the launch must pin the block count the pass-one loop was built for"
             );
@@ -425,9 +482,10 @@ mod tests {
             // Pass two reduces the per-block partials inside one tile-wide
             // workgroup, so the block count is capped by the tile as well as by
             // the number of tiles the input fills.
-            let saturated = prepare_size(LARGE_COUNT, 100_000, tile_ceiling);
+            let saturated = prepare_size(LARGE_COUNT, 100_000, tile_ceiling)
+                .expect("saturated reduction size prepares");
             assert_eq!(
-                saturated.tree_grid,
+                saturated.tree().grid,
                 Some([tile_ceiling.min(LARGE_COUNT / tile_ceiling), 1, 1]),
                 "Fix: more blocks than tiles leaves blocks with nothing to reduce"
             );
@@ -451,9 +509,10 @@ mod tests {
                 LARGE_COUNT,
                 profile.grid_stride_workgroups(),
                 tree_tile_ceiling(&profile),
-            );
+            )
+            .expect("reduction size prepares on an unprobed profile");
             assert_eq!(
-                prepared.tree_grid,
+                prepared.tree().grid,
                 Some([tile_ceiling.min(LARGE_COUNT / tile_ceiling), 1, 1]),
                 "Fix: an unreported compute-unit count must leave the shape to cap the grid, not collapse it to one block"
             );
@@ -474,5 +533,54 @@ mod tests {
     fn tree_barrier_rounds_computes_expected_log2_rounds() {
         assert_eq!(tree_barrier_rounds(32), 6);
         assert_eq!(tree_barrier_rounds(256), 9);
+    }
+
+    /// Every route stages exactly the host input buffers its own program
+    /// declares.
+    ///
+    /// WHY: the two routes do not share an ABI. The atomic route reads `values`
+    /// and accumulates into a host-staged `out`; the fused tree route's `out`
+    /// is a pipeline-live output the backend allocates, so it declares one
+    /// fewer host input. Binding one fixed pair of buffers to both routes made
+    /// the artifact reject the tree launch for supplying two inputs where the
+    /// ABI admits one, and the case never ran on any backend that took the
+    /// fused route. The roster comes from `size.routes`, so a third route is
+    /// held to this without this test being edited.
+    #[test]
+    fn every_reduction_route_stages_the_host_inputs_its_program_declares() {
+        for count in [SMALL_COUNT, LARGE_COUNT] {
+            let size = prepare_size(count, 32, 1024).expect("prepared reduction size");
+            for route in &size.routes {
+                let declared = route
+                    .program
+                    .buffers()
+                    .iter()
+                    .filter(|buffer| buffer.consumes_host_input())
+                    .count();
+                assert_eq!(
+                    route.inputs.len(),
+                    declared,
+                    "route `{}` at count {count} stages {} host input buffer(s) against an ABI declaring {declared}",
+                    route.name,
+                    route.inputs.len()
+                );
+            }
+        }
+    }
+
+    /// The two routes differ in host input arity, which is why one bundle
+    /// cannot serve both.
+    ///
+    /// Without this, a change that made both routes stage the host output would
+    /// leave the test above green while erasing the distinction it exists for.
+    #[test]
+    fn the_fused_tree_route_declares_fewer_host_inputs_than_the_atomic_route() {
+        let size = prepare_size(LARGE_COUNT, 32, 1024).expect("prepared reduction size");
+        assert!(
+            size.tree().inputs.len() < size.atomic().inputs.len(),
+            "the fused tree route's output is backend-allocated, so it stages fewer host inputs than the atomic route: tree={}, atomic={}",
+            size.tree().inputs.len(),
+            size.atomic().inputs.len()
+        );
     }
 }

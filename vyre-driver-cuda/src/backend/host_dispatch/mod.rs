@@ -67,6 +67,23 @@ impl VyreBackend for GridSyncSplitCudaBackend<'_> {
             .await_result()
     }
 
+    /// Dispatch one split segment with the device timer on.
+    ///
+    /// Without this the adapter inherits `VyreBackend`'s host-timed default,
+    /// which reports no device time at all, and the split sums nothing across
+    /// its segments: a grid-sync program that exceeds cooperative residency
+    /// then reported wall time and no device time, while the same program
+    /// under a cooperative launch reported both. A segment carries no
+    /// grid-sync barrier, so this cannot route back into the split.
+    fn dispatch_borrowed_timed(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+        self.0.dispatch_borrowed_timed(program, inputs, config)
+    }
+
     fn dispatch_borrowed_into(
         &self,
         program: &Program,
