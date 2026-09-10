@@ -9417,6 +9417,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `release/repo-boundary.toml` in bash instead of shelling into `python3`, so a
   host whose Python predates `tomllib` no longer leaves the loader with an
   unset version or tag.
+- The root `fuzz` crate appeared in neither `members` nor `exclude` of the
+  workspace manifest, so its position was undeclared. It joins
+  `vyre-foundation/fuzz` in `exclude`, because a cargo-fuzz crate is built by
+  `cargo fuzz` on nightly rather than by the workspace.
 - The runtime publishes 4 items at more than one path, down from the recorded
   119, and the pin records it. Deleting the re-export-only `scaling` module and
   making the uring submodules private removed 115 second paths; the committed
