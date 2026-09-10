@@ -18,5 +18,8 @@ pub mod sweep_math_prefix_scan_exclusive_volume_oracle_matrix;
 #[path = "sweep_math_prefix_scan_inclusive_volume_oracle_matrix.rs"]
 pub mod sweep_math_prefix_scan_inclusive_volume_oracle_matrix;
 
+#[path = "tiled_matmul_composition.rs"]
+pub mod tiled_matmul_composition;
+
 #[path = "scan_oracle/mod.rs"]
 pub mod scan_oracle;

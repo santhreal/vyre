@@ -4,8 +4,8 @@
 #![cfg(feature = "math")]
 
 use crate::scan_oracle;
-use vyre_test_support::word_corpora::lcg32_words;
 use scan_oracle::prefix_scan_cpu_ref as cpu_ref;
+use vyre_test_support::word_corpora::lcg32_words;
 
 use vyre_libs_math::math::prefix_scan::ScanKind;
 

@@ -5,9 +5,10 @@
 //! the cooperative body is the path every device can run.
 
 use crate::math::semiring_gemm::OP_ID as SEMIRING_GEMM_OP_ID;
+use std::sync::Arc;
 use vyre_foundation::composition::{wrap_child_region, wrap_region};
 use vyre_foundation::ir::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
 use vyre_libs_builder::plumbing::operand::element_zero::element_zero;
 use vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError;
@@ -219,6 +220,46 @@ pub(crate) fn build_matmul_tiled_program(
         dispatch_wg,
         vec![wrap_region(generator, body, None)],
     ))
+}
+
+/// State the registered semiring GEMM as the region that carries the
+/// contraction, for a tiled matmul program built by the shared composer.
+///
+/// `matmul_tiled` and `matmul_bias_tiled` assemble two kernel bodies for one
+/// operation id. The tensor-core body is assembled above and names
+/// `semiring_gemm` as the child region holding the accumulation. The
+/// cooperative body comes from `ContractionComposer`, which closes with a
+/// single region carrying no source, so the same operation attributed its
+/// contraction to the registered primitive on one path and claimed every node
+/// as own work on the other. This restores the child region on the composer
+/// path so both paths state the same edge.
+///
+/// The entry region keeps its generator and stays unattributed: it is the
+/// operation's own boundary. Only its body moves under the child. A region
+/// that already names a source is left alone, so applying this twice cannot
+/// nest one attribution inside another.
+pub(crate) fn attribute_contraction_to_semiring_gemm(program: Program) -> Program {
+    program.map_entry(|entry| {
+        entry
+            .into_iter()
+            .map(|node| match node {
+                Node::Region {
+                    generator,
+                    source_region: None,
+                    body,
+                } => {
+                    let parent = generator.duplicate_handle();
+                    let body = Arc::try_unwrap(body).unwrap_or_else(|shared| (*shared).clone());
+                    Node::Region {
+                        generator,
+                        source_region: None,
+                        body: Arc::new(vec![wrap_child_region(SEMIRING_GEMM_OP_ID, parent, body)]),
+                    }
+                }
+                other => other,
+            })
+            .collect()
+    })
 }
 
 fn checked_element_count(name: &str, rows: u32, cols: u32) -> Result<u32, TensorRefError> {
