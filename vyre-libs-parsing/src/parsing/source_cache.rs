@@ -594,8 +594,45 @@ mod tests {
         assert_eq!(cache.len(), 1);
     }
 
+    /// A panic under the LRU lock discards the cached maps rather than
+    /// serving them. Recovery that cleared the poison flag and kept the
+    /// entries would hand back a parse from a mutation that never finished.
     #[test]
-    fn poisoned_source_cache_lock_is_not_silently_recovered() {
+    fn a_poisoned_source_cache_serves_nothing_it_held_before_the_panic() {
+        let cache = Arc::new(ParsedSourceLru::<u32>::with_capacity(2));
+        assert_eq!(*cache.get_or_parse(b"a", b"", |_| 1u32), 1);
+        assert_eq!(cache.len(), 1);
+
+        let poisoned = Arc::clone(&cache);
+        let _ = std::thread::spawn(move || {
+            let _guard = poisoned.lock_inner();
+            panic!("poison parsed-source cache");
+        })
+        .join();
+
+        assert_eq!(
+            cache.len(),
+            0,
+            "a poisoned parsed-source cache must drop every entry it held"
+        );
+
+        let reparsed = AtomicUsize::new(0);
+        assert_eq!(
+            *cache.get_or_parse(b"a", b"", |_| {
+                reparsed.fetch_add(1, Ordering::SeqCst);
+                2u32
+            }),
+            2,
+            "the key cached before the panic must be parsed again, not served"
+        );
+        assert_eq!(reparsed.load(Ordering::SeqCst), 1);
+    }
+
+    /// The capacity is configuration, not cached state, so it survives a
+    /// panic under the lock. A recovery that reset it to zero would silently
+    /// disable caching for the rest of the process.
+    #[test]
+    fn a_poisoned_source_cache_keeps_its_capacity() {
         let cache = Arc::new(ParsedSourceLru::<u32>::with_capacity(2));
         let poisoned = Arc::clone(&cache);
         let _ = std::thread::spawn(move || {
@@ -604,18 +641,12 @@ mod tests {
         })
         .join();
 
-        let panic = std::panic::catch_unwind(|| {
-            let _ = cache.len();
-        })
-        .expect_err("poisoned parsed-source cache must panic instead of recovering");
-        let message = panic
-            .downcast_ref::<String>()
-            .map(String::as_str)
-            .or_else(|| panic.downcast_ref::<&'static str>().copied())
-            .unwrap_or("<non-string panic>");
-        assert!(
-            message.contains("parsed-source LRU lock is poisoned") && message.contains("Fix: "),
-            "a poisoned cache must name the lock it lost and the action that recovers: {message}"
+        assert_eq!(*cache.get_or_parse(b"a", b"", |_| 1u32), 1);
+        assert_eq!(*cache.get_or_parse(b"b", b"", |_| 2u32), 2);
+        assert_eq!(
+            cache.len(),
+            2,
+            "capacity is configuration and must survive the panic"
         );
     }
 }
