@@ -5680,6 +5680,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A loop bound read from a buffer is clamped to the extent of the buffers its
   body indexes, so an out-of-contract offset, count, or token total cannot
   request four billion iterations.
+- A workgroup reduction lowered to subgroup instructions binds the lane index
+  it reads inside the body it replaces, so fusing a reduction into an arm no
+  longer renames that binding away and leaves physical lowering rejecting the
+  whole program with `variable is referenced before binding`.
 - The operation placement reader parses the workspace manifest as a TOML
   document rather than as a single TOML value, and reports an unreadable,
   unparseable or crate-rootless manifest by name, so one broken file is no
@@ -6059,6 +6063,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A row in .github/CI_REQUIRED.md naming a workflow the checkout does not carry
   fails the ci-required gate, and the workflows whose path filters and
   directories no longer exist are deleted rather than parked.
+- A resident throughput batch summarizes its rows' device time with a median
+  instead of a mean, so one launch delayed outside the process no longer moves
+  the whole sample, and `device_gb_s_x1000` is computed from the bytes the
+  device moves rather than from host transfer bytes, which on a resident
+  dispatch reported a readback size as device bandwidth.
+- A resident batch is submitted in full before any item is awaited, so
+  consecutive launches run back to back on one stream and each item's device
+  time covers its own launch instead of a host round trip.
 - The WGPU resident pipeline cache keys entries by canonical pipeline identity
   instead of a 64-bit FxHash of the program wire, so a resident dispatch cannot
   be answered by a pipeline compiled for another adapter, ABI, naga build or
@@ -6403,6 +6415,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The tail of a failed child command is cut at a character boundary. A cut that
   landed inside a multibyte character fell back to the whole stream, so the
   byte bound did not hold for the output it exists to bound.
+- A workgroup reduction wider than one subgroup fences the tile-wide read of
+  its scratch against the store that writes each subgroup's partial back into
+  the low slots of that same tile, so the workgroup total is exact instead of
+  inflated by a partial that one subgroup read in place of a lane value.
 - The shared u32 witness helper is gated on the four dialect features whose
   registrations pack u32 bytes, so a selection that compiles none of them
   builds instead of failing on an unused helper.
