@@ -151,32 +151,50 @@ pub(super) fn check_4_cross_dialect_reachthrough(report: &mut Report) -> usize {
     flagged
 }
 
-/// Directories under `vyre-libs/src` that are shared plumbing rather than a
-/// dialect, so a dialect importing from one is not a cross-dialect edge.
+/// Directories of the Category A crate family that are shared plumbing rather
+/// than a dialect, so a dialect importing from one is not a cross-dialect edge.
 ///
 /// Only a directory can appear here, because `list_dialect_dirs` reads the
-/// dialect set from the directories under `vyre-libs/src` and a single-file
-/// module is never in that set to begin with. Five rows named single-file
-/// modules or a path that no longer exists and were removed for that reason:
-/// `region`, `tensor_ref`, `buffer_names`, `descriptor` and `test_support`.
-/// Four of those five now live under `plumbing`, the second live row: one
-/// directory holding what a composition of any dialect needs around the IR it
-/// builds. `check_0_every_exemption_is_live` holds each remaining row to a
-/// directory that still carries Rust source, so the next row that goes the same
-/// way fails instead of reading as coverage.
+/// dialect set from directories and a single-file module is never in that set
+/// to begin with. Five rows named single-file modules or a path that no longer
+/// exists and were removed for that reason: `region`, `tensor_ref`,
+/// `buffer_names`, `descriptor` and `test_support`. Four of those five now live
+/// under `plumbing`, the second live row: one directory holding what a
+/// composition of any dialect needs around the IR it builds.
+/// `check_0_every_exemption_is_live` holds each remaining row to a directory
+/// some family member still carries with Rust source in it, so the next row
+/// that goes the same way fails instead of reading as coverage.
 pub(super) const SHARED_PLUMBING_DIRS: [&str; 2] = ["builder", "plumbing"];
 
-/// Shared-plumbing rows whose directory under `libs_src` carries no Rust source.
-pub(super) fn dead_plumbing_rows(libs_src: &std::path::Path) -> Vec<&'static str> {
+/// Shared-plumbing rows that no Category A member carries as a directory
+/// holding Rust source.
+pub(super) fn dead_plumbing_rows(roots: &[CategoryASource]) -> Vec<&'static str> {
     SHARED_PLUMBING_DIRS
         .into_iter()
-        .filter(|dir| !structure_gate::source_scan::carries_rust_source(&libs_src.join(dir)))
+        .filter(|dir| !family_carries_directory(roots, dir))
         .collect()
 }
 
-/// Directories under `vyre-libs/src` that hold the kernel substrate: the
-/// composition domains every dialect is built out of. A dialect naming one is
-/// composing, not reaching, so an edge into these is not a cross-dialect edge.
+/// Whether some member of the Category A family carries a directory of this
+/// name under `src`, holding Rust source.
+///
+/// A row names a directory of the ownership family, and the family is a facade
+/// crate plus one crate per domain partition, so the directory a row names sits
+/// under whichever partition holds it: `builder` and `plumbing` under the
+/// builder crate, `math` and `geom` under the math crate. Resolving a row
+/// against `vyre-libs/src` alone reported all twenty rows dead while every one
+/// of them still named a live directory. A directory outlives the deletion of
+/// every file in it, so its presence is not the question.
+fn family_carries_directory(roots: &[CategoryASource], dir: &str) -> bool {
+    roots
+        .iter()
+        .any(|source| structure_gate::source_scan::carries_rust_source(&source.src.join(dir)))
+}
+
+/// Directories of the Category A crate family that hold the kernel substrate:
+/// the composition domains every dialect is built out of. A dialect naming one
+/// is composing, not reaching, so an edge into these is not a cross-dialect
+/// edge.
 ///
 /// These are the domains that used to sit in `vyre-primitives` and were reached
 /// as `vyre_primitives::<domain>::…`. The path is now `crate::<domain>::…`
@@ -219,11 +237,12 @@ pub(super) fn is_substrate_target(name: &str) -> bool {
     KERNEL_SUBSTRATE_DIRS.contains(&name)
 }
 
-/// Kernel-substrate rows whose directory under `libs_src` carries no Rust source.
-pub(super) fn dead_substrate_rows(libs_src: &std::path::Path) -> Vec<&'static str> {
+/// Kernel-substrate rows that no Category A member carries as a directory
+/// holding Rust source.
+pub(super) fn dead_substrate_rows(roots: &[CategoryASource]) -> Vec<&'static str> {
     KERNEL_SUBSTRATE_DIRS
         .into_iter()
-        .filter(|dir| !structure_gate::source_scan::carries_rust_source(&libs_src.join(dir)))
+        .filter(|dir| !family_carries_directory(roots, dir))
         .collect()
 }
 
@@ -281,39 +300,57 @@ mod tests {
         std::fs::write(directory.join("mod.rs"), "pub fn build() {}\n").expect("dialect source");
     }
 
+    /// One fixture member of the Category A family, rooted under `root`.
+    fn fixture_member(root: &std::path::Path, name: &str) -> CategoryASource {
+        let src = root.join(name).join("src");
+        std::fs::create_dir_all(&src).expect("member src");
+        CategoryASource {
+            member: name.to_string(),
+            src,
+        }
+    }
+
     /// WHY: the shared-plumbing list is consumed by a directory filter, so a row
     /// naming a single-file module or a path that was removed is skipped by
     /// nothing and still reads as a reviewed exemption. Five of the six rows were
-    /// in that state. The check runs against a directory it is handed rather than
-    /// the checkout, so both directions are proved: a row with a directory behind
-    /// it is live, and one without it is reported.
+    /// in that state.
+    ///
+    /// The row resolves against every member of the ownership family, not
+    /// against the facade crate alone: `builder` and `plumbing` sit in a
+    /// partition crate, and a resolution that read only the facade reported both
+    /// live rows dead. The fixture puts every directory under a member that is
+    /// not the facade, so a rule that reads the facade alone fails here.
     ///
     /// What this does not catch: a directory that exists but is a dialect rather
     /// than plumbing. That judgement is the reviewer's and the row carries it.
     #[test]
     fn a_plumbing_row_without_a_directory_behind_it_is_dead() {
-        let libs_src = tempfile::tempdir().expect("temporary vyre-libs/src");
+        let checkout = tempfile::tempdir().expect("temporary checkout");
+        let facade = fixture_member(checkout.path(), "vyre-libs");
+        let partition = fixture_member(checkout.path(), "vyre-libs-partition");
+        let roots = vec![facade, partition];
 
         assert_eq!(
-            dead_plumbing_rows(libs_src.path()),
+            dead_plumbing_rows(&roots),
             SHARED_PLUMBING_DIRS.to_vec(),
-            "every row is dead against a tree that holds none of them"
+            "every row is dead against a family that holds none of them"
         );
 
+        let partition_src = roots[1].src.clone();
         for dir in SHARED_PLUMBING_DIRS {
-            write_module(libs_src.path(), dir);
+            write_module(&partition_src, dir);
         }
         assert_eq!(
-            dead_plumbing_rows(libs_src.path()),
+            dead_plumbing_rows(&roots),
             Vec::<&str>::new(),
-            "no row is dead once every one of them names a directory carrying source"
+            "no row is dead once some family member carries its directory with source in it"
         );
 
         let first = SHARED_PLUMBING_DIRS[0];
-        std::fs::remove_file(libs_src.path().join(first).join("mod.rs"))
+        std::fs::remove_file(partition_src.join(first).join("mod.rs"))
             .expect("remove the source under one plumbing directory");
         assert_eq!(
-            dead_plumbing_rows(libs_src.path()),
+            dead_plumbing_rows(&roots),
             vec![first],
             "a directory that holds no Rust source holds no exemption"
         );
@@ -376,32 +413,45 @@ mod tests {
     /// WHY: the kernel-substrate list is consumed by a directory filter, the
     /// same shape as the shared-plumbing list, so a row naming a directory that
     /// moved or was renamed suppresses nothing and reads as a reviewed
-    /// exemption. Both directions are proved against a tree the check is handed.
+    /// exemption. All eighteen rows were in that state once the domains moved
+    /// into partition crates and the resolution still read the facade.
+    ///
+    /// The fixture splits the rows over two partition members, because the live
+    /// family does: `math` and `geom` sit in one crate and `graph` and
+    /// `topology` in another, so a rule that resolves a row against one root
+    /// reports every row it does not hold.
     #[test]
     fn a_substrate_row_without_a_directory_behind_it_is_dead() {
-        let libs_src = tempfile::tempdir().expect("temporary vyre-libs/src");
+        let checkout = tempfile::tempdir().expect("temporary checkout");
+        let roots = vec![
+            fixture_member(checkout.path(), "vyre-libs"),
+            fixture_member(checkout.path(), "vyre-libs-first"),
+            fixture_member(checkout.path(), "vyre-libs-second"),
+        ];
 
         assert_eq!(
-            dead_substrate_rows(libs_src.path()),
+            dead_substrate_rows(&roots),
             KERNEL_SUBSTRATE_DIRS.to_vec(),
-            "every row is dead against a tree that holds none of them"
+            "every row is dead against a family that holds none of them"
         );
 
-        for dir in KERNEL_SUBSTRATE_DIRS {
-            write_module(libs_src.path(), dir);
+        let split = KERNEL_SUBSTRATE_DIRS.len() / 2;
+        for (index, dir) in KERNEL_SUBSTRATE_DIRS.into_iter().enumerate() {
+            let owner = if index < split { 1 } else { 2 };
+            write_module(&roots[owner].src, dir);
         }
         assert_eq!(
-            dead_substrate_rows(libs_src.path()),
+            dead_substrate_rows(&roots),
             Vec::<&str>::new(),
-            "no row is dead once every one of them names a directory carrying source"
+            "no row is dead once some family member carries its directory with source in it"
         );
 
-        let first = KERNEL_SUBSTRATE_DIRS[0];
-        std::fs::remove_file(libs_src.path().join(first).join("mod.rs"))
+        let last = KERNEL_SUBSTRATE_DIRS[KERNEL_SUBSTRATE_DIRS.len() - 1];
+        std::fs::remove_file(roots[2].src.join(last).join("mod.rs"))
             .expect("remove the source under one substrate directory");
         assert_eq!(
-            dead_substrate_rows(libs_src.path()),
-            vec![first],
+            dead_substrate_rows(&roots),
+            vec![last],
             "a directory that holds no Rust source holds no exemption"
         );
     }

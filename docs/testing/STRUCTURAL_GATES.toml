@@ -953,12 +953,14 @@ cell space has no run-time listing to derive instead.
 
 [[gate]]
 file = "xtask-registry/src/gates/lego_audit/semantic_organization.rs"
-tests = ["file_roles_classify_every_vyre_libs_file_uniquely", "new_unregistered_nested_file_fails_role_closure", "overlapping_file_roles_fails_role_closure"]
+tests = ["a_registration_in_a_partition_crate_is_placed_by_its_own_domain", "every_production_file_in_the_family_has_exactly_one_role", "the_shared_builder_role_is_the_builder_module_of_a_family_crate", "a_file_outside_every_declared_domain_fails_role_closure", "every_canonical_block_skeleton_is_defined_in_a_shared_builder_module", "overlapping_file_roles_fails_role_closure"]
 reason = """
 Judge the file-role closure that classifies every composition-domain source
-file, including that an unregistered nested file and two overlapping roles both
-fail it. The subject under test is a rule over the file tree, so the tree is its
-input; a role assignment produces no run-time artifact to observe instead.
+file, the placement rule that resolves a registration against the crate family
+its operation id names, and the canonical block skeletons that must be defined
+once in a shared builder module. The subject under test is a rule over the file
+tree and over the workspace roster, so both are its input; a role assignment
+produces no run-time artifact to observe instead.
 """
 
 [[gate]]
