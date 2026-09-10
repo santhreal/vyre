@@ -396,6 +396,69 @@ fn committed_objects(root: &Path, objects: &[String]) -> Vec<Option<Content>> {
     }
 }
 
+/// The newest commit touching each committed path under `pathspec`.
+///
+/// One history walk answers every path. `git log -1 -- <path>` per artifact
+/// walks the whole history again for each one, which is what made the
+/// committed-provenance sweep cost tens of minutes on a network checkout: the
+/// commits arrive newest-first, so the first mention of a path is the commit
+/// that carries it.
+///
+/// # Errors
+///
+/// Returns the sentence a gate reports when git cannot run or when the log is
+/// not a sequence of commit-then-paths records.
+pub fn carrier_commits(root: &Path, pathspec: &str) -> Result<BTreeMap<String, String>, String> {
+    let output = Command::new("git")
+        .args([
+            "-c",
+            "core.quotePath=false",
+            "log",
+            "--format=%H",
+            "--name-only",
+            "--no-renames",
+            "--",
+            pathspec,
+        ])
+        .current_dir(root)
+        .output()
+        .map_err(|error| format!("git log over `{pathspec}` could not run: {error}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "git log over `{pathspec}` failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    let mut carriers = BTreeMap::new();
+    let mut commit = String::new();
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        if line.is_empty() {
+            continue;
+        }
+        if is_commit_id(line) {
+            commit = line.to_string();
+            continue;
+        }
+        if commit.is_empty() {
+            return Err(format!(
+                "git log over `{pathspec}` reported path `{line}` before any commit"
+            ));
+        }
+        carriers
+            .entry(line.to_string())
+            .or_insert_with(|| commit.clone());
+    }
+    Ok(carriers)
+}
+
+/// Whether a log line is a commit id rather than a path.
+///
+/// A tracked path cannot be 40 hex characters with no separator, so the two
+/// record kinds are distinguishable without one.
+fn is_commit_id(line: &str) -> bool {
+    line.len() == 40 && line.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
 /// What each requested `<commit>:<path>` object holds, as text, in order.
 ///
 /// `None` names an object git does not resolve. Committed text is read whole:

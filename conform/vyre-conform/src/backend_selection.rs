@@ -1,5 +1,6 @@
 //! Discovery and filtering of semantic-execution-capable registered backends.
 
+use vyre_driver_reference::is_oracle_executor_id;
 use vyre_registry_link::backend::live_backend_registry;
 
 /// Find a linked backend registration by ID, or find the default backend if "auto".
@@ -104,11 +105,10 @@ pub fn select_backends(
         .join(", ");
     let fix =
         format!("Fix: pass `--backend all` or one semantic-execution-capable backend id: {known}.");
-    if filter == "cpu-ref" || filter == "reference" || filter == "oracle" {
+    if is_oracle_executor_id(filter) {
         return Err(format!(
-            "the selected backend set only contains reference dispatch backends: `{filter}` is the \
-             reference oracle, so proving against it would certify the reference executor against \
-             itself. {fix}"
+            "`{filter}` is the reference oracle, not a backend, so proving against it would \
+             certify the reference executor against itself. {fix}"
         ));
     }
     let registrations = live_backend_registry()

@@ -316,7 +316,7 @@ jobs:
                   raise SystemExit(f"expected exactly one {name} under {root}, found {len(matches)}")
               with matches[0].open() as handle:
                   return json.load(handle)
-          for backend, filename in [("cuda", "cuda-conformance.json"), ("wgpu", "wgpu-conformance.json"), ("cpu-ref", "reference-conformance.json")]:
+          for backend, filename in [("cuda", "cuda-conformance.json"), ("wgpu", "wgpu-conformance.json"), ("reference-oracle", "reference-conformance.json")]:
               report = one("release-artifacts/conformance", filename)
               if report.get("backend_id") != backend:
                   raise SystemExit("{}: backend_id={!r}, expected {!r}".format(filename, report.get("backend_id"), backend))

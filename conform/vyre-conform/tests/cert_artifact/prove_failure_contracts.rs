@@ -1,4 +1,5 @@
 use super::*;
+use vyre_driver_reference::ORACLE_EXECUTOR_ID;
 
 /// The certificate path a refusal case may never create.
 fn refused_artifact_path(case: &str) -> std::path::PathBuf {
@@ -36,26 +37,26 @@ fn refusal_for_backend(case: &str, backend: &str) -> String {
 /// TEST-034: a certificate signed against the reference executor alone proves
 /// nothing, so `prove` must refuse instead of emitting one.
 ///
-/// The refusal is decided at backend selection. The interpreter submits no
-/// `BackendRegistration`, so `cpu-ref` resolves to nothing in the registry and
+/// The refusal is decided at backend selection. The oracle submits no
+/// `BackendRegistration`, so its id resolves to nothing in the registry and
 /// would otherwise be reported as a typo. `select_backends` names the oracle
-/// spellings ahead of that lookup so the caller is told what it asked for
-/// rather than that it misspelled something, and `semantic_execution_backends`
-/// still excludes a `reference_oracle` registration for an out-of-tree one.
+/// ahead of that lookup so the caller is told what it asked for rather than
+/// that it misspelled something, and `semantic_execution_backends` still
+/// excludes a `reference_oracle` registration for an out-of-tree one.
 #[test]
 fn prove_refuses_a_certificate_proving_the_reference_against_itself() {
-    let stderr = refusal_for_backend("reference", "cpu-ref");
+    let stderr = refusal_for_backend("reference", ORACLE_EXECUTOR_ID);
     assert!(
         stderr.contains("refused to emit"),
         "TEST-034: prove must explain why it refused to emit the certificate; stderr={stderr}"
     );
     assert!(
-        stderr.contains("reference dispatch backends"),
-        "TEST-034: the refusal must name the reference-only backend set as the reason; stderr={stderr}"
+        stderr.contains("is the reference oracle, not a backend"),
+        "TEST-034: the refusal must say the id is the oracle rather than a backend; stderr={stderr}"
     );
     assert!(
-        stderr.contains("`cpu-ref`") && stderr.contains("reference oracle"),
-        "TEST-034: the refusal must name the rejected id and what it is; stderr={stderr}"
+        stderr.contains(&format!("`{ORACLE_EXECUTOR_ID}`")),
+        "TEST-034: the refusal must name the rejected id; stderr={stderr}"
     );
 }
 

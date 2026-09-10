@@ -22,9 +22,32 @@ pub fn read_conformance_text(path: &Path) -> io::Result<String> {
     crate::output_arg::read_text_bounded(path, MAX_TEXT_BYTES, "conformance evidence")
 }
 
-/// Backends a release must dispatch. One release decision, read by the gate that
-/// records the matrix and by the check that reads the recorded matrix back.
-pub const REQUIRED_BACKENDS: &[&str] = &["cuda", "wgpu", "cpu-ref"];
+/// Device backends a release must dispatch. One release decision, read by the
+/// gate that records the matrix and by the check that reads the recorded
+/// matrix back.
+///
+/// Every name here is a registered `BackendRegistration`. This crate links no
+/// driver, so the list is pinned to the live registry by a contract in
+/// `xtask-registry`, which does: a required name the registry stops reporting
+/// turns that contract red rather than drifting.
+pub const REQUIRED_DISPATCH_BACKENDS: &[&str] = &["cuda", "wgpu"];
+
+/// The oracle every dispatch is compared against, and the id its record writes.
+///
+/// The reference interpreter is host code reached through a named API. It
+/// submits no `BackendRegistration` and never appears in discovery,
+/// precedence, autoroute or a backend count, so a release requires its record
+/// as an oracle record and requires the dispatch roster not to name it. The
+/// required dispatch list held it as a third backend, which asked the backend
+/// registry for something the registry is built to refuse, so the requirement
+/// failed on every run and named the wrong repair.
+///
+/// This crate links no driver, so the value is a copy of the id
+/// `vyre-driver-reference` owns. A contract in `xtask-registry`, which links
+/// both, holds the two equal. A record written before the oracle stopped
+/// being spelled as a backend carries `cpu-ref`, which is converted where a
+/// recorded report is read rather than accepted as a second spelling.
+pub const ORACLE_RECORD_ID: &str = "reference-oracle";
 const REQUIRED_WORKFLOWS: &[&str] = &[
     ".github/workflows/conform.yml",
     ".github/workflows/gpu-parity.yml",
@@ -134,7 +157,7 @@ pub fn inspect_conformance_matrix(context: &str, matrix: &Value, failures: &mut 
         .and_then(Value::as_array)
         .map(Vec::as_slice)
         .unwrap_or_default();
-    for required in REQUIRED_BACKENDS {
+    for required in REQUIRED_DISPATCH_BACKENDS {
         if !backends
             .iter()
             .any(|backend| backend.as_str() == Some(required))
@@ -143,6 +166,15 @@ pub fn inspect_conformance_matrix(context: &str, matrix: &Value, failures: &mut 
                 "{context}: dispatch_backends must include `{required}`"
             ));
         }
+    }
+    if backends
+        .iter()
+        .any(|backend| backend.as_str() == Some(ORACLE_RECORD_ID))
+    {
+        failures.push(format!(
+            "{context}: dispatch_backends names the oracle `{ORACLE_RECORD_ID}`, which executes \
+             on the host and is reached through a named API rather than the backend registry"
+        ));
     }
     let schema_version = u64_field(matrix, "schema_version", 0);
     if schema_version < 2 {
@@ -258,7 +290,7 @@ mod tests {
             "fixture_input_count": 49,
             "expected_output_count": 49,
             "duplicate_op_ids": [],
-            "dispatch_backends": REQUIRED_BACKENDS,
+            "dispatch_backends": REQUIRED_DISPATCH_BACKENDS,
             "ci_blocking_gate_count": 3,
             "required_ci_statuses": ["conform"],
             "missing_required_ci_statuses": [],
@@ -332,5 +364,51 @@ mod tests {
 
         assert_eq!(missing_workflows, Vec::<&&str>::new());
         assert_eq!(missing_gates, Vec::<&&str>::new());
+    }
+
+    /// WHY: the requirement this replaced could not pass. `cpu-ref` was listed
+    /// as a third dispatch backend, and the matrix generator reads the backend
+    /// registry, which the reference interpreter is built never to enter. The
+    /// inverse is the contract that can fail: a roster naming the oracle means
+    /// a host execution route reached backend discovery, and that has to be a
+    /// blocker rather than the state the requirement asks for.
+    ///
+    /// What it does not catch: an oracle registered under some other id. The
+    /// execution-domain closure in `vyre-driver-reference` decides every
+    /// registry entry by exhaustive match and owns that.
+    #[test]
+    fn a_roster_naming_the_oracle_is_a_failure_rather_than_the_requirement() {
+        let mut matrix = complete_matrix(REQUIRED_WORKFLOWS.iter().copied());
+        let mut roster = REQUIRED_DISPATCH_BACKENDS
+            .iter()
+            .map(|backend| Value::from(*backend))
+            .collect::<Vec<_>>();
+        roster.push(Value::from(ORACLE_RECORD_ID));
+        matrix["dispatch_backends"] = Value::from(roster);
+        let mut failures = Vec::new();
+
+        inspect_conformance_matrix("matrix.json", &matrix, &mut failures);
+
+        assert_eq!(
+            failures,
+            vec![format!(
+                "matrix.json: dispatch_backends names the oracle `{ORACLE_RECORD_ID}`, which \
+                 executes on the host and is reached through a named API rather than the \
+                 backend registry"
+            )]
+        );
+    }
+
+    /// WHY: the oracle spelling and the dispatch roster are two lists, and the
+    /// defect was that one held a member of the other. A required dispatch
+    /// backend that is also the oracle id would restore it in a shape the
+    /// assertion above cannot see, because the roster would then be required
+    /// to hold the name it is required to omit.
+    #[test]
+    fn the_oracle_is_not_a_required_dispatch_backend() {
+        assert!(
+            !REQUIRED_DISPATCH_BACKENDS.contains(&ORACLE_RECORD_ID),
+            "Fix: the oracle is compared against, never dispatched to."
+        );
     }
 }

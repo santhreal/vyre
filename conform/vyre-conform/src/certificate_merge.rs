@@ -93,11 +93,11 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
             if !pair.passed {
                 return Err(format!(
                     "merge refused failing pair ({}, {}) from `{}`. Fix: repair the backend/op divergence before merging.",
-                    pair.backend_id, pair.op_id, shard.path
+                    pair.executor_id, pair.op_id, shard.path
                 ));
             }
-            let key = (pair.backend_id.clone(), pair.op_id.clone());
-            unique_backends.insert(pair.backend_id.clone());
+            let key = (pair.executor_id.clone(), pair.op_id.clone());
+            unique_backends.insert(pair.executor_id.clone());
             unique_ops.insert(pair.op_id.clone());
             if pair_map.insert(key.clone(), pair).is_some() {
                 return Err(format!(
@@ -128,7 +128,7 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
     let pairs = pair_map.into_values().collect::<Vec<_>>();
     let laws = law_map.into_values().collect::<Vec<_>>();
     for pair in &pairs {
-        merge_hasher.update(pair.backend_id.as_bytes());
+        merge_hasher.update(pair.executor_id.as_bytes());
         merge_hasher.update(pair.op_id.as_bytes());
         merge_hasher.update(pair.message.as_bytes());
     }
@@ -159,7 +159,7 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
     program_hasher.update(b"vyre-conform/merge/v2");
     hash_proof_plan(&mut program_hasher, &plan);
     for pair in &pairs {
-        program_hasher.update(pair.backend_id.as_bytes());
+        program_hasher.update(pair.executor_id.as_bytes());
         program_hasher.update(pair.op_id.as_bytes());
         program_hasher.update(pair.message.as_bytes());
     }
@@ -261,7 +261,7 @@ fn read_and_verify_shard(path: &str) -> Result<VerifiedShard, String> {
         if !pair.passed {
             return Err(format!(
                 "certificate `{path}` contains failing pair ({}, {}). Fix: repair the divergence before merging.",
-                pair.backend_id, pair.op_id
+                pair.executor_id, pair.op_id
             ));
         }
     }

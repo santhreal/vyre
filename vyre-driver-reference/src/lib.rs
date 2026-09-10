@@ -23,6 +23,23 @@ pub const REFERENCE_SUBGROUP_WIDTH: u32 = 32;
 /// any shipped target offers, which is 227 KiB of opt-in shared memory on the
 /// widest CUDA part.
 pub const REFERENCE_SHARED_SCRATCH_BYTES: u32 = 256 * 1024;
+
+/// Executor id the conformance evidence and the conformance CLI spell for the
+/// reference oracle.
+///
+/// The oracle is not a backend. It submits no `BackendRegistration`, resolves
+/// to nothing in the `VyreBackend` registry, and is reached through this
+/// crate's API rather than through device dispatch. Recording it as a backend
+/// id put it back into the backend set through the evidence path, so it has
+/// its own id with one owner here rather than a copy in each caller.
+pub const ORACLE_EXECUTOR_ID: &str = "reference-oracle";
+
+/// Whether `id` selects the reference oracle.
+#[must_use]
+pub fn is_oracle_executor_id(id: &str) -> bool {
+    id == ORACLE_EXECUTOR_ID
+}
+
 /// Pure evaluation helper backed by `vyre_reference::reference_eval`.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct CpuRefEvaluator;
