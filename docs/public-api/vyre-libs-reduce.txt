@@ -38,8 +38,8 @@ pub fn vyre_libs_reduce::reduce::atomic_scalar::atomic_grid_stride_u32<V, A>(inp
 pub fn vyre_libs_reduce::reduce::count::reduce_count(bitset: &str, out: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_reduce::reduce::count_non_zero::reduce_count_non_zero(values: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_reduce::reduce::gather::gather(src: &str, indices: &str, dst: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs_reduce::reduce::grid_stride_tree::grid_stride_tree_sum_u32(values: &str, out: &str, count: u32, tile: u32, blocks: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs_reduce::reduce::grid_stride_tree::grid_stride_tree_sum_u32_blocks(count: u32, tile: u32, blocks: u32) -> u32
+pub fn vyre_libs_reduce::reduce::grid_stride_tree::grid_stride_tree_sum_u32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::grid_stride_tree::grid_stride_tree_sum_u32_blocks(count: u32, tile: u32) -> u32
 pub fn vyre_libs_reduce::reduce::histogram::histogram(input: &str, output: &str, count: u32, num_bins: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_reduce::reduce::histogram::histogram_atomic_scatter(input: &str, output: &str, count: u32, num_bins: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_reduce::reduce::max::reduce_max(values: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program

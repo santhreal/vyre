@@ -55,8 +55,8 @@ fn assert_dispatch_signature(program: &vyre_foundation::ir::Program, case: &str)
 #[test]
 fn a_multi_block_reduction_asks_the_caller_for_only_its_input() {
     // count > tile forces the two-pass path rather than the single-block one.
-    let program = grid_stride_tree_sum_u32("values", "out", 8192, 256, 8);
-    assert_dispatch_signature(&program, "count=8192 tile=256 blocks=8");
+    let program = grid_stride_tree_sum_u32("values", "out", 8192, 256);
+    assert_dispatch_signature(&program, "count=8192 tile=256");
 }
 
 #[test]
@@ -64,22 +64,19 @@ fn one_signature_holds_across_both_forms() {
     // The builder switches to the single-block form at `count <= tile`, so the
     // sweep straddles that boundary: a signature that only holds for the fused
     // form leaves the caller unable to dispatch the same op at a small count.
-    for (count, tile, blocks) in [
-        (1u32, 16u32, 1u32),
-        (16, 16, 1),
-        (255, 256, 4),
-        (256, 256, 1),
-        (257, 256, 4),
-        (8192, 256, 8),
-        (65536, 1024, 64),
-        (4096, 64, 64),
-        (1_048_576, 1024, 170),
+    for (count, tile) in [
+        (1u32, 16u32),
+        (16, 16),
+        (255, 256),
+        (256, 256),
+        (257, 256),
+        (8192, 256),
+        (65536, 1024),
+        (4096, 64),
+        (1_048_576, 1024),
     ] {
-        let program = grid_stride_tree_sum_u32("values", "out", count, tile, blocks);
-        assert_dispatch_signature(
-            &program,
-            &format!("count={count} tile={tile} blocks={blocks}"),
-        );
+        let program = grid_stride_tree_sum_u32("values", "out", count, tile);
+        assert_dispatch_signature(&program, &format!("count={count} tile={tile}"));
     }
 }
 
@@ -87,7 +84,7 @@ fn one_signature_holds_across_both_forms() {
 fn every_storage_buffer_binding_is_unique() {
     // Two fused passes each numbered their own bindings from zero. A collision
     // silently aliases two distinct buffers onto one slot.
-    let program = grid_stride_tree_sum_u32("values", "out", 8192, 256, 8);
+    let program = grid_stride_tree_sum_u32("values", "out", 8192, 256);
     let mut seen: Vec<(u32, String)> = Vec::new();
     for buffer in program.buffers() {
         if matches!(buffer.kind(), vyre_foundation::ir::MemoryKind::Shared) {
@@ -129,7 +126,7 @@ fn the_fused_reduction_carries_a_grid_level_fence() {
         }
     }
 
-    let program = grid_stride_tree_sum_u32("values", "out", 1 << 20, 1024, 170);
+    let program = grid_stride_tree_sum_u32("values", "out", 1 << 20, 1024);
     let mut found = Vec::new();
     orderings(program.entry(), &mut found);
     assert!(
@@ -138,63 +135,87 @@ fn the_fused_reduction_carries_a_grid_level_fence() {
     );
 }
 
-/// Pass 1 must reach every element from a grid narrower than the input.
+/// Every workgroup a launch runs writes a partial the combine reads.
 ///
-/// The block count is chosen by the caller from the device's cooperative
-/// residency, so it is routinely far smaller than `count / tile`. A thread that
-/// reads only its own invocation index then covers `blocks * tile` elements and
-/// silently drops the rest, which reads as a plausible-looking short sum. The
-/// invariant is that the emitted loop's trip count times the grid stride spans
-/// the whole input.
+/// A dispatch spans the program's widest non-shared binding and runs that span
+/// divided by the declared workgroup width, and a compiled artifact records
+/// that launch, so no grid a caller states reaches the device. The partial
+/// buffer therefore has to hold one slot per launched workgroup. When it held
+/// fewer, the surplus workgroups reduced elements nothing read: at one million
+/// elements the builder sized the grid from a device compute-unit count of 80
+/// while the launch ran 1024 workgroups, each of the 944 surplus workgroups
+/// re-read a clamped tail element thirteen times, and the reduction measured
+/// 0.53x of a multithreaded CPU baseline against a release contract of 1.10x.
+///
+/// The launched workgroup count is recomputed from the program's own buffer
+/// table because `vyre-libs-reduce` cannot depend on the driver crate that owns
+/// the rule. The rule is the one `dispatch_element_count_for_program` applies
+/// to a program declaring a shared buffer: the widest non-shared binding.
 #[test]
-fn pass_one_strides_far_enough_to_cover_every_element() {
-    use vyre_foundation::ir::{Expr, Node};
-    use vyre_foundation::visit::child_bodies;
-
-    fn loop_bounds(nodes: &[Node], out: &mut Vec<u32>) {
-        for node in nodes {
-            if let Node::Loop {
-                to: Expr::LitU32(bound),
-                ..
-            } = node
-            {
-                out.push(*bound);
-            }
-            for body in child_bodies(node) {
-                loop_bounds(body, out);
-            }
-        }
-    }
-
-    for (count, tile, requested) in [
-        (1_048_576u32, 1024u32, 170u32),
-        (1_048_576, 1024, 128),
-        (65536, 1024, 3),
-        (8192, 256, 5),
-        (1_000_001, 1024, 170),
-        // What a backend that reports no compute-unit count asks for: no device
-        // cap at all, so the shape is the only thing standing between the
-        // request and the launch.
-        (1_048_576, 256, u32::MAX),
-        (1_048_576, 1024, u32::MAX),
+fn every_launched_workgroup_writes_a_partial_the_combine_reads() {
+    for (count, tile) in [
+        (1_048_576u32, 1024u32),
+        (65536, 1024),
+        (8192, 256),
+        (1_000_001, 1024),
+        (1_048_576, 256),
+        (4096, 64),
+        // Above `tile * tile` the block count no longer fits one tile. Capping
+        // it there is what handed the surplus back to pass 1 as redundant work.
+        (1_048_576, 512),
+        (16_777_216, 1024),
+        (1_000_001, 64),
     ] {
         assert!(
             count > tile,
-            "Fix: this sweep reads the strided loop bounds, and a count within one tile takes the single-block form, which has no loop"
+            "Fix: this sweep reads the partial buffer, and a count within one tile takes the single-block form, which declares none"
         );
-        let blocks = grid_stride_tree_sum_u32_blocks(count, tile, requested);
-        let program = grid_stride_tree_sum_u32("values", "out", count, tile, requested);
-        let mut bounds = Vec::new();
-        loop_bounds(program.entry(), &mut bounds);
-        let stride = u64::from(blocks) * u64::from(tile);
-        let covered = bounds
-            .iter()
-            .map(|trips| u64::from(*trips) * stride)
-            .max()
-            .unwrap_or(0);
+        let program = grid_stride_tree_sum_u32("values", "out", count, tile);
+        let blocks = grid_stride_tree_sum_u32_blocks(count, tile);
+        assert_eq!(
+            launched_workgroups(&program),
+            blocks,
+            "count={count} tile={tile}: the launch runs a different grid than the builder sized its partials for"
+        );
+        assert_eq!(
+            partial_slots(&program),
+            blocks,
+            "count={count} tile={tile}: the partial buffer holds a different number of slots than the grid has workgroups"
+        );
         assert!(
-            covered >= u64::from(count),
-            "count={count} tile={tile} blocks={blocks}: a grid stride of {stride} over trip counts {bounds:?} reaches {covered} elements"
+            u64::from(blocks) * u64::from(tile) >= u64::from(count),
+            "count={count} tile={tile}: {blocks} tiles of {tile} lanes do not reach every element"
         );
     }
+}
+
+/// Workgroups a dispatch of `program` runs, read from the program alone.
+fn launched_workgroups(program: &vyre_foundation::ir::Program) -> u32 {
+    let span = program
+        .buffers()
+        .iter()
+        .filter(|buffer| !matches!(buffer.kind(), vyre_foundation::ir::MemoryKind::Shared))
+        .map(vyre_foundation::ir::BufferDecl::count)
+        .max()
+        .unwrap_or(1);
+    span.div_ceil(program.workgroup_size()[0].max(1))
+}
+
+/// Declared slot count of the fused program's partial buffer.
+fn partial_slots(program: &vyre_foundation::ir::Program) -> u32 {
+    program
+        .buffers()
+        .iter()
+        .find(|buffer| buffer.name().ends_with("_gst_partials"))
+        .map(vyre_foundation::ir::BufferDecl::count)
+        .unwrap_or_else(|| {
+            panic!(
+                "Fix: the fused two-pass reduction must declare a partial buffer; it declared {:?}",
+                program
+                    .buffers()
+                    .iter()
+                    .map(vyre_foundation::ir::BufferDecl::name)
+                    .collect::<Vec<_>>()
+            )
+        })
 }

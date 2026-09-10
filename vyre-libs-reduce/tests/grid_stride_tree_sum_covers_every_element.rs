@@ -15,11 +15,10 @@
 //! by adding its extent to one of the arrays.
 //!
 //! This also exercises the launch width. `reference_eval` infers its own grid
-//! from the program rather than taking the grid the caller would pin, so the
-//! two-pass form runs here under a launch that can be wider than the block
-//! count it was built for. Its partial store is guarded on the block index for
-//! that reason: an over-wide launch discards the extra blocks instead of writing
-//! past the partial buffer.
+//! from the program, and so does a compiled artifact, so the two-pass form runs
+//! under the grid its own buffer table implies. Its partial store is still
+//! guarded on the block index: a caller that over-fires the launch discards the
+//! extra blocks instead of writing past the partial buffer.
 #![cfg(feature = "reduce")]
 
 use vyre_libs_reduce::reduce::grid_stride_tree::{
@@ -37,23 +36,19 @@ fn values(count: u32) -> Vec<u32> {
         .collect()
 }
 
-fn reduced(count: u32, tile: u32, blocks: u32) -> u32 {
+fn reduced(count: u32, tile: u32) -> u32 {
     let input = values(count);
-    let program = grid_stride_tree_sum_u32("values", "out", count, tile, blocks);
+    let program = grid_stride_tree_sum_u32("values", "out", count, tile);
     // `out` is a backend-allocated output, so the dispatch carries one input.
     let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack_u32(&input))])
-        .unwrap_or_else(|error| {
-            panic!("Fix: count={count} tile={tile} blocks={blocks} must evaluate: {error}")
-        });
+        .unwrap_or_else(|error| panic!("Fix: count={count} tile={tile} must evaluate: {error}"));
     let bytes = outputs
         .last()
-        .unwrap_or_else(|| {
-            panic!("Fix: count={count} tile={tile} blocks={blocks} must report an output buffer")
-        })
+        .unwrap_or_else(|| panic!("Fix: count={count} tile={tile} must report an output buffer"))
         .to_bytes();
     assert!(
         bytes.len() >= 4,
-        "Fix: count={count} tile={tile} blocks={blocks} reported {} output byte(s)",
+        "Fix: count={count} tile={tile} reported {} output byte(s)",
         bytes.len()
     );
     u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
@@ -68,24 +63,22 @@ fn every_admitted_shape_sums_every_element() {
             .into_iter()
             .fold(0u32, |total, value| total.wrapping_add(value));
         for tile in [16u32, 32, 64, 256] {
-            for blocks in [1u32, 2, 7, 32, 128] {
-                let effective = grid_stride_tree_sum_u32_blocks(count, tile, blocks);
-                if count <= tile {
-                    covered_single_block += 1;
-                } else {
-                    covered_multi_pass += 1;
-                }
-                assert_eq!(
-                    reduced(count, tile, blocks),
-                    expected,
-                    "Fix: count={count} tile={tile} blocks={blocks} (effective {effective}) summed a subset of its input"
-                );
+            let blocks = grid_stride_tree_sum_u32_blocks(count, tile);
+            if count <= tile {
+                covered_single_block += 1;
+            } else {
+                covered_multi_pass += 1;
             }
+            assert_eq!(
+                reduced(count, tile),
+                expected,
+                "Fix: count={count} tile={tile} (blocks {blocks}) summed a subset of its input"
+            );
         }
     }
     assert!(
         covered_single_block > 0 && covered_multi_pass > 0,
-        "Fix: the sweep covered {covered_single_block} single-block and {covered_multi_pass} strided shape(s); both forms must be reached or the sweep proves one of them"
+        "Fix: the sweep covered {covered_single_block} single-block and {covered_multi_pass} two-pass shape(s); both forms must be reached or the sweep proves one of them"
     );
 }
 
@@ -93,9 +86,9 @@ fn every_admitted_shape_sums_every_element() {
 /// answered with a prefix. It is stated on its own so a future narrowing of the
 /// sweep above cannot drop it silently. The extents stay small because the
 /// reference interpreter walks every lane of every workgroup: the defect is a
-/// function of `count > tile` with one block, not of the size.
+/// function of `count > tile`, not of the size.
 #[test]
-fn one_block_over_many_tiles_is_not_a_prefix_sum() {
+fn many_tiles_are_not_summed_as_a_prefix() {
     let count = 1024u32;
     let tile = 256;
     let expected = values(count)
@@ -109,54 +102,49 @@ fn one_block_over_many_tiles_is_not_a_prefix_sum() {
         "Fix: the fixture must make a prefix sum distinguishable from the total"
     );
     assert_eq!(
-        reduced(count, tile, 1),
+        reduced(count, tile),
         expected,
-        "Fix: one block over {} tiles returned the first tile's sum",
+        "Fix: {} tiles returned the first tile's sum",
         count / tile
     );
 }
 
-/// WHY: the grid a program is built for is a caller contract, and a caller that
-/// does not pin it hands the launch to inference, which spans the widest
-/// declared buffer. That is how the release reduction ran a one-block program
-/// over 4096 workgroups. The strided pass must survive it: the extra blocks have
-/// no partial slot, so an unguarded store walks past the partial buffer. The
-/// interpreter absorbs an out-of-bounds store as a no-op, which is exactly the
-/// masking a real backend does not do, so this asserts the tally rather than the
-/// value alone.
+/// WHY: a caller that over-fires the launch runs blocks the partial buffer has
+/// no slot for, so an unguarded store walks past it. The interpreter absorbs an
+/// out-of-bounds store as a no-op, which is exactly the masking a real backend
+/// does not do, so this asserts the tally rather than the value alone.
 #[test]
 fn a_launch_wider_than_the_built_grid_stays_in_bounds() {
     let count = 1024u32;
-    let tile = 64;
     let expected = values(count)
         .into_iter()
         .fold(0u32, |total, value| total.wrapping_add(value));
     let input = values(count);
-    for blocks in [1u32, 2, 4] {
-        let program = grid_stride_tree_sum_u32("values", "out", count, tile, blocks);
-        let effective = grid_stride_tree_sum_u32_blocks(count, tile, blocks);
+    for tile in [16u32, 64, 256] {
+        let program = grid_stride_tree_sum_u32("values", "out", count, tile);
+        let blocks = grid_stride_tree_sum_u32_blocks(count, tile);
         // Four times the lanes the built grid covers, so every launch here fires
         // blocks the program has no partial slot for.
-        let over_fire = effective * tile * 4;
+        let over_fire = blocks * tile * 4;
         let (outputs, oob) = vyre_reference::reference_eval_with_dispatch_oob_report(
             &program,
             &[Value::from(pack_u32(&input))],
             over_fire,
         )
-        .unwrap_or_else(|error| panic!("Fix: blocks={blocks} must evaluate over-fired: {error}"));
+        .unwrap_or_else(|error| panic!("Fix: tile={tile} must evaluate over-fired: {error}"));
         assert_eq!(
             oob.total(),
             0,
-            "Fix: blocks={blocks} (effective {effective}) indexed past a buffer under a {over_fire}-lane launch: {oob:?}"
+            "Fix: tile={tile} (blocks {blocks}) indexed past a buffer under a {over_fire}-lane launch: {oob:?}"
         );
         let bytes = outputs
             .last()
-            .unwrap_or_else(|| panic!("Fix: blocks={blocks} must report an output buffer"))
+            .unwrap_or_else(|| panic!("Fix: tile={tile} must report an output buffer"))
             .to_bytes();
         assert_eq!(
             u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]),
             expected,
-            "Fix: blocks={blocks} (effective {effective}) changed its answer under a {over_fire}-lane launch"
+            "Fix: tile={tile} (blocks {blocks}) changed its answer under a {over_fire}-lane launch"
         );
     }
 }

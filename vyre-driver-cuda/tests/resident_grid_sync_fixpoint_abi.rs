@@ -39,10 +39,6 @@ const COUNT: u32 = 1 << 20;
 /// reduction.
 const TILE: u32 = 1024;
 
-/// Requested workgroup count. The builder clamps this, and the clamped value is
-/// the grid the caller must launch, so both come from the builder.
-const REQUESTED_BLOCKS: u32 = 4096;
-
 /// Reduction operand for element `index`, matching the release case generator.
 fn value_at(index: u32) -> u32 {
     index.wrapping_mul(17).wrapping_add(3) & 0xff
@@ -121,8 +117,8 @@ fn expected_roster_names(program: &vyre::ir::Program) -> Vec<String> {
 
 #[test]
 fn resident_grid_sync_fixpoint_reduces_the_real_large_tree_program() {
-    let blocks = grid_stride_tree::grid_stride_tree_sum_u32_blocks(COUNT, TILE, REQUESTED_BLOCKS);
-    let program = grid_stride_tree::grid_stride_tree_sum_u32("values", "out", COUNT, TILE, blocks);
+    let blocks = grid_stride_tree::grid_stride_tree_sum_u32_blocks(COUNT, TILE);
+    let program = grid_stride_tree::grid_stride_tree_sum_u32("values", "out", COUNT, TILE);
 
     // The program must actually carry the three binding classes this contract is
     // about, otherwise the gate passes on a shape that cannot expose the defect.

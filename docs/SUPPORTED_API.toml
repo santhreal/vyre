@@ -98824,7 +98824,7 @@ seam = "libs-builder"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
 stability = "extension"
-exported_item_count = 610
+exported_item_count = 611
 
   [[package.item]]
   path = "impl core::fmt::Debug for vyre_libs_builder::builder::gemm::ContractionEpilogue"
@@ -101747,6 +101747,13 @@ exported_item_count = 610
 
   [[package.item]]
   path = "vyre_libs_builder::builder::strided_accumulate_child<F>(parent_op_id: &'static str, tile: u32, chunks: u32, n: u32, acc_name: &'static str, initial: vyre_foundation::ir_inner::model::generated::Expr, scratch: &'static str, step: F) -> vyre_foundation::ir_inner::model::generated::Node where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::strided_loop(tile: u32, chunks: u32, n: u32, guarded_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> vyre_foundation::ir_inner::model::generated::Node"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -125367,14 +125374,14 @@ exported_item_count = 154
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_libs_reduce::reduce::grid_stride_tree::grid_stride_tree_sum_u32(values: &str, out: &str, count: u32, tile: u32, blocks: u32) -> vyre_foundation::ir_inner::model::program::definition::Program"
+  path = "vyre_libs_reduce::reduce::grid_stride_tree::grid_stride_tree_sum_u32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program"
   kind = "fn"
   stability = "extension"
   feature = "reduce"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_libs_reduce::reduce::grid_stride_tree::grid_stride_tree_sum_u32_blocks(count: u32, tile: u32, blocks: u32) -> u32"
+  path = "vyre_libs_reduce::reduce::grid_stride_tree::grid_stride_tree_sum_u32_blocks(count: u32, tile: u32) -> u32"
   kind = "fn"
   stability = "extension"
   feature = "reduce"

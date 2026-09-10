@@ -36,8 +36,6 @@ pub struct ReductionRoute {
     pub route_id: u64,
     /// The program dispatched for this route.
     pub program: Program,
-    /// Grid the launch pins, when the program's shape does not imply it.
-    pub grid: Option<[u32; 3]>,
     /// Host bytes bound in artifact ABI slot order.
     pub inputs: Vec<Vec<u8>>,
     /// Resident resources every dispatch binds, once the backend admits them.
@@ -122,17 +120,15 @@ impl BenchCase for ReduceSumBench {
     }
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        // The fused tree reduction carries a whole-grid fence, so it launches
-        // cooperatively and every workgroup must be co-resident. One workgroup
-        // per compute unit is the widest grid that holds at this tile. A backend
-        // that cannot report a compute-unit count places no cap on the request,
-        // and the builder clamps it to what the shape admits: reading the
-        // unreported count as one workgroup measured 0.08x of the CPU baseline.
+        // The tile is the widest workgroup extent the probed device admits, and
+        // the tree builder derives its workgroup count from that tile and the
+        // element count. A compiled artifact records the launch its own buffer
+        // table implies, so neither this case nor the device profile can state
+        // a grid the dispatch would honour.
         let profile = ctx.preferred_backend.device_profile();
-        let tree_blocks = profile.grid_stride_workgroups();
         let tile_ceiling = tree_tile_ceiling(&profile);
-        let mut small = prepare_size(SMALL_COUNT, tree_blocks, tile_ceiling)?;
-        let mut large = prepare_size(LARGE_COUNT, tree_blocks, tile_ceiling)?;
+        let mut small = prepare_size(SMALL_COUNT, tile_ceiling)?;
+        let mut large = prepare_size(LARGE_COUNT, tile_ceiling)?;
         upload_resident_routes(ctx, &mut small)?;
         upload_resident_routes(ctx, &mut large)?;
 
@@ -172,7 +168,7 @@ impl BenchCase for ReduceSumBench {
             // added to the roster changes the workload and must change the
             // fingerprint that names it.
             for route in &size.routes {
-                hasher.update(&route.grid.unwrap_or([0; 3])[0].to_le_bytes());
+                hasher.update(&route.route_id.to_le_bytes());
                 hasher.update(&route.program.fingerprint());
             }
         }
@@ -291,18 +287,12 @@ fn tree_tile_ceiling(profile: &vyre_driver::DeviceProfile) -> u32 {
     1u32 << admitted.ilog2()
 }
 
-fn prepare_size(
-    count: u32,
-    tree_blocks: u32,
-    tile_ceiling: u32,
-) -> Result<ReductionSizePrepared, BenchError> {
+fn prepare_size(count: u32, tile_ceiling: u32) -> Result<ReductionSizePrepared, BenchError> {
     let values: Vec<u32> = (0..count)
         .map(|index| index.wrapping_mul(17).wrapping_add(3) & 0xff)
         .collect();
     let expected = values.iter().copied().fold(0u32, u32::wrapping_add);
     let tree_tile = count.min(tile_ceiling).max(1).next_power_of_two();
-    let tree_blocks =
-        grid_stride_tree::grid_stride_tree_sum_u32_blocks(count, tree_tile, tree_blocks);
 
     let value_bytes = crate::cases::byte_pack::u32_bytes(&values);
     let out_seed = crate::cases::byte_pack::u32_bytes(&[0]);
@@ -310,7 +300,7 @@ fn prepare_size(
 
     let atomic_program = sum::reduce_sum("values", "out", count);
     let tree_program =
-        grid_stride_tree::grid_stride_tree_sum_u32("values", "out", count, tree_tile, tree_blocks);
+        grid_stride_tree::grid_stride_tree_sum_u32("values", "out", count, tree_tile);
 
     Ok(ReductionSizePrepared {
         count,
@@ -322,7 +312,6 @@ fn prepare_size(
                 inputs: host_input_bundle(&atomic_program, &named)?,
                 reseed: caller_seeded_accumulators(&atomic_program, &named)?,
                 program: atomic_program,
-                grid: None,
                 resident: None,
             },
             ReductionRoute {
@@ -331,12 +320,6 @@ fn prepare_size(
                 inputs: host_input_bundle(&tree_program, &named)?,
                 reseed: caller_seeded_accumulators(&tree_program, &named)?,
                 program: tree_program,
-                // The tree program's grid is a contract of the program at every
-                // block count: pass 1 strides the input over exactly this many
-                // blocks and sizes its partial buffer to them. Leaving the
-                // launch to inference spans the widest declared buffer instead,
-                // which is the whole input.
-                grid: Some([tree_blocks, 1, 1]),
                 resident: None,
             },
         ],
@@ -461,21 +444,18 @@ fn dispatch_route(
     size_name: &str,
     expected: &[u8],
 ) -> Result<TimedDispatchResult, BenchError> {
-    let mut config = ctx.dispatch_config.clone();
-    if let Some(grid) = route.grid {
-        config.grid_override = Some(grid);
-    }
+    let config = &ctx.dispatch_config;
     let result = match &route.resident {
         Some(resident) => {
             for (index, seed) in &route.reseed {
                 resident.upload_resource(*index, seed, route.name)?;
             }
             resident
-                .dispatch_timed(ctx, &route.program, &config)
+                .dispatch_timed(ctx, &route.program, config)
                 .map_err(|error| BenchError::BackendFailed(error.to_string()))?
         }
         None => ctx
-            .dispatch_timed(&route.program, &route.inputs, &config)
+            .dispatch_timed(&route.program, &route.inputs, config)
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
     };
     verify_route_output(size_name, route.name, &result.outputs, expected)?;
@@ -541,27 +521,60 @@ mod tests {
         );
     }
 
-    #[test]
-    fn small_and_large_reduction_sizes_prepare_expected_values() {
-        // The block count a 4090-class device reports; the clamp is what turns
-        // it into a legal grid for each size. Both tile ceilings are real: CUDA
-        // admits 1024 invocations per workgroup, WGSL admits 256.
-        let compute_units = 170;
+    /// Declared slot count of a route's partial buffer, when it has one.
+    fn partial_slots(route: &ReductionRoute) -> Option<u32> {
+        route
+            .program
+            .buffers()
+            .iter()
+            .find(|buffer| buffer.name().ends_with("_gst_partials"))
+            .map(|buffer| buffer.count())
+    }
 
-        for tile_ceiling in [1024, 256] {
-            let small = prepare_size(SMALL_COUNT, compute_units, tile_ceiling)
+    /// Workgroups a dispatch of `program` runs, read from the program alone.
+    ///
+    /// A launch spans the widest non-shared binding, and a compiled artifact
+    /// records that span, so this is the grid the tree route runs at whatever
+    /// the case or the device profile would prefer.
+    fn launched_workgroups(program: &Program) -> u32 {
+        let span = program
+            .buffers()
+            .iter()
+            .filter(|buffer| buffer.access != BufferAccess::Workgroup)
+            .map(|buffer| buffer.count())
+            .max()
+            .unwrap_or(1);
+        span.div_ceil(program.workgroup_size()[0].max(1))
+    }
+
+    /// The tree route sizes its partial buffer to the grid its launch runs.
+    ///
+    /// WHY: this case cannot state a grid, because a compiled artifact records
+    /// the launch its own buffer table implies. A block count taken from the
+    /// device profile therefore left the surplus workgroups reducing elements
+    /// nothing read: one workgroup per compute unit built an 80-workgroup grid
+    /// for a launch of 1024, and the reduction measured 0.53x of the rayon
+    /// baseline against a release contract of 1.10x. Reading an unreported
+    /// count as one workgroup measured 0.08x, which is the same defect at the
+    /// other extreme.
+    #[test]
+    fn the_tree_route_sizes_its_partials_to_the_grid_its_launch_runs() {
+        // Both tile ceilings are real: CUDA admits 1024 invocations per
+        // workgroup, WGSL admits 256.
+        for tile_ceiling in [1024u32, 256] {
+            let small = prepare_size(SMALL_COUNT, tile_ceiling)
                 .expect("small reduction size prepares");
             assert_eq!(small.count, 32);
             assert_eq!(small.tree_tile, 32);
             assert_eq!(small.atomic().inputs[0].len(), 32 * 4);
             assert_eq!(small.expected.len(), 4);
             assert_eq!(
-                small.tree().grid,
-                Some([1, 1, 1]),
-                "Fix: 32 elements at tile 32 need one block, and the launch pins it rather than letting the widest buffer infer a wider grid"
+                partial_slots(small.tree()),
+                None,
+                "Fix: 32 elements fill one tile, so the tree route takes the single-block form and declares no partials"
             );
 
-            let large = prepare_size(LARGE_COUNT, compute_units, tile_ceiling)
+            let large = prepare_size(LARGE_COUNT, tile_ceiling)
                 .expect("large reduction size prepares");
             assert_eq!(large.count, 1 << 20);
             assert_eq!(
@@ -571,49 +584,33 @@ mod tests {
             assert_eq!(large.atomic().inputs[0].len(), (1 << 20) * 4);
             assert_eq!(large.expected.len(), 4);
             assert_eq!(
-                large.tree().grid,
-                Some([compute_units, 1, 1]),
-                "Fix: the launch must pin the block count the pass-one loop was built for"
+                partial_slots(large.tree()),
+                Some(launched_workgroups(&large.tree().program)),
+                "Fix: the launch runs a grid the partial buffer has no slot for, so those workgroups reduce elements nothing reads"
             );
-
-            // Pass two reduces the per-block partials inside one tile-wide
-            // workgroup, so the block count is capped by the tile as well as by
-            // the number of tiles the input fills.
-            let saturated = prepare_size(LARGE_COUNT, 100_000, tile_ceiling)
-                .expect("saturated reduction size prepares");
             assert_eq!(
-                saturated.tree().grid,
-                Some([tile_ceiling.min(LARGE_COUNT / tile_ceiling), 1, 1]),
-                "Fix: more blocks than tiles leaves blocks with nothing to reduce"
+                partial_slots(large.tree()),
+                Some(LARGE_COUNT / tile_ceiling),
+                "Fix: one workgroup per tile of the input is the whole grid"
             );
         }
     }
 
-    /// WHY: the WGPU adapter probe reports no compute-unit count, and reading
-    /// that as one workgroup launched a one-million-element reduction at a
-    /// single block. It computed the right answer at 0.08x of the CPU baseline,
-    /// so only a performance contract could see it. This pins the request for
-    /// every backend whose profile leaves the count unreported.
+    /// WHY: the combine pass used to read the partials from one tile-wide
+    /// workgroup, which capped the block count at one tile. At a 256-lane tile
+    /// a one-million-element input needs 4096 blocks, and the cap handed the
+    /// surplus 3840 tiles back to pass one as strided rereads under a launch
+    /// that ran them anyway. The combine now strides the partials, so the
+    /// block count follows the input at every tile.
     #[test]
-    fn an_unreported_compute_unit_count_still_fills_the_grid() {
-        for tile_ceiling in [1024u32, 256] {
-            let profile = profile_with(tile_ceiling, tile_ceiling);
-            assert_eq!(
-                profile.compute_units, 0,
-                "Fix: this case only means something while the profile leaves the count unreported"
-            );
-            let prepared = prepare_size(
-                LARGE_COUNT,
-                profile.grid_stride_workgroups(),
-                tree_tile_ceiling(&profile),
-            )
-            .expect("reduction size prepares on an unprobed profile");
-            assert_eq!(
-                prepared.tree().grid,
-                Some([tile_ceiling.min(LARGE_COUNT / tile_ceiling), 1, 1]),
-                "Fix: an unreported compute-unit count must leave the shape to cap the grid, not collapse it to one block"
-            );
-        }
+    fn a_block_count_past_one_tile_still_gets_one_slot_each() {
+        let prepared = prepare_size(LARGE_COUNT, 256).expect("reduction size prepares");
+        assert_eq!(prepared.tree_tile, 256);
+        assert!(
+            LARGE_COUNT / 256 > prepared.tree_tile,
+            "Fix: this case only means something while the block count exceeds one tile"
+        );
+        assert_eq!(partial_slots(prepared.tree()), Some(LARGE_COUNT / 256));
     }
 
     #[test]
@@ -646,7 +643,7 @@ mod tests {
     #[test]
     fn every_reduction_route_stages_the_host_inputs_its_program_declares() {
         for count in [SMALL_COUNT, LARGE_COUNT] {
-            let size = prepare_size(count, 32, 1024).expect("prepared reduction size");
+            let size = prepare_size(count, 1024).expect("prepared reduction size");
             for route in &size.routes {
                 let declared = route
                     .program
@@ -672,7 +669,7 @@ mod tests {
     /// leave the test above green while erasing the distinction it exists for.
     #[test]
     fn the_fused_tree_route_declares_fewer_host_inputs_than_the_atomic_route() {
-        let size = prepare_size(LARGE_COUNT, 32, 1024).expect("prepared reduction size");
+        let size = prepare_size(LARGE_COUNT, 1024).expect("prepared reduction size");
         assert!(
             size.tree().inputs.len() < size.atomic().inputs.len(),
             "the fused tree route's output is backend-allocated, so it stages fewer host inputs than the atomic route: tree={}, atomic={}",
@@ -694,7 +691,7 @@ mod tests {
     #[test]
     fn only_a_caller_seeded_accumulator_is_reuploaded_between_dispatches() {
         for count in [SMALL_COUNT, LARGE_COUNT] {
-            let size = prepare_size(count, 32, 1024).expect("prepared reduction size");
+            let size = prepare_size(count, 1024).expect("prepared reduction size");
             assert_eq!(
                 size.atomic().reseed,
                 vec![(1usize, vec![0u8, 0, 0, 0])],
