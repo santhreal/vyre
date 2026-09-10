@@ -29,6 +29,8 @@ const DIRECTORY: &str = "docs/testing";
 const SCHEMA_VERSION: i64 = 1;
 /// What a caller does about a stale or missing guide.
 const FIX: &str = "run `xtask testing-guides --write`";
+/// The documentation page registry whose testing rows this gate owns.
+const PAGE_REGISTRY: &str = "docs/DOCS.toml";
 
 /// One cargo target a testing command can reach.
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -69,6 +71,7 @@ impl crate::gate::GateBehavior for TestingGuides {
         for record in &records {
             report.produced(format!("{DIRECTORY}/{}", guide_name(record)));
         }
+        report.produced(PAGE_REGISTRY.to_string());
         let metadata = load_metadata(&tree, &records, &mut report)?;
 
         let mut expected: BTreeMap<String, String> = BTreeMap::new();
@@ -159,6 +162,32 @@ impl crate::gate::GateBehavior for TestingGuides {
                 ));
             }
         }
+
+        // The registry row for a generated guide is fully determined by the
+        // guide, so a hand-written row goes stale the moment a member is added.
+        // Twenty-two domain crates were split out and every one of their guides
+        // read as an unclassified page until the rows were typed in by hand.
+        if !skipped {
+            match splice_registry_rows(&tree, expected.keys().map(String::as_str))? {
+                Some(spliced) => {
+                    if ctx.write {
+                        fs::write(ctx.root.join(PAGE_REGISTRY), &spliced).map_err(|error| {
+                            GateError::new(
+                                format!("cannot write `{PAGE_REGISTRY}`: {error}"),
+                                "make the documentation registry writable",
+                            )
+                        })?;
+                    } else {
+                        report.find(Finding::in_file(
+                            PAGE_REGISTRY,
+                            "the testing pages it registers are not the guides this gate renders",
+                            FIX,
+                        ));
+                    }
+                }
+                None => {}
+            }
+        }
         report.note(if ctx.write {
             format!("wrote {written} testing guide(s)")
         } else {
@@ -166,6 +195,96 @@ impl crate::gate::GateBehavior for TestingGuides {
         });
         Ok(report)
     }
+}
+
+/// Replace the contiguous run of `testing/` page rows in the registry with the
+/// rows the rendered guide set implies, returning `None` when it already says
+/// exactly that.
+///
+/// The splice is textual so every other row keeps its bytes, its comments and
+/// its order. Reserializing the document would rewrite ninety rows this gate
+/// does not own to say the same thing in a different shape.
+fn splice_registry_rows<'a>(
+    tree: &Tree,
+    guides: impl Iterator<Item = &'a str>,
+) -> Result<Option<String>, GateError> {
+    // A fixture tree carries the guides it is testing and none of the wider
+    // documentation registry, so the rows this gate owns are simply not there.
+    if !tree.exists(PAGE_REGISTRY) {
+        return Ok(None);
+    }
+    let source = tree.read(PAGE_REGISTRY)?;
+    let lines: Vec<&str> = source.lines().collect();
+
+    let mut blocks: Vec<(usize, usize, bool)> = Vec::new();
+    let mut start: Option<usize> = None;
+    for (index, line) in lines.iter().enumerate() {
+        if line.trim() == "[[page]]" {
+            if let Some(open) = start.take() {
+                blocks.push((open, index, block_is_testing(&lines[open..index])));
+            }
+            start = Some(index);
+        }
+    }
+    if let Some(open) = start {
+        blocks.push((open, lines.len(), block_is_testing(&lines[open..])));
+    }
+
+    let testing: Vec<&(usize, usize, bool)> =
+        blocks.iter().filter(|(_, _, testing)| *testing).collect();
+    let Some(first) = testing.first() else {
+        return Err(GateError::new(
+            format!("{PAGE_REGISTRY} registers no page under `testing/`"),
+            "restore the testing section; this gate replaces it rather than creating it",
+        ));
+    };
+    let last = testing.last().expect("a non-empty slice has a last element");
+    if last.1 - first.0 != testing.iter().map(|(open, end, _)| end - open).sum::<usize>() {
+        return Err(GateError::new(
+            format!("{PAGE_REGISTRY} interleaves testing pages with other pages"),
+            "keep the testing rows in one run; this gate replaces that run wholesale",
+        ));
+    }
+
+    let mut rendered = String::new();
+    for guide in guides {
+        let name = guide.rsplit('/').next().unwrap_or(guide);
+        let package = name.strip_suffix(".md").unwrap_or(name);
+        rendered.push_str("[[page]]\n");
+        rendered.push_str(&format!("path = \"testing/{name}\"\n"));
+        rendered.push_str(&format!("title = \"Testing `{package}`\"\n"));
+        rendered.push_str("status = \"generated\"\n");
+        rendered.push_str("audience = \"contributor\"\n");
+        rendered.push_str("owner = \"testing\"\n");
+        rendered.push_str("kind = \"testing\"\n");
+        rendered.push_str("section = \"Testing and conformance\"\n");
+        rendered.push_str("authority = \"testing/TESTING.toml\"\n");
+        rendered.push_str("generation = \"generated\"\n");
+        rendered.push_str("generator = \"../xtask/src/gates/testing_guides.rs\"\n");
+        rendered.push_str("nav = true\n\n");
+    }
+
+    let mut out = String::with_capacity(source.len());
+    for line in &lines[..first.0] {
+        out.push_str(line);
+        out.push('\n');
+    }
+    out.push_str(&rendered);
+    for line in &lines[last.1..] {
+        out.push_str(line);
+        out.push('\n');
+    }
+    while out.ends_with("\n\n") {
+        out.pop();
+    }
+    Ok((out != source).then_some(out))
+}
+
+/// Whether a `[[page]]` block declares a path under `testing/`.
+fn block_is_testing(block: &[&str]) -> bool {
+    block
+        .iter()
+        .any(|line| line.trim_start().starts_with("path = \"testing/"))
 }
 
 /// The guide filename one member renders, which is its directory name.

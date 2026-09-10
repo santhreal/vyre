@@ -32,7 +32,7 @@ fn write_fixture(root: &Path, include_profile: bool) {
     .expect("Fix: fixture workspace manifest must be writable");
     fs::write(
         root.join("a/Cargo.toml"),
-        "[package]\nname = \"a\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[features]\ndefault = []\nfast = []\n",
+        "[package]\nname = \"a\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[package.metadata.vyre]\npublication_class = \"internal-engine\"\n\n[features]\ndefault = []\nfast = []\n",
     )
     .expect("Fix: fixture crate manifest must be writable");
     fs::write(root.join("a/src/lib.rs"), "pub fn answer() -> u32 { 42 }\n")
@@ -44,7 +44,7 @@ fn write_fixture(root: &Path, include_profile: bool) {
     .expect("Fix: fixture integration test must be writable");
     fs::write(
         root.join("docs/CRATE_OWNERSHIP.toml"),
-        format!("schema_version = {REGISTRY_SCHEMA_VERSION}\n\n[[crate]]\npackage = \"a\"\npublication_class = \"internal-engine\"\npath = \"a\"\nowner = \"fixture\"\nlayer = \"foundation\"\nresponsibility = \"Return the exact fixture answer.\"\n"),
+        format!("schema_version = {REGISTRY_SCHEMA_VERSION}\n\n[[crate]]\npackage = \"a\"\npath = \"a\"\nlayer = \"foundation\"\nseam = \"fixture-seam\"\ninterface = \"The exact fixture answer, and nothing else.\"\nresponsibility = \"Return the exact fixture answer.\"\n"),
     )
     .expect("Fix: fixture ownership registry must be writable");
     let profile = if include_profile {

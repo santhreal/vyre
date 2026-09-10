@@ -1014,6 +1014,292 @@ generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
+path = "testing/vyre-libs-analysis.md"
+title = "Testing `vyre-libs-analysis`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-bitset.md"
+title = "Testing `vyre-libs-bitset`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-builder.md"
+title = "Testing `vyre-libs-builder`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-decode.md"
+title = "Testing `vyre-libs-decode`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-device.md"
+title = "Testing `vyre-libs-device`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-encoding.md"
+title = "Testing `vyre-libs-encoding`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-fixpoint.md"
+title = "Testing `vyre-libs-fixpoint`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-graph.md"
+title = "Testing `vyre-libs-graph`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-hash.md"
+title = "Testing `vyre-libs-hash`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-math.md"
+title = "Testing `vyre-libs-math`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-nn.md"
+title = "Testing `vyre-libs-nn`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-parsing.md"
+title = "Testing `vyre-libs-parsing`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-pattern.md"
+title = "Testing `vyre-libs-pattern`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-reasoning.md"
+title = "Testing `vyre-libs-reasoning`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-reduce.md"
+title = "Testing `vyre-libs-reduce`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-rule.md"
+title = "Testing `vyre-libs-rule`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-scheduling.md"
+title = "Testing `vyre-libs-scheduling`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-security.md"
+title = "Testing `vyre-libs-security`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-solvers.md"
+title = "Testing `vyre-libs-solvers`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-text.md"
+title = "Testing `vyre-libs-text`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-vfs.md"
+title = "Testing `vyre-libs-vfs`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
+path = "testing/vyre-libs-visual.md"
+title = "Testing `vyre-libs-visual`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../xtask/src/gates/testing_guides.rs"
+nav = true
+
+[[page]]
 path = "testing/vyre-libs.md"
 title = "Testing `vyre-libs`"
 status = "generated"

@@ -52,7 +52,8 @@ fn the_public_api_artifact_list_is_the_publishable_roster() {
     );
 }
 
-/// Every workspace member has a declared testing guide artifact, and nothing else does.
+/// Every workspace member has a declared testing guide artifact, the page
+/// registry is declared alongside them, and nothing else is.
 #[test]
 fn the_testing_guide_artifact_list_is_the_workspace_roster() {
     let tree = Tree::open(&workspace_root()).expect("the workspace manifest is readable");
@@ -69,10 +70,19 @@ fn the_testing_guide_artifact_list_is_the_workspace_roster() {
         !members.is_empty(),
         "the member set is empty, so this contract would hold against any list"
     );
+    // The gate owns the `testing/` page rows in the registry as well as the
+    // guides themselves, so the registry is a declared artifact that is not a
+    // member directory. Naming it here keeps the rest of the list closed.
+    const REGISTRY: &str = "docs/DOCS.toml";
     let declared: BTreeSet<String> = TESTING_GUIDE_ARTIFACTS
         .iter()
+        .filter(|path| **path != REGISTRY)
         .map(|path| (*path).to_string())
         .collect();
+    assert!(
+        TESTING_GUIDE_ARTIFACTS.contains(&REGISTRY),
+        "the gate writes {REGISTRY}, so it must declare it"
+    );
 
     let missing: Vec<&String> = members.difference(&declared).collect();
     assert!(

@@ -59,7 +59,12 @@ pub const PUBLIC_API_ARTIFACTS: &[&str] = &[
 ];
 
 /// Exact generated artifacts for testing guides.
+///
+/// `docs/DOCS.toml` is here because the gate owns the `testing/` page rows
+/// in it: a generated guide with no registry row reads as an unclassified
+/// page, and typing the row by hand is what went stale.
 pub const TESTING_GUIDE_ARTIFACTS: &[&str] = &[
+    "docs/DOCS.toml",
     "docs/testing/structure-gate.md",
     "docs/testing/vyre-alloc-probe.md",
     "docs/testing/vyre-aot.md",

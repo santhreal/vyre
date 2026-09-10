@@ -1,0 +1,2 @@
+category = "fixed"
+text = "The testing guide generator writes the documentation registry rows for the guides it renders, so a new crate's guide is classified without a hand-written row."

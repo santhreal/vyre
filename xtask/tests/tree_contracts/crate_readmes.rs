@@ -32,7 +32,10 @@ fn write_fixture(root: &Path, readme: Option<&str>, include_profile: bool) {
     .expect("Fix: fixture workspace manifest must be writable");
     fs::write(
         root.join("a/Cargo.toml"),
-        "[package]\nname = \"a\"\nversion = \"0.7.9\"\nedition = \"2021\"\n\n[features]\ndefault = [\"safe\"]\nsafe = []\nfast = []\n",
+        "[package]\nname = \"a\"\nversion = \"0.7.9\"\nedition = \"2021\"
+
+[package.metadata.vyre]
+publication_class = \"internal-engine\"\n\n[features]\ndefault = [\"safe\"]\nsafe = []\nfast = []\n",
     )
     .expect("Fix: fixture crate manifest must be writable");
     fs::write(root.join("a/src/lib.rs"), "pub fn answer() -> u32 { 42 }\n")
@@ -47,7 +50,7 @@ fn write_fixture(root: &Path, readme: Option<&str>, include_profile: bool) {
     }
     fs::write(
         root.join("docs/CRATE_OWNERSHIP.toml"),
-        format!("schema_version = {REGISTRY_SCHEMA_VERSION}\n\n[[crate]]\npackage = \"a\"\npublication_class = \"internal-engine\"\npath = \"a\"\nowner = \"fixture-owner\"\nlayer = \"foundation\"\nresponsibility = \"Return the exact fixture answer.\"\n"),
+        format!("schema_version = {REGISTRY_SCHEMA_VERSION}\n\n[[crate]]\npackage = \"a\"\npath = \"a\"\nlayer = \"foundation\"\nseam = \"fixture-seam\"\ninterface = \"The exact fixture answer, and nothing else.\"\nresponsibility = \"Return the exact fixture answer.\"\n"),
     )
     .expect("Fix: fixture ownership registry must be writable");
     let profile = if include_profile {
@@ -108,7 +111,7 @@ fn generated_contract_contains_every_crate_guide_surface() {
         "### Purpose",
         "Return the exact fixture answer.",
         "### Boundaries",
-        "The `fixture-owner` owner maintains this `foundation` crate",
+        "This crate is the `foundation` layer's `fixture-seam` seam, at `a`.",
         "### Minimal real example",
         "./cargo_full run -p a --example demo",
         "### Features",
@@ -160,7 +163,10 @@ fn manifest_feature_change_invalidates_readme_contract() {
     assert!(run(temp.path(), true).findings.is_empty());
     fs::write(
         temp.path().join("a/Cargo.toml"),
-        "[package]\nname = \"a\"\nversion = \"0.7.9\"\nedition = \"2021\"\n\n[features]\ndefault = [\"safe\"]\nsafe = []\nfast = []\nnew_route = []\n",
+        "[package]\nname = \"a\"\nversion = \"0.7.9\"\nedition = \"2021\"
+
+[package.metadata.vyre]
+publication_class = \"internal-engine\"\n\n[features]\ndefault = [\"safe\"]\nsafe = []\nfast = []\nnew_route = []\n",
     )
     .expect("Fix: changed fixture manifest must be writable");
 
@@ -224,7 +230,10 @@ fn a_retired_claim_in_the_generated_region_is_not_written() {
     track_fixture(temp.path());
     fs::write(
         temp.path().join("a/Cargo.toml"),
-        "[package]\nname = \"a\"\nversion = \"0.4.2\"\nedition = \"2021\"\n\n[features]\ndefault = [\"safe\"]\nsafe = []\nfast = []\n",
+        "[package]\nname = \"a\"\nversion = \"0.4.2\"\nedition = \"2021\"
+
+[package.metadata.vyre]
+publication_class = \"internal-engine\"\n\n[features]\ndefault = [\"safe\"]\nsafe = []\nfast = []\n",
     )
     .expect("Fix: retired fixture manifest must be writable");
 
