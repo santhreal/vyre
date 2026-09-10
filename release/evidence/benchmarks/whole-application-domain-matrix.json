@@ -1,210 +1,194 @@
 {
-  "schema_version": "vyre.whole-application-record.v1",
+  "schema_version": "vyre.whole-application-record.v2",
   "total_workloads": 3,
   "covered_domains": 3,
   "records": [
     {
-      "schema_version": "vyre.whole-application-record.v1",
+      "schema_version": "vyre.whole-application-record.v2",
       "workload_id": "workload.whole_app.dense_numerical_pipeline",
       "workload_name": "Dense Numerical Tensor Contraction & Normalization Pipeline",
       "domain": "DenseNumerical",
       "graph_node_count": 3,
       "graph_edge_count": 2,
       "compile_request_validated": true,
-      "executed_via_production_route": true,
+      "production_route": {
+        "backend_id": "cuda",
+        "device_id": "NVIDIA GeForce RTX 3080 Ti",
+        "device_generation": 2,
+        "artifact_digest": "b3017ad81186acf2295000fa9ee9e07e9338cc5df52c280b6fe96c3169c8d323",
+        "target_payload_digest": "4d6df431cda8d9370aaa71c1b19095ad7d3360a3b115d76e3043d946eb1726cf",
+        "bound_resource_count": 7,
+        "completed_submissions": 31
+      },
       "parity_result": {
+        "compared_values": 1,
         "is_exact_match": true,
         "max_ulp_distance": 0,
         "reference_digest": "d304e2d6380eab46aae93d2bf6c42612fed16c6371ab0c080c80d60d65c3425f",
         "candidate_digest": "d304e2d6380eab46aae93d2bf6c42612fed16c6371ab0c080c80d60d65c3425f",
-        "parity_status": "passed_exact_match"
+        "parity_status": "matched_exact_bytes"
       },
-      "compile_time_ns": 17514442,
-      "load_time_ns": 50000,
-      "p50_latency_ns": 5095311,
-      "p99_latency_ns": 5235061,
+      "compile_time_ns": 1015262,
+      "load_time_ns": 14755149,
+      "measured_samples": 30,
+      "p50_latency_ns": 50070,
+      "p99_latency_ns": 58061,
+      "device_p50_latency_ns": 11008,
       "throughput": {
-        "gflops": 421.4627228838436,
-        "gb_per_sec": 3.292677522530028,
-        "items_per_sec": 200969.08706848315
+        "gflops": null,
+        "gb_per_sec": 0.5726383063710805,
+        "items_per_sec": 20451368.084681448
       },
-      "peak_bytes": 67108864,
-      "resident_bytes": 16777216,
+      "peak_bytes": 24576,
+      "resident_bytes": 8192,
       "cold_state": {
-        "latency_ns": 5159049,
-        "memory_bytes": 67108864,
+        "latency_ns": 134332,
+        "memory_bytes": null,
         "is_cold_start": true,
-        "warmup_ratio": 1.0125091481167685
+        "warmup_ratio": 2.6828839624525664
       },
       "warm_state": {
-        "latency_ns": 5095311,
-        "memory_bytes": 67108864,
+        "latency_ns": 50070,
+        "memory_bytes": null,
         "is_cold_start": false,
-        "warmup_ratio": 1.0125091481167685
+        "warmup_ratio": 2.6828839624525664
       },
-      "selected_schedule_id": "schedule.fused_megakernel_persistent_v1",
-      "native_baseline_comparison": {
+      "selected_schedule_id": "schedule.78c4cda327393710f77fcf6644ffc1c90dbaf01f3b36fd5986c211dedc0b29f8",
+      "input_digest": "c6881785ac48221a06d37de95ac5c9bb4b3fda514590e9798b189e76e3a2997d",
+      "native_baseline_unmeasured": {
         "baseline_id": "native.cutlass.gemm_norm_residual_v3_5_0",
         "baseline_name": "NVIDIA CUTLASS 3.5.0 / cuBLAS 12.4 Contraction Pipeline",
-        "identical_input_digest": "c6881785ac48221a06d37de95ac5c9bb4b3fda514590e9798b189e76e3a2997d",
-        "native_p50_latency_ns": 7133435,
-        "speedup_ratio": 1.3999999214964505,
-        "verdict": "win"
+        "reason": "no version-pinned native baseline `native.cutlass.gemm_norm_residual_v3_5_0` is vendored. Fix: vendor the pinned native kernel and register it before claiming a comparison against it."
       },
-      "equality_conditions": {
-        "semantics": "fp32_ulp_tol:4",
-        "dtype": "u32_f32",
-        "shapes": "[1024, 1024] -> [1024, 1024] -> [1024, 1024]",
-        "raggedness": "uniform_contiguous",
-        "initial_and_final_state": "clean_buffers_unaliased",
-        "target": "sm_90a_sm_86",
-        "stream": "cuda_stream_non_blocking_0",
-        "toolchain_and_flags": "nvcc_12.4_-O3",
-        "clock_and_power_state": "locked_base_clock_tdp_100pct",
-        "warmup": "300_warmup_iterations_discarded",
-        "interleaving": "ab_ba_round_robin_interleaving",
-        "repetitions": "30_measured_samples_clt",
-        "cache_state": "flushed_l2_between_iterations",
-        "objective": "minimize_p50_latency"
-      },
-      "host_environment": "x86_64-linux-gnu / NVIDIA RTX 3080 Ti",
-      "recorded_at_utc": "2026-09-09T07:15:00Z"
+      "host_environment": "x86_64-linux / cuda / NVIDIA GeForce RTX 3080 Ti",
+      "recorded_at_utc": "2026-09-10T09:07:29Z"
     },
     {
-      "schema_version": "vyre.whole-application-record.v1",
+      "schema_version": "vyre.whole-application-record.v2",
       "workload_id": "workload.whole_app.irregular_stateful_traversal",
       "workload_name": "Irregular CSR Sparse Graph Frontier Traversal & Stateful Accumulator",
       "domain": "IrregularStateful",
       "graph_node_count": 3,
       "graph_edge_count": 2,
       "compile_request_validated": true,
-      "executed_via_production_route": true,
+      "production_route": {
+        "backend_id": "cuda",
+        "device_id": "NVIDIA GeForce RTX 3080 Ti",
+        "device_generation": 2,
+        "artifact_digest": "f3052f5f5197dba23e3eacd37b07907c4c529d1e4f30d41eac23572c99405319",
+        "target_payload_digest": "84eebc0fcfc8c80ee4079245b77dfb24cf8b1270324b5120412bd0df439f5e99",
+        "bound_resource_count": 7,
+        "completed_submissions": 31
+      },
       "parity_result": {
+        "compared_values": 1,
         "is_exact_match": true,
         "max_ulp_distance": 0,
         "reference_digest": "5fdbac95abd53af907b57e5f57db7f0c1396f498b397151adb03212867ebd333",
         "candidate_digest": "5fdbac95abd53af907b57e5f57db7f0c1396f498b397151adb03212867ebd333",
-        "parity_status": "passed_exact_match"
+        "parity_status": "matched_exact_bytes"
       },
-      "compile_time_ns": 17171153,
-      "load_time_ns": 50000,
-      "p50_latency_ns": 5266540,
-      "p99_latency_ns": 5594413,
+      "compile_time_ns": 816977,
+      "load_time_ns": 11749689,
+      "measured_samples": 30,
+      "p50_latency_ns": 50119,
+      "p99_latency_ns": 56245,
+      "device_p50_latency_ns": 11104,
       "throughput": {
         "gflops": null,
-        "gb_per_sec": 0.02488768717222313,
-        "items_per_sec": 1898779.8440721992
+        "gb_per_sec": 0.5720784532811908,
+        "items_per_sec": 20431373.3314711
       },
-      "peak_bytes": 33554432,
-      "resident_bytes": 8388608,
+      "peak_bytes": 24576,
+      "resident_bytes": 8192,
       "cold_state": {
-        "latency_ns": 5406138,
-        "memory_bytes": 33554432,
+        "latency_ns": 81128,
+        "memory_bytes": null,
         "is_cold_start": true,
-        "warmup_ratio": 1.0265065868672791
+        "warmup_ratio": 1.6187074762066282
       },
       "warm_state": {
-        "latency_ns": 5266540,
-        "memory_bytes": 33554432,
+        "latency_ns": 50119,
+        "memory_bytes": null,
         "is_cold_start": false,
-        "warmup_ratio": 1.0265065868672791
+        "warmup_ratio": 1.6187074762066282
       },
-      "selected_schedule_id": "schedule.fused_megakernel_persistent_v1",
-      "native_baseline_comparison": {
+      "selected_schedule_id": "schedule.70cdcebfa380d32923c0e4d22c83df0ca7848d91ab48123cc52aaf51c7a18900",
+      "input_digest": "42ded5eeca877f23b336768be0ba5082190d3e6dcae7037bf8ee9db2d31abb1d",
+      "native_baseline_unmeasured": {
         "baseline_id": "native.cub.spmv_segmented_scatter_v2_1_0",
         "baseline_name": "NVIDIA CUB 2.1.0 / cuSPARSE 12.3.0 SpMV Scatter Pipeline",
-        "identical_input_digest": "42ded5eeca877f23b336768be0ba5082190d3e6dcae7037bf8ee9db2d31abb1d",
-        "native_p50_latency_ns": 8426464,
-        "speedup_ratio": 1.6,
-        "verdict": "win"
+        "reason": "no version-pinned native baseline `native.cub.spmv_segmented_scatter_v2_1_0` is vendored. Fix: vendor the pinned native kernel and register it before claiming a comparison against it."
       },
-      "equality_conditions": {
-        "semantics": "exact",
-        "dtype": "u32",
-        "shapes": "vertices=1024,edges=4096",
-        "raggedness": "csr_ragged_irregular",
-        "initial_and_final_state": "clean_buffers_unaliased",
-        "target": "sm_90a_sm_86",
-        "stream": "cuda_stream_non_blocking_0",
-        "toolchain_and_flags": "nvcc_12.4_-O3",
-        "clock_and_power_state": "locked_base_clock_tdp_100pct",
-        "warmup": "300_warmup_iterations_discarded",
-        "interleaving": "ab_ba_round_robin_interleaving",
-        "repetitions": "30_measured_samples_clt",
-        "cache_state": "flushed_l2_between_iterations",
-        "objective": "minimize_p50_latency"
-      },
-      "host_environment": "x86_64-linux-gnu / NVIDIA RTX 3080 Ti",
-      "recorded_at_utc": "2026-09-09T07:15:00Z"
+      "host_environment": "x86_64-linux / cuda / NVIDIA GeForce RTX 3080 Ti",
+      "recorded_at_utc": "2026-09-10T09:07:29Z"
     },
     {
-      "schema_version": "vyre.whole-application-record.v1",
+      "schema_version": "vyre.whole-application-record.v2",
       "workload_id": "workload.whole_app.interactive_event_pipeline",
       "workload_name": "Latency-Sensitive Interactive UI Layout & Multi-Layer Composite Raster",
       "domain": "LatencySensitiveInteractive",
       "graph_node_count": 3,
       "graph_edge_count": 2,
       "compile_request_validated": true,
-      "executed_via_production_route": true,
+      "production_route": {
+        "backend_id": "cuda",
+        "device_id": "NVIDIA GeForce RTX 3080 Ti",
+        "device_generation": 2,
+        "artifact_digest": "83fc48820b033b3eafd83e19973f74407a280bbd88591bbcf4b824c25db51739",
+        "target_payload_digest": "99a2aaba088cdc6265b2c8379282e31b880c015759c9c67293330a973dcb5b84",
+        "bound_resource_count": 6,
+        "completed_submissions": 31
+      },
       "parity_result": {
+        "compared_values": 1,
         "is_exact_match": true,
         "max_ulp_distance": 0,
         "reference_digest": "dfb67354d133ebe5364a19155c163243b07e3756187e45bb822fd315f14aaab4",
         "candidate_digest": "dfb67354d133ebe5364a19155c163243b07e3756187e45bb822fd315f14aaab4",
-        "parity_status": "passed_exact_match"
+        "parity_status": "matched_exact_bytes"
       },
-      "compile_time_ns": 17270141,
-      "load_time_ns": 50000,
-      "p50_latency_ns": 2559054,
-      "p99_latency_ns": 2640871,
+      "compile_time_ns": 806418,
+      "load_time_ns": 11357429,
+      "measured_samples": 30,
+      "p50_latency_ns": 49037,
+      "p99_latency_ns": 53933,
+      "device_p50_latency_ns": 12128,
       "throughput": {
         "gflops": null,
-        "gb_per_sec": 0.051218926994115795,
-        "items_per_sec": 200073.9335707648
+        "gb_per_sec": 0.2505862919836042,
+        "items_per_sec": 10441095.499316843
       },
-      "peak_bytes": 16777216,
-      "resident_bytes": 4194304,
+      "peak_bytes": 10240,
+      "resident_bytes": 4096,
       "cold_state": {
-        "latency_ns": 2576908,
-        "memory_bytes": 16777216,
+        "latency_ns": 89511,
+        "memory_bytes": null,
         "is_cold_start": true,
-        "warmup_ratio": 1.0069767968944774
+        "warmup_ratio": 1.8253767563268553
       },
       "warm_state": {
-        "latency_ns": 2559054,
-        "memory_bytes": 16777216,
+        "latency_ns": 49037,
+        "memory_bytes": null,
         "is_cold_start": false,
-        "warmup_ratio": 1.0069767968944774
+        "warmup_ratio": 1.8253767563268553
       },
-      "selected_schedule_id": "schedule.fused_megakernel_persistent_v1",
-      "native_baseline_comparison": {
+      "selected_schedule_id": "schedule.c5463fc4bc40350a351858482c7b3812d171b0c4692565b2ca8fb8c7f4a3f19c",
+      "input_digest": "8376a12b2fb33d0dbfc8c4ba0838f2b7d8bb6f29ed2d2dcd254c9da0d245d765",
+      "native_baseline_unmeasured": {
         "baseline_id": "native.skia.composite_raster_blend_v1_2_0",
         "baseline_name": "Skia / DirectWrite-Style GPU Compositor Pipeline",
-        "identical_input_digest": "8376a12b2fb33d0dbfc8c4ba0838f2b7d8bb6f29ed2d2dcd254c9da0d245d765",
-        "native_p50_latency_ns": 3838581,
-        "speedup_ratio": 1.5,
-        "verdict": "win"
+        "reason": "no version-pinned native baseline `native.skia.composite_raster_blend_v1_2_0` is vendored. Fix: vendor the pinned native kernel and register it before claiming a comparison against it."
       },
-      "equality_conditions": {
-        "semantics": "exact",
-        "dtype": "u32_rgba8",
-        "shapes": "tiles=512,pixels_per_tile=64",
-        "raggedness": "uniform_contiguous",
-        "initial_and_final_state": "clean_buffers_unaliased",
-        "target": "sm_90a_sm_86",
-        "stream": "cuda_stream_non_blocking_0",
-        "toolchain_and_flags": "nvcc_12.4_-O3",
-        "clock_and_power_state": "locked_base_clock_tdp_100pct",
-        "warmup": "300_warmup_iterations_discarded",
-        "interleaving": "ab_ba_round_robin_interleaving",
-        "repetitions": "30_measured_samples_clt",
-        "cache_state": "flushed_l2_between_iterations",
-        "objective": "minimize_p99_latency"
-      },
-      "host_environment": "x86_64-linux-gnu / NVIDIA RTX 3080 Ti",
-      "recorded_at_utc": "2026-09-09T07:15:00Z"
+      "host_environment": "x86_64-linux / cuda / NVIDIA GeForce RTX 3080 Ti",
+      "recorded_at_utc": "2026-09-10T09:07:29Z"
     }
   ],
-  "status": "passed",
-  "generated_at_utc": "2026-09-09T07:15:00Z"
+  "backend_id": "cuda",
+  "status": "measured_with_unstated_fields",
+  "readiness_gaps": [
+    "equality_conditions",
+    "native_baseline_comparison"
+  ],
+  "generated_at_utc": "2026-09-10T09:07:29Z"
 }
