@@ -18,5 +18,5 @@ pub mod sweep_math_prefix_scan_exclusive_volume_oracle_matrix;
 #[path = "sweep_math_prefix_scan_inclusive_volume_oracle_matrix.rs"]
 pub mod sweep_math_prefix_scan_inclusive_volume_oracle_matrix;
 
-#[path = "wire_words/mod.rs"]
-pub mod wire_words;
+#[path = "scan_oracle/mod.rs"]
+pub mod scan_oracle;

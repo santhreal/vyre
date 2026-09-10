@@ -5,8 +5,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::wire_words;
-use wire_words::{alternating, lcg_u32 as lcg, ramp};
+use vyre_test_support::word_corpora::{alternating_words, lcg32_words, ramp_words};
 
 type RadixSort = fn(&[u32], u32) -> Vec<u32>;
 type RadixSortInto = fn(&[u32], u32, &mut Vec<u32>, &mut Vec<u32>);
@@ -89,16 +88,16 @@ fn radix_cases() -> Vec<(Vec<u32>, u32)> {
             }
         }
         for bits in bit_widths {
-            cases.push((ramp(len, 0), bits));
-            cases.push((ramp(len, u32::MAX), bits));
-            cases.push((alternating(len, 0, u32::MAX), bits));
+            cases.push((ramp_words(len, 0, 0x9E37_79B9), bits));
+            cases.push((ramp_words(len, u32::MAX, 0x9E37_79B9), bits));
+            cases.push((alternating_words(len, 0, u32::MAX), bits));
             cases.push((high_low_byte_pattern(len), bits));
         }
     }
 
     for seed in [0x0000_0001, 0xDEAD_BEEF, 0xFFFF_FFFE] {
         for len in lengths {
-            let input = lcg(seed, len);
+            let input = lcg32_words(seed, len);
             for bits in bit_widths {
                 cases.push((input.clone(), bits));
             }
@@ -117,7 +116,7 @@ fn radix_cases() -> Vec<(Vec<u32>, u32)> {
             6 => 32,
             _ => 33,
         };
-        let input = lcg(case as u32 ^ 0x51AF_0D00, len);
+        let input = lcg32_words(case as u32 ^ 0x51AF_0D00, len);
         cases.push((input, bits));
     }
 

@@ -9,10 +9,7 @@ use std::sync::Arc;
 
 use vyre_reference::value::Value;
 
-#[path = "support/scalar_corpus.rs"]
-mod scalar_corpus;
-
-use scalar_corpus::mix32;
+use vyre_test_support::scalar_corpora::mix32;
 
 #[test]
 fn generated_extend_bytes_width_preserves_existing_prefix_for_8192_cases() {

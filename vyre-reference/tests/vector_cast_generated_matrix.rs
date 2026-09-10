@@ -7,10 +7,7 @@ use vyre_reference::{
     workgroup::{Invocation, InvocationIds, Memory},
 };
 
-#[path = "support/scalar_corpus.rs"]
-mod scalar_corpus;
-
-use scalar_corpus::mix32;
+use vyre_test_support::scalar_corpora::mix32;
 
 fn eval_cast(target: DataType, source: Expr) -> Value {
     let program = Program::wrapped(Vec::new(), [1, 1, 1], Vec::new());

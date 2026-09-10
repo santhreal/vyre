@@ -13,7 +13,8 @@ use crate::wire_words;
 use wire_words::decode_u32_words as decode_u32;
 
 use crate::presence_oracle;
-use presence_oracle::{random_haystack_unbounded as random_haystack, random_literals, Lcg};
+use presence_oracle::{random_haystack_unbounded as random_haystack, random_literals};
+use vyre_test_support::word_corpora::Lcg;
 use std::collections::BTreeSet;
 
 use vyre_libs_pattern::pattern::classic_ac::{

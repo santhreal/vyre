@@ -19,10 +19,7 @@ use vyre_primitives::{
 use vyre_reference::dual_impls::{EvalError, ReferenceEvaluator};
 use vyre_reference::workgroup::Memory;
 
-#[path = "support/scalar_corpus.rs"]
-mod scalar_corpus;
-
-use scalar_corpus::{u32_anchors, u32_evaluator_corpus};
+use vyre_test_support::scalar_corpora::{u32_anchors, u32_evaluator_corpus};
 
 /// One binary evaluator and the contract its output word must satisfy.
 struct BinaryRow {

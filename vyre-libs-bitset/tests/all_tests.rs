@@ -4,9 +4,6 @@
 #[path = "gate_fixtures/mod.rs"]
 pub mod gate_fixtures;
 
-#[path = "wire_words/mod.rs"]
-pub mod wire_words;
-
 #[path = "dense_matvec_cases/mod.rs"]
 pub mod dense_matvec_cases;
 

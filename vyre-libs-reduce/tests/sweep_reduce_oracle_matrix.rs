@@ -13,8 +13,7 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "reduce")]
 
-use crate::wire_words;
-use wire_words::{alternating, lcg_u32 as lcg, ramp};
+use vyre_test_support::word_corpora::{alternating_words, lcg32_words, ramp_words};
 
 use vyre_reference::composition_witness::{
     exclusive_prefix_sum_witness, gather_witness, gather_witness_into, histogram_witness,
@@ -270,7 +269,7 @@ fn tree_or(values: &[u32]) -> u32 {
 fn histogram_inputs() -> impl Iterator<Item = (Vec<u32>, u32)> {
     (0..CASES).map(|case| {
         let num_bins = (4 + (case % 32)) as u32;
-        let input = lcg(case as u32, case % 97)
+        let input = lcg32_words(case as u32, case % 97)
             .into_iter()
             .enumerate()
             .map(|(slot, raw)| {
@@ -294,8 +293,8 @@ fn reduce_inputs() -> impl Iterator<Item = Vec<u32>> {
         [
             vec![0u32; len],
             vec![u32::MAX; len],
-            ramp(len, 0x1357_9BDF),
-            alternating(len, 0x5555_5555, 0xAAAA_AAAA),
+            ramp_words(len, 0x1357_9BDF, 0x9E37_79B9),
+            alternating_words(len, 0x5555_5555, 0xAAAA_AAAA),
         ]
     });
     let short = (0..CASES).map(|case| {
@@ -306,10 +305,10 @@ fn reduce_inputs() -> impl Iterator<Item = Vec<u32>> {
             3 => 257,
             _ => 1 + (case % 130),
         };
-        lcg(case as u32 ^ 0xAED0_CE00, len)
+        lcg32_words(case as u32 ^ 0xAED0_CE00, len)
     });
-    let wide = (0..CASES).map(|case| lcg(case as u32, 1 + (case % 200)));
-    let dense = (0..CASES).map(|case| lcg(case as u32, 1 + (case % 129)));
+    let wide = (0..CASES).map(|case| lcg32_words(case as u32, 1 + (case % 200)));
+    let dense = (0..CASES).map(|case| lcg32_words(case as u32, 1 + (case % 129)));
     fixed.chain(short).chain(wide).chain(dense)
 }
 
@@ -318,8 +317,8 @@ fn reduce_inputs() -> impl Iterator<Item = Vec<u32>> {
 /// bounds gate the GPU IR applies.
 fn index_pairs() -> impl Iterator<Item = (Vec<u32>, Vec<u32>)> {
     (0..CASES).map(|case| {
-        let values = lcg(case as u32, 1 + (case % 64));
-        let indices = lcg(case as u32 ^ 0x1DEF_0001, 1 + (case % 64))
+        let values = lcg32_words(case as u32, 1 + (case % 64));
+        let indices = lcg32_words(case as u32 ^ 0x1DEF_0001, 1 + (case % 64))
             .into_iter()
             .enumerate()
             .map(|(slot, raw)| {

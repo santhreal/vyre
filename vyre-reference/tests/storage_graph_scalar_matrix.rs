@@ -35,10 +35,7 @@ use vyre_reference::ieee754;
 use vyre_reference::ieee754::canonical_f32;
 use vyre_reference::{run_storage_graph, ReferenceError};
 
-#[path = "support/scalar_corpus.rs"]
-mod scalar_corpus;
-
-use scalar_corpus::{f32_corpus, i32_corpus, u32_corpus, u64_corpus};
+use vyre_test_support::scalar_corpora::{f32_corpus, i32_corpus, u32_corpus, u64_corpus};
 use vyre_test_support::spec_variant_tables::{builtin_bin_ops, builtin_un_ops};
 
 /// Binary cases a sampled row draws.

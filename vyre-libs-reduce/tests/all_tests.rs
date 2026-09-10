@@ -4,9 +4,6 @@
 #[path = "gate_fixtures/mod.rs"]
 pub mod gate_fixtures;
 
-#[path = "wire_words/mod.rs"]
-pub mod wire_words;
-
 #[path = "adversarial_reduce_gather.rs"]
 pub mod adversarial_reduce_gather;
 

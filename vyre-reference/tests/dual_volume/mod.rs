@@ -8,7 +8,6 @@
 //! could hide, so the sweep lives here and each target supplies only its id and
 //! its expectation.
 
-#![allow(dead_code)]
 
 use vyre_reference::{dual_op_ids, resolve_dual};
 
@@ -18,7 +17,8 @@ const CASES: u32 = 16384;
 #[path = "../support/dual_operands.rs"]
 mod dual_operands;
 
-use dual_operands::{binary_input, hostile_pair};
+use dual_operands::binary_input;
+use vyre_test_support::scalar_corpora::hostile_pair;
 
 /// Sweep every hostile operand pair through both independent references and an
 /// expectation written outside the crate under test.

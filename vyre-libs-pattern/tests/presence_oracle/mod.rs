@@ -13,12 +13,7 @@
 //! suffix3 cascade, no candidate masks, no region binary search, no packed-byte
 //! extraction (so any divergence is a real recall bug at the source).
 
-// Each integration-test binary that `mod presence_oracle;`s this file uses a
-// subset of the helpers; silence the unused-in-this-binary warnings. `dead_code`
-// covers helpers a binary never calls; `unreachable_pub` covers the `pub` on a
-// shared helper that a given binary does not re-export (the `pub` exists so the
-// BRACKET_KIND_OTHER gate can import it).
-#![allow(dead_code, unreachable_pub)]
+// Every helper here is reached from the one target that includes this module.
 
 use vyre_libs_pattern::pattern::classic_ac::{
     classic_ac_compile, presence_by_region_words, ClassicAcAutomaton,
@@ -32,37 +27,10 @@ use vyre_reference::composition_witness::{
 };
 use vyre_reference::value::Value;
 
+use vyre_test_support::word_corpora::Lcg;
+
 /// A labeled literal-set fixture with its haystack and region starts.
 pub type PresenceCase = (String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>);
-
-/// Deterministic LCG so failures reproduce from the case index alone.
-pub struct Lcg(pub u64);
-
-impl Lcg {
-    /// Seed the generator.
-    #[must_use]
-    pub fn new(seed: u64) -> Self {
-        Self(seed)
-    }
-
-    /// Advance the state and return the next 32 bits.
-    pub fn next_u32(&mut self) -> u32 {
-        self.0 = self
-            .0
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
-        (self.0 >> 33) as u32
-    }
-
-    /// A value in `0..n`, or `0` when `n` is zero.
-    pub fn below(&mut self, n: u32) -> u32 {
-        if n == 0 {
-            0
-        } else {
-            self.next_u32() % n
-        }
-    }
-}
 
 /// `region = largest r with region_starts[r] <= end_pos`. `region_starts` is
 /// ascending and starts at 0, so this is `upper_bound(end_pos) - 1`.

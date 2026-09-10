@@ -1,22 +1,9 @@
-//! The hostile operand pairs and byte packing the dual-reference suites share.
+//! The byte packing the dual-reference suites feed a facet.
 //!
-//! WHY: four dual targets carried the same seeded pair generator and the same
-//! two-word packing beside it. A copy that changes its multiplier sweeps a
-//! different operand space under the same name, so both have one owner here and
-//! every consumer calls it.
-
-#![allow(dead_code)]
-
-/// Derive one hostile operand pair from a seed.
-pub(crate) fn hostile_pair(seed: u32) -> (u32, u32) {
-    let left = seed
-        .wrapping_mul(0x85eb_ca6b)
-        .rotate_left((seed ^ 0x13) & 31);
-    let right = seed
-        .wrapping_mul(0xc2b2_ae35)
-        .rotate_right((seed ^ 0x29) & 31);
-    (left, right)
-}
+//! The seeded pair generator this module carried is one contract with one owner,
+//! `vyre_test_support::scalar_corpora::hostile_pair`. What stays here is the
+//! packing, which names this crate's wire layout and so is domain-specific to
+//! it. Every target that includes this module calls it.
 
 /// Pack one operand pair into the byte input a dual facet consumes.
 pub(crate) fn binary_input(left: u32, right: u32) -> Vec<u8> {

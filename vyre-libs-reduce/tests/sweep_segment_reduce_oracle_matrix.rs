@@ -5,8 +5,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::wire_words;
-use wire_words::{lcg_u32 as lcg, ramp};
+use vyre_test_support::word_corpora::{lcg32_words, ramp_words};
 
 type SegmentReduce = fn(&[u32], &[u32]) -> Vec<u32>;
 type SegmentReduceInto = fn(&[u32], &[u32], &mut Vec<u32>);
@@ -80,7 +79,7 @@ fn segment_cases() -> impl Iterator<Item = (Vec<u32>, Vec<u32>)> {
             [
                 (vec![fill; len], single_segment_offsets(len)),
                 (vec![fill; len], alternating_empty_segments(len)),
-                (ramp(len, fill), uniform_segment_offsets(len, 4)),
+                (ramp_words(len, fill, 0x9E37_79B9), uniform_segment_offsets(len, 4)),
             ]
             .into_iter()
         })
@@ -94,7 +93,7 @@ fn segment_cases() -> impl Iterator<Item = (Vec<u32>, Vec<u32>)> {
             _ => case % 129,
         };
         let seg_count = 1 + (case % 17);
-        let input = lcg(case as u32 ^ 0x9E37_79B9, len);
+        let input = lcg32_words(case as u32 ^ 0x9E37_79B9, len);
         let offsets = random_valid_offsets(case as u64 ^ 0xD00D_F00D, len, seg_count);
         (input, offsets)
     });

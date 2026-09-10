@@ -183,7 +183,7 @@ pub use registry_closure::{
 };
 #[cfg(feature = "semantic-requests")]
 pub mod artifact_fixtures;
-#[cfg(feature = "ir-fixtures")]
+#[cfg(feature = "parity-oracles")]
 pub mod async_span_parity;
 #[cfg(feature = "ir-fixtures")]
 pub mod backend_capabilities;
@@ -200,8 +200,10 @@ pub mod consumer_boundary;
 pub mod data_type_elements;
 #[cfg(feature = "ir-fixtures")]
 pub mod data_type_variants;
-#[cfg(feature = "ir-fixtures")]
+#[cfg(feature = "parity-oracles")]
 pub mod differential_matrix;
+#[cfg(feature = "ir-fixtures")]
+pub mod elementwise_programs;
 pub mod exploded_ifds_cases;
 #[cfg(feature = "ir-fixtures")]
 pub mod expr_variants;
@@ -214,7 +216,7 @@ pub mod fixture_instance;
 pub mod graph_shapes;
 #[cfg(feature = "ir-fixtures")]
 pub mod graph_values;
-#[cfg(feature = "ir-fixtures")]
+#[cfg(feature = "parity-oracles")]
 pub mod hardware_oracle;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_regions;
@@ -232,7 +234,7 @@ pub mod mutation_testing;
 pub mod pass_programs;
 #[cfg(feature = "driver-contracts")]
 pub mod preferred_dispatch_backend_contract;
-#[cfg(feature = "ir-fixtures")]
+#[cfg(feature = "parity-oracles")]
 pub mod registry_nets;
 pub mod replay_capsule;
 #[cfg(feature = "driver-artifact-contracts")]
@@ -241,18 +243,22 @@ pub mod resident_async_overlap_contract;
 pub mod selected_schedules;
 #[cfg(feature = "semantic-requests")]
 pub mod semantic_requests;
+pub mod scalar_corpora;
 #[cfg(feature = "spec-strategies")]
 pub mod spec_op_strategies;
 pub mod spec_variant_tables;
 #[cfg(feature = "ir-fixtures")]
 pub mod strict_float_programs;
+#[cfg(feature = "ir-fixtures")]
+pub mod structural_ir;
 pub mod sweep_rng;
 #[cfg(feature = "driver-artifact-contracts")]
 pub mod target_compiler_contract;
-#[cfg(feature = "semantic-requests")]
+#[cfg(feature = "semantic-parity")]
 pub mod test_parity_oracles;
 #[cfg(feature = "ir-fixtures")]
 pub mod tile_programs;
+pub mod word_corpora;
 #[cfg(feature = "ir-fixtures")]
 pub mod wire_hostile_inputs;
 #[cfg(feature = "ir-fixtures")]

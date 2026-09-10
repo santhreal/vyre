@@ -4,8 +4,7 @@
 //! drives every scalar reducer, vector unary bitset map, and binary bitset map
 //! through the same hostile length/value corpus.
 
-use crate::wire_words;
-use wire_words::{alternating, lcg_u32 as lcg, ramp};
+use vyre_test_support::word_corpora::{alternating_words, pcg_words, ramp_words};
 
 type UnaryScalar = fn(&[u32]) -> u32;
 type UnaryVector = fn(&[u32]) -> Vec<u32>;
@@ -190,10 +189,10 @@ fn unary_cases() -> Vec<Vec<u32>> {
         for fill in fills {
             cases.push(vec![fill; len]);
         }
-        cases.push(ramp(len, 0));
-        cases.push(ramp(len, u32::MAX));
-        cases.push(alternating(len, 0, u32::MAX));
-        cases.push(alternating(len, 0x5555_5555, 0xAAAA_AAAA));
+        cases.push(ramp_words(len, 0, 1));
+        cases.push(ramp_words(len, u32::MAX, 1));
+        cases.push(alternating_words(len, 0, u32::MAX));
+        cases.push(alternating_words(len, 0x5555_5555, 0xAAAA_AAAA));
     }
 
     for seed in [
@@ -205,7 +204,7 @@ fn unary_cases() -> Vec<Vec<u32>> {
         0xFFFF_FFFE,
     ] {
         for len in lengths {
-            cases.push(lcg(seed, len));
+            cases.push(pcg_words(seed, len));
         }
     }
 
@@ -228,10 +227,10 @@ fn binary_cases() -> Vec<(Vec<u32>, Vec<u32>)> {
     for lhs_len in lengths {
         for rhs_len in lengths {
             cases.push((vec![0; lhs_len], vec![u32::MAX; rhs_len]));
-            cases.push((ramp(lhs_len, 0x1357_9BDF), ramp(rhs_len, 0x2468_ACE0)));
+            cases.push((ramp_words(lhs_len, 0x1357_9BDF, 1), ramp_words(rhs_len, 0x2468_ACE0, 1)));
             cases.push((
-                alternating(lhs_len, 0x5555_5555, 0xAAAA_AAAA),
-                alternating(rhs_len, 0xFFFF_0000, 0x0000_FFFF),
+                alternating_words(lhs_len, 0x5555_5555, 0xAAAA_AAAA),
+                alternating_words(rhs_len, 0xFFFF_0000, 0x0000_FFFF),
             ));
         }
     }
@@ -246,10 +245,10 @@ fn binary_cases() -> Vec<(Vec<u32>, Vec<u32>)> {
 
     for seed in [0x1234_5678, 0xA5A5_5A5A, 0xFFFF_FFFE, 0x8000_0000] {
         for len in lengths {
-            cases.push((lcg(seed, len), lcg(seed.rotate_left(13), len)));
+            cases.push((pcg_words(seed, len), pcg_words(seed.rotate_left(13), len)));
             cases.push((
-                lcg(seed, len),
-                lcg(seed.rotate_right(7), len.saturating_add(1)),
+                pcg_words(seed, len),
+                pcg_words(seed.rotate_right(7), len.saturating_add(1)),
             ));
         }
     }

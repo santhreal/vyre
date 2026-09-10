@@ -12,8 +12,8 @@
 
 #![cfg(feature = "math-kernels")]
 
-use crate::wire_words;
-use wire_words::prefix_scan_cpu_ref as cpu_ref;
+use crate::scan_oracle;
+use scan_oracle::prefix_scan_cpu_ref as cpu_ref;
 
 use std::collections::HashMap;
 

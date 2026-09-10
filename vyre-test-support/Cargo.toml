@@ -21,14 +21,32 @@ default = []
 # Fixtures over the IR statement enum. Opt-in because it pulls vyre-foundation
 # into the dev graph of whichever crate enables it, and most consumers of this
 # crate only want the source-text closure enumerator or the flat element list.
-# The fixtures build inline shapes with smallvec, so it joins the graph too.
-ir-fixtures = ["dep:vyre-foundation", "dep:smallvec", "dep:vyre-reference", "dep:blake3", "dep:vyre-primitives"]
+# The fixtures build inline shapes with smallvec, so it joins the graph too, and
+# the synthetic schedule fixture hashes its own identity bytes with blake3.
+#
+# It stops here. A fixture states what IR exists; it never evaluates one, so the
+# reference interpreter and the intrinsic op crate are named by the contracts
+# that evaluate against them and by nothing else. Folding either in here put a
+# reference interpreter and an op library into the dev graph of vyre-spec, a leaf
+# crate that wanted a list of DataType discriminants, and into vyre-foundation's
+# own dev graph through two crates that depend on vyre-foundation.
+ir-fixtures = ["dep:vyre-foundation", "dep:smallvec", "dep:blake3"]
+# The reference-oracle bridge: the differential matrix, the hardware oracle, the
+# async span parity property, and the registry net cases. Every one of them
+# evaluates a program on the parity oracle, so this is where vyre-reference is
+# declared. A crate that only builds IR shapes never links an interpreter.
+parity-oracles = ["ir-fixtures", "dep:vyre-reference"]
 # The semantic execution seam: the graph, bindings, and request every backend
 # contract shares, plus the canonical compiler artifact fixtures every crate
 # downstream of vyre-megakernel admits, packages or reports on. Separate from
 # `ir-fixtures` because it needs the compiler boundary crate, which the IR
 # fixtures do not.
 semantic-requests = ["ir-fixtures", "dep:vyre-megakernel"]
+# The parity oracle stated over the semantic seam: `test_parity_oracles` compares
+# a request result against the reference interpreter and reads operand bytes
+# through vyre-primitives, so it needs the oracle, the seam, and the op crate at
+# once. Named separately so the seam alone stays interpreter-free.
+semantic-parity = ["semantic-requests", "parity-oracles", "dep:vyre-primitives"]
 # The backend-neutral driver registry contract. `vyre-driver` is the driver
 # boundary crate, not a concrete backend, so a driver crate enabling this joins
 # no sibling backend to its dev graph. Nothing else here needs it, so it is not
@@ -92,8 +110,9 @@ path = "tests/all_tests.rs"
 
 [[test]]
 name = "all_tests_ir_fixtures"
-path = "tests/all_tests_ir_fixtures.rs"
-required-features = ["ir-fixtures"]
+# The differential matrix and the registry nets in this binary evaluate on the
+# parity oracle, so the target declares that feature alongside the fixtures.
+required-features = ["ir-fixtures", "parity-oracles"]
 
 # Isolated: the body calls `set_current_dir`, and a process has one working
 # directory. The contract is that `vyre_workspace_root` answers for the

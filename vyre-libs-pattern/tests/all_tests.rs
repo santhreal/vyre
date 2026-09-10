@@ -24,5 +24,8 @@ pub mod scan_ac_transition_walk_single_owner;
 #[path = "scan_hit_buffer_layout_contracts.rs"]
 pub mod scan_hit_buffer_layout_contracts;
 
+#[path = "substring_search_boundaries.rs"]
+pub mod substring_search_boundaries;
+
 #[path = "wire_words/mod.rs"]
 pub mod wire_words;

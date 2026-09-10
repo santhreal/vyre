@@ -3,8 +3,9 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "math")]
 
-use crate::wire_words;
-use wire_words::{lcg_u32, prefix_scan_cpu_ref as cpu_ref};
+use crate::scan_oracle;
+use vyre_test_support::word_corpora::lcg32_words;
+use scan_oracle::prefix_scan_cpu_ref as cpu_ref;
 
 use vyre_libs_math::math::prefix_scan::ScanKind;
 
@@ -24,7 +25,7 @@ const CASES: usize = 16384;
 fn sweep_math_prefix_scan_exclusive_volume_oracle_matrix() {
     for idx in 0..CASES {
         let len = idx % 256;
-        let input = lcg_u32(idx as u32, len);
+        let input = lcg32_words(idx as u32, len);
         assert_eq!(
             cpu_ref(&input, ScanKind::ExclusiveSum),
             oracle_exclusive_scan(&input),

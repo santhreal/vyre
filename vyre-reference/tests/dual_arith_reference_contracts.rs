@@ -5,7 +5,8 @@ use vyre_reference::{dual_op_ids, resolve_dual};
 #[path = "support/dual_operands.rs"]
 mod dual_operands;
 
-use dual_operands::{binary_input, hostile_pair};
+use dual_operands::binary_input;
+use vyre_test_support::scalar_corpora::hostile_pair;
 
 #[test]
 fn arithmetic_dual_references_are_registered_in_the_public_oracle() {
