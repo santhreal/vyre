@@ -5,14 +5,16 @@
 //! prepare/commit journaling with idempotency keys, and supervised worker restart budgets.
 
 use core::sync::atomic::{AtomicU64, Ordering};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::format;
 use std::string::String;
-use std::sync::Mutex;
+use std::sync::{Condvar, Mutex};
+use std::time::{Duration, Instant};
 
 use vyre_foundation::failure_domain::{
-    reclaim_poisoned_mutex, reclaim_poisoned_mutex_observed, FailureDomain, Reclaimed,
-    RecoveryClass, RecoveryDisposition, TypedRecoveryError,
+    reclaim_poisoned_condvar_wait_timeout, reclaim_poisoned_mutex, reclaim_poisoned_mutex_observed,
+    FailureDomain, Reclaimed, RecoveryClass, RecoveryDisposition, StateOwnerRecovery,
+    TypedRecoveryError,
 };
 
 /// The subsystem every poison report in this module names as the owner.
@@ -36,15 +38,8 @@ pub enum GuardedState<T> {
     },
 }
 
-/// Trait implemented by mutable state owners declaring their failure domain and recovery class.
-pub trait StateOwnerRecovery {
-    /// Failure domain this state owner belongs to.
-    fn failure_domain(&self) -> FailureDomain;
-    /// Recovery class defining how failures are remediated.
-    fn recovery_class(&self) -> RecoveryClass;
-}
-
 /// Thread-safe atomic guarded container that eliminates uncoordinated lock poison.
+#[derive(Debug)]
 pub struct AtomicGuardedState<T> {
     inner: Mutex<GuardedState<T>>,
     domain: FailureDomain,
@@ -106,6 +101,48 @@ impl<T> AtomicGuardedState<T> {
         guard
     }
 
+    /// Access the guarded state with an operational closure whose error type
+    /// is the caller's.
+    ///
+    /// WHY: an owner keeps its own error vocabulary while the reason for a
+    /// rejection stays the governed one. A rejection arrives as
+    /// `E::from(TypedRecoveryError)`, which states the failure domain, the
+    /// recovery class and the corrective action, so a caller cannot mistake an
+    /// operation this owner refused to start for one that ran and failed.
+    ///
+    /// # Errors
+    ///
+    /// Returns the closure's error, or the rejection this owner reports while
+    /// it is rebuilding or terminal.
+    pub fn try_with_state<R, E>(&self, op: impl FnOnce(&mut T) -> Result<R, E>) -> Result<R, E>
+    where
+        E: From<TypedRecoveryError>,
+    {
+        let mut guard = self.lock_state();
+
+        match &mut *guard {
+            GuardedState::Ready(value) => op(value),
+            GuardedState::Rebuilding => Err(E::from(TypedRecoveryError::new(
+                self.domain,
+                self.recovery_class,
+                RecoveryDisposition::RequiresRebuild,
+                "State machine is currently rebuilding",
+                "Fix: await completion of the rebuild process before submitting operations.",
+            ))),
+            GuardedState::PoisonedTerminal {
+                domain,
+                recovery_class,
+                reason,
+            } => Err(E::from(TypedRecoveryError::new(
+                *domain,
+                *recovery_class,
+                RecoveryDisposition::RequiresRebuild,
+                reason.clone(),
+                "Fix: state machine is in PoisonedTerminal state; perform explicit recovery.",
+            ))),
+        }
+    }
+
     /// Access the guarded state with an operational closure.
     ///
     /// # Errors
@@ -115,40 +152,26 @@ impl<T> AtomicGuardedState<T> {
         &self,
         op: impl FnOnce(&mut T) -> Result<R, String>,
     ) -> Result<R, TypedRecoveryError> {
-        let mut guard = self.lock_state();
-
-        match &mut *guard {
-            GuardedState::Ready(val) => op(val).map_err(|err_msg| {
+        let domain = self.domain;
+        let recovery_class = self.recovery_class;
+        self.try_with_state(|value| {
+            op(value).map_err(|reason| {
                 TypedRecoveryError::new(
-                    self.domain,
-                    self.recovery_class,
+                    domain,
+                    recovery_class,
                     RecoveryDisposition::RequiresRebuild,
-                    err_msg,
+                    reason,
                     "Fix: inspect the failure cause and rebuild state if necessary.",
                 )
-            }),
-            GuardedState::Rebuilding => Err(TypedRecoveryError::new(
-                self.domain,
-                self.recovery_class,
-                RecoveryDisposition::RequiresRebuild,
-                "State machine is currently rebuilding",
-                "Fix: await completion of the rebuild process before submitting operations.",
-            )),
-            GuardedState::PoisonedTerminal {
-                domain,
-                recovery_class,
-                reason,
-            } => Err(TypedRecoveryError::new(
-                *domain,
-                *recovery_class,
-                RecoveryDisposition::RequiresRebuild,
-                reason.clone(),
-                "Fix: state machine is in PoisonedTerminal state; perform explicit recovery.",
-            )),
-        }
+            })
+        })
     }
 
     /// Access the guarded state with a read-only closure.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TypedRecoveryError`] if the lock was poisoned or if the state is terminal.
     pub fn with_state_ref<R>(
         &self,
         op: impl FnOnce(&T) -> Result<R, String>,
@@ -162,9 +185,26 @@ impl<T> AtomicGuardedState<T> {
         *guard = GuardedState::Ready(fresh_state);
     }
 
-    /// Mark the state as currently rebuilding.
+    /// Move the owner into [`GuardedState::Rebuilding`], where every operation
+    /// is rejected until [`finish_rebuild`](Self::finish_rebuild) completes it.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TypedRecoveryError`] when a rebuild is already in progress.
+    /// The transition and the check share one acquisition, so two callers
+    /// cannot both hold the rebuild and the second is told the first owns it
+    /// rather than silently restarting it.
     pub fn begin_rebuild(&self) -> Result<(), TypedRecoveryError> {
         let mut guard = self.lock_state();
+        if matches!(*guard, GuardedState::Rebuilding) {
+            return Err(TypedRecoveryError::new(
+                self.domain,
+                self.recovery_class,
+                RecoveryDisposition::RequiresRebuild,
+                "A rebuild of this state machine is already in progress",
+                "Fix: await the in-progress rebuild instead of starting a second one.",
+            ));
+        }
         *guard = GuardedState::Rebuilding;
         Ok(())
     }
@@ -202,58 +242,104 @@ pub struct PrepareTicket {
     pub ticket_id: u64,
 }
 
+/// How long a caller stands down for an in-flight commit of the same
+/// idempotency key before reporting the wait instead of extending it.
+///
+/// A stand-down that never ends turns one stalled committer into a stalled
+/// caller with no report, so the wait carries a bound and the error a caller
+/// receives when it elapses states that bound.
+pub const DEFAULT_COMMIT_STANDDOWN: Duration = Duration::from_secs(5);
+
+/// The prepared, committed and in-flight keys of one journal.
+struct JournalState<K: Ord, V> {
+    prepared: BTreeMap<K, (PrepareTicket, V)>,
+    committed: BTreeMap<K, V>,
+    executing: BTreeSet<K>,
+}
+
 /// Prepare-commit journal ensuring mutation side effects are strictly idempotent.
+///
+/// WHY: the three sets are one owner under one lock. Split across separate
+/// locks, two callers holding the same idempotency key each observed an
+/// uncommitted key, each ran the side effect, and each published it, which is
+/// the duplicate submission the journal exists to prevent.
 pub struct PrepareCommitJournal<K: Ord + Clone, V: Clone> {
     next_ticket: AtomicU64,
-    prepared: Mutex<BTreeMap<K, (PrepareTicket, V)>>,
-    committed: Mutex<BTreeMap<K, V>>,
+    state: Mutex<JournalState<K, V>>,
+    commit_settled: Condvar,
+    standdown: Duration,
+}
+
+/// The name every poison report over one journal's state gives that state.
+const JOURNAL_STATE: &str = "one prepare-commit journal's prepared, committed and in-flight keys";
+
+/// Clears one key's in-flight mark even when the side effect unwinds.
+///
+/// A side effect runs with no lock held, so a panic inside it would otherwise
+/// leave the key marked in flight for the life of the process and stand every
+/// later retry down to its bound.
+struct InFlightCommit<'journal, K: Ord + Clone, V: Clone> {
+    journal: &'journal PrepareCommitJournal<K, V>,
+    key: K,
+}
+
+impl<K: Ord + Clone, V: Clone> Drop for InFlightCommit<'_, K, V> {
+    fn drop(&mut self) {
+        let mut state = self.journal.lock_state();
+        state.executing.remove(&self.key);
+        drop(state);
+        self.journal.commit_settled.notify_all();
+    }
 }
 
 impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
-    /// Create a new prepare-commit journal.
+    /// Create a new prepare-commit journal standing down for
+    /// [`DEFAULT_COMMIT_STANDDOWN`].
     #[must_use]
     pub fn new() -> Self {
+        Self::with_standdown(DEFAULT_COMMIT_STANDDOWN)
+    }
+
+    /// Create a journal whose in-flight stand-down uses an explicit bound.
+    #[must_use]
+    pub fn with_standdown(standdown: Duration) -> Self {
         Self {
             next_ticket: AtomicU64::new(1),
-            prepared: Mutex::new(BTreeMap::new()),
-            committed: Mutex::new(BTreeMap::new()),
+            state: Mutex::new(JournalState {
+                prepared: BTreeMap::new(),
+                committed: BTreeMap::new(),
+                executing: BTreeSet::new(),
+            }),
+            commit_settled: Condvar::new(),
+            standdown,
         }
+    }
+
+    /// Longest a caller waits for an in-flight commit of the same key.
+    #[must_use]
+    pub const fn standdown(&self) -> Duration {
+        self.standdown
+    }
+
+    fn lock_state(&self) -> std::sync::MutexGuard<'_, JournalState<K, V>> {
+        reclaim_poisoned_mutex(&self.state, OWNER, JOURNAL_STATE)
     }
 
     /// Prepare a mutation under an idempotency key.
-    /// If the key is already committed, returns `Ok(None)` indicating already completed.
+    ///
+    /// Returns `Ok(None)` when the key is already committed, which is the
+    /// idempotent no-op a retry of a completed effect resolves to.
     ///
     /// # Errors
     ///
-    /// Returns error if key is already prepared by a concurrent operation.
-    fn lock_committed(&self) -> std::sync::MutexGuard<'_, BTreeMap<K, V>> {
-        reclaim_poisoned_mutex(
-            &self.committed,
-            OWNER,
-            "the prepare-commit journal's committed keys",
-        )
-    }
-
-    fn lock_prepared(&self) -> std::sync::MutexGuard<'_, BTreeMap<K, (PrepareTicket, V)>> {
-        reclaim_poisoned_mutex(
-            &self.prepared,
-            OWNER,
-            "the prepare-commit journal's prepared keys",
-        )
-    }
-
-    /// # Errors
-    ///
-    /// Returns error if key is already prepared by a concurrent operation.
+    /// Returns an error when the key is already prepared or already in flight,
+    /// because a second ticket over one key is a second side effect.
     pub fn prepare(&self, key: K, value: V) -> Result<Option<PrepareTicket>, String> {
-        let committed = self.lock_committed();
-        if committed.contains_key(&key) {
-            return Ok(None); // Already committed; idempotent no-op
+        let mut state = self.lock_state();
+        if state.committed.contains_key(&key) {
+            return Ok(None);
         }
-        drop(committed);
-
-        let mut prepared = self.lock_prepared();
-        if prepared.contains_key(&key) {
+        if state.prepared.contains_key(&key) || state.executing.contains(&key) {
             return Err(String::from(
                 "Fix: operation with this idempotency key is already prepared in flight.",
             ));
@@ -261,7 +347,7 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
 
         let ticket_id = self.next_ticket.fetch_add(1, Ordering::SeqCst);
         let ticket = PrepareTicket { ticket_id };
-        prepared.insert(key, (ticket, value));
+        state.prepared.insert(key, (ticket, value));
         Ok(Some(ticket))
     }
 
@@ -269,34 +355,41 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
     ///
     /// # Errors
     ///
-    /// Returns error if the ticket does not match the prepared entry.
+    /// Returns an error if the ticket does not match the prepared entry.
     pub fn commit(&self, key: K, ticket: PrepareTicket) -> Result<V, String> {
-        let mut prepared = self.lock_prepared();
-        if let Some((saved_ticket, val)) = prepared.remove(&key) {
-            if saved_ticket != ticket {
-                return Err(String::from(
-                    "Fix: ticket mismatch during prepare-commit transaction commit.",
-                ));
-            }
-            let mut committed = self.lock_committed();
-            committed.insert(key, val.clone());
-            Ok(val)
-        } else {
-            let committed = self.lock_committed();
-            if let Some(existing) = committed.get(&key) {
-                Ok(existing.clone())
-            } else {
-                Err(String::from(
-                    "Fix: no prepared transaction found for key during commit phase.",
-                ))
-            }
+        let mut state = self.lock_state();
+        if let Some(existing) = state.committed.get(&key) {
+            return Ok(existing.clone());
         }
+        let Some((saved_ticket, value)) = state.prepared.remove(&key) else {
+            return Err(String::from(
+                "Fix: no prepared transaction found for key during commit phase.",
+            ));
+        };
+        if saved_ticket != ticket {
+            state.prepared.insert(key, (saved_ticket, value));
+            return Err(String::from(
+                "Fix: ticket mismatch during prepare-commit transaction commit.",
+            ));
+        }
+        state.committed.insert(key, value.clone());
+        Ok(value)
     }
 
     /// Commit an idempotency key, executing a side-effecting closure if not already committed.
     ///
-    /// If the key is already committed, the closure is NEVER invoked, and the existing
-    /// committed value is returned, guaranteeing exactly-once side-effect execution.
+    /// The closure runs at most once per key for the life of the journal. A
+    /// caller arriving while another holds the key stands down until that
+    /// commit settles and then reads the committed value, so a retry of a
+    /// submission, publication, allocation, signature issuance or cache
+    /// insertion produces one effect and one published value.
+    ///
+    /// # Errors
+    ///
+    /// Returns the closure's error, or a stand-down report naming the bound
+    /// when a commit already in flight for this key does not settle within
+    /// [`standdown`](Self::standdown). The key stays prepared in both cases, so
+    /// the caller retries rather than losing the record.
     pub fn commit_idempotent<E>(
         &self,
         key: K,
@@ -306,75 +399,120 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
     where
         E: From<String>,
     {
-        // First check if already committed
-        {
-            let committed = self.lock_committed();
-            if let Some(val) = committed.get(&key) {
-                return Ok(val.clone());
+        let mut state = self.lock_state();
+        let deadline = Instant::now() + self.standdown;
+        while state.executing.contains(&key) {
+            if let Some(value) = state.committed.get(&key) {
+                return Ok(value.clone());
             }
-        }
-
-        // Verify prepared ticket
-        {
-            let prepared = self.lock_prepared();
-            let (saved_ticket, _) = prepared.get(&key).ok_or_else(|| {
-                E::from(String::from(
-                    "Fix: no prepared transaction found for key during commit phase.",
-                ))
-            })?;
-            if *saved_ticket != ticket {
-                return Err(E::from(String::from(
-                    "Fix: ticket mismatch during prepare-commit transaction commit.",
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return Err(E::from(format!(
+                    "Fix: a commit for this idempotency key has been in flight longer than {} ms; \
+                     await or abort it before retrying.",
+                    self.standdown.as_millis()
                 )));
             }
+            let (reacquired, _) = reclaim_poisoned_condvar_wait_timeout(
+                &self.commit_settled,
+                &self.state,
+                state,
+                remaining,
+                OWNER,
+                JOURNAL_STATE,
+            );
+            state = reacquired;
         }
 
-        // Execute side effect exactly once
-        let val = side_effect()?;
-
-        // Move from prepared to committed
-        {
-            let mut prepared = self.lock_prepared();
-            prepared.remove(&key);
+        if let Some(value) = state.committed.get(&key) {
+            return Ok(value.clone());
         }
-        {
-            let mut committed = self.lock_committed();
-            committed.insert(key, val.clone());
+        match state.prepared.get(&key) {
+            None => {
+                return Err(E::from(String::from(
+                    "Fix: no prepared transaction found for key during commit phase.",
+                )))
+            }
+            Some((saved_ticket, _)) if *saved_ticket != ticket => {
+                return Err(E::from(String::from(
+                    "Fix: ticket mismatch during prepare-commit transaction commit.",
+                )))
+            }
+            Some(_) => {}
         }
+        state.executing.insert(key.clone());
+        drop(state);
 
-        Ok(val)
+        // The mark is held across the side effect, which is what makes the
+        // effect exactly once. Dropping this clears it whether the effect
+        // returns a value, reports an error, or unwinds.
+        let in_flight = InFlightCommit {
+            journal: self,
+            key: key.clone(),
+        };
+        let value = side_effect()?;
+
+        let mut state = self.lock_state();
+        state.prepared.remove(&key);
+        state.committed.insert(key, value.clone());
+        drop(state);
+        drop(in_flight);
+
+        Ok(value)
     }
 
     /// Abort and discard a prepared mutation.
-    pub fn abort(&self, key: &K, ticket: PrepareTicket) {
-        let mut prepared = self.lock_prepared();
-        if let Some((saved_ticket, _)) = prepared.get(key) {
-            if saved_ticket.ticket_id == ticket.ticket_id {
-                prepared.remove(key);
-            }
+    ///
+    /// Returns whether the entry was discarded. A key whose side effect is in
+    /// flight is never discarded, because releasing it would let a second
+    /// prepare issue a second ticket over an effect already running.
+    pub fn abort(&self, key: &K, ticket: PrepareTicket) -> bool {
+        let mut state = self.lock_state();
+        if state.executing.contains(key) {
+            return false;
         }
+        if state
+            .prepared
+            .get(key)
+            .is_some_and(|(saved_ticket, _)| saved_ticket.ticket_id == ticket.ticket_id)
+        {
+            state.prepared.remove(key);
+            return true;
+        }
+        false
     }
 
     /// Check if an idempotency key has been committed.
     #[must_use]
     pub fn is_committed(&self, key: &K) -> bool {
-        let committed = self.lock_committed();
-        committed.contains_key(key)
+        self.lock_state().committed.contains_key(key)
     }
 
     /// Retrieve the committed value for a key if already committed.
     #[must_use]
     pub fn get_committed(&self, key: &K) -> Option<V> {
-        let committed = self.lock_committed();
-        committed.get(key).cloned()
+        self.lock_state().committed.get(key).cloned()
     }
 
-    /// Bounded cleanup of stale prepared transactions exceeding a ticket threshold.
+    /// Count the keys whose side effect is running right now.
+    #[must_use]
+    pub fn in_flight_len(&self) -> usize {
+        self.lock_state().executing.len()
+    }
+
+    /// Discard at most `limit` prepared entries older than `max_stale_tickets`.
+    ///
+    /// Cleanup is bounded by `limit` and skips a key whose side effect is in
+    /// flight, so repeated invocation converges and never discards the record
+    /// a running effect is about to commit against.
     pub fn cleanup_stale_prepared(&self, max_stale_tickets: u64, limit: usize) -> usize {
-        let mut prepared = self.lock_prepared();
+        let mut state = self.lock_state();
         let current_ticket = self.next_ticket.load(Ordering::SeqCst);
         let mut to_remove = Vec::new();
-        for (key, (ticket, _)) in prepared.iter() {
+        for (key, (ticket, _)) in &state.prepared {
+            if state.executing.contains(key) {
+                continue;
+            }
             if current_ticket.saturating_sub(ticket.ticket_id) >= max_stale_tickets {
                 to_remove.push(key.clone());
                 if to_remove.len() >= limit {
@@ -384,7 +522,7 @@ impl<K: Ord + Clone, V: Clone> PrepareCommitJournal<K, V> {
         }
         let count = to_remove.len();
         for key in to_remove {
-            prepared.remove(&key);
+            state.prepared.remove(&key);
         }
         count
     }
@@ -406,7 +544,8 @@ impl<K: Ord + Clone, V: Clone> StateOwnerRecovery for PrepareCommitJournal<K, V>
     }
 }
 
-/// Supervised restart budget tracking crash and restart counts within a sliding window.
+/// Supervised restart budget bounding how often one disposable worker or
+/// device context is respawned before the fault is reported as fatal.
 pub struct SupervisedRestartBudget {
     max_restarts: u32,
     restart_count: Mutex<u32>,
@@ -489,153 +628,4 @@ impl StateOwnerRecovery for SupervisedRestartBudget {
     fn recovery_class(&self) -> RecoveryClass {
         RecoveryClass::ProcessFatal
     }
-}
-
-/// Authoritative declaration registry mapping each known runtime state owner to its failure domain and recovery class.
-#[must_use]
-pub fn authoritative_runtime_state_owner_registry(
-) -> BTreeMap<&'static str, (FailureDomain, RecoveryClass)> {
-    let mut map = BTreeMap::new();
-    map.insert(
-        "vyre-runtime/src/atomic_recovery.rs:inner",
-        (
-            FailureDomain::MemoryState,
-            RecoveryClass::RestartableFromCanonicalInput,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/atomic_recovery.rs:prepared",
-        (
-            FailureDomain::MemoryState,
-            RecoveryClass::TransactionallyRecoverable,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/atomic_recovery.rs:committed",
-        (
-            FailureDomain::MemoryState,
-            RecoveryClass::TransactionallyRecoverable,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/atomic_recovery.rs:restart_count",
-        (FailureDomain::WorkerProcess, RecoveryClass::ProcessFatal),
-    );
-    map.insert(
-        "vyre-runtime/src/artifact_admission/interactive_session.rs:records",
-        (
-            FailureDomain::SessionLifecycle,
-            RecoveryClass::TransactionallyRecoverable,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/artifact_admission/interactive_session.rs:channel_generations",
-        (
-            FailureDomain::SessionLifecycle,
-            RecoveryClass::TransactionallyRecoverable,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/artifact_admission/interactive_session.rs:admitted_queue",
-        (
-            FailureDomain::SessionLifecycle,
-            RecoveryClass::TransactionallyRecoverable,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/artifact_admission/interactive_session.rs:faulted",
-        (
-            FailureDomain::SessionLifecycle,
-            RecoveryClass::TransactionallyRecoverable,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/artifact_admission/retained.rs:state_machine",
-        (
-            FailureDomain::DeviceContext,
-            RecoveryClass::DeviceContextFatal,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/artifact_admission/session.rs:state",
-        (
-            FailureDomain::DeviceContext,
-            RecoveryClass::DeviceContextFatal,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/pipeline_cache/in_memory.rs:shards",
-        (
-            FailureDomain::MemoryState,
-            RecoveryClass::RestartableFromCanonicalInput,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/pipeline_cache/disk.rs:pending_flushes",
-        (
-            FailureDomain::DiskJournal,
-            RecoveryClass::RestartableFromCanonicalInput,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/retained_page_cache/mod.rs:inner",
-        (
-            FailureDomain::MemoryState,
-            RecoveryClass::RestartableFromCanonicalInput,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/resource_residency/mod.rs:state",
-        (
-            FailureDomain::DeviceContext,
-            RecoveryClass::DeviceContextFatal,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/tenant/registry.rs:free_list",
-        (
-            FailureDomain::MemoryState,
-            RecoveryClass::RestartableFromCanonicalInput,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/tenant/registry.rs:tenants",
-        (
-            FailureDomain::MemoryState,
-            RecoveryClass::RestartableFromCanonicalInput,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/tenant/registry.rs:generations",
-        (
-            FailureDomain::MemoryState,
-            RecoveryClass::RestartableFromCanonicalInput,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/external_resource_admission.rs:resources",
-        (
-            FailureDomain::DeviceContext,
-            RecoveryClass::DeviceContextFatal,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/external_resource_admission.rs:dependent_views",
-        (
-            FailureDomain::DeviceContext,
-            RecoveryClass::DeviceContextFatal,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/external_resource_admission.rs:dependent_pipelines",
-        (
-            FailureDomain::DeviceContext,
-            RecoveryClass::DeviceContextFatal,
-        ),
-    );
-    map.insert(
-        "vyre-runtime/src/structured_concurrency.rs:workers",
-        (FailureDomain::WorkerProcess, RecoveryClass::ProcessFatal),
-    );
-    map
 }

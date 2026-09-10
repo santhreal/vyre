@@ -5,14 +5,10 @@
 //! - State can be rebuilt cleanly from canonical input via explicit recover().
 //! - Prepare/commit journals guarantee side effect idempotency under repeated calls.
 //! - Supervised restart budgets enforce worker crash bounds and fail closed.
-//! - Source-derived runtime closure: every mutable state owner in vyre-runtime has a registered failure domain and recovery class.
 
 #![forbid(unsafe_code)]
 
-use std::collections::BTreeMap;
-use std::fs;
 use std::panic;
-use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::thread;
@@ -24,10 +20,8 @@ use vyre_runtime::artifact_admission::{
     InteractiveSessionStateMachine, InteractiveSubmissionRequest, PriorityClass,
 };
 use vyre_runtime::atomic_recovery::{
-    authoritative_runtime_state_owner_registry, AtomicGuardedState, GuardedState,
-    PrepareCommitJournal, SupervisedRestartBudget,
+    AtomicGuardedState, GuardedState, PrepareCommitJournal, SupervisedRestartBudget,
 };
-use vyre_test_support::monorepo::vyre_workspace_root;
 
 #[test]
 fn atomic_guarded_state_transitions_to_poisoned_terminal_on_panic() {
@@ -172,121 +166,6 @@ fn supervised_restart_budget_exhausts_and_fails_closed() {
     budget.reset();
     assert_eq!(budget.current_restarts(), 0);
     assert_eq!(budget.remaining_restarts(), 3);
-}
-
-#[test]
-fn source_derived_mutable_state_owner_closure_test() {
-    let registry = authoritative_runtime_state_owner_registry();
-
-    fn scan_dir(dir: &Path, lock_files: &mut BTreeMap<String, usize>) {
-        if !dir.exists() {
-            return;
-        }
-        for entry in fs::read_dir(dir).unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            if path.is_dir() {
-                let name = path.file_name().unwrap().to_str().unwrap();
-                if name != "target" && name != "tests" {
-                    scan_dir(&path, lock_files);
-                }
-            } else if path.extension().is_some_and(|ext| ext == "rs") {
-                let file_name = path.file_name().unwrap().to_str().unwrap();
-                if file_name == "tests.rs" || file_name.ends_with("_tests.rs") {
-                    continue;
-                }
-                let content = fs::read_to_string(&path).unwrap();
-                let mut lock_count = 0;
-                let mut in_test_mod = false;
-                let mut test_mod_depth = 0;
-                let mut pending_test_cfg = false;
-                for line in content.lines() {
-                    let trimmed = line.trim();
-                    if trimmed.starts_with("//")
-                        || trimmed.starts_with("/*")
-                        || trimmed.starts_with('*')
-                    {
-                        continue;
-                    }
-                    if trimmed.starts_with("#[cfg(test)]") {
-                        pending_test_cfg = true;
-                        continue;
-                    }
-                    if pending_test_cfg {
-                        if trimmed.starts_with("mod ") {
-                            in_test_mod = true;
-                            test_mod_depth = 0;
-                        }
-                        pending_test_cfg = false;
-                    }
-                    if in_test_mod {
-                        test_mod_depth += trimmed.matches('{').count();
-                        let close_count = trimmed.matches('}').count();
-                        if close_count >= test_mod_depth {
-                            in_test_mod = false;
-                            test_mod_depth = 0;
-                        } else {
-                            test_mod_depth -= close_count;
-                        }
-                        continue;
-                    }
-                    if (line.contains("Mutex<")
-                        || line.contains("RwLock<")
-                        || line.contains("DashMap<"))
-                        && !line.contains("use ")
-                        && !line.contains("fn ")
-                    {
-                        lock_count += 1;
-                    }
-                }
-                if lock_count > 0 {
-                    let path_str = path.to_str().unwrap().replace('\\', "/");
-                    lock_files.insert(path_str, lock_count);
-                }
-            }
-        }
-    }
-
-    let mut lock_files = BTreeMap::new();
-    let root = vyre_workspace_root();
-    scan_dir(&root.join("vyre-runtime/src"), &mut lock_files);
-
-    assert!(
-        !lock_files.is_empty(),
-        "scan must locate existing runtime state owners from source"
-    );
-
-    // 1. Verify every source file with locks/state owners is covered in the authoritative registry
-    for (file_path, count) in &lock_files {
-        let has_entry = registry.keys().any(|key| {
-            let prefix = key.split(':').next().unwrap_or("");
-            file_path.ends_with(prefix)
-        });
-        assert!(
-            has_entry,
-            "Source file {file_path} contains {count} mutable state owner(s) but has no declared FailureDomain / RecoveryClass in authoritative registry! Fix: register failure domain in authoritative_runtime_state_owner_registry()."
-        );
-    }
-
-    // 2. Verify each registered owner has a valid failure domain and recovery class
-    for (key, (domain, class)) in &registry {
-        assert!(
-            FailureDomain::ALL.contains(domain),
-            "registered state owner {key} must have a valid FailureDomain"
-        );
-        assert!(
-            RecoveryClass::ALL.contains(class),
-            "registered state owner {key} must have a valid RecoveryClass"
-        );
-    }
-
-    // 3. Verify vyre-megakernel contains no uncatalogued mutable state
-    let mut megakernel_locks = BTreeMap::new();
-    scan_dir(&root.join("vyre-megakernel/src"), &mut megakernel_locks);
-    assert!(
-        megakernel_locks.is_empty(),
-        "vyre-megakernel must remain pure and immutable; found unexpected mutable state in: {megakernel_locks:?}"
-    );
 }
 
 #[test]

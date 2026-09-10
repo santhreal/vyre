@@ -7,6 +7,9 @@ use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, BindingSet,
     BoundResource, Completion, DeviceIdentity, Resource, Submission,
 };
+use vyre_foundation::failure_domain::{
+    govern_rwlock_read, govern_rwlock_write, RecoveryClass, TypedRecoveryError,
+};
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{
     AbiAccess, ArtifactEnvelope, ArtifactValueId, CompileError, Digest, ResourceLifetime,
@@ -38,9 +41,16 @@ pub enum ArtifactSessionError {
     /// Typed resource ingestion or schema validation failed.
     #[error(transparent)]
     Ingestion(#[from] ResourceIngestionError),
-    /// Runtime lifecycle state was poisoned by a panic while locked.
-    #[error("artifact session state is poisoned: {0}. Fix: discard and rebuild the session")]
+    /// Runtime lifecycle state rejected the operation.
+    #[error("artifact session state is inconsistent: {0}. Fix: discard and rebuild the session")]
     State(String),
+    /// The session is not accepting operations because a panic left its
+    /// device-bound state half written.
+    ///
+    /// The device context is fatal here: the state names the materialized
+    /// instance the device holds, and a fresh device is the only way back.
+    #[error(transparent)]
+    Recovery(#[from] TypedRecoveryError),
 }
 
 pub(super) struct MaterializedArtifact {
@@ -54,6 +64,12 @@ pub struct ArtifactSession {
     registration: &'static BackendRegistration,
     state: RwLock<MaterializedArtifact>,
 }
+
+/// The subsystem every poison report over one artifact session names.
+const SESSION_OWNER: &str = "an artifact session";
+
+/// The state every poison report over one artifact session names.
+const SESSION_STATE: &str = "the materialized artifact and its device instance";
 
 impl ArtifactSession {
     /// Compile one validated request, attach the registered target payload, and
@@ -122,29 +138,51 @@ impl ArtifactSession {
         Self::from_envelope(registration, envelope)
     }
 
+    /// Take the materialized artifact for reading, or report that the device
+    /// context is fatal.
+    ///
+    /// WHY: the guarded value names the instance the device holds. A panic
+    /// under this lock leaves that record half written, so the session rejects
+    /// every later operation and the caller reacquires a device rather than
+    /// reading what the panic left.
+    fn read_state(
+        &self,
+    ) -> Result<std::sync::RwLockReadGuard<'_, MaterializedArtifact>, ArtifactSessionError> {
+        Ok(govern_rwlock_read(
+            &self.state,
+            SESSION_OWNER,
+            SESSION_STATE,
+            RecoveryClass::DeviceContextFatal,
+        )?)
+    }
+
+    /// Take the materialized artifact for replacement under the same contract
+    /// as [`read_state`](Self::read_state).
+    fn write_state(
+        &self,
+    ) -> Result<std::sync::RwLockWriteGuard<'_, MaterializedArtifact>, ArtifactSessionError> {
+        Ok(govern_rwlock_write(
+            &self.state,
+            SESSION_OWNER,
+            SESSION_STATE,
+            RecoveryClass::DeviceContextFatal,
+        )?)
+    }
+
     /// Neutral artifact identity shared by every session and device generation.
     pub fn artifact(&self) -> Result<Digest, ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         Ok(state.admitted.neutral().digest())
     }
     /// Exact authenticated target payload identity materialized by this session.
     pub fn payload(&self) -> Result<Digest, ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         Ok(state.admitted.target_payload().digest())
     }
 
     /// Current immutable device generation identity.
     pub fn device(&self) -> Result<DeviceIdentity, ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         Ok(state.instance.device().clone())
     }
 
@@ -158,10 +196,7 @@ impl ArtifactSession {
         &self,
         bindings: BindingSet,
     ) -> Result<Box<dyn Submission>, ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         Ok(state.instance.submit(bindings)?)
     }
 
@@ -177,10 +212,7 @@ impl ArtifactSession {
     ///
     /// This path never invokes the target compiler, semantic optimizer, or lowering.
     pub fn rematerialize(&self) -> Result<DeviceIdentity, ArtifactSessionError> {
-        let mut state = self
-            .state
-            .write()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let mut state = self.write_state()?;
         let materializer: Arc<dyn ArtifactMaterializer> =
             Arc::from(self.registration.materializer()?);
         let admitted = admit_envelope(
@@ -200,10 +232,7 @@ impl ArtifactSession {
 
     /// Resolve one canonical artifact ABI value by its stable resource name.
     pub fn resource(&self, name: &str) -> Result<ArtifactValueId, ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         state
             .admitted
             .neutral()
@@ -222,10 +251,7 @@ impl ArtifactSession {
     }
     /// Allocate one resident resource from this session's materializer generation.
     pub fn allocate_resident(&self, byte_len: usize) -> Result<Resource, ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         Ok(state.materializer.allocate_resident(byte_len)?)
     }
 
@@ -235,10 +261,7 @@ impl ArtifactSession {
         resource: &Resource,
         bytes: &[u8],
     ) -> Result<(), ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         Ok(state.materializer.upload_resident(resource, bytes)?)
     }
 
@@ -249,10 +272,7 @@ impl ArtifactSession {
         offset_bytes: usize,
         bytes: &[u8],
     ) -> Result<(), ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         Ok(state
             .materializer
             .upload_resident_at(resource, offset_bytes, bytes)?)
@@ -260,10 +280,7 @@ impl ArtifactSession {
 
     /// Release one resource owned by this session's materializer.
     pub fn free_resident(&self, resource: Resource) -> Result<(), ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         Ok(state.materializer.free_resident(resource)?)
     }
 
@@ -328,10 +345,7 @@ impl ArtifactSession {
         workspace: Option<&ArtifactWorkspace>,
         dataset: &TypedResourceDataset,
     ) -> Result<BindingSet, ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
 
         let neutral = state.admitted.neutral();
         let target_payload = state.admitted.target_payload();
@@ -572,10 +586,7 @@ impl ArtifactSession {
     ///
     /// Returns the materializer rejection when a region cannot be allocated.
     pub fn allocate_workspace(&self) -> Result<ArtifactWorkspace, ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         Ok(ArtifactWorkspace::allocate(
             state.admitted.neutral().allocation(),
             state.materializer.as_ref(),
@@ -588,19 +599,13 @@ impl ArtifactSession {
     ///
     /// Returns the first materializer rejection after releasing the rest.
     pub fn free_workspace(&self, workspace: ArtifactWorkspace) -> Result<(), ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         Ok(workspace.free(state.materializer.as_ref())?)
     }
 
     /// Bind host inputs in canonical ABI slot order.
     pub fn host_bindings(&self, inputs: &[&[u8]]) -> Result<BindingSet, ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         let artifact = state.admitted.neutral();
         let resources = host_input_resources(artifact)?;
         if resources.len() != inputs.len() {
@@ -634,10 +639,7 @@ impl ArtifactSession {
         &self,
         completion: &Completion,
     ) -> Result<Vec<Vec<u8>>, ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         let neutral = state.admitted.neutral();
         let lifetimes = neutral
             .resources()
@@ -698,10 +700,7 @@ impl ArtifactSession {
         program: &Program,
         completion: &Completion,
     ) -> Result<Vec<Vec<u8>>, ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         let canonical =
             state
                 .admitted
@@ -754,10 +753,7 @@ impl ArtifactSession {
     pub(super) fn retained_values(
         &self,
     ) -> Result<BTreeSet<ArtifactValueId>, ArtifactSessionError> {
-        let state = self
-            .state
-            .read()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let state = self.read_state()?;
         Ok(state
             .admitted
             .neutral()
@@ -797,7 +793,7 @@ fn require_every_entry_binding(
     Ok(())
 }
 
-impl crate::atomic_recovery::StateOwnerRecovery for ArtifactSession {
+impl crate::StateOwnerRecovery for ArtifactSession {
     fn failure_domain(&self) -> crate::FailureDomain {
         crate::FailureDomain::DeviceContext
     }

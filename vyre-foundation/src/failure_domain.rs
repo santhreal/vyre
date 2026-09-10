@@ -9,6 +9,7 @@ use std::string::String;
 use std::sync::{
     Condvar, Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard,
 };
+use std::time::Duration;
 /// Explicit failure domain identifying which subsystem boundary failed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FailureDomain {
@@ -85,6 +86,27 @@ pub enum RecoveryClass {
     ProcessFatal,
     /// Compiler or engine internal invariant violated; unrecoverable defect.
     InvariantViolation,
+}
+
+/// Implemented by every owner of mutable shared state, stating the blast
+/// radius of a fault under its locks and how that fault is remediated.
+///
+/// A poisoned lock means a thread panicked while holding it, so the guarded
+/// value may be half written. Answering that at whichever call site observed
+/// it first gives one owner as many recoveries as it has entry points. The
+/// impl is the single record instead: a `Mutex`, `RwLock`, `DashMap` or
+/// `AtomicGuardedState` field commits its struct to one domain and one class,
+/// and the `lock-poison-policy` gate rejects an owning struct that has no
+/// impl.
+///
+/// The trait is defined here rather than in the runtime because the driver
+/// owns device-bound state of its own and sits below the runtime, so a home
+/// above either of them is the only one both can reach.
+pub trait StateOwnerRecovery {
+    /// Failure domain this state owner belongs to.
+    fn failure_domain(&self) -> FailureDomain;
+    /// Recovery class defining how failures are remediated.
+    fn recovery_class(&self) -> RecoveryClass;
 }
 
 impl RecoveryClass {
@@ -454,6 +476,35 @@ pub fn reclaim_poisoned_condvar_wait<'a, T>(
             report_reclaimed(owner, state);
             mutex.clear_poison();
             poison.into_inner()
+        }
+    }
+}
+
+/// Wait on a condition variable with a deadline over state no owner can rebuild.
+///
+/// WHY: an unbounded wait turns one stalled holder into a stalled caller with
+/// no report. The returned flag states whether the wait ended on `timeout`
+/// rather than on a notification, so a stand-down terminates and the caller
+/// names the bound it waited out instead of blocking forever.
+///
+/// A wait releases the mutex and takes it again, so it observes a panic in
+/// another waiter exactly as an acquisition does. `mutex` is the lock `guard`
+/// came from, which is what the flag is cleared on.
+pub fn reclaim_poisoned_condvar_wait_timeout<'a, T>(
+    condvar: &Condvar,
+    mutex: &'a Mutex<T>,
+    guard: MutexGuard<'a, T>,
+    timeout: Duration,
+    owner: &str,
+    state: &str,
+) -> (MutexGuard<'a, T>, bool) {
+    match condvar.wait_timeout(guard, timeout) {
+        Ok((reacquired, result)) => (reacquired, result.timed_out()),
+        Err(poison) => {
+            report_reclaimed(owner, state);
+            mutex.clear_poison();
+            let (reacquired, result) = poison.into_inner();
+            (reacquired, result.timed_out())
         }
     }
 }

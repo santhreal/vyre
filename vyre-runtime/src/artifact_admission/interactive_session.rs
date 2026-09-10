@@ -28,7 +28,9 @@ use std::sync::{Mutex, MutexGuard};
 
 use thiserror::Error;
 
+use vyre_driver::lock_policy::govern_mutex;
 use vyre_driver::BackendError;
+use vyre_foundation::failure_domain::RecoveryClass;
 use vyre_megakernel::{Digest, RealTimeDeadline};
 
 /// Heaviest measured interactive dispatch duration in microseconds under maximum
@@ -208,6 +210,21 @@ pub enum InteractiveCancellationError {
     Poisoned(String),
 }
 
+/// The subsystem every poison report over an interactive session names.
+const INTERACTIVE_OWNER: &str = "an interactive artifact session";
+
+/// The lifecycle record of every request the session admitted.
+const REQUEST_RECORDS: &str = "the admitted interactive request records";
+
+/// The newest frame generation each channel has submitted.
+const CHANNEL_GENERATIONS: &str = "the per-channel frame generations";
+
+/// The admission queue in dispatch order.
+const ADMITTED_QUEUE: &str = "the admitted interactive queue";
+
+/// The reason the session faulted, if it has.
+const FAULT_REASON: &str = "the interactive session fault reason";
+
 #[derive(Debug)]
 struct RequestRecord {
     request: InteractiveSubmissionRequest,
@@ -252,12 +269,23 @@ impl InteractiveSessionStateMachine {
         }
     }
 
-    /// Acquire one of the session locks, reporting poison rather than panicking.
+    /// Acquire one of the session locks under the runtime's poison policy.
     ///
     /// A panic under any of these locks can leave the queue and the record map
-    /// disagreeing, so every entry point refuses instead of reading torn state.
-    fn guard<T>(lock: &Mutex<T>) -> Result<MutexGuard<'_, T>, BackendError> {
-        lock.lock().map_err(BackendError::poisoned_lock)
+    /// disagreeing, and neither is derivable from anything the session still
+    /// holds, so the class is transactional: the guarded value is discarded
+    /// with the guard and the caller rebuilds the session. `state` names which
+    /// of the four the report is about.
+    fn guard<'lock, T>(
+        lock: &'lock Mutex<T>,
+        state: &'static str,
+    ) -> Result<MutexGuard<'lock, T>, BackendError> {
+        govern_mutex(
+            lock,
+            INTERACTIVE_OWNER,
+            state,
+            RecoveryClass::TransactionallyRecoverable,
+        )
     }
 
     /// Maximum admitted queue capacity.
@@ -275,7 +303,7 @@ impl InteractiveSessionStateMachine {
         request: InteractiveSubmissionRequest,
         current_time_ns: u64,
     ) -> Result<InteractiveRequestId, InteractiveAdmissionError> {
-        let faulted = Self::guard(&self.faulted)
+        let faulted = Self::guard(&self.faulted, FAULT_REASON)
             .map_err(|error| InteractiveAdmissionError::Poisoned(error.to_string()))?;
         if faulted.is_some() {
             return Err(InteractiveAdmissionError::DeviceLoss);
@@ -290,7 +318,7 @@ impl InteractiveSessionStateMachine {
             });
         }
 
-        let mut channel_gens = Self::guard(&self.channel_generations)
+        let mut channel_gens = Self::guard(&self.channel_generations, CHANNEL_GENERATIONS)
             .map_err(|error| InteractiveAdmissionError::Poisoned(error.to_string()))?;
         let current_gen = channel_gens.entry(request.channel_id).or_insert(0);
         if request.frame_generation < *current_gen {
@@ -301,9 +329,9 @@ impl InteractiveSessionStateMachine {
             });
         }
 
-        let mut queue = Self::guard(&self.admitted_queue)
+        let mut queue = Self::guard(&self.admitted_queue, ADMITTED_QUEUE)
             .map_err(|error| InteractiveAdmissionError::Poisoned(error.to_string()))?;
-        let mut records = Self::guard(&self.records)
+        let mut records = Self::guard(&self.records, REQUEST_RECORDS)
             .map_err(|error| InteractiveAdmissionError::Poisoned(error.to_string()))?;
 
         // Perform supersession for any older generation on the same channel
@@ -352,7 +380,7 @@ impl InteractiveSessionStateMachine {
 
     /// Advance an admitted request to `Prepared` status off the event thread.
     pub fn prepare(&self, request_id: InteractiveRequestId) -> Result<(), BackendError> {
-        let mut records = Self::guard(&self.records)?;
+        let mut records = Self::guard(&self.records, REQUEST_RECORDS)?;
         let record = records
             .get_mut(&request_id)
             .ok_or_else(|| BackendError::InvalidProgram {
@@ -382,8 +410,8 @@ impl InteractiveSessionStateMachine {
 
     /// Advance a prepared request across the irreversible submission boundary into `Submitted`.
     pub fn submit(&self, request_id: InteractiveRequestId) -> Result<(), BackendError> {
-        let mut queue = Self::guard(&self.admitted_queue)?;
-        let mut records = Self::guard(&self.records)?;
+        let mut queue = Self::guard(&self.admitted_queue, ADMITTED_QUEUE)?;
+        let mut records = Self::guard(&self.records, REQUEST_RECORDS)?;
         let record = records
             .get_mut(&request_id)
             .ok_or_else(|| BackendError::InvalidProgram {
@@ -420,9 +448,9 @@ impl InteractiveSessionStateMachine {
     ) -> Result<InteractiveCompletion, BackendError> {
         // Same lock order as `admit`: faulted, then channel generations, then
         // records.
-        let fault_reason = Self::guard(&self.faulted)?.clone();
-        let channel_gens = Self::guard(&self.channel_generations)?;
-        let mut records = Self::guard(&self.records)?;
+        let fault_reason = Self::guard(&self.faulted, FAULT_REASON)?.clone();
+        let channel_gens = Self::guard(&self.channel_generations, CHANNEL_GENERATIONS)?;
+        let mut records = Self::guard(&self.records, REQUEST_RECORDS)?;
         let record = records
             .get_mut(&request_id)
             .ok_or_else(|| BackendError::InvalidProgram {
@@ -472,9 +500,9 @@ impl InteractiveSessionStateMachine {
         &self,
         request_id: InteractiveRequestId,
     ) -> Result<CancellationOutcome, InteractiveCancellationError> {
-        let mut queue = Self::guard(&self.admitted_queue)
+        let mut queue = Self::guard(&self.admitted_queue, ADMITTED_QUEUE)
             .map_err(|error| InteractiveCancellationError::Poisoned(error.to_string()))?;
-        let mut records = Self::guard(&self.records)
+        let mut records = Self::guard(&self.records, REQUEST_RECORDS)
             .map_err(|error| InteractiveCancellationError::Poisoned(error.to_string()))?;
         let record = records
             .get_mut(&request_id)
@@ -504,7 +532,7 @@ impl InteractiveSessionStateMachine {
         blocking_id: InteractiveRequestId,
         waiting_priority: PriorityClass,
     ) -> Result<PriorityClass, BackendError> {
-        let mut records = Self::guard(&self.records)?;
+        let mut records = Self::guard(&self.records, REQUEST_RECORDS)?;
         let record = records
             .get_mut(&blocking_id)
             .ok_or_else(|| BackendError::InvalidProgram {
@@ -522,11 +550,11 @@ impl InteractiveSessionStateMachine {
     /// `reason` is retained and reported by every faulted completion, so a
     /// caller learns which loss ended its frame.
     pub fn fault_all(&self, reason: &str) -> Result<(), BackendError> {
-        let mut faulted = Self::guard(&self.faulted)?;
+        let mut faulted = Self::guard(&self.faulted, FAULT_REASON)?;
         *faulted = Some(reason.to_string());
-        let mut queue = Self::guard(&self.admitted_queue)?;
+        let mut queue = Self::guard(&self.admitted_queue, ADMITTED_QUEUE)?;
         queue.clear();
-        let mut records = Self::guard(&self.records)?;
+        let mut records = Self::guard(&self.records, REQUEST_RECORDS)?;
         for rec in records.values_mut() {
             if rec.state != InteractiveSessionState::Completed
                 && rec.state != InteractiveSessionState::Cancelled
@@ -540,7 +568,7 @@ impl InteractiveSessionStateMachine {
 
     /// Reason this session faulted, `None` while it is healthy.
     pub fn fault_reason(&self) -> Result<Option<String>, BackendError> {
-        Ok(Self::guard(&self.faulted)?.clone())
+        Ok(Self::guard(&self.faulted, FAULT_REASON)?.clone())
     }
 
     /// Inspect current state of a request.
@@ -552,7 +580,7 @@ impl InteractiveSessionStateMachine {
         &self,
         request_id: InteractiveRequestId,
     ) -> Result<Option<InteractiveSessionState>, BackendError> {
-        Ok(Self::guard(&self.records)?
+        Ok(Self::guard(&self.records, REQUEST_RECORDS)?
             .get(&request_id)
             .map(|r| r.state))
     }
@@ -564,7 +592,7 @@ impl InteractiveSessionStateMachine {
         &self,
         request_id: InteractiveRequestId,
     ) -> Result<Option<PriorityClass>, BackendError> {
-        Ok(Self::guard(&self.records)?
+        Ok(Self::guard(&self.records, REQUEST_RECORDS)?
             .get(&request_id)
             .map(|r| r.effective_priority))
     }
@@ -576,7 +604,7 @@ impl Default for InteractiveSessionStateMachine {
     }
 }
 
-impl crate::atomic_recovery::StateOwnerRecovery for InteractiveSessionStateMachine {
+impl crate::StateOwnerRecovery for InteractiveSessionStateMachine {
     fn failure_domain(&self) -> crate::FailureDomain {
         crate::FailureDomain::SessionLifecycle
     }

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every struct in the runtime and the driver holding a `Mutex`, `RwLock`, `DashMap` or `AtomicGuardedState` field implements `StateOwnerRecovery` in the same file, the inventory is read out of the syntax tree instead of a hand-written registry, and the megakernel is rejected for owning mutable shared state at all."

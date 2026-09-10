@@ -20,7 +20,7 @@ use vyre_libs::telemetry as substrate_obs;
 use crate::lock_policy::{govern_mutex, RecoveryClass};
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{LazyLock, Mutex, OnceLock};
 
 const TRACE_EVENT_CAPACITY: usize = 256;
 
@@ -489,9 +489,30 @@ pub trait BackendObservabilityProvider {
     fn backend_metrics(&self) -> Vec<(&'static str, u64)>;
 }
 
+/// The bounded ring of substrate audit events one process has recorded.
+///
+/// A named type rather than a bare static: the recovery class of a mutable
+/// owner is stated by a `StateOwnerRecovery` impl, and a static has nothing
+/// to implement it on.
+struct TraceEventRing {
+    events: Mutex<VecDeque<SubstrateAuditEvent>>,
+}
+
+impl crate::lock_policy::StateOwnerRecovery for TraceEventRing {
+    fn failure_domain(&self) -> crate::lock_policy::FailureDomain {
+        crate::lock_policy::FailureDomain::MemoryState
+    }
+
+    fn recovery_class(&self) -> RecoveryClass {
+        RecoveryClass::TransactionallyRecoverable
+    }
+}
+
 fn trace_events() -> &'static Mutex<VecDeque<SubstrateAuditEvent>> {
-    static EVENTS: OnceLock<Mutex<VecDeque<SubstrateAuditEvent>>> = OnceLock::new();
-    EVENTS.get_or_init(|| Mutex::new(VecDeque::with_capacity(TRACE_EVENT_CAPACITY)))
+    static EVENTS: LazyLock<TraceEventRing> = LazyLock::new(|| TraceEventRing {
+        events: Mutex::new(VecDeque::with_capacity(TRACE_EVENT_CAPACITY)),
+    });
+    &EVENTS.events
 }
 
 fn trace_enabled() -> bool {

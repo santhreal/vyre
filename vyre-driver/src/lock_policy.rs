@@ -24,7 +24,7 @@ use std::sync::{Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockW
 
 pub use vyre_foundation::failure_domain::{
     govern_mutex_restartable, reclaim_poisoned_for_teardown, FailureDomain, RecoveryClass,
-    RecoveryDisposition, TypedRecoveryError,
+    RecoveryDisposition, StateOwnerRecovery, TypedRecoveryError,
 };
 
 use crate::BackendError;

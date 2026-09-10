@@ -23,6 +23,7 @@ use validation::{
     validate_warm_resource_set,
 };
 use vyre_driver::{ArtifactInstance, ArtifactMaterializer, BackendError, Resource};
+use vyre_foundation::failure_domain::{govern_mutex, RecoveryClass};
 
 const ZERO_UPLOAD_CHUNK_BYTES: usize = 1024 * 1024;
 
@@ -494,10 +495,19 @@ impl ResourceResidency {
         }
     }
 
+    /// Take the residency table, or report that the device context is fatal.
+    ///
+    /// A panic under this lock leaves the record of which handles the device
+    /// holds half written, so every operation is rejected from here on and the
+    /// handles are released by this owner's teardown. The recovery is a fresh
+    /// device and a fresh residency, never a repair of this one.
     fn lock_state(&self) -> Result<MutexGuard<'_, ResidencyState>, ResourceResidencyError> {
-        self.state
-            .lock()
-            .map_err(|_| ResourceResidencyError::LockPoisoned)
+        Ok(govern_mutex(
+            &self.state,
+            "the resource residency table",
+            "resident device resources and their accounting",
+            RecoveryClass::DeviceContextFatal,
+        )?)
     }
 }
 
@@ -529,7 +539,7 @@ impl Drop for ResourceResidency {
     }
 }
 
-impl crate::atomic_recovery::StateOwnerRecovery for ResourceResidency {
+impl crate::StateOwnerRecovery for ResourceResidency {
     fn failure_domain(&self) -> crate::FailureDomain {
         crate::FailureDomain::DeviceContext
     }

@@ -28,8 +28,35 @@ use crate::DispatchConfig;
 /// Programs the measurement table holds facts for at once.
 const MAX_MEASURED_PROGRAMS: usize = 4_096;
 
-static LAUNCH_MEASUREMENTS: LazyLock<Mutex<BTreeMap<LaunchFactKey, BTreeMap<[u32; 3], u64>>>> =
-    LazyLock::new(|| Mutex::new(BTreeMap::new()));
+/// The subsystem every poison report over the measurement table names.
+const LAUNCH_FACTS_OWNER: &str = "launch geometry measurement";
+
+/// The state every poison report over the measurement table names.
+const LAUNCH_FACTS_STATE: &str = "the measured launch widths per program";
+
+/// The launch widths one process has measured, keyed by program identity.
+///
+/// A named type rather than a bare static: the recovery class of a mutable
+/// owner is stated by a `StateOwnerRecovery` impl, and a static has nothing
+/// to implement it on.
+struct LaunchMeasurementTable {
+    entries: Mutex<BTreeMap<LaunchFactKey, BTreeMap<[u32; 3], u64>>>,
+}
+
+impl crate::lock_policy::StateOwnerRecovery for LaunchMeasurementTable {
+    fn failure_domain(&self) -> crate::lock_policy::FailureDomain {
+        crate::lock_policy::FailureDomain::MemoryState
+    }
+
+    fn recovery_class(&self) -> RecoveryClass {
+        RecoveryClass::TransactionallyRecoverable
+    }
+}
+
+static LAUNCH_MEASUREMENTS: LazyLock<LaunchMeasurementTable> =
+    LazyLock::new(|| LaunchMeasurementTable {
+        entries: Mutex::new(BTreeMap::new()),
+    });
 
 /// Resolve the backend-visible workgroup shape for an untracked dispatch.
 ///
@@ -117,9 +144,9 @@ pub fn record_launch_measurement(
     }
     let key = LaunchFactKey::new(program, declared, element_count, limits);
     let Ok(mut guard) = govern_mutex(
-        &LAUNCH_MEASUREMENTS,
-        "launch_facts",
-        "LAUNCH_MEASUREMENTS",
+        &LAUNCH_MEASUREMENTS.entries,
+        LAUNCH_FACTS_OWNER,
+        LAUNCH_FACTS_STATE,
         RecoveryClass::TransactionallyRecoverable,
     ) else {
         return false;
@@ -153,9 +180,9 @@ pub fn launch_width_measurements(
 ) -> BTreeMap<[u32; 3], u64> {
     let key = LaunchFactKey::new(program, program.workgroup_size(), element_count, limits);
     let guard = match govern_mutex(
-        &LAUNCH_MEASUREMENTS,
-        "launch_facts",
-        "LAUNCH_MEASUREMENTS",
+        &LAUNCH_MEASUREMENTS.entries,
+        LAUNCH_FACTS_OWNER,
+        LAUNCH_FACTS_STATE,
         RecoveryClass::TransactionallyRecoverable,
     ) {
         Ok(guard) => guard,
@@ -284,9 +311,9 @@ pub(crate) fn forget_launch_measurements(
 ) {
     let key = LaunchFactKey::new(program, program.workgroup_size(), element_count, limits);
     if let Ok(mut guard) = govern_mutex(
-        &LAUNCH_MEASUREMENTS,
-        "launch_facts",
-        "LAUNCH_MEASUREMENTS",
+        &LAUNCH_MEASUREMENTS.entries,
+        LAUNCH_FACTS_OWNER,
+        LAUNCH_FACTS_STATE,
         RecoveryClass::TransactionallyRecoverable,
     ) {
         guard.remove(&key);

@@ -317,3 +317,23 @@ impl Drop for StructuredWorkerScope {
         self.close();
     }
 }
+
+impl crate::StateOwnerRecovery for WorkerQuarantine {
+    fn failure_domain(&self) -> crate::FailureDomain {
+        crate::FailureDomain::WorkerProcess
+    }
+
+    fn recovery_class(&self) -> crate::RecoveryClass {
+        crate::RecoveryClass::ProcessFatal
+    }
+}
+
+impl crate::StateOwnerRecovery for StructuredWorkerScope {
+    fn failure_domain(&self) -> crate::FailureDomain {
+        crate::FailureDomain::WorkerProcess
+    }
+
+    fn recovery_class(&self) -> crate::RecoveryClass {
+        crate::RecoveryClass::ProcessFatal
+    }
+}

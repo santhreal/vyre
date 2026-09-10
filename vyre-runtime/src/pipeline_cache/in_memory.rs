@@ -569,7 +569,7 @@ mod tests {
     }
 }
 
-impl crate::atomic_recovery::StateOwnerRecovery for InMemoryPipelineCache {
+impl crate::StateOwnerRecovery for InMemoryPipelineCache {
     fn failure_domain(&self) -> crate::FailureDomain {
         crate::FailureDomain::MemoryState
     }

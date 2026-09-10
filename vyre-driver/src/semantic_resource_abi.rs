@@ -374,3 +374,13 @@ impl ExternalResourceRegistry {
         map.get(&resource_id).cloned()
     }
 }
+
+impl crate::lock_policy::StateOwnerRecovery for ExternalResourceRegistry {
+    fn failure_domain(&self) -> crate::lock_policy::FailureDomain {
+        crate::lock_policy::FailureDomain::DeviceContext
+    }
+
+    fn recovery_class(&self) -> crate::lock_policy::RecoveryClass {
+        crate::lock_policy::RecoveryClass::DeviceContextFatal
+    }
+}

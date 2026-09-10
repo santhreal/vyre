@@ -892,3 +892,13 @@ mod pipeline_cache_key_tests {
         );
     }
 }
+
+impl crate::lock_policy::StateOwnerRecovery for DiskPipelineCache {
+    fn failure_domain(&self) -> crate::lock_policy::FailureDomain {
+        crate::lock_policy::FailureDomain::DiskJournal
+    }
+
+    fn recovery_class(&self) -> crate::lock_policy::RecoveryClass {
+        crate::lock_policy::RecoveryClass::TransactionallyRecoverable
+    }
+}

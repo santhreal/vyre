@@ -21,6 +21,15 @@ use vyre_foundation::failure_domain::{reclaim_poisoned_read, reclaim_poisoned_wr
 /// The subsystem every poison report in this module names as the owner.
 const OWNER: &str = "runtime external resource admission";
 
+/// The record of every external memory handle the device currently holds.
+const RESOURCE_TABLE: &str = "the admitted external resource table";
+
+/// Which views depend on each admitted resource.
+const VIEW_INDEX: &str = "the dependent view index";
+
+/// Which pipelines depend on each admitted resource.
+const PIPELINE_INDEX: &str = "the dependent pipeline index";
+
 /// Global lease counter for admitted external resources.
 static NEXT_LEASE_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -277,10 +286,7 @@ impl ExternalResourceAdmissionManager {
         let row_pitch_bytes = record.row_pitch_bytes;
         let is_zero_copy = record.is_zero_copy;
 
-        let mut map = match self.resources.write() {
-            Ok(g) => g,
-            Err(_) => return Err(ExternalAdmissionError::ResourceInvalidated { resource_id }),
-        };
+        let mut map = reclaim_poisoned_write(&self.resources, OWNER, RESOURCE_TABLE);
         map.insert(resource_id, record);
 
         Ok(AdmittedExternalResourceLease {
@@ -303,10 +309,7 @@ impl ExternalResourceAdmissionManager {
         resource_id: u64,
         view_id: u64,
     ) -> Result<(), ExternalAdmissionError> {
-        let map = match self.resources.read() {
-            Ok(g) => g,
-            Err(_) => return Err(ExternalAdmissionError::ResourceInvalidated { resource_id }),
-        };
+        let map = reclaim_poisoned_read(&self.resources, OWNER, RESOURCE_TABLE);
         let record = map
             .get(&resource_id)
             .ok_or(ExternalAdmissionError::ResourceNotFound { resource_id })?;
@@ -315,10 +318,7 @@ impl ExternalResourceAdmissionManager {
         }
         drop(map);
 
-        let mut views = match self.dependent_views.write() {
-            Ok(g) => g,
-            Err(_) => return Err(ExternalAdmissionError::ResourceInvalidated { resource_id }),
-        };
+        let mut views = reclaim_poisoned_write(&self.dependent_views, OWNER, VIEW_INDEX);
         views.entry(resource_id).or_default().insert(view_id);
         Ok(())
     }
@@ -333,10 +333,7 @@ impl ExternalResourceAdmissionManager {
         resource_id: u64,
         pipeline_id: u64,
     ) -> Result<(), ExternalAdmissionError> {
-        let map = match self.resources.read() {
-            Ok(g) => g,
-            Err(_) => return Err(ExternalAdmissionError::ResourceInvalidated { resource_id }),
-        };
+        let map = reclaim_poisoned_read(&self.resources, OWNER, RESOURCE_TABLE);
         let record = map
             .get(&resource_id)
             .ok_or(ExternalAdmissionError::ResourceNotFound { resource_id })?;
@@ -345,10 +342,8 @@ impl ExternalResourceAdmissionManager {
         }
         drop(map);
 
-        let mut pipelines = match self.dependent_pipelines.write() {
-            Ok(g) => g,
-            Err(_) => return Err(ExternalAdmissionError::ResourceInvalidated { resource_id }),
-        };
+        let mut pipelines =
+            reclaim_poisoned_write(&self.dependent_pipelines, OWNER, PIPELINE_INDEX);
         pipelines
             .entry(resource_id)
             .or_default()
@@ -365,10 +360,7 @@ impl ExternalResourceAdmissionManager {
         &self,
         schedule: &ResourceTransitionSchedule,
     ) -> Result<TransitionExecutionReport, ExternalAdmissionError> {
-        let map = match self.resources.write() {
-            Ok(g) => g,
-            Err(_) => return Err(ExternalAdmissionError::ResourceInvalidated { resource_id: 0 }),
-        };
+        let map = reclaim_poisoned_write(&self.resources, OWNER, RESOURCE_TABLE);
 
         // 1. Verify every referenced resource is valid
         for (resource_id, _) in &schedule.transitions {
@@ -399,10 +391,7 @@ impl ExternalResourceAdmissionManager {
         resource_id: u64,
         expected_gen: u64,
     ) -> Result<u64, ExternalAdmissionError> {
-        let mut map = match self.resources.write() {
-            Ok(g) => g,
-            Err(_) => return Err(ExternalAdmissionError::ResourceInvalidated { resource_id }),
-        };
+        let mut map = reclaim_poisoned_write(&self.resources, OWNER, RESOURCE_TABLE);
         let record = map
             .get_mut(&resource_id)
             .ok_or(ExternalAdmissionError::ResourceNotFound { resource_id })?;
@@ -419,18 +408,10 @@ impl ExternalResourceAdmissionManager {
             invalidated_artifacts: Vec::new(),
         };
 
-        let mut map = reclaim_poisoned_write(
-            &self.resources,
-            OWNER,
-            "the admitted external resource table",
-        );
-        let mut views =
-            reclaim_poisoned_write(&self.dependent_views, OWNER, "the dependent view index");
-        let mut pipelines = reclaim_poisoned_write(
-            &self.dependent_pipelines,
-            OWNER,
-            "the dependent pipeline index",
-        );
+        let mut map = reclaim_poisoned_write(&self.resources, OWNER, RESOURCE_TABLE);
+        let mut views = reclaim_poisoned_write(&self.dependent_views, OWNER, VIEW_INDEX);
+        let mut pipelines =
+            reclaim_poisoned_write(&self.dependent_pipelines, OWNER, PIPELINE_INDEX);
 
         for (res_id, record) in map.iter_mut() {
             record.invalidate_on_device_loss();
@@ -453,11 +434,136 @@ impl ExternalResourceAdmissionManager {
     /// Look up an admitted resource record.
     #[must_use]
     pub fn query_resource(&self, resource_id: u64) -> Option<AdmittedResourceRecord> {
-        let map = reclaim_poisoned_read(
-            &self.resources,
-            OWNER,
-            "the admitted external resource table",
-        );
+        let map = reclaim_poisoned_read(&self.resources, OWNER, RESOURCE_TABLE);
         map.get(&resource_id).cloned()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    use vyre_driver::{
+        ColorInterpretation, ResourceLayoutState, ResourceUsageTransition, TimelineSyncProtocol,
+    };
+
+    const RESOURCE_ID: u64 = 7001;
+
+    fn manager_with_one_resource() -> Arc<ExternalResourceAdmissionManager> {
+        let manager = Arc::new(ExternalResourceAdmissionManager::new(9));
+        let record = AdmittedResourceRecord::new_external_import_2d(
+            RESOURCE_ID,
+            9,
+            ImageFormat::Rgba8Unorm,
+            ColorInterpretation::Srgb,
+            64,
+            64,
+            64 * 4,
+            ResourcePermittedUsages::SAMPLED.union(ResourcePermittedUsages::TRANSFER_DST),
+            ExternalMemoryKind::DmaBuf,
+            0x7001_C001,
+            TimelineSyncProtocol::TimelineSemaphore {
+                timeline_id: 1,
+                wait_value: 0,
+                signal_value: 1,
+            },
+        );
+        manager
+            .admit_external_resource(record)
+            .expect("admit the fixture resource");
+        manager
+    }
+
+    /// Poison one of the manager's locks from a thread that panics holding it.
+    fn poison<T: Send + Sync + 'static>(
+        manager: Arc<ExternalResourceAdmissionManager>,
+        pick: fn(&ExternalResourceAdmissionManager) -> &RwLock<T>,
+    ) {
+        let joined = std::thread::spawn(move || {
+            let _guard = pick(&manager).write().expect("lock is not yet poisoned");
+            panic!("a panic holding an external admission lock");
+        })
+        .join();
+        assert!(joined.is_err(), "the poisoning thread must have panicked");
+    }
+
+    /// Closes the class "a poisoned lock reported as an invalidated resource".
+    ///
+    /// `AdmittedResourceRecord` is the only record of an external handle the
+    /// device holds, so discarding the table on a poison report leaks every
+    /// handle in it and tells the caller the resource died when only a guard
+    /// did. Every lock-touching method clears the poison and continues, so the
+    /// three locks are poisoned first and then each method is exercised.
+    ///
+    /// A `ResourceInvalidated` result here means poison is being reported as
+    /// device loss again. It does not prove the table is internally consistent
+    /// after an arbitrary panic; consistency comes from every mutation between
+    /// the guard and the panic being a single map insert or a generation bump.
+    #[test]
+    fn external_admission_recovers_every_poisoned_lock_instead_of_invalidating_resources() {
+        let manager = manager_with_one_resource();
+
+        poison(Arc::clone(&manager), |m| &m.resources);
+        poison(Arc::clone(&manager), |m| &m.dependent_views);
+        poison(Arc::clone(&manager), |m| &m.dependent_pipelines);
+
+        assert!(
+            manager.resources.is_poisoned()
+                && manager.dependent_views.is_poisoned()
+                && manager.dependent_pipelines.is_poisoned(),
+            "the fixture must leave all three locks poisoned"
+        );
+
+        manager
+            .register_dependent_view(RESOURCE_ID, 11)
+            .expect("Fix: register_dependent_view must clear the poison and continue");
+        manager
+            .register_dependent_pipeline(RESOURCE_ID, 12)
+            .expect("Fix: register_dependent_pipeline must clear the poison and continue");
+
+        let mut schedule = ResourceTransitionSchedule::new();
+        schedule.add_transition(
+            RESOURCE_ID,
+            ResourceUsageTransition::to_sampled(ResourceLayoutState::General),
+        );
+        manager
+            .execute_transition_schedule(&schedule)
+            .expect("Fix: execute_transition_schedule must clear the poison and continue");
+
+        assert_eq!(
+            manager
+                .mutate_resource(RESOURCE_ID, 1)
+                .expect("Fix: mutate_resource must clear the poison and continue"),
+            2,
+            "the generation must advance across a recovered poison"
+        );
+
+        let record = manager
+            .query_resource(RESOURCE_ID)
+            .expect("Fix: query_resource must clear the poison and continue");
+        assert!(
+            record.is_valid,
+            "a recovered poison must not mark the resource invalid"
+        );
+
+        let report = manager.invalidate_device_loss();
+        assert_eq!(
+            report.invalidated_resources,
+            vec![RESOURCE_ID],
+            "device loss must still see the resource the recovered table holds"
+        );
+        assert_eq!(report.invalidated_views, vec![11]);
+        assert_eq!(report.invalidated_artifacts, vec![12]);
+    }
+}
+
+impl crate::StateOwnerRecovery for ExternalResourceAdmissionManager {
+    fn failure_domain(&self) -> crate::FailureDomain {
+        crate::FailureDomain::DeviceContext
+    }
+
+    fn recovery_class(&self) -> crate::RecoveryClass {
+        crate::RecoveryClass::DeviceContextFatal
     }
 }

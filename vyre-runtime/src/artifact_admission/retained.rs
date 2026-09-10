@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
+
+use vyre_foundation::failure_domain::{govern_mutex, RecoveryClass};
 
 use vyre_driver::{BackendError, BindingSet, BoundResource, Completion, DeviceIdentity};
 use vyre_megakernel::{ArtifactValueId, Digest};
@@ -114,6 +116,12 @@ pub struct RetainedArtifactSession {
     state_machine: Mutex<RetainedSessionStateMachine>,
 }
 
+/// The subsystem every poison report over one retained session names.
+const RETAINED_OWNER: &str = "a retained artifact session";
+
+/// The state every poison report over one retained session names.
+const RETAINED_STATE: &str = "the retained session phase, generation and values";
+
 impl RetainedArtifactSession {
     /// Create retained policy state and require every retained ABI value initially.
     pub fn new(
@@ -144,6 +152,25 @@ impl RetainedArtifactSession {
         self.session.device()
     }
 
+    /// Take the retained state machine, or report that the device context is
+    /// fatal.
+    ///
+    /// WHY: the machine records the generation the device has accepted and the
+    /// retained bytes the next submission merges. A panic under this lock
+    /// leaves a phase and a generation that no longer describe what the device
+    /// did, so the session rejects every later transition and the caller
+    /// reacquires a device instead of resuming from an unproven generation.
+    fn lock_state_machine(
+        &self,
+    ) -> Result<MutexGuard<'_, RetainedSessionStateMachine>, ArtifactSessionError> {
+        Ok(govern_mutex(
+            &self.state_machine,
+            RETAINED_OWNER,
+            RETAINED_STATE,
+            RecoveryClass::DeviceContextFatal,
+        )?)
+    }
+
     /// Build empty transient bindings for the shared neutral artifact.
     pub fn bindings(&self) -> Result<BindingSet, ArtifactSessionError> {
         self.session.bindings()
@@ -151,19 +178,13 @@ impl RetainedArtifactSession {
 
     /// Current retained state machine generation.
     pub fn generation(&self) -> Result<u64, ArtifactSessionError> {
-        let sm = self
-            .state_machine
-            .lock()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let sm = self.lock_state_machine()?;
         Ok(sm.generation)
     }
 
     /// Current retained session lifecycle phase.
     pub fn phase(&self) -> Result<RetainedSessionPhase, ArtifactSessionError> {
-        let sm = self
-            .state_machine
-            .lock()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let sm = self.lock_state_machine()?;
         Ok(sm.phase)
     }
 
@@ -172,10 +193,7 @@ impl RetainedArtifactSession {
         &self,
         transition: RetainedSessionTransition,
     ) -> Result<(), ArtifactSessionError> {
-        let mut sm = self
-            .state_machine
-            .lock()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let mut sm = self.lock_state_machine()?;
         sm.apply_transition(transition)
     }
 
@@ -200,10 +218,7 @@ impl RetainedArtifactSession {
             }
             .into());
         }
-        let mut sm = self
-            .state_machine
-            .lock()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let mut sm = self.lock_state_machine()?;
         let expected_generation = sm.generation;
         sm.apply_transition(RetainedSessionTransition::ReplaceState {
             expected_generation,
@@ -224,10 +239,7 @@ impl RetainedArtifactSession {
             }
             .into());
         }
-        let mut sm = self
-            .state_machine
-            .lock()
-            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let mut sm = self.lock_state_machine()?;
         sm.apply_transition(RetainedSessionTransition::BeginSubmission)?;
         for (value, bytes) in sm.values.iter() {
             bindings.insert(*value, BoundResource::Host(bytes.clone()));
@@ -261,7 +273,7 @@ impl RetainedArtifactSession {
     }
 }
 
-impl crate::atomic_recovery::StateOwnerRecovery for RetainedArtifactSession {
+impl crate::StateOwnerRecovery for RetainedArtifactSession {
     fn failure_domain(&self) -> crate::FailureDomain {
         crate::FailureDomain::DeviceContext
     }

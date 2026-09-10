@@ -18,6 +18,8 @@ use crate::gate::{Finding, GateBehavior, GateCtx, GateError, Report};
 use crate::gates::scan::{cfg_test_lines, Tree};
 use crate::gates::use_paths::is_test_source_path;
 
+pub mod state_owners;
+
 /// Files that own a lock poison policy.
 ///
 /// This is not an exemption list. Each entry is the single definition of a
@@ -55,6 +57,11 @@ pub enum Violation {
     /// act of accepting the state, so it belongs with the record of who
     /// accepted it and why.
     HandRolledClearPoison,
+    /// An inline closure turns the `PoisonError` into another error type. The
+    /// recovery class is lost at the conversion, so every caller downstream
+    /// reads a message where a decision belongs. Reported only under the roots
+    /// whose owners record a recovery class.
+    AdHocPoisonConversion,
 }
 
 impl Violation {
@@ -65,6 +72,7 @@ impl Violation {
         Violation::IntoInnerRecovery,
         Violation::SilentDiscard,
         Violation::HandRolledClearPoison,
+        Violation::AdHocPoisonConversion,
     ];
 
     /// What the finding reports about the source line.
@@ -77,6 +85,9 @@ impl Violation {
             Violation::IntoInnerRecovery => "poisoned guard unwrapped with into_inner",
             Violation::SilentDiscard => "poisoned lock discarded by a pattern match",
             Violation::HandRolledClearPoison => "poison flag cleared outside a policy owner",
+            Violation::AdHocPoisonConversion => {
+                "poisoned lock converted by an inline closure, discarding the recovery class"
+            }
         }
     }
 
@@ -94,6 +105,10 @@ impl Violation {
             Violation::SilentDiscard => {
                 "call a vyre_foundation::failure_domain policy. Skipping the branch loses the work \
                  it existed to do and reports nothing"
+            }
+            Violation::AdHocPoisonConversion => {
+                "acquire through a govern_* policy and convert its TypedRecoveryError with #[from], \
+                 which carries the owner, the guarded state and the recovery class"
             }
         }
     }
@@ -222,6 +237,15 @@ pub fn violations_in(lines: &[&str], test_mask: &[bool]) -> Vec<(usize, Violatio
         if discards {
             found.push((acquired_at, Violation::SilentDiscard));
         }
+
+        // An inline closure over the poison error renames it and drops the
+        // decision: the caller receives a string where a recovery class
+        // belongs, and no owner or guarded state is recorded. A named policy
+        // function passed to `map_err` is the shape this requires instead, so
+        // only a closure literal is reported.
+        if joined.contains(".map_err(|") {
+            found.push((acquired_at, Violation::AdHocPoisonConversion));
+        }
     }
 
     found
@@ -292,6 +316,7 @@ impl GateBehavior for LockPoisonPolicy {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
         let mut scanned_count = 0;
+        let mut outside_roots = 0usize;
 
         for relative_path in tree.all_rust() {
             if is_test_source_path(&relative_path) {
@@ -319,12 +344,20 @@ impl GateBehavior for LockPoisonPolicy {
                 continue;
             }
 
+            let governed_root = state_owners::OWNER_CONTRACT_ROOTS
+                .iter()
+                .any(|root| path_str.starts_with(root));
+
             let content = tree.read(&relative_path)?;
             let lines: Vec<&str> = content.lines().collect();
             let test_mask = cfg_test_lines(&lines);
             scanned_count += 1;
 
             for (index, violation) in violations_in(&lines, &test_mask) {
+                if violation == Violation::AdHocPoisonConversion && !governed_root {
+                    outside_roots += 1;
+                    continue;
+                }
                 report.find(Finding::at(
                     relative_path.clone(),
                     (index + 1) as u32,
@@ -334,9 +367,23 @@ impl GateBehavior for LockPoisonPolicy {
             }
         }
 
+        let inventoried = state_owners::check(&tree, &mut report)?;
+
+        if outside_roots > 0 {
+            report.note(format!(
+                "{outside_roots} lock acquisition(s) converted by an inline closure outside \
+                 {}; those crates state no recovery contract for their owners yet",
+                state_owners::OWNER_CONTRACT_ROOTS.join(" and ")
+            ));
+        }
+
         report.cover_complete(
             "production source files scanned for lock governance",
             scanned_count,
+        );
+        report.cover_complete(
+            "mutable state owners closed against a recovery contract",
+            inventoried,
         );
         Ok(report)
     }
@@ -414,6 +461,9 @@ mod tests {
                     "if let Ok(mut guard) = self.state.lock() { guard.push(item); }"
                 }
                 Violation::HandRolledClearPoison => "self.state.clear_poison();",
+                Violation::AdHocPoisonConversion => {
+                    "let guard = self.state.lock().map_err(|error| Error::State(error.to_string()))?;"
+                }
             };
             assert!(
                 detect(source).contains(category),
@@ -440,9 +490,10 @@ pub fn is_quarantined(&self, lease_id: &str) -> bool {
 
     /// A governed call site is the shape the tree is required to use, so the
     /// gate reports nothing on it. Each line here is a real shape from the
-    /// migrated tree, including the two that only look like violations: a
-    /// `Cell::into_inner` far from any lock, and an `if let Ok` over a result
-    /// that is not a lock.
+    /// migrated tree, including the three that only look like violations: a
+    /// `Cell::into_inner` far from any lock, an `if let Ok` over a result that
+    /// is not a lock, and a `map_err` handed a named policy function rather
+    /// than a closure that renames the poison.
     #[test]
     fn governed_call_sites_are_not_reported() {
         let governed = "\
@@ -453,6 +504,7 @@ let held = reclaim_poisoned_for_teardown(self.state.lock(), OWNER, STATE);
 let bytes = self.buffer.read().unwrap_or_else(|_| poisoned_buffer_byte_lock());
 let value = cell.into_inner();
 if let Ok(text) = std::fs::read_to_string(path) { use_it(text); }
+let named = self.state.lock().map_err(BackendError::poisoned_lock)?;
 ";
         assert_eq!(
             detect(governed),

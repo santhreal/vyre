@@ -207,3 +207,13 @@ mod tests {
         );
     }
 }
+
+impl crate::lock_policy::StateOwnerRecovery for RoutingTable {
+    fn failure_domain(&self) -> crate::lock_policy::FailureDomain {
+        crate::lock_policy::FailureDomain::MemoryState
+    }
+
+    fn recovery_class(&self) -> crate::lock_policy::RecoveryClass {
+        crate::lock_policy::RecoveryClass::RestartableFromCanonicalInput
+    }
+}
