@@ -2,41 +2,14 @@
 
 use super::*;
 
-#[derive(Debug)]
-struct TestOpaqueExpr;
-
-impl ExprNode for TestOpaqueExpr {
-    fn extension_kind(&self) -> &'static str {
-        "test.opaque_expr"
-    }
-
-    fn debug_identity(&self) -> &str {
-        "test"
-    }
-
-    fn result_type(&self) -> Option<DataType> {
-        None
-    }
-
-    fn cse_safe(&self) -> bool {
-        false
-    }
-
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        [7; 32]
-    }
-
-    fn validate_extension(&self) -> std::result::Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn wire_payload(&self) -> Vec<u8> {
-        Vec::new()
-    }
-}
+vyre_test_support::test_expr_extension!(
+    TestOpaqueExpr,
+    kind: "test.opaque_expr",
+    identity: "test",
+    result_type: None,
+    cse_safe: false,
+    fingerprint: 7,
+);
 
 struct CountingNodeVisitor {
     count: usize,
@@ -45,107 +18,31 @@ struct CountingNodeVisitor {
 impl NodeVisitor for CountingNodeVisitor {
     type Break = Infallible;
 
-    fn visit_let(&mut self, _: &Node, _: &Ident, _: &Expr) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_assign(&mut self, _: &Node, _: &Ident, _: &Expr) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_store(&mut self, _: &Node, _: &Ident, _: &Expr, _: &Expr) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_if(&mut self, _: &Node, _: &Expr, _: &[Node], _: &[Node]) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_loop(
-        &mut self,
-        _: &Node,
-        _: &Ident,
-        _: &Expr,
-        _: &Expr,
-        _: &[Node],
-    ) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_indirect_dispatch(&mut self, _: &Node, _: &Ident, _: u64) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_async_load(
-        &mut self,
-        _: &Node,
-        _: &Ident,
-        _: &Ident,
-        _: &Expr,
-        _: &Expr,
-        _: &Ident,
-    ) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_async_store(
-        &mut self,
-        _: &Node,
-        _: &Ident,
-        _: &Ident,
-        _: &Expr,
-        _: &Expr,
-        _: &Ident,
-    ) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_async_wait(&mut self, _: &Node, _: &Ident) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_trap(&mut self, _: &Node, _: &Expr, _: &Ident) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_resume(&mut self, _: &Node, _: &Ident) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_return(&mut self, _: &Node) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_barrier(&mut self, _: &Node) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_logical_barrier(&mut self, _: &Node) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_block(&mut self, _: &Node, _: &[Node]) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_region(
-        &mut self,
-        _: &Node,
-        _: &Ident,
-        _: &Option<Ident>,
-        _: &[Node],
-    ) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
-    fn visit_opaque_node(
-        &mut self,
-        _: &Node,
-        _: &dyn crate::ir_inner::model::node::NodeExtension,
-    ) -> ControlFlow<Self::Break> {
-        self.count += 1;
-        Continue(())
-    }
+    node_visitor_uniform_arms!(
+        |this| {
+            this.count += 1;
+            Continue(())
+        },
+        visit_let,
+        visit_assign,
+        visit_store,
+        visit_if,
+        visit_loop,
+        visit_indirect_dispatch,
+        visit_async_load,
+        visit_async_store,
+        visit_async_wait,
+        visit_trap,
+        visit_resume,
+        visit_return,
+        visit_barrier,
+        visit_logical_barrier,
+        visit_collective,
+        visit_tile,
+        visit_block,
+        visit_region,
+        visit_opaque_node,
+    );
 }
 
 #[test]
