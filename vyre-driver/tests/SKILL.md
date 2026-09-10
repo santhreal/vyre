@@ -44,8 +44,10 @@ crate depends on it. It names no concrete backend and holds no shader knowledge.
 ## Cross-crate contracts
 
 - `VyreBackend` is implemented by the concrete driver crates.
-- `registered_target_operation_facets` joins the semantic catalog with each
-  linked target registration. `vyre-reference` consumes it.
+- `registered_target_operation_facets` intersects each linked target's declared
+  semantic catalog with the language-level operations that target registers for
+  dispatch, so a facet states that the target lowers every node of the
+  operation's canonical program. `vyre-reference` consumes it.
 - `SemanticOperation`, `TargetOperationFacet`, and `OperationRegistration` are
   owned by `vyre-foundation::operation`. Each driver crate submits its
   registration through `inventory`.

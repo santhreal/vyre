@@ -76,7 +76,8 @@ pub fn default_supported_ops_with_trap() -> &'static std::collections::HashSet<O
     &OPS
 }
 
-/// Check every node in `nodes` and in every body nested under it.
+/// The first node whose operation `supported` does not contain, paired with
+/// its position in the body that holds it.
 ///
 /// Child bodies come from [`child_bodies`], the shared-read descent owner in
 /// `vyre-foundation`, so this crate does not restate which `Node` variants
@@ -85,14 +86,14 @@ pub fn default_supported_ops_with_trap() -> &'static std::collections::HashSet<O
 /// transparent leaf, so an unsupported operation buried in its body validated
 /// clean and reached the backend anyway.
 ///
-/// `index` is the node's position in the body that holds it, matching the
-/// error the recursive walk reported.
-fn validate_nodes(
-    nodes: &[Node],
-    backend: &'static str,
+/// Dispatch admission and the target-facet join both ask this question, so
+/// they ask it here. Two walks would let a backend advertise a facet for an
+/// operation its own dispatch path refuses.
+pub(crate) fn first_unsupported_node_op<'a>(
+    nodes: &'a [Node],
     supported: &std::collections::HashSet<OpId>,
-) -> Result<(), ValidationError> {
-    let mut stack: Vec<(&Node, usize)> = Vec::with_capacity(nodes.len());
+) -> Option<(&'static str, usize)> {
+    let mut stack: Vec<(&'a Node, usize)> = Vec::with_capacity(nodes.len());
     stack.extend(
         nodes
             .iter()
@@ -103,8 +104,7 @@ fn validate_nodes(
     while let Some((node, index)) = stack.pop() {
         let op = node_op_id(node);
         if !supported.contains(op) {
-            let op_id = Arc::<str>::from(op);
-            return Err(ValidationError::unsupported_op(backend, &op_id, index));
+            return Some((op, index));
         }
         // Groups in reverse, each reversed, so `then` pops before `otherwise`
         // and both in source order: the same visit order as the recursion.
@@ -117,5 +117,24 @@ fn validate_nodes(
             );
         }
     }
-    Ok(())
+    None
+}
+
+/// Check every node in `nodes` and in every body nested under it.
+///
+/// `index` is the node's position in the body that holds it, matching the
+/// error the recursive walk reported.
+fn validate_nodes(
+    nodes: &[Node],
+    backend: &'static str,
+    supported: &std::collections::HashSet<OpId>,
+) -> Result<(), ValidationError> {
+    match first_unsupported_node_op(nodes, supported) {
+        Some((op, index)) => Err(ValidationError::unsupported_op(
+            backend,
+            &Arc::<str>::from(op),
+            index,
+        )),
+        None => Ok(()),
+    }
 }

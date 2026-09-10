@@ -351,8 +351,20 @@ fn cuda_float_lowering_capability_honesty_and_refusal() {
          operation, or both cases below exercise one refusal shape."
     );
 
+    const LANES: u32 = 4;
+    let lane_bytes: Vec<u8> = (0..LANES)
+        .flat_map(|i| (i as f32 + 0.5).to_le_bytes())
+        .collect();
+    let witnesses: [(&Program, Vec<Vec<u8>>); 2] = [
+        (&constant_store, Vec::new()),
+        (
+            &transcendental,
+            vec![lane_bytes.clone(), lane_bytes.clone(), lane_bytes],
+        ),
+    ];
+
     for &mode in FloatLoweringMode::EVERY {
-        for program in [&constant_store, &transcendental] {
+        for (program, inputs) in &witnesses {
             let mut config = DispatchConfig::default();
             config.float_lowering = mode;
 
@@ -364,6 +376,14 @@ fn cuda_float_lowering_capability_honesty_and_refusal() {
                     "Fix: mode `{}` permits contraction, so CUDA must state that it lowers it.",
                     mode.cache_label()
                 );
+                backend
+                    .dispatch(program, inputs, &config)
+                    .unwrap_or_else(|error| {
+                        panic!(
+                            "Fix: CUDA states it lowers `{}`, so the dispatch must run: {error}",
+                            mode.cache_label()
+                        )
+                    });
                 continue;
             };
 
@@ -374,7 +394,9 @@ fn cuda_float_lowering_capability_honesty_and_refusal() {
                  so a strict answer would be contracted arithmetic under a bit-identity request.",
                 mode.cache_label()
             );
-            let error = backend.dispatch(program, &[], &config).expect_err(&format!(
+            let error = backend
+                .dispatch(program, inputs, &config)
+                .expect_err(&format!(
                 "Fix: CUDA does not lower `{}` and must refuse the dispatch rather than answer \
                  it with contracted arithmetic.",
                 mode.cache_label()
@@ -392,4 +414,16 @@ fn cuda_float_lowering_capability_honesty_and_refusal() {
             );
         }
     }
+
+    let mut contracted = DispatchConfig::default();
+    contracted.float_lowering = FloatLoweringMode::Contracted;
+    let outputs = backend
+        .dispatch(&constant_store, &[], &contracted)
+        .expect("Fix: CUDA states it lowers `contracted`, so the witness must run.");
+    assert_eq!(
+        outputs[0].as_slice(),
+        &1.0_f32.to_le_bytes(),
+        "Fix: a mode CUDA states it lowers must return the program's value, not a refusal or a \
+         rounded neighbour."
+    );
 }

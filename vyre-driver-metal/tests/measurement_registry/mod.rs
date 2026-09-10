@@ -35,16 +35,6 @@ impl Registry {
         );
     }
 
-    /// Require the integer at `key` to be `expected`.
-    pub(crate) fn declares_integer(&self, key: &str, expected: i64) {
-        assert_eq!(
-            self.table.get(key).and_then(toml::Value::as_integer),
-            Some(expected),
-            "Fix: a {} registry `{key}` change must be recorded in this case.",
-            self.noun
-        );
-    }
-
     /// Every string the array at `key` states, which must state at least one.
     #[must_use]
     pub(crate) fn roster(&self, key: &str) -> BTreeSet<&str> {

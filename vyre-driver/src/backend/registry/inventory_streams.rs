@@ -5,6 +5,7 @@ use std::sync::{Arc, LazyLock};
 
 use vyre_foundation::ir::OpId;
 use vyre_foundation::operation::{TargetId, TargetOperationFacet};
+use vyre_foundation::transform::schedule_lowering::lower_logical_schedule_borrowed;
 
 use super::grid_sync_split::wrap_grid_sync_split;
 use crate::backend::{ArtifactMaterializer, BackendError, VyreBackend};
@@ -36,12 +37,18 @@ pub struct BackendRegistration {
     /// per the frozen `BackendError` contract.
     pub factory: fn() -> Result<Box<dyn VyreBackend>, BackendError>,
     /// Language-level IR operation IDs accepted by raw backend dispatch.
-    pub supported_ops: fn() -> &'static HashSet<OpId>,
-    /// Canonical semantic operation IDs supported by the target compiler.
     ///
-    /// This owner-local projection is the target facet submission. The shared
-    /// driver joins it with `OperationRegistry` and never infers semantic
-    /// support from language-level node capability.
+    /// This is the backend's lowering-arm declaration. `validate_program`
+    /// refuses a program whose nodes leave it, and
+    /// [`registered_target_operation_facets`] refuses a semantic operation
+    /// whose canonical program leaves it.
+    pub supported_ops: fn() -> &'static HashSet<OpId>,
+    /// Canonical semantic operation IDs the target compiler claims.
+    ///
+    /// This owner-local projection is a claim, not a facet. A published facet
+    /// is the intersection of this claim with `OperationRegistry` and with the
+    /// lowering arms in `supported_ops`, so a driver that claims the whole
+    /// catalog publishes only the part it lowers.
     pub semantic_operations: fn() -> &'static HashSet<OpId>,
     /// Pure compiler facet for this backend's immutable target payload.
     pub target_compiler: Option<fn() -> Result<Box<dyn TargetCompiler>, BackendError>>,
@@ -114,8 +121,21 @@ inventory::collect!(BackendRegistration);
 
 /// Return target compiler facets keyed by canonical semantic operation identity.
 ///
-/// A compiler-capable backend contributes a facet when the canonical neutral
-/// program contains only operation IDs advertised by that backend.
+/// A compiler-capable backend contributes a facet for an operation only when
+/// that backend has a lowering arm for every node of the operation's canonical
+/// program. The declared semantic set is the backend's claim; the language-level
+/// operation set it registers for dispatch is what it can actually lower, and a
+/// facet is the intersection. Emitting one per declared id made every backend
+/// report the whole catalog, which is the same answer for a backend with one
+/// emitter arm and a backend with all of them.
+///
+/// The program is legalized first, exactly as
+/// [`crate::validation::validate_program_contract`] legalizes it before
+/// admission: a logical execution marker is resolved by schedule lowering and
+/// never reaches an emitter, so asking whether a backend lowers one is the
+/// wrong question. Device-dependent facts stay out of this join; a capability
+/// a device reports is answered by the support certificate, not by a static
+/// registration.
 ///
 /// # Errors
 ///
@@ -126,6 +146,7 @@ pub fn registered_target_operation_facets() -> Result<&'static [TargetOperationF
     static FACETS: LazyLock<Result<Arc<[TargetOperationFacet]>, BackendError>> = LazyLock::new(
         || {
             let backends = registered_backends()?;
+            let registry = vyre_foundation::operation::OperationRegistry::global();
             let mut facets = Vec::new();
             let facet_count = backends.iter().fold(0usize, |count, backend| {
                 count.saturating_add((backend.semantic_operations)().len())
@@ -137,27 +158,44 @@ pub fn registered_target_operation_facets() -> Result<&'static [TargetOperationF
                 "target operation facet",
                 "reduce linked target operation declarations",
             )?;
-            for backend in backends
-                .iter()
-                .filter(|backend| backend.target_compiler.is_some())
-            {
+            let compiling = || {
+                backends
+                    .iter()
+                    .filter(|backend| backend.target_compiler.is_some())
+            };
+            for backend in compiling() {
                 for operation_id in (backend.semantic_operations)() {
-                    let operation =
-                        vyre_foundation::operation::OperationRegistry::global()
-                            .get(operation_id)
-                            .ok_or_else(|| {
-                                BackendError::new(format!(
-                                    "target `{}` advertises unknown semantic operation `{operation_id}`. Fix: submit one canonical OperationRegistration or remove the stale target facet.",
-                                    backend.target_id
-                                ))
-                            })?;
-                    if operation.program().is_some() {
-                        facets.push(TargetOperationFacet {
-                            operation_id: operation.id,
-                            target_id: backend.target_id.clone(),
-                            version: 1,
-                        });
+                    if registry.get(operation_id).is_none() {
+                        return Err(BackendError::new(format!(
+                            "target `{}` advertises unknown semantic operation `{operation_id}`. Fix: submit one canonical OperationRegistration or remove the stale target facet.",
+                            backend.target_id
+                        )));
                     }
+                }
+            }
+            for operation in registry.iter() {
+                let Some(program) = operation.program() else {
+                    continue;
+                };
+                let lowered = lower_logical_schedule_borrowed(&program);
+                let physical = lowered.as_ref().unwrap_or(&program);
+                for backend in compiling() {
+                    if !(backend.semantic_operations)().contains(operation.id) {
+                        continue;
+                    }
+                    if crate::backend::validation::first_unsupported_node_op(
+                        physical.entry(),
+                        (backend.supported_ops)(),
+                    )
+                    .is_some()
+                    {
+                        continue;
+                    }
+                    facets.push(TargetOperationFacet {
+                        operation_id: operation.id,
+                        target_id: backend.target_id.clone(),
+                        version: 1,
+                    });
                 }
             }
             facets.sort_unstable_by(|left, right| {

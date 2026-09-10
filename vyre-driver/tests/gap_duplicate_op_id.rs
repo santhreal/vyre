@@ -20,7 +20,7 @@ inventory::submit! {
         Some(duplicate_program),
         None,
         None,
-    ).with_opaque("external duplicate fixture is opaque")
+    ).with_uncharacterized()
 }
 
 inventory::submit! {
@@ -30,7 +30,7 @@ inventory::submit! {
         Some(duplicate_program),
         None,
         None,
-    ).with_opaque("external duplicate fixture is opaque")
+    ).with_uncharacterized()
 }
 
 /// WHY: one semantic identity must never depend on linked-inventory order.

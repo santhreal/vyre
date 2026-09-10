@@ -81,7 +81,7 @@ inventory::submit! {
     )
     .with_signature(CALLEE_SIG)
     .with_category("test")
-    .with_opaque("a pairwise row sum over a caller-supplied index states no reorderable law")
+    .with_uncharacterized()
 }
 
 /// The call resolves and disappears. Before the fix this failed with

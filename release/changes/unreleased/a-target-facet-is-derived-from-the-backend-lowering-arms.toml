@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A target operation facet is published only where the target lowers every node of the operation's canonical program, so a target that declares the whole catalog and registers fewer lowering arms no longer reports the whole catalog as supported."
