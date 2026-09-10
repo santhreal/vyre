@@ -533,14 +533,13 @@ fn render_contract(
         "### Boundaries".to_string(),
         String::new(),
         format!(
-            "The `{}` owner maintains this `{}` crate at `{}`.",
-            record.owner, record.layer, record.path
+            "This crate is the `{}` layer's `{}` seam, at `{}`.",
+            record.layer, record.seam, record.path
         ),
-        format!(
-            "Its allowed internal production dependencies are: {}.",
-            joined(&record.allowed_dependencies())
-        ),
-        "Any other normal or build dependency requires an ownership-registry change.".to_string(),
+        format!("Every production dependency on it crosses {}", record.interface),
+        "The layer ranks in the architecture manifest decide which layers may".to_string(),
+        "reach it; a dependency from a layer that does not outrank this one requires".to_string(),
+        "an architecture-manifest change.".to_string(),
         String::new(),
         "### Minimal real example".to_string(),
         String::new(),
@@ -575,7 +574,7 @@ fn render_contract(
             "[`{registry}`]({up}{registry}) is authoritative for this crate's",
             registry = crate_registry::REGISTRY
         ),
-        "responsibility and allowed internal edges.".to_string(),
+        "responsibility, layer, and seam.".to_string(),
         String::new(),
         "### License".to_string(),
         String::new(),

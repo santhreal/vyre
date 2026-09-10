@@ -1,9 +1,9 @@
 //! The supported-API classification gate and the manifest generated from it.
 //!
-//! Every publishable workspace package has an explicit publication class declared
-//! in `docs/CRATE_OWNERSHIP.toml`. This gate reads committed public-API snapshots
-//! from `docs/public-api/` and classifies every exported item by owner, stability,
-//! feature, and wire compatibility.
+//! Every publishable workspace package declares an explicit publication class in
+//! its own `[package.metadata.vyre]` table. This gate reads the committed
+//! public-API snapshots under `docs/public-api/` and classifies every exported
+//! item by seam, stability, feature, and wire compatibility.
 //!
 //! [`SUPPORTED_API_MANIFEST`] (`docs/SUPPORTED_API.toml`) records the resulting
 //! classification. This gate verifies that every exported item is classified, that
@@ -50,8 +50,8 @@ pub struct PackageClassification {
     pub name: String,
     /// Repository-relative directory.
     pub path: String,
-    /// Owning seam.
-    pub owner: String,
+    /// Name of the seam the package owns, as the architecture manifest states it.
+    pub seam: String,
     /// Publication class from crate registry.
     pub publication_class: String,
     /// Stability level.
@@ -132,7 +132,7 @@ pub fn render_manifest(packages: &[PackageClassification]) -> String {
         out.push_str("[[package]]\n");
         out.push_str(&format!("name = \"{}\"\n", pkg.name));
         out.push_str(&format!("path = \"{}\"\n", pkg.path));
-        out.push_str(&format!("owner = \"{}\"\n", pkg.owner));
+        out.push_str(&format!("seam = \"{}\"\n", pkg.seam));
         out.push_str(&format!(
             "publication_class = \"{}\"\n",
             pkg.publication_class
@@ -234,7 +234,7 @@ pub fn classify_workspace(
         classifications.push(PackageClassification {
             name: pkg.package.clone(),
             path: record.path.clone(),
-            owner: record.owner.clone(),
+            seam: record.seam.clone(),
             publication_class: record.publication_class.clone(),
             stability,
             items,
@@ -334,7 +334,7 @@ mod tests {
         let pkgs = vec![PackageClassification {
             name: "vyre".to_string(),
             path: "vyre".to_string(),
-            owner: "core-maintainers".to_string(),
+            seam: "compiler-facade".to_string(),
             publication_class: "stable-consumer-sdk".to_string(),
             stability: "stable".to_string(),
             items: vec![ClassifiedItem {

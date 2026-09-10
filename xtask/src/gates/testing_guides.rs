@@ -548,10 +548,9 @@ fn render_guide(
         record.responsibility.clone(),
         String::new(),
         format!(
-            "The crate lives at `{}`. The `{}` owner maintains its",
-            record.path, record.owner
+            "The crate lives at `{}` and owns the `{}` seam in the `{}` layer.",
+            record.path, record.seam, record.layer
         ),
-        format!("`{}` testing contract.", record.layer),
         String::new(),
         "## Commands".to_string(),
         String::new(),
@@ -669,14 +668,15 @@ mod tests {
     #[test]
     fn the_guide_filename_is_the_member_directory_name() {
         let record = CrateRecord {
-            package: "vyre-conform-spec".to_string(),
-            path: "conform/vyre-conform-spec".to_string(),
-            owner: "conform".to_string(),
-            layer: "spec".to_string(),
-            publication_class: "conformance-tooling".to_string(),
-            responsibility: String::new(),
-            dependencies: Vec::new(),
-        };
+                    package: "vyre-conform-spec".to_string(),
+                    path: "conform/vyre-conform-spec".to_string(),
+                    layer: "spec".to_string(),
+                    publication_class: "conformance-tooling".to_string(),
+                    seam: "conform".to_string(),
+                    interface: String::new(),
+                    responsibility: String::new(),
+                    facade_exported: false,
+                };
         assert_eq!(guide_name(&record), "vyre-conform-spec.md");
     }
 
@@ -701,14 +701,15 @@ mod tests {
             )]),
         };
         let record = CrateRecord {
-            package: "demo".to_string(),
-            path: "demo".to_string(),
-            owner: "core".to_string(),
-            layer: "driver".to_string(),
-            publication_class: "concrete-backend".to_string(),
-            responsibility: String::new(),
-            dependencies: Vec::new(),
-        };
+                    package: "demo".to_string(),
+                    path: "demo".to_string(),
+                    layer: "driver".to_string(),
+                    publication_class: "concrete-backend".to_string(),
+                    seam: "core".to_string(),
+                    interface: String::new(),
+                    responsibility: String::new(),
+                    facade_exported: false,
+                };
         let mut report = Report::clean();
         let fields = metadata
             .resolve(&record, &mut report)
@@ -730,14 +731,15 @@ mod tests {
             overrides: BTreeMap::new(),
         };
         let record = CrateRecord {
-            package: "demo".to_string(),
-            path: "demo".to_string(),
-            owner: "core".to_string(),
-            layer: "driver".to_string(),
-            publication_class: "concrete-backend".to_string(),
-            responsibility: String::new(),
-            dependencies: Vec::new(),
-        };
+                    package: "demo".to_string(),
+                    path: "demo".to_string(),
+                    layer: "driver".to_string(),
+                    publication_class: "concrete-backend".to_string(),
+                    seam: "core".to_string(),
+                    interface: String::new(),
+                    responsibility: String::new(),
+                    facade_exported: false,
+                };
         let mut report = Report::clean();
         assert!(metadata.resolve(&record, &mut report).is_none());
         assert_eq!(report.findings.len(), 1);

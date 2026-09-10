@@ -1,14 +1,18 @@
-//! Whether the resolved crate graph stays inside the layering the ownership
-//! registry declares.
+//! Whether a substrate-neutral crate stays neutral, in its graph and in its
+//! words.
 //!
-//! Three rules over one graph. A member may reach another member only if its
-//! `docs/CRATE_OWNERSHIP.toml` entry allows it, directly or through a declared
-//! edge. A member in a substrate-neutral layer may not reach a backend API crate
-//! at all, whatever the intermediate was, and may not name a concrete backend,
-//! vendor or dialect in its own production sources: a neutral crate that
-//! describes its work in one vendor's words is where a rule meant for every
-//! backend ends up written for one, which is the drift the third rule reports
-//! before the code follows the prose.
+//! Two rules over one graph. A member in a substrate-neutral layer may not
+//! reach a backend API crate at all, whatever the intermediate was, and may not
+//! name a concrete backend, vendor or dialect in its own production sources: a
+//! neutral crate that describes its work in one vendor's words is where a rule
+//! meant for every backend ends up written for one, which is the drift the
+//! second rule reports before the code follows the prose.
+//!
+//! Dependency direction is not judged here. `crate-ownership` owns the layer
+//! DAG in `docs/CRATE_OWNERSHIP.toml` and holds every production edge to it.
+//! This gate reads that file only for the layer each member sits in, through
+//! the crate that owns it, so the neutrality decision and the direction rule
+//! answer from one statement of where a crate lives.
 //!
 //! The graph comes from the manifests and the lockfile, never from cargo. The
 //! shell form ran `cargo tree` once per member and once more per violation, so a
@@ -75,8 +79,8 @@ const RETIRED_CRATES: &[&str] = &["vyre-ir", "vyre-wgpu"];
 /// one of these has crossed it whatever the intermediate was.
 const BACKEND_APIS: &[&str] = &["ash", "cudarc", "metal", "naga", "wgpu"];
 
-/// Every internal edge stays inside its declared closure, and no substrate-neutral
-/// crate reaches a backend API.
+/// No substrate-neutral crate reaches a backend API, in its graph or in its
+/// production sources.
 pub struct Layering;
 
 impl crate::gate::GateBehavior for Layering {
@@ -97,24 +101,7 @@ impl crate::gate::GateBehavior for Layering {
         let mut scanned = 0usize;
 
         for member in &graph.members {
-            let allowed = registry.closure(member);
-            let internal = graph.reachable_members(member);
-            edges += internal.len();
-            for reached in &internal {
-                if allowed.contains(reached) {
-                    continue;
-                }
-                report.find(Finding::in_file(
-                    format!("{}/Cargo.toml", graph.directory(member)),
-                    format!(
-                        "`{member}` reaches `{reached}`, which its ownership entry does not \
-                         allow directly or through a declared edge: {}",
-                        graph.path_to(member, reached)
-                    ),
-                    "remove the edge, or declare it in the docs/CRATE_OWNERSHIP.toml entry \
-                     for the crate that owns it and regenerate the ownership docs",
-                ));
-            }
+            edges += graph.reachable_members(member).len();
             if !registry.neutral(member) {
                 continue;
             }
@@ -707,10 +694,8 @@ impl Graph {
     }
 }
 
-/// The layering the ownership registry declares.
+/// The layer each member declares, and the neutrality decision for that layer.
 struct Registry {
-    /// Directly declared edges per package.
-    declared: BTreeMap<String, BTreeSet<String>>,
     /// Declared layer per package.
     layers: BTreeMap<String, String>,
     /// Neutrality decision per layer name.
@@ -718,69 +703,39 @@ struct Registry {
 }
 
 impl Registry {
-    /// Read the registry and hold it against the member roster.
+    /// Read the declared layers and hold them against the member roster.
     fn read(
         tree: &Tree,
         members: &BTreeSet<String>,
         neutrality: &Neutrality,
     ) -> Result<Self, GateError> {
-        let table = tree.read_toml("docs/CRATE_OWNERSHIP.toml")?;
-        let crates = table
-            .get("crate")
-            .and_then(toml::Value::as_array)
-            .filter(|entries| !entries.is_empty())
-            .ok_or_else(|| {
-                GateError::new(
-                    "docs/CRATE_OWNERSHIP.toml declares no [[crate]] entries",
-                    "record each crate's layer and allowed internal edges; a closure read \
-                     from an empty registry allows nothing and reports nothing",
-                )
-            })?;
-        let mut declared = BTreeMap::new();
-        let mut layers = BTreeMap::new();
-        for entry in crates {
-            let Some(package) = entry.get("package").and_then(toml::Value::as_str) else {
-                return Err(GateError::new(
-                    "a docs/CRATE_OWNERSHIP.toml [[crate]] entry declares no package",
-                    "name the package the entry describes",
-                ));
-            };
-            let edges: BTreeSet<String> = entry
-                .get("dependency")
-                .and_then(toml::Value::as_array)
-                .map(|list| {
-                    list.iter()
-                        .filter_map(|dependency| dependency.get("package"))
-                        .filter_map(toml::Value::as_str)
-                        .map(str::to_string)
-                        .collect()
-                })
-                .unwrap_or_default();
-            declared.insert(package.to_string(), edges);
-            layers.insert(
-                package.to_string(),
-                entry
-                    .get("layer")
-                    .and_then(toml::Value::as_str)
-                    .unwrap_or_default()
-                    .to_string(),
-            );
+        let declared = crate::gates::crate_registry::declared_crates(tree)?;
+        if declared.is_empty() {
+            return Err(GateError::new(
+                "docs/CRATE_OWNERSHIP.toml declares no [[crate]] entries",
+                "record each member's layer; a neutrality rule read from an empty manifest \
+                 covers nothing and reports nothing",
+            ));
         }
+        let layers: BTreeMap<String, String> = declared
+            .into_iter()
+            .map(|entry| (entry.package, entry.layer))
+            .collect();
 
-        let unregistered: Vec<&String> = members
+        let unregistered: Vec<&str> = members
             .iter()
-            .filter(|member| !declared.contains_key(*member))
+            .map(String::as_str)
+            .filter(|member| !layers.contains_key(*member))
             .collect();
         if !unregistered.is_empty() {
-            let names: Vec<&str> = unregistered.iter().map(|name| name.as_str()).collect();
             return Err(GateError::new(
                 format!(
                     "workspace member(s) with no docs/CRATE_OWNERSHIP.toml entry: {}",
-                    names.join(", ")
+                    unregistered.join(", ")
                 ),
-                "record the crate's layer and allowed internal edges in the registry, then \
-                 run `xtask crate-ownership --write`; an unregistered crate has an empty \
-                 closure, so every edge it has would report at once",
+                "record the member's layer in the architecture manifest, then run \
+                 `xtask crate-ownership --write`; a member with no layer has no neutrality \
+                 decision, so the rule would skip it",
             ));
         }
 
@@ -842,33 +797,12 @@ impl Registry {
         }
 
         Ok(Self {
-            declared,
             layers,
             neutrality: decided,
         })
     }
 
-    /// Every package the given one may reach, through its own declared edges and
-    /// through theirs.
-    fn closure(&self, package: &str) -> BTreeSet<String> {
-        let mut reached = BTreeSet::new();
-        let mut pending: Vec<String> = self
-            .declared
-            .get(package)
-            .map(|edges| edges.iter().cloned().collect())
-            .unwrap_or_default();
-        while let Some(current) = pending.pop() {
-            if !reached.insert(current.clone()) {
-                continue;
-            }
-            if let Some(edges) = self.declared.get(&current) {
-                pending.extend(edges.iter().cloned());
-            }
-        }
-        reached
-    }
-
-    /// The layer the registry gives a package.
+    /// The layer the manifest gives a package.
     fn layer(&self, package: &str) -> &str {
         self.layers.get(package).map_or("", String::as_str)
     }
@@ -1112,28 +1046,30 @@ mod tests {
         assert!(graph.reachable_members("neutral").is_empty());
     }
 
+    /// WHY: the neutrality decision is per layer and the layer is per member,
+    /// so a package with no row must read as not-neutral rather than inherit a
+    /// neighbour's decision. Waving an unknown package through as neutral would
+    /// convict it on the vocabulary rule it was never placed under.
     #[test]
-    fn a_declared_closure_follows_the_edges_of_the_crates_it_names() {
+    fn the_neutrality_decision_follows_the_layer_the_member_declares() {
         let registry = Registry {
-            declared: [
-                ("top".to_string(), ["middle".to_string()].into()),
-                ("middle".to_string(), ["bottom".to_string()].into()),
-                ("bottom".to_string(), BTreeSet::new()),
+            layers: [
+                ("top".to_string(), "runtime".to_string()),
+                ("bottom".to_string(), "foundation".to_string()),
             ]
             .into_iter()
             .collect(),
-            layers: [("top".to_string(), "runtime".to_string())]
-                .into_iter()
-                .collect(),
-            neutrality: [("runtime".to_string(), true)].into_iter().collect(),
+            neutrality: [
+                ("runtime".to_string(), true),
+                ("foundation".to_string(), false),
+            ]
+            .into_iter()
+            .collect(),
         };
-        assert_eq!(
-            registry.closure("top"),
-            ["middle".to_string(), "bottom".to_string()]
-                .into_iter()
-                .collect::<BTreeSet<_>>()
-        );
+        assert_eq!(registry.layer("top"), "runtime");
         assert!(registry.neutral("top"));
+        assert!(!registry.neutral("bottom"));
+        assert_eq!(registry.layer("unknown"), "");
         assert!(!registry.neutral("unknown"));
     }
 
