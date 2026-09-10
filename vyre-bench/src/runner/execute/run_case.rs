@@ -288,7 +288,7 @@ pub(super) fn run_case(
     if thermal_status_applies(&metrics, requirements.needs_gpu) {
         status = "thermal_unstable".to_string();
     }
-    status = final_case_status(&status, config.enforce_budgets, performance.as_ref());
+    status = final_case_status(&status, performance.as_ref());
 
     let wall_ns = metrics.get("wall_ns").map(|s| s.mean);
 
@@ -323,12 +323,13 @@ pub(super) fn run_case(
     })
 }
 
-fn final_case_status(
-    provisional: &str,
-    enforce_budgets: bool,
-    performance: Option<&PerformanceEvaluation>,
-) -> String {
-    if enforce_budgets && performance.is_some_and(|performance| !performance.contract_passed) {
+/// State the case verdict.
+///
+/// WHY: a failed performance contract is a failed case whatever the producing
+/// command asked for, so the status a reader tallies agrees with
+/// `CaseReport::passes_summary_evidence` and with the printed pair.
+fn final_case_status(provisional: &str, performance: Option<&PerformanceEvaluation>) -> String {
+    if performance.is_some_and(|performance| !performance.contract_passed) {
         "failed".to_string()
     } else {
         provisional.to_string()
@@ -624,8 +625,15 @@ mod tests {
         }
     }
 
+    /// WHY: the status a reader tallies in `cases[]` has to agree with
+    /// `CaseReport::passes_summary_evidence`, which rejects a failed contract
+    /// whatever the producing command asked for. A verdict that depended on a
+    /// producer flag printed one pass count and recorded another.
+    ///
+    /// This does not catch a provisional status added without a decision: the
+    /// provisional set is string literals at the call site, not a type.
     #[test]
-    fn enforced_performance_failure_retains_a_reportable_failed_status() {
+    fn a_failed_performance_contract_is_a_failed_case_in_every_run() {
         let failed = PerformanceEvaluation {
             speedup_x: Some(99.0),
             contract_passed: false,
@@ -637,21 +645,23 @@ mod tests {
             violations: Vec::new(),
         };
 
-        assert_eq!(
-            final_case_status("thermal_unstable", true, Some(&failed)),
-            "failed",
-            "Fix: enforced performance failures must remain failed while preserving their measured report."
-        );
-        assert_eq!(
-            final_case_status("pass", false, Some(&failed)),
-            "pass",
-            "Fix: non-enforcing local runs must report measurements without converting a contract miss into a case failure."
-        );
-        assert_eq!(
-            final_case_status("thermal_unstable", true, Some(&passed)),
-            "thermal_unstable",
-            "Fix: a passing performance contract must preserve stronger provisional evidence status."
-        );
+        for provisional in ["pass", "unstable", "thermal_unstable"] {
+            assert_eq!(
+                final_case_status(provisional, Some(&failed)),
+                "failed",
+                "Fix: a case that missed its performance contract must report status `failed` so the case list and the printed pass count state the same verdict."
+            );
+            assert_eq!(
+                final_case_status(provisional, Some(&passed)),
+                provisional,
+                "Fix: a passing performance contract must preserve the provisional measurement status."
+            );
+            assert_eq!(
+                final_case_status(provisional, None),
+                provisional,
+                "Fix: a case without a performance contract must preserve the provisional measurement status."
+            );
+        }
     }
 
     #[test]

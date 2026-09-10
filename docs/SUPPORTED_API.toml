@@ -34584,7 +34584,7 @@ seam = "foundation-ir"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 8829
+exported_item_count = 8830
 
   [[package.item]]
   path = "alloc::string::String::from(err: vyre_foundation::serial::wire::encode::WireEncodeErr) -> alloc::string::String"
@@ -59155,6 +59155,13 @@ exported_item_count = 8829
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "wire-bound"
+
+  [[package.item]]
+  path = "vyre_foundation::logical_points_per_element(program: &vyre_foundation::ir::Program, buffer: &str) -> u32"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_foundation::loop_bounds"

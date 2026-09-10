@@ -17,7 +17,7 @@ use vyre_primitives::wire::pack_u32_slice;
 use vyre_reference::composition_witness::classic_ac_suffix3_bloom_contains_witness;
 
 use super::baseline::cpu_aho_overlapping_matches;
-use super::haystack::{build_irregular_haystack, pattern_lengths};
+use super::haystack::{build_irregular_haystack, pattern_lengths, with_haystack_extent};
 use super::metrics::{scan_ac_count_metric_points, ScanAcStats};
 use super::sample::{dispatch_reset_then_scan, scan_bench_run, take_scan_sample, ResetThenScan};
 use super::{HAYSTACK_BYTES, PATTERNS, SUITES};
@@ -187,7 +187,10 @@ pub(super) fn prepare_scan_ac_irregular_count(
     let baseline_wall_ns = elapsed_ns(baseline_start);
     let (candidate_end_mask, candidate_suffix2_mask, candidate_suffix3_bloom) =
         super::scan_ac_candidate_masks(&ac);
-    let program = build_ac_bounded_count_suffix3_prefilter_program(&ac.dfa);
+    let program = with_haystack_extent(
+        build_ac_bounded_count_suffix3_prefilter_program(&ac.dfa),
+        HAYSTACK_BYTES,
+    )?;
     let inputs = scan_ac_count_inputs_with_masks(
         &ac,
         &haystack,

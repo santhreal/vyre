@@ -368,6 +368,34 @@ pub struct ReportSummary {
     pub cache_hit_rate: Option<f64>,
 }
 
+impl ReportSummary {
+    /// Derive the pass and fail tally from the case list.
+    ///
+    /// WHY: the printed pair and the `cases` array are the same fact stated
+    /// twice. Counting while cases execute creates a second source that drifts
+    /// from the list a reader tallies, so both counts and `total_cases` are
+    /// computed here from `cases` alone, with `CaseReport::passes_summary_evidence`
+    /// as the only verdict.
+    #[must_use]
+    pub fn from_cases(
+        cases: &[CaseReport],
+        total_time_ns: u64,
+        cache_hit_rate: Option<f64>,
+    ) -> Self {
+        let passed = cases
+            .iter()
+            .filter(|case| case.passes_summary_evidence())
+            .count();
+        Self {
+            total_cases: cases.len(),
+            passed,
+            failed: cases.len() - passed,
+            total_time_ns,
+            cache_hit_rate,
+        }
+    }
+}
+
 impl CaseReport {
     pub fn passes_summary_evidence(&self) -> bool {
         self.status == "pass"
@@ -475,12 +503,8 @@ impl CaseReport {
 
 impl ReportSchema {
     pub fn evidence_summary_counts(&self) -> (usize, usize) {
-        let passed = self
-            .cases
-            .iter()
-            .filter(|case| case.passes_summary_evidence())
-            .count();
-        (passed, self.cases.len().saturating_sub(passed))
+        let derived = ReportSummary::from_cases(&self.cases, 0, None);
+        (derived.passed, derived.failed)
     }
 
     pub fn validate_summary_evidence(&self) -> Result<(), String> {

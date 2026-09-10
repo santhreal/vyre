@@ -2170,6 +2170,7 @@ pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::validate(graph: &'a vy
 pub fn vyre_foundation::logical::LogicalProgramGraph<'a>::value_budget(&self, value: vyre_foundation::ir::GraphValueId) -> core::result::Result<vyre_foundation::numeric::NumericContract, vyre_foundation::logical::LogicalProgramError>
 pub fn vyre_foundation::logical::LogicalRegionKind::is_reduction_or_scan(self) -> bool
 pub fn vyre_foundation::logical::LogicalRegionKind::is_stateful(self) -> bool
+pub fn vyre_foundation::logical_points_per_element(program: &vyre_foundation::ir::Program, buffer: &str) -> u32
 pub fn vyre_foundation::loop_bounds::data_derived_loop_bounds(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::loop_bounds::DataDerivedLoopBound>
 pub fn vyre_foundation::loop_bounds::data_derived_loop_bounds_in(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<vyre_foundation::loop_bounds::DataDerivedLoopBound>
 pub fn vyre_foundation::lower::LoweringError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result

@@ -122,8 +122,6 @@ pub fn execute_suite(
     });
     let started = Instant::now();
     let mut cases_report = Vec::with_capacity(registry.len());
-    let mut passed = 0;
-    let mut failed = 0;
     let mut selected_backend_profile = None;
 
     let selected_cases: Vec<_> = registry
@@ -140,7 +138,6 @@ pub fn execute_suite(
     for case in selected_cases.iter().copied() {
         let requirements = case.requirements();
         if let Err(error) = validate_requirements(&environment, &requirements) {
-            failed += 1;
             cases_report.push(case_failure(
                 case,
                 None,
@@ -154,7 +151,6 @@ pub fn execute_suite(
             match acquire_backend(config.backend_id.as_deref()) {
                 Ok(backend) => backend,
                 Err(error) => {
-                    failed += 1;
                     cases_report.push(case_failure(
                         case,
                         None,
@@ -168,7 +164,6 @@ pub fn execute_suite(
         {
             Ok(registration) => registration,
             Err(error) => {
-                failed += 1;
                 cases_report.push(case_failure(
                     case,
                     None,
@@ -181,7 +176,6 @@ pub fn execute_suite(
         let materializer = match preferred_registration.materializer() {
             Ok(materializer) => Arc::from(materializer),
             Err(error) => {
-                failed += 1;
                 cases_report.push(case_failure(
                     case,
                     Some(preferred_backend.id().to_string()),
@@ -215,7 +209,6 @@ pub fn execute_suite(
         let mut prepared = match case.prepare(&mut ctx) {
             Ok(prepared) => prepared,
             Err(error) => {
-                failed += 1;
                 cases_report.push(case_failure(
                     case,
                     Some(ctx.preferred_backend.id().to_string()),
@@ -232,7 +225,6 @@ pub fn execute_suite(
             .or_else(|| case.program(&prepared))
         {
             if let Err(error) = ctx.prepare_artifact(program) {
-                failed += 1;
                 cases_report.push(case_failure(
                     case,
                     Some(ctx.preferred_backend.id().to_string()),
@@ -244,16 +236,8 @@ pub fn execute_suite(
         }
 
         match run_case(case, &mut ctx, &mut prepared, suite, config) {
-            Ok(case_report) => {
-                if case_report.passes_summary_evidence() {
-                    passed += 1;
-                } else {
-                    failed += 1;
-                }
-                cases_report.push(case_report);
-            }
+            Ok(case_report) => cases_report.push(case_report),
             Err(error) => {
-                failed += 1;
                 cases_report.push(case_failure(
                     case,
                     Some(ctx.preferred_backend.id().to_string()),
@@ -276,6 +260,9 @@ pub fn execute_suite(
             workgroup[0], workgroup[1], workgroup[2]
         ));
     }
+    if config.enforce_budgets {
+        features.push("budgets:enforced".to_string());
+    }
 
     let selected_backend = config.backend_id.clone().or_else(|| {
         cases_report
@@ -291,6 +278,7 @@ pub fn execute_suite(
         .iter()
         .flat_map(CaseReport::evidence_blockers)
         .collect();
+    let summary = ReportSummary::from_cases(&cases_report, elapsed_ns(started), cache_hit_rate);
     let report = ReportSchema {
         schema: "vyre-bench.result.v1".to_string(),
         run_id: format!("vyre-bench.{}", suite.as_str()),
@@ -303,13 +291,7 @@ pub fn execute_suite(
         environment,
         features,
         cases: cases_report,
-        summary: ReportSummary {
-            total_cases: selected_cases.len(),
-            passed,
-            failed,
-            total_time_ns: elapsed_ns(started),
-            cache_hit_rate,
-        },
+        summary,
         blockers,
     };
 

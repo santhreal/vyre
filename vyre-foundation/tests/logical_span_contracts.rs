@@ -614,3 +614,235 @@ fn a_full_span_effect_keeps_the_resource_span_despite_its_guard() {
 
     assert!(!launch_covers_full_input_span(&unguarded_store()));
 }
+
+/// Buffer the widening tests read.
+fn packed_haystack() -> Vec<BufferDecl> {
+    vec![
+        BufferDecl::storage("h", 0, vyre_foundation::ir::BufferAccess::ReadOnly, DataType::U32)
+            .with_count(1024),
+        BufferDecl::output("out", 1, DataType::U32).with_count(RESOURCE_SPAN),
+    ]
+}
+
+/// A program whose only effect stores `read` into `out` at the index.
+fn reading_store(read: Expr) -> Program {
+    Program::wrapped(
+        packed_haystack(),
+        [256, 1, 1],
+        vec![Node::store("out", index(), read)],
+    )
+}
+
+/// WHY: a packed program addresses a narrower unit than the element type it
+/// declares, so a launch span taken from the declared count covers a fraction
+/// of the input and the program reports a fraction of the answer. Every form
+/// the divisor takes in the IR must yield the exact factor, and every
+/// neighbouring form must yield 1, since claiming a factor the program does not
+/// apply fires invocations past the domain it stores into.
+#[test]
+fn every_packed_index_form_states_its_exact_point_factor() {
+    let cases: Vec<(&str, Expr, u32)> = vec![
+        ("h[index / 4]", Expr::load("h", Expr::div(index(), Expr::u32(4))), 4),
+        ("h[index >> 2]", Expr::load("h", Expr::shr(index(), Expr::u32(2))), 4),
+        ("h[index / 1]", Expr::load("h", Expr::div(index(), Expr::u32(1))), 1),
+        ("h[index]", Expr::load("h", index()), 1),
+        ("h[index / 0]", Expr::load("h", Expr::div(index(), Expr::u32(0))), 1),
+        (
+            "h[index >> 32]",
+            Expr::load("h", Expr::shr(index(), Expr::u32(32))),
+            1,
+        ),
+        (
+            "h[index % 4]",
+            Expr::load("h", Expr::rem(index(), Expr::u32(4))),
+            1,
+        ),
+        (
+            "h[index * 4]",
+            Expr::load("h", Expr::mul(index(), Expr::u32(4))),
+            1,
+        ),
+        (
+            "h[4 / index]",
+            Expr::load("h", Expr::div(Expr::u32(4), index())),
+            1,
+        ),
+        (
+            "h[out[0] / 4]",
+            Expr::load(
+                "h",
+                Expr::div(Expr::load("out", Expr::u32(0)), Expr::u32(4)),
+            ),
+            1,
+        ),
+        (
+            "h[(index / 8) / 2] states no factor",
+            Expr::load(
+                "h",
+                Expr::div(Expr::div(index(), Expr::u32(8)), Expr::u32(2)),
+            ),
+            1,
+        ),
+    ];
+    for (form, read, expected) in cases {
+        let program = reading_store(read);
+        assert_eq!(
+            vyre_foundation::logical_points_per_element(&program, "h"),
+            expected,
+            "{form}"
+        );
+    }
+}
+
+/// WHY: the divisor is written against a local in production, because the
+/// invocation index is bound once and reused, so an analysis that only accepts
+/// the index expression itself reads every real packed program as unpacked.
+#[test]
+fn a_divisor_written_against_a_bound_index_states_the_factor() {
+    let program = Program::wrapped(
+        packed_haystack(),
+        [256, 1, 1],
+        vec![
+            Node::let_bind("i", index()),
+            Node::store(
+                "out",
+                Expr::var("i"),
+                Expr::load("h", Expr::div(Expr::var("i"), Expr::u32(4))),
+            ),
+        ],
+    );
+    assert_eq!(vyre_foundation::logical_points_per_element(&program, "h"), 4);
+}
+
+/// WHY: a local that no longer holds the index states no relation to the axis,
+/// so a divisor applied to it widens nothing. A loop variable is that case, and
+/// it is the one the byte scan writes: the walk inside the loop indexes by the
+/// loop cursor, and only the gate outside it indexes by the invocation.
+#[test]
+fn a_divisor_against_a_rebound_local_states_no_factor() {
+    let program = Program::wrapped(
+        packed_haystack(),
+        [256, 1, 1],
+        vec![
+            Node::let_bind("i", index()),
+            Node::loop_for(
+                "step",
+                Expr::u32(0),
+                Expr::u32(8),
+                vec![Node::store(
+                    "out",
+                    Expr::var("i"),
+                    Expr::load("h", Expr::div(Expr::var("step"), Expr::u32(4))),
+                )],
+            ),
+        ],
+    );
+    assert_eq!(vyre_foundation::logical_points_per_element(&program, "h"), 1);
+
+    let reassigned = Program::wrapped(
+        packed_haystack(),
+        [256, 1, 1],
+        vec![
+            Node::let_bind("i", index()),
+            Node::assign("i", Expr::u32(7)),
+            Node::store(
+                "out",
+                index(),
+                Expr::load("h", Expr::div(Expr::var("i"), Expr::u32(4))),
+            ),
+        ],
+    );
+    assert_eq!(
+        vyre_foundation::logical_points_per_element(&reassigned, "h"),
+        1
+    );
+}
+
+/// WHY: the factor belongs to the buffer the divided index addresses, and a
+/// launch widened by a factor another buffer applies runs invocations past the
+/// domain this one declares. Every access position must be read, since an
+/// atomic and a store reach memory without a load.
+#[test]
+fn the_factor_is_per_buffer_and_read_from_every_access_position() {
+    let other_buffer = Program::wrapped(
+        packed_haystack(),
+        [256, 1, 1],
+        vec![Node::store(
+            "out",
+            index(),
+            Expr::load("out", Expr::div(index(), Expr::u32(4))),
+        )],
+    );
+    assert_eq!(
+        vyre_foundation::logical_points_per_element(&other_buffer, "h"),
+        1
+    );
+    assert_eq!(
+        vyre_foundation::logical_points_per_element(&other_buffer, "out"),
+        4
+    );
+
+    let atomic = reading_store(Expr::atomic_add_ordered(
+        "h",
+        Expr::div(index(), Expr::u32(4)),
+        Expr::u32(1),
+        MemoryOrdering::Relaxed,
+    ));
+    assert_eq!(vyre_foundation::logical_points_per_element(&atomic, "h"), 4);
+
+    let stored = Program::wrapped(
+        packed_haystack(),
+        [256, 1, 1],
+        vec![Node::store(
+            "h",
+            Expr::div(index(), Expr::u32(4)),
+            Expr::u32(1),
+        )],
+    );
+    assert_eq!(vyre_foundation::logical_points_per_element(&stored, "h"), 4);
+
+    let untouched = reading_store(Expr::u32(1));
+    assert_eq!(
+        vyre_foundation::logical_points_per_element(&untouched, "h"),
+        1
+    );
+}
+
+/// WHY: a program packs at one rate, and two accesses at different rates mean
+/// the wider one is the domain: covering the narrower rate leaves the lanes the
+/// wider access needs unlaunched. Nesting must not hide an access either, since
+/// every real gate sits inside a branch.
+#[test]
+fn the_widest_factor_wins_wherever_the_access_is_nested() {
+    for (first, second) in [(4u32, 2u32), (2, 4)] {
+        let program = Program::wrapped(
+            packed_haystack(),
+            [256, 1, 1],
+            vec![Node::if_then(
+                Expr::lt(index(), Expr::u32(8)),
+                vec![
+                    Node::store(
+                        "out",
+                        index(),
+                        Expr::load("h", Expr::div(index(), Expr::u32(first))),
+                    ),
+                    Node::loop_for(
+                        "step",
+                        Expr::u32(0),
+                        Expr::u32(2),
+                        vec![Node::store(
+                            "out",
+                            index(),
+                            Expr::load("h", Expr::div(index(), Expr::u32(second))),
+                        )],
+                    ),
+                ],
+            )],
+        );
+        assert_eq!(
+            vyre_foundation::logical_points_per_element(&program, "h"),
+            first.max(second),
+            "{first} then {second}"
+        );
+    }
+}
