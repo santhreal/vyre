@@ -148,27 +148,40 @@ fn check_item_for_silent_skips(item: &syn::Item, sink: &mut Vec<(u32, &'static s
 }
 
 fn check_stmt_for_silent_skips(stmt: &syn::Stmt, sink: &mut Vec<(u32, &'static str)>) {
-    if let syn::Stmt::Expr(expr, _) = stmt {
-        check_expr_for_silent_skips(expr, sink);
+    match stmt {
+        syn::Stmt::Expr(expr, _) => check_expr_for_silent_skips(expr, sink),
+        syn::Stmt::Local(local) => {
+            if let Some(init) = &local.init {
+                check_expr_for_silent_skips(&init.expr, sink);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Walk every statement of `block`.
+fn check_block_for_silent_skips(block: &syn::Block, sink: &mut Vec<(u32, &'static str)>) {
+    for stmt in &block.stmts {
+        check_stmt_for_silent_skips(stmt, sink);
     }
 }
 
 fn check_expr_for_silent_skips(expr: &syn::Expr, sink: &mut Vec<(u32, &'static str)>) {
     match expr {
         syn::Expr::If(expr_if) => {
-            let cond_str = quote::quote!(#expr_if).to_string();
-            if cond_str.contains("is_err ()")
-                && (cond_str.contains("return Ok (())") || cond_str.contains("return ;"))
-            {
-                sink.push((
-                    expr_if.if_token.span.start().line as u32,
-                    "an is_err guard returning early",
-                ));
-            } else if cond_str.contains("if let Err") && cond_str.contains("return") {
-                sink.push((
-                    expr_if.if_token.span.start().line as u32,
-                    "an if-let-Err guard returning early",
-                ));
+            judge_guard(expr_if, sink);
+            check_block_for_silent_skips(&expr_if.then_branch, sink);
+            if let Some((_, otherwise)) = &expr_if.else_branch {
+                check_expr_for_silent_skips(otherwise, sink);
+            }
+        }
+        syn::Expr::Block(block) => check_block_for_silent_skips(&block.block, sink),
+        syn::Expr::Loop(body) => check_block_for_silent_skips(&body.body, sink),
+        syn::Expr::While(body) => check_block_for_silent_skips(&body.body, sink),
+        syn::Expr::ForLoop(body) => check_block_for_silent_skips(&body.body, sink),
+        syn::Expr::Match(expr_match) => {
+            for arm in &expr_match.arms {
+                check_expr_for_silent_skips(&arm.body, sink);
             }
         }
         syn::Expr::Macro(expr_macro) => {
@@ -186,6 +199,70 @@ fn check_expr_for_silent_skips(expr: &syn::Expr, sink: &mut Vec<(u32, &'static s
         }
         _ => {}
     }
+}
+
+/// Report `expr_if` when its own condition probes a failure and its own body
+/// leaves successfully anyway.
+///
+/// The condition and the body are read separately. Stringifying the whole `if`
+/// convicted any branch whose body happened to contain a guard and a `return`
+/// that had nothing to do with each other, which is the shape of every CLI
+/// entry point in the tree: `if subcommand == "prove" { if let Err(error) =
+/// prove(args) { eprintln!("{error}"); exit(1) } return; }` printed the error
+/// and exited nonzero, which is the loudest report available, and read as a
+/// silent skip.
+fn judge_guard(expr_if: &syn::ExprIf, sink: &mut Vec<(u32, &'static str)>) {
+    let then_branch = &expr_if.then_branch;
+    let body = quote::quote!(#then_branch).to_string();
+    if !returns_successfully(&body) || aborts_loudly(&body) {
+        return;
+    }
+    let condition = &expr_if.cond;
+    let condition = quote::quote!(#condition).to_string();
+    let line = expr_if.if_token.span.start().line as u32;
+    if condition.contains("is_err ()") {
+        sink.push((line, "an is_err guard returning early"));
+    } else if condition.contains("let Err") {
+        sink.push((line, "an if-let-Err guard returning early"));
+    }
+}
+
+/// Whether a guard body leaves without carrying the failure it just observed.
+///
+/// This is the whole shape the gate exists to find. A body that returns the
+/// error, or propagates it with `?`, has reported it to its caller and is
+/// ordinary error handling; reading any `return` as a skip convicted every
+/// recovery path in the drivers, including one that re-queues a flush and
+/// returns the error it caught.
+fn returns_successfully(body: &str) -> bool {
+    body.contains("return ;") || body.contains("return Ok (") || body.trim_end().ends_with("return }")
+}
+
+/// Whether a guard body ends the process or reports the correction instead of
+/// continuing.
+///
+/// A hardcoded list of six panic message prefixes decided this before, so a
+/// body that aborted with any other wording, with a nonzero process exit, or
+/// through an assertion was read as a skip. The question is what the body does,
+/// not how its message opens. `exit (0)` is excluded: leaving successfully is
+/// the skip this gate exists to find.
+///
+/// A body that emits a diagnostic naming the correction has reported the
+/// failure, which is the same standard every error in this workspace is held
+/// to. That is not the printed excuse the gate also looks for: an excuse says
+/// the run was skipped and names nothing to do about it.
+fn aborts_loudly(body: &str) -> bool {
+    if body.contains("exit (") && !body.contains("exit (0)") {
+        return true;
+    }
+    if body.contains("Fix:") {
+        return true;
+    }
+    ["panic !", "unreachable !", "todo !", "unimplemented !", "abort ()"]
+        .iter()
+        .any(|needle| body.contains(needle))
+        || body.contains("assert !")
+        || body.contains("assert_eq !")
 }
 
 /// Which silent-skip shapes a line carries.
@@ -269,6 +346,138 @@ mod tests {
     fn skips(line: &str) -> Vec<&'static str> {
         let masked = scan::mask_literals(line);
         silent_skips(line, &masked)
+    }
+
+    /// Judge whole source the way the AST arm does.
+    fn ast_skips(source: &str) -> Vec<(u32, &'static str)> {
+        let file = syn::parse_file(source).expect("test source must parse");
+        let mut sink = Vec::new();
+        find_ast_silent_skips(&file, &mut sink);
+        sink
+    }
+
+    /// WHY: the arm has to keep convicting the shape it exists for, at every
+    /// depth. The walk used to read only the top level of a function body, so a
+    /// skip one block in was invisible; a gate that cannot fail on a nested
+    /// instance of its own subject certifies what it never checked. The two
+    /// conditions and the two successful exits are all four combinations.
+    #[test]
+    fn a_guard_that_leaves_successfully_is_convicted_at_any_depth() {
+        for guard in [
+            "if probe().is_err() { return; }",
+            "if probe().is_err() { return Ok(()); }",
+            "if let Err(error) = probe() { return; }",
+            "if let Err(error) = probe() { return Ok(()); }",
+        ] {
+            for (shape, nesting) in [
+                ("top level", format!("fn t() {{ {guard} }}")),
+                ("a nested block", format!("fn t() {{ {{ {guard} }} }}")),
+                ("a loop", format!("fn t() {{ loop {{ {guard} }} }}")),
+                ("a for body", format!("fn t() {{ for _ in 0..1 {{ {guard} }} }}")),
+                (
+                    "an else branch",
+                    format!("fn t() {{ if a {{ }} else {{ {guard} }} }}"),
+                ),
+                (
+                    "a match arm",
+                    format!("fn t() {{ match a {{ _ => {{ {guard} }} }} }}"),
+                ),
+                (
+                    "a let initializer",
+                    format!("fn t() {{ let _v = {{ {guard} 1 }}; }}"),
+                ),
+            ] {
+                assert_eq!(
+                    ast_skips(&nesting).len(),
+                    1,
+                    "{guard:?} in {shape} was not convicted"
+                );
+            }
+        }
+    }
+
+    /// WHY: propagating the failure is the opposite of skipping it, and reading
+    /// any `return` as a skip convicted thirty ordinary recovery paths in the
+    /// drivers. Each of these observed an error and handed it to its caller.
+    #[test]
+    fn carrying_the_failure_onward_is_not_a_skip() {
+        for body in [
+            "fn t() -> R { if let Err(error) = probe() { return Err(error); } Ok(()) }",
+            "fn t() -> R { if probe().is_err() { return Err(Failed); } Ok(()) }",
+            "fn t() -> R { if let Err(e) = probe() { log(&e); return Err(e.into()); } Ok(()) }",
+        ] {
+            assert!(
+                ast_skips(body).is_empty(),
+                "propagation read as a skip: {body:?}"
+            );
+        }
+    }
+
+    /// WHY: stringifying the whole `if` joined a condition to a `return` that
+    /// belonged to a different statement, which convicted every CLI entry point
+    /// in the tree. This one prints the error and exits nonzero, the loudest
+    /// report available, and the trailing `return` ends the dispatch arm.
+    #[test]
+    fn a_dispatch_arm_around_a_loud_guard_is_not_a_skip() {
+        let source = "fn main() { if sub == \"prove\" { \
+            if let Err(error) = prove(args) { eprintln!(\"{error}\"); std::process::exit(1); } \
+            return; } }";
+        assert!(
+            ast_skips(source).is_empty(),
+            "a nonzero exit inside a dispatch arm is a report, not a skip"
+        );
+        assert_eq!(
+            ast_skips(
+                "fn main() { if sub == \"prove\" { \
+                 if let Err(_e) = prove(args) { return; } return; } }"
+            )
+            .len(),
+            1,
+            "the same arm with a swallowing guard must still be convicted"
+        );
+    }
+
+    /// WHY: this workspace holds every error to naming its correction, so a body
+    /// that emits one has reported the failure. Without this the gate demanded a
+    /// panic from three diagnostic paths that already say what to do, and the
+    /// only edit that clears such a finding is deleting the diagnostic. The
+    /// negative case is the printed excuse the gate does look for: it names no
+    /// correction.
+    #[test]
+    fn a_diagnostic_naming_the_correction_is_a_report() {
+        assert!(
+            ast_skips(
+                "fn t() { if let Err(error) = write(p) { \
+                 tracing::error!(\"could not write: {error}. Fix: free space on that volume.\"); \
+                 return; } }"
+            )
+            .is_empty()
+        );
+        assert_eq!(
+            ast_skips(
+                "fn t() { if let Err(_e) = probe() { \
+                 println!(\"skipping: no GPU\"); return; } }"
+            )
+            .len(),
+            1,
+            "an excuse that names nothing to do is still a skip"
+        );
+    }
+
+    /// WHY: `exit(0)` leaves successfully, which is the skip, and every other
+    /// exit code carries the failure out. Excluding the whole `exit(` family
+    /// would let a test opt out of the gate by exiting clean.
+    #[test]
+    fn only_a_nonzero_exit_counts_as_carrying_the_failure() {
+        assert!(
+            ast_skips("fn t() { if probe().is_err() { std::process::exit(1); return; } }")
+                .is_empty()
+        );
+        assert_eq!(
+            ast_skips("fn t() { if probe().is_err() { std::process::exit(0); return; } }").len(),
+            1,
+            "exiting clean on a failed probe is the skip this gate exists to find"
+        );
     }
 
     /// WHY: the shell original carried ten patterns and matched seven, because
