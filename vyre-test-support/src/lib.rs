@@ -147,6 +147,116 @@ macro_rules! test_node_extension {
     };
 }
 
+/// Declare a test-only `Expr::Opaque` payload type that carries wire bytes.
+///
+/// The payload-carrying counterpart of [`test_expr_extension!`]: a wire
+/// round-trip test needs an extension whose bytes come back out, so the
+/// fingerprint is a Blake3 digest of the payload rather than a repeated byte
+/// and `wire_payload` hands the bytes back. Only the payload varies per value;
+/// the CSE answer is one decision per fixture type, so it is an argument.
+///
+/// The generated type is `pub(crate)` with a `pub(crate)` payload field, so a
+/// fixture module can hand it to sibling test modules.
+///
+/// `ExprNode` and `DataType` are named unqualified, so the caller must have
+/// both in scope, and `blake3` must be a dependency of the calling crate.
+#[macro_export]
+macro_rules! test_payload_expr_extension {
+    (
+        $name:ident,
+        kind: $kind:expr,
+        identity: $identity:expr,
+        result_type: $result_type:expr,
+        cse_safe: $cse_safe:expr $(,)?
+    ) => {
+        #[derive(Debug)]
+        pub(crate) struct $name {
+            /// Bytes this extension writes to the wire and reads back.
+            pub(crate) payload: ::std::vec::Vec<u8>,
+        }
+
+        impl ExprNode for $name {
+            fn extension_kind(&self) -> &'static str {
+                $kind
+            }
+            fn debug_identity(&self) -> &str {
+                $identity
+            }
+            fn result_type(&self) -> Option<DataType> {
+                $result_type
+            }
+            fn cse_safe(&self) -> bool {
+                $cse_safe
+            }
+            fn stable_fingerprint(&self) -> [u8; 32] {
+                *blake3::hash(&self.payload).as_bytes()
+            }
+            fn validate_extension(&self) -> ::core::result::Result<(), ::std::string::String> {
+                Ok(())
+            }
+            fn as_any(&self) -> &dyn ::std::any::Any {
+                self
+            }
+            fn wire_payload(&self) -> ::std::vec::Vec<u8> {
+                self.payload.clone()
+            }
+        }
+    };
+}
+
+/// Declare a test-only `Node::Opaque` payload type that carries wire bytes.
+///
+/// The statement form of [`test_payload_expr_extension!`]. A statement
+/// extension has no result type and no CSE answer, and instead answers the two
+/// effect questions the walkers read. The trait's conservative defaults are
+/// impure and divergent, so a fixture that is neither states both.
+///
+/// `NodeExtension` is named unqualified, so the caller must have it in scope,
+/// and `blake3` must be a dependency of the calling crate.
+#[macro_export]
+macro_rules! test_payload_node_extension {
+    (
+        $name:ident,
+        kind: $kind:expr,
+        identity: $identity:expr,
+        is_pure: $is_pure:expr,
+        is_divergent: $is_divergent:expr $(,)?
+    ) => {
+        #[derive(Debug)]
+        pub(crate) struct $name {
+            /// Bytes this extension writes to the wire and reads back.
+            pub(crate) payload: ::std::vec::Vec<u8>,
+        }
+
+        impl NodeExtension for $name {
+            fn extension_kind(&self) -> &'static str {
+                $kind
+            }
+            fn debug_identity(&self) -> &str {
+                $identity
+            }
+            fn stable_fingerprint(&self) -> [u8; 32] {
+                *blake3::hash(&self.payload).as_bytes()
+            }
+            fn validate_extension(&self) -> ::core::result::Result<(), ::std::string::String> {
+                Ok(())
+            }
+            fn as_any(&self) -> &dyn ::std::any::Any {
+                self
+            }
+            fn wire_payload(&self) -> ::std::vec::Vec<u8> {
+                self.payload.clone()
+            }
+            fn is_pure(&self) -> bool {
+                $is_pure
+            }
+            fn is_divergent(&self) -> bool {
+                $is_divergent
+            }
+        }
+    };
+}
+
 /// Declare a test operation signature over `u32` values.
 ///
 /// A dialect or operation fixture that only needs "some registered operation"

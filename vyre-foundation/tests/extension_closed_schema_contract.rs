@@ -15,94 +15,31 @@ use vyre_spec::{
     ExtensionResourceBounds, ExtensionSchema, ExtensionSemVer, SideEffectClass,
 };
 
-#[derive(Debug)]
-struct CanonicalTestExpr {
-    payload: Vec<u8>,
-    pure: bool,
-}
+vyre_test_support::test_payload_expr_extension!(
+    CanonicalTestExpr,
+    kind: "test.canonical.expr",
+    identity: "canonical-test-expr",
+    result_type: Some(DataType::U32),
+    cse_safe: true,
+);
 
-impl ExprNode for CanonicalTestExpr {
-    fn extension_kind(&self) -> &'static str {
-        "test.canonical.expr"
-    }
-
-    fn debug_identity(&self) -> &str {
-        "canonical-test-expr"
-    }
-
-    fn result_type(&self) -> Option<DataType> {
-        Some(DataType::U32)
-    }
-
-    fn cse_safe(&self) -> bool {
-        self.pure
-    }
-
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        *blake3::hash(&self.payload).as_bytes()
-    }
-
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    fn wire_payload(&self) -> Vec<u8> {
-        self.payload.clone()
-    }
-}
-
-#[derive(Debug)]
-struct CanonicalTestNode {
-    payload: Vec<u8>,
-    pure: bool,
-    divergent: bool,
-}
-
-impl NodeExtension for CanonicalTestNode {
-    fn extension_kind(&self) -> &'static str {
-        "test.canonical.node"
-    }
-
-    fn debug_identity(&self) -> &str {
-        "canonical-test-node"
-    }
-
-    fn stable_fingerprint(&self) -> [u8; 32] {
-        *blake3::hash(&self.payload).as_bytes()
-    }
-
-    fn validate_extension(&self) -> Result<(), String> {
-        Ok(())
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    fn wire_payload(&self) -> Vec<u8> {
-        self.payload.clone()
-    }
-
-    fn is_pure(&self) -> bool {
-        self.pure
-    }
-
-    fn is_divergent(&self) -> bool {
-        self.divergent
-    }
-}
+vyre_test_support::test_payload_node_extension!(
+    CanonicalTestNode,
+    kind: "test.canonical.node",
+    identity: "canonical-test-node",
+    is_pure: false,
+    is_divergent: true,
+);
 
 fn deserialize_canonical_expr(bytes: &[u8]) -> Result<Arc<dyn ExprNode>, String> {
     // Deliberate bad decode: if payload starts with 0xFF, corrupt the decoded payload so it fails roundtrip
     if bytes.first() == Some(&0xFF) {
         return Ok(Arc::new(CanonicalTestExpr {
             payload: vec![0x00],
-            pure: true,
         }));
     }
     Ok(Arc::new(CanonicalTestExpr {
         payload: bytes.to_vec(),
-        pure: true,
     }))
 }
 
@@ -110,14 +47,10 @@ fn deserialize_canonical_node(bytes: &[u8]) -> Result<Arc<dyn NodeExtension>, St
     if bytes.first() == Some(&0xFF) {
         return Ok(Arc::new(CanonicalTestNode {
             payload: vec![0x00],
-            pure: false,
-            divergent: true,
         }));
     }
     Ok(Arc::new(CanonicalTestNode {
         payload: bytes.to_vec(),
-        pure: false,
-        divergent: true,
     }))
 }
 
@@ -251,11 +184,9 @@ fn catalog_bundle_refuses_empty_required_proof_fields() {
 fn opaque_expr_interning_keys_on_stable_content_not_pointer_identity() {
     let node_a = Arc::new(CanonicalTestExpr {
         payload: vec![1, 2, 3, 4],
-        pure: true,
     });
     let node_b = Arc::new(CanonicalTestExpr {
         payload: vec![1, 2, 3, 4],
-        pure: true,
     });
 
     assert!(
@@ -294,7 +225,6 @@ fn program_hashing_records_full_opaque_identity() {
             Expr::u32(0),
             Expr::Opaque(Arc::new(CanonicalTestExpr {
                 payload: vec![10, 20, 30],
-                pure: true,
             })),
         )],
     );
@@ -307,7 +237,6 @@ fn program_hashing_records_full_opaque_identity() {
             Expr::u32(0),
             Expr::Opaque(Arc::new(CanonicalTestExpr {
                 payload: vec![10, 20, 31], // different payload byte
-                pure: true,
             })),
         )],
     );
@@ -330,7 +259,6 @@ fn wire_decode_rejects_payloads_that_do_not_round_trip_canonically() {
             Expr::u32(0),
             Expr::Opaque(Arc::new(CanonicalTestExpr {
                 payload: vec![0x42, 0x43, 0x44],
-                pure: true,
             })),
         )],
     );
@@ -348,7 +276,6 @@ fn wire_decode_rejects_payloads_that_do_not_round_trip_canonically() {
             Expr::u32(0),
             Expr::Opaque(Arc::new(CanonicalTestExpr {
                 payload: vec![0xFF, 0x01, 0x02],
-                pure: true,
             })),
         )],
     );
