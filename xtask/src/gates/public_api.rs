@@ -86,10 +86,6 @@ impl crate::gate::GateBehavior for PublicApiSnapshot {
         let tree = Tree::open(&ctx.root)?;
         let rows = roster(&tree)?;
         let mut report = Report::clean();
-        report.cover_complete("public api exports", rows.len());
-        for row in &rows {
-            report.produced(PathBuf::from(SNAPSHOT_DIR).join(format!("{}.txt", row.package)));
-        }
         let scoped = ctx.flag("--crate").map(str::to_string);
         if let Some(name) = &scoped {
             if !rows
@@ -102,6 +98,21 @@ impl crate::gate::GateBehavior for PublicApiSnapshot {
                 ));
             }
         }
+        let covered: Vec<&Snapshotted> = rows
+            .iter()
+            .filter(|row| {
+                scoped.as_ref().is_none_or(|name| {
+                    &row.package == name || &row.directory == name
+                })
+            })
+            .collect();
+        // The descriptor declares every snapshot this gate owns, and the
+        // accounting compares a run against that set, so the declaration stays
+        // whole even when `--crate` narrows the work below.
+        report.cover_complete("public api exports", rows.len());
+        for row in &rows {
+            report.produced(PathBuf::from(SNAPSHOT_DIR).join(format!("{}.txt", row.package)));
+        }
         let owned: BTreeSet<&str> = rows.iter().map(|row| row.package.as_str()).collect();
         for stale in unowned_snapshots(&ctx.root, &owned)? {
             report.find(Finding::in_file(
@@ -113,12 +124,7 @@ impl crate::gate::GateBehavior for PublicApiSnapshot {
                 "delete the snapshot, or restore a publishable package with that name",
             ));
         }
-        for row in &rows {
-            if let Some(name) = &scoped {
-                if &row.package != name && &row.directory != name {
-                    continue;
-                }
-            }
+        for row in &covered {
             let source_root = format!("{}/src", row.directory);
             if !structure_gate::source_scan::carries_rust_source(&ctx.root.join(&source_root)) {
                 report.find(Finding::in_file(

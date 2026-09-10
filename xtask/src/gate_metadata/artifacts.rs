@@ -13,8 +13,6 @@ pub const FROZEN_CONTRACT_ARTIFACTS: &[&str] = &[
 
 /// Exact generated artifacts for public API snapshots.
 pub const PUBLIC_API_ARTIFACTS: &[&str] = &[
-    "docs/public-api/vyre-aot.txt",
-    "docs/public-api/vyre-debug.txt",
     "docs/public-api/vyre-driver-cuda.txt",
     "docs/public-api/vyre-driver-metal.txt",
     "docs/public-api/vyre-driver-reference.txt",
@@ -49,11 +47,9 @@ pub const PUBLIC_API_ARTIFACTS: &[&str] = &[
     "docs/public-api/vyre-libs-vfs.txt",
     "docs/public-api/vyre-libs-visual.txt",
     "docs/public-api/vyre-libs.txt",
-    "docs/public-api/vyre-lints.txt",
     "docs/public-api/vyre-lower.txt",
     "docs/public-api/vyre-macros.txt",
     "docs/public-api/vyre-megakernel.txt",
-    "docs/public-api/vyre-pass-engine.txt",
     "docs/public-api/vyre-primitives.txt",
     "docs/public-api/vyre-reference.txt",
     "docs/public-api/vyre-runtime.txt",
