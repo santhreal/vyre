@@ -574,11 +574,7 @@ pub(crate) fn emit_uncached(
     let segments = vyre_lower::dispatch_segments(desc)
         .map_err(|source| EmitError::InvalidDescriptor(source.to_string()))?;
     for (index, segment) in segments.iter().enumerate() {
-        let name = if index == 0 {
-            "main".to_owned()
-        } else {
-            format!("{}{index}", crate::GRID_SEGMENT_ENTRY_PREFIX)
-        };
+        let name = crate::grid_segments::segment_entry_name(index);
         let mut function = Function::default();
         function.name = Some(name.clone());
         let builtins = Builtins::push(

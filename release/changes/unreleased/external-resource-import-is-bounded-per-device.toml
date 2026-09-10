@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "External resource import holds at most 1024 records per device on the WGPU, CUDA, Metal, and runtime admission paths, evicting an invalidated record before the oldest live one, so a caller that imports every frame without a matching release no longer grows the registry and its dependent indexes without bound."
