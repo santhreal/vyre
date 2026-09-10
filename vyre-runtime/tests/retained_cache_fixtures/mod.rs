@@ -4,6 +4,13 @@
 //! given case is about. Restating the other seven per suite means a field added
 //! to the identity is added in every copy, and a copy that drifts silently stops
 //! testing the same cache.
+//!
+//! This is the only definition in the crate. The retained-page-cache and
+//! speculative-transaction suites each carried their own copy while asserting
+//! against the same public cache, and the three copies had already drifted on
+//! `cache_schema_version`: two pinned a literal `1` and one read the schema
+//! registry. The registry is the owner of that number, so the fixture reads it
+//! and a schema bump moves every retained-cache key at once.
 
 use vyre_foundation::ir::DataType;
 use vyre_runtime::retained_page_cache::{RetainedPageCacheKey, RetainedPageLayout};
@@ -27,7 +34,7 @@ pub(crate) fn retained_key(
             units_per_page: 16,
         },
         device_generation: generation,
-        cache_schema_version: 1,
+        cache_schema_version: vyre_spec::schema_registry::SchemaId::CacheEntry.version_u32(),
         isolation_domain: tenant.to_string(),
         trust_domain: trust.map(str::to_string),
     }

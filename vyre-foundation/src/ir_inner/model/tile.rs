@@ -132,6 +132,35 @@ impl Layout {
     }
 }
 
+/// The logical coordinates of the `index`-th element of a tile with `extents`.
+///
+/// This is the inverse of [`Layout::linear_index`] under [`Layout::RowMajor`],
+/// and it is stated once here because element ORDER over a tile's logical index
+/// space is row-major whatever the storage layout is: a layout decides where an
+/// element lives, not which element comes next. Both the tile lowering and the
+/// reference interpreter walk a flat element range and need the coordinates of
+/// each step, and each carried its own de-linearization loop, so the two sides
+/// of the tile parity comparison derived the coordinates they compare from
+/// separate code.
+///
+/// A zero extent describes a tile with no elements, so no index addresses one.
+/// Such an axis contributes coordinate zero instead of dividing by zero.
+#[must_use]
+pub fn row_major_coords(index: u32, extents: &[u32]) -> Vec<u32> {
+    let mut coords = Vec::with_capacity(extents.len());
+    let mut remaining = index;
+    for &extent in extents.iter().rev() {
+        if extent == 0 {
+            coords.push(0);
+            continue;
+        }
+        coords.push(remaining % extent);
+        remaining /= extent;
+    }
+    coords.reverse();
+    coords
+}
+
 /// A multidimensional tile value in the IR.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Tile {

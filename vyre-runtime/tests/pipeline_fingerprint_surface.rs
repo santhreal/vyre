@@ -24,25 +24,11 @@
 //! the artifact, which is what makes cross-host agreement follow from the
 //! artifact being canonical.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
 use vyre_runtime::pipeline_cache::PipelineFingerprint;
 
 use vyre_test_support::artifact_fixtures::artifact_for_program as artifact;
-
-fn single_store() -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::output("out", 1, DataType::U32).with_count(1),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::load("in", Expr::u32(0)),
-        )],
-    )
-}
+use vyre_test_support::elementwise_programs::single_element_copy_program;
 
 fn return_only(out_count: u32) -> Program {
     Program::wrapped(
@@ -59,7 +45,7 @@ fn return_only(out_count: u32) -> Program {
 fn fixtures() -> Vec<(&'static str, Program)> {
     vec![
         ("empty", Program::empty()),
-        ("single store", single_store()),
+        ("single store", single_element_copy_program(1)),
         ("return with one output word", return_only(1)),
         ("return with two output words", return_only(2)),
     ]

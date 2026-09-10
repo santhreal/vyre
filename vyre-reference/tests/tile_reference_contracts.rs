@@ -1,12 +1,16 @@
 //! Contract tests for reference interpreter execution of Tile operations.
+//!
+//! The value cases are `vyre_test_support::tile_programs::tile_cases`, the same
+//! corpus the lowering contract lowers and simulates, so the oracle and the
+//! lowering are compared on one set of programs with one set of expected
+//! values. A case that only the oracle can answer, a rejection, stays here.
 
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, Layout, Node, Program, Residency, SubgroupReduceOp,
-    Tile,
+    BufferAccess, BufferDecl, DataType, Expr, Ident, Layout, Node, Program, Residency, Tile,
 };
 use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
-use vyre_test_support::tile_programs::{tile_matmul_program, TileOperand};
+use vyre_test_support::tile_programs::tile_cases;
 
 fn decode_f32(bytes: &[u8]) -> Vec<f32> {
     bytes
@@ -20,206 +24,38 @@ fn encode_f32(values: &[f32]) -> Vec<u8> {
 }
 
 #[test]
-fn reference_eval_tile_matmul_2x2() {
-    // A = [[1.0, 2.0], [3.0, 4.0]]
-    // B = [[5.0, 6.0], [7.0, 8.0]]
-    // C = A x B = [[19.0, 22.0], [43.0, 50.0]]
-    let a_data = vec![1.0f32, 2.0, 3.0, 4.0];
-    let b_data = vec![5.0f32, 6.0, 7.0, 8.0];
+fn reference_eval_computes_every_tile_case() {
+    for case in tile_cases() {
+        let name = case.name;
+        let inputs: Vec<Value> = case
+            .inputs
+            .iter()
+            .map(|buffer| Value::from(encode_f32(buffer)))
+            .collect();
 
-    let square = |elements| {
-        TileOperand::new(
-            DataType::F32,
-            vec![2, 2],
-            Layout::RowMajor,
-            Residency::Register,
-            elements,
-        )
-    };
-    let prog = tile_matmul_program([1, 1, 1], &square(4), &square(4), &square(4));
+        let outputs = reference_eval(&case.program, &inputs)
+            .unwrap_or_else(|e| panic!("case {name} must evaluate on the oracle: {e}"));
 
-    let outputs = reference_eval(
-        &prog,
-        &[
-            Value::from(encode_f32(&a_data)),
-            Value::from(encode_f32(&b_data)),
-        ],
-    )
-    .expect("reference_eval failed");
-
-    let out_f32 = decode_f32(&outputs[0].to_bytes());
-    assert_eq!(out_f32, vec![19.0, 22.0, 43.0, 50.0]);
+        let actual = decode_f32(&outputs[0].to_bytes());
+        assert_eq!(
+            actual, case.expected,
+            "case {name} oracle output did not match expected"
+        );
+    }
 }
 
 #[test]
-fn reference_eval_tile_reduce_and_elementwise() {
-    let a_data = vec![1.0f32, 5.0, 2.0, 8.0];
-    let tile_a = Tile::new(
-        DataType::F32,
-        vec![2, 2],
-        Layout::RowMajor,
-        Residency::Register,
-    );
-
-    let prog = Program::wrapped(
-        vec![
-            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::output("out", 1, DataType::F32).with_count(2),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::tile_load(
-                "t_a",
-                tile_a,
-                "a",
-                vec![Expr::u32(0), Expr::u32(0)],
-                Layout::RowMajor,
-            ),
-            Node::tile_reduce("max_per_row", "t_a", SubgroupReduceOp::Max, 1),
-            Node::tile_store("out", vec![Expr::u32(0)], "max_per_row"),
-        ],
-    );
-
-    let outputs =
-        reference_eval(&prog, &[Value::from(encode_f32(&a_data))]).expect("reference_eval failed");
-
-    let out_f32 = decode_f32(&outputs[0].to_bytes());
-    assert_eq!(out_f32, vec![5.0, 8.0]);
-}
-
-#[test]
-fn reference_eval_tile_elementwise_scaling() {
-    let a_data = vec![2.0f32, 4.0, 6.0, 8.0];
-    let tile_a = Tile::new(
-        DataType::F32,
-        vec![4],
-        Layout::RowMajor,
-        Residency::Register,
-    );
-
-    let prog = Program::wrapped(
-        vec![
-            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::output("out", 1, DataType::F32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::tile_load("t_a", tile_a, "a", vec![Expr::u32(0)], Layout::RowMajor),
-            Node::tile_elementwise(
-                "scaled",
-                vec![vyre_foundation::ir::Ident::from("t_a")],
-                vec![Node::let_bind(
-                    "scaled",
-                    Expr::mul(Expr::var("t_a"), Expr::f32(3.0)),
-                )],
-            ),
-            Node::tile_store("out", vec![Expr::u32(0)], "scaled"),
-        ],
-    );
-
-    let outputs =
-        reference_eval(&prog, &[Value::from(encode_f32(&a_data))]).expect("reference_eval failed");
-
-    let out_f32 = decode_f32(&outputs[0].to_bytes());
-    assert_eq!(out_f32, vec![6.0, 12.0, 18.0, 24.0]);
-}
-
-#[test]
-fn reference_eval_tile_column_major_layout() {
-    // Source 2x2: [[1.0, 2.0], [3.0, 4.0]] in memory: [1.0, 2.0, 3.0, 4.0]
-    // Loaded with ColumnMajor into tile extents [2, 2]:
-    // (0, 0) -> local linear index (0*1 + 0*2) = 0 => 1.0
-    // (0, 1) -> local linear index (0*1 + 1*2) = 2 => 2.0
-    // (1, 0) -> local linear index (1*1 + 0*2) = 1 => 3.0
-    // (1, 1) -> local linear index (1*1 + 1*2) = 3 => 4.0
-    // In tile array elements: [1.0, 3.0, 2.0, 4.0]
-    let a_data = vec![1.0f32, 2.0, 3.0, 4.0];
-    let tile_col = Tile::new(
-        DataType::F32,
-        vec![2, 2],
-        Layout::ColumnMajor,
-        Residency::Register,
-    );
-
-    let prog = Program::wrapped(
-        vec![
-            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::output("out", 1, DataType::F32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::tile_load(
-                "t_col",
-                tile_col,
-                "a",
-                vec![Expr::u32(0), Expr::u32(0)],
-                Layout::ColumnMajor,
-            ),
-            Node::tile_store("out", vec![Expr::u32(0)], "t_col"),
-        ],
-    );
-
-    let outputs =
-        reference_eval(&prog, &[Value::from(encode_f32(&a_data))]).expect("reference_eval failed");
-
-    let out_f32 = decode_f32(&outputs[0].to_bytes());
-    assert_eq!(out_f32, vec![1.0, 3.0, 2.0, 4.0]);
-}
-#[test]
-fn reference_eval_tile_elementwise_broadcast_per_row_and_rejection() {
-    // 1. A 4-element tile combined with a 2-element per-row reduction produces
-    // the per-row value on both elements of each row.
-    // t_a = [[10.0, 20.0], [30.0, 40.0]] (row 0: max 20.0, row 1: max 40.0)
-    // max_per_row = [20.0, 40.0]
-    // diff = t_a - max_per_row:
-    // row 0: [10.0 - 20.0, 20.0 - 20.0] = [-10.0, 0.0]
-    // row 1: [30.0 - 40.0, 40.0 - 40.0] = [-10.0, 0.0]
+fn reference_eval_rejects_elementwise_operand_that_does_not_divide_the_output() {
+    // A 3-element input against a 4-element output has no broadcast, so it is
+    // rejected rather than folded to whichever length happens to fit.
     let a_data = vec![10.0f32, 20.0, 30.0, 40.0];
+    let b_data = vec![1.0f32, 2.0, 3.0];
     let tile_a = Tile::new(
         DataType::F32,
         vec![2, 2],
         Layout::RowMajor,
         Residency::Register,
     );
-
-    let prog = Program::wrapped(
-        vec![
-            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::output("out", 1, DataType::F32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::tile_load(
-                "t_a",
-                tile_a.clone(),
-                "a",
-                vec![Expr::u32(0), Expr::u32(0)],
-                Layout::RowMajor,
-            ),
-            Node::tile_reduce("max_per_row", "t_a", SubgroupReduceOp::Max, 1),
-            Node::tile_elementwise(
-                "diff",
-                vec![
-                    vyre_foundation::ir::Ident::from("t_a"),
-                    vyre_foundation::ir::Ident::from("max_per_row"),
-                ],
-                vec![Node::let_bind(
-                    "diff",
-                    Expr::sub(Expr::var("t_a"), Expr::var("max_per_row")),
-                )],
-            ),
-            Node::tile_store("out", vec![Expr::u32(0)], "diff"),
-        ],
-    );
-
-    let outputs =
-        reference_eval(&prog, &[Value::from(encode_f32(&a_data))]).expect("reference_eval failed");
-
-    let out_f32 = decode_f32(&outputs[0].to_bytes());
-    assert_eq!(out_f32, vec![-10.0, 0.0, -10.0, 0.0]);
-
-    // 2. A 3-element input against a 4-element output is rejected with stated error.
-    let b_data = vec![1.0f32, 2.0, 3.0];
     let tile_b = Tile::new(
         DataType::F32,
         vec![3],
@@ -227,7 +63,7 @@ fn reference_eval_tile_elementwise_broadcast_per_row_and_rejection() {
         Residency::Register,
     );
 
-    let prog_invalid = Program::wrapped(
+    let program = Program::wrapped(
         vec![
             BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
             BufferDecl::storage("b", 1, BufferAccess::ReadOnly, DataType::F32).with_count(3),
@@ -245,10 +81,7 @@ fn reference_eval_tile_elementwise_broadcast_per_row_and_rejection() {
             Node::tile_load("t_b", tile_b, "b", vec![Expr::u32(0)], Layout::RowMajor),
             Node::tile_elementwise(
                 "sum",
-                vec![
-                    vyre_foundation::ir::Ident::from("t_a"),
-                    vyre_foundation::ir::Ident::from("t_b"),
-                ],
+                vec![Ident::from("t_a"), Ident::from("t_b")],
                 vec![Node::let_bind(
                     "sum",
                     Expr::add(Expr::var("t_a"), Expr::var("t_b")),
@@ -259,7 +92,7 @@ fn reference_eval_tile_elementwise_broadcast_per_row_and_rejection() {
     );
 
     let err = reference_eval(
-        &prog_invalid,
+        &program,
         &[
             Value::from(encode_f32(&a_data)),
             Value::from(encode_f32(&b_data)),

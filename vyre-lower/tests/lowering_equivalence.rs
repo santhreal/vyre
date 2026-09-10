@@ -20,21 +20,7 @@ use vyre_lower::{
     TransactionScope, TRAP_SIDECAR_NAME, WORKGROUP_SLOT_BASE,
 };
 
-/// Program that reads one binding and stores into another.
-fn copy_program() -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("in", 0, BufferAccess::ReadOnly, DataType::U32).with_count(4),
-            BufferDecl::output("out", 1, DataType::U32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::load("in", Expr::u32(0)),
-        )],
-    )
-}
+use vyre_test_support::elementwise_programs::single_element_copy_program as copy_program;
 
 /// Hand-built descriptor that loads slot 0 and stores into slot 1.
 fn copy_descriptor(extra: Vec<KernelOp>, slots: Vec<BindingSlot>) -> KernelDescriptor {
@@ -76,7 +62,7 @@ fn drop_stores(body: &KernelBody) -> KernelBody {
 
 #[test]
 fn a_kernel_that_lowers_states_the_same_effects_on_both_sides() {
-    let program = copy_program();
+    let program = copy_program(4);
     let lowering = lower_physical(&program).expect("the copy program lowers");
 
     let stated = EffectSignature::from_program(&lowering.program);
@@ -94,7 +80,7 @@ fn a_kernel_that_lowers_states_the_same_effects_on_both_sides() {
 
 #[test]
 fn a_store_the_lowering_dropped_is_reported_as_a_lost_write() {
-    let program = copy_program();
+    let program = copy_program(4);
     let mut descriptor = lower(&program).expect("the copy program lowers");
     descriptor.body = drop_stores(&descriptor.body);
 
@@ -115,7 +101,7 @@ fn a_store_the_lowering_dropped_is_reported_as_a_lost_write() {
 
 #[test]
 fn a_store_no_statement_performs_is_reported_as_invented() {
-    let program = copy_program();
+    let program = copy_program(4);
     let descriptor = copy_descriptor(vec![effect(KernelOpKind::StoreGlobal, [0, 0, 1])], vec![]);
 
     let errors = check_effects(
@@ -135,7 +121,7 @@ fn a_store_no_statement_performs_is_reported_as_invented() {
 
 #[test]
 fn a_read_modify_write_only_the_physical_side_performs_is_reported() {
-    let program = copy_program();
+    let program = copy_program(4);
     let descriptor = copy_descriptor(
         vec![op(
             KernelOpKind::Atomic {
@@ -231,7 +217,7 @@ fn a_load_no_expression_performs_is_reported_as_an_invented_read() {
 
 #[test]
 fn a_read_the_program_performs_may_disappear() {
-    let program = copy_program();
+    let program = copy_program(4);
     let descriptor = descriptor("store_only")
         .slots(vec![
             global_ro(0, DataType::U32, "in"),
@@ -255,7 +241,7 @@ fn a_read_the_program_performs_may_disappear() {
 
 #[test]
 fn the_diagnostic_sidecar_is_compared_only_when_it_is_not_excluded() {
-    let program = copy_program();
+    let program = copy_program(4);
     let sidecar = global_rw(2, DataType::U32, TRAP_SIDECAR_NAME);
     let descriptor = copy_descriptor(
         vec![effect(KernelOpKind::StoreGlobal, [2, 0, 1])],
@@ -345,7 +331,7 @@ fn a_dispatch_count_buffer_is_read_and_not_written() {
 
 #[test]
 fn every_disagreement_is_reported_at_once() {
-    let program = copy_program();
+    let program = copy_program(4);
     let descriptor = descriptor("wrong")
         .slots(vec![
             global_ro(0, DataType::U32, "in"),

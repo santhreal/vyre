@@ -90,7 +90,7 @@ pub mod ir {
         SamplerDescriptor, SamplerFilter, SubresourceRange, ViewDescriptor,
     };
     pub use crate::ir_inner::model::tile::{
-        Layout, Layout as TileLayout, Residency, Tile, Tile as TileType,
+        row_major_coords, Layout, Layout as TileLayout, Residency, Tile, Tile as TileType,
     };
     /// Per-Node-variant bit-position constants for `ProgramStats::node_kinds_present`.
     /// Compose with `ProgramStats::has_any_node_kind` for O(1) `analyze_impl` gates.

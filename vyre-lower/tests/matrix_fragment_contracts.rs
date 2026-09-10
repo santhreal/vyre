@@ -316,34 +316,11 @@ fn result_ids_span_the_accumulator_fragment() {
 }
 #[test]
 fn tile_matmul_lowering_packs_fragment_operands_as_distinct_words() {
-    use vyre_foundation::ir::{DataType, Layout, Residency};
+    use vyre_foundation::ir::{Layout, Residency};
     use vyre_lower::lower;
-    use vyre_test_support::tile_programs::{tile_matmul_program, TileOperand};
+    use vyre_test_support::tile_programs::fragment_matmul_program;
 
-    let prog = tile_matmul_program(
-        [32, 1, 1],
-        &TileOperand::new(
-            DataType::F16,
-            vec![16, 16],
-            Layout::RowMajor,
-            Residency::Subgroup,
-            256,
-        ),
-        &TileOperand::new(
-            DataType::F16,
-            vec![16, 8],
-            Layout::ColumnMajor,
-            Residency::Subgroup,
-            128,
-        ),
-        &TileOperand::new(
-            DataType::F32,
-            vec![16, 8],
-            Layout::RowMajor,
-            Residency::Register,
-            128,
-        ),
-    );
+    let prog = fragment_matmul_program(Residency::Subgroup, Layout::RowMajor);
 
     let desc = lower(&prog).expect("tile matmul program must lower to valid descriptor");
     let mma_op = desc
@@ -392,34 +369,11 @@ fn tile_matmul_lowering_packs_fragment_operands_as_distinct_words() {
 
 #[test]
 fn tile_matmul_lowering_proves_bitwise_fragment_packing() {
-    use vyre_foundation::ir::{BinOp, DataType, Layout, Residency};
+    use vyre_foundation::ir::{BinOp, Layout, Residency};
     use vyre_lower::lower;
-    use vyre_test_support::tile_programs::{tile_matmul_program, TileOperand};
+    use vyre_test_support::tile_programs::fragment_matmul_program;
 
-    let prog = tile_matmul_program(
-        [32, 1, 1],
-        &TileOperand::new(
-            DataType::F16,
-            vec![16, 16],
-            Layout::RowMajor,
-            Residency::Subgroup,
-            256,
-        ),
-        &TileOperand::new(
-            DataType::F16,
-            vec![16, 8],
-            Layout::ColumnMajor,
-            Residency::Subgroup,
-            128,
-        ),
-        &TileOperand::new(
-            DataType::F32,
-            vec![16, 8],
-            Layout::RowMajor,
-            Residency::Register,
-            128,
-        ),
-    );
+    let prog = fragment_matmul_program(Residency::Subgroup, Layout::RowMajor);
 
     let desc = lower(&prog).expect("tile matmul program must lower to valid descriptor");
     let mma_op = desc
@@ -446,35 +400,12 @@ fn tile_matmul_lowering_proves_bitwise_fragment_packing() {
 
 #[test]
 fn contraction_candidate_analysis_covers_all_supported_strategies() {
-    use vyre_foundation::ir::{DataType, Layout, Residency};
+    use vyre_foundation::ir::{Layout, Residency};
     use vyre_lower::analyses::contraction_candidates::{analyze, ContractionStrategy};
     use vyre_lower::lower;
-    use vyre_test_support::tile_programs::{tile_matmul_program, TileOperand};
+    use vyre_test_support::tile_programs::fragment_matmul_program;
 
-    let prog = tile_matmul_program(
-        [32, 1, 1],
-        &TileOperand::new(
-            DataType::F16,
-            vec![16, 16],
-            Layout::RowMajor,
-            Residency::Subgroup,
-            256,
-        ),
-        &TileOperand::new(
-            DataType::F16,
-            vec![16, 8],
-            Layout::ColumnMajor,
-            Residency::Subgroup,
-            128,
-        ),
-        &TileOperand::new(
-            DataType::F32,
-            vec![16, 8],
-            Layout::RowMajor,
-            Residency::Register,
-            128,
-        ),
-    );
+    let prog = fragment_matmul_program(Residency::Subgroup, Layout::RowMajor);
 
     let desc = lower(&prog).expect("tile matmul program must lower");
     let plan = analyze(&desc);

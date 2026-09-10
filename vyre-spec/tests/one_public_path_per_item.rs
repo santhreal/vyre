@@ -24,7 +24,9 @@
 //! path is written instead of when the snapshot is next refreshed.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
+
+use vyre_test_support::monorepo::vyre_workspace_root;
 
 /// Crate directory whose module tree this contract judges.
 const CRATE_DIR: &str = "vyre-spec";
@@ -56,7 +58,7 @@ struct Module {
 
 #[test]
 fn no_item_is_published_at_two_paths() {
-    let modules = module_tree(&checkout_root());
+    let modules = module_tree(&vyre_workspace_root());
     let known: BTreeSet<&[String]> = modules
         .iter()
         .map(|module| module.path.as_slice())
@@ -97,7 +99,7 @@ fn no_item_is_published_at_two_paths() {
 
 #[test]
 fn the_walk_actually_reaches_the_crate() {
-    let modules = module_tree(&checkout_root());
+    let modules = module_tree(&vyre_workspace_root());
     let public = modules.iter().filter(|module| module.public).count();
     let root_reexports = modules
         .iter()
@@ -195,29 +197,6 @@ fn a_re_export_resolves_to_the_longest_module_prefix_it_names() {
     assert_eq!(resolve(&root, &segments("inner"), &known), Some(inner));
 }
 
-/// Absolute root of the checkout this test runs in.
-///
-/// Resolved from the working directory rather than `CARGO_MANIFEST_DIR`: a
-/// target directory shared by several checkouts computes the same unit hash for
-/// a member in each of them, so a compiled-in path can name a different tree
-/// than the one under test.
-fn checkout_root() -> PathBuf {
-    let start = std::env::current_dir().expect("Fix: the working directory must be readable");
-    for candidate in start.ancestors() {
-        let manifest = candidate.join("Cargo.toml");
-        let Ok(text) = std::fs::read_to_string(&manifest) else {
-            continue;
-        };
-        if text.lines().any(|line| line.trim_start() == "[workspace]") {
-            return candidate.to_path_buf();
-        }
-    }
-    panic!(
-        "Fix: no ancestor of `{}` declares a `[workspace]`; this contract reports \
-         on a workspace member and has nothing to measure outside one",
-        start.display()
-    );
-}
 
 /// Every module of the crate, root first, in declaration order.
 ///

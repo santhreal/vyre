@@ -289,3 +289,11 @@ pub mod rolling_upgrade_compatibility_contracts;
 /// Integration tests from `tests/runtime_quota_and_concurrency_contracts.rs`.
 #[path = "runtime_quota_and_concurrency_contracts.rs"]
 pub mod runtime_quota_and_concurrency_contracts;
+
+/// Integration tests from `tests/retained_page_cache_contracts.rs`.
+#[path = "retained_page_cache_contracts.rs"]
+pub mod retained_page_cache_contracts;
+
+/// Integration tests from `tests/speculative_transaction_contracts.rs`.
+#[path = "speculative_transaction_contracts.rs"]
+pub mod speculative_transaction_contracts;

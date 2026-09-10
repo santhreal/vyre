@@ -15,30 +15,13 @@
 
 use std::collections::HashMap;
 
-use vyre_foundation::ir::{DataType, Layout, Residency};
+use vyre_foundation::ir::{Layout, Residency};
 use vyre_lower::{lower, KernelOpKind};
-use vyre_test_support::tile_programs::{tile_matmul_program, TileOperand};
+use vyre_test_support::tile_programs::fragment_matmul_program;
 
 /// `c[16,8] = a[16,16] x b[16,8]` with the stated residency on both inputs.
 fn matmul_with_input_residency(residency: Residency) -> vyre_foundation::ir::Program {
-    tile_matmul_program(
-        [32, 1, 1],
-        &TileOperand::new(
-            DataType::F16,
-            vec![16, 16],
-            Layout::RowMajor,
-            residency,
-            256,
-        ),
-        &TileOperand::new(DataType::F16, vec![16, 8], Layout::ColumnMajor, residency, 128),
-        &TileOperand::new(
-            DataType::F32,
-            vec![16, 8],
-            Layout::RowMajor,
-            Residency::Register,
-            128,
-        ),
-    )
+    fragment_matmul_program(residency, Layout::RowMajor)
 }
 
 #[test]
@@ -148,32 +131,12 @@ fn a_swizzled_declaration_states_no_fragment_orientation() {
     // A swizzled layout is a storage permutation no fragment orientation
     // expresses, so it is answered before an operand word exists rather than
     // reinterpreted as row-major.
-    let program = tile_matmul_program(
-        [32, 1, 1],
-        &TileOperand::new(
-            DataType::F16,
-            vec![16, 16],
-            Layout::Swizzled {
-                permutation: vec![1, 0],
-                period: 8,
-            },
-            Residency::Subgroup,
-            256,
-        ),
-        &TileOperand::new(
-            DataType::F16,
-            vec![16, 8],
-            Layout::ColumnMajor,
-            Residency::Subgroup,
-            128,
-        ),
-        &TileOperand::new(
-            DataType::F32,
-            vec![16, 8],
-            Layout::RowMajor,
-            Residency::Register,
-            128,
-        ),
+    let program = fragment_matmul_program(
+        Residency::Subgroup,
+        Layout::Swizzled {
+            permutation: vec![1, 0],
+            period: 8,
+        },
     );
 
     let descriptor = lower(&program).expect("a swizzled tile must still lower");
