@@ -156,3 +156,86 @@ fn contraction_f32_matches_reference_oracle_across_shapes() {
         }
     }
 }
+
+/// The register-tiled row-batched candidate computes the same product as the
+/// untiled one, checked against the reference oracle rather than against the
+/// other candidate alone.
+///
+/// The tile changes which invocation owns which output and how many operand
+/// elements a contraction step stages. It does not change the summation order
+/// of any single output, so an F32 result is bit-identical and a difference
+/// here is a movement or predication defect, not rounding.
+#[test]
+fn the_register_tiled_row_batched_candidate_matches_the_oracle() {
+    use vyre_foundation::validate::BackendCapabilities;
+    use vyre_megakernel::DeviceFacts;
+    use vyre_spec::DataType;
+
+    // Extents that do not divide the tile, so the overhanging rows and columns
+    // exercise the store predication.
+    let geometries = [(1, 1, 1), (3, 4, 5), (7, 3, 11), (16, 8, 16)];
+
+    for (rows, in_dim, out_dim) in geometries {
+        let x_vals: Vec<f32> = (0..(rows * in_dim)).map(|i| (i as f32) * 0.5 - 3.0).collect();
+        let w_vals: Vec<f32> = (0..(in_dim * out_dim))
+            .map(|i| (i as f32) * 0.25 + 0.75)
+            .collect();
+        let inputs = vec![
+            Value::from(pack_f32_slice(&x_vals)),
+            Value::from(pack_f32_slice(&w_vals)),
+        ];
+
+        let composer = || {
+            ContractionComposer::batched_rows(
+                "vyre-libs::nn::linear_rows",
+                TensorRef::f32_2d("x", rows, in_dim),
+                TensorRef::f32_2d("w", in_dim, out_dim),
+                None,
+                TensorRef::f32_2d("out", rows, out_dim),
+                rows,
+                in_dim,
+                out_dim,
+                DataType::F32,
+                false,
+            )
+        };
+
+        let untiled = composer()
+            .build()
+            .unwrap_or_else(|e| panic!("Fix: {rows}x{in_dim}x{out_dim} untiled must build: {e}"));
+        let facts = DeviceFacts::new(BackendCapabilities::NONE, 256).with_occupancy(64, 0);
+        let tiled = composer()
+            .with_device_facts(facts)
+            .build()
+            .unwrap_or_else(|e| panic!("Fix: {rows}x{in_dim}x{out_dim} tiled must build: {e}"));
+
+        let count = (rows * out_dim) as usize;
+        let read = |program: &vyre_foundation::ir::Program| {
+            let outputs = vyre_reference::reference_eval(program, &inputs)
+                .unwrap_or_else(|e| panic!("Fix: {rows}x{in_dim}x{out_dim} must evaluate: {e}"));
+            vyre_primitives::wire::unpack_f32_slice(&outputs[0].to_bytes(), count, "row_batched")
+                .expect("unpack f32 slice")
+        };
+
+        assert_eq!(
+            read(&tiled),
+            read(&untiled),
+            "Fix: the {rows}x{in_dim}x{out_dim} register-tiled candidate must compute the untiled product"
+        );
+
+        let mut expected = vec![0.0f32; count];
+        for r in 0..rows as usize {
+            for c in 0..out_dim as usize {
+                let mut sum = 0.0f32;
+                for p in 0..in_dim as usize {
+                    sum += x_vals[r * in_dim as usize + p] * w_vals[p * out_dim as usize + c];
+                }
+                expected[r * out_dim as usize + c] = sum;
+            }
+        }
+        assert_eq!(
+            read(&tiled), expected,
+            "Fix: the {rows}x{in_dim}x{out_dim} register-tiled candidate must match the oracle product"
+        );
+    }
+}

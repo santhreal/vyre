@@ -256,11 +256,12 @@ mod cases {
         }
     }
 
-    /// Every `ContractionTiling` must build the geometry it names, and the
-    /// cooperative variant is the only one that allocates workgroup memory.
+    /// Every `ContractionTiling` must state what the 2D geometry does with it:
+    /// build with exactly the workgroup tiles it names, or be rejected as a
+    /// tiling that geometry has no program for.
     ///
     /// The match has no catch-all, so an added tiling fails to compile until
-    /// its memory requirement is decided.
+    /// its memory requirement and its admissibility are decided.
     #[test]
     fn each_tiling_allocates_workgroup_memory_only_when_it_stages_tiles() {
         let tilings = [
@@ -272,20 +273,30 @@ mod cases {
                 a_tile_name: "a_shared".to_string(),
                 b_tile_name: "b_shared".to_string(),
             },
+            ContractionTiling::RegisterTiled {
+                rows: 2,
+                columns: 2,
+                workgroup_size: [64, 1, 1],
+            },
             ContractionTiling::Block1D { tile: 8 },
         ];
 
         for tiling in tilings {
-            let expected_shared: Vec<String> = match &tiling {
-                ContractionTiling::Linear { .. } | ContractionTiling::Block1D { .. } => Vec::new(),
+            // `None` states that the 2D geometry has no program for this
+            // tiling and must reject it instead of reinterpreting it.
+            let expected_shared: Option<Vec<String>> = match &tiling {
+                ContractionTiling::Linear { .. } | ContractionTiling::Block1D { .. } => {
+                    Some(Vec::new())
+                }
                 ContractionTiling::CooperativeShared {
                     a_tile_name,
                     b_tile_name,
                     ..
-                } => vec![a_tile_name.clone(), b_tile_name.clone()],
+                } => Some(vec![a_tile_name.clone(), b_tile_name.clone()]),
+                ContractionTiling::RegisterTiled { .. } => None,
             };
 
-            let program = ContractionComposer::matmul_2d(
+            let built = ContractionComposer::matmul_2d(
                 "tiling_closure",
                 TensorRef::u32_2d("a", 16, 16),
                 TensorRef::u32_2d("b", 16, 16),
@@ -295,8 +306,21 @@ mod cases {
                 16,
             )
             .with_tiling(tiling.clone())
-            .build()
-            .unwrap_or_else(|error| panic!("Fix: {tiling:?} must build: {error}"));
+            .build();
+
+            let Some(expected_shared) = expected_shared else {
+                let error = built.expect_err(&format!(
+                    "Fix: {tiling:?} has no 2D contraction program and must be rejected"
+                ));
+                assert!(
+                    matches!(error, TensorRefError::UnsupportedTiling { .. }),
+                    "Fix: {tiling:?} must be rejected as an unsupported tiling, got {error}"
+                );
+                continue;
+            };
+
+            let program =
+                built.unwrap_or_else(|error| panic!("Fix: {tiling:?} must build: {error}"));
 
             let shared: Vec<String> = program
                 .buffers()

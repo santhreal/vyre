@@ -158,6 +158,16 @@ pub enum TensorRefError {
         /// Shape that overflowed.
         shape: Vec<u32>,
     },
+    /// The selected tiling has no program for the declared geometry.
+    #[error(
+        "op `{op}` selects tiling `{tiling}`, which has no program for its declared geometry. Fix: select a tiling the geometry assembles."
+    )]
+    UnsupportedTiling {
+        /// Name of the tiling variant with no program for this geometry.
+        tiling: &'static str,
+        /// Op id for the failing builder.
+        op: &'static str,
+    },
 }
 
 /// Verify that every name in `refs` is unique. Returns

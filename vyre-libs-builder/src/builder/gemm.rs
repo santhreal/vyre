@@ -6,6 +6,7 @@
 
 use std::sync::Arc;
 use vyre_foundation::ir::{DataType, Expr, Program};
+use vyre_megakernel::DeviceFacts;
 use vyre_spec::Semiring;
 
 #[path = "gemm_algebra.rs"]
@@ -98,11 +99,114 @@ pub enum ContractionTiling {
         /// Shared memory buffer name for RHS tiles.
         b_tile_name: String,
     },
+    /// Register-tiled invocation grid. Each invocation accumulates a
+    /// `rows x columns` tile of outputs across the whole contraction
+    /// dimension, so one staged left value serves `columns` accumulators and
+    /// one staged right value serves `rows` of them.
+    RegisterTiled {
+        /// Output rows one invocation accumulates.
+        rows: u32,
+        /// Output columns one invocation accumulates.
+        columns: u32,
+        /// Workgroup size configuration.
+        workgroup_size: [u32; 3],
+    },
     /// 1D block-tiled loop over the reduction dimension (reference / oracle structure).
     Block1D {
         /// Tile dimension size.
         tile: u32,
     },
+}
+
+/// Output tile one invocation of a contraction accumulates.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ContractionOutputTile {
+    /// Output rows one invocation accumulates.
+    pub rows: u32,
+    /// Output columns one invocation accumulates.
+    pub columns: u32,
+}
+
+impl ContractionOutputTile {
+    /// Live scalars the tiled body holds besides its accumulators and its
+    /// staged operands: the flat tile index, the two tile coordinates, the
+    /// two tile origins, and the contraction induction variable.
+    const BODY_LIVE_SCALARS: u32 = 6;
+
+    /// Registers one invocation holds for a `rows x columns` output tile.
+    ///
+    /// The tiled body keeps `rows * columns` accumulators live across the
+    /// contraction loop, and stages one left value per tile row and one right
+    /// value per tile column inside each iteration.
+    #[must_use]
+    pub const fn register_footprint(rows: u32, columns: u32) -> u32 {
+        rows.saturating_mul(columns)
+            .saturating_add(rows)
+            .saturating_add(columns)
+            .saturating_add(Self::BODY_LIVE_SCALARS)
+    }
+
+    /// Largest output tile the declared extents and the stated device budgets
+    /// admit for one invocation.
+    ///
+    /// The tile grows squarely while its register footprint fits the stated
+    /// per-invocation budget, then extends along whichever declared extent
+    /// still has room. Facts that state no register budget admit no tile, and
+    /// so does a geometry whose output is one element wide in both extents:
+    /// the caller keeps the untiled candidate in both cases rather than
+    /// receiving a tile derived from an assumed budget.
+    #[must_use]
+    pub fn derive(rows: u32, columns: u32, facts: &DeviceFacts) -> Option<Self> {
+        let budget = facts.registers_per_invocation();
+        if rows == 0 || columns == 0 || budget <= Self::BODY_LIVE_SCALARS {
+            return None;
+        }
+
+        let mut tile = Self {
+            rows: 1,
+            columns: 1,
+        };
+        while tile.rows < rows
+            && tile.columns < columns
+            && Self::register_footprint(tile.rows + 1, tile.columns + 1) <= budget
+        {
+            tile.rows += 1;
+            tile.columns += 1;
+        }
+        while tile.columns < columns
+            && Self::register_footprint(tile.rows, tile.columns + 1) <= budget
+        {
+            tile.columns += 1;
+        }
+        while tile.rows < rows && Self::register_footprint(tile.rows + 1, tile.columns) <= budget {
+            tile.rows += 1;
+        }
+
+        (tile.rows > 1 || tile.columns > 1).then_some(tile)
+    }
+}
+
+/// Workgroup the stated device admits for a tiled contraction launch.
+///
+/// The invocation count is the largest whole number of subgroups the stated
+/// per-workgroup invocation limit holds. A device that states no subgroup size
+/// contributes only its invocation limit, and one that states neither leaves
+/// the declared workgroup unchanged.
+fn tiled_workgroup(facts: &DeviceFacts, declared: [u32; 3]) -> [u32; 3] {
+    let limit = facts.max_invocations_per_workgroup();
+    if limit == 0 {
+        return declared;
+    }
+    let subgroup = facts.subgroup_size();
+    let invocations = if subgroup == 0 {
+        limit
+    } else {
+        (limit / subgroup) * subgroup
+    };
+    if invocations == 0 {
+        return declared;
+    }
+    [invocations, 1, 1]
 }
 
 /// Geometry of contraction tensors.
@@ -184,6 +288,9 @@ pub struct ContractionComposer {
     pub geometry: ContractionGeometry,
     /// Category-A build options (workgroup override, tenant id).
     pub options: BuildOptions,
+    /// Facts of the device the contraction will run on. Absent facts state no
+    /// budget, which admits no physical tile.
+    pub device: DeviceFacts,
 }
 
 impl ContractionComposer {
@@ -212,6 +319,7 @@ impl ContractionComposer {
             epilogue: ContractionEpilogue::None,
             geometry,
             options: BuildOptions::default(),
+            device: DeviceFacts::unknown(),
         }
     }
 
@@ -310,6 +418,7 @@ impl ContractionComposer {
             epilogue,
             geometry: ContractionGeometry::Matmul2D { m, k, n },
             options: BuildOptions::default(),
+            device: DeviceFacts::unknown(),
         }
     }
 
@@ -513,6 +622,43 @@ impl ContractionComposer {
         self
     }
 
+    /// State the facts of the device the contraction will run on and select
+    /// the physical tiling those facts admit.
+    ///
+    /// A row-batched contraction accumulates the largest output tile the
+    /// declared extents and the stated register budget admit, and the launch
+    /// takes the largest whole number of subgroups the stated invocation limit
+    /// holds. Facts that admit no tile leave the untiled candidate selected,
+    /// which is also what a later [`Self::with_tiling`] call states
+    /// explicitly: admissibility is decided here, before any candidate is
+    /// ranked.
+    #[must_use]
+    pub fn with_device_facts(mut self, facts: DeviceFacts) -> Self {
+        self.device = facts;
+        if let ContractionGeometry::BatchedRows {
+            rows,
+            out_dim,
+            in_dim: _,
+            weight_out_in: _,
+        } = self.geometry
+        {
+            if let Some(tile) = ContractionOutputTile::derive(rows, out_dim, &facts) {
+                let declared = match self.tiling {
+                    ContractionTiling::Linear { workgroup_size }
+                    | ContractionTiling::RegisterTiled { workgroup_size, .. } => workgroup_size,
+                    ContractionTiling::CooperativeShared { tile, .. } => [tile, tile, 1],
+                    ContractionTiling::Block1D { tile } => [tile, 1, 1],
+                };
+                self.tiling = ContractionTiling::RegisterTiled {
+                    rows: tile.rows,
+                    columns: tile.columns,
+                    workgroup_size: tiled_workgroup(&facts, declared),
+                };
+            }
+        }
+        self
+    }
+
     /// Validate tensors and assemble the contraction Program.
     ///
     /// # Errors
@@ -676,6 +822,12 @@ impl ContractionComposer {
                         *tile,
                         &self.dtype,
                     ),
+                    ContractionTiling::RegisterTiled { .. } => {
+                        Err(TensorRefError::UnsupportedTiling {
+                            tiling: "RegisterTiled",
+                            op: self.op_id,
+                        })
+                    }
                 }
             }
             ContractionGeometry::BatchedMatmul3D { batch, m, k, n } => {
@@ -699,21 +851,58 @@ impl ContractionComposer {
                 out_dim,
                 weight_out_in,
             } => {
-                let wg = self.options.workgroup_size.unwrap_or([64, 1, 1]);
-                build_batched_rows_contraction(
-                    generator,
-                    self.a.name_str(),
-                    self.b.name_str(),
-                    self.bias.as_ref().map(TensorRef::name_str),
-                    self.out.name_str(),
-                    *rows,
-                    *in_dim,
-                    *out_dim,
-                    &self.dtype,
-                    &self.acc_dtype,
-                    *weight_out_in,
-                    wg,
-                )
+                match &self.tiling {
+                    ContractionTiling::RegisterTiled {
+                        rows: tile_rows,
+                        columns,
+                        workgroup_size,
+                    } => {
+                        let wg = self.options.workgroup_size.unwrap_or(*workgroup_size);
+                        build_batched_rows_register_tiled(
+                            generator,
+                            self.a.name_str(),
+                            self.b.name_str(),
+                            self.bias.as_ref().map(TensorRef::name_str),
+                            self.out.name_str(),
+                            *rows,
+                            *in_dim,
+                            *out_dim,
+                            *tile_rows,
+                            *columns,
+                            &self.dtype,
+                            &self.acc_dtype,
+                            *weight_out_in,
+                            wg,
+                        )
+                    }
+                    ContractionTiling::Linear { workgroup_size } => {
+                        let wg = self.options.workgroup_size.unwrap_or(*workgroup_size);
+                        build_batched_rows_contraction(
+                            generator,
+                            self.a.name_str(),
+                            self.b.name_str(),
+                            self.bias.as_ref().map(TensorRef::name_str),
+                            self.out.name_str(),
+                            *rows,
+                            *in_dim,
+                            *out_dim,
+                            &self.dtype,
+                            &self.acc_dtype,
+                            *weight_out_in,
+                            wg,
+                        )
+                    }
+                    ContractionTiling::CooperativeShared { .. } => {
+                        Err(TensorRefError::UnsupportedTiling {
+                            tiling: "CooperativeShared",
+                            op: self.op_id,
+                        })
+                    }
+                    ContractionTiling::Block1D { .. } => Err(TensorRefError::UnsupportedTiling {
+                        tiling: "Block1D",
+                        op: self.op_id,
+                    }),
+                }
             }
             ContractionGeometry::Matvec { n, matrix_cells } => {
                 let wg = self.options.workgroup_size.unwrap_or([256, 1, 1]);
