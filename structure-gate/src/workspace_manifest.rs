@@ -154,6 +154,36 @@ pub(crate) fn workspace_paths(root: &Path, key: &str) -> Vec<String> {
     }
 }
 
+/// Every checkout directory that holds a `Cargo.toml`, root-relative.
+///
+/// The root manifest declares which of these cargo loads and which it leaves
+/// out. A directory on neither list is a crate the workspace never decided
+/// about: cargo pulls it into the graph or refuses to build it depending on
+/// where it sits, and nothing records which was meant.
+///
+/// # Panics
+///
+/// Panics when a manifest path is not under `root`.
+#[must_use]
+pub fn manifest_directories(root: &Path) -> Vec<String> {
+    tree_files(root)
+        .manifests
+        .iter()
+        .filter_map(|manifest| manifest.parent())
+        .filter(|directory| *directory != root)
+        .map(|directory| {
+            let relative = directory.strip_prefix(root).unwrap_or_else(|_| {
+                panic!(
+                    "Fix: manifest directory {} is not under {}",
+                    directory.display(),
+                    root.display()
+                )
+            });
+            relative.to_string_lossy().replace('\\', "/")
+        })
+        .collect()
+}
+
 /// Crate identifier for a crate name, e.g. `vyre_libs` for `vyre-libs`.
 #[must_use]
 pub fn crate_ident(crate_name: &str) -> String {

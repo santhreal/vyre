@@ -584,11 +584,6 @@ const RECORDED_NODE_VISITORS: &[(&str, &str)] = &[
         "vyre-emit-naga: collects one variant's tag and ignores the rest. \
          Wants try_for_each_node; not yet routed.",
     ),
-    (
-        "LocalSlots",
-        "vyre-reference: collects declarations from three variants and ignores \
-         the rest. Wants try_for_each_node; not yet routed.",
-    ),
 ];
 
 /// `Node` variants whose visitor hook is not `visit_<snake_case_variant>`, and

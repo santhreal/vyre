@@ -106,9 +106,7 @@ fn law_named(name: &str) -> Option<AlgebraicLaw> {
 
 /// The `AlgebraicLaw` variant names `vyre-spec` declares, read from source.
 fn declared_law_variants() -> BTreeSet<String> {
-    let path = vyre_test_support::monorepo::vyre_crate_directory("vyre-spec")
-        .join("src")
-        .join("algebraic_law.rs");
+    let path = vyre_test_support::monorepo::declaring_source_file("pub enum AlgebraicLaw {");
     let source = std::fs::read_to_string(&path)
         .unwrap_or_else(|err| panic!("Fix: cannot read {path:?} to derive the law set: {err}"));
     let body = vyre_test_support::braced_body(&source, "pub enum AlgebraicLaw {")

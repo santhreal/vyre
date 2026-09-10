@@ -18,12 +18,14 @@ use vyre_foundation::{
     schedule::{CombineOrder, MappingLevel, SchedulePhaseId, ScheduleTransform},
 };
 
+use vyre_foundation::execution_plan::fusion::FusionRejectionReason;
+
 use crate::{
     candidate::CandidatePlan,
     certificate::PruneReason,
     facts::PlanningFacts,
     legality::{
-        analyze_fusion_pair, analyze_topology_legality, FusionDecision, FusionRejectionReason,
+        analyze_fusion_pair, analyze_topology_legality, FusionDecision,
         TopologyDecision, TopologyRejectionReason,
     },
     DependencyEdge, DeviceFacts, FusionGroupId,

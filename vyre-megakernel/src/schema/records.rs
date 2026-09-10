@@ -2,10 +2,10 @@
 //! fusion, barrier and materialization facts one compile selected.
 
 use serde::{Deserialize, Serialize};
+use vyre_foundation::execution_plan::fusion::FusionRejectionReason;
 use vyre_foundation::ir::DataType;
 
 use crate::identity::{ArtifactNodeId, ArtifactValueId, Digest, FusionGroupId};
-use crate::legality;
 use crate::objective::CompileObjective;
 
 /// Canonical executable-node payload.
@@ -175,7 +175,7 @@ pub struct FusionRejection {
     /// Connecting value.
     pub value: ArtifactValueId,
     /// Stable semantic rejection reason.
-    pub reason: legality::FusionRejectionReason,
+    pub reason: FusionRejectionReason,
 }
 
 /// Dependency-completion boundary between canonical stages.

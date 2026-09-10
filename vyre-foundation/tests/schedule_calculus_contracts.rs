@@ -255,9 +255,13 @@ fn schedule_calculus_all_operators_declare_preconditions_resources_effects_and_p
 
 #[test]
 fn schedule_calculus_operator_set_is_closed_against_source_at_runtime() {
-    let source = std::fs::read_to_string("vyre-foundation/src/schedule/tree.rs")
-        .or_else(|_| std::fs::read_to_string("src/schedule/tree.rs"))
-        .expect("schedule tree.rs source must be accessible for runtime closure check");
+    let declaring = vyre_test_support::monorepo::declaring_source_file("pub enum ScheduleOp {");
+    let source = std::fs::read_to_string(&declaring).unwrap_or_else(|error| {
+        panic!(
+            "read the declaration of ScheduleOp at {}: {error}",
+            declaring.display()
+        )
+    });
 
     let enum_marker = "pub enum ScheduleOp {";
     let start_idx = source
