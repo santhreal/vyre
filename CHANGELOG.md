@@ -5154,6 +5154,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   device identity, and `architecture()` keyed the compiled-baseline cache
   directory on that empty string, which let two different devices share one
   cached binary.
+- The CUDA grid-sync split backend forwards timed dispatch to the backend it
+  wraps rather than falling back to the host-timed default.
 - Three vyre-bench tests named vyre_driver_cuda, which the crate depends on
   only under cfg(not(target_os = "macos")). The macOS lane failed to resolve
   the crate and the whole benchmark harness stopped compiling there. Each test
@@ -5943,6 +5945,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   string literal and so is the table that spells it. The two rule sources are
   exempt by path, and a test requires each to exist and to still carry the
   language, so a stale exemption is red rather than a silent widening.
+- Each route of the crossover reduction case stages the host input buffers its
+  own program declares, so the fused tree route whose output the backend
+  allocates is no longer handed an input it never declared.
 - Two graph dispatch contracts compared a CPU reference against itself.
   `substrate_exploded_ifds_arms_cover_every_declared_case_group` asserted
   `reference_build_ifds_csr` equals `build_cpu_reference`, and
@@ -6199,6 +6204,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   the device-tests feature in both the manifest and the file, and a failed
   acquisition is a configuration failure rather than a skip. tests/dispatch.rs
   gained the matching file-level cfg its manifest row already required.
+- A grid-sync program split into one kernel launch per segment reports the
+  total device, enqueue, and wait time across those launches instead of host
+  wall time alone, and reports none at all when a segment measured none.
 - The routing-contract closure test reads a split op as one module. An op whose
   program moved into its own file registered in the tests module beside it,
   which the test looked for only under a directory named for the file, so a
@@ -6339,6 +6347,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   own entry boundary and whose program shrank.
 - A tiled matrix multiply on an F16 M16N8K16-eligible shape emits the
   tensor-core body, which no public builder could reach before.
+- Timed CUDA graph replay no longer answers from the materialized output cache,
+  which reported zero device nanoseconds for every sample after the first.
 - A timed cudaGraph replay whose inputs already match the materialized host
   outputs returns those outputs with `device_ns = Some(0)` instead of launching
   the graph again to produce a timing. The untimed path already short-circuited
@@ -6417,6 +6427,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   segment, ordered by an explicit retained-state succession that fusion
   legality cannot contract back together. A fence inside a loop body has no
   correct cut and is refused with the loop named.
+- A program requiring whole-grid synchronization now compiles and emits a
+  target payload on the Naga route, lowering each dispatch segment to its own
+  compute entry point instead of refusing the fence.
 - Every CI lane that builds every target of the workspace deletes the
   preinstalled .NET, Android, Haskell, Swift, PowerShell and CodeQL trees
   first, and prints the free space before and after. That reclaim alone was not
@@ -8024,6 +8037,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   count buffer as a read because the host writes it and the shader only reads
   it; the scan now agrees, and no emitted shader changes because the Naga
   emitter rejects `IndirectDispatch` before producing WGSL.
+- Every naga-derived backend now emits an f32 quotient that rounds to nearest,
+  correcting a bare `OpFDiv` whose 2.5-ULP Vulkan accuracy requirement left
+  five of eight measured quotients one ULP from the value the reference oracle
+  and the PTX `div.rn.f32` lowering state, which composition amplified into a
+  164-ULP `tensor_train_decompose` divergence.
 - The naga vector-packing analysis now states that a fused load or store
   crosses neither `KernelOpKind::OpaqueExpr` nor `KernelOpKind::OpaqueNode`.
   The reorder-safety match had no arm for either, so the crate stopped
