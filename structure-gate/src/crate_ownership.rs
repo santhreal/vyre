@@ -23,8 +23,8 @@ pub struct CrateRow {
     pub package: String,
     /// Checkout-relative directory the package occupies.
     pub path: String,
-    /// Subsystem that owns the package.
-    pub owner: String,
+    /// Named seam the package publishes to the rest of the workspace.
+    pub seam: String,
     /// Architectural layer the package sits in.
     pub layer: String,
 }
@@ -41,7 +41,7 @@ impl Registry {
     /// # Errors
     ///
     /// When the file is missing, unreadable, not TOML, declares no member, or
-    /// carries a row without a `package`, `path`, `owner` or `layer`. Each of
+    /// carries a row without a `package`, `path`, `seam` or `layer`. Each of
     /// those leaves a caller with a roster that covers less than the tree, so it
     /// is reported instead of defaulted.
     pub fn read(root: &Path) -> Result<Self, String> {
@@ -56,7 +56,7 @@ impl Registry {
     /// # Errors
     ///
     /// When the text is not TOML, declares no member, or carries a row without a
-    /// `package`, `path`, `owner` or `layer`.
+    /// `package`, `path`, `seam` or `layer`.
     pub fn parse(text: &str) -> Result<Self, String> {
         #[derive(Deserialize)]
         struct OwnershipFile {
@@ -68,7 +68,7 @@ impl Registry {
         struct RawCrateEntry {
             package: Option<String>,
             path: Option<String>,
-            owner: Option<String>,
+            seam: Option<String>,
             layer: Option<String>,
         }
 
@@ -86,16 +86,16 @@ impl Registry {
                 .path
                 .ok_or_else(|| format!("{REGISTRY} entry for `{package}` declares no `path`"))?
                 .replace('\\', "/");
-            let owner = entry
-                .owner
-                .ok_or_else(|| format!("{REGISTRY} entry for `{package}` declares no `owner`"))?;
+            let seam = entry
+                .seam
+                .ok_or_else(|| format!("{REGISTRY} entry for `{package}` declares no `seam`"))?;
             let layer = entry
                 .layer
                 .ok_or_else(|| format!("{REGISTRY} entry for `{package}` declares no `layer`"))?;
             rows.push(CrateRow {
                 package,
                 path,
-                owner,
+                seam,
                 layer,
             });
         }

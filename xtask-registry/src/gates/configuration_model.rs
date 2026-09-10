@@ -41,7 +41,7 @@ impl GateBehavior for ConfigurationModelGate {
                     "repair the [facade] roster in docs/CRATE_OWNERSHIP.toml",
                 )
             })?;
-        inspection.generates_text(&facade_path, facade_manifest);
+        inspection.generates_document_text(&facade_path, facade_manifest);
 
         let mut report = settle_inspection(ctx, ctx.gate_name()?, inspection);
 

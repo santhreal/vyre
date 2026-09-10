@@ -139,6 +139,7 @@ purpose = "Submission, admission, tenancy, and lifecycle policy over a compiled 
 name = "facade"
 rank = 6
 purpose = "The single curated consumer surface over the layers below it."
+exports_declared_seams = true
 
 [[layer]]
 name = "registry-link"
@@ -609,50 +610,6 @@ layer = "tooling"
 seam = "evidence-gates"
 interface = "The gates that decide whether a recorded benchmark or release measurement still describes this tree."
 responsibility = "Own the xtask subcommands that decide whether a recorded benchmark or release measurement still describes this tree."
-
-[[crate.dependency]]
-package = "vyre-emit-naga"
-purpose = "primary text and related binary emission"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "public"
-seam = "primary-text-emitter"
-
-[[crate.dependency]]
-package = "vyre-foundation"
-purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "public"
-seam = "foundation-ir"
-
-[[crate.dependency]]
-package = "vyre-libs"
-purpose = "product operation builders"
-features = ["python-parser"]
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "product-libraries"
-
-[[crate.dependency]]
-package = "vyre-lower"
-purpose = "verified backend-neutral representation lowering"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "public"
-seam = "lowering"
 
 # The consumer facade roster.
 #

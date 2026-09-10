@@ -1,7 +1,7 @@
 //! The registry reader every rule takes its roster from.
 //!
-//! A rule that resolves a file to the wrong crate holds it to the wrong owner,
-//! and a rule whose reader accepts a row missing `owner` covers that crate with
+//! A rule that resolves a file to the wrong crate holds it to the wrong seam,
+//! and a rule whose reader accepts a row missing `seam` covers that crate with
 //! an empty string nobody notices. Both fail here rather than in the rule.
 //!
 //! The checkout cases are held against `docs/CRATE_OWNERSHIP.toml` as it stands,
@@ -66,21 +66,21 @@ fn a_sibling_sharing_a_name_prefix_keeps_its_own_files() {
 fn the_longest_declared_directory_owns_the_file() {
     let registry = Registry::parse(
         "schema_version = 2\n\n\
-         [[crate]]\npackage = \"outer\"\npath = \"tools\"\nowner = \"outer-owner\"\nlayer = \"tooling\"\n\n\
-         [[crate]]\npackage = \"inner\"\npath = \"tools/inner\"\nowner = \"inner-owner\"\nlayer = \"tooling\"\n",
+         [[crate]]\npackage = \"outer\"\npath = \"tools\"\nseam = \"outer-seam\"\nlayer = \"tooling\"\n\n\
+         [[crate]]\npackage = \"inner\"\npath = \"tools/inner\"\nseam = \"inner-seam\"\nlayer = \"tooling\"\n",
     )
     .expect("Fix: the fixture registry must be readable");
     assert_eq!(
         registry
             .owning_crate("tools/inner/src/lib.rs")
-            .map(|row| row.owner.as_str()),
-        Some("inner-owner")
+            .map(|row| row.seam.as_str()),
+        Some("inner-seam")
     );
     assert_eq!(
         registry
             .owning_crate("tools/src/lib.rs")
-            .map(|row| row.owner.as_str()),
-        Some("outer-owner")
+            .map(|row| row.seam.as_str()),
+        Some("outer-seam")
     );
 }
 
@@ -93,7 +93,7 @@ fn the_longest_declared_directory_owns_the_file() {
 fn a_declared_directory_owns_its_files_whichever_separator_wrote_it() {
     let registry = Registry::parse(
         "schema_version = 2\n\n\
-         [[crate]]\npackage = \"win\"\npath = \"tools\\\\win\"\nowner = \"win-owner\"\nlayer = \"tooling\"\n",
+         [[crate]]\npackage = \"win\"\npath = \"tools\\\\win\"\nseam = \"win-seam\"\nlayer = \"tooling\"\n",
     )
     .expect("Fix: the fixture registry must be readable");
     for query in [
@@ -103,8 +103,8 @@ fn a_declared_directory_owns_its_files_whichever_separator_wrote_it() {
         "tools\\win\\src\\lib.rs",
     ] {
         assert_eq!(
-            registry.owning_crate(query).map(|row| row.owner.as_str()),
-            Some("win-owner"),
+            registry.owning_crate(query).map(|row| row.seam.as_str()),
+            Some("win-seam"),
             "Fix: `{query}` must resolve to the member that declares its directory"
         );
     }
@@ -117,21 +117,21 @@ fn a_file_outside_every_declared_directory_has_no_owner() {
     assert_eq!(registry.owning_crate("docs/ARCHITECTURE.md"), None);
 }
 
-/// A row missing a field is reported, not read as an empty owner.
+/// A row missing a field is reported, not read as an empty seam.
 #[test]
 fn a_row_missing_a_required_field_fails_closed() {
     for (field, row) in [
         (
             "path",
-            "[[crate]]\npackage = \"a\"\nowner = \"a-owner\"\nlayer = \"a-layer\"\n",
+            "[[crate]]\npackage = \"a\"\nseam = \"a-seam\"\nlayer = \"a-layer\"\n",
         ),
         (
-            "owner",
+            "seam",
             "[[crate]]\npackage = \"a\"\npath = \"a\"\nlayer = \"a-layer\"\n",
         ),
         (
             "layer",
-            "[[crate]]\npackage = \"a\"\npath = \"a\"\nowner = \"a-owner\"\n",
+            "[[crate]]\npackage = \"a\"\npath = \"a\"\nseam = \"a-seam\"\n",
         ),
     ] {
         let error = Registry::parse(row).expect_err("Fix: an incomplete row must be reported");
@@ -141,7 +141,7 @@ fn a_row_missing_a_required_field_fails_closed() {
         );
     }
     let error =
-        Registry::parse("[[crate]]\npath = \"a\"\nowner = \"a-owner\"\nlayer = \"a-layer\"\n")
+        Registry::parse("[[crate]]\npath = \"a\"\nseam = \"a-seam\"\nlayer = \"a-layer\"\n")
             .expect_err("Fix: a row with no package must be reported");
     assert!(
         error.contains("entry with no `package`"),

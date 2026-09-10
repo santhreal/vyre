@@ -116,242 +116,242 @@ const OWNER_CALLS: [&str; 8] = [
 const WAIVERS: &[Waiver] = &[
     Waiver {
         path: "conform/vyre-conform/tests/contract_cases/composition_discipline__every_op_is_under_complexity_budget.rs",
-        owner: "conformance",
+        seam: "parity-harness",
         reason: "conform harness walk, converted with the rest of the conform contract cases",
     },
     Waiver {
         path: "conform/vyre-conform/tests/contract_cases/composition_discipline__measure_program.rs",
-        owner: "conformance",
+        seam: "parity-harness",
         reason: "conform harness walk, converted with the rest of the conform contract cases",
     },
     Waiver {
         path: "conform/vyre-conform/tests/contract_cases/parity_matrix__synthetic_entries.rs",
-        owner: "conformance",
+        seam: "parity-harness",
         reason: "conform harness walk, converted with the rest of the conform contract cases",
     },
     Waiver {
         path: "vyre-driver-wgpu/tests/op_pairwise/all_entries_vec.rs",
-        owner: "portable-driver",
+        seam: "portable-driver",
         reason: "driver test walk, converted with the driver walker lane",
     },
     Waiver {
         path: "vyre-libs/src/nn/linear/layer/linear_4bit/affine_grouped.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "domain op builder walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/src/security/aliases_dataflow.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "domain dataflow walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/blake3_kat.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/indexed_map_composition_contracts.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/loop_unroll_trip1_idempotence.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/math_algebra_branchless_contracts.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/nn_attention_clone_family_ir_invariance.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/optimized_programs.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/parsing_walker_clone_family.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/region_chain_invariant.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-libs/tests/workgroup_cooperative_tiling.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
         path: "vyre-reference/src/execution/hashmap/step/node_step.rs",
-        owner: "reference-semantics",
+        seam: "reference-semantics",
         reason: "the reference evaluator interprets each variant, so its dispatch is the decision, not a descent shortcut",
     },
     Waiver {
         path: "vyre-reference/src/execution/node.rs",
-        owner: "reference-semantics",
+        seam: "reference-semantics",
         reason: "the reference evaluator interprets each variant, so its dispatch is the decision, not a descent shortcut",
     },
     Waiver {
         path: "xtask-registry/src/docs/operation_schema/composition.rs",
-        owner: "release-tooling",
+        seam: "live-registry-gates",
         reason: "tooling walk over IR for documentation generation",
     },
     Waiver {
         path: "xtask-registry/src/gates/lego_audit/fingerprint.rs",
-        owner: "release-tooling",
+        seam: "live-registry-gates",
         reason: "tooling walk over IR for a gate, emitting one fingerprint byte per node kind, so the arm set is the measurement",
     },
     Waiver {
         path: "xtask-registry/src/gates/lego_audit/ops.rs",
-        owner: "release-tooling",
+        seam: "live-registry-gates",
         reason: "tooling walk over IR for a gate, counting nodes per variant, so the arm set is the measurement",
     },
     Waiver {
         path: "xtask-registry/src/print_composition.rs",
-        owner: "release-tooling",
+        seam: "live-registry-gates",
         reason: "tooling walk over IR for a report",
     },
     Waiver {
         path: "vyre-debug/src/source_assignments.rs",
-        owner: "debugging",
+        seam: "debugging",
         reason: "lexical scope stack pushed per child body; the owner walk carries no scope frame",
     },
     Waiver {
         path: "vyre-foundation/src/optimizer/passes/algebraic/const_fold/binop_identities.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "rebuild threading a local literal environment through each child in order",
     },
     Waiver {
         path: "vyre-foundation/src/optimizer/passes/cleanup/branch_value_hoist.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "test helper searching for one structural shape, deliberately independent of the walker under test",
     },
     Waiver {
         path: "vyre-foundation/src/optimizer/passes/cleanup/empty_block_collapse.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "test oracle counting empty blocks independently of the pass it checks",
     },
     Waiver {
         path: "vyre-foundation/src/optimizer/passes/cleanup/region_fusion_hint.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "reads sibling windows inside each body, which is position information the owner walk drops",
     },
     Waiver {
         path: "vyre-foundation/src/optimizer/passes/fusion_cse/fusion/mod.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "rebuild constructing each variant with its own builder; belongs on rewrite_node, conversion in flight",
     },
     Waiver {
         path: "vyre-foundation/src/optimizer/passes/loops/loop_redundant_bound_check_elide.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "two remaining blocks are test oracles counting guards and stores independently of the pass",
     },
     Waiver {
         path: "vyre-foundation/src/optimizer/passes/loops/loop_unroll.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "catch-all encodes the scope claim that other variants open their own scope, documented at the site",
     },
     Waiver {
         path: "vyre-foundation/tests/adversarial_loop_induction_rebind.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "test oracle deliberately independent of the production walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/canonical_determinism.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "test oracle deliberately independent of the production walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/collective_ir_contracts.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "test oracle deliberately independent of the production walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/contract_cases/program_stats_proptest__arb_node.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "generator building arbitrary nodes; routing it through the owner would compare the walker against itself",
     },
     Waiver {
         path: "vyre-foundation/tests/fusion_substitute_into_subgroup_operand.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "test oracle deliberately independent of the substitution walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/inline_buffer_reference_arguments.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "test oracle deliberately independent of the inliner walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/inline_callee_local_rename_in_trap_and_async.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "test oracle deliberately independent of the inliner walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/rewrite_driver_descends_into_async_offset.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "test oracle whose whole point is checking the rewrite driver against a separate descent",
     },
     Waiver {
         path: "vyre-foundation/tests/subst_preserves_subgroup_reduce_op.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "test oracle deliberately independent of the substitution walker it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/wire_buffer_ref_round_trip.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "test oracle deliberately independent of the wire round trip it audits",
     },
     Waiver {
         path: "vyre-foundation/tests/tile_nodes_contracts.rs",
-        owner: "foundation-ir",
+        seam: "foundation-ir",
         reason: "tile node contract descent verification oracle",
     },
     Waiver {
         path: "vyre-libs/tests/internal/graph/dominator_tree/mod.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "test oracle deliberately independent of the dominator construction it audits",
     },
     Waiver {
         path: "vyre-libs/tests/internal/graph/persistent_bfs/behavior_contracts/program_sync_contracts.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "test oracle deliberately independent of the traversal it audits",
     },
     Waiver {
         path: "vyre-libs/tests/internal/graph/persistent_bfs/validation_and_builders.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "test oracle deliberately independent of the traversal it audits",
     },
     Waiver {
         path: "vyre-libs/tests/adversarial_math.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "test oracle deliberately independent of the production walker it audits",
     },
     Waiver {
         path: "vyre-libs/tests/ir_shape/mod.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "shape oracle for the graph tests, independent of the production walker by design",
     },
     Waiver {
         path: "vyre-libs/tests/loop_back_edge_audit.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "back edge audit oracle, independent of the production walker by design",
     },
     Waiver {
         path: "vyre-libs/tests/surface_contracts.rs",
-        owner: "product-libraries",
+        seam: "semantic-library",
         reason: "library surface contract walk owned by the libs lane, not converted in this lane",
     },
     Waiver {
         path: "vyre-pass-engine/tests/dce_program_back_edge_contract.rs",
-        owner: "pass-engine",
+        seam: "pass-engine",
         reason: "test oracle deliberately independent of the dead code walker it audits",
     },
 
@@ -361,8 +361,8 @@ const WAIVERS: &[Waiver] = &[
 struct Waiver {
     /// Checkout-relative file the descent sits in.
     path: &'static str,
-    /// Owner that `docs/CRATE_OWNERSHIP.toml` declares for the crate holding it.
-    owner: &'static str,
+    /// Seam that `docs/CRATE_OWNERSHIP.toml` declares for the crate holding it.
+    seam: &'static str,
     /// What makes the hand-written descent acceptable here.
     reason: &'static str,
 }
@@ -436,8 +436,8 @@ fn every_waiver_still_describes_a_real_walk() {
         stale
             .iter()
             .map(|waiver| format!(
-                "  {} (owner {}): {}",
-                waiver.path, waiver.owner, waiver.reason
+                "  {} (seam {}): {}",
+                waiver.path, waiver.seam, waiver.reason
             ))
             .collect::<Vec<_>>()
             .join("\n"),
@@ -453,9 +453,9 @@ fn every_waiver_still_describes_a_real_walk() {
 /// first waiver under it fails until the row exists, and a waiver retargeted at
 /// a file in another crate fails until the row it names is corrected.
 #[test]
-fn every_waiver_names_the_owner_of_the_crate_holding_the_file() {
+fn every_waiver_names_the_seam_of_the_crate_holding_the_file() {
     let registry = Registry::read(&workspace_root())
-        .expect("Fix: docs/CRATE_OWNERSHIP.toml must be readable to judge waiver owners");
+        .expect("Fix: docs/CRATE_OWNERSHIP.toml must be readable to judge waiver seams");
     for waiver in WAIVERS {
         let Some(owning) = registry.owning_crate(waiver.path) else {
             panic!(
@@ -465,10 +465,10 @@ fn every_waiver_names_the_owner_of_the_crate_holding_the_file() {
             );
         };
         assert_eq!(
-            waiver.owner, owning.owner,
-            "Fix: waiver for {} names owner `{}` and `{}` declares owner `{}` in \
+            waiver.seam, owning.seam,
+            "Fix: waiver for {} names seam `{}` and `{}` declares seam `{}` in \
              docs/CRATE_OWNERSHIP.toml. Only the subsystem that owns the file may convert it.",
-            waiver.path, waiver.owner, owning.package, owning.owner
+            waiver.path, waiver.seam, owning.package, owning.seam
         );
         assert!(
             waiver.reason.split_whitespace().count() >= 5,

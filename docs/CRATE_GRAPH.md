@@ -8,32 +8,35 @@ together, then regenerate this file.
 
 A production dependency is legal only when the consumer's layer outranks the
 dependency's layer. Two layers share a rank when neither depends on the other.
+A layer that admits a closed set of consumer layers names them; one that admits
+every layer the rank rule allows names none.
 
-| Rank | Layer | Purpose |
-| --- | --- | --- |
-| `0` | `foundation` | Typed IR, logical domains, specification records, diagnostics, and the derive macros that generate them. |
-| `0` | `standalone-tooling` | Source-structure gates that read the tree and depend on no compiler crate. |
-| `1` | `lowering` | One verified selected-module representation between semantic IR and target emission. |
-| `1` | `primitives` | Intrinsic operations, each with its own emitter arm in every backend and its own reference arm. |
-| `2` | `compiler-boundary` | Schedule search, artifact identity, and authenticated target-payload construction. |
-| `2` | `emitter` | Target text and binary emission for one dialect each. |
-| `2` | `semantics` | The independent semantic oracle. Never a production execution route. |
-| `3` | `libraries` | Domain-neutral compositions built from existing IR. |
-| `4` | `backend-neutral` | The dispatch, binding, and capability contract every concrete backend implements. |
-| `4` | `pass-engine` | Pass scheduling and rewrite application over semantic IR. |
-| `5` | `concrete-backend` | One device family each: capability probing, module loading, and dispatch. |
-| `5` | `packaging` | Ahead-of-time artifact packaging and load. |
-| `5` | `runtime` | Submission, admission, tenancy, and lifecycle policy over a compiled artifact. |
-| `5` | `test-tooling` | Shared verification fixtures and harness support, private to the workspace. |
-| `6` | `facade` | The single curated consumer surface over the layers below it. |
-| `6` | `registry-link` | Link anchors that pull registration submissions into a final binary. |
-| `7` | `conformance` | Parity harnesses that join a production result to an independently produced oracle result. |
-| `7` | `tooling` | Gates, benchmarks, and generators that read the whole workspace. |
+| Rank | Layer | Admitted consumer layers | Purpose |
+| --- | --- | --- | --- |
+| `0` | `foundation` | every outranking layer | Typed IR, logical domains, specification records, diagnostics, and the derive macros that generate them. |
+| `0` | `standalone-tooling` | `test-tooling`, `tooling` | Source-structure gates that read the tree and depend on no compiler crate. |
+| `1` | `lowering` | every outranking layer | One verified selected-module representation between semantic IR and target emission. |
+| `1` | `primitives` | every outranking layer | Intrinsic operations, each with its own emitter arm in every backend and its own reference arm. |
+| `2` | `compiler-boundary` | every outranking layer | Schedule search, artifact identity, and authenticated target-payload construction. |
+| `2` | `emitter` | every outranking layer | Target text and binary emission for one dialect each. |
+| `2` | `semantics` | every outranking layer | The independent semantic oracle. Never a production execution route. |
+| `3` | `libraries` | `backend-neutral`, `conformance`, `libraries`, `pass-engine`, `registry-link`, `runtime`, `tooling` | Domain-neutral compositions built from existing IR. |
+| `4` | `backend-neutral` | every outranking layer | The dispatch, binding, and capability contract every concrete backend implements. |
+| `4` | `pass-engine` | every outranking layer | Pass scheduling and rewrite application over semantic IR. |
+| `5` | `concrete-backend` | every outranking layer | One device family each: capability probing, module loading, and dispatch. |
+| `5` | `packaging` | every outranking layer | Ahead-of-time artifact packaging and load. |
+| `5` | `runtime` | every outranking layer | Submission, admission, tenancy, and lifecycle policy over a compiled artifact. |
+| `5` | `test-tooling` | None | Shared verification fixtures and harness support, private to the workspace. |
+| `6` | `facade` | every outranking layer | The single curated consumer surface over the layers below it. |
+| `6` | `registry-link` | every outranking layer | Link anchors that pull registration submissions into a final binary. |
+| `7` | `conformance` | every outranking layer | Parity harnesses that join a production result to an independently produced oracle result. |
+| `7` | `tooling` | every outranking layer | Gates, benchmarks, and generators that read the whole workspace. |
 
 ## Workspace dependency graph
 
-The workspace contains 57 crates. An arrow points from a crate to
-an internal normal or build dependency. Development dependencies are excluded.
+The workspace contains 57 crates and 328 internal production edges, resolved
+under the union of every feature. An arrow points from a crate to an internal
+normal or build dependency. Development dependencies are excluded.
 
 ```mermaid
 graph TD
@@ -424,341 +427,341 @@ graph TD
   C56 --> C54
 ```
 
-## Dependency contracts
+## Resolved production edges
 
-| Consumer | Dependency | Purpose | Features | Conditions | Kinds | Optional | Default features | Boundary | Owning seam |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `vyre` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
-| `vyre` | `vyre-driver-cuda` | native accelerator backend execution | None | `always` | `normal` | `true` | `true` | `private` | `cuda-driver` |
-| `vyre` | `vyre-driver-wgpu` | portable backend execution | None | `always` | `normal` | `true` | `true` | `private` | `portable-driver` |
-| `vyre` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `vyre` | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | None | `always` | `normal` | `false` | `true` | `private` | `runtime` |
-| `vyre` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
-| `vyre-aot` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
-| `vyre-aot` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-aot` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-bench` | `vyre` | public lifecycle facade | None | `always` | `normal` | `false` | `false` | `private` | `public-facade` |
-| `vyre-bench` | `vyre-alloc-probe` | per-thread heap counters the runner installs as the global allocator | None | `always` | `normal` | `false` | `true` | `private` | `benchmarks` |
-| `vyre-bench` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `test-fixtures` | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
-| `vyre-bench` | `vyre-driver-cuda` | native accelerator backend execution | None | `cfg(not(target_os = "macos"))` | `normal` | `false` | `true` | `private` | `cuda-driver` |
-| `vyre-bench` | `vyre-driver-wgpu` | portable backend execution | None | `always` | `normal` | `false` | `true` | `private` | `portable-driver` |
-| `vyre-bench` | `vyre-emit-ptx` | primary binary backend text emission | None | `always` | `normal` | `false` | `true` | `private` | `primary-binary-emitter` |
-| `vyre-bench` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre-bench` | `vyre-libs` | product operation builders | `bitset`, `graph`, `math-scan`, `nn-linear-4bit`, `predicate` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
-| `vyre-bench` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
-| `vyre-bench` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `vyre-bench` | `vyre-pass-engine` | optimizer pass execution as dispatched Vyre Programs | None | `always` | `normal` | `false` | `true` | `private` | `pass-engine` |
-| `vyre-bench` | `vyre-primitives` | reusable semantic Program builders | `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
-| `vyre-bench` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
-| `vyre-bench` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `metal`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
-| `vyre-bench` | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | None | `always` | `normal` | `false` | `true` | `private` | `runtime` |
-| `vyre-bench` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
-| `vyre-bench` | `xtask` | the one producer of the source fingerprint a recorded artifact names its tree with | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
-| `vyre-conform` | `vyre` | public lifecycle facade | None | `always` | `normal` | `false` | `false` | `private` | `public-facade` |
-| `vyre-conform` | `vyre-conform-spec` | versioned conformance schemas | None | `always` | `normal` | `false` | `true` | `private` | `conformance` |
-| `vyre-conform` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
-| `vyre-conform` | `vyre-driver-cuda` | native accelerator backend execution | None | `always` | `normal` | `true` | `true` | `private` | `cuda-driver` |
-| `vyre-conform` | `vyre-driver-spirv` | SPIR-V backend execution | None | `always` | `normal` | `true` | `true` | `private` | `spirv-driver` |
-| `vyre-conform` | `vyre-driver-wgpu` | portable backend execution | None | `always` | `normal` | `true` | `true` | `private` | `portable-driver` |
-| `vyre-conform` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre-conform` | `vyre-libs` | product operation builders | `full` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
-| `vyre-conform` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `vyre-conform` | `vyre-primitives` | reusable semantic Program builders | `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
-| `vyre-conform` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
-| `vyre-conform` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `operations` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
-| `vyre-conform` | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | None | `always` | `normal` | `false` | `true` | `private` | `runtime` |
-| `vyre-conform` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
-| `vyre-conform-spec` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
-| `vyre-debug` | `vyre` | public lifecycle facade | None | `always` | `normal` | `false` | `false` | `private` | `public-facade` |
-| `vyre-debug` | `vyre-emit-naga` | primary text and related binary emission | None | `always` | `normal` | `false` | `true` | `public` | `primary-text-emitter` |
-| `vyre-debug` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-debug` | `vyre-libs` | product operation builders | `python-parser` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
-| `vyre-debug` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
-| `vyre-driver` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-driver` | `vyre-libs` | composition library the driver adapters plan against | None | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
-| `vyre-driver` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-driver` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-driver-cuda` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
-| `vyre-driver-cuda` | `vyre-emit-ptx` | primary binary backend text emission | None | `always` | `normal` | `false` | `true` | `private` | `primary-binary-emitter` |
-| `vyre-driver-cuda` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-driver-cuda` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
-| `vyre-driver-cuda` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `vyre-driver-metal` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
-| `vyre-driver-metal` | `vyre-emit-metal` | native Apple source emission | None | `always` | `normal` | `false` | `true` | `private` | `metal-emitter` |
-| `vyre-driver-metal` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre-driver-metal` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
-| `vyre-driver-metal` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `vyre-driver-reference` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
-| `vyre-driver-reference` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-driver-reference` | `vyre-megakernel` | the admitted artifact and target payload the reference target materializes | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-driver-reference` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
-| `vyre-driver-spirv` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
-| `vyre-driver-spirv` | `vyre-emit-spirv` | SPIR-V emission | None | `always` | `normal` | `false` | `true` | `private` | `spirv-emitter` |
-| `vyre-driver-spirv` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-driver-spirv` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
-| `vyre-driver-spirv` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `vyre-driver-wgpu` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
-| `vyre-driver-wgpu` | `vyre-emit-naga` | primary text and related binary emission | None | `always` | `normal` | `false` | `true` | `private` | `primary-text-emitter` |
-| `vyre-driver-wgpu` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-driver-wgpu` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
-| `vyre-driver-wgpu` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `vyre-driver-wgpu` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-emit-metal` | `vyre-emit-naga` | primary text and related binary emission | None | `always` | `normal` | `false` | `true` | `private` | `primary-text-emitter` |
-| `vyre-emit-metal` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre-emit-metal` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
-| `vyre-emit-naga` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts, and the source digest the build script stamps | None | `always` | `build`, `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-emit-naga` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
-| `vyre-emit-ptx` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts, and the source digest the build script stamps | None | `always` | `build`, `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre-emit-ptx` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
-| `vyre-emit-spirv` | `vyre-emit-naga` | primary text and related binary emission | None | `always` | `normal` | `false` | `true` | `public` | `primary-text-emitter` |
-| `vyre-emit-spirv` | `vyre-foundation` | diagnostic projection for emitter errors | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-emit-spirv` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
-| `vyre-foundation` | `vyre-macros` | compile-time registration generation | None | `always` | `normal` | `false` | `true` | `private` | `registration-macros` |
-| `vyre-foundation` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs` | `vyre-libs-analysis` | compiler-internal static analysis, cost model, and dataflow fixpoint compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-bitset` | packed bitset word operations and logical bitwise compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-builder` | shared IR composition infrastructure and registration link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-decode` | Base64, hex, DEFLATE, and encodex decoding compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-device` | compiler-internal device boundary and resident layout compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-encoding` | compiler-internal provenance, matroid, and fingerprint encoding compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-fixpoint` | deterministic fixpoint iteration and grid synchronization compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-graph` | graph traversal, dominator, and topological sorting compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-hash` | hash and checksum compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-math` | linear algebra, scan, and geometric algebra compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-nn` | neural activation, attention, and mixture-of-experts compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-parsing` | lexer driver and LR(1) table walker compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-pattern` | substring, DFA, NFA, and regular expression scanning compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-reasoning` | compiler-internal logic, causal reasoning, and knowledge compilation compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-reduce` | workgroup reduction tree and prefix scan compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-rule` | detection rule condition operator and formula compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-scheduling` | compiler-internal scheduling, fusion, and batching compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-security` | security taint analysis and label resolver compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-solvers` | compiler-internal numerical solver and autotuning compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-text` | text classification, UTF-8 validation, and line indexing compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-vfs` | virtual filesystem asynchronous block load compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-libs-visual` | visual rendering and compositing effect compositions | None | `always` | `normal` | `true` | `true` | `public` | `product-libraries` |
-| `vyre-libs` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-analysis` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-analysis` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-analysis` | `vyre-libs-device` | compiler-internal device boundary contracts, memory ownership, and resident graph layout | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-analysis` | `vyre-libs-fixpoint` | deterministic fixpoint iteration kernels and grid synchronization barriers | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-analysis` | `vyre-libs-graph` | graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort | `analysis` | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-analysis` | `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-analysis` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-analysis` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-analysis` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-bitset` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-bitset` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-bitset` | `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-bitset` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-bitset` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-bitset` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-builder` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-builder` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-builder` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-builder` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-decode` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-decode` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-decode` | `vyre-libs-pattern` | substring matching, DFA, NFA, regex scanning pipelines, and bracket matching | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-decode` | `vyre-libs-text` | text processing, byte classification, UTF-8 validation, and line indexing | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-decode` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-decode` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-decode` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-device` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-device` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-device` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-device` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-device` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-encoding` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-encoding` | `vyre-libs-bitset` | packed u32 bitset operations, word utilities, and logical bitwise compositions | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-encoding` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-encoding` | `vyre-libs-device` | compiler-internal device boundary contracts, memory ownership, and resident graph layout | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-encoding` | `vyre-libs-fixpoint` | deterministic fixpoint iteration kernels and grid synchronization barriers | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-encoding` | `vyre-libs-graph` | graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort | `graph` | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-encoding` | `vyre-libs-hash` | hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3 | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-encoding` | `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | `math-kernels` | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-encoding` | `vyre-libs-nn` | neural network activations, linear, normalization, attention, MoE, and LLM inference | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-encoding` | `vyre-libs-parsing` | lexer drivers, LR(1) table walkers, and language-specific AST construction kernels | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-encoding` | `vyre-libs-pattern` | substring matching, DFA, NFA, regex scanning pipelines, and bracket matching | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-encoding` | `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-encoding` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-encoding` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-encoding` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-fixpoint` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-fixpoint` | `vyre-libs-bitset` | packed u32 bitset operations, word utilities, and logical bitwise compositions | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-fixpoint` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-fixpoint` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-fixpoint` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-fixpoint` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-graph` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-graph` | `vyre-libs-bitset` | packed u32 bitset operations, word utilities, and logical bitwise compositions | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-graph` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-graph` | `vyre-libs-fixpoint` | deterministic fixpoint iteration kernels and grid synchronization barriers | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-graph` | `vyre-libs-hash` | hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3 | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-graph` | `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-graph` | `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-graph` | `vyre-libs-visual` | interactive graphics compositions the visual dispatch path builds on | None | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
-| `vyre-libs-graph` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-graph` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-graph` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-hash` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-hash` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-hash` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-hash` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-hash` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-math` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-math` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-math` | `vyre-libs-fixpoint` | deterministic fixpoint iteration kernels and grid synchronization barriers | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-math` | `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-math` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-math` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-math` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-nn` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-nn` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-nn` | `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-nn` | `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-nn` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-nn` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-nn` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-parsing` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-parsing` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-parsing` | `vyre-libs-hash` | hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3 | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-parsing` | `vyre-libs-pattern` | substring matching, DFA, NFA, regex scanning pipelines, and bracket matching | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-parsing` | `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-parsing` | `vyre-libs-text` | text processing, byte classification, UTF-8 validation, and line indexing | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-parsing` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-parsing` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-parsing` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-pattern` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-pattern` | `vyre-libs-bitset` | packed u32 bitset operations, word utilities, and logical bitwise compositions | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-pattern` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-pattern` | `vyre-libs-hash` | checksum compositions the scanning pipeline reuses | None | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
-| `vyre-libs-pattern` | `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-pattern` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-pattern` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-pattern` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-reasoning` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-reasoning` | `vyre-libs-analysis` | compiler-internal static analysis, cost models, dataflow fixpoint, and diagnostics | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-reasoning` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-reasoning` | `vyre-libs-graph` | graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort | `reasoning` | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-reasoning` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-reasoning` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-reasoning` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-reduce` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-reduce` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-reduce` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-reduce` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-reduce` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-rule` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-rule` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-rule` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-rule` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-rule` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-scheduling` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-scheduling` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-scheduling` | `vyre-libs-device` | compiler-internal device boundary contracts, memory ownership, and resident graph layout | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-scheduling` | `vyre-libs-graph` | graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-scheduling` | `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-scheduling` | `vyre-libs-parsing` | lexer drivers, LR(1) table walkers, and language-specific AST construction kernels | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-scheduling` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-scheduling` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-scheduling` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-security` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-security` | `vyre-libs-bitset` | packed u32 bitset operations, word utilities, and logical bitwise compositions | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-security` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-security` | `vyre-libs-graph` | graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-security` | `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-security` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-security` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-security` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-solvers` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-solvers` | `vyre-libs-bitset` | packed u32 bitset operations, word utilities, and logical bitwise compositions | `bitset` | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-solvers` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-solvers` | `vyre-libs-device` | compiler-internal device boundary contracts, memory ownership, and resident graph layout | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-solvers` | `vyre-libs-fixpoint` | deterministic fixpoint iteration kernels and grid synchronization barriers | `fixpoint` | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-solvers` | `vyre-libs-graph` | graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-solvers` | `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | `math-kernels` | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-solvers` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-solvers` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-solvers` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-text` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-text` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-text` | `vyre-libs-reduce` | workgroup reduction trees, atomic scalar reductions, and prefix scans | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-text` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-text` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-text` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-vfs` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-vfs` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-vfs` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-vfs` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-vfs` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-libs-visual` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `serde` | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-libs-visual` | `vyre-libs-builder` | shared IR composition infrastructure, child region skeletons, operands, and link anchors | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-visual` | `vyre-libs-math` | linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures | None | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-libs-visual` | `vyre-megakernel` | the compiler-owned semantic compile-and-execute seam every composition reaches a device through | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-libs-visual` | `vyre-primitives` | the wire format, guarded IR construction, the launch-geometry helper, the marker types, and the intrinsic registrations | `inventory-registry` | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-libs-visual` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-lower` | `vyre-foundation` | typed IR plus validated backend-neutral selected schedule phases | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-lower` | `vyre-spec` | the declared IR level a lowering stage registers itself for | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-megakernel` | `vyre-foundation` | typed graph, logical-domain, neutral schedule IR and validation, diagnostics, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-megakernel` | `vyre-lower` | single verified selected-module representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
-| `vyre-megakernel` | `vyre-spec` | the declared IR level the target-payload stage registers itself for | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-pass-engine` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-pass-engine` | `vyre-libs` | product operation builders | None | `always` | `normal` | `false` | `false` | `private` | `product-libraries` |
-| `vyre-pass-engine` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `vyre-pass-engine` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-primitives` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `true` | `true` | `private` | `foundation-ir` |
-| `vyre-reference` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-reference` | `vyre-primitives` | the wire format, the marker types, and guarded IR construction | None | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-reference` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-registry-link` | `vyre-driver` | backend registry contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
-| `vyre-registry-link` | `vyre-driver-cuda` | native accelerator backend registration | None | `always` | `normal` | `true` | `true` | `private` | `cuda-driver` |
-| `vyre-registry-link` | `vyre-driver-metal` | native Apple backend registration | None | `always` | `normal` | `true` | `true` | `private` | `metal-driver` |
-| `vyre-registry-link` | `vyre-driver-spirv` | SPIR-V backend registration | None | `always` | `normal` | `true` | `true` | `private` | `spirv-driver` |
-| `vyre-registry-link` | `vyre-driver-wgpu` | portable backend registration | None | `always` | `normal` | `true` | `true` | `private` | `portable-driver` |
-| `vyre-registry-link` | `vyre-foundation` | operation registry contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre-registry-link` | `vyre-libs` | product operation registrations | `full` | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
-| `vyre-registry-link` | `vyre-libs-builder` | registration link anchors for composed operations | None | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
-| `vyre-registry-link` | `vyre-lower` | the physical-kernel level-stage registry source | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
-| `vyre-registry-link` | `vyre-megakernel` | the target-payload level-stage registry source | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-registry-link` | `vyre-primitives` | primitive operation registrations | `hardware` | `always` | `normal` | `true` | `false` | `private` | `primitive-library` |
-| `vyre-registry-link` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-runtime` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
-| `vyre-runtime` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-runtime` | `vyre-libs` | composition trees the megakernel planner plans against | None | `always` | `normal` | `true` | `true` | `private` | `product-libraries` |
-| `vyre-runtime` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-runtime` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-test-support` | `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
-| `vyre-test-support` | `vyre-driver` | the backend-neutral driver registry contract every backend fixture is stated against, behind the driver-contracts feature | None | `always` | `normal` | `true` | `true` | `private` | `backend-contract` |
-| `vyre-test-support` | `vyre-foundation` | IR statement fixtures for the run-time variant enumeration, behind the ir-fixtures feature | None | `always` | `normal` | `true` | `true` | `private` | `foundation-ir` |
-| `vyre-test-support` | `vyre-megakernel` | the semantic execution request every backend contract shares, behind the semantic-requests feature | None | `always` | `normal` | `true` | `true` | `private` | `megakernel-compiler` |
-| `vyre-test-support` | `vyre-primitives` | wire encoding for fixture payload construction | None | `always` | `normal` | `true` | `false` | `private` | `primitive-library` |
-| `vyre-test-support` | `vyre-reference` | reference interpreter oracle evaluation and canonical ULP distance calculation for the differential execution matrix, behind the ir-fixtures feature | None | `always` | `normal` | `true` | `true` | `private` | `reference-semantics` |
-| `vyre-test-support` | `vyre-spec` | DataType and declared operation signatures for fixture tables, without gating a leaf crate behind ir-fixtures | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
-| `xtask` | `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
-| `xtask-evidence` | `vyre-bench` | benchmark workloads and evidence | None | `always` | `normal` | `false` | `true` | `private` | `benchmarks` |
-| `xtask-evidence` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
-| `xtask-evidence` | `vyre-foundation` | the release optimization family list the pass-family manifest is checked against | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `xtask-evidence` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `metal`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
-| `xtask-evidence` | `xtask` | subcommand registry, bounded readers, and release manifests | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
-| `xtask-registry` | `structure-gate` | read whether a directory carries Rust source, and which directory owns a domain | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
-| `xtask-registry` | `vyre` | public lifecycle facade | None | `always` | `normal` | `false` | `false` | `private` | `public-facade` |
-| `xtask-registry` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
-| `xtask-registry` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `xtask-registry` | `vyre-libs` | product operation builders | `full`, `pattern-regex` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
-| `xtask-registry` | `vyre-megakernel` | neutral artifact compilation and target payload contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `xtask-registry` | `vyre-primitives` | reusable semantic Program builders | `hardware` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
-| `xtask-registry` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
-| `xtask-registry` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `operations`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
-| `xtask-registry` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
-| `xtask-registry` | `xtask` | subcommand registry, bounded readers, and release manifests | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
+| Consumer | Dependency | Seam crossed | Kinds | Conditions | Destination features | Optional | Default features | Activated by |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `vyre` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre` | `vyre-driver-cuda` | `cuda-driver` | `normal` | `always` | None | `true` | `true` | `cuda` |
+| `vyre` | `vyre-driver-wgpu` | `portable-driver` | `normal` | `always` | None | `true` | `true` | `wgpu` |
+| `vyre` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre` | `vyre-runtime` | `runtime` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-aot` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-aot` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-aot` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-bench` | `vyre` | `public-facade` | `normal` | `always` | None | `false` | `false` | None |
+| `vyre-bench` | `vyre-alloc-probe` | `allocation-probe` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-bench` | `vyre-driver` | `backend-contract` | `normal` | `always` | `test-fixtures` | `false` | `true` | None |
+| `vyre-bench` | `vyre-driver-cuda` | `cuda-driver` | `normal` | `cfg(not(target_os = "macos"))` | None | `false` | `true` | None |
+| `vyre-bench` | `vyre-driver-wgpu` | `portable-driver` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-bench` | `vyre-emit-ptx` | `primary-binary-emitter` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-bench` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-bench` | `vyre-libs` | `semantic-library` | `normal` | `always` | `bitset`, `graph`, `math-scan`, `nn-linear-4bit`, `predicate` | `false` | `true` | None |
+| `vyre-bench` | `vyre-lower` | `lowering` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-bench` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-bench` | `vyre-pass-engine` | `pass-engine` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-bench` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `hardware` | `false` | `false` | None |
+| `vyre-bench` | `vyre-reference` | `reference-semantics` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-bench` | `vyre-registry-link` | `registry-link` | `normal` | `always` | `cuda`, `metal`, `spirv`, `wgpu` | `false` | `false` | None |
+| `vyre-bench` | `vyre-runtime` | `runtime` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-bench` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-bench` | `xtask` | `gate-registry` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-conform` | `vyre` | `public-facade` | `normal` | `always` | None | `false` | `false` | None |
+| `vyre-conform` | `vyre-conform-spec` | `conformance-schema` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-conform` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-conform` | `vyre-driver-cuda` | `cuda-driver` | `normal` | `always` | None | `true` | `true` | `default`, `device-tests`, `gpu` |
+| `vyre-conform` | `vyre-driver-spirv` | `spirv-driver` | `normal` | `always` | None | `true` | `true` | `default`, `device-tests`, `gpu` |
+| `vyre-conform` | `vyre-driver-wgpu` | `portable-driver` | `normal` | `always` | None | `true` | `true` | `default`, `device-tests`, `gpu` |
+| `vyre-conform` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-conform` | `vyre-libs` | `semantic-library` | `normal` | `always` | `full` | `false` | `true` | None |
+| `vyre-conform` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-conform` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `hardware` | `false` | `false` | None |
+| `vyre-conform` | `vyre-reference` | `reference-semantics` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-conform` | `vyre-registry-link` | `registry-link` | `normal` | `always` | `cuda`, `metal`, `operations`, `spirv`, `wgpu` | `false` | `false` | None |
+| `vyre-conform` | `vyre-runtime` | `runtime` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-conform` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-conform-spec` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-debug` | `vyre` | `public-facade` | `normal` | `always` | None | `false` | `false` | None |
+| `vyre-debug` | `vyre-emit-naga` | `primary-text-emitter` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-debug` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-debug` | `vyre-libs` | `semantic-library` | `normal` | `always` | `python-parser` | `false` | `true` | None |
+| `vyre-debug` | `vyre-lower` | `lowering` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver` | `vyre-libs` | `semantic-library` | `normal` | `always` | `analysis`, `encoding`, `reasoning`, `telemetry` | `true` | `true` | `libs-compositions` |
+| `vyre-driver` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-cuda` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-cuda` | `vyre-emit-ptx` | `primary-binary-emitter` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-cuda` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-cuda` | `vyre-lower` | `lowering` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-cuda` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-metal` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-metal` | `vyre-emit-metal` | `metal-emitter` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-metal` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-metal` | `vyre-lower` | `lowering` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-metal` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-reference` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-reference` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-reference` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-reference` | `vyre-reference` | `reference-semantics` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-spirv` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-spirv` | `vyre-emit-spirv` | `spirv-emitter` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-spirv` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-spirv` | `vyre-lower` | `lowering` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-spirv` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-wgpu` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-wgpu` | `vyre-emit-naga` | `primary-text-emitter` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-wgpu` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-wgpu` | `vyre-lower` | `lowering` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-wgpu` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-driver-wgpu` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-emit-metal` | `vyre-emit-naga` | `primary-text-emitter` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-emit-metal` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-emit-metal` | `vyre-lower` | `lowering` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-emit-naga` | `vyre-foundation` | `foundation-ir` | `build`, `normal` | `always` | None | `false` | `true` | None |
+| `vyre-emit-naga` | `vyre-lower` | `lowering` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-emit-ptx` | `vyre-foundation` | `foundation-ir` | `build`, `normal` | `always` | None | `false` | `true` | None |
+| `vyre-emit-ptx` | `vyre-lower` | `lowering` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-emit-spirv` | `vyre-emit-naga` | `primary-text-emitter` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-emit-spirv` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-emit-spirv` | `vyre-lower` | `lowering` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-foundation` | `vyre-macros` | `registration-macros` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-foundation` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs` | `vyre-libs-analysis` | `libs-analysis` | `normal` | `always` | `analysis` | `true` | `true` | `analysis`, `full`, `reasoning` |
+| `vyre-libs` | `vyre-libs-bitset` | `libs-bitset` | `normal` | `always` | `bitset`, `logical` | `true` | `true` | `analysis`, `bitset`, `encoding`, `fixpoint`, `full`, `graph`, `graph-dispatch`, `interactive-graphics`, `label`, `logical`, `math`, `math-succinct`, `nfa`, `pattern-nfa`, `pattern-regex`, `predicate`, `reasoning`, `scheduling`, `security`, `solvers`, `topology` |
+| `vyre-libs` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | `builder`, `builder-ops`, `cat-a-builder-options`, `telemetry` | `false` | `true` | None |
+| `vyre-libs` | `vyre-libs-decode` | `libs-decode` | `normal` | `always` | `decode` | `true` | `true` | `decode`, `default`, `full` |
+| `vyre-libs` | `vyre-libs-device` | `libs-device` | `normal` | `always` | `device` | `true` | `true` | `analysis`, `device`, `encoding`, `full`, `graph-dispatch`, `reasoning`, `scheduling`, `solvers` |
+| `vyre-libs` | `vyre-libs-encoding` | `libs-encoding` | `normal` | `always` | `encoding` | `true` | `true` | `encoding`, `full` |
+| `vyre-libs` | `vyre-libs-fixpoint` | `libs-fixpoint` | `normal` | `always` | `fixpoint` | `true` | `true` | `analysis`, `encoding`, `fixpoint`, `full`, `graph`, `graph-dispatch`, `interactive-graphics`, `math`, `math-succinct`, `predicate`, `reasoning`, `scheduling`, `security`, `solvers`, `topology` |
+| `vyre-libs` | `vyre-libs-graph` | `libs-graph` | `normal` | `always` | `graph`, `graph-dispatch`, `interactive-graphics`, `topology` | `true` | `true` | `analysis`, `encoding`, `full`, `graph`, `graph-dispatch`, `interactive-graphics`, `math`, `math-succinct`, `predicate`, `reasoning`, `scheduling`, `security`, `solvers`, `topology` |
+| `vyre-libs` | `vyre-libs-hash` | `libs-hash` | `normal` | `always` | `crypto-blake3`, `hash` | `true` | `true` | `analysis`, `crypto`, `crypto-blake3`, `decode`, `default`, `encoding`, `full`, `graph`, `graph-dispatch`, `hash`, `interactive-graphics`, `math`, `math-succinct`, `nfa`, `parsing`, `parsing-kernels`, `pattern`, `pattern-dfa`, `pattern-kernels`, `pattern-nfa`, `pattern-regex`, `pattern-substring`, `predicate`, `python-parser`, `reasoning`, `scheduling`, `security`, `solvers`, `topology` |
+| `vyre-libs` | `vyre-libs-math` | `libs-math` | `normal` | `always` | `geom`, `math-algebra`, `math-broadcast`, `math-dialect`, `math-kernels`, `math-linalg`, `math-scan`, `math-succinct`, `opt`, `representation` | `true` | `true` | `analysis`, `default`, `encoding`, `full`, `geom`, `graph`, `graph-dispatch`, `interactive-graphics`, `llm`, `math`, `math-algebra`, `math-broadcast`, `math-dialect`, `math-kernels`, `math-linalg`, `math-scan`, `math-succinct`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-kernels`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `opt`, `predicate`, `reasoning`, `representation`, `scheduling`, `security`, `solvers`, `topology`, `visual` |
+| `vyre-libs` | `vyre-libs-nn` | `libs-nn` | `normal` | `always` | `llm`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-kernels`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm` | `true` | `true` | `default`, `encoding`, `full`, `llm`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-kernels`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm` |
+| `vyre-libs` | `vyre-libs-parsing` | `libs-parsing` | `normal` | `always` | `go-parser`, `parsing`, `parsing-kernels`, `python-parser` | `true` | `true` | `encoding`, `full`, `go-parser`, `parsing`, `parsing-kernels`, `python-parser`, `scheduling` |
+| `vyre-libs` | `vyre-libs-pattern` | `libs-pattern` | `normal` | `always` | `nfa`, `pattern-dfa`, `pattern-kernels`, `pattern-nfa`, `pattern-regex`, `pattern-substring` | `true` | `true` | `decode`, `default`, `encoding`, `full`, `nfa`, `parsing`, `parsing-kernels`, `pattern`, `pattern-dfa`, `pattern-kernels`, `pattern-nfa`, `pattern-regex`, `pattern-substring`, `python-parser`, `scheduling` |
+| `vyre-libs` | `vyre-libs-reasoning` | `libs-reasoning` | `normal` | `always` | `reasoning` | `true` | `true` | `full`, `reasoning` |
+| `vyre-libs` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | `reduce` | `true` | `true` | `analysis`, `bitset`, `decode`, `default`, `encoding`, `fixpoint`, `full`, `geom`, `go-parser`, `graph`, `graph-dispatch`, `interactive-graphics`, `label`, `llm`, `logical`, `math`, `math-algebra`, `math-broadcast`, `math-dialect`, `math-kernels`, `math-linalg`, `math-scan`, `math-succinct`, `nfa`, `nn`, `nn-activation`, `nn-attention`, `nn-inference`, `nn-kernels`, `nn-linear`, `nn-linear-4bit`, `nn-moe`, `nn-norm`, `opt`, `parsing`, `parsing-kernels`, `pattern`, `pattern-dfa`, `pattern-nfa`, `pattern-regex`, `pattern-substring`, `predicate`, `python-parser`, `reasoning`, `reduce`, `scheduling`, `security`, `solvers`, `text`, `topology`, `visual` |
+| `vyre-libs` | `vyre-libs-rule` | `libs-rule` | `normal` | `always` | `rule` | `true` | `true` | `full`, `rule` |
+| `vyre-libs` | `vyre-libs-scheduling` | `libs-scheduling` | `normal` | `always` | `scheduling` | `true` | `true` | `full`, `scheduling` |
+| `vyre-libs` | `vyre-libs-security` | `libs-security` | `normal` | `always` | `label`, `predicate`, `security` | `true` | `true` | `full`, `label`, `predicate`, `security` |
+| `vyre-libs` | `vyre-libs-solvers` | `libs-solvers` | `normal` | `always` | `solvers` | `true` | `true` | `full`, `solvers` |
+| `vyre-libs` | `vyre-libs-text` | `libs-text` | `normal` | `always` | `text` | `true` | `true` | `decode`, `default`, `encoding`, `full`, `parsing`, `parsing-kernels`, `pattern`, `pattern-dfa`, `pattern-nfa`, `pattern-regex`, `pattern-substring`, `python-parser`, `scheduling`, `text` |
+| `vyre-libs` | `vyre-libs-vfs` | `libs-vfs` | `normal` | `always` | `vfs` | `true` | `true` | `full`, `vfs` |
+| `vyre-libs` | `vyre-libs-visual` | `libs-visual` | `normal` | `always` | `visual` | `true` | `true` | `full`, `interactive-graphics`, `visual` |
+| `vyre-libs` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-analysis` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-analysis` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-analysis` | `vyre-libs-device` | `libs-device` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-analysis` | `vyre-libs-fixpoint` | `libs-fixpoint` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-analysis` | `vyre-libs-graph` | `libs-graph` | `normal` | `always` | `dense-reachability` | `false` | `true` | None |
+| `vyre-libs-analysis` | `vyre-libs-math` | `libs-math` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-analysis` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-analysis` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-analysis` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-bitset` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-bitset` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-bitset` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-bitset` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-bitset` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-bitset` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-builder` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-builder` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-builder` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-builder` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-decode` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-decode` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-decode` | `vyre-libs-pattern` | `libs-pattern` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-decode` | `vyre-libs-text` | `libs-text` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-decode` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-decode` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-decode` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-device` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-device` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-device` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-device` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-device` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-libs-bitset` | `libs-bitset` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-libs-device` | `libs-device` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-libs-fixpoint` | `libs-fixpoint` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-libs-graph` | `libs-graph` | `normal` | `always` | `graph` | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-libs-hash` | `libs-hash` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-libs-math` | `libs-math` | `normal` | `always` | `math-kernels` | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-libs-nn` | `libs-nn` | `normal` | `always` | `nn-attention` | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-libs-parsing` | `libs-parsing` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-libs-pattern` | `libs-pattern` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-encoding` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-encoding` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-fixpoint` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-fixpoint` | `vyre-libs-bitset` | `libs-bitset` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-fixpoint` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-fixpoint` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-fixpoint` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-fixpoint` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-graph` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-graph` | `vyre-libs-bitset` | `libs-bitset` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-graph` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-graph` | `vyre-libs-fixpoint` | `libs-fixpoint` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-graph` | `vyre-libs-hash` | `libs-hash` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-graph` | `vyre-libs-math` | `libs-math` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-graph` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-graph` | `vyre-libs-visual` | `libs-visual` | `normal` | `always` | `visual` | `true` | `true` | `interactive-graphics` |
+| `vyre-libs-graph` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-graph` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-graph` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-hash` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-hash` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-hash` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-hash` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-hash` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-math` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-math` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-math` | `vyre-libs-fixpoint` | `libs-fixpoint` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-math` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-math` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-math` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-math` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-nn` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-nn` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-nn` | `vyre-libs-math` | `libs-math` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-nn` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-nn` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-nn` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-nn` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-parsing` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-parsing` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-parsing` | `vyre-libs-hash` | `libs-hash` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-parsing` | `vyre-libs-pattern` | `libs-pattern` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-parsing` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-parsing` | `vyre-libs-text` | `libs-text` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-parsing` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-parsing` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-parsing` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-pattern` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-pattern` | `vyre-libs-bitset` | `libs-bitset` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-pattern` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-pattern` | `vyre-libs-hash` | `libs-hash` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-pattern` | `vyre-libs-math` | `libs-math` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-pattern` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-pattern` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-pattern` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-reasoning` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-reasoning` | `vyre-libs-analysis` | `libs-analysis` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-reasoning` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-reasoning` | `vyre-libs-graph` | `libs-graph` | `normal` | `always` | `impact-mask` | `false` | `true` | None |
+| `vyre-libs-reasoning` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-reasoning` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-reasoning` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-reduce` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-reduce` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-reduce` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-reduce` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-reduce` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-rule` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-rule` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-rule` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-rule` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-rule` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-scheduling` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-scheduling` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-scheduling` | `vyre-libs-device` | `libs-device` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-scheduling` | `vyre-libs-graph` | `libs-graph` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-scheduling` | `vyre-libs-math` | `libs-math` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-scheduling` | `vyre-libs-parsing` | `libs-parsing` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-scheduling` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-scheduling` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-scheduling` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-security` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-security` | `vyre-libs-bitset` | `libs-bitset` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-security` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-security` | `vyre-libs-graph` | `libs-graph` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-security` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-security` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-security` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-security` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-solvers` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-solvers` | `vyre-libs-bitset` | `libs-bitset` | `normal` | `always` | `bitset` | `false` | `true` | None |
+| `vyre-libs-solvers` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-solvers` | `vyre-libs-device` | `libs-device` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-solvers` | `vyre-libs-fixpoint` | `libs-fixpoint` | `normal` | `always` | `fixpoint` | `false` | `true` | None |
+| `vyre-libs-solvers` | `vyre-libs-graph` | `libs-graph` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-solvers` | `vyre-libs-math` | `libs-math` | `normal` | `always` | `math-kernels` | `false` | `true` | None |
+| `vyre-libs-solvers` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-solvers` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-solvers` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-text` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-text` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-text` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-text` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-text` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-text` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-vfs` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-vfs` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-vfs` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-vfs` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-vfs` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-visual` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
+| `vyre-libs-visual` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-visual` | `vyre-libs-math` | `libs-math` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-visual` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-libs-visual` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
+| `vyre-libs-visual` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-lower` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-lower` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-megakernel` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-megakernel` | `vyre-lower` | `lowering` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-megakernel` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-pass-engine` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-pass-engine` | `vyre-libs` | `semantic-library` | `normal` | `always` | `analysis`, `encoding`, `graph`, `graph-dispatch`, `reasoning`, `scheduling`, `solvers`, `telemetry` | `false` | `false` | None |
+| `vyre-pass-engine` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-pass-engine` | `vyre-primitives` | `primitive-library` | `normal` | `always` | None | `false` | `false` | None |
+| `vyre-primitives` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `true` | `true` | `hardware`, `inventory-registry`, `vyre-foundation` |
+| `vyre-reference` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-reference` | `vyre-primitives` | `primitive-library` | `normal` | `always` | None | `false` | `false` | None |
+| `vyre-reference` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-registry-link` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-registry-link` | `vyre-driver-cuda` | `cuda-driver` | `normal` | `always` | None | `true` | `true` | `cuda`, `default` |
+| `vyre-registry-link` | `vyre-driver-metal` | `metal-driver` | `normal` | `always` | None | `true` | `true` | `default`, `metal` |
+| `vyre-registry-link` | `vyre-driver-spirv` | `spirv-driver` | `normal` | `always` | None | `true` | `true` | `default`, `spirv` |
+| `vyre-registry-link` | `vyre-driver-wgpu` | `portable-driver` | `normal` | `always` | None | `true` | `true` | `default`, `wgpu` |
+| `vyre-registry-link` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-registry-link` | `vyre-libs` | `semantic-library` | `normal` | `always` | `full` | `true` | `true` | `default`, `operations` |
+| `vyre-registry-link` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `true` | `true` | `default`, `operations` |
+| `vyre-registry-link` | `vyre-lower` | `lowering` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-registry-link` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-registry-link` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `hardware` | `true` | `false` | `default`, `operations` |
+| `vyre-registry-link` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-runtime` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-runtime` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-runtime` | `vyre-libs` | `semantic-library` | `normal` | `always` | `analysis`, `encoding`, `math`, `solvers` | `true` | `true` | `libs-compositions` |
+| `vyre-runtime` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-runtime` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-test-support` | `structure-gate` | `source-structure` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-test-support` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `driver-contracts` |
+| `vyre-test-support` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `ir-fixtures`, `semantic-requests` |
+| `vyre-test-support` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `semantic-requests` |
+| `vyre-test-support` | `vyre-primitives` | `primitive-library` | `normal` | `always` | None | `true` | `false` | `driver-artifact-contracts`, `ir-fixtures`, `semantic-requests` |
+| `vyre-test-support` | `vyre-reference` | `reference-semantics` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `ir-fixtures`, `semantic-requests` |
+| `vyre-test-support` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `xtask` | `structure-gate` | `source-structure` | `normal` | `always` | None | `false` | `true` | None |
+| `xtask-evidence` | `vyre-bench` | `workload-benchmarks` | `normal` | `always` | None | `false` | `true` | None |
+| `xtask-evidence` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `false` | `true` | None |
+| `xtask-evidence` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `xtask-evidence` | `vyre-registry-link` | `registry-link` | `normal` | `always` | `cuda`, `metal`, `spirv`, `wgpu` | `false` | `false` | None |
+| `xtask-evidence` | `xtask` | `gate-registry` | `normal` | `always` | None | `false` | `true` | None |
+| `xtask-registry` | `structure-gate` | `source-structure` | `normal` | `always` | None | `false` | `true` | None |
+| `xtask-registry` | `vyre` | `public-facade` | `normal` | `always` | None | `false` | `false` | None |
+| `xtask-registry` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `false` | `true` | None |
+| `xtask-registry` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
+| `xtask-registry` | `vyre-libs` | `semantic-library` | `normal` | `always` | `full`, `pattern-regex` | `false` | `true` | None |
+| `xtask-registry` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
+| `xtask-registry` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `hardware` | `false` | `false` | None |
+| `xtask-registry` | `vyre-reference` | `reference-semantics` | `normal` | `always` | None | `false` | `true` | None |
+| `xtask-registry` | `vyre-registry-link` | `registry-link` | `normal` | `always` | `cuda`, `operations`, `spirv`, `wgpu` | `false` | `false` | None |
+| `xtask-registry` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
+| `xtask-registry` | `xtask` | `gate-registry` | `normal` | `always` | None | `false` | `true` | None |
 
 ## Changing a dependency
 
-Change the Cargo manifest and its complete `[[crate.dependency]]` record in
-the same patch. The registry rejects undeclared packages, feature drift, target
-condition drift, stale seams, and missing visibility declarations.
+Change the Cargo manifest. The architecture manifest needs an edit only when the
+edge crosses a seam the destination's layer does not admit, when the curated
+surface starts carrying a new seam, or when a member is added or moved.
