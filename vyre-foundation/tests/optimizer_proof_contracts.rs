@@ -522,6 +522,6 @@ fn semantic_equality_saturation_consumes_no_device_facts() {
     assert_eq!(sat.class_growth_limit, 4096);
     assert_eq!(sat.max_iterations, 16);
     assert!(sat.admits_contract(
-        vyre_foundation::optimizer::rewrite_contract::NumericalContract::BitExact
+        vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract::BitExact
     ));
 }

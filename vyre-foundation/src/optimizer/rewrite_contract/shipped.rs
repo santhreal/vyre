@@ -11,7 +11,6 @@
 
 use super::{
     BoundedExpansion::{self, NodeBudget, NodeFactor, NonGrowing},
-    NumericalContract::{BitExact, FloatContraction, IntegerWrapping},
     ProfitabilityFact::{
         self, Canonicalizes, EnablesFusion, RaisesOccupancy, ReducesSynchronization,
         RemovesLaunches, RemovesNodes, RemovesTraffic, ShortensDependence, WidensVector,
@@ -20,6 +19,7 @@ use super::{
     RewriteEffect::{
         self, Allocation, Atomic, BufferAbi, ControlFlow, Reads, Synchronization, Writes,
     },
+    RewriteNumericalContract::{BitExact, FloatContraction, IntegerWrapping},
     RewritePrecondition::{
         self, AbiPreserved, BoundedIndices, ConstantLoopBounds, DisjointBuffers, EffectFreeRegion,
         IntegerElements, LiteralOperands, SingleReachingDefinition, SynchronizationFreeRegion,
@@ -41,7 +41,7 @@ const fn contract(
     level: vyre_spec::IrLevel,
     preconditions: &'static [RewritePrecondition],
     effects: &'static [RewriteEffect],
-    numerical: super::NumericalContract,
+    numerical: super::RewriteNumericalContract,
     witness: super::RewriteWitness,
     profitability: &'static [ProfitabilityFact],
     expansion: BoundedExpansion,

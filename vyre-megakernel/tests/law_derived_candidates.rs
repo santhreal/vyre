@@ -30,7 +30,7 @@ use vyre_foundation::optimizer::law_saturation::{derive_program_alternative, Law
 use vyre_foundation::optimizer::region_law::{
     derive_region_alternatives, law_numerical_contract, RegionDerivationBudget, REGION_LAWS,
 };
-use vyre_foundation::optimizer::rewrite_contract::NumericalContract;
+use vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract;
 use vyre_megakernel::{Artifact, SearchBudget, SearchCertificate};
 
 #[path = "support/search_fixtures.rs"]
@@ -178,22 +178,22 @@ fn permissive() -> NumericContract {
 /// comparison is an independent claim about what a bit-exact caller admits.
 /// Integer results are identical wrapping included, which is why an exact
 /// request still admits `IntegerWrapping`.
-const EXACT_GRANTS: [NumericalContract; 2] = [
-    NumericalContract::BitExact,
-    NumericalContract::IntegerWrapping,
+const EXACT_GRANTS: [RewriteNumericalContract; 2] = [
+    RewriteNumericalContract::BitExact,
+    RewriteNumericalContract::IntegerWrapping,
 ];
 
 /// The contracts a request that grants everything a law may declare.
-const EVERY_GRANT: [NumericalContract; 5] = [
-    NumericalContract::BitExact,
-    NumericalContract::IntegerWrapping,
-    NumericalContract::FloatReassociation,
-    NumericalContract::FloatContraction,
-    NumericalContract::ReducedPrecision,
+const EVERY_GRANT: [RewriteNumericalContract; 5] = [
+    RewriteNumericalContract::BitExact,
+    RewriteNumericalContract::IntegerWrapping,
+    RewriteNumericalContract::FloatReassociation,
+    RewriteNumericalContract::FloatContraction,
+    RewriteNumericalContract::ReducedPrecision,
 ];
 
 /// Region law names the derivation reports for every node program of `graph`.
-fn region_names(graph: &ProgramGraph, grants: &[NumericalContract]) -> BTreeSet<String> {
+fn region_names(graph: &ProgramGraph, grants: &[RewriteNumericalContract]) -> BTreeSet<String> {
     let mut names = BTreeSet::new();
     for node in graph.nodes() {
         let derived =
@@ -326,7 +326,7 @@ fn every_law_derived_candidate_carries_a_chain() {
 fn a_law_the_request_did_not_grant_is_absent() {
     let value_changing: Vec<&str> = REGION_LAWS
         .iter()
-        .filter(|law| law_numerical_contract(law) != Some(NumericalContract::BitExact))
+        .filter(|law| law_numerical_contract(law) != Some(RewriteNumericalContract::BitExact))
         .map(|law| law.name)
         .collect();
     assert!(
@@ -343,8 +343,8 @@ fn a_law_the_request_did_not_grant_is_absent() {
         };
         let contract = law_numerical_contract(law);
         assert!(
-            contract == Some(NumericalContract::BitExact)
-                || contract == Some(NumericalContract::IntegerWrapping),
+            contract == Some(RewriteNumericalContract::BitExact)
+                || contract == Some(RewriteNumericalContract::IntegerWrapping),
             "law {name} declares {contract:?}, a contract the exact request never granted"
         );
     }

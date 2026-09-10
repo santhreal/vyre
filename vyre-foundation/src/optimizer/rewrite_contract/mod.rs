@@ -67,9 +67,12 @@ pub enum RewriteEffect {
 }
 
 /// What a rewrite is allowed to do to computed values.
+///
+/// One rewrite's permission class. The program-level record of caller-declared
+/// numeric allowances is `types::contract::NumericalContract`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[non_exhaustive]
-pub enum NumericalContract {
+pub enum RewriteNumericalContract {
     /// Every result is bit-identical before and after.
     BitExact,
     /// Integer results are identical, wrapping included.
@@ -219,7 +222,7 @@ pub struct RewriteContract {
     /// Effect classes the rewrite adds, removes, or moves.
     pub effects: &'static [RewriteEffect],
     /// What the rewrite may do to computed values.
-    pub numerical: NumericalContract,
+    pub numerical: RewriteNumericalContract,
     /// Evidence authorizing the rewrite.
     pub witness: RewriteWitness,
     /// Why running it is expected to pay.

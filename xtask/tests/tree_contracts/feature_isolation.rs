@@ -18,15 +18,20 @@ use std::path::Path;
 
 use xtask::gates::feature_isolation::{
     agreement_failures, check_args, derive_pairs, first_error, host_oracle_reach_failures,
-    load_rows, parse_rows, render, unmeasured_failures, workspace_manifests, Observation, Pair,
-    Row, BASELINE, DEFAULTS,
+    load_rows, parse_rows, render, unmeasured_failures, workspace_manifests, FeatureIsolationRow,
+    Observation, Pair, BASELINE, DEFAULTS,
 };
 
 use super::workspace_sources::workspace_root;
 
 /// A row spelling whatever outcome and reason the case is about.
-fn row(member: &str, feature: &str, outcome: Option<&str>, reason: Option<&str>) -> Row {
-    Row {
+fn row(
+    member: &str,
+    feature: &str,
+    outcome: Option<&str>,
+    reason: Option<&str>,
+) -> FeatureIsolationRow {
+    FeatureIsolationRow {
         member: member.to_string(),
         feature: feature.to_string(),
         outcome: outcome.map(str::to_string),
@@ -36,12 +41,12 @@ fn row(member: &str, feature: &str, outcome: Option<&str>, reason: Option<&str>)
 
 /// A selection declared with no exemption: the shape of every row for a pair
 /// that is expected to compile.
-fn declared(member: &str, feature: &str) -> Row {
+fn declared(member: &str, feature: &str) -> FeatureIsolationRow {
     row(member, feature, None, None)
 }
 
 /// A selection exempted from compiling, with the constraint that exempts it.
-fn exempt(member: &str, feature: &str, reason: &str) -> Row {
+fn exempt(member: &str, feature: &str, reason: &str) -> FeatureIsolationRow {
     row(member, feature, Some("blocked"), Some(reason))
 }
 

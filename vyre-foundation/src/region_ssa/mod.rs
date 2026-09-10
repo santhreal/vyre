@@ -19,7 +19,7 @@ pub use dominance::{verify_dominance, DominanceVerifier};
 pub use lower::{lower_program_to_region_ssa, lower_region_ssa_to_program, RegionSsaError};
 pub use opt::{RegionSsaConstProp, RegionSsaDce, RegionSsaOptimizer, ValueRemap};
 
-use crate::extension::CatalogBundle;
+use crate::extension::ExtensionCatalogBundle;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use vyre_spec::ExtensionIdentity;
@@ -101,12 +101,20 @@ pub struct EffectParam {
     pub effect_class: SideEffectClass,
 }
 
-/// Explicit effect and ordering token.
+/// Identifier of an explicit effect and ordering token in a region function.
+///
+/// Names one ordering edge between region ops. The token record carrying an
+/// effect kind and its obligation is `memory_model::obligations::EffectToken`.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
-pub struct EffectToken(pub u32);
+pub struct EffectTokenId(pub u32);
 
 /// Scalar literal constant.
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+///
+/// The one literal value space of this crate's IR. Statement IR (`ir::Expr`)
+/// carries only the 32-bit and boolean widths, so lowering a `U64`, `I64` or
+/// `F64` literal to it goes through [`Self::to_expr`], which rejects a value
+/// that does not survive the narrowing.
+#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
 pub enum ScalarLiteral {
     /// 32-bit unsigned integer.
     U32(u32),
@@ -372,7 +380,7 @@ pub enum RegionOpKind {
         /// Linear or element index.
         index: ValueId,
         /// Ordering effect token.
-        effect_in: Option<EffectToken>,
+        effect_in: Option<EffectTokenId>,
     },
     /// Semantic buffer write yielding a new effect token.
     BufferStore {
@@ -383,7 +391,7 @@ pub enum RegionOpKind {
         /// Value written.
         value: ValueId,
         /// Ordering effect token.
-        effect_in: Option<EffectToken>,
+        effect_in: Option<EffectTokenId>,
     },
     /// Allocation of semantic buffer.
     BufferAlloc {
@@ -590,7 +598,7 @@ pub struct RegionModule {
     /// Global memory declarations.
     pub globals: Vec<GlobalDecl>,
     /// Attached extension catalog bundle.
-    pub catalog: Option<CatalogBundle>,
+    pub catalog: Option<ExtensionCatalogBundle>,
 }
 
 impl RegionModule {

@@ -1,5 +1,5 @@
 #![allow(clippy::expect_used)]
-use super::expr_key::ExprId;
+use super::expr_key::CseExprId;
 use super::{expr_has_effect, CseCtx, ScopeFrame, ScopedBinding};
 use crate::ir::{Expr, Ident, Node};
 use crate::optimizer::rewrite::{rewrite_binary, rewrite_fma, rewrite_select};
@@ -59,7 +59,7 @@ impl CseCtx {
     }
 
     #[inline]
-    fn record_insert(&mut self, key: ExprId, value: Ident) {
+    fn record_insert(&mut self, key: CseExprId, value: Ident) {
         let old = self.values.insert(
             key,
             ScopedBinding {
@@ -73,7 +73,7 @@ impl CseCtx {
     }
 
     #[inline]
-    fn visible_value(&self, key: ExprId) -> Option<&Ident> {
+    fn visible_value(&self, key: CseExprId) -> Option<&Ident> {
         let value = self.values.get(&key)?;
         (value.epoch == self.current_epoch).then_some(&value.name)
     }
@@ -356,10 +356,10 @@ impl CseCtx {
         }
 
         // Soundness fix (S19): the previous pointer cache mapped
-        // `*const Expr → ExprId`, claiming the IR is immutable during
+        // `*const Expr → CseExprId`, claiming the IR is immutable during
         // a single CSE pass. That isn't safe  -  Box<Expr> sub-trees
         // freed by `Cow::Owned` rewrites can be reallocated at the
-        // same address by later sub-trees, so a stale ExprId from a
+        // same address by later sub-trees, so a stale CseExprId from a
         // prior expression flows through `values.get(stale_id)` and
         // CSE merges semantically distinct expressions (caught by
         // `full_optimize_is_idempotent_on_canonical_wire` regression

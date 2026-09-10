@@ -54,37 +54,25 @@ impl fmt::Display for InternedLayoutId {
     }
 }
 
-/// Canonical identifier for an expression in a hash-consed expression arena.
+/// Canonical identifier for a slot in the hash-consed node arena.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
 )]
-pub struct ExprId(pub u32);
+pub struct InternedNodeId(pub u32);
 
-impl fmt::Display for ExprId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "expr#{}", self.0)
-    }
-}
-
-/// Canonical identifier for a node in a hash-consed node arena.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
-)]
-pub struct NodeId(pub u32);
-
-impl fmt::Display for NodeId {
+impl fmt::Display for InternedNodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "node#{}", self.0)
     }
 }
 
-/// Canonical identifier for a logical region.
+/// Canonical identifier for a slot in the hash-consed logical region arena.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
 )]
-pub struct RegionId(pub u32);
+pub struct InternedRegionId(pub u32);
 
-impl fmt::Display for RegionId {
+impl fmt::Display for InternedRegionId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "region#{}", self.0)
     }

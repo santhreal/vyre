@@ -44,10 +44,12 @@ use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 
 use super::ids::{
-    ExprId, InternedConstId, InternedLayoutId, InternedStringId, InternedTypeId, NodeId, RegionId,
+    InternedConstId, InternedLayoutId, InternedNodeId, InternedRegionId, InternedStringId,
+    InternedTypeId,
 };
 use crate::ir::{DataType, Expr, Node};
 use crate::logical::LogicalRegion;
+use crate::optimizer::expr_arena::{ExprArena, ExprId};
 
 /// Thread-safe canonical string interner.
 #[derive(Debug, Default)]
@@ -371,78 +373,6 @@ impl LayoutInterner {
     }
 }
 
-fn compute_expr_digest(expr: &Expr) -> [u8; 32] {
-    let mut hasher = blake3::Hasher::new();
-    hasher.update(b"vyre::substrate::expr::v1\0");
-    hasher.update(format!("{expr:?}").as_bytes());
-    *hasher.finalize().as_bytes()
-}
-
-/// Thread-safe hash-consed expression arena for immutable structural sharing.
-#[derive(Debug, Default)]
-pub struct ExprArena {
-    map: RwLock<FxHashMap<[u8; 32], ExprId>>,
-    exprs: RwLock<Vec<Arc<Expr>>>,
-    allocated_bytes: AtomicUsize,
-}
-
-impl ExprArena {
-    /// Create an empty expression arena.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Intern an expression into the hash-consed arena.
-    pub fn intern(&self, expr: Expr) -> ExprId {
-        let digest = compute_expr_digest(&expr);
-        {
-            let read_guard = arena_read(&self.map, "ExprArena", "map");
-            if let Some(&id) = read_guard.get(&digest) {
-                return id;
-            }
-        }
-
-        let mut write_guard = arena_write(&self.map, "ExprArena", "map");
-        if let Some(&id) = write_guard.get(&digest) {
-            return id;
-        }
-
-        let mut exprs_guard = arena_write(&self.exprs, "ExprArena", "exprs");
-        let id = ExprId(exprs_guard.len() as u32);
-        let arc_expr = Arc::new(expr);
-        self.allocated_bytes
-            .fetch_add(std::mem::size_of::<Expr>(), Ordering::Relaxed);
-        write_guard.insert(digest, id);
-        exprs_guard.push(arc_expr);
-        id
-    }
-
-    /// Resolve an expression identifier to its shared immutable expression.
-    pub fn lookup(&self, id: ExprId) -> Option<Arc<Expr>> {
-        let exprs_guard = arena_read(&self.exprs, "ExprArena", "exprs");
-        exprs_guard.get(id.0 as usize).cloned()
-    }
-
-    /// Total number of unique expressions in the arena.
-    #[must_use]
-    pub fn len(&self) -> usize {
-        arena_read(&self.exprs, "ExprArena", "exprs").len()
-    }
-
-    /// Whether the arena contains no expressions.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    /// Estimated memory allocated by the expression arena.
-    #[must_use]
-    pub fn allocated_bytes(&self) -> usize {
-        self.allocated_bytes.load(Ordering::Relaxed)
-    }
-}
-
 fn compute_node_digest(node: &Node) -> [u8; 32] {
     let mut hasher = blake3::Hasher::new();
     hasher.update(b"vyre::substrate::node::v1\0");
@@ -453,7 +383,7 @@ fn compute_node_digest(node: &Node) -> [u8; 32] {
 /// Thread-safe hash-consed node arena for immutable AST statements.
 #[derive(Debug, Default)]
 pub struct NodeArena {
-    map: RwLock<FxHashMap<[u8; 32], NodeId>>,
+    map: RwLock<FxHashMap<[u8; 32], InternedNodeId>>,
     nodes: RwLock<Vec<Arc<Node>>>,
     allocated_bytes: AtomicUsize,
 }
@@ -466,7 +396,7 @@ impl NodeArena {
     }
 
     /// Intern a node into the hash-consed arena.
-    pub fn intern(&self, node: Node) -> NodeId {
+    pub fn intern(&self, node: Node) -> InternedNodeId {
         let digest = compute_node_digest(&node);
         {
             let read_guard = arena_read(&self.map, "NodeArena", "map");
@@ -481,7 +411,7 @@ impl NodeArena {
         }
 
         let mut nodes_guard = arena_write(&self.nodes, "NodeArena", "nodes");
-        let id = NodeId(nodes_guard.len() as u32);
+        let id = InternedNodeId(nodes_guard.len() as u32);
         let arc_node = Arc::new(node);
         self.allocated_bytes
             .fetch_add(std::mem::size_of::<Node>(), Ordering::Relaxed);
@@ -491,7 +421,7 @@ impl NodeArena {
     }
 
     /// Resolve a node identifier to its shared immutable node.
-    pub fn lookup(&self, id: NodeId) -> Option<Arc<Node>> {
+    pub fn lookup(&self, id: InternedNodeId) -> Option<Arc<Node>> {
         let nodes_guard = arena_read(&self.nodes, "NodeArena", "nodes");
         nodes_guard.get(id.0 as usize).cloned()
     }
@@ -518,7 +448,7 @@ impl NodeArena {
 /// Thread-safe hash-consed region arena for structurally shared logical regions.
 #[derive(Debug, Default)]
 pub struct RegionArena {
-    map: RwLock<FxHashMap<LogicalRegion, RegionId>>,
+    map: RwLock<FxHashMap<LogicalRegion, InternedRegionId>>,
     regions: RwLock<Vec<Arc<LogicalRegion>>>,
     allocated_bytes: AtomicUsize,
 }
@@ -531,7 +461,7 @@ impl RegionArena {
     }
 
     /// Intern a logical region into the hash-consed arena.
-    pub fn intern(&self, region: LogicalRegion) -> RegionId {
+    pub fn intern(&self, region: LogicalRegion) -> InternedRegionId {
         {
             let read_guard = arena_read(&self.map, "RegionArena", "map");
             if let Some(&id) = read_guard.get(&region) {
@@ -545,7 +475,7 @@ impl RegionArena {
         }
 
         let mut regions_guard = arena_write(&self.regions, "RegionArena", "regions");
-        let id = RegionId(regions_guard.len() as u32);
+        let id = InternedRegionId(regions_guard.len() as u32);
         let arc_region = Arc::new(region.clone());
         self.allocated_bytes
             .fetch_add(std::mem::size_of::<LogicalRegion>(), Ordering::Relaxed);
@@ -555,7 +485,7 @@ impl RegionArena {
     }
 
     /// Resolve a region identifier to its shared immutable logical region.
-    pub fn lookup(&self, id: RegionId) -> Option<Arc<LogicalRegion>> {
+    pub fn lookup(&self, id: InternedRegionId) -> Option<Arc<LogicalRegion>> {
         let regions_guard = arena_read(&self.regions, "RegionArena", "regions");
         regions_guard.get(id.0 as usize).cloned()
     }
@@ -590,8 +520,10 @@ pub struct SubstrateArena {
     pub constants: ConstInterner,
     /// Memory layout interner.
     pub layouts: LayoutInterner,
-    /// Expression hash-consed arena.
-    pub exprs: ExprArena,
+    /// Expression hash-consed arena, behind a lock because interning mutates it
+    /// and a `SubstrateArena` is shared. Reached through [`Self::intern_expr`],
+    /// [`Self::expr`] and [`Self::expr_count`] so no caller holds the guard.
+    exprs: RwLock<ExprArena>,
     /// Node AST hash-consed arena.
     pub nodes: NodeArena,
     /// Logical region hash-consed arena.
@@ -605,6 +537,27 @@ impl SubstrateArena {
         Self::default()
     }
 
+    /// Intern an expression into the hash-consed expression arena.
+    pub fn intern_expr(&self, expr: &Expr) -> ExprId {
+        arena_write(&self.exprs, "SubstrateArena", "exprs").intern(expr)
+    }
+
+    /// Reconstruct the expression interned at `id`.
+    ///
+    /// # Panics
+    ///
+    /// Panics when `id` was not produced by this arena.
+    #[must_use]
+    pub fn expr(&self, id: ExprId) -> Expr {
+        arena_read(&self.exprs, "SubstrateArena", "exprs").rebuild(id)
+    }
+
+    /// Number of distinct expression nodes interned.
+    #[must_use]
+    pub fn expr_count(&self) -> usize {
+        arena_read(&self.exprs, "SubstrateArena", "exprs").len()
+    }
+
     /// Total memory allocated across all interners and arenas in bytes.
     #[must_use]
     pub fn total_allocated_bytes(&self) -> usize {
@@ -612,7 +565,7 @@ impl SubstrateArena {
             + self.types.allocated_bytes()
             + self.constants.allocated_bytes()
             + self.layouts.allocated_bytes()
-            + self.exprs.allocated_bytes()
+            + arena_read(&self.exprs, "SubstrateArena", "exprs").allocated_bytes()
             + self.nodes.allocated_bytes()
             + self.regions.allocated_bytes()
     }

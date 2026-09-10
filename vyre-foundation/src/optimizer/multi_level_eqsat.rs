@@ -499,7 +499,8 @@ pub struct SemanticEqualitySaturation {
     /// Maximum saturation iterations.
     pub max_iterations: usize,
     /// Granted numerical contracts.
-    pub admitted_numerical_contracts: Vec<crate::optimizer::rewrite_contract::NumericalContract>,
+    pub admitted_numerical_contracts:
+        Vec<crate::optimizer::rewrite_contract::RewriteNumericalContract>,
 }
 
 impl Default for SemanticEqualitySaturation {
@@ -508,7 +509,7 @@ impl Default for SemanticEqualitySaturation {
             class_growth_limit: 4096,
             max_iterations: 16,
             admitted_numerical_contracts: vec![
-                crate::optimizer::rewrite_contract::NumericalContract::BitExact,
+                crate::optimizer::rewrite_contract::RewriteNumericalContract::BitExact,
             ],
         }
     }
@@ -519,7 +520,7 @@ impl SemanticEqualitySaturation {
     #[must_use]
     pub fn admits_contract(
         &self,
-        contract: crate::optimizer::rewrite_contract::NumericalContract,
+        contract: crate::optimizer::rewrite_contract::RewriteNumericalContract,
     ) -> bool {
         self.admitted_numerical_contracts.contains(&contract)
     }

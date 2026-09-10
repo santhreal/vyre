@@ -57,40 +57,9 @@
 
 use super::is_invocation_id_eq_constant;
 use crate::ir::{Expr, Node, Program};
+use crate::memory_model::AtomicOrdering;
 use crate::optimizer::RefusalReason;
 use vyre_spec::SideEffectClass;
-
-/// Memory-ordering tag carried by `ReadWriteAtomic`. Mirrors the wire-frozen
-/// `MemoryOrdering` in `vyre-foundation::memory_model` but reduced to the
-/// orderings the lattice composition rules distinguish. `Relaxed` is treated
-/// as `Acquire` in lattice composition (conservative  -  no rule allows weaker).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[non_exhaustive]
-pub enum AtomicOrdering {
-    /// Acquire ordering  -  synchronizes with a Release on the same address.
-    Acquire,
-    /// Release ordering  -  synchronizes with an Acquire on the same address.
-    Release,
-    /// Acquire+Release combined.
-    AcqRel,
-    /// Sequentially consistent ordering  -  total order across all `SeqCst` ops.
-    SeqCst,
-}
-
-impl AtomicOrdering {
-    /// Join two orderings to the strongest of the pair. Used when composing
-    /// two `ReadWriteAtomic` effects.
-    #[must_use]
-    pub fn join(self, other: Self) -> Self {
-        use AtomicOrdering::{AcqRel, Acquire, Release, SeqCst};
-        match (self, other) {
-            (SeqCst, _) | (_, SeqCst) => SeqCst,
-            (AcqRel, _) | (_, AcqRel) | (Acquire, Release) | (Release, Acquire) => AcqRel,
-            (Acquire, Acquire) => Acquire,
-            (Release, Release) => Release,
-        }
-    }
-}
 
 /// Synchronization scope carried by `Synchronized`. Mirrors the wire-frozen
 /// barrier scope in `vyre-foundation::memory_model`.

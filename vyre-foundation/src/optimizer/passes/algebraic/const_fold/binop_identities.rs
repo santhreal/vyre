@@ -8,9 +8,8 @@
 // is delimited by a Unicode box-drawing comment header.
 
 use crate::ir::Expr;
-use crate::optimizer::algebraic_rules::{
-    binop_identity_replacement, IdentityReplacement, ScalarLiteral,
-};
+use crate::optimizer::algebraic_rules::{binop_identity_replacement, IdentityReplacement};
+use crate::region_ssa::ScalarLiteral;
 
 /// True iff `expr` is an integer literal (u32 or i32). Used by the
 /// distributive expansion rule to gate the rewrite so

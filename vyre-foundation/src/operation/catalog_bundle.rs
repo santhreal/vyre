@@ -18,7 +18,7 @@ pub struct ExtensionProvenance {
 /// Explicit immutable catalog bundle containing only execution-relevant semantic descriptors
 /// and callable lowering providers.
 #[derive(Clone, Debug)]
-pub struct CatalogBundle {
+pub struct OperationCatalogBundle {
     /// Schema version of the catalog bundle itself.
     pub version: u32,
     /// BLAKE3 256-bit digest of the bundle contents and extension provenance.
@@ -31,7 +31,7 @@ pub struct CatalogBundle {
     pub extensions: BTreeMap<&'static str, ExtensionProvenance>,
 }
 
-impl CatalogBundle {
+impl OperationCatalogBundle {
     /// Construct an empty catalog bundle.
     #[must_use]
     pub fn empty() -> Self {

@@ -38,7 +38,7 @@ use rustc_hash::FxHashSet;
 use vyre_spec::RegionLawFamily;
 
 use crate::ir::Program;
-use crate::optimizer::rewrite_contract::{contract_for_pass, NumericalContract};
+use crate::optimizer::rewrite_contract::{contract_for_pass, RewriteNumericalContract};
 use crate::optimizer::{registered_pass_registrations, OptimizerError};
 
 /// One declarative law and the registered rewrite that realizes it.
@@ -175,7 +175,7 @@ pub fn region_law(name: &str) -> Option<&'static RegionLaw> {
 /// `None` when the law names a pass with no declared contract, which the
 /// closure suite rejects rather than deriving from.
 #[must_use]
-pub fn law_numerical_contract(law: &RegionLaw) -> Option<NumericalContract> {
+pub fn law_numerical_contract(law: &RegionLaw) -> Option<RewriteNumericalContract> {
     contract_for_pass(law.realized_by).map(|contract| contract.numerical)
 }
 
@@ -263,11 +263,11 @@ impl RegionDerivation {
 
 /// Laws admitted for a run: every bit-exact law, plus the value-changing laws
 /// whose declared contract the caller granted.
-fn admitted_laws(grants: &[NumericalContract]) -> Vec<&'static RegionLaw> {
+fn admitted_laws(grants: &[RewriteNumericalContract]) -> Vec<&'static RegionLaw> {
     REGION_LAWS
         .iter()
         .filter(|law| match law_numerical_contract(law) {
-            Some(NumericalContract::BitExact) => true,
+            Some(RewriteNumericalContract::BitExact) => true,
             Some(contract) => grants.contains(&contract),
             None => false,
         })
@@ -300,7 +300,7 @@ fn apply_law(law: &RegionLaw, program: &Program) -> Result<Option<Program>, Opti
 /// pass set cannot be ordered.
 pub fn derive_region_alternatives(
     program: &Program,
-    grants: &[NumericalContract],
+    grants: &[RewriteNumericalContract],
     budget: RegionDerivationBudget,
 ) -> Result<RegionDerivation, OptimizerError> {
     if budget.max_alternatives == 0 {

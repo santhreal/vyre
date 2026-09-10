@@ -37,7 +37,7 @@ use vyre_foundation::optimizer::law_saturation::{derive_program_alternative, Law
 use vyre_foundation::optimizer::region_law::{
     derive_region_alternatives, RegionDerivationBudget, RegionDerivationStop,
 };
-use vyre_foundation::optimizer::rewrite_contract::NumericalContract;
+use vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract;
 
 use crate::facts::{measure_node, NodeMeasurement};
 
@@ -105,19 +105,19 @@ pub(crate) enum LawDerivationError {
 /// unconditionally; listing it here would state a permission that is not the
 /// caller's to give. `IntegerWrapping` is granted unconditionally because it
 /// states that integer results are identical, wrapping included.
-fn granted_contracts(numeric: Option<NumericContract>) -> Vec<NumericalContract> {
-    let mut grants = vec![NumericalContract::IntegerWrapping];
+fn granted_contracts(numeric: Option<NumericContract>) -> Vec<RewriteNumericalContract> {
+    let mut grants = vec![RewriteNumericalContract::IntegerWrapping];
     let Some(numeric) = numeric else {
         return grants;
     };
     if matches!(numeric.reassociation, Reassociation::WithinBudget) {
-        grants.push(NumericalContract::FloatReassociation);
+        grants.push(RewriteNumericalContract::FloatReassociation);
     }
     if !matches!(numeric.measure, ErrorMeasure::Exact) {
-        grants.push(NumericalContract::FloatContraction);
+        grants.push(RewriteNumericalContract::FloatContraction);
     }
     if matches!(numeric.approximation, Approximation::Native { .. }) {
-        grants.push(NumericalContract::ReducedPrecision);
+        grants.push(RewriteNumericalContract::ReducedPrecision);
     }
     grants
 }

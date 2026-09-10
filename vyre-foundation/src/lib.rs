@@ -63,7 +63,7 @@ pub mod ir {
     };
     pub use crate::ir_inner::model::node::{node_op_id, Node, NodeExtension};
     pub use crate::ir_inner::model::node_kind::{
-        EvalError, InterpCtx, NodeId, NodeStorage, OpId, RegionId, Value, VarId,
+        ByteRegionId, EvalError, InterpCtx, NodeId, NodeStorage, OpId, Value, VarId,
     };
     pub use crate::ir_inner::model::program::{
         BufferDecl, CacheLocality, LinearType, MemoryHints, MemoryKind, Program, Scope,

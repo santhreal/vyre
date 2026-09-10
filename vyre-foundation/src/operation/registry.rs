@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
 use crate::operation::call_graph::CallGraphClosure;
-use crate::operation::catalog_bundle::CatalogBundle;
+use crate::operation::catalog_bundle::OperationCatalogBundle;
 use crate::operation::registration::OperationRegistration;
 use crate::operation::registry_error::{validate_identity, OperationRegistryError};
 use crate::operation::semantic_op::SemanticOperation;
@@ -16,7 +16,7 @@ pub struct OperationRegistry {
     ordered: Vec<&'static OperationRegistration>,
     by_id: BTreeMap<&'static str, &'static OperationRegistration>,
     call_graph: CallGraphClosure,
-    catalog_bundle: CatalogBundle,
+    catalog_bundle: OperationCatalogBundle,
 }
 
 impl OperationRegistry {
@@ -84,7 +84,7 @@ impl OperationRegistry {
             }
         }
         let call_graph = CallGraphClosure::solve_from_registrations(ordered.iter().copied());
-        let catalog_bundle = CatalogBundle::from_registry();
+        let catalog_bundle = OperationCatalogBundle::from_registry();
         Ok(Self {
             ordered,
             by_id,
@@ -158,7 +158,7 @@ impl OperationRegistry {
 
     /// Return the immutable catalog bundle.
     #[must_use]
-    pub fn catalog_bundle(&self) -> &CatalogBundle {
+    pub fn catalog_bundle(&self) -> &OperationCatalogBundle {
         &self.catalog_bundle
     }
 }

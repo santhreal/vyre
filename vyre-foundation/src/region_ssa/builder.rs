@@ -4,7 +4,7 @@ use rustc_hash::FxHashSet;
 use vyre_spec::{BinOp, CombineKind, DataType, TernaryOp, UnOp};
 
 use super::{
-    Block, BlockArg, BlockId, EffectToken, RegionFunction, RegionId, RegionKind, RegionOp,
+    Block, BlockArg, BlockId, EffectTokenId, RegionFunction, RegionId, RegionKind, RegionOp,
     RegionOpKind, ScalarLiteral, StructuredRegion, Terminator, ValueId, ViewOp,
 };
 
@@ -336,7 +336,7 @@ impl RegionBuilder {
         buffer: impl Into<String>,
         index: ValueId,
         element_type: DataType,
-        effect_in: Option<EffectToken>,
+        effect_in: Option<EffectTokenId>,
     ) -> Result<ValueId, DominanceError> {
         self.check_operand(index)?;
         let res = self.emit_op_internal(
@@ -356,7 +356,7 @@ impl RegionBuilder {
         buffer: impl Into<String>,
         index: ValueId,
         value: ValueId,
-        effect_in: Option<EffectToken>,
+        effect_in: Option<EffectTokenId>,
     ) -> Result<(), DominanceError> {
         self.check_operand(index)?;
         self.check_operand(value)?;

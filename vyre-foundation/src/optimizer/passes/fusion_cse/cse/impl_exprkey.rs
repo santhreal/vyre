@@ -1,11 +1,11 @@
 use crate::ir::{BinOp, Expr, UnOp};
-use crate::optimizer::passes::fusion_cse::cse::expr_key::{ExprId, ExprKey};
+use crate::optimizer::passes::fusion_cse::cse::expr_key::{CseExprId, ExprKey};
 use crate::optimizer::passes::fusion_cse::cse::{CseCtx, TypeKey};
 use smallvec::SmallVec;
 
 impl CseCtx {
     #[inline]
-    pub(crate) fn intern_expr(&mut self, expr: &Expr) -> ExprId {
+    pub(crate) fn intern_expr(&mut self, expr: &Expr) -> CseExprId {
         // Soundness (S19): pointer-keyed cache removed. See the
         // matching comment in `impl_csectx.rs::expr`  -  `Box<Expr>`
         // addresses are reused as Cow::Owned rewrites churn through
@@ -59,7 +59,7 @@ impl CseCtx {
                 op_id.clone(),
                 args.iter()
                     .map(|arg| self.intern_expr(arg))
-                    .collect::<SmallVec<[ExprId; 4]>>(),
+                    .collect::<SmallVec<[CseExprId; 4]>>(),
             ),
             Expr::Fma { a, b, c } => ExprKey::Fma(
                 self.intern_expr(a),
@@ -96,7 +96,7 @@ impl CseCtx {
         if let Some(&id) = self.deduplication.get(&key) {
             id
         } else {
-            let id = ExprId(u32::try_from(self.arena.len()).map_or(u32::MAX, |value| value));
+            let id = CseExprId(u32::try_from(self.arena.len()).map_or(u32::MAX, |value| value));
             self.arena.push(key.clone());
             self.deduplication.insert(key, id);
             id

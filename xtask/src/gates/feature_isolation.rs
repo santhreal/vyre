@@ -162,7 +162,7 @@ impl Pair {
 /// which carries it forward past every edge that could have invalidated it.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Row {
+pub struct FeatureIsolationRow {
     /// Package name the row judges.
     pub member: String,
     /// Feature the row judges, or [`BASELINE`].
@@ -176,7 +176,7 @@ pub struct Row {
     pub reason: Option<String>,
 }
 
-impl Row {
+impl FeatureIsolationRow {
     /// Whether the row exempts its selection from having to compile.
     #[must_use]
     pub fn blocked(&self) -> bool {
@@ -187,7 +187,7 @@ impl Row {
 #[derive(Debug, Deserialize)]
 struct RowFile {
     #[serde(default)]
-    pair: Vec<Row>,
+    pair: Vec<FeatureIsolationRow>,
 }
 
 fn data_path(root: &Path) -> PathBuf {
@@ -688,7 +688,7 @@ fn read_manifest(path: &Path) -> Result<String, String> {
 ///
 /// Returns the reason the data file could not be read as declarations,
 /// including a copy that still stores a compile outcome.
-pub fn load_rows(root: &Path) -> Result<Vec<Row>, String> {
+pub fn load_rows(root: &Path) -> Result<Vec<FeatureIsolationRow>, String> {
     let path = data_path(root);
     let text = fs::read_to_string(&path).map_err(|error| {
         format!(
@@ -704,7 +704,7 @@ pub fn load_rows(root: &Path) -> Result<Vec<Row>, String> {
 /// # Errors
 ///
 /// Returns the reason the text is not a set of declarations.
-pub fn parse_rows(path: &Path, text: &str) -> Result<Vec<Row>, String> {
+pub fn parse_rows(path: &Path, text: &str) -> Result<Vec<FeatureIsolationRow>, String> {
     let document: toml::Value = toml::from_str(text)
         .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
     reject_stored_measurement(path, &document)?;
@@ -787,9 +787,9 @@ fn is_real_reason(reason: &str) -> bool {
 /// observed: whether a selection holds is [`unmeasured_failures`] and
 /// [`sweep_failures`], and both need this run to have compiled it.
 #[must_use]
-pub fn agreement_failures(pairs: &[Pair], rows: &[Row]) -> Vec<String> {
+pub fn agreement_failures(pairs: &[Pair], rows: &[FeatureIsolationRow]) -> Vec<String> {
     let mut failures = Vec::new();
-    let mut recorded: BTreeMap<(&str, &str), &Row> = BTreeMap::new();
+    let mut recorded: BTreeMap<(&str, &str), &FeatureIsolationRow> = BTreeMap::new();
 
     for row in rows {
         let label = Pair {
@@ -924,7 +924,10 @@ pub fn unmeasured_failures(pairs: &[Pair], observed: &[(Pair, Observation)]) -> 
 /// fix that closes it, rather than a second time as a `blocked` row that
 /// compiles.
 #[must_use]
-pub fn sweep_failures(rows: &[Row], observed: &[(Pair, Observation)]) -> Vec<String> {
+pub fn sweep_failures(
+    rows: &[FeatureIsolationRow],
+    observed: &[(Pair, Observation)],
+) -> Vec<String> {
     let mut failures = Vec::new();
     for (pair, observation) in observed {
         let Some(row) = rows
@@ -1095,7 +1098,11 @@ fn compile(
 /// compile outcome is written: a selection expected to compile is a bare pair,
 /// and the only thing a row can state is that the selection is exempt and why.
 #[must_use]
-pub fn render(axis: &[Pair], observed: &[(Pair, Observation)], previous: &[Row]) -> String {
+pub fn render(
+    axis: &[Pair],
+    observed: &[(Pair, Observation)],
+    previous: &[FeatureIsolationRow],
+) -> String {
     let mut text = String::from(
         "# Every feature selection this workspace judges.\n\
          #\n\
@@ -1169,7 +1176,7 @@ pub fn render(axis: &[Pair], observed: &[(Pair, Observation)], previous: &[Row])
 
 /// Declarations already recorded, treating a file that does not exist yet as
 /// none and a file that still stores an outcome as a hard failure.
-fn recorded_rows(root: &Path) -> Result<Vec<Row>, GateError> {
+fn recorded_rows(root: &Path) -> Result<Vec<FeatureIsolationRow>, GateError> {
     if !data_path(root).exists() {
         return Ok(Vec::new());
     }
@@ -1516,7 +1523,7 @@ mod tests {
             member: member.to_string(),
             feature: feature.to_string(),
         };
-        let row = |member: &str, feature: &str, blocked: bool| Row {
+        let row = |member: &str, feature: &str, blocked: bool| FeatureIsolationRow {
             member: member.to_string(),
             feature: feature.to_string(),
             outcome: blocked.then(|| BLOCKED.to_string()),

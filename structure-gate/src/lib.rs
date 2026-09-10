@@ -44,6 +44,7 @@ use std::sync::{LazyLock, Mutex, PoisonError};
 pub mod backend_vocabulary;
 pub mod cfg_test;
 pub mod crate_ownership;
+pub mod duplicate_type_name;
 pub mod geometry_constants;
 pub mod module_layout;
 pub mod registration_macro;
@@ -53,6 +54,7 @@ pub mod workspace_manifest;
 pub mod workspace_rules;
 
 // Source scan and route discovery.
+pub use duplicate_type_name::duplicate_public_type_name_failures;
 pub use geometry_constants::geometry_constant_failures;
 pub use source_scan::opaque_span;
 pub use workspace_manifest::{
@@ -196,6 +198,10 @@ pub fn violations(root: &Path) -> Vec<String> {
     ));
     failures.extend(backend_vocabulary::neutral_vocabulary_failures(root));
     failures.extend(geometry_constant_failures(root));
+    failures.extend(duplicate_public_type_name_failures(
+        root,
+        &workspace.crate_roots,
+    ));
     failures
 }
 
