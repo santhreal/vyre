@@ -9,7 +9,6 @@
 //! expectations (e.g. gather/scatter kernels are permitted uncoalesced traffic).
 
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
 
 use vyre_foundation::diagnostics::{
     CauseKind, CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, RetryClass,
@@ -33,14 +32,14 @@ pub enum SanitizerKind {
 impl SanitizerKind {
     /// Stable diagnostic code for this defect family.
     #[must_use]
-    pub const fn code(self) -> &'static str {
-        match self {
+    pub const fn code(self) -> DiagnosticCode {
+        DiagnosticCode::new(match self {
             Self::ComputeSanitizer => "SAN001_COMPUTE_SANITIZER",
             Self::VulkanValidation => "SAN002_VULKAN_VALIDATION",
             Self::DataRace => "SAN003_DATA_RACE",
             Self::OutOfBoundsMemory => "SAN004_OUT_OF_BOUNDS",
             Self::IllegalInstruction => "SAN005_ILLEGAL_INSTRUCTION",
-        }
+        })
     }
 
     /// Actionable fix hint for this defect family.
@@ -162,7 +161,7 @@ impl SanitizerFailure {
     /// Convert this hard correctness failure into a versioned structured Diagnostic.
     #[must_use]
     pub fn diagnostic(&self) -> Diagnostic {
-        let mut diag = Diagnostic::error(self.kind.code(), self.message.clone())
+        let mut diag = Diagnostic::error_with_code(self.kind.code(), self.message.clone())
             .with_stage(DiagnosticStage::Materialize)
             .with_compiler_level(CompilerLevel::DriverRuntime)
             .with_fix(self.kind.suggested_fix())

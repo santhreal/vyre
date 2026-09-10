@@ -21,9 +21,15 @@ pub struct ProgramDiff {
 }
 
 /// Compare two Program representations structurally.
+///
+/// The count comes from `ProgramStats::node_count`, which walks the whole node
+/// tree. `entry` holds one root region for every program built through
+/// `Program::wrapped`, so a difference taken across it is zero whatever the
+/// bodies hold, and the diff called two programs identical whenever their
+/// buffers and launch geometry matched.
 #[must_use]
 pub fn diff_programs(before: &Program, after: &Program) -> ProgramDiff {
-    let op_count_delta = (after.entry.len() as i64) - (before.entry.len() as i64);
+    let op_count_delta = (after.stats().node_count as i64) - (before.stats().node_count as i64);
     let mut buffers_added = Vec::new();
     let mut buffers_dropped = Vec::new();
 
@@ -50,10 +56,11 @@ pub fn diff_programs(before: &Program, after: &Program) -> ProgramDiff {
     }
 
     let geometry_changed = before.workgroup_size != after.workgroup_size;
-    let is_identical = op_count_delta == 0
-        && buffers_added.is_empty()
-        && buffers_dropped.is_empty()
-        && !geometry_changed;
+    // The deltas above describe what moved; they do not decide identity. Two
+    // programs can hold the same node count, the same buffers and the same
+    // launch geometry and still compute different values, so identity is the
+    // content hash and the deltas stay a description of the difference.
+    let is_identical = before.content_hash() == after.content_hash();
 
     ProgramDiff {
         op_count_delta,

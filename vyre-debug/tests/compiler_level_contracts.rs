@@ -172,6 +172,54 @@ fn program_and_graph_structural_diffs() {
     assert_eq!(diff_g.node_count_delta, 1);
 }
 
+/// WHY: `Program::wrapped` puts every body inside one root region, so a diff
+/// that counted `entry` saw one entry for every program and called two
+/// programs identical whenever their buffers and launch geometry matched.
+/// Identity is the content hash, which no body change survives, and the case
+/// below changes only an operand: the node count, the buffer set and the
+/// launch geometry are all equal.
+///
+/// What it does not catch: two programs that compute the same values through
+/// different IR. Those are not identical here and are not meant to be.
+#[test]
+fn a_body_change_that_moves_no_count_is_not_identical() {
+    let before = sample_program();
+    let after = Program::wrapped(
+        vec![
+            BufferDecl::read("x", 0, DataType::U32).with_count(4),
+            BufferDecl::read_write("y", 1, DataType::U32).with_count(4),
+        ],
+        [4, 1, 1],
+        vec![Node::store(
+            "y",
+            Expr::gid_x(),
+            Expr::add(Expr::load("x", Expr::gid_x()), Expr::u32(2)),
+        )],
+    );
+
+    let diff = diff_programs(&before, &after);
+    assert_eq!(
+        diff.op_count_delta, 0,
+        "the case must hold the node count equal, or it proves nothing about identity"
+    );
+    assert!(
+        diff.buffers_added.is_empty() && diff.buffers_dropped.is_empty(),
+        "the case must hold the buffer set equal"
+    );
+    assert!(
+        !diff.geometry_changed,
+        "the case must hold the launch geometry equal"
+    );
+    assert!(
+        !diff.is_identical,
+        "a program that adds 2 where another adds 1 is not identical"
+    );
+    assert!(
+        diff_programs(&before, &before).is_identical,
+        "a program is identical to itself"
+    );
+}
+
 #[test]
 fn artifact_and_plan_structural_diffs() {
     let graph = sample_graph();
