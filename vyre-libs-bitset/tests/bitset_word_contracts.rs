@@ -11,13 +11,14 @@ use vyre_reference::value::Value;
 #[test]
 fn bitset_and_writes_every_declared_output_word() {
     let program = bitset_and("lhs", "rhs", "out", 2);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(&[0xFF00_FF00, 0xAAAA_5555])),
             Value::from(pack(&[0x0F0F_F0F0, 0xFFFF_0000])),
         ],
     )
+    .outputs()
     .expect("bitset_and reference evaluation must succeed");
 
     assert_eq!(
@@ -29,13 +30,14 @@ fn bitset_and_writes_every_declared_output_word() {
 #[test]
 fn bitset_and_not_writes_every_declared_output_word() {
     let program = bitset_and_not("lhs", "rhs", "out", 2);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(&[0xFFFF_0000, 0xAAAA_5555])),
             Value::from(pack(&[0x0F0F_F0F0, 0xFFFF_0000])),
         ],
     )
+    .outputs()
     .expect("bitset_and_not reference evaluation must succeed");
 
     assert_eq!(
@@ -68,10 +70,11 @@ fn bitset_test_bit_program_matches_cpu_ref_including_out_of_range() {
     // the program must return 0 (matching cpu_ref), not read past `buf`.
     for bit_idx in [34u32, 0, 64, 1024] {
         let program = bitset_test_bit("buf", bit_idx, "out", words);
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &program,
             &[Value::from(pack(&buf)), Value::from(pack(&[0]))],
         )
+        .outputs()
         .expect("bitset_test_bit reference evaluation must succeed");
         assert_eq!(
             unpack(&outputs[0].to_bytes())[0],

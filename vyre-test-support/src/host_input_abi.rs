@@ -165,9 +165,7 @@ pub fn canonical_inputs(program: &Program) -> Vec<Vec<u8>> {
 
 /// The refusal wording a wrong input count produces.
 fn both_counts(expected: usize, received: usize) -> String {
-    format!(
-        "expected {expected} input buffer(s) from Program declarations but received {received}"
-    )
+    format!("expected {expected} input buffer(s) from Program declarations but received {received}")
 }
 
 /// Assert `backend` and the reference interpreter accept and refuse the same
@@ -191,8 +189,11 @@ pub fn assert_backend_agrees_with_reference_on_input_counts(backend: &impl HostI
         );
 
         let reference_exact: Vec<Value> = exact.iter().cloned().map(Value::from).collect();
-        vyre_reference::reference_eval(program, &reference_exact)
-            .unwrap_or_else(|error| panic!("Fix: the oracle must accept {expected} inputs: {error}"));
+        vyre_reference::ReferenceRequest::standard(program, &reference_exact)
+            .outputs()
+            .unwrap_or_else(|error| {
+                panic!("Fix: the oracle must accept {expected} inputs: {error}")
+            });
         backend
             .dispatch_host_inputs(program, &exact)
             .unwrap_or_else(|error| {
@@ -216,7 +217,8 @@ pub fn assert_backend_agrees_with_reference_on_input_counts(backend: &impl HostI
 /// which side of the declared count the list is on.
 fn assert_reference_refuses(program: &Program, inputs: &[Vec<u8>], reason: &str) {
     let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
-    let refusal = vyre_reference::reference_eval(program, &values)
+    let refusal = vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
         .err()
         .unwrap_or_else(|| panic!("Fix: the oracle must refuse {} inputs.", inputs.len()));
     let text = refusal.to_string();

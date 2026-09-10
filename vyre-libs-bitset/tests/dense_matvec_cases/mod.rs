@@ -325,7 +325,7 @@ pub fn assert_program_overwrites_dirty_output(
             case.tile_count,
             case.dst_words,
         );
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &program,
             &[
                 Value::from(pack_u32_slice(&frontier)),
@@ -333,6 +333,7 @@ pub fn assert_program_overwrites_dirty_output(
                 Value::from(pack_u32_slice(&vec![u32::MAX; case.dst_words as usize])),
             ],
         )
+        .outputs()
         .unwrap_or_else(|err| {
             panic!(
                 "Fix: the {arm} dense matvec Program must execute in the reference oracle: {err}"

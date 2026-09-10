@@ -78,7 +78,8 @@ fn execute_case(
         Value::from(u32_bytes(zero_points)),
         Value::from(f32_bytes(bias)),
     ];
-    let outputs = vyre_reference::reference_eval(&program, &inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("grouped INT4 program must execute under the reference oracle");
     assert_eq!(outputs.len(), 1, "grouped INT4 emits one output buffer");
     decode_f32(&outputs[0].to_bytes())[..out_dim].to_vec()

@@ -51,7 +51,8 @@ fn dead_buffer_elim_keeps_control_only_referenced_buffer() {
 
     // The original is well-scoped: `gate` is declared, the guard loads it,
     // and the program stores 7 to `out`.
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original program is well-scoped and must run");
     assert_eq!(
         original,
@@ -65,10 +66,12 @@ fn dead_buffer_elim_keeps_control_only_referenced_buffer() {
     // removed `gate` (it feeds no output) yet left the `If` that loads it, so
     // the reference interpreter's validator rejects the dangling load
     // ("load from unknown buffer `gate`") and reference_eval errors.
-    let transformed = vyre_reference::reference_eval(&optimized, &inputs).expect(
-        "dead_buffer_elim must not remove a buffer still referenced by a \
+    let transformed = vyre_reference::ReferenceRequest::standard(&optimized, &inputs)
+        .outputs()
+        .expect(
+            "dead_buffer_elim must not remove a buffer still referenced by a \
          surviving node (control-only load left a dangling reference)",
-    );
+        );
 
     assert_eq!(
         transformed, original,

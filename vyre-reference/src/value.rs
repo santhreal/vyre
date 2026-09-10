@@ -31,8 +31,16 @@ impl PartialEq for Value {
             (Self::Bool(a), Self::Bool(b)) => a == b,
             (Self::Bytes(a), Self::Bytes(b)) => a == b,
             (Self::Float(a), Self::Float(b)) => a.to_bits() == b.to_bits(),
-            (Self::Array(a), Self::Array(b)) => a == b,
-            _ => false,
+            (
+                Self::U32(_)
+                | Self::I32(_)
+                | Self::U64(_)
+                | Self::Bool(_)
+                | Self::Bytes(_)
+                | Self::Float(_)
+                | Self::Array(_),
+                _,
+            ) => false,
         }
     }
 }
@@ -46,7 +54,9 @@ impl Value {
         match self {
             Self::Array(values) => !values.is_empty(),
             Self::Float(value) => *value != 0.0,
-            _ => self.try_as_u32().unwrap_or(1) != 0,
+            Self::U32(_) | Self::I32(_) | Self::U64(_) | Self::Bool(_) | Self::Bytes(_) => {
+                self.try_as_u32().unwrap_or(1) != 0
+            }
         }
     }
 
@@ -202,7 +212,7 @@ impl Value {
         match self {
             Self::Float(value) => Some(*value as f32),
             Self::U32(value) => Some(f32::from_bits(*value)),
-            _ => None,
+            Self::I32(_) | Self::U64(_) | Self::Bool(_) | Self::Bytes(_) | Self::Array(_) => None,
         }
     }
     /// Try to interpret the value as an `f64`.
@@ -214,7 +224,7 @@ impl Value {
             Self::I32(value) => Some(f64::from(*value)),
             Self::U64(value) => Some(f64::from_bits(*value)),
             Self::Bool(value) => Some(if *value { 1.0 } else { 0.0 }),
-            _ => None,
+            Self::Bytes(_) | Self::Array(_) => None,
         }
     }
 
@@ -222,12 +232,6 @@ impl Value {
     #[must_use]
     pub fn wide_bytes(&self) -> Vec<u8> {
         self.to_bytes()
-    }
-
-    /// Create a zero value for the given data type.
-    #[must_use]
-    pub fn zero_for(ty: vyre_foundation::ir::DataType) -> Self {
-        Self::try_zero_for(ty).unwrap_or_else(|| Self::Bytes(Arc::from([])))
     }
 
     /// Try to create a zero value for the given data type.

@@ -29,7 +29,7 @@ use vyre_reference::value::Value;
 /// returns the two ReadWrite buffers in binding order.
 fn gpu_add_carry(a: &[u32], b: &[u32]) -> (Vec<u32>, Vec<u32>) {
     let program = bigint_add_carry(a.len() as u32);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(a)),
@@ -38,6 +38,7 @@ fn gpu_add_carry(a: &[u32], b: &[u32]) -> (Vec<u32>, Vec<u32>) {
             Value::from(pack(&vec![0u32; a.len()])),
         ],
     )
+    .outputs()
     .expect("bigint_add_carry reference evaluation must succeed");
     (
         unpack(&outputs[0].to_bytes()),

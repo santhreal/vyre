@@ -69,9 +69,12 @@ fn fused_presence_and_positions_equals_separate_scans_high_volume() {
             region_count,
         )
         .expect("separate presence-by-region program builds");
-        let sep_presence_out =
-            vyre_reference::reference_eval(&sep_presence_program, &packed.presence_inputs())
-                .expect("separate presence-by-region program evaluates");
+        let sep_presence_out = vyre_reference::ReferenceRequest::standard(
+            &sep_presence_program,
+            &packed.presence_inputs(),
+        )
+        .outputs()
+        .expect("separate presence-by-region program evaluates");
         let sep_presence = decode_u32(&sep_presence_out[0].to_bytes());
 
         // --- Separate positions (suffix3 prefilter) program (bindings 0-10) ---
@@ -99,9 +102,12 @@ fn fused_presence_and_positions_equals_separate_scans_high_volume() {
             Value::from(packed.suffix2.clone()),
             Value::from(packed.suffix3.clone()),
         ];
-        let sep_positions_out =
-            vyre_reference::reference_eval(&sep_positions_program, &sep_positions_inputs)
-                .expect("separate positions program evaluates");
+        let sep_positions_out = vyre_reference::ReferenceRequest::standard(
+            &sep_positions_program,
+            &sep_positions_inputs,
+        )
+        .outputs()
+        .expect("separate positions program evaluates");
         let sep_count = decode_u32(&sep_positions_out[0].to_bytes());
         let sep_matches = decode_u32(&sep_positions_out[1].to_bytes());
         let sep_triples = decode_triples(&sep_count, &sep_matches);
@@ -119,7 +125,8 @@ fn fused_presence_and_positions_equals_separate_scans_high_volume() {
         // Binding 12 is the fused program's match counter, which the presence
         // program does not declare.
         fused_inputs.push(Value::from(packed.zero.clone()));
-        let fused_out = vyre_reference::reference_eval(&fused_program, &fused_inputs)
+        let fused_out = vyre_reference::ReferenceRequest::standard(&fused_program, &fused_inputs)
+            .outputs()
             .expect("fused program evaluates");
         let fused_presence = decode_u32(&fused_out[0].to_bytes());
         let fused_count = decode_u32(&fused_out[1].to_bytes());

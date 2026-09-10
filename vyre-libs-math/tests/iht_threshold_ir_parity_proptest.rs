@@ -31,10 +31,11 @@ fn oracle(z: &[u32], threshold: u32) -> Vec<u32> {
 /// Drive the real IR. Buffer binding order: z(0), threshold(1, count 1), out(2, RW).
 fn gpu_threshold(z: &[u32], threshold: u32) -> Vec<u32> {
     let program = iht_threshold("z", "threshold", "out", z.len() as u32);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[Value::from(pack(z)), Value::from(pack(&[threshold]))],
     )
+    .outputs()
     .expect("iht_threshold reference evaluation must succeed");
     unpack(&outputs[0].to_bytes())
 }

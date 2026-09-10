@@ -13,7 +13,7 @@ proptest! {
             ],
         );
         let inputs: [Value; 0] = [];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs).outputs()
             .expect("Fix: store program must execute successfully");
         prop_assert_eq!(outputs.len(), 1);
         let bytes = outputs[0].to_bytes();
@@ -38,7 +38,7 @@ proptest! {
             ],
         );
         let inputs = [Value::from(index.to_le_bytes().to_vec())];
-        let error = vyre_reference::reference_eval(&program, &inputs)
+        let error = vyre_reference::ReferenceRequest::standard(&program, &inputs).outputs()
             .expect_err("Fix: a store past the buffer must be refused.");
         prop_assert_eq!(
             error.error_class(),

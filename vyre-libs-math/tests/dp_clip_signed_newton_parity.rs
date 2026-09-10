@@ -27,7 +27,7 @@ fn signed_grad(state: &mut u32) -> f64 {
 fn run_via_reference(grads: &[u32], norms: &[u32], clip: u32, b: u32, d: u32) -> Vec<u32> {
     let program = dp_clip_per_sample("grads", "norms", "clip", "clipped", b, d);
     let cells = (b * d) as usize;
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32(grads)),
@@ -36,6 +36,7 @@ fn run_via_reference(grads: &[u32], norms: &[u32], clip: u32, b: u32, d: u32) ->
             Value::from(pack_u32(&vec![0u32; cells])),
         ],
     )
+    .outputs()
     .expect("dp_clip_per_sample reference evaluation must succeed");
     outputs[0]
         .to_bytes()

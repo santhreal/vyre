@@ -51,7 +51,7 @@ fn run_via_reference(
     c_out: u32,
 ) -> Vec<u32> {
     let program = tfn_scalar_mix("features", "weights", "out", n_nodes, c_in, c_out);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32(features)),
@@ -59,6 +59,7 @@ fn run_via_reference(
             Value::from(pack_u32(&vec![0u32; (n_nodes * c_out) as usize])),
         ],
     )
+    .outputs()
     .expect("tfn_scalar_mix reference evaluation must succeed");
     outputs[0]
         .to_bytes()

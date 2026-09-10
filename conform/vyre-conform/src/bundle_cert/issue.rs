@@ -28,12 +28,12 @@ pub fn reference_dispatch<'a>(
     for input in planned_inputs.iter().copied() {
         values.push(Value::from(input));
     }
-    let evaluated = vyre_reference::reference_eval(program, values).map_err(|e| {
-        BundleCertError::ReferenceFailed {
+    let evaluated = vyre_reference::ReferenceRequest::standard(program, values)
+        .outputs()
+        .map_err(|e| BundleCertError::ReferenceFailed {
             witness: witness.name.clone(),
             message: e.to_string(),
-        }
-    })?;
+        })?;
     outputs.clear();
     outputs.extend(evaluated.into_iter().map(|value| value.to_bytes()));
     Ok(())

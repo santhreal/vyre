@@ -15,7 +15,7 @@
 //!
 //! This suite closes that hole: each op's IR is run over randomized inputs (all-zero, all-`u32::MAX`,
 //! all-nonzero, sparse-nonzero) asserted bit-exact vs `cpu_ref`. Building it SURFACED AND FIXED A REAL
-//! BUG — `reduce_sum` diverged at `len = 257` (IR double-counted) because `reference_eval` fires
+//! BUG — `reduce_sum` diverged at `len = 257` (IR double-counted) because the oracle fires
 //! `ceil(count/256)` workgroups for a `count > 256` input while the kernel is single-workgroup by
 //! construction; the non-idempotent Sum/Count/CountNonZero double-counted while the idempotent
 //! Max/Min/Any/All hid it. The fix (a `lane < WORKGROUP_SIZE` guard on the atomic in
@@ -89,13 +89,14 @@ const OPS: [Op; 7] = [
 fn run_ir(op: Op, values: &[u32]) -> u32 {
     let program = op.build(values.len() as u32);
     let pack = |data: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(data));
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             pack(values),  // values (binding 0, RO)
             pack(&[0u32]), // out (binding 1, RW) — kernel re-inits to identity in lane 0
         ],
     )
+    .outputs()
     .expect("reduce reference evaluation must succeed");
     // Sole RW buffer is `out` (binding 1) → results[0].
     let b = outputs[0].to_bytes();

@@ -28,7 +28,8 @@ pub(crate) fn reference_eval_idoms(
         Value::from(to_bytes(&vec![0u32; node_count as usize])),
     ];
 
-    let outputs = vyre_reference::reference_eval(program, &values)
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
         .expect("dominator-tree reference program must evaluate");
     let bytes = outputs[0].to_bytes();
     bytes

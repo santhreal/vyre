@@ -14,15 +14,19 @@ use vyre_reference::value::Value;
 
 fn eval_fnv1a32_u8(bytes: &[u8]) -> u32 {
     let program = fnv1a32_program_u8("input", "out", bytes.len() as u32);
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(bytes.to_vec())])
-        .expect("Fix: packed-u8 FNV-1a32 reference evaluation must succeed");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(bytes.to_vec())])
+            .outputs()
+            .expect("Fix: packed-u8 FNV-1a32 reference evaluation must succeed");
     unpack_u32s(&outputs[0].to_bytes())[0]
 }
 
 fn eval_fnv1a64_u8(bytes: &[u8]) -> u64 {
     let program = fnv1a64_program_n_u8("input", "out", bytes.len() as u32);
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(bytes.to_vec())])
-        .expect("Fix: packed-u8 FNV-1a64 reference evaluation must succeed");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(bytes.to_vec())])
+            .outputs()
+            .expect("Fix: packed-u8 FNV-1a64 reference evaluation must succeed");
     let words = unpack_u32s(&outputs[0].to_bytes());
     u64::from(words[0]) | (u64::from(words[1]) << 32)
 }

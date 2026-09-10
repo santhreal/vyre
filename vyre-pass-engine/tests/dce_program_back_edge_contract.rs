@@ -480,9 +480,11 @@ fn execute_single_node_dce(reversed: bool) -> Vec<Vec<u32>> {
         pack_words(&[0]),
     ];
     let outputs = if reversed {
-        vyre_reference::reference_eval_lane_reversed(&program, &inputs)
+        vyre_reference::ReferenceRequest::standard(&program, &inputs)
+            .with_schedule_policy(vyre_reference::DeterministicSchedulePolicy::LaneReversed)
+            .outputs()
     } else {
-        vyre_reference::reference_eval(&program, &inputs)
+        vyre_reference::ReferenceRequest::standard(&program, &inputs).outputs()
     }
     .expect("Fix: the reference interpreter must execute the DCE fixpoint");
 

@@ -510,7 +510,8 @@ fn eval_reference(
     inputs: &[Vec<u8>],
 ) -> Result<Vec<Vec<u8>>, vyre_reference::ReferenceError> {
     let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
-    vyre_reference::reference_eval(program, &values)
+    vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
         .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
 }
 

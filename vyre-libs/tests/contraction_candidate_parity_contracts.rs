@@ -96,7 +96,9 @@ fn contraction_u32_matches_reference_oracle_across_shapes() {
         let b_bytes: Vec<u8> = b_vals.iter().flat_map(|v| v.to_le_bytes()).collect();
         let inputs = vec![Value::from(a_bytes), Value::from(b_bytes)];
 
-        let outputs = vyre_reference::reference_eval(&prog, &inputs).expect("eval");
+        let outputs = vyre_reference::ReferenceRequest::standard(&prog, &inputs)
+            .outputs()
+            .expect("eval");
         let out_bytes = outputs[0].to_bytes();
         let actual: Vec<u32> = out_bytes
             .chunks_exact(4)
@@ -143,7 +145,9 @@ fn contraction_f32_matches_reference_oracle_across_shapes() {
             Value::from(pack_f32_slice(&b_vals)),
         ];
 
-        let outputs = vyre_reference::reference_eval(&prog, &inputs).expect("eval");
+        let outputs = vyre_reference::ReferenceRequest::standard(&prog, &inputs)
+            .outputs()
+            .expect("eval");
         let out_bytes = outputs[0].to_bytes();
         let actual =
             vyre_primitives::wire::unpack_f32_slice(&out_bytes, (m * n) as usize, "matmul_out")
@@ -176,7 +180,9 @@ fn the_register_tiled_row_batched_candidate_matches_the_oracle() {
     let geometries = [(1, 1, 1), (3, 4, 5), (7, 3, 11), (16, 8, 16)];
 
     for (rows, in_dim, out_dim) in geometries {
-        let x_vals: Vec<f32> = (0..(rows * in_dim)).map(|i| (i as f32) * 0.5 - 3.0).collect();
+        let x_vals: Vec<f32> = (0..(rows * in_dim))
+            .map(|i| (i as f32) * 0.5 - 3.0)
+            .collect();
         let w_vals: Vec<f32> = (0..(in_dim * out_dim))
             .map(|i| (i as f32) * 0.25 + 0.75)
             .collect();
@@ -211,7 +217,8 @@ fn the_register_tiled_row_batched_candidate_matches_the_oracle() {
 
         let count = (rows * out_dim) as usize;
         let read = |program: &vyre_foundation::ir::Program| {
-            let outputs = vyre_reference::reference_eval(program, &inputs)
+            let outputs = vyre_reference::ReferenceRequest::standard(program, &inputs)
+                .outputs()
                 .unwrap_or_else(|e| panic!("Fix: {rows}x{in_dim}x{out_dim} must evaluate: {e}"));
             vyre_primitives::wire::unpack_f32_slice(&outputs[0].to_bytes(), count, "row_batched")
                 .expect("unpack f32 slice")

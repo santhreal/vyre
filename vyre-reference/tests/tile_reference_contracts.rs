@@ -8,7 +8,6 @@
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Ident, Layout, Node, Program, Residency, Tile,
 };
-use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
 use vyre_test_support::tile_programs::tile_cases;
 
@@ -33,7 +32,8 @@ fn reference_eval_computes_every_tile_case() {
             .map(|buffer| Value::from(encode_f32(buffer)))
             .collect();
 
-        let outputs = reference_eval(&case.program, &inputs)
+        let outputs = vyre_reference::ReferenceRequest::standard(&case.program, &inputs)
+            .outputs()
             .unwrap_or_else(|e| panic!("case {name} must evaluate on the oracle: {e}"));
 
         let actual = decode_f32(&outputs[0].to_bytes());
@@ -91,13 +91,14 @@ fn reference_eval_rejects_elementwise_operand_that_does_not_divide_the_output() 
         ],
     );
 
-    let err = reference_eval(
+    let err = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(encode_f32(&a_data)),
             Value::from(encode_f32(&b_data)),
         ],
     )
+    .outputs()
     .expect_err("reference_eval must reject 3-element input against 4-element output");
 
     let err_msg = err.to_string();

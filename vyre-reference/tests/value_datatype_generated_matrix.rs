@@ -158,7 +158,9 @@ fn generated_fixed_width_datatypes_decode_only_the_declared_storage_window() {
             case.name
         );
 
-        let zero = Value::zero_for(case.ty.clone()).to_bytes();
+        let zero = Value::try_zero_for(case.ty.clone())
+            .expect("Fix: the declared element type must have a defined zero")
+            .to_bytes();
         assert_eq!(
             zero.len(),
             case.width,

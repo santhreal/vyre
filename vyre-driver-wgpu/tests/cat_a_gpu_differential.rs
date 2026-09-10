@@ -53,7 +53,8 @@ fn backend() -> &'static WgpuBackend {
 }
 
 fn run_cpu(program: &Program, inputs: Vec<Value>) -> Vec<Vec<u8>> {
-    let outputs = vyre_reference::reference_eval(program, &inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
         .expect("reference backend must execute Cat-A op");
     outputs.into_iter().map(|v| v.to_bytes()).collect()
 }

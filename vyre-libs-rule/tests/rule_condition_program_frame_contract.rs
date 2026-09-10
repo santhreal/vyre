@@ -47,7 +47,8 @@ fn verdict(program: &Program, arguments: [u32; 6]) -> u32 {
         .iter()
         .map(|word| Value::from(pack_u32_slice(&[*word])))
         .collect();
-    let outputs = vyre_reference::reference_eval(program, &inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
         .expect("Fix: a condition program must execute on the reference interpreter");
     assert_eq!(outputs.len(), 1, "a condition leaf publishes one verdict");
     decode_u32_le_bytes_all(&outputs[0].to_bytes())[0]

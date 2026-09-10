@@ -41,7 +41,7 @@ pub(crate) fn output_only_store(expr: Expr) -> Program {
 pub(crate) fn run_reference(
     program: &Program,
 ) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
-    vyre_reference::reference_eval(program, &[Value::U32(0)])
+    vyre_reference::ReferenceRequest::standard(program, &[Value::U32(0)]).outputs()
 }
 
 fn leaf_expr() -> impl Strategy<Value = Expr> {

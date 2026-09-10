@@ -13,7 +13,12 @@ fn eval_cast(target: DataType, source: Expr) -> Value {
         target,
         value: Box::new(source),
     };
-    reference_eval_expr(&program, &mut ReferenceMemory::empty(), InvocationIds::ZERO, &expr)
+    reference_eval_expr(
+        &program,
+        &mut ReferenceMemory::empty(),
+        InvocationIds::ZERO,
+        &expr,
+    )
     .expect("Fix: generated vector cast expression must evaluate in the reference oracle.")
 }
 

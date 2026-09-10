@@ -43,7 +43,8 @@ impl BackendRunner {
                 for bytes in backend_inputs.iter() {
                     values.push(Value::from(*bytes));
                 }
-                vyre_reference::reference_eval(program, values)
+                vyre_reference::ReferenceRequest::standard(program, values)
+                    .outputs()
                     .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
                     .map_err(|error| format!("reference dispatch failed: {error}"))
             }

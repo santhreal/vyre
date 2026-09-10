@@ -194,8 +194,10 @@ enum Order {
 
 fn eval(program: &Program, inputs: &[Value], order: Order) -> Vec<Value> {
     match order {
-        Order::Forward => vyre_reference::reference_eval(program, inputs),
-        Order::Reversed => vyre_reference::reference_eval_lane_reversed(program, inputs),
+        Order::Forward => vyre_reference::ReferenceRequest::standard(program, inputs).outputs(),
+        Order::Reversed => vyre_reference::ReferenceRequest::standard(program, inputs)
+            .with_schedule_policy(vyre_reference::DeterministicSchedulePolicy::LaneReversed)
+            .outputs(),
     }
     .expect("reference evaluation must succeed")
 }

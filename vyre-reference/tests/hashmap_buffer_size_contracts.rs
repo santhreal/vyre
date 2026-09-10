@@ -6,7 +6,7 @@
 //! halves of that ABI: the arity and the per-buffer size.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_reference::{reference_eval, value::Value};
+use vyre_reference::value::Value;
 
 #[test]
 fn huge_declared_buffer_size_returns_structured_error() {
@@ -23,7 +23,8 @@ fn huge_declared_buffer_size_returns_structured_error() {
         )],
     );
 
-    let error = reference_eval(&program, &[Value::from(vec![0u8; 16])])
+    let error = vyre_reference::ReferenceRequest::standard(&program, &[Value::from(vec![0u8; 16])])
+        .outputs()
         .expect_err("oversized declared input must not panic or allocate implicitly");
     let message = error.to_string();
     assert!(
@@ -77,10 +78,11 @@ fn elementwise_program(count: u32) -> Program {
 /// Four u32 elements declared (16 bytes), eight bytes supplied for `b`.
 #[test]
 fn an_undersized_input_is_an_error() {
-    let error = reference_eval(
+    let error = vyre_reference::ReferenceRequest::standard(
         &elementwise_program(4),
         &[Value::from(vec![0u8; 16]), Value::from(vec![0u8; 8])],
     )
+    .outputs()
     .expect_err("an undersized input must be rejected");
 
     let message = error.to_string();
@@ -104,10 +106,11 @@ fn an_undersized_input_is_an_error() {
 /// test above pass while breaking every caller.
 #[test]
 fn an_exactly_sized_input_set_is_accepted() {
-    let outputs = reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &elementwise_program(4),
         &[Value::from(vec![0xFFu8; 16]), Value::from(vec![0x0Fu8; 16])],
     )
+    .outputs()
     .expect("an exactly-sized input set must be accepted");
 
     assert_eq!(outputs.len(), 1, "the program declares one output buffer");
@@ -125,10 +128,11 @@ fn an_exactly_sized_input_set_is_accepted() {
 /// still passed.
 #[test]
 fn an_input_one_byte_short_is_an_error() {
-    let error = reference_eval(
+    let error = vyre_reference::ReferenceRequest::standard(
         &elementwise_program(4),
         &[Value::from(vec![0u8; 16]), Value::from(vec![0u8; 15])],
     )
+    .outputs()
     .expect_err("an input one byte short must be rejected");
     assert!(
         error.to_string().contains("15 bytes"),
@@ -142,10 +146,11 @@ fn an_input_one_byte_short_is_an_error() {
 /// reaches for once they have concluded the Value is ignored.
 #[test]
 fn an_empty_input_is_an_error() {
-    let error = reference_eval(
+    let error = vyre_reference::ReferenceRequest::standard(
         &elementwise_program(4),
         &[Value::from(vec![0u8; 16]), Value::from(Vec::<u8>::new())],
     )
+    .outputs()
     .expect_err("an empty input must be rejected");
     assert!(error.to_string().contains("`b`"), "got: {error}");
 }
@@ -161,8 +166,12 @@ fn an_empty_input_is_an_error() {
 /// long-list refusal states rather than a second sentence describing it.
 #[test]
 fn a_list_one_value_short_is_refused_by_name() {
-    let error = reference_eval(&elementwise_program(4), &[Value::from(vec![0xFFu8; 16])])
-        .expect_err("a list one Value short must be refused");
+    let error = vyre_reference::ReferenceRequest::standard(
+        &elementwise_program(4),
+        &[Value::from(vec![0xFFu8; 16])],
+    )
+    .outputs()
+    .expect_err("a list one Value short must be refused");
     let message = error.to_string();
     assert!(
         message.contains("`b`"),
@@ -181,7 +190,7 @@ fn a_list_one_value_short_is_refused_by_name() {
 /// Accepting it here is what let a malformed fixture reach hardware.
 #[test]
 fn an_output_placeholder_is_refused() {
-    let error = reference_eval(
+    let error = vyre_reference::ReferenceRequest::standard(
         &elementwise_program(4),
         &[
             Value::from(vec![0xFFu8; 16]),
@@ -189,6 +198,7 @@ fn an_output_placeholder_is_refused() {
             Value::from(vec![0u8; 16]),
         ],
     )
+    .outputs()
     .expect_err("a Value for a backend-allocated output must be refused");
     let message = error.to_string();
     assert!(
@@ -207,10 +217,11 @@ fn an_output_placeholder_is_refused() {
 /// output it would demand a Value the ABI says the caller never supplies.
 #[test]
 fn the_interpreter_allocates_its_own_output() {
-    let outputs = reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &elementwise_program(4),
         &[Value::from(vec![0xFFu8; 16]), Value::from(vec![0x0Fu8; 16])],
     )
+    .outputs()
     .expect("one Value per input buffer is the whole ABI");
     assert_eq!(outputs[0].to_bytes(), vec![0x0Fu8; 16]);
 }
@@ -223,13 +234,14 @@ fn the_interpreter_allocates_its_own_output() {
 fn the_required_size_tracks_the_declared_element_count() {
     for count in [1u32, 2, 4, 16, 257] {
         let required = count as usize * 4;
-        let error = reference_eval(
+        let error = vyre_reference::ReferenceRequest::standard(
             &elementwise_program(count),
             &[
                 Value::from(vec![0u8; required]),
                 Value::from(vec![0u8; required - 1]),
             ],
         )
+        .outputs()
         .expect_err("an undersized input must be rejected at every element count");
         let message = error.to_string();
         assert!(

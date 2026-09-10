@@ -26,7 +26,8 @@ fn reference(hist: &[u32; 256]) -> (u32, u32) {
 fn run_ir(hist: &[u32; 256]) -> (u32, u32) {
     let program = utf8_shape_counts("histogram", "out");
     let pack = |d: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(d));
-    let outputs = vyre_reference::reference_eval(&program, &[pack(hist)])
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[pack(hist)])
+        .outputs()
         .expect("utf8_shape_counts reference evaluation must succeed");
     let w: Vec<u32> = outputs[0]
         .to_bytes()

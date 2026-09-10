@@ -33,7 +33,8 @@ fn reference_outputs(program: &Program, lanes: &[&[u32]]) -> Vec<Vec<u8>> {
         .iter()
         .map(|lane| Value::Bytes(pack_words(lane).into()))
         .collect::<Vec<_>>();
-    vyre_reference::reference_eval(program, &inputs)
+    vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
         .expect("Fix: reference evaluation must succeed for valid test programs.")
         .iter()
         .map(|value| value.to_bytes())
@@ -121,11 +122,7 @@ fn spirv_elementwise_fma_matches_reference() {
     let a = (1..=count).collect::<Vec<u32>>();
 
     let outputs = backend
-        .dispatch(
-            &program,
-            &[pack_words(&a)],
-            &DispatchConfig::default(),
-        )
+        .dispatch(&program, &[pack_words(&a)], &DispatchConfig::default())
         .expect("Fix: SPIR-V dispatch of a multiply-add must succeed.");
 
     assert_lanes_match_reference(
@@ -169,11 +166,7 @@ fn spirv_rejects_cooperative_dispatch() {
     let mut config = DispatchConfig::default();
     config.cooperative = true;
     let error = backend
-        .dispatch(
-            &program,
-            &[pack_words(&a), pack_words(&b)],
-            &config,
-        )
+        .dispatch(&program, &[pack_words(&a), pack_words(&b)], &config)
         .expect_err("Fix: SPIR-V must reject cooperative dispatch with UnsupportedFeature");
     match error {
         vyre_driver::BackendError::UnsupportedFeature { name, backend } => {

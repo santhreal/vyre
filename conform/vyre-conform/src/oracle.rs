@@ -107,8 +107,8 @@ impl OracleSession {
         let program = expanded.as_ref().unwrap_or(&self.program);
         let values = reference_values(program, inputs)?;
         let request = vyre_reference::ReferenceRequest::new(
-            program.clone(),
-            values,
+            program,
+            &values,
             vyre_reference::ReferenceBudget::standard(),
         );
         let result = request

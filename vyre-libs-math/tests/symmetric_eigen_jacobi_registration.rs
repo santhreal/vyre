@@ -120,7 +120,8 @@ fn reference_execution_reproduces_the_registered_oracle_within_tolerance() {
 
     for (case, (input_case, expected_case)) in inputs.iter().zip(expected.iter()).enumerate() {
         let values: Vec<Value> = input_case.iter().cloned().map(Value::from).collect();
-        let outputs = vyre_reference::reference_eval(&program, &values)
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &values)
+            .outputs()
             .expect("reference evaluation of the registered eigensolve must succeed");
         assert_eq!(
             outputs.len(),

@@ -81,7 +81,7 @@ pub(crate) fn matroid_intersection_eval(
     );
     let zeros_n = vec![0u32; n as usize];
     let zero1 = vec![0u32];
-    let outputs = vyre_reference::reference_eval_with_dispatch(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(exchange_adj)),
@@ -97,8 +97,9 @@ pub(crate) fn matroid_intersection_eval(
             Value::from(pack(&zero1)),
             Value::from(pack(&zero1)),
         ],
-        min_dispatch,
     )
+    .with_min_dispatch_elements(min_dispatch)
+    .outputs()
     .expect("matroid_intersection_full reference evaluation must succeed");
     let index = vyre_reference::output_index(&program, "set_x")
         .expect("matroid_intersection_full must declare output set_x");

@@ -29,7 +29,7 @@ use vyre_reference::value::Value;
 fn run_ir(adjacency: &[u32], treatment_mask: &[u32], n: u32) -> Vec<u32> {
     let program = rule2_reverse_incoming("adjacency", "treatment_mask", "out_adjacency", n);
     let cells = (n * n) as usize;
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(adjacency)),
@@ -37,6 +37,7 @@ fn run_ir(adjacency: &[u32], treatment_mask: &[u32], n: u32) -> Vec<u32> {
             Value::from(pack(&vec![0u32; cells])),
         ],
     )
+    .outputs()
     .expect("do_rule2_reverse_incoming reference evaluation must succeed");
     let idx = vyre_reference::output_index(&program, "out_adjacency")
         .expect("Fix: do_rule2_reverse_incoming must declare output `out_adjacency`");
@@ -47,7 +48,7 @@ fn run_intervention_ir(adjacency: &[u32], intervention_mask: &[u32], n: u32) -> 
     let program =
         intervention_delete_incoming("adjacency", "intervention_mask", "out_adjacency", n);
     let cells = (n * n) as usize;
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(adjacency)),
@@ -55,6 +56,7 @@ fn run_intervention_ir(adjacency: &[u32], intervention_mask: &[u32], n: u32) -> 
             Value::from(pack(&vec![0u32; cells])),
         ],
     )
+    .outputs()
     .expect("do_intervention_delete_incoming reference evaluation must succeed");
     let idx = vyre_reference::output_index(&program, "out_adjacency")
         .expect("Fix: do_intervention_delete_incoming must declare output `out_adjacency`");
@@ -125,7 +127,7 @@ fn rule2_ir_reverses_incoming_edge_of_treated_node() {
 fn run_rule3_ir(adjacency: &[u32], keep_mask: &[u32], n: u32) -> (Vec<u32>, Vec<u32>, u32) {
     let program = rule3_subgraph("adjacency", "keep_mask", "reduced", "kept", "kept_len", n);
     let cells = (n * n) as usize;
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(adjacency)),
@@ -135,6 +137,7 @@ fn run_rule3_ir(adjacency: &[u32], keep_mask: &[u32], n: u32) -> (Vec<u32>, Vec<
             Value::from(pack(&[0u32])),
         ],
     )
+    .outputs()
     .expect("do_rule3_subgraph reference evaluation must succeed");
     let reduced_idx = vyre_reference::output_index(&program, "reduced")
         .expect("Fix: do_rule3_subgraph must declare output `reduced`");

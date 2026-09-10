@@ -52,7 +52,7 @@ fn run_via_reference(
 ) -> Vec<u32> {
     let n = x.len() as u32;
     let program = score_denoise_step("x", "score", "noise", "alpha", "beta", "sigma", "out", n);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32(x)),
@@ -64,6 +64,7 @@ fn run_via_reference(
             Value::from(pack_u32(&vec![0u32; x.len()])),
         ],
     )
+    .outputs()
     .expect("score_denoise_step reference evaluation must succeed");
     outputs[0]
         .to_bytes()

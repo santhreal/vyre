@@ -40,7 +40,7 @@ fn project_fixed(a: &[u32], omega: &[u32], m: usize, n: usize, l: usize) -> Vec<
 
 fn run_via_reference(a: &[u32], omega: &[u32], m: u32, n: u32, l: u32) -> Vec<u32> {
     let program = randomized_projection_step("a", "omega", "y", m, n, l);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32(a)),
@@ -48,6 +48,7 @@ fn run_via_reference(a: &[u32], omega: &[u32], m: u32, n: u32, l: u32) -> Vec<u3
             Value::from(pack_u32(&vec![0u32; (m * l) as usize])),
         ],
     )
+    .outputs()
     .expect("randomized_projection_step reference evaluation must succeed");
     outputs[0]
         .to_bytes()

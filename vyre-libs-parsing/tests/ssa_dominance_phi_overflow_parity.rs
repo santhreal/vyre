@@ -42,20 +42,16 @@ fn phi_stores_past_capacity_are_gated_not_oob_and_count_signals_overflow() {
         Value::from(pack_u32_slice(&[0])),                                  // out_phi_count
     ];
 
-    let (outputs, report) = vyre_reference::reference_eval_oob_report(&program, &inputs)
-        .expect("ssa_dominance_scan must reference-evaluate the overflow fixture");
-
-    // THE parity assertion: zero out-of-bounds accesses. The interpreter would
-    // silently drop an ungated OOB store, so before the fix `report.oob_stores`
-    // would be 3 here (the second allocation's three writes at 4,5,6).
-    assert_eq!(
-        report.total(),
-        0,
-        "Fix: phi stores past out_phi_nodes capacity must be GATED (got {} OOB store(s), \
-         {} OOB load(s)); an ungated store corrupts memory on a real GPU",
-        report.oob_stores,
-        report.oob_loads
-    );
+    // THE parity assertion: the strict oracle refuses an out-of-bounds access
+    // rather than dropping the store, so evaluating at all is the assertion.
+    // Before the fix the second allocation's three writes at 4, 5 and 6 landed
+    // past `out_phi_nodes` capacity and were silently dropped.
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
+        .expect(
+            "Fix: phi stores past out_phi_nodes capacity must be GATED; an ungated store corrupts \
+         memory on a real GPU",
+        );
 
     let phi_out = vyre_reference::output_index(&program, "out_phi_nodes")
         .expect("out_phi_nodes is a reference output");

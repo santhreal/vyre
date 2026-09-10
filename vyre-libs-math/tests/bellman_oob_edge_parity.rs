@@ -45,7 +45,7 @@ fn gpu_dist(
         },
     );
     // Buffer binding order: dist(0), next_dist(1), changed(2), src(3), dst(4), weight(5).
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(dist_init)),
@@ -56,6 +56,7 @@ fn gpu_dist(
             Value::from(pack(weight)),
         ],
     )
+    .outputs()
     .expect("bellman reference evaluation must succeed");
     unpack(&outputs[0].to_bytes()) // final dist
 }

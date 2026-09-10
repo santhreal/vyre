@@ -129,10 +129,12 @@ impl WholeApplicationWorkload {
                 node_inputs.push(Value::Bytes(Arc::from(bytes.into_boxed_slice())));
             }
 
-            let node_outputs = vyre_reference::reference_eval(&node.program, &node_inputs)
-                .map_err(|err| {
-                    format!("Reference eval failed on node `{}`: {:?}", node.name, err)
-                })?;
+            let node_outputs =
+                vyre_reference::ReferenceRequest::standard(&node.program, &node_inputs)
+                    .outputs()
+                    .map_err(|err| {
+                        format!("Reference eval failed on node `{}`: {:?}", node.name, err)
+                    })?;
 
             for (out_value_id, port) in node.outputs.iter().zip(node.output_ports.iter()) {
                 let Some(index) = vyre_reference::output_index(&node.program, &port.buffer) else {

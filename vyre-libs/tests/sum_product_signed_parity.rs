@@ -143,7 +143,7 @@ fn run_via_reference(c: &Circuit) -> Vec<u32> {
         n_nodes,
         n_edges,
     );
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32(&c.kinds)),
@@ -155,6 +155,7 @@ fn run_via_reference(c: &Circuit) -> Vec<u32> {
             Value::from(pack_u32(&vec![0u32; n_nodes as usize])),
         ],
     )
+    .outputs()
     .expect("sum_product_evaluate reference evaluation must succeed");
     outputs[0]
         .to_bytes()
@@ -307,7 +308,7 @@ fn run_leveled(c: &Circuit, depths: &[u32], max_depth: u32) -> Vec<u32> {
     );
     // Buffer/binding order: depths(0), kinds(1), child_offsets(2), child_counts(3), children(4),
     // weights(5), leaf_values(6), out(7). outputs[0] = the sole ReadWrite buffer `out`.
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32(depths)),
@@ -320,6 +321,7 @@ fn run_leveled(c: &Circuit, depths: &[u32], max_depth: u32) -> Vec<u32> {
             Value::from(pack_u32(&vec![0u32; n_nodes as usize])),
         ],
     )
+    .outputs()
     .expect("sum_product_evaluate_leveled reference evaluation must succeed");
     outputs[0]
         .to_bytes()

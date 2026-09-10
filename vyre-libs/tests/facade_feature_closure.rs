@@ -31,8 +31,8 @@ fn declared_features() -> BTreeMap<String, Vec<String>> {
     // workspace member roster. A compiled-in manifest path names whichever
     // checkout last built this binary through the shared target directory, so
     // the features read would be that tree's.
-    let manifest =
-        vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")).join("Cargo.toml");
+    let manifest = vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"))
+        .join("Cargo.toml");
     let text = std::fs::read_to_string(&manifest)
         .expect("Fix: vyre-libs must be able to read its own Cargo.toml.");
     let parsed: toml::Value =

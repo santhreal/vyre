@@ -38,7 +38,8 @@ fn run_xor_bind(a: &[u32], b: &[u32]) -> Vec<u32> {
     let dim_words = a.len() as u32;
     let program = hypervector_xor_bind("a", "b", "out", dim_words);
     // The write-only output is backend allocated; the host submits only the two inputs.
-    let outputs = vyre_reference::reference_eval(&program, &[pack(a), pack(b)])
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[pack(a), pack(b)])
+        .outputs()
         .expect("xor_bind reference evaluation must succeed");
     decode(&outputs[0])
 }
@@ -50,7 +51,8 @@ fn run_majority(hvs: &[Vec<u32>], dim_words: u32) -> Vec<u32> {
         stacked.extend_from_slice(hv);
     }
     let program = hypervector_majority_bundle("stacked", "out", dim_words, k);
-    let outputs = vyre_reference::reference_eval(&program, &[pack(&stacked)])
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[pack(&stacked)])
+        .outputs()
         .expect("majority_bundle reference evaluation must succeed");
     decode(&outputs[0])
 }

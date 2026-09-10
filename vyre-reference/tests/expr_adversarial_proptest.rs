@@ -8,8 +8,8 @@ use crate::flat_expr_eval;
 
 use proptest::prelude::*;
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_reference::Buffer;
 use vyre_reference::workgroup::InvocationIds;
+use vyre_reference::Buffer;
 use vyre_reference::{reference_eval_expr, value::Value, ReferenceMemory};
 
 use flat_expr_eval::{

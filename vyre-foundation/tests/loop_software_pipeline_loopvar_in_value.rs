@@ -54,7 +54,8 @@ fn software_pipeline_does_not_leak_loop_var_into_epilogue() {
     let buf_in: Vec<u8> = (10u32..18).flat_map(u32::to_le_bytes).collect();
     let inputs = [Value::from(buf_in)];
 
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original loop program is valid and must run");
     // buf_out[i] = buf_in[i] + i = (10+0, 11+1, ... 17+7).
     let expected: Vec<u8> = (0u32..8).flat_map(|i| (10 + i + i).to_le_bytes()).collect();
@@ -67,10 +68,12 @@ fn software_pipeline_does_not_leak_loop_var_into_epilogue() {
     let result = LoopSoftwarePipeline::transform(program);
     assert!(result.changed, "the Load-then-Store loop must pipeline");
 
-    let after = vyre_reference::reference_eval(&result.program, &inputs).expect(
-        "pipelined program must still validate and run -- the epilogue must not \
+    let after = vyre_reference::ReferenceRequest::standard(&result.program, &inputs)
+        .outputs()
+        .expect(
+            "pipelined program must still validate and run -- the epilogue must not \
          reference the loop variable after the steady loop has exited",
-    );
+        );
     assert_eq!(
         after, original,
         "software pipelining must preserve semantics when the store value uses \

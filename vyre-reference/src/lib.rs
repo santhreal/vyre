@@ -39,26 +39,27 @@
 //!   scalar implementation rather than a lowering of the call, so the call ABI
 //!   is shared and the arithmetic is not.
 //!
-//! One canonical evaluator owns program execution. A request is submitted to
-//! [`ReferenceRequest::execute`], which resolves the logical iteration domain
-//! from the program's own declared extents, validates the exact resource ABI,
-//! arms the mandatory budget and interprets the program through
-//! `execution::hashmap`. The crate carried four more routes into the same
-//! semantics: a statement executor over `workgroup::Invocation`, a
-//! `NodeStorage` dataflow interpreter that delegated its arithmetic to
-//! `NodeStorage::interpret`, a second byte-keyed registry of paired primitive
-//! references, and two flat-byte adapters. Each was a second answer to what a
-//! node means, and a differential oracle with two answers cannot say which one
-//! a backend must match, so they are gone rather than kept in agreement.
+//! One canonical evaluator owns program execution, and
+//! [`ReferenceRequest`] is the only way to reach it. A request states the
+//! logical program, the exact resource ABI, the workload envelope, the
+//! numerical contract, the schedule-exploration policy and a mandatory work,
+//! memory and recursion budget; submitting it resolves the logical iteration
+//! domain from the program's own declared extents, arms that budget and
+//! interprets the program through `execution::hashmap`. The crate carried
+//! four more routes into the same semantics and eleven untyped free functions
+//! in front of them, most of which armed no budget at all. Each was a second
+//! answer to what a node means, and a differential oracle with two answers
+//! cannot say which one a backend must match, so they are gone rather than
+//! kept in agreement.
 
 mod error;
 pub use error::{ReferenceError, ReferenceErrorClass, ReferenceErrorKind, StepCeilingExceeded};
 /// Typed, versioned reference execution requests, contracts, and certificates.
 mod request;
 pub use request::{
-    DeterministicSchedulePolicy, DiagnosticPermissiveReport, ExactResourceAbi, ExecutionStrictness,
-    ReferenceBudget, ReferenceCertificate, ReferenceRequest, StrictExecutionResult,
-    WorkloadEnvelope, REFERENCE_ORACLE_VERSION, REFERENCE_REQUEST_SCHEMA_VERSION,
+    DeterministicSchedulePolicy, DiagnosticPermissiveReport, ExactResourceAbi, ReferenceBudget,
+    ReferenceCertificate, ReferenceRequest, StrictExecutionResult, WorkloadEnvelope,
+    REFERENCE_ORACLE_VERSION, REFERENCE_REQUEST_SCHEMA_VERSION,
 };
 mod reference_facet;
 pub use reference_facet::{reference_facets, reference_fn, ReferenceFacet};
@@ -97,17 +98,10 @@ mod float16;
 mod oob;
 mod ops;
 
-/// A tally of out-of-bounds accesses the interpreter silently absorbed during a
-/// tracked run, surfaces the masking that hides GPU/CPU parity hazards. See
-/// [`reference_eval_oob_report`].
-pub use oob::OobReport;
-pub use execution::{op_count, step_budget};
-/// Typed bytes backing one declared IR buffer, as the evaluator holds them.
-pub use oob::Buffer;
 /// Evaluate one expression for one lane through the canonical evaluator.
 pub use execution::single_expr::{reference_eval_expr, ReferenceMemory};
 /// The interpreter's ABI: [`is_reference_input`] selects the buffers a caller must
-/// supply a `Value` for, [`is_reference_output`] selects the buffers `reference_eval`
+/// supply a `Value` for, [`is_reference_output`] selects the buffers a request
 /// returns, [`output_index`] locates a named output by that predicate, and
 /// [`reference_inputs`] projects a declaration-order buffer list onto the input
 /// ABI, and [`reference_input_values`] does the same for borrowed bytes and
@@ -118,10 +112,10 @@ pub use execution::{
     is_reference_input, is_reference_output, output_index, reference_input_values,
     reference_inputs, ReferenceInputMismatch,
 };
-/// Execute a vyre Program on the pure Rust reference interpreter.
-pub use execution::{
-    reference_eval, reference_eval_lane_reversed, reference_eval_lane_rotated,
-    reference_eval_oob_report, reference_eval_step_count, reference_eval_with_dispatch,
-    reference_eval_with_dispatch_oob_report, reference_eval_with_grid,
-    reference_eval_with_step_ceiling, run_arena_reference, run_arena_reference_with_dispatch,
-};
+pub use execution::{op_count, step_budget};
+/// Typed bytes backing one declared IR buffer, as the evaluator holds them.
+pub use oob::Buffer;
+/// A tally of out-of-bounds accesses a diagnostic permissive run absorbed,
+/// which surfaces the masking that hides GPU/CPU parity hazards. See
+/// [`ReferenceRequest::execute_permissive`].
+pub use oob::OobReport;

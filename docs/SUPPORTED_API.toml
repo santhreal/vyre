@@ -151386,7 +151386,7 @@ seam = "reference-semantics"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_backend_extension"
 stability = "extension"
-exported_item_count = 1091
+exported_item_count = 1084
 
   [[package.item]]
   path = "impl core::cmp::Eq for vyre_reference::composition_witness::RuleConditionWitness"
@@ -151564,13 +151564,6 @@ exported_item_count = 1091
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "impl vyre_reference::ExactResourceAbi"
-  kind = "impl"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "impl vyre_reference::OobReport"
   kind = "impl"
   stability = "extension"
@@ -151614,13 +151607,6 @@ exported_item_count = 1091
 
   [[package.item]]
   path = "impl vyre_reference::ReferenceMemory"
-  kind = "impl"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl vyre_reference::ReferenceRequest"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -151726,6 +151712,20 @@ exported_item_count = 1091
 
   [[package.item]]
   path = "impl vyre_reference::workgroup::InvocationIds"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "impl<'a> vyre_reference::ExactResourceAbi<'a>"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "impl<'a> vyre_reference::ReferenceRequest<'a>"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -151844,57 +151844,36 @@ exported_item_count = 1091
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_reference::ExactResourceAbi"
+  path = "vyre_reference::ExactResourceAbi::declared_buffers: &'a [vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl]"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ExactResourceAbi::inputs: &'a [vyre_reference::value::Value]"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ExactResourceAbi<'a>"
   kind = "struct"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_reference::ExactResourceAbi::declared_buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::ExactResourceAbi::for_program(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> Self"
+  path = "vyre_reference::ExactResourceAbi<'a>::for_program(program: &'a vyre_foundation::ir_inner::model::program::definition::Program, inputs: &'a [vyre_reference::value::Value]) -> Self"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_reference::ExactResourceAbi::inputs: alloc::vec::Vec<vyre_reference::value::Value>"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::ExactResourceAbi::new(declared_buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, inputs: alloc::vec::Vec<vyre_reference::value::Value>) -> Self"
+  path = "vyre_reference::ExactResourceAbi<'a>::new(declared_buffers: &'a [vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl], inputs: &'a [vyre_reference::value::Value]) -> Self"
   kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::ExecutionStrictness"
-  kind = "enum"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::ExecutionStrictness::DiagnosticPermissive"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::ExecutionStrictness::Strict"
-  kind = "variant"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -152208,6 +152187,13 @@ exported_item_count = 1091
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_reference::ReferenceBudget::admit_declared_work: bool"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_reference::ReferenceBudget::bounded(steps: u64) -> Self"
   kind = "fn"
   stability = "extension"
@@ -152237,6 +152223,27 @@ exported_item_count = 1091
 
   [[package.item]]
   path = "vyre_reference::ReferenceBudget::standard() -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceBudget::with_max_memory_bytes(bytes: usize) -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceBudget::with_max_recursion_depth(depth: usize) -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceBudget::with_work_ceiling(steps: u64) -> Self"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -152761,36 +152768,8 @@ exported_item_count = 1091
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_reference::ReferenceRequest"
-  kind = "struct"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_reference::ReferenceRequest::budget: vyre_reference::ReferenceBudget"
   kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::ReferenceRequest::execute(&self) -> core::result::Result<vyre_reference::StrictExecutionResult, vyre_reference::ReferenceError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::ReferenceRequest::execute_permissive(&self) -> core::result::Result<vyre_reference::DiagnosticPermissiveReport, vyre_reference::ReferenceError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::ReferenceRequest::new(program: vyre_foundation::ir_inner::model::program::definition::Program, inputs: alloc::vec::Vec<vyre_reference::value::Value>, budget: vyre_reference::ReferenceBudget) -> Self"
-  kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -152803,14 +152782,14 @@ exported_item_count = 1091
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_reference::ReferenceRequest::program: vyre_foundation::ir_inner::model::program::definition::Program"
+  path = "vyre_reference::ReferenceRequest::program: &'a vyre_foundation::ir_inner::model::program::definition::Program"
   kind = "field"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_reference::ReferenceRequest::resource_abi: vyre_reference::ExactResourceAbi"
+  path = "vyre_reference::ReferenceRequest::resource_abi: vyre_reference::ExactResourceAbi<'a>"
   kind = "field"
   stability = "extension"
   feature = "unconditional"
@@ -152824,13 +152803,6 @@ exported_item_count = 1091
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_reference::ReferenceRequest::strictness: vyre_reference::ExecutionStrictness"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_reference::ReferenceRequest::version: u32"
   kind = "field"
   stability = "extension"
@@ -152838,36 +152810,99 @@ exported_item_count = 1091
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_reference::ReferenceRequest::with_numerical_contract(self, contract: vyre_spec::numeric_semantics::NumericSemantics) -> Self"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::ReferenceRequest::with_schedule_policy(self, policy: vyre_reference::DeterministicSchedulePolicy) -> Self"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::ReferenceRequest::with_strictness(self, strictness: vyre_reference::ExecutionStrictness) -> Self"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::ReferenceRequest::with_workload_envelope(self, envelope: vyre_reference::WorkloadEnvelope) -> Self"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_reference::ReferenceRequest::workload_envelope: vyre_reference::WorkloadEnvelope"
   kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>"
+  kind = "struct"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>::execute(&self) -> core::result::Result<vyre_reference::StrictExecutionResult, vyre_reference::ReferenceError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>::execute_permissive(&self) -> core::result::Result<vyre_reference::DiagnosticPermissiveReport, vyre_reference::ReferenceError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>::new(program: &'a vyre_foundation::ir_inner::model::program::definition::Program, inputs: &'a [vyre_reference::value::Value], budget: vyre_reference::ReferenceBudget) -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>::outputs(&self) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>::outputs_and_steps(&self) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, u64), vyre_reference::ReferenceError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>::standard(program: &'a vyre_foundation::ir_inner::model::program::definition::Program, inputs: &'a [vyre_reference::value::Value]) -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>::with_budget(self, budget: vyre_reference::ReferenceBudget) -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>::with_grid(self, grid: [u32; 3]) -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>::with_min_dispatch_elements(self, min: u32) -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>::with_numerical_contract(self, contract: vyre_spec::numeric_semantics::NumericSemantics) -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>::with_schedule_policy(self, policy: vyre_reference::DeterministicSchedulePolicy) -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>::with_workload_envelope(self, envelope: vyre_reference::WorkloadEnvelope) -> Self"
+  kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -158494,70 +158529,7 @@ exported_item_count = 1091
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_reference::reference_eval(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_reference::reference_eval_expr(program: &vyre_foundation::ir_inner::model::program::definition::Program, memory: &mut vyre_reference::ReferenceMemory, ids: vyre_reference::workgroup::InvocationIds, expr: &vyre_foundation::ir_inner::model::generated::Expr) -> core::result::Result<vyre_reference::value::Value, vyre_reference::ReferenceError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::reference_eval_lane_reversed(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::reference_eval_lane_rotated(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], by: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::reference_eval_oob_report(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::reference_eval_step_count(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, u64), vyre_reference::ReferenceError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::reference_eval_with_dispatch(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::reference_eval_with_dispatch_oob_report(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::reference_eval_with_grid(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], grid: [u32; 3]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::reference_eval_with_step_ceiling(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], ceiling: u64) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, u64), vyre_reference::ReferenceError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -158586,20 +158558,6 @@ exported_item_count = 1091
 
   [[package.item]]
   path = "vyre_reference::reference_inputs(program: &vyre_foundation::ir_inner::model::program::definition::Program, buffers: alloc::vec::Vec<alloc::vec::Vec<u8>>) -> alloc::vec::Vec<vyre_reference::value::Value>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::run_arena_reference(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::run_arena_reference_with_dispatch(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -158887,13 +158845,6 @@ exported_item_count = 1091
 
   [[package.item]]
   path = "vyre_reference::value::Value::write_bytes_width_into(&self, target: &mut [u8])"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_reference::value::Value::zero_for(ty: vyre_spec::data_type::DataType) -> Self"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"

@@ -74,7 +74,7 @@ fn gqa_contains_dot_partial_children_owned_by_each_canonical_attention_pass() {
 fn gqa_single_token_broadcasts_distinct_kv_heads_to_their_query_groups() {
     let program = gqa_attention("q", "k", "v", "out", 4, 2, 1, 2)
         .expect("valid grouped-query dimensions must build");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(f32_bytes(&[1.0, 0.0, 0.0, 1.0, 1.0, 1.0, -1.0, 1.0])),
@@ -82,6 +82,7 @@ fn gqa_single_token_broadcasts_distinct_kv_heads_to_their_query_groups() {
             Value::from(f32_bytes(&[10.0, 20.0, 30.0, 40.0])),
         ],
     )
+    .outputs()
     .expect("reference execution must evaluate canonical GQA composition");
 
     assert_eq!(

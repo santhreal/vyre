@@ -198,10 +198,11 @@ mod gradient {
 
     fn render_u32(program: &vyre_foundation::ir::Program, pixels: usize) -> Vec<u32> {
         let init = vec![0u8; pixels * 4];
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             program,
             &[Value::Bytes(std::sync::Arc::from(init.into_boxed_slice()))],
         )
+        .outputs()
         .expect("Fix: visual gradient program must execute in the reference interpreter.");
         outputs[0]
             .to_bytes()

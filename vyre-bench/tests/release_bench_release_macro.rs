@@ -5,7 +5,7 @@ use vyre_bench::cases::release_workloads::{
     build_release_macro_program, release_macro_program_specs,
     release_macro_program_specs_for_records,
 };
-use vyre_reference::{reference_eval, value::Value};
+use vyre_reference::value::Value;
 
 const GENERATED_RECORD_COUNTS: u32 = 128;
 const RELEASE_MACRO_CASES: usize = 10;
@@ -20,7 +20,7 @@ fn reference_outputs(
         .cloned()
         .map(Value::from)
         .collect::<Vec<_>>();
-    reference_eval(&case.program, &values)
+    vyre_reference::ReferenceRequest::standard(&case.program, &values).outputs()
         .unwrap_or_else(|error| {
             panic!(
                 "Fix: generated release macro case {} must execute on the reference interpreter: {error}",

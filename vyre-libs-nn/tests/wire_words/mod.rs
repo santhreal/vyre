@@ -36,12 +36,6 @@ pub(crate) fn bf16_bytes(values: &[f32]) -> Vec<u8> {
     u16_bytes(&values.iter().copied().map(bf16_word).collect::<Vec<_>>())
 }
 
-
-
-
-
-
-
 /// Helper for building standard test KvCacheAppendSpec.
 pub(crate) fn kv_cache_append_test_spec<'a>(
     batch: u32,
@@ -93,7 +87,7 @@ pub(crate) fn execute_causal_gqa(
         offset,
     )
     .expect("Fix: valid causal GQA fixture must build");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(f32_bytes(q)),
@@ -101,6 +95,7 @@ pub(crate) fn execute_causal_gqa(
             Value::from(f32_bytes(v)),
         ],
     )
+    .outputs()
     .expect("Fix: causal GQA must execute");
     f32_words_of(&outputs[0])
 }
@@ -134,7 +129,7 @@ pub(crate) fn execute_causal_gqa_typed(
         dtype,
     )
     .expect("Fix: valid BF16 causal GQA must build");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(bf16_bytes(q)),
@@ -142,6 +137,7 @@ pub(crate) fn execute_causal_gqa_typed(
             Value::from(bf16_bytes(v)),
         ],
     )
+    .outputs()
     .expect("Fix: BF16 causal GQA must execute");
     u16_words_of(&outputs[0])
 }

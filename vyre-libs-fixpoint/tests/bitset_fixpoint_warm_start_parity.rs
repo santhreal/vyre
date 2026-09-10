@@ -22,7 +22,7 @@ use vyre_reference::value::Value;
 fn eval(current: &[u32], next: &[u32], seed: &[u32]) -> (Vec<u32>, u32) {
     let words = current.len() as u32;
     let program = bitset_fixpoint_warm_start("current", "next", "changed", "seed", words);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(current)),
@@ -31,6 +31,7 @@ fn eval(current: &[u32], next: &[u32], seed: &[u32]) -> (Vec<u32>, u32) {
             Value::from(pack(seed)),
         ],
     )
+    .outputs()
     .expect("bitset_fixpoint_warm_start reference evaluation must succeed");
     // Locate each writable output BY NAME (not fixed position) via the interpreter's own
     // `output_index`, so a buffer reorder or a future fused intermediate can't silently

@@ -28,9 +28,12 @@ fn run_ir(segments_in: &[u32]) -> (Vec<u32>, Vec<u32>) {
     let program = rle_segment_lengths(n);
     let pack = |d: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(d));
     let zeros = vec![0u32; n as usize];
-    let outputs =
-        vyre_reference::reference_eval(&program, &[pack(segments_in), pack(&zeros), pack(&zeros)])
-            .expect("rle_segment_lengths reference evaluation must succeed");
+    let outputs = vyre_reference::ReferenceRequest::standard(
+        &program,
+        &[pack(segments_in), pack(&zeros), pack(&zeros)],
+    )
+    .outputs()
+    .expect("rle_segment_lengths reference evaluation must succeed");
     // RW buffers in binding order: lengths_out(1) then values_out(2).
     (decode(&outputs[0]), decode(&outputs[1]))
 }

@@ -11,8 +11,10 @@ use vyre_reference::value::Value;
 
 fn run_packed_u8_program(source: &[u8]) -> Vec<u32> {
     let program = byte_histogram_256_u8("source", "histogram", source.len() as u32);
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(source.to_vec())])
-        .expect("Fix: packed-u8 byte_histogram reference evaluation must succeed");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(source.to_vec())])
+            .outputs()
+            .expect("Fix: packed-u8 byte_histogram reference evaluation must succeed");
     let mut histogram = unpack_u32s(&outputs[0].to_bytes());
     histogram.truncate(256);
     histogram

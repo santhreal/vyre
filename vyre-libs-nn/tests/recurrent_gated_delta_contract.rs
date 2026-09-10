@@ -38,7 +38,7 @@ fn execute(
     );
     let program =
         recurrent_gated_delta(&spec).expect("Fix: valid recurrent delta fixture must build");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(bytes(query)),
@@ -52,6 +52,7 @@ fn execute(
             Value::from(bytes(&vec![0.0f32; state.len()])),
         ],
     )
+    .outputs()
     .expect("Fix: recurrent delta must execute");
     assert_eq!(outputs.len(), 3);
     assert_eq!(decode(&outputs[0]), state);

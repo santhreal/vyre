@@ -21,9 +21,12 @@ fn run_ir(node_tags: &[u32], family_mask: u32) -> Vec<u32> {
     let words = node_count.div_ceil(32).max(1) as usize;
     let program = resolve_family("tags", "nodeset", node_count, family_mask);
     let pack = |d: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(d));
-    let outputs =
-        vyre_reference::reference_eval(&program, &[pack(node_tags), pack(&vec![0u32; words])])
-            .expect("resolve_family reference evaluation must succeed");
+    let outputs = vyre_reference::ReferenceRequest::standard(
+        &program,
+        &[pack(node_tags), pack(&vec![0u32; words])],
+    )
+    .outputs()
+    .expect("resolve_family reference evaluation must succeed");
     outputs[0]
         .to_bytes()
         .chunks_exact(4)

@@ -28,7 +28,8 @@ fn eval(a: &[u32], b: &[u32], seed: Option<&[u32]>, m: u32, n: u32, k: u32, w: u
     if let Some(seed) = seed {
         inputs.push(Value::from(pack(seed)));
     }
-    let outputs = vyre_reference::reference_eval(&program, &inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("semiring_gemm_wide reference evaluation must succeed");
     unpack(&outputs[0].to_bytes()) // c is the sole ReadWrite buffer
 }

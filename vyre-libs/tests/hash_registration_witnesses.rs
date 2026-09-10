@@ -21,7 +21,7 @@ fn assert_registered_witness(id: &str, expected: Vec<Vec<Vec<u8>>>) {
 
     let build = entry.build.expect("neutral builder");
     for (case, (input_set, expected_outputs)) in inputs.iter().zip(expected.iter()).enumerate() {
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &build(),
             &input_set
                 .iter()
@@ -29,6 +29,7 @@ fn assert_registered_witness(id: &str, expected: Vec<Vec<Vec<u8>>>) {
                 .map(Value::from)
                 .collect::<Vec<_>>(),
         )
+        .outputs()
         .unwrap_or_else(|error| panic!("reference run failed for {id}: {error}"))
         .into_iter()
         .map(|value| value.to_bytes())

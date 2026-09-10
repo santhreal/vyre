@@ -24,7 +24,7 @@ fn run(matrix: &[f32], m: u32, n: u32, r_next: u32) -> (Vec<f32>, Vec<f32>) {
     let u_count = (m * r_next) as usize;
     let rem_count = (r_next * n) as usize;
     let gram = (n * n) as usize;
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_f32(matrix)),                    // input_matrix (RO)
@@ -35,6 +35,7 @@ fn run(matrix: &[f32], m: u32, n: u32, r_next: u32) -> (Vec<f32>, Vec<f32>) {
             Value::from(pack_f32(&vec![0.0f32; n as usize])), // tt_eval
         ],
     )
+    .outputs()
     .expect("tensor_train_decompose_step reference evaluation must succeed");
     let u = unpack_f32(
         &outputs[vyre_reference::output_index(&program, "u").expect("u output")].to_bytes(),

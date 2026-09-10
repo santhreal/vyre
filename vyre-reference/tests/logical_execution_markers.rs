@@ -8,7 +8,7 @@
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryOrdering, Node, Program};
 use vyre_reference::value::Value;
 use vyre_reference::workgroup::InvocationIds;
-use vyre_reference::{reference_eval, reference_eval_expr, ReferenceMemory};
+use vyre_reference::{reference_eval_expr, ReferenceMemory};
 
 #[test]
 fn logical_coordinates_read_the_semantic_invocation_coordinates() {
@@ -30,8 +30,8 @@ fn logical_coordinates_read_the_semantic_invocation_coordinates() {
         (Expr::logical_within_tile_index(1), 31),
         (Expr::logical_within_tile_index(2), 32),
     ] {
-        let value = reference_eval_expr(&program, &mut ReferenceMemory::empty(), ids, &expr)
-        .unwrap();
+        let value =
+            reference_eval_expr(&program, &mut ReferenceMemory::empty(), ids, &expr).unwrap();
         assert_eq!(value, Value::U32(expected), "{expr:?}");
     }
 }
@@ -52,7 +52,7 @@ fn every_logical_barrier_ordering_is_executed_or_rejected_by_contract() {
                 Node::store("out", Expr::u32(0), Expr::u32(7)),
             ],
         );
-        let result = reference_eval(&program, &[]);
+        let result = vyre_reference::ReferenceRequest::standard(&program, &[]).outputs();
         if ordering == MemoryOrdering::Relaxed {
             let error = result.expect_err("Relaxed barriers must fail semantic validation");
             assert!(error.to_string().contains("V043"));

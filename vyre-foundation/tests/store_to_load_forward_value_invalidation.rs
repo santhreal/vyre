@@ -49,7 +49,8 @@ fn store_to_load_forward_declines_when_forwarded_var_is_reassigned() {
     let inputs = [Value::U32(0)];
 
     // Original: store b[0] = 5, reassign t = 99, x = load(b,0) = 5, out[0] = 5.
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original program is well-scoped and must run");
     assert_eq!(
         original,
@@ -66,7 +67,8 @@ fn store_to_load_forward_declines_when_forwarded_var_is_reassigned() {
     // the pass forwarded `x = t`, and `t` is 99 at the load point, so `out`
     // would be 99 -- a miscompile. Post-fix the pass declines (the forwarded
     // value's variable `t` is reassigned in the gap), leaving the load intact.
-    let transformed = vyre_reference::reference_eval(&optimized, &inputs)
+    let transformed = vyre_reference::ReferenceRequest::standard(&optimized, &inputs)
+        .outputs()
         .expect("optimized program must still run");
 
     assert_eq!(

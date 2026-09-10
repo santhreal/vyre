@@ -250,9 +250,11 @@ fn reduce_slice(
     })?;
     let mut acc = crate::execution::typed_ops::canonical_f32(identity);
     for index in 0..slice.len() {
-        let lane = crate::execution::typed_ops::canonical_f32(
-            numeric_element("reduce input", slice, index)? as f32,
-        );
+        let lane = crate::execution::typed_ops::canonical_f32(numeric_element(
+            "reduce input",
+            slice,
+            index,
+        )? as f32);
         let combined = op.combine_f32(acc, lane).ok_or_else(|| {
             ReferenceError::incomplete_dispatch_semantics(format!(
                 "tile reduce operator `{}` has no float fold. Fix: add reference semantics for it.",
@@ -301,11 +303,7 @@ fn is_float_element(element: &vyre_foundation::ir::DataType) -> bool {
 }
 
 /// The declared extents of `shape`, checked against the elements present.
-fn declared_extents(
-    role: &str,
-    shape: &Tile,
-    len: usize,
-) -> Result<Vec<usize>, ReferenceError> {
+fn declared_extents(role: &str, shape: &Tile, len: usize) -> Result<Vec<usize>, ReferenceError> {
     if shape.extents.is_empty() {
         return Err(ReferenceError::incomplete_dispatch_semantics(format!(
             "tile {role} declares no extents. Fix: declare the tile with its extents."

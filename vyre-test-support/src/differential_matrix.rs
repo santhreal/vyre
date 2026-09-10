@@ -9,7 +9,7 @@
 
 use vyre_foundation::fp_parity::effective_tolerance;
 use vyre_foundation::ir::Program;
-use vyre_reference::{reference_eval, value::Value};
+use vyre_reference::value::Value;
 
 /// Decision outcome for a differential comparison.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,7 +52,8 @@ pub fn evaluate_differential(
     inputs: &[Value],
     backend_outputs: &[Vec<u8>],
 ) -> Result<DifferentialDecision, String> {
-    let ref_outputs = reference_eval(program, inputs)
+    let ref_outputs = vyre_reference::ReferenceRequest::standard(program, inputs)
+        .outputs()
         .map_err(|e| format!("reference interpreter evaluation failed: {e}"))?;
 
     let ref_bytes: Vec<u8> = ref_outputs.iter().flat_map(|v| v.to_bytes()).collect();

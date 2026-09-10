@@ -32,7 +32,6 @@ use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as
 use vyre_reference::value::Value;
 use vyre_test_support::fixed_point::xorshift32 as next_u32;
 
-
 fn out_by_name(program: &Program, outputs: &[Value], name: &str) -> Vec<u32> {
     let index = vyre_reference::output_index(program, name)
         .unwrap_or_else(|| panic!("Fix: union_find program must declare output `{name}`"));
@@ -102,15 +101,16 @@ fn union_find_closure(
 ) -> Vec<u32> {
     let mut parent: Vec<u32> = (0..node_count).collect();
     for _ in 0..node_count + 1 {
-        let outputs = vyre_reference::reference_eval_with_dispatch(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             program,
             &[
                 Value::from(pack(&parent)),
                 Value::from(pack(edge_a)),
                 Value::from(pack(edge_b)),
             ],
-            edge_count,
         )
+        .with_min_dispatch_elements(edge_count)
+        .outputs()
         .expect("union_find reference evaluation must succeed");
         let next = out_by_name(program, &outputs, "parent");
         if next == parent {
@@ -139,15 +139,16 @@ fn find_root_body_walks_multi_hop_root() {
     let seed = vec![0u32, 3, 3, 3];
     let mut parent = seed;
     for _ in 0..node_count + 1 {
-        let outputs = vyre_reference::reference_eval_with_dispatch(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &program,
             &[
                 Value::from(pack(&parent)),
                 Value::from(pack(&edge_a)),
                 Value::from(pack(&edge_b)),
             ],
-            edge_count,
         )
+        .with_min_dispatch_elements(edge_count)
+        .outputs()
         .expect("union_find reference evaluation must succeed");
         let next = out_by_name(&program, &outputs, "parent");
         if next == parent {

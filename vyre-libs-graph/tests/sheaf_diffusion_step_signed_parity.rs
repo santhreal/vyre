@@ -27,7 +27,7 @@ fn signed_half(state: &mut u32) -> f64 {
 
 fn run_via_reference(stalks: &[u32], restriction: &[u32], damping: u32, cells: u32) -> Vec<u32> {
     let program = sheaf_diffusion_step("stalks", "restriction", "damping", "stalks_next", cells, 1);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32(stalks)),
@@ -36,6 +36,7 @@ fn run_via_reference(stalks: &[u32], restriction: &[u32], damping: u32, cells: u
             Value::from(pack_u32(&vec![0u32; cells as usize])),
         ],
     )
+    .outputs()
     .expect("sheaf_diffusion_step reference evaluation must succeed");
     outputs[0]
         .to_bytes()

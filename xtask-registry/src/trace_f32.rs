@@ -17,7 +17,6 @@
 //! ```
 
 use vyre::ir::Program;
-use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
 use xtask::gate::{Finding, GateCtx, GateError, Report};
 
@@ -51,7 +50,7 @@ impl xtask::gate::GateBehavior for TraceF32 {
                     .iter()
                     .map(|bytes| Value::Bytes(bytes.clone().into()))
                     .collect();
-                match reference_eval(&case.program, &values) {
+                match vyre_reference::ReferenceRequest::standard(&case.program, &values).outputs() {
                     Ok(out) => {
                         let outputs: Vec<Vec<u8>> =
                             out.into_iter().map(|value| value.to_bytes()).collect();

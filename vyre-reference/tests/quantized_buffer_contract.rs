@@ -2,12 +2,13 @@
 //!
 //! The spec exposes INT4/FP4/NF4/FP8 datatypes for GPU inference paths. The
 //! CPU oracle must preserve their fixed-width storage bytes exactly. A load
-//! past the buffer is refused under the strict default; diagnostic mode,
-//! which exists to measure absorbed accesses, keeps the typed zero payload at
-//! the element's storage width rather than degrading to empty `Bytes`.
+//! past the buffer is refused under the strict default; diagnostic permissive
+//! mode counts the absorbed load instead of refusing it, and the payload it
+//! absorbs keeps the element's storage width rather than degrading to empty
+//! `Bytes`.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_reference::{reference_eval, reference_eval_oob_report, value::Value, ReferenceErrorClass};
+use vyre_reference::{value::Value, ReferenceErrorClass, ReferenceRequest};
 
 fn load_store_program(ty: DataType, index: u32) -> Program {
     Program::wrapped(
@@ -25,27 +26,29 @@ fn load_store_program(ty: DataType, index: u32) -> Program {
 }
 
 fn run_single_load_store(ty: DataType, input: Vec<u8>, index: u32) -> Vec<u8> {
-    let outputs = reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &load_store_program(ty, index),
         &[Value::Bytes(input.into())],
     )
+    .outputs()
     .expect("quantized load/store oracle program must execute");
     outputs[0].to_bytes()
 }
 
-/// The absorbed payload of an out-of-bounds load, measured in diagnostic mode.
+/// Diagnostic permissive mode counts an out-of-bounds load instead of
+/// refusing it.
 ///
-/// Asserts the tally counted the access, so this cannot pass by the load
-/// having stayed in bounds.
-fn absorbed_oob_load(ty: DataType, input: Vec<u8>) -> Vec<u8> {
-    let (outputs, report) =
-        reference_eval_oob_report(&load_store_program(ty, 99), &[Value::Bytes(input.into())])
-            .expect("Fix: diagnostic mode must absorb an out-of-bounds load rather than refuse it.");
-    assert!(
-        report.oob_loads > 0,
-        "Fix: the absorbed load must be counted, or this measures an in-bounds load."
-    );
-    outputs[0].to_bytes()
+/// The absorbed payload is not reachable from here, and that is the point:
+/// permissive mode issues no output value a device could be graded against.
+/// The width of that payload is a property of [`Value::try_zero_for`] and is
+/// asserted directly against it below.
+fn absorbed_oob_load_count(ty: DataType, input: Vec<u8>) -> u64 {
+    let program = load_store_program(ty, 99);
+    let inputs = [Value::Bytes(input.into())];
+    let report = ReferenceRequest::standard(&program, &inputs)
+        .execute_permissive()
+        .expect("Fix: diagnostic mode must absorb an out-of-bounds load rather than refuse it.");
+    report.oob_report.oob_loads
 }
 
 /// Under the strict default a load past the buffer is refused for every
@@ -64,10 +67,11 @@ fn quantized_out_of_bounds_load_refuses_under_the_strict_default() {
         DataType::I16,
         DataType::U16,
     ] {
-        let error = reference_eval(
+        let error = vyre_reference::ReferenceRequest::standard(
             &load_store_program(ty.clone(), 99),
             &[Value::Bytes(vec![0xFF, 0xFF].into())],
         )
+        .outputs()
         .expect_err("Fix: a quantized load past the buffer must be refused.");
         assert_eq!(
             error.error_class(),
@@ -96,7 +100,7 @@ fn quantized_scalar_load_store_preserves_raw_storage_bits() {
     }
 }
 
-/// Diagnostic mode absorbs the load at the element's storage width.
+/// The absorbed payload of a one-byte quantized element keeps one byte.
 #[test]
 fn absorbed_quantized_scalar_load_keeps_its_one_byte_width() {
     for ty in [
@@ -106,20 +110,32 @@ fn absorbed_quantized_scalar_load_keeps_its_one_byte_width() {
         DataType::F8E4M3,
         DataType::F8E5M2,
     ] {
+        assert!(
+            absorbed_oob_load_count(ty.clone(), vec![0xFF]) > 0,
+            "{ty} absorbed load must be counted, or this measures an in-bounds load"
+        );
         assert_eq!(
-            absorbed_oob_load(ty.clone(), vec![0xFF]),
+            Value::try_zero_for(ty.clone())
+                .expect("Fix: the declared element type must have a defined zero")
+                .to_bytes(),
             vec![0],
             "{ty} absorbed load must keep a one-byte typed zero, not empty Bytes"
         );
     }
 }
 
-/// Diagnostic mode absorbs a two-byte element at two bytes.
+/// The absorbed payload of a two-byte element keeps two bytes.
 #[test]
 fn absorbed_half_and_bfloat_loads_keep_their_two_byte_width() {
     for ty in [DataType::F16, DataType::BF16, DataType::I16, DataType::U16] {
+        assert!(
+            absorbed_oob_load_count(ty.clone(), vec![0xFF, 0xFF]) > 0,
+            "{ty} absorbed load must be counted, or this measures an in-bounds load"
+        );
         assert_eq!(
-            absorbed_oob_load(ty.clone(), vec![0xFF, 0xFF]),
+            Value::try_zero_for(ty.clone())
+                .expect("Fix: the declared element type must have a defined zero")
+                .to_bytes(),
             vec![0, 0],
             "{ty} absorbed load must preserve its two-byte storage shape"
         );
@@ -137,8 +153,10 @@ fn packed_i4_reference_buffer_len_reports_logical_elements() {
         vec![Node::store("out", Expr::u32(0), Expr::buf_len("input"))],
     );
 
-    let outputs = reference_eval(&program, &[Value::Bytes(vec![0u8; 4].into())])
-        .expect("Fix: packed I4 buffer length oracle must execute.");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::Bytes(vec![0u8; 4].into())])
+            .outputs()
+            .expect("Fix: packed I4 buffer length oracle must execute.");
 
     assert_eq!(
         outputs[0].to_bytes(),

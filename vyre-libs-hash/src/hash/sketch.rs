@@ -449,7 +449,7 @@ mod tests {
         let hashes = [2u32, w + 5, w + 9]; // row0 valid; rows 1,2 far out of range
         let signs = [1u32, 1, 1];
         let program = count_sketch_update("table", "hashes", "signs", d, w);
-        let (_outputs, report) = vyre_test_support::test_parity_oracles::eval_bytes_oob_report(
+        vyre_test_support::test_parity_oracles::eval_bytes_in_bounds(
             "count_sketch_update",
             &program,
             vec![
@@ -457,11 +457,6 @@ mod tests {
                 vyre_primitives::wire::pack_u32_slice(&hashes),
                 vyre_primitives::wire::pack_u32_slice(&signs),
             ],
-        );
-        assert_eq!(
-            report.total(),
-            0,
-            "Fix: the col<w gate must skip the scatter with control flow, never relying on interpreter OOB masking"
         );
     }
 }

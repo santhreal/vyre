@@ -133,40 +133,23 @@ fn every_hardware_registration_passes_every_registry_safety_rule() {
                 offenders.push(format!("{} (case {case_idx}) {rule}: {detail}", entry.id));
             };
 
-            let (forward, report) =
-                match vyre_reference::reference_eval_oob_report(&program, &values) {
-                    Ok(pair) => pair,
+            // The strict oracle refuses an access that left a declared
+            // buffer, so evaluating at all is the out-of-bounds rule.
+            let forward =
+                match vyre_reference::ReferenceRequest::standard(&program, &values).outputs() {
+                    Ok(outputs) => outputs,
                     Err(error) => {
-                        fail("evaluates its own fixture", error.to_string());
+                        fail("evaluates its own fixture in bounds", error.to_string());
                         continue;
                     }
                 };
             checked_cases += 1;
-            if report.total() > 0 {
-                fail(
-                    "is out-of-bounds clean",
-                    format!(
-                        "{} load(s), {} store(s), {} atomic(s) past a buffer on valid input",
-                        report.oob_loads, report.oob_stores, report.oob_atomics
-                    ),
-                );
-            }
 
-            match vyre_reference::reference_eval_with_dispatch_oob_report(
-                &program, &values, overfire,
-            ) {
-                Ok((overfired, over_report)) => {
-                    if over_report.total() > 0 {
-                        fail(
-                            "is out-of-bounds clean under grid over-fire",
-                            format!(
-                                "grid>={overfire}: {} load(s), {} store(s), {} atomic(s)",
-                                over_report.oob_loads,
-                                over_report.oob_stores,
-                                over_report.oob_atomics
-                            ),
-                        );
-                    }
+            match vyre_reference::ReferenceRequest::standard(&program, &values)
+                .with_min_dispatch_elements(overfire)
+                .outputs()
+            {
+                Ok(overfired) => {
                     if bytes(&overfired) != bytes(&forward) {
                         fail(
                             "keeps its output under grid over-fire",
@@ -174,16 +157,27 @@ fn every_hardware_registration_passes_every_registry_safety_rule() {
                         );
                     }
                 }
-                Err(error) => fail("evaluates under grid over-fire", error.to_string()),
+                Err(error) => fail(
+                    "evaluates in bounds under grid over-fire",
+                    format!("grid>={overfire}: {error}"),
+                ),
             }
 
             let mut orders: Vec<(String, Vec<Value>)> = Vec::new();
-            match vyre_reference::reference_eval_lane_reversed(&program, &values) {
+            match vyre_reference::ReferenceRequest::standard(&program, &values)
+                .with_schedule_policy(vyre_reference::DeterministicSchedulePolicy::LaneReversed)
+                .outputs()
+            {
                 Ok(reversed) => orders.push(("reversed lane order".to_string(), reversed)),
                 Err(error) => fail("evaluates in reversed lane order", error.to_string()),
             }
             for by in ROTATIONS {
-                match vyre_reference::reference_eval_lane_rotated(&program, &values, by) {
+                match vyre_reference::ReferenceRequest::standard(&program, &values)
+                    .with_schedule_policy(vyre_reference::DeterministicSchedulePolicy::LaneRotated(
+                        by,
+                    ))
+                    .outputs()
+                {
                     Ok(rotated) => orders.push((format!("lane order rotated by {by}"), rotated)),
                     Err(error) => fail(
                         &format!("evaluates in lane order rotated by {by}"),

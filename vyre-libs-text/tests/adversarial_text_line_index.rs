@@ -36,7 +36,8 @@ fn run_program(source: &[u8]) -> Vec<u32> {
         input_bytes.extend_from_slice(&0u32.to_le_bytes());
     }
     let lines_index = output_index(&program, "lines");
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(input_bytes)])
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[Value::from(input_bytes)])
+        .outputs()
         .expect("Fix: line_index reference evaluation must succeed");
     let out_bytes = outputs[lines_index].to_bytes();
     let mut out_u32s = Vec::with_capacity(cap);
@@ -49,8 +50,10 @@ fn run_packed_u8_program(source: &[u8]) -> Vec<u32> {
     let n = source.len();
     let program = line_index_u8("source", "lines", n as u32);
     let lines_index = output_index(&program, "lines");
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(source.to_vec())])
-        .expect("Fix: packed-u8 line_index reference evaluation must succeed");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(source.to_vec())])
+            .outputs()
+            .expect("Fix: packed-u8 line_index reference evaluation must succeed");
     let out_bytes = outputs[lines_index].to_bytes();
     let mut out_u32s = Vec::with_capacity(n);
     out_u32s.extend(unpack_u32s(&out_bytes));
@@ -99,7 +102,8 @@ fn line_index_pipeline_intermediates_match_registered_fixture_shape() {
     for &byte in source {
         input_bytes.extend_from_slice(&(byte as u32).to_le_bytes());
     }
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(input_bytes)])
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[Value::from(input_bytes)])
+        .outputs()
         .expect("Fix: line_index pipeline fixture reference evaluation must succeed");
 
     assert_eq!(unpack_u32s(&outputs[0].to_bytes()), vec![0, 0, 0, 1, 0]);

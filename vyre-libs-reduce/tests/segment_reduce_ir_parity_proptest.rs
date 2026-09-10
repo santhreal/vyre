@@ -46,7 +46,7 @@ fn run_ir(input: &[u32], offsets: &[u32], num_segments: u32) -> Vec<u32> {
         num_segments,
     );
     let pack = |data: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(data));
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             pack(input_arg),                          // input (binding 0, RO)
@@ -54,6 +54,7 @@ fn run_ir(input: &[u32], offsets: &[u32], num_segments: u32) -> Vec<u32> {
             pack(&vec![0u32; num_segments as usize]), // output (binding 2, RW)
         ],
     )
+    .outputs()
     .expect("segment_reduce_sum reference evaluation must succeed");
     // Sole RW buffer is `output` (binding 2) → results[0].
     outputs[0]

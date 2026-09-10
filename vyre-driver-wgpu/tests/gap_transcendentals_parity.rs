@@ -217,7 +217,8 @@ fn reference_results(op: UnOp, inputs: &[f32]) -> Vec<f32> {
         &expanded,
         vec![f32_bytes(inputs), vec![0u8; inputs.len() * 4]],
     );
-    let outputs = vyre_reference::reference_eval(&expanded, &values)
+    let outputs = vyre_reference::ReferenceRequest::standard(&expanded, &values)
+        .outputs()
         .expect("Fix: the reference interpreter must evaluate an expanded program");
     bytes_f32(&outputs[0].to_bytes())
 }

@@ -216,6 +216,20 @@ impl<'a> HashmapInvocation<'a> {
         self.returned || self.frames.is_empty()
     }
 
+    /// Push one frame, refusing a lane whose nesting has reached the armed
+    /// recursion ceiling.
+    ///
+    /// Every frame a lane enters goes through here, so the depth contract is
+    /// stated once instead of at each nesting statement.
+    ///
+    /// # Errors
+    /// Refuses with `BudgetExhaustion` when the frame ceiling is crossed.
+    #[inline]
+    pub(crate) fn push_frame(&mut self, frame: Frame<'a>) -> Result<(), ReferenceError> {
+        self.frames.push(frame);
+        crate::execution::step_budget::check_recursion_depth(self.frames.len())
+    }
+
     #[inline]
     pub(crate) fn is_leader(&self) -> bool {
         self.linear_local_index == 0

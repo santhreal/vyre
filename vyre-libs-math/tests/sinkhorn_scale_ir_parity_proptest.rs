@@ -37,10 +37,11 @@ fn oracle(target: &[u32], divisor: &[u32]) -> Vec<u32> {
 fn gpu_scale(target: &[u32], divisor: &[u32]) -> Vec<u32> {
     let count = target.len() as u32;
     let program = sinkhorn_scale("target", "divisor", "out", count);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[Value::from(pack(target)), Value::from(pack(divisor))],
     )
+    .outputs()
     .expect("sinkhorn_scale reference evaluation must succeed");
     unpack(&outputs[0].to_bytes())
 }

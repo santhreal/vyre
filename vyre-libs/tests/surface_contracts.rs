@@ -188,8 +188,9 @@ fn contract_substring_real_byte_compare() {
         .flat_map(|b| u32::from(b).to_le_bytes())
         .collect();
     let inputs = [Value::from(haystack_bytes), Value::from(needle_bytes)];
-    let outputs =
-        vyre_reference::reference_eval(&program, &inputs).expect("execute substring_search");
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
+        .expect("execute substring_search");
     assert_eq!(outputs.len(), 1, "only matches buffer is ReadWrite");
     let raw = outputs[0].to_bytes();
     let words: Vec<u32> = raw

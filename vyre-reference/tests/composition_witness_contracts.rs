@@ -95,7 +95,7 @@ use vyre_reference::composition_witness::{
     AmgSolveScratchWitness, ExplodedIfdsScratchWitness, NewtonSchulzScratchWitness,
     RuleConditionWitness, RuleEvaluationContextWitness, RuleFormulaWitness,
 };
-use vyre_reference::{reference_eval, value::Value};
+use vyre_reference::value::Value;
 use vyre_spec::Semiring;
 
 #[test]
@@ -212,13 +212,14 @@ fn interpreter_matches_independent_witness_on_matrix_vector() {
     let mat = vec![2u32, 3, 4, 5];
     let v = vec![10u32, 20];
 
-    let outputs = reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::Bytes(bytemuck_slice(&mat)),
             Value::Bytes(bytemuck_slice(&v)),
         ],
     )
+    .outputs()
     .expect("reference evaluation must succeed");
 
     // Independent witness calculation:

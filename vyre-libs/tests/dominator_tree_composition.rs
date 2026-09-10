@@ -73,7 +73,8 @@ fn reference_words(program: &Program, inputs: &[&[u32]]) -> Vec<Vec<u32>> {
         .iter()
         .map(|words| Value::from(vyre_primitives::wire::pack_u32_slice(words)))
         .collect();
-    vyre_reference::reference_eval(program, &values)
+    vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
         .expect("dominator-tree phase program must evaluate")
         .into_iter()
         .map(|value| {
@@ -142,7 +143,7 @@ fn depth_phase_witness_matches_reference() {
 
     let build = entry.build.expect("neutral builder");
     for (case, (input_set, expected)) in inputs.iter().zip(declared.iter()).enumerate() {
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &build(),
             &input_set
                 .iter()
@@ -150,6 +151,7 @@ fn depth_phase_witness_matches_reference() {
                 .map(Value::from)
                 .collect::<Vec<_>>(),
         )
+        .outputs()
         .expect("reference run for dominator_tree_depth")
         .into_iter()
         .map(|value| value.to_bytes())
@@ -208,7 +210,7 @@ fn intersect_phase_witness_matches_reference() {
 
     let build = entry.build.expect("neutral builder");
     for (case, (input_set, expected)) in inputs.iter().zip(declared.iter()).enumerate() {
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &build(),
             &input_set
                 .iter()
@@ -216,6 +218,7 @@ fn intersect_phase_witness_matches_reference() {
                 .map(Value::from)
                 .collect::<Vec<_>>(),
         )
+        .outputs()
         .expect("reference run for dominator_tree_intersect_step")
         .into_iter()
         .map(|value| value.to_bytes())

@@ -47,8 +47,9 @@ fn run_compress(
         Value::from(u32_bytes(msg)),
         Value::from(u32_bytes(params)),
     ];
-    let outputs =
-        vyre_reference::reference_eval(program, &inputs).expect("blake3_compress must execute");
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
+        .expect("blake3_compress must execute");
     assert_eq!(outputs.len(), 1, "only cv_out buffer is ReadWrite");
     let words = decode_u32_words(&outputs[0].to_bytes());
     assert_eq!(words.len(), 8);

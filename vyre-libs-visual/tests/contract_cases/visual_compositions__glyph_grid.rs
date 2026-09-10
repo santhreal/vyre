@@ -32,7 +32,7 @@ mod glyph_grid {
             grid.shape,
             grid.glyph_count,
         );
-        let outputs = vyre_reference::reference_eval(
+        let outputs = vyre_reference::ReferenceRequest::standard(
             &program,
             &[
                 Value::from(le_bytes(&grid.glyphs)),
@@ -41,6 +41,7 @@ mod glyph_grid {
                 Value::from(le_bytes(&grid.atlas)),
             ],
         )
+        .outputs()
         .expect("glyph_grid_blend must execute under the reference oracle");
         assert_eq!(outputs.len(), 1, "only the output buffer is ReadWrite");
         words(&outputs[0].to_bytes())

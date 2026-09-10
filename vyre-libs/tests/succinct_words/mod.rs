@@ -14,8 +14,10 @@ use crate::wire_words::{decode_u32_words, u32_bytes};
 /// Build the rank superblock prefix table for `bits`.
 pub(crate) fn superblocks(bits: &[u32], words: u32, block_words: u32) -> Vec<u32> {
     let program = vyre_libs::math::succinct::rank1_superblocks("bits", "sb", words, block_words);
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(u32_bytes(bits))])
-        .expect("Fix: rank1_superblocks must execute in the reference interpreter.");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(u32_bytes(bits))])
+            .outputs()
+            .expect("Fix: rank1_superblocks must execute in the reference interpreter.");
     decode_u32_words(&outputs[0].to_bytes())
 }
 
@@ -46,14 +48,15 @@ pub(crate) fn try_rank_query(
         queries.len() as u32,
         block_words,
     );
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(u32_bytes(bits)),
             Value::from(u32_bytes(superblocks)),
             Value::from(u32_bytes(queries)),
         ],
-    )?;
+    )
+    .outputs()?;
     Ok(decode_u32_words(&outputs[0].to_bytes()))
 }
 
@@ -75,12 +78,13 @@ pub(crate) fn try_select_query(
         bits.len() as u32,
         queries.len() as u32,
     );
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(u32_bytes(bits)),
             Value::from(u32_bytes(queries)),
         ],
-    )?;
+    )
+    .outputs()?;
     Ok(decode_u32_words(&outputs[0].to_bytes()))
 }

@@ -26,11 +26,10 @@ fn example_op_adds_one_elementwise() {
     )
     .build()
     .expect("example operation must satisfy its typed contract");
-    let outputs = vyre_reference::reference_eval(
-        &program,
-        &[Value::from(u32_bytes(&[1, 2, 3, 4]))],
-    )
-    .expect("example_op must execute");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(u32_bytes(&[1, 2, 3, 4]))])
+            .outputs()
+            .expect("example_op must execute");
     let got = decode_u32_words(&outputs[0].to_bytes());
     assert_eq!(got, vec![2, 3, 4, 5]);
 }

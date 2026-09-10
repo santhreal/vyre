@@ -33,7 +33,8 @@ fn execute_words(program: &Program, input: &[u16]) -> Vec<u16> {
         .iter()
         .flat_map(|word| word.to_le_bytes())
         .collect::<Vec<_>>();
-    let outputs = vyre_reference::reference_eval(program, &[Value::from(input_bytes)])
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &[Value::from(input_bytes)])
+        .outputs()
         .expect("Fix: typed layout conversion must execute");
     outputs[0]
         .to_bytes()

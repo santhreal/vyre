@@ -56,8 +56,10 @@ fn a_mesh_placement_computes_what_the_reference_computes() {
     let graph = in_place_input_graph(8);
     let program = graph.nodes()[0].program.clone();
     let state = vec![0u8; 8 * 4];
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(state.as_slice())])
-        .expect("Fix: the reference oracle must execute the fixture program");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(state.as_slice())])
+            .outputs()
+            .expect("Fix: the reference oracle must execute the fixture program");
     let words = outputs[0]
         .to_bytes()
         .chunks_exact(4)

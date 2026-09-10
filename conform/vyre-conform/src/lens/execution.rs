@@ -22,7 +22,7 @@ pub fn run_cpu(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, Re
     };
     let values = vyre_reference::reference_input_values(program, effective_slices)
         .map_err(|m| ReferenceError::new(format!("input mismatch: {m}")))?;
-    let outputs = vyre_reference::reference_eval(program, &values)?;
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &values).outputs()?;
     Ok(outputs.into_iter().map(|value| value.to_bytes()).collect())
 }
 

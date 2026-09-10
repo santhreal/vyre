@@ -108,7 +108,7 @@ fn build(model_dim: u32, hidden_dim: u32) -> Program {
 fn run(model_dim: u32, hidden_dim: u32) -> (Vec<f32>, Vec<f32>) {
     let f = fixture(model_dim, hidden_dim);
     let program = build(model_dim, hidden_dim);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_f32_slice(&f.x)),
@@ -118,6 +118,7 @@ fn run(model_dim: u32, hidden_dim: u32) -> (Vec<f32>, Vec<f32>) {
             Value::from(pack_f32_slice(&f.b2)),
         ],
     )
+    .outputs()
     .expect("Fix: mlp_4x_leaky_sq must reference-evaluate");
     let index = vyre_reference::output_index(&program, "out")
         .expect("Fix: mlp_4x_leaky_sq must declare output `out`");

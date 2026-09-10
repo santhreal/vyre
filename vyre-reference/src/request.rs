@@ -3,43 +3,74 @@
 //! One submission carries the logical program, the exact resource ABI, the
 //! workload envelope, the numerical contract, the schedule policy, and a
 //! mandatory work, memory, and recursion budget. Nothing about an execution is
-//! implicit, and nothing about it is optional.
+//! implicit, and nothing about it is optional: [`ReferenceRequest`] is the only
+//! type the evaluator accepts and its methods are the only entry points into
+//! it.
+//!
+//! Strictness is the method rather than a field. [`ReferenceRequest::execute`]
+//! and [`ReferenceRequest::outputs`] grade a device; they refuse a fault
+//! instead of absorbing it. [`ReferenceRequest::execute_permissive`] records
+//! what a run absorbed and returns a [`DiagnosticPermissiveReport`], which has
+//! no output value and no certificate anywhere in it. A caller therefore
+//! cannot extract an expected output from a permissive run by ignoring a
+//! `Result` or by reading the wrong field: the type carries none.
 
 use vyre_foundation::ir::{BufferDecl, Program};
-use vyre_spec::NumericSemantics;
+use vyre_spec::{numeric_semantics_for, DataType, NumericSemantics};
 
 use crate::error::ReferenceError;
 use crate::oob::OobReport;
 use crate::value::Value;
 
 /// Stable schema version for [`ReferenceRequest`].
-pub const REFERENCE_REQUEST_SCHEMA_VERSION: u32 = 1;
+pub const REFERENCE_REQUEST_SCHEMA_VERSION: u32 = 2;
 
 /// Stable reference oracle version reported in certificates.
-pub const REFERENCE_ORACLE_VERSION: &str = "0.8.0-ref.row86";
+pub const REFERENCE_ORACLE_VERSION: &str = "0.9.0-ref";
 
 /// Mandatory work, memory, and recursion budget for reference evaluation.
 ///
-/// An absent budget does not compile: evaluation must be explicitly bounded.
+/// An absent budget does not compile: [`ReferenceRequest::new`] takes one by
+/// value and every evaluation arms it, so no path reaches the evaluator
+/// unbounded.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct ReferenceBudget {
     /// Work ceiling in interpreter steps.
     pub work_ceiling: u64,
-    /// Maximum allocated memory across all buffers in bytes.
+    /// Whether the ceiling rises to the work the program's own constant
+    /// extents declare.
+    ///
+    /// A program whose trip counts are all constants states its work in
+    /// advance, and refusing it against a ceiling sized for a smaller corpus
+    /// says the oracle cannot evaluate a program whose work it can count. When
+    /// this is `false` the ceiling is a hard cap, which is what an adversarial
+    /// termination check needs.
+    pub admit_declared_work: bool,
+    /// Maximum buffer bytes one evaluation may allocate.
     pub max_memory_bytes: usize,
-    /// Maximum call and block frame recursion depth.
+    /// Maximum block, loop, and call frame depth one lane may reach.
     pub max_recursion_depth: usize,
 }
 
 impl ReferenceBudget {
-    /// Standard step ceiling for ordinary unit/integration test workloads.
+    /// Standard step ceiling for ordinary reference workloads.
     pub const DEFAULT_WORK_CEILING: u64 = crate::step_budget::MAX_REFERENCE_STEPS;
-    /// Standard memory ceiling for workgroup/storage allocations (64 MiB).
-    pub const DEFAULT_MAX_MEMORY_BYTES: usize = 64 * 1024 * 1024;
+    /// Standard allocation ceiling for one evaluation (1 GiB).
+    ///
+    /// The oracle materializes every declared buffer of a whole dispatch on
+    /// the host. The bound exists so a program that asks for more memory than
+    /// the host has ends with a structured refusal rather than an allocation
+    /// failure that takes the process with it; it is not a workload size.
+    pub const DEFAULT_MAX_MEMORY_BYTES: usize = 1024 * 1024 * 1024;
     /// Standard frame depth ceiling.
-    pub const DEFAULT_MAX_RECURSION_DEPTH: usize = 256;
+    ///
+    /// Frame depth follows the program's static block nesting, not its trip
+    /// counts, so this stands far above any nesting a compiler emits and still
+    /// ends a self-referential region before the host stack does.
+    pub const DEFAULT_MAX_RECURSION_DEPTH: usize = 1024;
 
-    /// Construct an explicit reference execution budget.
+    /// Construct an explicit reference execution budget whose ceiling rises to
+    /// the work the program declares.
     #[must_use]
     pub const fn new(
         work_ceiling: u64,
@@ -48,34 +79,70 @@ impl ReferenceBudget {
     ) -> Self {
         Self {
             work_ceiling,
+            admit_declared_work: true,
             max_memory_bytes,
             max_recursion_depth,
         }
     }
 
-    /// Build a standard budget suitable for regular reference evaluation.
+    /// Build the standard budget for regular reference evaluation.
     #[must_use]
     pub const fn standard() -> Self {
-        Self {
-            work_ceiling: Self::DEFAULT_WORK_CEILING,
-            max_memory_bytes: Self::DEFAULT_MAX_MEMORY_BYTES,
-            max_recursion_depth: Self::DEFAULT_MAX_RECURSION_DEPTH,
-        }
+        Self::new(
+            Self::DEFAULT_WORK_CEILING,
+            Self::DEFAULT_MAX_MEMORY_BYTES,
+            Self::DEFAULT_MAX_RECURSION_DEPTH,
+        )
     }
 
-    /// Construct a tight budget for adversarial termination checks.
+    /// Construct a hard step cap for adversarial termination checks.
+    ///
+    /// The cap does not rise to declared work, so a program that declares a
+    /// trip count larger than `steps` is refused rather than admitted.
     #[must_use]
     pub const fn bounded(steps: u64) -> Self {
         Self {
             work_ceiling: steps,
+            admit_declared_work: false,
             max_memory_bytes: Self::DEFAULT_MAX_MEMORY_BYTES,
             max_recursion_depth: Self::DEFAULT_MAX_RECURSION_DEPTH,
         }
     }
+
+    /// The standard budget with an explicit work ceiling that still rises to
+    /// declared work.
+    #[must_use]
+    pub const fn with_work_ceiling(steps: u64) -> Self {
+        Self::new(
+            steps,
+            Self::DEFAULT_MAX_MEMORY_BYTES,
+            Self::DEFAULT_MAX_RECURSION_DEPTH,
+        )
+    }
+
+    /// The standard budget with an explicit allocation ceiling.
+    #[must_use]
+    pub const fn with_max_memory_bytes(bytes: usize) -> Self {
+        Self::new(
+            Self::DEFAULT_WORK_CEILING,
+            bytes,
+            Self::DEFAULT_MAX_RECURSION_DEPTH,
+        )
+    }
+
+    /// The standard budget with an explicit frame depth ceiling.
+    #[must_use]
+    pub const fn with_max_recursion_depth(depth: usize) -> Self {
+        Self::new(
+            Self::DEFAULT_WORK_CEILING,
+            Self::DEFAULT_MAX_MEMORY_BYTES,
+            depth,
+        )
+    }
 }
 
 /// Workload envelope defining workgroup extents and dispatch grid floors.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct WorkloadEnvelope {
     /// Workgroup size declared by the program `[sx, sy, sz]`.
     pub workgroup_size: [u32; 3],
@@ -117,32 +184,30 @@ impl WorkloadEnvelope {
     }
 }
 
-/// Exact resource ABI: declared buffers and explicit inputs in declaration order.
-#[derive(Clone, Debug, PartialEq)]
-pub struct ExactResourceAbi {
+/// Exact resource ABI: the buffers the program declares and the values the
+/// caller supplies for them, both borrowed for the life of the request.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ExactResourceAbi<'a> {
     /// Declared buffers from the program specification.
-    pub declared_buffers: Vec<BufferDecl>,
+    pub declared_buffers: &'a [BufferDecl],
     /// Supplied input values in declaration order.
-    pub inputs: Vec<Value>,
+    pub inputs: &'a [Value],
 }
 
-impl ExactResourceAbi {
+impl<'a> ExactResourceAbi<'a> {
     /// Construct an exact resource ABI.
     #[must_use]
-    pub fn new(declared_buffers: Vec<BufferDecl>, inputs: Vec<Value>) -> Self {
+    pub const fn new(declared_buffers: &'a [BufferDecl], inputs: &'a [Value]) -> Self {
         Self {
             declared_buffers,
             inputs,
         }
     }
 
-    /// Extract exact resource ABI from a program and input slice.
+    /// Extract the exact resource ABI a program and input slice describe.
     #[must_use]
-    pub fn for_program(program: &Program, inputs: &[Value]) -> Self {
-        Self {
-            declared_buffers: program.buffers().to_vec(),
-            inputs: inputs.to_vec(),
-        }
+    pub fn for_program(program: &'a Program, inputs: &'a [Value]) -> Self {
+        Self::new(program.buffers(), inputs)
     }
 }
 
@@ -159,67 +224,87 @@ pub enum DeterministicSchedulePolicy {
     BoundedInterleaving,
 }
 
-/// Execution strictness mode.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub enum ExecutionStrictness {
-    /// Strict mode: any out-of-bounds, type mismatch, missing value, overflow, poison,
-    /// or incomplete dispatch returns a structured error.
-    Strict,
-    /// Diagnostic permissive mode: records what a program absorbed, such as an
-    /// out-of-bounds tally. It carries no output value and no certificate.
-    DiagnosticPermissive,
-}
-
 /// One typed, versioned reference execution request.
+///
+/// The request borrows the program and the inputs, so submitting one copies
+/// neither. The evaluator has no other door: every public evaluation entry
+/// point on this crate is a method here.
 #[derive(Clone, Debug, PartialEq)]
-pub struct ReferenceRequest {
+pub struct ReferenceRequest<'a> {
     /// Schema version for wire / ABI serialization.
     pub version: u32,
     /// The logical program to evaluate.
-    pub program: Program,
+    pub program: &'a Program,
     /// Exact resource ABI.
-    pub resource_abi: ExactResourceAbi,
+    pub resource_abi: ExactResourceAbi<'a>,
     /// Workload envelope.
     pub workload_envelope: WorkloadEnvelope,
-    /// Numerical contract.
+    /// Numerical contract the caller grades against.
     pub numerical_contract: NumericSemantics,
     /// Deterministic schedule exploration policy.
     pub schedule_policy: DeterministicSchedulePolicy,
-    /// Mandatory work and memory budget.
+    /// Mandatory work, memory, and recursion budget.
     pub budget: ReferenceBudget,
-    /// Strictness mode.
-    pub strictness: ExecutionStrictness,
 }
 
-impl ReferenceRequest {
-    /// Construct a new strict reference request with the given mandatory budget.
+impl<'a> ReferenceRequest<'a> {
+    /// Construct a reference request under an explicit mandatory budget.
     #[must_use]
-    pub fn new(program: Program, inputs: Vec<Value>, budget: ReferenceBudget) -> Self {
-        let envelope = WorkloadEnvelope::for_program(&program);
-        let resource_abi = ExactResourceAbi::for_program(&program, &inputs);
-        let numerical_contract = vyre_spec::numeric_semantics_for(&vyre_spec::DataType::F32);
+    pub fn new(program: &'a Program, inputs: &'a [Value], budget: ReferenceBudget) -> Self {
         Self {
             version: REFERENCE_REQUEST_SCHEMA_VERSION,
             program,
-            resource_abi,
-            workload_envelope: envelope,
-            numerical_contract,
+            resource_abi: ExactResourceAbi::for_program(program, inputs),
+            workload_envelope: WorkloadEnvelope::for_program(program),
+            numerical_contract: numeric_semantics_for(&DataType::F32),
             schedule_policy: DeterministicSchedulePolicy::Forward,
             budget,
-            strictness: ExecutionStrictness::Strict,
         }
+    }
+
+    /// Construct a reference request under [`ReferenceBudget::standard`].
+    #[must_use]
+    pub fn standard(program: &'a Program, inputs: &'a [Value]) -> Self {
+        Self::new(program, inputs, ReferenceBudget::standard())
     }
 
     /// Set an explicit workload envelope.
     #[must_use]
-    pub fn with_workload_envelope(mut self, envelope: WorkloadEnvelope) -> Self {
+    pub const fn with_workload_envelope(mut self, envelope: WorkloadEnvelope) -> Self {
         self.workload_envelope = envelope;
+        self
+    }
+
+    /// Set an explicit workgroup grid `[x, y, z]`.
+    ///
+    /// Buffer-shape inference distributes a dispatch only across workgroup axes
+    /// whose size is greater than one, so a program that fans a `[256, 1, 1]`
+    /// workgroup across `grid.y` would otherwise collapse to `grid.y == 1` and
+    /// cover only the first slice. A caller that knows the real dispatch grid
+    /// states it here.
+    #[must_use]
+    pub const fn with_grid(mut self, grid: [u32; 3]) -> Self {
+        self.workload_envelope.workgroup_grid = Some(grid);
+        self
+    }
+
+    /// Set a dispatch element floor.
+    ///
+    /// Buffer-shape inference cannot see the per-invocation count of a program
+    /// whose scan length is a runtime value: a haystack packed four bytes to a
+    /// `u32` infers a quarter of the invocations the dispatch runs, and the
+    /// high positions are never visited. The floor states the real count; the
+    /// interpreter still runs at least the inferred grid, so `0` changes
+    /// nothing.
+    #[must_use]
+    pub const fn with_min_dispatch_elements(mut self, min: u32) -> Self {
+        self.workload_envelope.min_dispatch_elements = Some(min);
         self
     }
 
     /// Set an explicit schedule exploration policy.
     #[must_use]
-    pub fn with_schedule_policy(mut self, policy: DeterministicSchedulePolicy) -> Self {
+    pub const fn with_schedule_policy(mut self, policy: DeterministicSchedulePolicy) -> Self {
         self.schedule_policy = policy;
         self
     }
@@ -231,53 +316,99 @@ impl ReferenceRequest {
         self
     }
 
-    /// Set strictness mode.
+    /// Set an explicit budget.
     #[must_use]
-    pub fn with_strictness(mut self, strictness: ExecutionStrictness) -> Self {
-        self.strictness = strictness;
+    pub const fn with_budget(mut self, budget: ReferenceBudget) -> Self {
+        self.budget = budget;
         self
     }
 
-    /// Execute this request strictly and return a verified result with certificate.
+    /// The numerical contract the oracle applies for `datatype`, refusing a
+    /// request whose stated contract disagrees with it.
+    ///
+    /// The oracle's arithmetic comes from `vyre_spec`, so a request that states
+    /// a different contract is grading a device against semantics the oracle
+    /// never applied. Naming the disagreement is the only answer that is not a
+    /// silently wrong verdict.
+    fn verify_numerical_contract(&self) -> Result<(), ReferenceError> {
+        let authoritative = numeric_semantics_for(&self.numerical_contract.datatype);
+        if authoritative == self.numerical_contract {
+            return Ok(());
+        }
+        Err(ReferenceError::type_mismatch(format!(
+            "the request states a numerical contract for {:?} that disagrees with the versioned \
+             semantics the oracle applies (schema {}). Fix: submit \
+             `vyre_spec::numeric_semantics_for` for the datatype, or grade against the semantics \
+             the oracle implements.",
+            self.numerical_contract.datatype,
+            vyre_spec::NUMERIC_SEMANTICS_SCHEMA_VERSION
+        )))
+    }
+
+    /// Execute this request strictly and return the outputs with a certificate.
     ///
     /// # Errors
-    /// Returns a structured [`ReferenceError`] on missing values, type mismatches, poison,
-    /// overflow, out-of-bounds access, incomplete dispatch semantics, nontermination, or budget exhaustion.
+    /// Returns a structured [`ReferenceError`] on missing values, type
+    /// mismatches, poison, overflow, out-of-bounds access, incomplete dispatch
+    /// semantics, nontermination, or budget exhaustion.
     pub fn execute(&self) -> Result<StrictExecutionResult, ReferenceError> {
-        if self.strictness != ExecutionStrictness::Strict {
-            return Err(ReferenceError::type_mismatch(
-                "execute() called on a non-strict request; use execute_permissive() for diagnostic permissive requests",
-            ));
-        }
+        self.verify_numerical_contract()?;
         let (outputs, steps) = crate::execution::run_with_request(self)?;
-        let fingerprint = self
-            .program
-            .fingerprint()
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect::<String>();
-        let certificate = ReferenceCertificate {
-            schema_version: REFERENCE_REQUEST_SCHEMA_VERSION,
-            program_fingerprint: fingerprint,
-            oracle_version: REFERENCE_ORACLE_VERSION.to_string(),
-            steps_executed: steps,
-            schedule_policy: self.schedule_policy,
-        };
+        let fingerprint =
+            self.program
+                .fingerprint()
+                .iter()
+                .fold(String::with_capacity(64), |mut hex, byte| {
+                    use std::fmt::Write;
+                    let _ = write!(hex, "{byte:02x}");
+                    hex
+                });
         Ok(StrictExecutionResult {
             outputs,
             steps_executed: steps,
-            certificate,
+            certificate: ReferenceCertificate {
+                schema_version: REFERENCE_REQUEST_SCHEMA_VERSION,
+                program_fingerprint: fingerprint,
+                oracle_version: REFERENCE_ORACLE_VERSION.to_string(),
+                steps_executed: steps,
+                schedule_policy: self.schedule_policy,
+            },
         })
+    }
+
+    /// Execute this request strictly and return only the output values.
+    ///
+    /// The projection a caller comparing bytes against a device reads. It runs
+    /// exactly [`execute`](Self::execute) and drops the certificate.
+    ///
+    /// # Errors
+    /// Same as [`execute`](Self::execute).
+    pub fn outputs(&self) -> Result<Vec<Value>, ReferenceError> {
+        self.execute().map(|result| result.outputs)
+    }
+
+    /// Execute this request strictly and return the outputs with the step count
+    /// the run charged.
+    ///
+    /// # Errors
+    /// Same as [`execute`](Self::execute).
+    pub fn outputs_and_steps(&self) -> Result<(Vec<Value>, u64), ReferenceError> {
+        self.execute()
+            .map(|result| (result.outputs, result.steps_executed))
     }
 
     /// Execute in diagnostic permissive mode.
     ///
-    /// Diagnostic permissive mode records what the run absorbed. The report it
-    /// returns carries no output value and no certificate.
+    /// Permissive mode absorbs an out-of-bounds access deterministically and
+    /// records the tally. The report it returns carries no output value and no
+    /// certificate, so nothing a device can be graded against leaves this
+    /// method.
     ///
     /// # Errors
-    /// Returns [`ReferenceError`] on unrecoverable host faults.
+    /// Returns [`ReferenceError`] for every fault class permissive mode does
+    /// not absorb, which is every class except out-of-bounds access.
     pub fn execute_permissive(&self) -> Result<DiagnosticPermissiveReport, ReferenceError> {
+        self.verify_numerical_contract()?;
         let (outputs, steps, oob) = crate::execution::run_permissive_with_request(self)?;
         let mut anomalies = Vec::new();
         if oob.total() > 0 {

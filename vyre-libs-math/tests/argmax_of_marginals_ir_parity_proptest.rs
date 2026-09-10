@@ -30,7 +30,7 @@ fn gpu_argmax(gains: &[u32], picked_mask: &[u32]) -> (u32, u32) {
         "winner_gain",
         gains.len() as u32,
     );
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(gains)),
@@ -39,6 +39,7 @@ fn gpu_argmax(gains: &[u32], picked_mask: &[u32]) -> (u32, u32) {
             Value::from(pack(&[0u32])),
         ],
     )
+    .outputs()
     .expect("argmax_of_marginals reference evaluation must succeed");
     (
         unpack(&outputs[0].to_bytes())[0],

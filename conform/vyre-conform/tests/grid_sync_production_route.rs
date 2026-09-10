@@ -67,7 +67,7 @@ fn fenced_cases() -> Vec<FencedCase> {
 /// Reference-oracle outputs for one fenced program under its planned inputs.
 fn oracle_outputs(case: &FencedCase, planned: &[&[u8]]) -> Vec<Vec<u8>> {
     let values: Vec<Value> = planned.iter().map(|bytes| Value::from(*bytes)).collect();
-    vyre_reference::reference_eval(&case.program, &values)
+    vyre_reference::ReferenceRequest::standard(&case.program, &values).outputs()
         .unwrap_or_else(|error| {
             panic!(
                 "Fix: `{}` is registered with fixture inputs its own reference oracle refuses: {error}",

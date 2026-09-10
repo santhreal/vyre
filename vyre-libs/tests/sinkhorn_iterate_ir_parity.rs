@@ -51,7 +51,7 @@ fn run_ir(
     // Before the binding record existed, this call passed the ten names
     // positionally in BINDING order rather than parameter order, so the emitted
     // program named its kernel matrix `u_curr`, its `u` ping-pong half `k_t` and
-    // its convergence flag `kv`. Nothing failed, because `reference_eval` binds
+    // its convergence flag `kv`. Nothing failed, because the oracle binds
     // by index and a name is only a label to it. Naming each field is what makes
     // the roles checkable.
     let program = sinkhorn_iterate(
@@ -75,7 +75,7 @@ fn run_ir(
     );
     let pack = |data: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(data));
     let (mm, nn) = (m as usize, n as usize);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             pack(u_init),          // u_curr (0, RW) <- final u
@@ -90,6 +90,7 @@ fn run_ir(
             pack(&vec![0u32; nn]), // ktu (9, RW)
         ],
     )
+    .outputs()
     .expect("sinkhorn_iterate reference evaluation must succeed");
     // RW buffers in binding order: u_curr(0), u_next(1), changed(2), v(7), kv(8), ktu(9).
     let u = words(&outputs[0]);

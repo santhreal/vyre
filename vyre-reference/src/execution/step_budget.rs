@@ -41,7 +41,7 @@ use crate::error::{ReferenceError, StepCeilingExceeded};
 /// Measured, not chosen: 911,388 steps on `vyre-libs::math::symmetric_eigen_jacobi`.
 /// `the_reference_step_ceiling_is_derived_from_the_corpus`
 /// in `vyre-libs` evaluates every registered fixture case through
-/// [`crate::reference_eval_step_count`] and fails when a run charges more than
+/// [`crate::ReferenceRequest::outputs_and_steps`] and fails when a run charges more than
 /// this, printing the number to record here. Raise it only to a value that test
 /// printed.
 pub const MEASURED_HEAVIEST_CORPUS_STEPS: u64 = 911_388;
@@ -74,8 +74,33 @@ thread_local! {
     /// was armed with. `None` while no evaluation is armed. A `Cell` so the
     /// charging path is one read and one write with no borrow flag.
     static BUDGET: Cell<Option<(u64, u64, bool)>> = const { Cell::new(None) };
+    /// Buffer bytes the armed evaluation has allocated, and the ceilings it
+    /// may reach. Separate from `BUDGET` because allocation and frame entry
+    /// are cold, and widening the per-step cell would charge every step for
+    /// them.
+    static ALLOCATION: Cell<Limits> = const { Cell::new(Limits::UNARMED) };
     /// The armed program's name, read only when a refusal is built.
     static PROGRAM: RefCell<String> = const { RefCell::new(String::new()) };
+}
+
+/// Memory and frame-depth ceilings of the armed evaluation.
+#[derive(Clone, Copy)]
+struct Limits {
+    /// Buffer bytes allocated so far by this evaluation.
+    allocated_bytes: usize,
+    /// Buffer bytes this evaluation may allocate in total.
+    max_memory_bytes: usize,
+    /// Frame depth one lane may reach.
+    max_recursion_depth: usize,
+}
+
+impl Limits {
+    /// No evaluation armed: nothing is charged and nothing is refused.
+    const UNARMED: Self = Self {
+        allocated_bytes: 0,
+        max_memory_bytes: usize::MAX,
+        max_recursion_depth: usize::MAX,
+    };
 }
 
 /// Restores the enclosing evaluation's budget when one evaluation ends.
@@ -90,32 +115,91 @@ impl Drop for BudgetGuard {
     fn drop(&mut self) {
         if self.outermost {
             BUDGET.with(|budget| budget.set(None));
+            ALLOCATION.with(|limits| limits.set(Limits::UNARMED));
         }
     }
 }
 
-/// Arm [`MAX_REFERENCE_STEPS`] for one evaluation of `program`, or join the
-/// enclosing evaluation's budget.
-pub(crate) fn arm(program: &Program) -> BudgetGuard {
-    arm_with_mode(program, MAX_REFERENCE_STEPS, false)
-}
-
-/// Arm an explicit ceiling for one evaluation, or join the enclosing one.
+/// Arm [`ReferenceBudget::standard`](crate::ReferenceBudget::standard) for one
+/// evaluation of `program`, or join the enclosing evaluation's budget.
 ///
-/// Only the measurement harness picks a ceiling; production evaluation uses
-/// [`arm`] so one number governs every caller.
-pub(crate) fn arm_with(program: &Program, ceiling: u64) -> BudgetGuard {
-    arm_with_mode(program, ceiling, true)
+/// The evaluator calls this so a program reached through a nested path is
+/// bounded by the same contract as one submitted through a request.
+pub(crate) fn arm(program: &Program) -> BudgetGuard {
+    arm_with_budget(program, crate::ReferenceBudget::standard())
 }
 
-pub(crate) fn arm_with_mode(program: &Program, ceiling: u64, exact: bool) -> BudgetGuard {
+/// Arm one evaluation's work, memory, and frame-depth budget, or join the
+/// enclosing one.
+pub(crate) fn arm_with_budget(program: &Program, budget: crate::ReferenceBudget) -> BudgetGuard {
     if BUDGET.with(Cell::get).is_some() {
         return BudgetGuard { outermost: false };
     }
     let label = program_label(program);
     PROGRAM.with_borrow_mut(|armed| *armed = label);
-    BUDGET.with(|budget| budget.set(Some((0, ceiling, exact))));
+    BUDGET.with(|cell| {
+        cell.set(Some((0, budget.work_ceiling, !budget.admit_declared_work)));
+    });
+    ALLOCATION.with(|limits| {
+        limits.set(Limits {
+            allocated_bytes: 0,
+            max_memory_bytes: budget.max_memory_bytes,
+            max_recursion_depth: budget.max_recursion_depth,
+        });
+    });
     BudgetGuard { outermost: true }
+}
+
+/// Charge `bytes` of buffer allocation against the armed memory ceiling.
+///
+/// The ceiling bounds what one evaluation allocates in total. A run that
+/// crosses it ends with a structured refusal naming the bound, which is the
+/// only outcome that is neither a wrong answer nor an allocation failure that
+/// ends the host process.
+///
+/// # Errors
+/// Refuses with `BudgetExhaustion` when the armed allocation ceiling is
+/// crossed.
+pub(crate) fn charge_memory(bytes: usize, buffer: &str) -> Result<(), ReferenceError> {
+    ALLOCATION.with(|cell| {
+        let mut limits = cell.get();
+        let Some(allocated) = limits.allocated_bytes.checked_add(bytes) else {
+            return Err(ReferenceError::budget_exhaustion(format!(
+                "allocating buffer `{buffer}` overflows the host address space. Fix: declare a \
+                 buffer whose byte length this host can address."
+            )));
+        };
+        if allocated > limits.max_memory_bytes {
+            return Err(ReferenceError::budget_exhaustion(format!(
+                "allocating {bytes} byte(s) for buffer `{buffer}` reaches {allocated} bytes, past \
+                 the {} byte allocation ceiling this request armed. Fix: raise \
+                 `ReferenceBudget::max_memory_bytes`, or submit a program whose declared buffers \
+                 fit the bound.",
+                limits.max_memory_bytes
+            )));
+        }
+        limits.allocated_bytes = allocated;
+        cell.set(limits);
+        Ok(())
+    })
+}
+
+/// Refuse a lane whose frame depth has reached the armed recursion ceiling.
+///
+/// `depth` is the depth the lane stands at once the frame is pushed.
+///
+/// # Errors
+/// Refuses with `BudgetExhaustion` when the armed frame ceiling is crossed.
+pub(crate) fn check_recursion_depth(depth: usize) -> Result<(), ReferenceError> {
+    let max = ALLOCATION.with(|cell| cell.get().max_recursion_depth);
+    if depth <= max {
+        return Ok(());
+    }
+    Err(ReferenceError::budget_exhaustion(format!(
+        "entering a nested body at frame depth {depth} passes the {max} frame ceiling this \
+         request armed. Fix: raise `ReferenceBudget::max_recursion_depth`, or submit a program \
+         whose block nesting fits the bound."
+    )))
 }
 
 /// Raise the armed ceiling to admit the work `body` declares over
@@ -252,7 +336,7 @@ fn program_label(program: &Program) -> String {
     label
 }
 
-// Inline: `arm_with`, `charge` and `charged` are crate-private, and the nesting
+// Inline: `arm_with_budget`, `charge` and `charged` are crate-private, and the nesting
 // rule is not observable through a public entry point.
 #[cfg(test)]
 mod tests {
@@ -281,7 +365,7 @@ mod tests {
     #[test]
     fn the_ceiling_refuses_the_step_that_exceeds_it_and_not_the_one_that_reaches_it() {
         let program = tiny_program();
-        let guard = arm_with(&program, 2);
+        let guard = arm_with_budget(&program, crate::ReferenceBudget::bounded(2));
         charge().expect("Fix: the first step is within a ceiling of two");
         charge().expect("Fix: the second step reaches the ceiling and is admitted");
         let error = charge().expect_err("Fix: the third step exceeds a ceiling of two");
@@ -301,10 +385,10 @@ mod tests {
     #[test]
     fn a_nested_evaluation_is_charged_to_the_enclosing_ceiling() {
         let program = tiny_program();
-        let outer = arm_with(&program, 10);
+        let outer = arm_with_budget(&program, crate::ReferenceBudget::bounded(10));
         charge().expect("Fix: the outer evaluation charges its own step");
         {
-            let inner = arm_with(&program, u64::MAX);
+            let inner = arm_with_budget(&program, crate::ReferenceBudget::bounded(u64::MAX));
             charge().expect("Fix: a nested evaluation charges the enclosing budget");
             assert_eq!(
                 charged(),

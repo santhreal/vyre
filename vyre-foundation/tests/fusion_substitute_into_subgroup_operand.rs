@@ -168,7 +168,8 @@ fn fusion_substitutes_pending_binding_into_subgroup_operand() {
     let inputs = [Value::Array(vec![Value::U32(3), Value::U32(5)])];
 
     // Original is well-scoped and computes out[0] = subgroup_add(3 + 5) = 8.
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original program is well-scoped and must run");
 
     let fused = Fusion::transform(program).program;
@@ -193,7 +194,8 @@ fn fusion_substitutes_pending_binding_into_subgroup_operand() {
     // ORACLE DIFFERENTIAL: the fused program must remain well-scoped and produce
     // byte-identical results to the original. Pre-fix `reference_eval` rejects
     // the dangling `v` with "reference to undeclared variable `v`".
-    let after = vyre_reference::reference_eval(&fused, &inputs)
+    let after = vyre_reference::ReferenceRequest::standard(&fused, &inputs)
+        .outputs()
         .expect("fused program must remain well-scoped (no dangling subgroup operand)");
     assert_eq!(
         after, original,

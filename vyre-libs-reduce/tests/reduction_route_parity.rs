@@ -13,9 +13,11 @@ fn pack(words: &[u32]) -> Value {
 }
 
 fn evaluate_output(program: &vyre_foundation::ir::Program, inputs: &[Value]) -> Vec<u32> {
-    let outputs = vyre_reference::reference_eval(program, inputs).unwrap_or_else(|error| {
-        panic!("Fix: reduction route reference evaluation failed: {error}")
-    });
+    let outputs = vyre_reference::ReferenceRequest::standard(program, inputs)
+        .outputs()
+        .unwrap_or_else(|error| {
+            panic!("Fix: reduction route reference evaluation failed: {error}")
+        });
     let output_index = vyre_reference::output_index(program, "out")
         .expect("Fix: each scalar reduction route must expose `out`");
     outputs[output_index]

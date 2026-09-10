@@ -782,7 +782,8 @@ mod tests {
                 .cloned()
                 .map(vyre_reference::value::Value::from)
                 .collect::<Vec<_>>();
-            let outputs = vyre_reference::reference_eval(&program, &values)
+            let outputs = vyre_reference::ReferenceRequest::standard(&program, &values)
+                .outputs()
                 .expect("Fix: string bitmap scatter must reference-evaluate")
                 .into_iter()
                 .map(|value| value.to_bytes())
@@ -820,7 +821,8 @@ mod tests {
                 .cloned()
                 .map(vyre_reference::value::Value::from)
                 .collect::<Vec<_>>();
-            let outputs = vyre_reference::reference_eval(&program, &values)
+            let outputs = vyre_reference::ReferenceRequest::standard(&program, &values)
+                .outputs()
                 .expect("Fix: condition eval program must reference-evaluate")
                 .into_iter()
                 .map(|value| value.to_bytes())
@@ -858,7 +860,8 @@ mod tests {
                     .cloned()
                     .map(vyre_reference::value::Value::from)
                     .collect::<Vec<_>>();
-                let outputs = vyre_reference::reference_eval(&program, &values)
+                let outputs = vyre_reference::ReferenceRequest::standard(&program, &values)
+                    .outputs()
                     .unwrap_or_else(|err| {
                         panic!("pattern {pattern:?} records {records} failed reference eval: {err}")
                     })
@@ -889,7 +892,8 @@ mod tests {
                 .cloned()
                 .map(vyre_reference::value::Value::from)
                 .collect::<Vec<_>>();
-            let outputs = vyre_reference::reference_eval(&program, &values)
+            let outputs = vyre_reference::ReferenceRequest::standard(&program, &values)
+                .outputs()
                 .expect("Fix: quantified condition loops program must reference-evaluate")
                 .into_iter()
                 .map(|value| value.to_bytes())

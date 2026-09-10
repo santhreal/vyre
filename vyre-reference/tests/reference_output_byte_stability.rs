@@ -20,7 +20,6 @@ use vyre_lower::artifact_golden::{
     assert_matches_golden, contains_case, hex_words, render_sections, write_golden,
 };
 use vyre_lower::program_stability_corpus;
-use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
 
 fn golden_path() -> PathBuf {
@@ -35,12 +34,14 @@ fn render_program(case: &program_stability_corpus::StabilityCase) -> String {
         .iter()
         .map(|bytes| Value::Bytes(Arc::from(bytes.clone().into_boxed_slice())))
         .collect::<Vec<_>>();
-    let outputs = reference_eval(&case.program, &values).unwrap_or_else(|error| {
-        panic!(
-            "Fix: shared stability case `{}` must evaluate: {error}",
-            case.id
-        )
-    });
+    let outputs = vyre_reference::ReferenceRequest::standard(&case.program, &values)
+        .outputs()
+        .unwrap_or_else(|error| {
+            panic!(
+                "Fix: shared stability case `{}` must evaluate: {error}",
+                case.id
+            )
+        });
     let mut text = String::new();
     for (index, output) in outputs.iter().enumerate() {
         writeln!(text, "output {index}").expect("string write");

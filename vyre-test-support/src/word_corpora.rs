@@ -40,7 +40,11 @@ impl Lcg {
 
     /// Next value in `0..n`, or zero when `n` is zero.
     pub fn below(&mut self, n: u32) -> u32 {
-        if n == 0 { 0 } else { self.next_u32() % n }
+        if n == 0 {
+            0
+        } else {
+            self.next_u32() % n
+        }
     }
 }
 

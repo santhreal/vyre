@@ -10,10 +10,11 @@ fn run_bad_case(cv_in: Vec<u8>, msg: Vec<u8>) {
         .iter()
         .flat_map(|value| value.to_le_bytes())
         .collect::<Vec<_>>();
-    let error = vyre_reference::reference_eval(
+    let error = vyre_reference::ReferenceRequest::standard(
         &program,
         &[Value::from(cv_in), Value::from(msg), Value::from(params)],
     )
+    .outputs()
     .expect_err("Fix: malformed BLAKE3 buffer size must return a reference_eval error");
     let message = error.to_string();
     assert!(

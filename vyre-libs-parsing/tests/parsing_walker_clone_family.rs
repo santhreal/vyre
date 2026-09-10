@@ -349,9 +349,10 @@ fn go_brace_span_scan_has_one_owner() {
 
 fn assignments_to(nodes: &[Node], target: &str) -> bool {
     nodes.iter().any(|root| {
-        any_descendant(root, &mut |node| {
-            matches!(node, Node::Assign { name, .. } if name.as_str() == target)
-        })
+        any_descendant(
+            root,
+            &mut |node| matches!(node, Node::Assign { name, .. } if name.as_str() == target),
+        )
     })
 }
 

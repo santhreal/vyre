@@ -36,7 +36,7 @@ fn run_ir(payloads: &[u32], flags: &[u32], offsets: &[u32]) -> (Vec<u32>, u32) {
     let count = payloads.len() as u32;
     let program = stream_compact("payloads", "flags", "offsets", "compacted", "live", count);
     let pack = |data: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(data));
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             pack(payloads),                    // payloads (0, RO)
@@ -46,6 +46,7 @@ fn run_ir(payloads: &[u32], flags: &[u32], offsets: &[u32]) -> (Vec<u32>, u32) {
             pack(&[0u32]),                     // live_count (4, RW)
         ],
     )
+    .outputs()
     .expect("stream_compact reference evaluation must succeed");
     // RW buffers in binding order: compacted(3) then live_count(4).
     let compacted: Vec<u32> = outputs[0]

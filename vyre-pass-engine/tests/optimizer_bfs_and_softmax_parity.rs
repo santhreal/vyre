@@ -50,7 +50,7 @@ fn run_line_bfs(program: &Program, changed_words: usize) -> (u32, Vec<u32>, u32)
     let changed = vec![0u32; changed_words];
     let converged = [0u32];
 
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         program,
         &[
             Value::from(pack(&pg_nodes)),
@@ -64,6 +64,7 @@ fn run_line_bfs(program: &Program, changed_words: usize) -> (u32, Vec<u32>, u32)
             Value::from(pack(&converged)),
         ],
     )
+    .outputs()
     .expect("BFS program must execute under reference_eval");
 
     let frontier = unpack(&outputs[0].to_bytes())[0];
@@ -103,9 +104,11 @@ fn run_bfs_graph(
         Value::from(pack(&[0u32])),
     ];
     let outputs = if reversed {
-        vyre_reference::reference_eval_lane_reversed(program, &inputs)
+        vyre_reference::ReferenceRequest::standard(program, &inputs)
+            .with_schedule_policy(vyre_reference::DeterministicSchedulePolicy::LaneReversed)
+            .outputs()
     } else {
-        vyre_reference::reference_eval(program, &inputs)
+        vyre_reference::ReferenceRequest::standard(program, &inputs).outputs()
     }
     .expect("BFS program must execute under the reference interpreter");
     (
@@ -300,10 +303,11 @@ fn dispatch_softmax_normalizes_precomputed_exponentials_in_16_16() {
     // For pre_exp = [1,2,3,4], sum = 10, so out[i] = pre_exp[i] * 65536 / 10 (integer div).
     let pre_exp = [1u32, 2, 3, 4];
     let out_init = [0u32; 4];
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &dispatch_softmax("pre_exp", "out", 4),
         &[Value::from(pack(&pre_exp)), Value::from(pack(&out_init))],
     )
+    .outputs()
     .expect("softmax program must execute under reference_eval");
     let out = unpack(&outputs[0].to_bytes());
     assert_eq!(
@@ -363,9 +367,11 @@ fn drive_one_dispatch(
         Value::from(pack(&[0u32])),
     ];
     let outputs = if reversed {
-        vyre_reference::reference_eval_lane_reversed(program, &inputs)
+        vyre_reference::ReferenceRequest::standard(program, &inputs)
+            .with_schedule_policy(vyre_reference::DeterministicSchedulePolicy::LaneReversed)
+            .outputs()
     } else {
-        vyre_reference::reference_eval(program, &inputs)
+        vyre_reference::ReferenceRequest::standard(program, &inputs).outputs()
     }
     .expect("the DCE analysis program must execute under the reference interpreter");
     (

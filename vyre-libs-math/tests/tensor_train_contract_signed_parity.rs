@@ -37,7 +37,7 @@ fn contract_fixed(acc_in: &[u32], core: &[u32], r_prev: usize, r_next: usize) ->
 
 fn run_via_reference(acc_in: &[u32], core: &[u32], r_prev: u32, r_next: u32) -> Vec<u32> {
     let program = tt_contract_step("acc_in", "core", "acc_out", r_prev, r_next);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32(acc_in)),
@@ -45,6 +45,7 @@ fn run_via_reference(acc_in: &[u32], core: &[u32], r_prev: u32, r_next: u32) -> 
             Value::from(pack_u32(&vec![0u32; r_next as usize])),
         ],
     )
+    .outputs()
     .expect("tt_contract_step reference evaluation must succeed");
     outputs[0]
         .to_bytes()

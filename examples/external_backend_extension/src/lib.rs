@@ -73,7 +73,7 @@ impl VyreBackend for ExternalBackend {
             )));
         }
         let values: Vec<Value> = inputs.iter().map(|row| Value::from(*row)).collect();
-        vyre_reference::reference_eval(program, &values)
+        vyre_reference::ReferenceRequest::standard(program, &values).outputs()
             .map(|outputs| outputs.iter().map(Value::to_bytes).collect())
             .map_err(|error| {
                 BackendError::new(format!(

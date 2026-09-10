@@ -46,13 +46,14 @@ fn run_hex_decode(input: &[u8]) -> Vec<u32> {
     );
     let program = hex_decode("input", "output", input.len() as u32);
     let packed_input: Vec<u32> = input.iter().map(|&byte| u32::from(byte)).collect();
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(vyre_primitives::wire::pack_u32_slice(&packed_input)),
             Value::from(vyre_primitives::wire::pack_u32_slice(hex_decode_table_ref())),
         ],
     )
+    .outputs()
     .expect("Fix: hex_decode reference_eval must succeed for oracle matrix inputs.");
     vyre_primitives::wire::decode_u32_le_bytes_all(&outputs[0].to_bytes())
 }

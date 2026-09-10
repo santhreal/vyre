@@ -98,7 +98,8 @@ fn presence_program_reference_eval_matches_cpu_oracle_high_volume() {
             )),
         ];
 
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+            .outputs()
             .expect("Fix: suffix3 presence program must evaluate in the reference backend");
         let bitmap = decode_u32(&outputs[0].to_bytes());
 

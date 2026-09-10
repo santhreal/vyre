@@ -24,13 +24,14 @@ use vyre_reference::value::Value;
 /// Drive the real IR. Buffer binding order: candidates(0), chosen(1, RW).
 fn gpu_schedule(candidates: &[u32], h: u32, w: u32, k: u32) -> Vec<u32> {
     let program = planar_rewrite_schedule("candidates", "chosen", h, w, k);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(candidates)),
             Value::from(pack(&vec![0u32; candidates.len()])),
         ],
     )
+    .outputs()
     .expect("planar_rewrite_schedule reference evaluation must succeed");
     unpack(&outputs[0].to_bytes())
 }

@@ -53,7 +53,8 @@ fn registered_operations_match_reference_interpreter_outputs() {
             .enumerate()
         {
             let ref_inputs: Vec<Value> = inputs.into_iter().map(Value::from).collect();
-            let actual_buffers = vyre_reference::reference_eval(&program, &ref_inputs)
+            let actual_buffers = vyre_reference::ReferenceRequest::standard(&program, &ref_inputs)
+                .outputs()
                 .unwrap_or_else(|err| {
                     panic!(
                         "Reference execution failed for operation {} (case {case_idx}): {err}",
@@ -140,7 +141,8 @@ fn affected_operations_are_explicitly_verified() {
             .enumerate()
         {
             let ref_inputs: Vec<Value> = inputs.into_iter().map(Value::from).collect();
-            let actual_buffers = vyre_reference::reference_eval(&program, &ref_inputs)
+            let actual_buffers = vyre_reference::ReferenceRequest::standard(&program, &ref_inputs)
+                .outputs()
                 .unwrap_or_else(|err| {
                     panic!(
                         "Reference execution failed for operation {} (case {case_idx}): {err}",

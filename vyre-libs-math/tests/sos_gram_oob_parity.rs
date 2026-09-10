@@ -32,7 +32,7 @@ use vyre_reference::value::Value;
 fn eval_gram(pairs: &[u32], p: &[u32], m: u32, coeff_count: u32) -> Vec<u32> {
     let program = sos_gram_construct("pairs", "p", "gram", m, coeff_count);
     let gram_init = vec![0u32; (m as usize) * (m as usize)];
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(pairs)),
@@ -40,6 +40,7 @@ fn eval_gram(pairs: &[u32], p: &[u32], m: u32, coeff_count: u32) -> Vec<u32> {
             Value::from(pack(&gram_init)),
         ],
     )
+    .outputs()
     .expect("sos_gram reference evaluation must succeed");
     // `gram` (binding 2) is the sole ReadWrite buffer; reference_eval returns only the
     // writable buffers, so it is outputs[0] (as the gather parity test uses outputs[0]

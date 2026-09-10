@@ -44,12 +44,10 @@ fn program_presence(literals: &[Vec<u8>], haystack: &[u8], region_starts: &[u32]
     // is packed 4 bytes/u32), silently skipping high positions and under-firing
     // proven a reference-interpreter artifact, not a kernel bug, by the GPU gate
     // (`literal_set_presence_by_region_gpu_ground_truth`) passing the same fixtures.
-    let out = vyre_reference::reference_eval_with_dispatch(
-        &program,
-        &case.presence_inputs(),
-        haystack.len() as u32,
-    )
-    .expect("region-presence program evaluates");
+    let out = vyre_reference::ReferenceRequest::standard(&program, &case.presence_inputs())
+        .with_min_dispatch_elements(haystack.len() as u32)
+        .outputs()
+        .expect("region-presence program evaluates");
     decode_u32(&out[0].to_bytes())
 }
 

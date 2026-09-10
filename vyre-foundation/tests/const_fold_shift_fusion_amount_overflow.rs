@@ -43,12 +43,14 @@ fn const_fold_preserves_double_shift_that_overflows_the_width() {
     // fuse to (1 << 31) == 0x8000_0000.
     let inputs = [Value::U32(1)];
 
-    let base = vyre_reference::reference_eval(&program, &inputs)
+    let base = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("unoptimized program must run on the reference interpreter");
 
     let optimized =
         optimize::optimize(program.clone()).expect("registered optimizer must converge");
-    let opt = vyre_reference::reference_eval(&optimized, &inputs)
+    let opt = vyre_reference::ReferenceRequest::standard(&optimized, &inputs)
+        .outputs()
         .expect("optimized program must run on the reference interpreter");
 
     assert_eq!(

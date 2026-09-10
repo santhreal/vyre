@@ -21,19 +21,16 @@ fn char_class_masks_high_bit_source_and_records_no_interpreter_oob() {
     let mut table = [0u32; 256];
     table[0x41] = 0xABCD; // low byte of 0x0141 is 0x41
     let program = char_class("source", "classified", 1);
-    let (outputs, report) = vyre_reference::reference_eval_oob_report(
-        &program,
-        &[
-            Value::from(pack_u32s(&[0x0141])), // > 255
-            Value::from(pack_u32s(&table)),
-        ],
-    )
-    .expect("Fix: char_class must reference-evaluate a high-bit source element");
-    assert_eq!(
-        report.total(),
-        0,
-        "Fix: masked table index must stay in bounds without relying on interpreter OOB masking"
-    );
+    let inputs = [
+        Value::from(pack_u32s(&[0x0141])), // > 255
+        Value::from(pack_u32s(&table)),
+    ];
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
+        .expect(
+            "Fix: char_class must reference-evaluate a high-bit source element, and the masked \
+             table index must stay in bounds rather than be absorbed",
+        );
     let out = unpack_u32s(&outputs[0].to_bytes());
     assert_eq!(
         out[0], 0xABCD,
@@ -53,10 +50,11 @@ fn run_program(source: &[u8], table: &[u32; 256]) -> Vec<u32> {
         input_bytes.extend_from_slice(&0u32.to_le_bytes());
     }
     let table_bytes = pack_u32s(table);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[Value::from(input_bytes), Value::from(table_bytes)],
     )
+    .outputs()
     .expect("Fix: char_class reference evaluation must succeed");
     let out_bytes = outputs[0].to_bytes();
     let mut out_u32s = unpack_u32s(&out_bytes);

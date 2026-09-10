@@ -388,7 +388,7 @@ fn four_russians_ir_apply_lut_matches_cpu_reference() {
     let rhs = [0xF0F0_F0F0u32, 0xFFFF_0000];
     let lut = binary_byte_lut(BooleanTileOp::And);
     let program = four_russians_apply_byte_lut("lhs", "rhs", "lut", "out", lhs.len() as u32);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(u32_bytes(&lhs)),
@@ -397,6 +397,7 @@ fn four_russians_ir_apply_lut_matches_cpu_reference() {
             Value::from(u32_bytes(&[0u32; 2])),
         ],
     )
+    .outputs()
     .expect("four_russians_apply_byte_lut must execute");
 
     assert_eq!(

@@ -50,7 +50,7 @@ fn heaviest_registered_fixture() -> (&'static str, u64) {
         for (index, case) in cases.iter().enumerate() {
             let inputs = case.iter().cloned().map(Value::from).collect::<Vec<_>>();
             let (_outputs, steps) =
-                vyre_reference::reference_eval_step_count(&program(&entry), &inputs)
+                vyre_reference::ReferenceRequest::standard(&program(&entry), &inputs).outputs_and_steps()
                     .unwrap_or_else(|error| {
                         panic!(
                             "Fix: registered fixture {} case {index} must evaluate under the shipped step ceiling: {error}",

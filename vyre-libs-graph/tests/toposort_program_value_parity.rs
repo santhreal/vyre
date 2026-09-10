@@ -23,7 +23,6 @@ use vyre_primitives::wire::{decode_u32_le_bytes_all as unpack, pack_u32_slice as
 use vyre_reference::value::Value;
 use vyre_test_support::fixed_point::xorshift32 as next_u32;
 
-
 /// Independent Kahn's toposort mirroring `toposort_program`'s exact deterministic policy:
 /// ascending indegree-0 seed, FIFO pop, successors walked in CSR order. Returns the pop order.
 fn kahn_fifo(node_count: u32, offsets: &[u32], targets: &[u32]) -> Vec<u32> {
@@ -91,7 +90,7 @@ fn run_toposort_program(node_count: u32, offsets: &[u32], targets: &[u32]) -> Ve
     } else {
         targets.to_vec()
     };
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(offsets)),
@@ -100,6 +99,7 @@ fn run_toposort_program(node_count: u32, offsets: &[u32], targets: &[u32]) -> Ve
             Value::from(pack(&zeros)),
         ],
     )
+    .outputs()
     .expect("toposort_program reference evaluation must succeed");
     let index = vyre_reference::output_index(&program, "order")
         .expect("Fix: toposort_program must declare output `order`");

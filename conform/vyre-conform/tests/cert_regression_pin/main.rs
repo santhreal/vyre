@@ -56,7 +56,8 @@ fn assert_reference_output_words(
     plan_witness_inputs_into(&case.inputs, &plan, &mut planned)
         .unwrap_or_else(|e| panic!("{name}: witness input planning failed: {e}"));
     let values: Vec<Value> = planned.into_iter().map(Value::from).collect();
-    let outputs = vyre_reference::reference_eval(program, &values)
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
         .unwrap_or_else(|e| panic!("{name}: reference_eval failed: {e}"));
     let words: Vec<u32> = outputs
         .iter()

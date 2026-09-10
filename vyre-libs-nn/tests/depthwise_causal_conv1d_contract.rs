@@ -60,7 +60,8 @@ fn execute_f32(
     if let Some(mask) = mask {
         inputs.push(Value::from(u32_bytes(mask)));
     }
-    let outputs = vyre_reference::reference_eval(&program, &inputs)
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("Fix: causal convolution must execute");
     outputs[0]
         .to_bytes()
@@ -183,13 +184,14 @@ fn bf16_convolution_matches_exact_output_words() {
         DataType::BF16,
     )
     .expect("Fix: BF16 convolution must build");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(u16_bytes(&[0x3f80, 0xbf80])),
             Value::from(u16_bytes(&[0x4000])),
         ],
     )
+    .outputs()
     .expect("Fix: BF16 convolution must execute");
     assert_eq!(outputs[0].to_bytes(), u16_bytes(&[0x4000, 0xc000]));
 }

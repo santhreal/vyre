@@ -25,7 +25,12 @@ fn eval_unop_f32(op: &UnOp, input: f32) -> Value {
         op: op.clone(),
         operand: Box::new(Expr::f32(input)),
     };
-    reference_eval_expr(&program, &mut ReferenceMemory::empty(), InvocationIds::ZERO, &expr)
+    reference_eval_expr(
+        &program,
+        &mut ReferenceMemory::empty(),
+        InvocationIds::ZERO,
+        &expr,
+    )
     .expect("Fix: reference interpreter must evaluate generated transcendental expression")
 }
 

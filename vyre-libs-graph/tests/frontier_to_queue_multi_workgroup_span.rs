@@ -49,7 +49,7 @@ fn frontier_with(node_count: u32, set: &[u32]) -> Vec<u32> {
 }
 
 fn run(program: &Program, frontier: &[u32], queue_capacity: u32) -> (Vec<u32>, Vec<u32>) {
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         program,
         &[
             Value::from(pack_words(frontier)),
@@ -60,6 +60,7 @@ fn run(program: &Program, frontier: &[u32], queue_capacity: u32) -> (Vec<u32>, V
             Value::from(pack_words(&[0])),
         ],
     )
+    .outputs()
     .expect("Fix: frontier_to_queue must reference-evaluate");
     (
         out_words(program, &outputs, "queue"),

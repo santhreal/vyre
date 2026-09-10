@@ -72,16 +72,15 @@ pub(crate) fn shape_of(program: &vyre_foundation::ir::Program) -> ProgramShape {
 
 fn node_contains_loop(node: &vyre_foundation::ir::Node) -> bool {
     use vyre_foundation::ir::Node;
-    any_descendant(node, &mut |current| {
-        matches!(current, Node::Loop { .. })
-    })
+    any_descendant(node, &mut |current| matches!(current, Node::Loop { .. }))
 }
 
 fn node_contains_invocation_zero_gate(node: &vyre_foundation::ir::Node) -> bool {
     use vyre_foundation::ir::Node;
-    any_descendant(node, &mut |current| {
-        matches!(current, Node::If { cond, .. } if expr_is_invocation_zero(cond))
-    })
+    any_descendant(
+        node,
+        &mut |current| matches!(current, Node::If { cond, .. } if expr_is_invocation_zero(cond)),
+    )
 }
 
 fn expr_is_invocation_zero(expr: &vyre_foundation::ir::Expr) -> bool {

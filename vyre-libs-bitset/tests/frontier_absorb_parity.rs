@@ -52,7 +52,7 @@ fn absorb_new_bits_counted_matches_reference() {
         2,
         FINAL_WORD_MASK,
     );
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(&VISITED_INIT)),
@@ -61,6 +61,7 @@ fn absorb_new_bits_counted_matches_reference() {
             Value::from(pack(&[0u32; 2])),
         ],
     )
+    .outputs()
     .expect("frontier absorb reference evaluation must succeed");
     assert_eq!(
         out_by_name(&program, &outputs, "visited"),
@@ -88,7 +89,7 @@ fn absorb_new_bits_no_counts_matches_reference() {
         2,
         FINAL_WORD_MASK,
     );
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(&VISITED_INIT)),
@@ -96,6 +97,7 @@ fn absorb_new_bits_no_counts_matches_reference() {
             Value::from(pack(&[0u32; 2])),
         ],
     )
+    .outputs()
     .expect("frontier absorb (no counts) reference evaluation must succeed");
     assert_eq!(
         out_by_name(&program, &outputs, "visited"),
@@ -121,7 +123,7 @@ fn absorb_for_node_count_derives_words_and_tail_mask() {
         "added_counts",
         36,
     );
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(&VISITED_INIT)),
@@ -130,6 +132,7 @@ fn absorb_for_node_count_derives_words_and_tail_mask() {
             Value::from(pack(&[0u32; 2])),
         ],
     )
+    .outputs()
     .expect("frontier absorb (for node count) reference evaluation must succeed");
     assert_eq!(
         out_by_name(&program, &outputs, "visited"),

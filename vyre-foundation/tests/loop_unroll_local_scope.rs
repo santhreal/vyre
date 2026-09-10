@@ -38,7 +38,8 @@ fn program_with_local_in_unrollable_body() -> Program {
 fn unroll_preserves_output(label: &str, program: Program) {
     let inputs: [Value; 0] = []; // `out` is the only buffer and it is an output.
 
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .unwrap_or_else(|e| panic!("{label}: original loop must be well-scoped and run: {e}"));
     assert_eq!(
         original,
@@ -56,9 +57,11 @@ fn unroll_preserves_output(label: &str, program: Program) {
     // flat-spliced the three `let x` copies into the enclosing sequence instead
     // of giving each its own Block scope, they would be duplicate sibling
     // bindings the validator rejects and reference_eval would error.
-    let after = vyre_reference::reference_eval(&result.program, &inputs).unwrap_or_else(|e| {
-        panic!("{label}: each duplicated `let x` needs its own iteration scope (V032): {e}")
-    });
+    let after = vyre_reference::ReferenceRequest::standard(&result.program, &inputs)
+        .outputs()
+        .unwrap_or_else(|e| {
+            panic!("{label}: each duplicated `let x` needs its own iteration scope (V032): {e}")
+        });
     assert_eq!(
         after, original,
         "{label}: unrolled program must preserve observable output"

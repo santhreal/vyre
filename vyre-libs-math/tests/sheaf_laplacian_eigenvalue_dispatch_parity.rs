@@ -29,7 +29,7 @@ fn run(n_nodes: u32, d: u32, r: &[u32], floor: u32) -> (Vec<u32>, Vec<u32>) {
     // seeded to zero (the backend zero-allocates them); one_fp_buf carries the 16.16 unit written
     // into the eigenvector's arg-max slot. The running max/arg-max are loop-carried locals, so
     // there are no scratch buffers to seed.
-    let outputs = vyre_reference::reference_eval_with_dispatch(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(r)),
@@ -37,8 +37,9 @@ fn run(n_nodes: u32, d: u32, r: &[u32], floor: u32) -> (Vec<u32>, Vec<u32>) {
             Value::from(pack(&[0u32])),
             Value::from(pack(&[ONE_FP])),
         ],
-        floor,
     )
+    .with_min_dispatch_elements(floor)
+    .outputs()
     .expect("sheaf_laplacian_eigenvalue reference evaluation must succeed");
     let lam = unpack(
         &outputs[vyre_reference::output_index(&program, "lambda").expect("lambda output")]

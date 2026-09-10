@@ -402,13 +402,14 @@ const KERNELS: &[[f32; 9]] = &[
 fn run_conv(h: u32, w: u32, input: &[f32], kernel: &[f32]) -> Vec<f32> {
     let program = conv2d_3x3_direct("input", "kernel", "output", h, w)
         .expect("Fix: conv2d_3x3_direct must build.");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_f32_slice(input)),
             Value::from(pack_f32_slice(kernel)),
         ],
     )
+    .outputs()
     .expect("Fix: conv2d_3x3_direct must execute in the reference interpreter.");
     decode_f32_le_bytes_all(&outputs[0].to_bytes())
 }
@@ -416,21 +417,24 @@ fn run_conv(h: u32, w: u32, input: &[f32], kernel: &[f32]) -> Vec<f32> {
 fn run_conv_decision(h: u32, w: u32, input: &[f32], kernel: &[f32]) -> Vec<f32> {
     let program = conv2d_3x3_decision("input", "kernel", "output", h, w)
         .expect("Fix: conv2d_3x3_decision must build.");
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_f32_slice(input)),
             Value::from(pack_f32_slice(kernel)),
         ],
     )
+    .outputs()
     .expect("Fix: conv2d_3x3_decision must execute in the reference interpreter.");
     decode_f32_le_bytes_all(&outputs[0].to_bytes())
 }
 
 fn run_im2col(h: u32, w: u32, input: &[f32]) -> Vec<f32> {
     let program = im2col_3x3("input", "output", h, w).expect("Fix: im2col_3x3 must build.");
-    let outputs = vyre_reference::reference_eval(&program, &[Value::from(pack_f32_slice(input))])
-        .expect("Fix: im2col_3x3 must execute in the reference interpreter.");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::from(pack_f32_slice(input))])
+            .outputs()
+            .expect("Fix: im2col_3x3 must execute in the reference interpreter.");
     decode_f32_le_bytes_all(&outputs[0].to_bytes())
 }
 
@@ -589,13 +593,14 @@ fn spine_nodes(node_count: u32) -> Vec<u8> {
 }
 
 fn run_walk(program: &Program, nodes: &[u8], out_words: usize) -> Vec<u32> {
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         program,
         &[
             Value::from(nodes.to_vec()),
             Value::from(pack_u32_slice(&vec![0u32; out_words])),
         ],
     )
+    .outputs()
     .expect("Fix: an AST walk must execute in the reference interpreter.");
     decode_u32_le_bytes_all(&outputs[0].to_bytes())
 }
@@ -687,13 +692,14 @@ fn both_walks_match_the_host_traversal_oracles_on_spines() {
         // 7. Spine closed-form postorder helper agreement (single output buffer)
         let spine_post_prog = ast_walk_postorder("out", node_count);
         let spine_post = {
-            let outputs = vyre_reference::reference_eval(
+            let outputs = vyre_reference::ReferenceRequest::standard(
                 &spine_post_prog,
                 &[Value::from(pack_u32_slice(&vec![
                     0u32;
                     node_count as usize
                 ]))],
             )
+            .outputs()
             .expect("Fix: spine postorder walk must execute in reference interpreter.");
             decode_u32_le_bytes_all(&outputs[0].to_bytes())
         };
@@ -795,20 +801,16 @@ fn ast_walk_capacity_and_degenerate_invariants() {
     let small_cap = 3u32;
 
     let program = ast_walk_preorder("nodes", "out", node_count, small_cap);
-    let (outputs, oob_report) = vyre_reference::reference_eval_oob_report(
-        &program,
-        &[
-            Value::from(branching_nodes),
-            Value::from(pack_u32_slice(&vec![0u32; small_cap as usize])),
-        ],
-    )
-    .expect("Fix: capacity-limited walk must execute without reference error.");
-
-    assert_eq!(
-        oob_report.total(),
-        0,
-        "Capacity-limited walk must produce zero out-of-bounds writes."
-    );
+    let capped_inputs = [
+        Value::from(branching_nodes),
+        Value::from(pack_u32_slice(&vec![0u32; small_cap as usize])),
+    ];
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &capped_inputs)
+        .outputs()
+        .expect(
+            "Fix: capacity-limited walk must execute without reference error and without an \
+             out-of-bounds write.",
+        );
 
     let decoded = decode_u32_le_bytes_all(&outputs[0].to_bytes());
     assert_eq!(
@@ -819,15 +821,13 @@ fn ast_walk_capacity_and_degenerate_invariants() {
 
     // Empty tree (node_count = 0)
     let empty_prog = ast_walk_preorder("nodes", "out", 0, 4);
-    let (empty_out, empty_oob) = vyre_reference::reference_eval_oob_report(
-        &empty_prog,
-        &[
-            Value::from(vec![0u8; 32]),
-            Value::from(pack_u32_slice(&[0u32; 4])),
-        ],
-    )
-    .expect("Fix: 0-node walk must evaluate safely.");
-    assert_eq!(empty_oob.total(), 0);
+    let empty_inputs = [
+        Value::from(vec![0u8; 32]),
+        Value::from(pack_u32_slice(&[0u32; 4])),
+    ];
+    let empty_out = vyre_reference::ReferenceRequest::standard(&empty_prog, &empty_inputs)
+        .outputs()
+        .expect("Fix: 0-node walk must evaluate safely and in bounds.");
     assert_eq!(decode_u32_le_bytes_all(&empty_out[0].to_bytes()).len(), 4);
 }
 

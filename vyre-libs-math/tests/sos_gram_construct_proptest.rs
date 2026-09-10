@@ -20,7 +20,7 @@ use vyre_reference::value::Value;
 fn run_ir(monomial_pairs: &[u32], p_coeffs: &[u32], m: u32, coeff_count: u32) -> Vec<u32> {
     let program = sos_gram_construct("monomial_pairs", "p_coeffs", "gram", m, coeff_count);
     let cells = (m * m) as usize;
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack(monomial_pairs)),
@@ -28,6 +28,7 @@ fn run_ir(monomial_pairs: &[u32], p_coeffs: &[u32], m: u32, coeff_count: u32) ->
             Value::from(pack(&vec![0u32; cells])),
         ],
     )
+    .outputs()
     .expect("sos_gram_construct reference evaluation must succeed");
     let index = vyre_reference::output_index(&program, "gram")
         .expect("sos_gram_construct must declare output gram");

@@ -164,7 +164,7 @@ fn run_cpu<'a>(
         values.push(Value::from(input.as_slice()));
     }
 
-    let evaluated = vyre_reference::reference_eval(program, values)?;
+    let evaluated = vyre_reference::ReferenceRequest::standard(program, values).outputs()?;
     outputs.clear();
     outputs.extend(evaluated.into_iter().map(|value| value.to_bytes()));
     Ok(outputs.as_slice())

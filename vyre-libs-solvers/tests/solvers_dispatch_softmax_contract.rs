@@ -33,13 +33,14 @@ const ONE: u32 = 1 << 16;
 fn run(pre_exp: &[u32]) -> Vec<u32> {
     let n = u32::try_from(pre_exp.len()).expect("fixture length fits a u32");
     let program = dispatch_softmax(PRE_EXP, OUT, n);
-    let outputs = vyre_reference::reference_eval(
+    let outputs = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             Value::from(pack_u32_slice(pre_exp)),
             Value::from(pack_u32_slice(&vec![0u32; pre_exp.len()])),
         ],
     )
+    .outputs()
     .expect("Fix: dispatch_softmax must execute on the reference interpreter");
     assert_eq!(
         outputs.len(),
