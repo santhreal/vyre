@@ -18,8 +18,10 @@ use std::collections::BTreeMap;
 
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::{
-    compile, Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
-    ObjectiveMetric, SearchBudget, ARTIFACT_SCHEMA_VERSION,
+    compile, compile_selected_modules, Artifact, CompileObjective, CompileRequest, DeviceFacts,
+    Digest, EmittedTargetModule, ExecutionTopology, ExternalFacts, ObjectiveMetric,
+    ResidentPartitionMode, SearchBudget, TargetModuleBundle, TargetPayloadFormat, TargetProfile,
+    ARTIFACT_SCHEMA_VERSION,
 };
 
 use vyre_test_support::graph_fixtures::{
@@ -36,6 +38,31 @@ fn device_default() -> DeviceFacts {
         .with_compute_units(8)
         .with_concurrent_queues(4)
         .with_launch_costs(4224, 1000)
+}
+
+fn payload_format() -> TargetPayloadFormat {
+    TargetPayloadFormat::new("test.target-binary", 1).expect("format must be valid")
+}
+
+fn payload_profile() -> TargetProfile {
+    TargetProfile::new("test.target-binary", 1, [64, 1, 1], 64, 1_024, 0)
+        .expect("profile must be valid")
+}
+
+/// Which execution topology this is, with no catch-all arm.
+///
+/// A topology variant added to the compiler stops this suite compiling until
+/// the lowering assertion below states what the target record must carry for
+/// it.
+fn topology_variant(topology: ExecutionTopology) -> &'static str {
+    match topology {
+        ExecutionTopology::Sequential => "sequential",
+        ExecutionTopology::ConcurrentQueue { .. } => "concurrent_queue",
+        ExecutionTopology::ResidentPartition { mode, .. } => match mode {
+            ResidentPartitionMode::FixedSpatialMask => "resident_partition.fixed_spatial_mask",
+            ResidentPartitionMode::BoundedWorkQueue => "resident_partition.bounded_work_queue",
+        },
+    }
 }
 
 // ============================================================================
@@ -238,17 +265,80 @@ fn artifact_encoding_preserves_the_pinned_schema_and_compiled_topology_schedule(
         "an artifact stamps the schema its own crate states"
     );
 
+    // Two independent arms on a device stating four concurrent queues select a
+    // topology off the sequential baseline. Without this the assertions below
+    // would hold for an artifact that recorded no topology decision at all.
+    let selected = artifact.selected_plan().topology;
+    assert_ne!(
+        selected,
+        ExecutionTopology::Sequential,
+        "two independent arms on a device stating four concurrent queues must select a concurrent \
+         topology, and this plan selected {selected:?}"
+    );
+    assert_eq!(topology_variant(selected), "concurrent_queue");
+    assert!(
+        selected.arm_width() > 1,
+        "a concurrent topology must submit on more than one arm"
+    );
+
     let wire_bytes = artifact.to_bytes().expect("artifact must encode");
     let decoded = Artifact::from_bytes(&wire_bytes).expect("artifact must decode");
 
     assert_eq!(decoded, artifact);
     assert_eq!(decoded.digest(), artifact.digest());
-    assert_eq!(decoded.selected_plan(), artifact.selected_plan());
+    assert_eq!(
+        decoded.selected_plan().topology,
+        selected,
+        "the serialized plan must carry the topology by value, not a default"
+    );
     decoded.selected_plan().schedule.validate().unwrap();
     assert_eq!(
         decoded.selected_plan().schedule.phases.len(),
         decoded.fusion().len(),
         "one selected schedule phase must describe each emitted fusion group"
+    );
+
+    // Lowering is where a selected topology is dropped without any artifact
+    // assertion noticing: the plan still states it and the target record is
+    // what a materializer submits from.
+    let payload = compile_selected_modules(
+        &artifact,
+        payload_format(),
+        payload_profile(),
+        |module, _profile| {
+            Ok(EmittedTargetModule {
+                entry_point: format!("entry_{}", module.group.0),
+                resource_bindings: module.canonical_bindings.clone(),
+                bytes: vec![1, 2, 3],
+            })
+        },
+    )
+    .expect("selected module lowering must succeed");
+
+    let bundle =
+        TargetModuleBundle::from_bytes(payload.bytes()).expect("module bundle must be admissible");
+    assert_eq!(
+        bundle.topology, selected,
+        "the lowered target record must carry the topology the plan selected"
+    );
+    assert_eq!(
+        bundle.arms.len(),
+        bundle.modules.len(),
+        "every lowered module must carry one arm assignment"
+    );
+    assert!(
+        bundle.arms.iter().any(|arm| arm.arm > 0),
+        "a concurrent topology must place at least one module off arm 0, and the assignments are \
+         {:?}",
+        bundle.arms
+    );
+    assert_ne!(
+        payload.bytes(),
+        TargetModuleBundle::new(bundle.modules.clone())
+            .to_bytes()
+            .expect("baseline bundle must encode")
+            .as_slice(),
+        "the lowered bytes must differ from the sequential baseline over the same modules"
     );
 
     // Verify the immediately preceding schema is rejected.
