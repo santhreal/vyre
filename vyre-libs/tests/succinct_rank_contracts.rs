@@ -7,9 +7,6 @@
 #![cfg(feature = "math-succinct")]
 #![allow(deprecated)]
 use crate::succinct_words;
-use crate::wire_words;
-use vyre_reference::value::Value;
-use wire_words::u32_bytes;
 
 #[test]
 fn rank_superblocks_store_zero_prefix_and_total_sentinel() {

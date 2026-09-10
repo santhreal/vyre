@@ -83,7 +83,7 @@ spec-strategies = ["dep:proptest"]
 structure-gate = { path = "../structure-gate" }
 vyre-foundation = { workspace = true, optional = true }
 vyre-megakernel = { workspace = true, optional = true }
-vyre-lower = { workspace = true, optional = true, default-features = false }
+vyre-lower = { workspace = true, optional = true }
 vyre-driver = { workspace = true, optional = true }
 proptest = { workspace = true, optional = true }
 # Not optional, and not behind `ir-fixtures`: `data_type_elements` states which

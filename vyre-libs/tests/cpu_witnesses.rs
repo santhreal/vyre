@@ -9,7 +9,6 @@
 ))]
 
 use vyre_libs::operation_catalog::library_entries;
-use vyre_reference::value::Value;
 
 fn entry(id: &'static str) -> vyre_foundation::operation::SemanticOperation {
     library_entries()
