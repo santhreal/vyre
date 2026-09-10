@@ -2983,6 +2983,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   payload format, target profile, launch geometry, resource binding and
   instance core are constructed in one place, so a change to the fixture device
   or search budget reaches both modules.
+- `vyre_foundation::execution_plan::fusion::FusionRejectionReason` is the one
+  definition of why a fusion is refused, and it is matchable exhaustively
+  across crates. The megakernel carried a second copy of the same eleven
+  variants and the same `MKL` diagnostic codes, and a classifier outside the
+  declaring crate now fails to compile until a new reason is filed rather than
+  falling into a wildcard arm.
 - The `hot-path-nested-rows` gate reads the trait that returns nested byte rows
   rather than counting the text of the type in one crate. A dispatch trait that
   returns `Vec<Vec<u8>>` must also declare a form that fills slots the caller
@@ -5233,6 +5239,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `hashmap/step/node_step.rs` to hold that seam. The backend-vocabulary row for
   the resource capability interface points at
   `vyre-spec/src/resource_capability`, which is the directory the file became.
+- A `SOURCE_DATE_EPOCH` that names no representable instant is refused instead
+  of rendering a timestamp the format has no room for.
 - A declared output byte range that is inverted, unaddressable, or past the
   buffer is refused instead of falling back to the whole buffer.
 - A registration is rejected when the tier it declares is one the crate that
@@ -6018,6 +6026,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Three file-size ratchet rows whose files moved from vyre-primitives into
   vyre-libs follow the code to its new path at the measured count instead of
   lapsing to the flat cap.
+- A dispatch records a read-back buffer no module writes under the identity
+  that module read it from, so a program whose kernel loads from a read-write
+  host-staged buffer without storing to it submits instead of being refused for
+  an unbound write direction.
 - A fusion module that binds a resource read-write now names an input identity
   for it at every resource lifetime. Classifying the binding by lifetime left a
   caller-visible output resource out of the input projection, so every wgpu
@@ -7571,6 +7583,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The async rule roster derives its covered set from the validation catalog and
   the suite sources at run time, which closed a gap where the empty-tag rule
   V128 had no test case in the tree.
+- The workspace roster rule reads the checkout instead of a compiled-in copy of
+  the root manifest, so a directory holding a `Cargo.toml` that neither
+  `members` nor `exclude` names is reported. The copy could only report an edit
+  to the manifest that skipped it, and the `fuzz` crate had been sitting
+  outside both lists.
 - Device waits are bounded. Stream and event synchronization poll the CUDA
   driver with a spin window and capped sleep instead of blocking without a
   deadline, and a conformance compile, dispatch or session drop that outlives
@@ -9181,6 +9198,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   vyre-libs solvers are compared against the builders they forward to. Both
   pass the op id and both buffer names through unchanged, across the empty,
   single-workgroup and multi-block regimes.
+- The `dispatch` fuzz target is excluded from the root workspace by name and
+  built by the fuzz workflow. Nothing had compiled it since it was written.
 - The workspace-docs gate reports a warning-level rustdoc diagnostic as a
   finding, so a public item linking to a private one fails the gate that owns
   the check instead of only the strict documentation leg.
@@ -9510,6 +9529,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `structure-gate/tests/checkout_provenance.rs` rejects both spellings,
   assembling each from parts at run time so the gate does not report itself and
   needs no exemption.
+- The gates that build the workspace, the consumers and the device test targets
+  share one cargo invocation, one diagnostic parse and one placement of a
+  diagnostic relative to the checkout, so a build that produced no diagnostics
+  and a nonzero exit is judged the same way by each. Two gates that read the
+  workflow command grammar, two that walk a crate's sources, and two evidence
+  writers that query the host device driver likewise have one owner each.
 - The wgpu transcendental parity contract accepts a device result that is
   within either the ulp budget or the absolute error the device API states near
   a zero crossing. Ulp width collapses toward a root, so a conforming `cos`

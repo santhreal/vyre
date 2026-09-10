@@ -11122,7 +11122,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FusionDecision"
 variant_name = "Legal"
-declaration_site = "vyre-megakernel/src/legality.rs:63"
+declaration_site = "vyre-megakernel/src/legality.rs:16"
 constructors = ["FusionDecision::Legal"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq)"
@@ -11152,7 +11152,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FusionDecision"
 variant_name = "Rejected"
-declaration_site = "vyre-megakernel/src/legality.rs:65"
+declaration_site = "vyre-megakernel/src/legality.rs:18"
 constructors = ["FusionDecision::Rejected"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq)"
@@ -11232,7 +11232,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FusionLegalityVerdict"
 variant_name = "Legal"
-declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:87"
+declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:93"
 constructors = ["FusionLegalityVerdict::Legal"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -11242,7 +11242,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FusionLegalityVerdict"
 variant_name = "Rejected"
-declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:89"
+declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:95"
 constructors = ["FusionLegalityVerdict::Rejected"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -11252,28 +11252,8 @@ disposition = "implemented"
 [[closure]]
 type_name = "FusionRejectionReason"
 variant_name = "DependencyCycle"
-declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:29"
-constructors = ["FusionRejectionReason::DependencyCycle"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "FusionRejectionReason"
-variant_name = "DependencyCycle"
-declaration_site = "vyre-megakernel/src/legality.rs:28"
-constructors = ["FusionRejectionReason::DependencyCycle"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "FusionRejectionReason"
-variant_name = "ExcessiveRegisters"
 declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:35"
-constructors = ["FusionRejectionReason::ExcessiveRegisters"]
+constructors = ["FusionRejectionReason::DependencyCycle"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
 public_api_entry = "docs/public-api/vyre-foundation.txt"
@@ -11282,17 +11262,17 @@ disposition = "implemented"
 [[closure]]
 type_name = "FusionRejectionReason"
 variant_name = "ExcessiveRegisters"
-declaration_site = "vyre-megakernel/src/legality.rs:34"
+declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:41"
 constructors = ["FusionRejectionReason::ExcessiveRegisters"]
 child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
+equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
 public_api_entry = "docs/public-api/vyre-foundation.txt"
 disposition = "implemented"
 
 [[closure]]
 type_name = "FusionRejectionReason"
 variant_name = "ExcessiveSharedMemory"
-declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:33"
+declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:39"
 constructors = ["FusionRejectionReason::ExcessiveSharedMemory"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -11301,38 +11281,18 @@ disposition = "implemented"
 
 [[closure]]
 type_name = "FusionRejectionReason"
-variant_name = "ExcessiveSharedMemory"
-declaration_site = "vyre-megakernel/src/legality.rs:32"
-constructors = ["FusionRejectionReason::ExcessiveSharedMemory"]
+variant_name = "GenuinelyIllegalGeometry"
+declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:43"
+constructors = ["FusionRejectionReason::GenuinelyIllegalGeometry"]
 child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
+equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
 public_api_entry = "docs/public-api/vyre-foundation.txt"
 disposition = "implemented"
 
 [[closure]]
 type_name = "FusionRejectionReason"
-variant_name = "GenuinelyIllegalGeometry"
+variant_name = "IncompatibleIterationSpace"
 declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:37"
-constructors = ["FusionRejectionReason::GenuinelyIllegalGeometry"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "FusionRejectionReason"
-variant_name = "GenuinelyIllegalGeometry"
-declaration_site = "vyre-megakernel/src/legality.rs:36"
-constructors = ["FusionRejectionReason::GenuinelyIllegalGeometry"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "FusionRejectionReason"
-variant_name = "IncompatibleIterationSpace"
-declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:31"
 constructors = ["FusionRejectionReason::IncompatibleIterationSpace"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -11341,79 +11301,29 @@ disposition = "implemented"
 
 [[closure]]
 type_name = "FusionRejectionReason"
-variant_name = "IncompatibleIterationSpace"
-declaration_site = "vyre-megakernel/src/legality.rs:30"
-constructors = ["FusionRejectionReason::IncompatibleIterationSpace"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "FusionRejectionReason"
 variant_name = "LifecycleBoundary"
-declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:21"
-constructors = ["FusionRejectionReason::LifecycleBoundary"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "FusionRejectionReason"
-variant_name = "LifecycleBoundary"
-declaration_site = "vyre-megakernel/src/legality.rs:19"
-constructors = ["FusionRejectionReason::LifecycleBoundary"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "FusionRejectionReason"
-variant_name = "MultipleConsumers"
-declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:23"
-constructors = ["FusionRejectionReason::MultipleConsumers"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "FusionRejectionReason"
-variant_name = "MultipleConsumers"
-declaration_site = "vyre-megakernel/src/legality.rs:21"
-constructors = ["FusionRejectionReason::MultipleConsumers"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "FusionRejectionReason"
-variant_name = "NotProducerConsumer"
-declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:19"
-constructors = ["FusionRejectionReason::NotProducerConsumer"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "FusionRejectionReason"
-variant_name = "NotProducerConsumer"
-declaration_site = "vyre-megakernel/src/legality.rs:17"
-constructors = ["FusionRejectionReason::NotProducerConsumer"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "FusionRejectionReason"
-variant_name = "SynchronizationBoundary"
 declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:27"
-constructors = ["FusionRejectionReason::SynchronizationBoundary"]
+constructors = ["FusionRejectionReason::LifecycleBoundary"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
+public_api_entry = "docs/public-api/vyre-foundation.txt"
+disposition = "implemented"
+
+[[closure]]
+type_name = "FusionRejectionReason"
+variant_name = "MultipleConsumers"
+declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:29"
+constructors = ["FusionRejectionReason::MultipleConsumers"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
+public_api_entry = "docs/public-api/vyre-foundation.txt"
+disposition = "implemented"
+
+[[closure]]
+type_name = "FusionRejectionReason"
+variant_name = "NotProducerConsumer"
+declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:25"
+constructors = ["FusionRejectionReason::NotProducerConsumer"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
 public_api_entry = "docs/public-api/vyre-foundation.txt"
@@ -11422,17 +11332,17 @@ disposition = "implemented"
 [[closure]]
 type_name = "FusionRejectionReason"
 variant_name = "SynchronizationBoundary"
-declaration_site = "vyre-megakernel/src/legality.rs:25"
+declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:33"
 constructors = ["FusionRejectionReason::SynchronizationBoundary"]
 child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
+equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
 public_api_entry = "docs/public-api/vyre-foundation.txt"
 disposition = "implemented"
 
 [[closure]]
 type_name = "FusionRejectionReason"
 variant_name = "UnknownGraphMember"
-declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:17"
+declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:23"
 constructors = ["FusionRejectionReason::UnknownGraphMember"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -11441,31 +11351,11 @@ disposition = "implemented"
 
 [[closure]]
 type_name = "FusionRejectionReason"
-variant_name = "UnknownGraphMember"
-declaration_site = "vyre-megakernel/src/legality.rs:15"
-constructors = ["FusionRejectionReason::UnknownGraphMember"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "FusionRejectionReason"
 variant_name = "WorkgroupMismatch"
-declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:25"
+declaration_site = "vyre-foundation/src/execution_plan/fusion/legality.rs:31"
 constructors = ["FusionRejectionReason::WorkgroupMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "FusionRejectionReason"
-variant_name = "WorkgroupMismatch"
-declaration_site = "vyre-megakernel/src/legality.rs:23"
-constructors = ["FusionRejectionReason::WorkgroupMismatch"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
 public_api_entry = "docs/public-api/vyre-foundation.txt"
 disposition = "implemented"
 
@@ -33457,7 +33347,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "TopologyDecision"
 variant_name = "Legal"
-declaration_site = "vyre-megakernel/src/legality.rs:96"
+declaration_site = "vyre-megakernel/src/legality.rs:49"
 constructors = ["TopologyDecision::Legal"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq)"
@@ -33466,7 +33356,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "TopologyDecision"
 variant_name = "Rejected"
-declaration_site = "vyre-megakernel/src/legality.rs:98"
+declaration_site = "vyre-megakernel/src/legality.rs:51"
 constructors = ["TopologyDecision::Rejected"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq)"
@@ -33475,7 +33365,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "TopologyRejectionReason"
 variant_name = "ControlDependencyOrEffect"
-declaration_site = "vyre-megakernel/src/legality.rs:83"
+declaration_site = "vyre-megakernel/src/legality.rs:36"
 constructors = ["TopologyRejectionReason::ControlDependencyOrEffect"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
@@ -33484,7 +33374,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "TopologyRejectionReason"
 variant_name = "IllegalAsymmetricJoin"
-declaration_site = "vyre-megakernel/src/legality.rs:85"
+declaration_site = "vyre-megakernel/src/legality.rs:38"
 constructors = ["TopologyRejectionReason::IllegalAsymmetricJoin"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
@@ -33493,7 +33383,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "TopologyRejectionReason"
 variant_name = "InsufficientComputeUnits"
-declaration_site = "vyre-megakernel/src/legality.rs:75"
+declaration_site = "vyre-megakernel/src/legality.rs:28"
 constructors = ["TopologyRejectionReason::InsufficientComputeUnits"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
@@ -33502,7 +33392,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "TopologyRejectionReason"
 variant_name = "InsufficientConcurrentQueues"
-declaration_site = "vyre-megakernel/src/legality.rs:73"
+declaration_site = "vyre-megakernel/src/legality.rs:26"
 constructors = ["TopologyRejectionReason::InsufficientConcurrentQueues"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
@@ -33511,7 +33401,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "TopologyRejectionReason"
 variant_name = "NoIndependentConcurrency"
-declaration_site = "vyre-megakernel/src/legality.rs:87"
+declaration_site = "vyre-megakernel/src/legality.rs:40"
 constructors = ["TopologyRejectionReason::NoIndependentConcurrency"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
@@ -33520,7 +33410,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "TopologyRejectionReason"
 variant_name = "OccupancyExceeded"
-declaration_site = "vyre-megakernel/src/legality.rs:89"
+declaration_site = "vyre-megakernel/src/legality.rs:42"
 constructors = ["TopologyRejectionReason::OccupancyExceeded"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
@@ -33529,7 +33419,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "TopologyRejectionReason"
 variant_name = "RequiresCooperativeLaunch"
-declaration_site = "vyre-megakernel/src/legality.rs:79"
+declaration_site = "vyre-megakernel/src/legality.rs:32"
 constructors = ["TopologyRejectionReason::RequiresCooperativeLaunch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
@@ -33538,7 +33428,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "TopologyRejectionReason"
 variant_name = "ResourceConflict"
-declaration_site = "vyre-megakernel/src/legality.rs:81"
+declaration_site = "vyre-megakernel/src/legality.rs:34"
 constructors = ["TopologyRejectionReason::ResourceConflict"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"
@@ -33547,7 +33437,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "TopologyRejectionReason"
 variant_name = "UnenforceableSpatialMasking"
-declaration_site = "vyre-megakernel/src/legality.rs:77"
+declaration_site = "vyre-megakernel/src/legality.rs:30"
 constructors = ["TopologyRejectionReason::UnenforceableSpatialMasking"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)"

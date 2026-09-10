@@ -1223,7 +1223,7 @@ seam = "backend-contract"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 2690
+exported_item_count = 2691
 
   [[package.item]]
   path = "T::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>"
@@ -14170,6 +14170,13 @@ exported_item_count = 2690
 
   [[package.item]]
   path = "vyre_driver::materialize::InstanceCore::absorb_outputs_for_module(&self, module_index: usize, plan: &vyre_driver::BindingPlan, program: &vyre_foundation::ir_inner::model::program::definition::Program, produced: alloc::vec::Vec<alloc::vec::Vec<u8>>, state: &mut alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>, missing: impl core::ops::function::Fn(usize, &str) -> vyre_driver::BackendError) -> core::result::Result<(), vyre_driver::BackendError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::materialize::InstanceCore::absorbed_value_for_module_binding(&self, module_index: usize, binding: &vyre_driver::Binding) -> core::result::Result<vyre_megakernel::identity::ArtifactValueId, vyre_driver::BackendError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -140868,7 +140875,7 @@ seam = "megakernel-compiler"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre"
 stability = "internal"
-exported_item_count = 1335
+exported_item_count = 1321
 
   [[package.item]]
   path = "impl core::convert::From<&vyre_megakernel::TargetCompileError> for vyre_foundation::diagnostics::Diagnostic"
@@ -141341,13 +141348,6 @@ exported_item_count = 1335
 
   [[package.item]]
   path = "impl vyre_megakernel::cost::CostBreakdown"
-  kind = "impl"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl vyre_megakernel::legality::FusionRejectionReason"
   kind = "impl"
   stability = "internal"
   feature = "unconditional"
@@ -143377,7 +143377,7 @@ exported_item_count = 1335
   wire_compatibility = "wire-bound"
 
   [[package.item]]
-  path = "vyre_megakernel::FusionRejection::reason: vyre_megakernel::legality::FusionRejectionReason"
+  path = "vyre_megakernel::FusionRejection::reason: vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason"
   kind = "field"
   stability = "internal"
   feature = "unconditional"
@@ -147899,102 +147899,11 @@ exported_item_count = 1335
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_megakernel::legality::FusionDecision::Rejected(vyre_megakernel::legality::FusionRejectionReason)"
+  path = "vyre_megakernel::legality::FusionDecision::Rejected(vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason)"
   kind = "variant"
   stability = "internal"
   feature = "unconditional"
   wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_megakernel::legality::FusionRejectionReason"
-  kind = "enum"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "wire-bound"
-
-  [[package.item]]
-  path = "vyre_megakernel::legality::FusionRejectionReason::DependencyCycle"
-  kind = "variant"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_megakernel::legality::FusionRejectionReason::ExcessiveRegisters"
-  kind = "variant"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_megakernel::legality::FusionRejectionReason::ExcessiveSharedMemory"
-  kind = "variant"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_megakernel::legality::FusionRejectionReason::GenuinelyIllegalGeometry"
-  kind = "variant"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_megakernel::legality::FusionRejectionReason::IncompatibleIterationSpace"
-  kind = "variant"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_megakernel::legality::FusionRejectionReason::LifecycleBoundary"
-  kind = "variant"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_megakernel::legality::FusionRejectionReason::MultipleConsumers"
-  kind = "variant"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_megakernel::legality::FusionRejectionReason::NotProducerConsumer"
-  kind = "variant"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_megakernel::legality::FusionRejectionReason::SynchronizationBoundary"
-  kind = "variant"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_megakernel::legality::FusionRejectionReason::UnknownGraphMember"
-  kind = "variant"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_megakernel::legality::FusionRejectionReason::WorkgroupMismatch"
-  kind = "variant"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_megakernel::legality::FusionRejectionReason::code(self) -> &'static str"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "wire-bound"
 
   [[package.item]]
   path = "vyre_megakernel::legality::analyze_fusion_pair(graph: &vyre_foundation::ir_inner::model::program_graph::graph::ProgramGraph, from: vyre_megakernel::ArtifactNodeId, to: vyre_megakernel::ArtifactNodeId, value: vyre_megakernel::ArtifactValueId) -> vyre_megakernel::legality::FusionDecision"

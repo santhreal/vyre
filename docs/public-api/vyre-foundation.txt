@@ -10,7 +10,6 @@
 #[non_exhaustive] pub enum vyre_foundation::dialect_lookup::AttrType
 #[non_exhaustive] pub enum vyre_foundation::execution_plan::InnovationTrack
 #[non_exhaustive] pub enum vyre_foundation::execution_plan::fusion::FusionError
-#[non_exhaustive] pub enum vyre_foundation::execution_plan::fusion::FusionRejectionReason
 #[non_exhaustive] pub enum vyre_foundation::graph_view::DataflowKind
 #[non_exhaustive] pub enum vyre_foundation::graph_view::EdgeKind
 #[non_exhaustive] pub enum vyre_foundation::graph_view::GraphValidateError
@@ -1251,6 +1250,7 @@ pub enum vyre_foundation::execution_plan::ProvenanceStrategy
 pub enum vyre_foundation::execution_plan::ReadbackStrategy
 pub enum vyre_foundation::execution_plan::fusion::FusionCandidateKind
 pub enum vyre_foundation::execution_plan::fusion::FusionLegalityVerdict
+pub enum vyre_foundation::execution_plan::fusion::FusionRejectionReason
 pub enum vyre_foundation::execution_plan::fusion::HandoffLocation
 pub enum vyre_foundation::execution_plan::fusion::RegionRelation
 pub enum vyre_foundation::execution_plan::fusion::TileResidency
