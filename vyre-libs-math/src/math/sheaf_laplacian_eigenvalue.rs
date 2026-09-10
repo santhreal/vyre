@@ -188,7 +188,7 @@ inventory::submit! {
             ]]
         }),
     )
-    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
+    .with_uncharacterized()
 }
 
 /// The largest diagonal entry in the fixture, which the phase selects.
@@ -232,7 +232,7 @@ inventory::submit! {
         }),
         Some(|| vec![vec![EXPECTED_POWER_ITERATION_PHASE_BYTES.to_vec()]]),
     )
-    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
+    .with_uncharacterized()
 }
 
 #[cfg(test)]

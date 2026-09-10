@@ -14,12 +14,12 @@ mod semantics;
 mod target_facet;
 
 pub use self::call_graph::CallGraphClosure;
-pub use self::catalog_bundle::{ExtensionProvenance, OperationCatalogBundle};
+pub use self::catalog_bundle::{OperationCatalogBundle, ExtensionProvenance};
 pub use self::conformance::ConformanceRegistry;
 pub use self::dialect::{DialectOperationSpec, OperationVisitor};
 pub use self::records::{
-    ConformanceProvider, ContractProvider, LoweringProvider, OperationContractBuilder,
-    OperationFixtures, SemanticDescriptor,
+    AbsenceDecision, ConformanceProvider, ContractProvider, LoweringProvider,
+    OperationContractBuilder, OperationFixtures, SemanticDescriptor,
 };
 pub use self::registration::OperationRegistration;
 pub use self::registry::OperationRegistry;
@@ -39,7 +39,7 @@ macro_rules! declare_operation {
         $(signature: $sig:expr,)?
         $(category: $cat:expr,)?
         $(laws: $laws:expr,)?
-        $(opaque_reason: $opaque:expr,)?
+        $(absence: $absence:expr,)?
         $(numeric: $num:expr,)?
         $(geometry_requirements: $geom:expr,)?
         $(explicit_effects: $eff:expr,)?
@@ -73,7 +73,7 @@ macro_rules! declare_operation {
                     },
                     explicit_effects: None $(.or(Some($eff)))?,
                     explicit_capabilities: None $(.or(Some($caps)))?,
-                    opaque_reason: None $(.or(Some($opaque)))?,
+                    absence: None $(.or(Some($absence)))?,
                 }
             }
             $crate::inventory::submit! {
@@ -116,7 +116,7 @@ macro_rules! declare_operation {
                             },
                             explicit_effects: None $(.or(Some($eff)))?,
                             explicit_capabilities: None $(.or(Some($caps)))?,
-                            opaque_reason: None $(.or(Some($opaque)))?,
+                            absence: None $(.or(Some($absence)))?,
                         };
                         let op = $crate::operation::SemanticOperation {
                             id: desc.id,
@@ -133,7 +133,7 @@ macro_rules! declare_operation {
                             source_file: file!(),
                             explicit_effects: desc.explicit_effects,
                             explicit_capabilities: desc.explicit_capabilities,
-                            opaque_reason: desc.opaque_reason,
+                            absence: desc.absence,
                         };
                         op.contract_record()
                     }),

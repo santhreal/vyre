@@ -190,5 +190,5 @@ inventory::submit! {
         }),
     )
     .with_category("visual")
-    .with_opaque("vector path and line segment analytical rasterization")
+    .with_uncharacterized()
 }

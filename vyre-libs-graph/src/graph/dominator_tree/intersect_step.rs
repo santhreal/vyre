@@ -205,7 +205,7 @@ inventory::submit! {
         ]]),
         Some(|| vec![vec![EXPECTED_DOMINATOR_TREE_LCA_BYTES.to_vec()]]),
     )
-    .with_opaque("graph traversal and topological structural analysis")
+    .with_no_legal_rewrite()
 }
 
 /// The registered operation on its own: one sweep, with movement reported on

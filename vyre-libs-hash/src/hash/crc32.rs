@@ -619,7 +619,7 @@ inventory::submit! {
         }),
         Some(|| vec![vec![EXPECTED_CRC32_OUTPUT_BYTES.to_vec()]]),
     )
-    .with_opaque("cryptographic or checksum hash state compression round")
+    .with_no_legal_rewrite()
 }
 
 #[cfg(test)]

@@ -180,7 +180,7 @@ inventory::submit! {
             vec![vec![EXPECTED_BITSET_FIXPOINT_OUTPUT_BYTES.to_vec()]]
         }),
     )
-    .with_opaque("iterative dataflow fixpoint iteration step")
+    .with_no_legal_rewrite()
 }
 
 #[cfg(test)]

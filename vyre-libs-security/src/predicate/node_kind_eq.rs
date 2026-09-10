@@ -38,6 +38,7 @@ inventory::submit! {
         }),
     )
     .with_laws(&["identity"])
+    .with_no_legal_rewrite()
 }
 
 #[cfg(test)]

@@ -60,7 +60,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_INT8_UNPACK_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
-    .with_opaque("neural network layer activation or tensor contraction step")
+    .with_uncharacterized()
 }
 
 inventory::submit! {
@@ -76,5 +76,5 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_INT8_PACK_OUTPUT_BYTES.to_vec()]]),
     )
     .with_category("nn")
-    .with_opaque("neural network layer activation or tensor contraction step")
+    .with_no_legal_rewrite()
 }

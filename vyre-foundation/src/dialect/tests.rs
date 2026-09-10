@@ -80,6 +80,7 @@ crate::define_dialect! {
             summary: "Alpha operation.",
             signature: UNIT_SIG,
             is_composable: true,
+            decision: Some(crate::operation::AbsenceDecision::Uncharacterized),
             call_builder: call_alpha,
             fields: ALPHA_FIELDS,
             resource_abi: ALPHA_ABI,
@@ -93,6 +94,7 @@ crate::define_dialect! {
             summary: "Beta operation.",
             signature: UNIT_SIG,
             is_composable: true,
+            decision: Some(crate::operation::AbsenceDecision::Uncharacterized),
             call_builder: call_beta,
         },
     ]

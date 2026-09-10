@@ -94,7 +94,7 @@ inventory::submit! {
     )
     .with_category("math")
     .with_numeric(vyre_foundation::numeric::NumericContract::ieee_f32(32))
-    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
+    .with_no_legal_rewrite()
 }
 
 /// Build a Program that computes `C = A · B` for NxN row-major F32

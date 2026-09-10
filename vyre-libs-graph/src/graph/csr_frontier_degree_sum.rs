@@ -112,6 +112,7 @@ inventory::submit! {
         }),
     )
     .with_laws(&["bounded"])
+    .with_uncharacterized()
 }
 
 #[cfg(test)]

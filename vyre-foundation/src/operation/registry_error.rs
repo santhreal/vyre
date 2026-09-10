@@ -41,19 +41,11 @@ pub enum OperationRegistryError {
         /// Whether the minting crate is inside the workspace.
         origin: &'static str,
     },
-    /// A registration has neither an algebraic law nor an explicit opaque decision.
-    #[error("operation `{id}` has no transform decision: must declare either algebraic laws or an explicit opaque decision")]
+    /// A registration has neither an algebraic law nor a recorded absence class.
+    #[error("operation `{id}` has no transform decision: must declare either algebraic laws or a recorded absence class")]
     MissingTransformDecision {
         /// Invalid operation id.
         id: &'static str,
-    },
-    /// A registration cited an invalid or placeholder opaque reason.
-    #[error("operation `{id}` records an invalid or placeholder opaque reason `{reason}`")]
-    InvalidOpaqueReason {
-        /// Invalid operation id.
-        id: &'static str,
-        /// Invalid reason string.
-        reason: &'static str,
     },
     /// A registration cited an unknown algebraic law.
     #[error("operation `{id}` cites unknown algebraic law `{law}`")]

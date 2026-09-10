@@ -252,7 +252,7 @@ inventory::submit! {
         ]]),
     )
     .with_category("parsing")
-    .with_opaque("lexical and grammar parser state automaton transition")
+    .with_uncharacterized()
 }
 
 fn call_fixture_inputs() -> Vec<Vec<Vec<u8>>> {

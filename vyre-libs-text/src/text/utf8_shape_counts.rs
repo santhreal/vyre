@@ -153,7 +153,7 @@ inventory::submit! {
         }),
         Some(|| vec![vec![vec![2, 0, 0, 0, 2, 0, 0, 0]]]),
     )
-    .with_opaque("text encoding classification and character frequency scanning")
+    .with_no_legal_rewrite()
 }
 
 #[cfg(test)]

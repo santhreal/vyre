@@ -36,7 +36,7 @@ inventory::submit! {
         bytes_extraction: false,
     })
     .with_category("conform")
-    .with_opaque("a synthetic callee declares a signature only, so it states no law")
+    .with_uncharacterized()
 }
 
 /// Op id of the coverage bundle, named once so the entry, the validation exemption

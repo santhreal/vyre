@@ -67,4 +67,5 @@ inventory::submit! {
         }),
     )
     .with_laws(&["complement"])
+    .with_uncharacterized()
 }

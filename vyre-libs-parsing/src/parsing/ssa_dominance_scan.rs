@@ -185,5 +185,5 @@ inventory::submit! {
             EXPECTED_SSA_DOMINANCE_SCAN_COUNT_BYTES.to_vec(),
         ]]),
     )
-    .with_opaque("lexical and grammar parser state automaton transition")
+    .with_uncharacterized()
 }

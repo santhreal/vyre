@@ -61,7 +61,8 @@ macro_rules! submit_hardware_intrinsic {
         capabilities: $caps:expr,
         inputs_count: $in_cnt:expr,
         outputs_count: $out_cnt:expr,
-        semantic: $semantic:expr
+        semantic: $semantic:expr,
+        decision: [$($decision:tt)*]
     ) => {
         inventory::submit! {
             vyre_foundation::operation::OperationRegistration::intrinsic_unconstrained(
@@ -78,7 +79,7 @@ macro_rules! submit_hardware_intrinsic {
             )
             .with_explicit_effects($effects)
             .with_explicit_capabilities($caps)
-            .with_opaque("hardware primitive execution and memory intrinsic")
+            $($decision)*
         }
 
         inventory::submit! {
@@ -135,7 +136,8 @@ macro_rules! define_unary_u32_hardware_intrinsic {
             capabilities: vyre_foundation::program_caps::RequiredCapabilities::NONE,
             inputs_count: 1,
             outputs_count: 1,
-            semantic: crate::hardware::catalog::HardwareSemantic::UnaryU32Map
+            semantic: crate::hardware::catalog::HardwareSemantic::UnaryU32Map,
+            decision: [.with_no_legal_rewrite()]
         }
 
         #[cfg(test)]
@@ -216,7 +218,8 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
             capabilities: vyre_foundation::program_caps::RequiredCapabilities::NONE,
             inputs_count: 1,
             outputs_count: 1,
-            semantic: crate::hardware::catalog::HardwareSemantic::BarrierIdentityU32
+            semantic: crate::hardware::catalog::HardwareSemantic::BarrierIdentityU32,
+            decision: [.with_uncharacterized()]
         }
 
         #[cfg(test)]

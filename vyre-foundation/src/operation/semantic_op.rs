@@ -2,10 +2,11 @@
 
 use crate::dialect_lookup::Signature;
 use crate::geometry::{GeometryConstraintConflict, GeometryRequirements};
-use crate::ir::Program;
+use crate::ir::{BufferAccess, Program};
 use crate::numeric::NumericContract;
 use crate::operation::records::{
-    ConformanceProvider, ContractProvider, LoweringProvider, OperationFixtures, SemanticDescriptor,
+    AbsenceDecision, ConformanceProvider, ContractProvider, LoweringProvider, OperationFixtures,
+    SemanticDescriptor,
 };
 use crate::operation::registry::OperationRegistry;
 use crate::operation::semantics::{OperationEffects, OperationTier};
@@ -43,8 +44,8 @@ pub struct SemanticOperation {
     pub explicit_effects: Option<OperationEffects>,
     /// Optional explicit closed capabilities.
     pub explicit_capabilities: Option<RequiredCapabilities>,
-    /// Optional explicit opaque / no-transform reason.
-    pub opaque_reason: Option<&'static str>,
+    /// Recorded decision when the operation declares no unconditional law.
+    pub absence: Option<AbsenceDecision>,
 }
 
 impl SemanticOperation {
@@ -113,16 +114,17 @@ impl SemanticOperation {
         self.category
     }
 
-    /// Return the explicit opaque / no-transform reason, if one was recorded.
+    /// Return the recorded law-absence decision, if one was recorded.
     #[must_use]
-    pub const fn opaque_reason(self) -> Option<&'static str> {
-        self.opaque_reason
+    pub const fn absence(self) -> Option<AbsenceDecision> {
+        self.absence
     }
 
-    /// Whether this operation has a recorded transform decision (either laws or an explicit opaque decision).
+    /// Whether this operation records a transform decision: either declared
+    /// laws or an explicit law-absence decision.
     #[must_use]
     pub fn has_transform_decision(self) -> bool {
-        !self.laws.is_empty() || self.opaque_reason.is_some()
+        !self.laws.is_empty() || self.absence.is_some()
     }
 
     /// Return the permitted f32 drift in ULPs.
@@ -185,7 +187,7 @@ impl SemanticOperation {
             geometry_requirements: self.geometry_requirements,
             explicit_effects: self.explicit_effects,
             explicit_capabilities: self.explicit_capabilities,
-            opaque_reason: self.opaque_reason,
+            absence: self.absence,
         }
     }
 
@@ -220,14 +222,16 @@ impl SemanticOperation {
     /// Construct the canonical semantic contract record.
     #[must_use]
     pub fn contract_record(self) -> vyre_spec::SemanticContractRecord {
-        build_contract_record(
-            self.id,
-            self.signature,
-            self.explicit_effects,
-            self.numeric,
-            self.laws,
-            self.opaque_reason,
-        )
+        build_contract_record(&ContractFacts {
+            id: self.id,
+            signature: self.signature,
+            effects: self.direct_effects(),
+            capabilities: self.direct_required_capabilities(),
+            numeric: self.numeric,
+            laws: self.laws,
+            absence: self.absence,
+            program: self.program(),
+        })
     }
 }
 
@@ -290,119 +294,275 @@ fn signature_to_contract_sig(sig: Option<&Signature>) -> Option<vyre_spec::OpSig
     })
 }
 
-pub(crate) fn build_contract_record(
-    id: &'static str,
-    signature: Option<&Signature>,
-    explicit_effects: Option<OperationEffects>,
-    numeric: NumericContract,
-    laws: &'static [&'static str],
-    opaque_reason: Option<&'static str>,
-) -> vyre_spec::SemanticContractRecord {
-    let sig = signature_to_contract_sig(signature);
+/// Every fact a contract record is derived from.
+///
+/// A record built from a shorter argument list left five facets at a
+/// declaration-order default, so `aliasing`, `shape_index`, `determinism`,
+/// `range_preconditions` and `resource_bounds` stated the same value for every
+/// operation in the catalog and carried no information. Each is derived here
+/// from the canonical program, the resolved effects, the resolved capabilities
+/// and the numeric contract.
+pub(crate) struct ContractFacts<'a> {
+    /// Stable operation identity.
+    pub id: &'static str,
+    /// Declared callable signature.
+    pub signature: Option<&'a Signature>,
+    /// Resolved effects: explicit when declared, program-derived otherwise.
+    pub effects: Option<OperationEffects>,
+    /// Resolved capabilities: explicit when declared, program-derived otherwise.
+    pub capabilities: Option<RequiredCapabilities>,
+    /// What the result is allowed to be.
+    pub numeric: NumericContract,
+    /// Declared law names.
+    pub laws: &'static [&'static str],
+    /// Recorded law-absence decision.
+    pub absence: Option<AbsenceDecision>,
+    /// Canonical program, when the registration builds one.
+    pub program: Option<Program>,
+}
 
-    let eff = if let Some(e) = explicit_effects {
-        if !e.reads && !e.writes && !e.atomics && !e.synchronizes {
-            vyre_spec::MemoryEffect::Pure
-        } else if e.atomics {
-            vyre_spec::MemoryEffect::Atomic
-        } else if e.synchronizes {
-            vyre_spec::MemoryEffect::Synchronizing
-        } else if e.writes {
-            vyre_spec::MemoryEffect::Write
-        } else {
-            vyre_spec::MemoryEffect::Read
-        }
+/// Classify resolved effects into the closed memory-effect vocabulary.
+fn derive_effects(effects: Option<OperationEffects>) -> vyre_spec::MemoryEffect {
+    let Some(e) = effects else {
+        return vyre_spec::MemoryEffect::Pure;
+    };
+    if e.atomics {
+        vyre_spec::MemoryEffect::Atomic
+    } else if e.synchronizes {
+        vyre_spec::MemoryEffect::Synchronizing
+    } else if e.writes {
+        vyre_spec::MemoryEffect::Write
+    } else if e.reads {
+        vyre_spec::MemoryEffect::Read
     } else {
         vyre_spec::MemoryEffect::Pure
-    };
+    }
+}
 
-    let num = match numeric.ulp_budget() {
+/// Derive the aliasing contract from the declared buffer access modes.
+///
+/// A `ReadWrite` buffer is an in-place update, so its operand and its result
+/// are required to be the same allocation. Two or more read-only inputs may
+/// overlap without changing the result. Anything else requires disjointness.
+fn derive_aliasing(program: Option<&Program>) -> vyre_spec::AliasingContract {
+    let Some(program) = program else {
+        return vyre_spec::AliasingContract::Disjoint;
+    };
+    let mut read_only = 0usize;
+    for decl in program.buffers() {
+        match decl.access {
+            BufferAccess::ReadWrite => return vyre_spec::AliasingContract::MustAlias,
+            BufferAccess::ReadOnly => read_only += 1,
+            _ => {}
+        }
+    }
+    if read_only >= 2 {
+        vyre_spec::AliasingContract::ReadSharingOnly
+    } else {
+        vyre_spec::AliasingContract::Disjoint
+    }
+}
+
+/// Derive the shape and index contract from declared element counts.
+///
+/// A storage buffer declares `count == 0` because its extent is a runtime
+/// binding, which is exactly `Dynamic`. When every participating buffer states
+/// a static extent the output-to-input element ratio separates elementwise,
+/// contracting and expanding.
+fn derive_shape_index(program: Option<&Program>) -> vyre_spec::ShapeIndexContract {
+    let Some(program) = program else {
+        return vyre_spec::ShapeIndexContract::agnostic();
+    };
+    let mut input_elements = 0u64;
+    let mut output_elements = 0u64;
+    let mut dynamic = false;
+    let mut any_output = false;
+    for decl in program.buffers() {
+        if matches!(decl.access, BufferAccess::Workgroup) {
+            continue;
+        }
+        let count = u64::from(decl.count);
+        if count == 0 {
+            dynamic = true;
+        }
+        let is_output = decl.is_output
+            || decl.pipeline_live_out
+            || matches!(decl.access, BufferAccess::WriteOnly | BufferAccess::ReadWrite);
+        if is_output {
+            any_output = true;
+            output_elements = output_elements.saturating_add(count);
+        } else {
+            input_elements = input_elements.saturating_add(count);
+        }
+    }
+    let relation = if dynamic || !any_output {
+        vyre_spec::ShapeIndexRelation::Dynamic
+    } else if output_elements == input_elements {
+        vyre_spec::ShapeIndexRelation::Elementwise
+    } else if output_elements < input_elements {
+        vyre_spec::ShapeIndexRelation::Contracting
+    } else {
+        vyre_spec::ShapeIndexRelation::Expanding
+    };
+    vyre_spec::ShapeIndexContract {
+        relation,
+        rank_preserving: matches!(relation, vyre_spec::ShapeIndexRelation::Elementwise),
+        dimension_invariants: Vec::new(),
+    }
+}
+
+/// Derive the determinism class from rounding budget, atomics, and laws.
+///
+/// An atomic read-modify-write leaves the combine order to the schedule, so the
+/// result is order-independent only when the operation records both
+/// commutativity and associativity. This is where a law decision reaches a
+/// facet other than itself.
+fn derive_determinism(
+    numeric: NumericContract,
+    effects: Option<OperationEffects>,
+    families: &[vyre_spec::LawFamily],
+) -> vyre_spec::DeterminismClass {
+    let atomics = effects.is_some_and(|e| e.atomics);
+    let order_independent = families.contains(&vyre_spec::LawFamily::Commutative)
+        && families.contains(&vyre_spec::LawFamily::Associative);
+    if atomics && !order_independent {
+        return vyre_spec::DeterminismClass::NonDeterministic;
+    }
+    match numeric.ulp_budget() {
+        Some(0) | None => vyre_spec::DeterminismClass::Deterministic,
+        Some(_) => vyre_spec::DeterminismClass::DeterministicModuloRounding,
+    }
+}
+
+/// Derive the resource bounds contract from the resolved capability record.
+fn derive_resource_bounds(
+    capabilities: Option<RequiredCapabilities>,
+) -> vyre_spec::ResourceBoundsContract {
+    match capabilities.map(|caps| caps.static_storage_bytes) {
+        Some(bytes) if bytes > 0 => vyre_spec::ResourceBoundsContract::StaticMemoryBytes(
+            usize::try_from(bytes).unwrap_or(usize::MAX),
+        ),
+        _ => vyre_spec::ResourceBoundsContract::Unbounded,
+    }
+}
+
+/// Derive the numerical behavior model from the numeric contract.
+fn derive_numerical(numeric: NumericContract) -> vyre_spec::NumericBehavior {
+    match numeric.ulp_budget() {
         Some(0) | None => vyre_spec::NumericBehavior::Exact,
         Some(ulps) => vyre_spec::NumericBehavior::IeeeFloatingPoint {
             ulp_budget: ulps,
             nan_behavior: vyre_spec::NanBehavior::CanonicalQuietNan,
             infinity_behavior: vyre_spec::InfinityBehavior::SignedInfinity,
         },
-    };
+    }
+}
 
-    let decision = if !laws.is_empty() {
-        let mut guarded = Vec::new();
-        for &law_name in laws {
-            let law = match law_name {
-                "commutative" => vyre_spec::AlgebraicLaw::Commutative,
-                "associative" => vyre_spec::AlgebraicLaw::Associative,
-                "identity" => vyre_spec::AlgebraicLaw::Identity { element: 0 },
-                "left-identity" => vyre_spec::AlgebraicLaw::LeftIdentity { element: 0 },
-                "right-identity" => vyre_spec::AlgebraicLaw::RightIdentity { element: 0 },
-                "self-inverse" => vyre_spec::AlgebraicLaw::SelfInverse { result: 0 },
-                "idempotent" => vyre_spec::AlgebraicLaw::Idempotent,
-                "absorbing" => vyre_spec::AlgebraicLaw::Absorbing { element: 0 },
-                "left-absorbing" => vyre_spec::AlgebraicLaw::LeftAbsorbing { element: 0 },
-                "right-absorbing" => vyre_spec::AlgebraicLaw::RightAbsorbing { element: 0 },
-                "involution" => vyre_spec::AlgebraicLaw::Involution,
-                "de-morgan" => vyre_spec::AlgebraicLaw::DeMorgan {
-                    inner_op: "and",
-                    dual_op: "or",
-                },
-                "monotone" => vyre_spec::AlgebraicLaw::Monotone,
-                "monotonic" => vyre_spec::AlgebraicLaw::Monotonic {
-                    direction: vyre_spec::MonotonicDirection::NonDecreasing,
-                },
-                "bounded" => vyre_spec::AlgebraicLaw::Bounded {
-                    lo: 0,
-                    hi: u32::MAX,
-                },
-                "complement" => vyre_spec::AlgebraicLaw::Complement {
-                    complement_op: "not",
-                    universe: u32::MAX,
-                },
-                "distributive" => vyre_spec::AlgebraicLaw::DistributiveOver { over_op: "add" },
-                "lattice-absorption" => {
-                    vyre_spec::AlgebraicLaw::LatticeAbsorption { dual_op: "min" }
-                }
-                "inverse-of" => vyre_spec::AlgebraicLaw::InverseOf { op: "add" },
-                "trichotomy" => vyre_spec::AlgebraicLaw::Trichotomy {
-                    less_op: "lt",
-                    equal_op: "eq",
-                    greater_op: "gt",
-                },
-                "zero-product" => vyre_spec::AlgebraicLaw::ZeroProduct { holds: true },
-                "categorical-identity" => vyre_spec::AlgebraicLaw::CategoricalIdentity,
-                "categorical-associative" => vyre_spec::AlgebraicLaw::CategoricalAssociative,
-                custom => vyre_spec::AlgebraicLaw::Custom {
-                    name: custom,
-                    description: "registered law",
-                    arity: 1,
-                    check: |_, _| true,
-                },
-            };
-            guarded.push(vyre_spec::GuardedLaw::unconditional(law));
+/// Resolve declared law names into law records, the labels no family in the
+/// closed vocabulary carries, and the families that carry executable evidence.
+///
+/// A name in the vocabulary always produces a record, so nothing a
+/// registration declared is discarded. Whether that record is a proven law is
+/// a separate question its proof method answers: a family whose statement needs
+/// a payload a bare name cannot carry yields `ProofMethod::None`, which
+/// [`vyre_spec::TransformDecision::absence_class`] reports as
+/// [`vyre_spec::AbsenceClass::LawUnrecorded`].
+///
+/// A name no family carries records nothing at all. Mapping it onto a custom
+/// law whose check returned true is what let a label assert a property nothing
+/// examined.
+fn resolve_laws(
+    laws: &'static [&'static str],
+) -> (
+    Vec<vyre_spec::GuardedLaw>,
+    Vec<vyre_spec::RejectedLawLabel>,
+    Vec<vyre_spec::LawFamily>,
+) {
+    let mut declared = Vec::new();
+    let mut rejected = Vec::new();
+    let mut proven = Vec::new();
+    for &name in laws {
+        let Some(family) = vyre_spec::LawFamily::from_name(name) else {
+            rejected.push(vyre_spec::RejectedLawLabel {
+                law: name.to_string(),
+                missing_payload: vyre_spec::RejectedLawLabel::UNKNOWN_LAW_NAME.to_string(),
+            });
+            continue;
+        };
+        let obligation = family.obligation();
+        if obligation.evidence.is_executable() {
+            proven.push(family);
         }
-        vyre_spec::TransformDecision::GuardedLaws(guarded)
-    } else if let Some(reason) = opaque_reason {
-        if reason.starts_with("no-transform:") || reason.starts_with("notransform:") {
-            vyre_spec::TransformDecision::NoTransform {
-                reason: reason.to_string(),
-            }
-        } else {
-            vyre_spec::TransformDecision::Opaque {
-                reason: reason.to_string(),
-            }
+        declared.push(obligation.guarded_law(family.representative()));
+    }
+    (declared, rejected, proven)
+}
+
+/// State the recorded absence in the contract vocabulary, with the operation's
+/// own declared shape as its reason.
+///
+/// The reason is derived, never authored. A registration used to carry a
+/// sentence beside the decision, and those sentences named the domain rather
+/// than the operation: one string served 74 registrations. What the shape
+/// states is specific to the operation and cannot be shared by writing it
+/// twice. The refutation or the missing witness that justifies the decision is
+/// executed evidence and is recorded per operation by the conformance
+/// disposition ledger.
+fn absence_shape(program: Option<&Program>) -> String {
+    let Some(program) = program else {
+        return "the registration builds no program, so no witness can be derived".to_string();
+    };
+    let mut read_only = 0usize;
+    let mut written = 0usize;
+    for decl in program.buffers() {
+        match decl.access {
+            BufferAccess::ReadOnly => read_only += 1,
+            BufferAccess::WriteOnly | BufferAccess::ReadWrite => written += 1,
+            _ => {}
+        }
+    }
+    format!(
+        "the declared shape is {} buffer(s), {read_only} read-only and {written} written",
+        program.buffers().len()
+    )
+}
+
+/// The contract decision a recorded absence states.
+fn absence_decision(
+    decision: AbsenceDecision,
+    program: Option<&Program>,
+) -> vyre_spec::TransformDecision {
+    let reason = absence_shape(program);
+    match decision {
+        AbsenceDecision::NoLegalRewrite => vyre_spec::TransformDecision::NoTransform { reason },
+        AbsenceDecision::Uncharacterized => vyre_spec::TransformDecision::Opaque { reason },
+    }
+}
+
+pub(crate) fn build_contract_record(
+    facts: &ContractFacts<'_>,
+) -> vyre_spec::SemanticContractRecord {
+    let (declared, rejected, families) = resolve_laws(facts.laws);
+    let decision = if declared.is_empty() {
+        match facts.absence {
+            Some(decision) => absence_decision(decision, facts.program.as_ref()),
+            None => vyre_spec::TransformDecision::NotRecorded,
         }
     } else {
-        vyre_spec::TransformDecision::NotRecorded
+        vyre_spec::TransformDecision::GuardedLaws(declared)
     };
 
     vyre_spec::SemanticContractRecord {
-        id: id.to_string(),
-        signature: sig,
-        effects: eff,
-        aliasing: vyre_spec::AliasingContract::Disjoint,
-        shape_index: vyre_spec::ShapeIndexContract::elementwise(),
-        numerical: num,
-        determinism: vyre_spec::DeterminismClass::Deterministic,
+        id: facts.id.to_string(),
+        signature: signature_to_contract_sig(facts.signature),
+        effects: derive_effects(facts.effects),
+        aliasing: derive_aliasing(facts.program.as_ref()),
+        shape_index: derive_shape_index(facts.program.as_ref()),
+        numerical: derive_numerical(facts.numeric),
+        determinism: derive_determinism(facts.numeric, facts.effects, &families),
         range_preconditions: vyre_spec::RangeContract::unbounded(),
-        resource_bounds: vyre_spec::ResourceBoundsContract::Unbounded,
+        resource_bounds: derive_resource_bounds(facts.capabilities),
         decision,
+        rejected_labels: rejected,
     }
 }

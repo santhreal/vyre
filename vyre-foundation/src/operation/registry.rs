@@ -40,33 +40,6 @@ impl OperationRegistry {
             if !entry.has_transform_decision() {
                 return Err(OperationRegistryError::MissingTransformDecision { id: entry.id });
             }
-            if let Some(reason) = entry.opaque_reason() {
-                let trimmed = reason.trim();
-                let mut lower = trimmed.to_ascii_lowercase();
-                lower.retain(|c| !c.is_whitespace());
-                if trimmed.len() < 5
-                    || matches!(
-                        lower.as_str(),
-                        "todo"
-                            | "tbd"
-                            | "placeholder"
-                            | "none"
-                            | "unimplemented"
-                            | "opaque"
-                            | "no-op"
-                            | "notransform"
-                            | "notransforms"
-                            | "notimplemented"
-                    )
-                    || lower.starts_with("todo:")
-                    || lower.starts_with("placeholder:")
-                {
-                    return Err(OperationRegistryError::InvalidOpaqueReason {
-                        id: entry.id,
-                        reason,
-                    });
-                }
-            }
             for &law in entry.laws {
                 if !known_laws.contains(law) {
                     return Err(OperationRegistryError::UnknownAlgebraicLaw { id: entry.id, law });

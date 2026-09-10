@@ -6,12 +6,8 @@
 //! out-of-bounds segment offsets, protects the caller output buffer across failure paths,
 //! and validates adversarial input shapes.
 
-#![allow(unused_imports, dead_code, clippy::identity_op)]
-
-use vyre_libs_reduce::reduce::segment_reduce::*;
 use vyre_reference::composition_witness::{
     segment_reduce_sum_witness as reference_segment_reduce_sum,
-    segment_reduce_sum_witness_into as reference_segment_reduce_sum_into,
     try_segment_reduce_sum_witness_into as try_reference_segment_reduce_sum_into,
 };
 

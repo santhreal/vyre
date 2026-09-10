@@ -47,7 +47,8 @@ submit_hardware_intrinsic! {
     capabilities: vyre_foundation::program_caps::RequiredCapabilities::NONE.with_subgroup_ops(),
     inputs_count: 1,
     outputs_count: 1,
-    semantic: crate::hardware::catalog::HardwareSemantic::SubgroupBallotU32
+    semantic: crate::hardware::catalog::HardwareSemantic::SubgroupBallotU32,
+    decision: [.with_no_legal_rewrite()]
 }
 
 #[cfg(test)]

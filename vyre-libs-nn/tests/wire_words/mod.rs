@@ -1,20 +1,11 @@
-//! Wire helpers for tests.
-#![allow(dead_code, unused_imports, unused_variables)]
+//! Attention and typed-lane oracles and wire access for this crate's tests.
 
-use vyre_primitives::wire::decode_u16_le_bytes_all;
 use vyre_reference::value::Value;
 use vyre_test_support::test_parity_oracles::f32_bytes;
 
-
-
-
-
 pub(crate) use vyre_primitives::wire::decode_f32_le_bytes_all as f32_words;
 pub(crate) use vyre_primitives::wire::decode_u16_le_bytes_all as u16_words;
-pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as decode_u32_words;
 pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as words_from_bytes;
-pub(crate) use vyre_primitives::wire::pack_u32_slice as u32_bytes;
-pub(crate) use vyre_primitives::wire::pack_u32_slice as bytes_to_u32;
 
 pub(crate) fn u16_bytes(values: &[u16]) -> Vec<u8> {
     let mut out = Vec::new();
@@ -29,7 +20,7 @@ pub(crate) fn f32_words_of(value: &Value) -> Vec<f32> {
 
 /// U16 words from an oracle output value, the carrier for a BF16 or F16 lane.
 pub(crate) fn u16_words_of(value: &Value) -> Vec<u16> {
-    decode_u16_le_bytes_all(&value.to_bytes())
+    u16_words(&value.to_bytes())
 }
 
 /// Round `value` to BF16, breaking ties toward even, the rounding the typed

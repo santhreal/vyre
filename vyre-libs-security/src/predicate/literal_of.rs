@@ -44,4 +44,5 @@ inventory::submit! {
         }),
     )
     .with_laws(&["absorbing"])
+    .with_no_legal_rewrite()
 }

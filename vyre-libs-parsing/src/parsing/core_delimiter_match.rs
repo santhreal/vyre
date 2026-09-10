@@ -89,5 +89,5 @@ inventory::submit! {
             vec![vec![EXPECTED_CORE_DELIMITER_MATCH_BYTES.to_vec()]]
         }),
     )
-    .with_opaque("lexical and grammar parser state automaton transition")
+    .with_no_legal_rewrite()
 }

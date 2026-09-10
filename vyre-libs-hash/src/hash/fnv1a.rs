@@ -408,7 +408,7 @@ inventory::submit! {
             vec![vec![EXPECTED_FNV1A_32_OUTPUT_BYTES.to_vec()]]
         }),
     )
-    .with_opaque("cryptographic or checksum hash state compression round")
+    .with_no_legal_rewrite()
 }
 
 inventory::submit! {
@@ -425,7 +425,7 @@ inventory::submit! {
             vec![vec![EXPECTED_FNV1A_64_OUTPUT_BYTES.to_vec()]]
         }),
     )
-    .with_opaque("cryptographic or checksum hash state compression round")
+    .with_uncharacterized()
 }
 
 #[cfg(test)]

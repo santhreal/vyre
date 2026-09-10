@@ -463,7 +463,7 @@ inventory::submit! {
         }),
     )
     .with_category("nn")
-    .with_opaque("neural network layer activation or tensor contraction step")
+    .with_uncharacterized()
 }
 
 /// Build standalone tile score computation program.
@@ -559,7 +559,7 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_ATTENTION_TILE_SCORES_BYTES.to_vec()]]),
     )
     .with_category("nn")
-    .with_opaque("neural network layer activation or tensor contraction step")
+    .with_no_legal_rewrite()
 }
 
 /// A single-weight absorb leaves the value tile unchanged.
@@ -575,5 +575,5 @@ inventory::submit! {
         Some(|| vec![vec![EXPECTED_ATTENTION_ABSORB_VALUES_BYTES.to_vec()]]),
     )
     .with_category("nn")
-    .with_opaque("neural network layer activation or tensor contraction step")
+    .with_uncharacterized()
 }

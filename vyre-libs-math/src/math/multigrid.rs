@@ -281,7 +281,7 @@ inventory::submit! {
             vec![vec![vec![0x00, 0x00, 0x03, 0x00]]] // 3 << 16
         }),
     )
-    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
+    .with_uncharacterized()
 }
 
 #[cfg(test)]

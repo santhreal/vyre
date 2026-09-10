@@ -121,7 +121,7 @@ inventory::submit! {
             vec![vec![EXPECTED_HOMOTOPY_OUTPUT_BYTES.to_vec()]]
         }),
     )
-    .with_opaque("homotopy numerical continuation and euler predictor step")
+    .with_uncharacterized()
 }
 
 #[cfg(test)]

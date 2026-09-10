@@ -95,7 +95,7 @@ macro_rules! define_bit_update_op {
                     vec![vec![EXPECTED_REGISTRATION_BYTES.to_vec()]]
                 }),
             )
-    .with_opaque("bitset manipulation query or non-symmetric set transformation")
+    .with_uncharacterized()
 }
 
         #[cfg(test)]

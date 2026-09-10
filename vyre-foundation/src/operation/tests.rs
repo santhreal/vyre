@@ -1,10 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
-    operation_id_namespace, registry_error::validate_identity, ConformanceProvider,
-    ConformanceRegistry, ExtensionProvenance, IdNamespace, LoweringProvider,
-    OperationCatalogBundle, OperationRegistration, OperationRegistry, OperationRegistryError,
-    OperationTier, SemanticDescriptor,
+    operation_id_namespace, registry_error::validate_identity, OperationCatalogBundle, ConformanceProvider,
+    AbsenceDecision, ConformanceRegistry, ExtensionProvenance, IdNamespace, LoweringProvider,
+    OperationRegistration, OperationRegistry, OperationRegistryError, OperationTier,
+    SemanticDescriptor,
 };
 use crate::numeric::NumericContract;
 
@@ -253,7 +253,7 @@ fn missing_provider_fails_closure_validation() {
         geometry_requirements: crate::geometry::GeometryRequirements::agnostic(),
         explicit_effects: None,
         explicit_capabilities: None,
-        opaque_reason: Some("test operation placeholder rationale"),
+        absence: Some(AbsenceDecision::Uncharacterized),
     };
     let low = LoweringProvider { id, build: None };
     let conf = ConformanceProvider {
@@ -313,7 +313,7 @@ fn production_catalog_read_cannot_reach_fixtures_and_changing_fixtures_preserves
         geometry_requirements: crate::geometry::GeometryRequirements::agnostic(),
         explicit_effects: None,
         explicit_capabilities: None,
-        opaque_reason: None,
+        absence: None,
     };
     let lowering = LoweringProvider { id, build: None };
 
@@ -374,8 +374,7 @@ fn production_catalog_read_cannot_reach_fixtures_and_changing_fixtures_preserves
             ..desc
         },
     );
-    let bundle3 =
-        OperationCatalogBundle::from_parts(modified_descriptors, lowering_providers, extensions);
+    let bundle3 = OperationCatalogBundle::from_parts(modified_descriptors, lowering_providers, extensions);
     let digest3 = *bundle3.digest();
     assert_ne!(
         digest1, digest3,
@@ -404,7 +403,7 @@ fn catalog_bundle_digest_is_part_of_artifact_identity() {
             geometry_requirements: crate::geometry::GeometryRequirements::agnostic(),
             explicit_effects: None,
             explicit_capabilities: None,
-            opaque_reason: Some("external custom dialect operation"),
+            absence: Some(AbsenceDecision::Uncharacterized),
         }],
         vec![LoweringProvider {
             id: "custom_dialect::op_a",
@@ -427,7 +426,7 @@ fn catalog_bundle_digest_is_part_of_artifact_identity() {
             geometry_requirements: crate::geometry::GeometryRequirements::agnostic(),
             explicit_effects: None,
             explicit_capabilities: None,
-            opaque_reason: Some("external custom dialect operation v2"),
+            absence: Some(AbsenceDecision::Uncharacterized),
         }],
         vec![LoweringProvider {
             id: "custom_dialect::op_a",
@@ -560,7 +559,7 @@ fn adding_operation_without_decision_turns_registry_red() {
 /// A test proves a law label without executable proof evidence is rejected.
 #[test]
 fn law_label_without_executable_proof_evidence_is_rejected() {
-    let unproven_law = vyre_spec::GuardedLaw::unconditional(vyre_spec::AlgebraicLaw::Associative)
+    let unproven_law = vyre_spec::GuardedLaw::declared(vyre_spec::AlgebraicLaw::Associative)
         .with_proof_method(vyre_spec::ProofMethod::None);
     assert_eq!(
         unproven_law.validate(),
@@ -570,7 +569,7 @@ fn law_label_without_executable_proof_evidence_is_rejected() {
     );
 
     let zero_witness_law =
-        vyre_spec::GuardedLaw::unconditional(vyre_spec::AlgebraicLaw::Commutative)
+        vyre_spec::GuardedLaw::declared(vyre_spec::AlgebraicLaw::Commutative)
             .with_proof_method(vyre_spec::ProofMethod::WitnessedU32 { seed: 42, count: 0 });
     assert_eq!(
         zero_witness_law.validate(),
@@ -580,32 +579,43 @@ fn law_label_without_executable_proof_evidence_is_rejected() {
     );
 }
 
-/// A test proves placeholder opaque reasons are rejected by name.
+/// Every recorded absence class produces a decision that validates, and the two
+/// classes stay distinct in the contract vocabulary.
+///
+/// The vocabulary is walked from `AbsenceDecision::ALL` and mapped by an
+/// exhaustive match, so a class added to the enum fails to compile here until a
+/// builder records it. The reason carried beside the decision is derived from
+/// the registration's own declared shape, so a placeholder reason is not
+/// expressible and needs no test of its own.
 #[test]
-fn placeholder_opaque_reasons_are_rejected() {
-    for placeholder in [
-        "todo",
-        "none",
-        "opaque",
-        "tbd",
-        "placeholder",
-        "no-op",
-        "not implemented",
-    ] {
+fn every_absence_class_produces_a_distinct_validating_decision() {
+    let mut states = BTreeSet::new();
+    for class in AbsenceDecision::ALL {
         let reg = OperationRegistration::new_unconstrained(
-            "vyre-foundation::test::placeholder_op",
+            "vyre-foundation::test::absence_op",
             OperationTier::Foundation,
             None,
             None,
             None,
-        )
-        .with_opaque(placeholder);
+        );
+        let reg = match class {
+            AbsenceDecision::NoLegalRewrite => reg.with_no_legal_rewrite(),
+            AbsenceDecision::Uncharacterized => reg.with_uncharacterized(),
+        };
         let record = reg.contract_record();
+        assert_eq!(
+            record.validate(),
+            Ok(()),
+            "absence class `{}` must produce a valid contract record",
+            class.name()
+        );
         assert!(
-            record.validate().is_err(),
-            "Placeholder reason `{placeholder}` must fail contract validation"
+            states.insert(record.decision.state_name()),
+            "absence class `{}` reuses another class's decision state",
+            class.name()
         );
     }
+    assert_eq!(states.len(), AbsenceDecision::ALL.len());
 }
 
 /// A test proves declarative dialect operations generate builders, documentation, and contract joins.
@@ -640,7 +650,7 @@ fn declarative_dialect_operation_generation() {
         source_file: file!(),
         explicit_effects: None,
         explicit_capabilities: None,
-        opaque_reason: None,
+        absence: None,
     };
 
     let record = op.contract_record();

@@ -7,6 +7,7 @@ pub mod cert;
 pub mod convergence_lens;
 pub mod coordinator;
 pub mod law_proof;
+pub mod law_survey;
 pub mod lens;
 pub mod minimizer;
 pub mod oracle;
@@ -25,6 +26,9 @@ pub use cert::{issue_certificate, verify_structural, CertificateError, IssueInpu
 pub use coordinator::{DeviceLeaseManager, WorkerCoordinator};
 pub use law_proof::{
     prove_declared_laws, prove_law, LawProof, LawVerdict, LawWitness, UnprovenKind,
+};
+pub use law_survey::{
+    judge, survey_operation, Disposition, DispositionDefect, OperationSurvey,
 };
 pub use minimizer::{CounterexampleMinimizer, MinimizationBudget, MinimizerReport};
 pub use oracle::{OracleError, OracleSession};

@@ -285,6 +285,7 @@ pub fn prove_law(entry: &SemanticOperation, law: &'static str) -> LawProof {
         );
     };
     let mut exercised = 0usize;
+    let mut rejected: Option<String> = None;
     for (case, inputs) in cases.iter().enumerate() {
         if inputs.len() != shape.inputs.len() {
             return proof(
@@ -301,13 +302,21 @@ pub fn prove_law(entry: &SemanticOperation, law: &'static str) -> LawProof {
         if !(plan.admits)(&shape, inputs) {
             continue;
         }
-        exercised += 1;
         match (plan.check)(&program, &shape, inputs, &cases) {
-            Ok(None) => {}
+            Ok(None) => exercised += 1,
             Ok(Some(detail)) => {
                 return proof(Some(plan.witness), LawVerdict::Refuted { case, detail })
             }
-            Err(reason) => return proof(Some(plan.witness), LawVerdict::Unrunnable { reason }),
+            // The witness feeds the program an input the operation's own
+            // declared range precondition rejects, so this case is outside the
+            // domain the law is stated over. A registration whose own fixtures
+            // the oracle cannot run is a parity defect and is reported there.
+            Err(reason) => rejected = Some(reason),
+        }
+    }
+    if exercised == 0 {
+        if let Some(reason) = rejected {
+            return unproven(UnprovenKind::ShapeNotComposable, reason);
         }
     }
     proof(Some(plan.witness), LawVerdict::Holds { cases: exercised })

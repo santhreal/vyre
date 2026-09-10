@@ -85,6 +85,10 @@ pub mod schema_compatibility;
 #[path = "semantic_execution_contracts.rs"]
 pub mod semantic_execution_contracts;
 
+/// Integration tests from `tests/target_facet_backend_closure.rs`.
+#[path = "target_facet_backend_closure.rs"]
+pub mod target_facet_backend_closure;
+
 #[test]
 fn vyre_conform_worker_entry() {
     vyre_conform::run_worker_from_env_or_exit();

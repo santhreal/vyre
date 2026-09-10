@@ -527,7 +527,7 @@ inventory::submit! {
             vec![vec![EXPECTED_ATTENTION_MAX_PASS_OUTPUT_BYTES.to_vec()]]
         }),
     )
-    .with_opaque("neural network layer activation or tensor contraction step")
+    .with_uncharacterized()
 }
 
 inventory::submit! {
@@ -547,7 +547,7 @@ inventory::submit! {
             vec![vec![EXPECTED_ATTENTION_SUM_PASS_OUTPUT_BYTES.to_vec()]]
         }),
     )
-    .with_opaque("neural network layer activation or tensor contraction step")
+    .with_uncharacterized()
 }
 
 inventory::submit! {
@@ -580,5 +580,5 @@ inventory::submit! {
             vec![vec![EXPECTED_ATTENTION_WRITE_PASS_OUTPUT_BYTES.to_vec()]]
         }),
     )
-    .with_opaque("neural network layer activation or tensor contraction step")
+    .with_uncharacterized()
 }

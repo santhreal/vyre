@@ -293,5 +293,5 @@ inventory::submit! {
         }),
     )
     .with_category("visual")
-    .with_opaque("bilinear image scaling and resampling")
+    .with_uncharacterized()
 }

@@ -99,6 +99,9 @@ mod ir_level;
 /// Known-answer test vector type  -  deterministic input/output pairs.
 /// Specification element.
 mod kat_vector;
+/// Closed algebraic-law vocabulary and the proof obligation each member carries.
+/// Specification element.
+mod law_family;
 /// Canonical catalog of algebraic laws exposed via `law_catalog()`.
 /// Specification element.
 mod law_catalog;
@@ -253,6 +256,12 @@ pub use kat_vector::KatVector;
 /// See [`law_catalog::law_catalog`].
 /// Specification element.
 pub use law_catalog::law_catalog;
+/// See [`law_family::LawFamily`] and its obligation records.
+/// Specification element.
+pub use law_family::{
+    check_not_declared, law_family_names, law_family_representatives, LawEvidence, LawFamily,
+    LawObligation, LawPayload,
+};
 /// See [`layer::Layer`].
 /// Specification element.
 pub use layer::Layer;
@@ -280,10 +289,10 @@ pub use numeric_semantics::{
 };
 /// See [`op_contract::OperationContract`] and its component types.
 pub use op_contract::{
-    AliasingContract, CapabilityId, ContractValidationError, CostHint, DeterminismClass,
-    NumericBehavior, OperationContract, RangeContract, RangePrecondition, ResourceBoundsContract,
-    SemanticContractRecord, ShapeIndexContract, ShapeIndexRelation, SideEffectClass,
-    TransformDecision,
+    AbsenceClass, AliasingContract, CapabilityId, ContractValidationError, CostHint,
+    DeterminismClass, NumericBehavior, OperationContract, RangeContract, RangePrecondition,
+    RejectedLawLabel, ResourceBoundsContract, SemanticContractRecord, ShapeIndexContract,
+    ShapeIndexRelation, SideEffectClass, TransformDecision,
 };
 /// See [`op_metadata::OpMetadata`].
 /// Specification element.

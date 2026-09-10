@@ -342,6 +342,66 @@ impl Default for ResourceBoundsContract {
     }
 }
 
+/// Which of the four meanings an absent unconditional algebraic law carries.
+///
+/// A catalog that records absence as one state cannot tell a synthesis pass
+/// whether to look for a law, so the four are separated here and every
+/// operation resolves to exactly one of them or to none.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
+pub enum AbsenceClass {
+    /// No equivalence-preserving rewrite is legal for this operation.
+    NoLegalRewrite,
+    /// Laws are recorded and every one of them holds only under a guard, so no
+    /// unconditional rewrite is available.
+    GuardedOnly,
+    /// The operation's semantics are not characterized in algebraic terms.
+    /// This is a recorded answer, not a missing one.
+    Uncharacterized,
+    /// Nothing has been recorded. A law may hold and no decision states it.
+    LawUnrecorded,
+}
+
+impl AbsenceClass {
+    /// Every class, so a reader of the partition is judged against the whole
+    /// vocabulary rather than the members someone remembered.
+    pub const ALL: &'static [Self] = &[
+        Self::NoLegalRewrite,
+        Self::GuardedOnly,
+        Self::Uncharacterized,
+        Self::LawUnrecorded,
+    ];
+
+    /// Stable name recorded in reports and generated projections.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::NoLegalRewrite => "no-legal-rewrite",
+            Self::GuardedOnly => "guarded-only",
+            Self::Uncharacterized => "uncharacterized",
+            Self::LawUnrecorded => "law-unrecorded",
+        }
+    }
+
+    /// Whether this class is a recorded decision rather than a missing one.
+    ///
+    /// `LawUnrecorded` is the only defect state: the other three are answers.
+    #[must_use]
+    pub const fn is_recorded(self) -> bool {
+        match self {
+            Self::NoLegalRewrite | Self::GuardedOnly | Self::Uncharacterized => true,
+            Self::LawUnrecorded => false,
+        }
+    }
+
+    /// The class `name` spells, or `None` when no class carries that name.
+    #[must_use]
+    pub fn parse(name: &str) -> Option<Self> {
+        Self::ALL.iter().copied().find(|c| c.name() == name)
+    }
+}
+
 /// Exhaustive transformation decision: either proof-producing guarded laws, an explicit
 /// opaque/no-transform decision, or unrecorded.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -410,6 +470,36 @@ impl TransformDecision {
         }
     }
 
+    /// Which meaning of absence this decision carries, or `None` when the
+    /// operation records at least one unconditional law with executable proof
+    /// evidence and is therefore not absent.
+    ///
+    /// A law whose proof method carries no executable evidence is a label, not
+    /// a record, so it counts toward `LawUnrecorded` rather than toward a
+    /// recorded law. Exhaustive with no catch-all: a state added to this enum
+    /// fails to compile until it is placed in the partition.
+    #[must_use]
+    pub fn absence_class(&self) -> Option<AbsenceClass> {
+        match self {
+            Self::GuardedLaws(laws) => {
+                let mut recorded = laws
+                    .iter()
+                    .filter(|law| law.proof_method.has_executable_proof())
+                    .peekable();
+                if recorded.peek().is_none() {
+                    Some(AbsenceClass::LawUnrecorded)
+                } else if recorded.any(|law| law.guard.is_unconditional()) {
+                    None
+                } else {
+                    Some(AbsenceClass::GuardedOnly)
+                }
+            }
+            Self::NoTransform { .. } => Some(AbsenceClass::NoLegalRewrite),
+            Self::Opaque { .. } => Some(AbsenceClass::Uncharacterized),
+            Self::NotRecorded => Some(AbsenceClass::LawUnrecorded),
+        }
+    }
+
     /// Return the opaque or no-transform reason string, if any.
     #[must_use]
     pub fn opaque_reason(&self) -> Option<&str> {
@@ -428,10 +518,19 @@ impl TransformDecision {
         }
     }
 
-    /// Validate the decision: ensures laws have proof evidence and reasons are non-placeholder.
+    /// Validate the decision: laws are well-formed records and reasons are
+    /// concrete.
+    ///
+    /// A law with no executable proof evidence is a well-formed record of an
+    /// unproven law, so it passes here and reports through
+    /// [`Self::absence_class`] as [`AbsenceClass::LawUnrecorded`]. Rejecting it
+    /// here would make catalog construction fail rather than let the partition
+    /// be measured and driven to zero.
     ///
     /// # Errors
-    /// Returns [`ContractValidationError`] if the decision is invalid or unrecorded.
+    /// Returns [`ContractValidationError`] if the decision is unrecorded, the
+    /// law list is empty, a law's guard is malformed, or a reason is a
+    /// placeholder.
     pub fn validate(&self) -> Result<(), ContractValidationError> {
         match self {
             Self::GuardedLaws(laws) => {
@@ -439,7 +538,8 @@ impl TransformDecision {
                     return Err(ContractValidationError::EmptyLaws);
                 }
                 for law in laws {
-                    law.validate().map_err(ContractValidationError::LawError)?;
+                    law.validate_shape()
+                        .map_err(ContractValidationError::LawError)?;
                 }
                 Ok(())
             }
@@ -506,6 +606,25 @@ impl core::fmt::Display for ContractValidationError {
     }
 }
 
+/// A declared law name rejected for carrying no executable proof evidence.
+///
+/// A label is not a law. Recording the rejection per operation is what keeps an
+/// unexercised label from reading as a proven one, and states what recording it
+/// would take.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub struct RejectedLawLabel {
+    /// The declared law name.
+    pub law: String,
+    /// The payload the law's statement needs, or `unknown-law-name` when no
+    /// family in the catalog carries that name.
+    pub missing_payload: String,
+}
+
+impl RejectedLawLabel {
+    /// Name recorded when the declared law name matches no catalog family.
+    pub const UNKNOWN_LAW_NAME: &'static str = "unknown-law-name";
+}
+
 /// One canonical semantic contract record defining exact signature, effects, aliasing,
 /// shape and index relations, numerical behavior, determinism, range preconditions,
 /// resource bounds, and either proof-producing guarded laws or an explicit opaque/no-transform decision.
@@ -529,14 +648,17 @@ pub struct SemanticContractRecord {
     pub range_preconditions: RangeContract,
     /// Resource allocation bounds.
     pub resource_bounds: ResourceBoundsContract,
-    /// Exhaustive transform decision.
+    /// Exhaustive transform decision, carrying only laws with executable proof
+    /// evidence.
     pub decision: TransformDecision,
+    /// Declared law names rejected for carrying no executable proof evidence.
+    pub rejected_labels: Vec<RejectedLawLabel>,
 }
 
 impl SemanticContractRecord {
-    /// Construct a contract record with an unrecorded decision.
-    #[must_use]
-    pub fn unrecorded(id: impl Into<String>) -> Self {
+    /// Construct a record carrying `decision` and the neutral facets a caller
+    /// that states nothing else leaves at their contract defaults.
+    fn with_decision(id: impl Into<String>, decision: TransformDecision) -> Self {
         Self {
             id: id.into(),
             signature: None,
@@ -547,63 +669,50 @@ impl SemanticContractRecord {
             determinism: DeterminismClass::Deterministic,
             range_preconditions: RangeContract::unbounded(),
             resource_bounds: ResourceBoundsContract::Unbounded,
-            decision: TransformDecision::NotRecorded,
+            decision,
+            rejected_labels: Vec::new(),
         }
+    }
+
+    /// Construct a contract record with an unrecorded decision.
+    #[must_use]
+    pub fn unrecorded(id: impl Into<String>) -> Self {
+        Self::with_decision(id, TransformDecision::NotRecorded)
     }
 
     /// Construct a contract record with an explicit opaque decision.
     #[must_use]
     pub fn opaque(id: impl Into<String>, reason: impl Into<String>) -> Self {
-        Self {
-            id: id.into(),
-            signature: None,
-            effects: MemoryEffect::Pure,
-            aliasing: AliasingContract::Disjoint,
-            shape_index: ShapeIndexContract::elementwise(),
-            numerical: NumericBehavior::Exact,
-            determinism: DeterminismClass::Deterministic,
-            range_preconditions: RangeContract::unbounded(),
-            resource_bounds: ResourceBoundsContract::Unbounded,
-            decision: TransformDecision::Opaque {
+        Self::with_decision(
+            id,
+            TransformDecision::Opaque {
                 reason: reason.into(),
             },
-        }
+        )
     }
 
     /// Construct a contract record with an explicit no-transform decision.
     #[must_use]
     pub fn no_transform(id: impl Into<String>, reason: impl Into<String>) -> Self {
-        Self {
-            id: id.into(),
-            signature: None,
-            effects: MemoryEffect::Pure,
-            aliasing: AliasingContract::Disjoint,
-            shape_index: ShapeIndexContract::elementwise(),
-            numerical: NumericBehavior::Exact,
-            determinism: DeterminismClass::Deterministic,
-            range_preconditions: RangeContract::unbounded(),
-            resource_bounds: ResourceBoundsContract::Unbounded,
-            decision: TransformDecision::NoTransform {
+        Self::with_decision(
+            id,
+            TransformDecision::NoTransform {
                 reason: reason.into(),
             },
-        }
+        )
     }
 
     /// Construct a contract record with explicit guarded laws.
     #[must_use]
     pub fn with_laws(id: impl Into<String>, laws: Vec<GuardedLaw>) -> Self {
-        Self {
-            id: id.into(),
-            signature: None,
-            effects: MemoryEffect::Pure,
-            aliasing: AliasingContract::Disjoint,
-            shape_index: ShapeIndexContract::elementwise(),
-            numerical: NumericBehavior::Exact,
-            determinism: DeterminismClass::Deterministic,
-            range_preconditions: RangeContract::unbounded(),
-            resource_bounds: ResourceBoundsContract::Unbounded,
-            decision: TransformDecision::GuardedLaws(laws),
-        }
+        Self::with_decision(id, TransformDecision::GuardedLaws(laws))
+    }
+
+    /// Which meaning of absence this record carries, or `None` when it records
+    /// an unconditional law with executable proof evidence.
+    #[must_use]
+    pub fn absence_class(&self) -> Option<AbsenceClass> {
+        self.decision.absence_class()
     }
 
     /// Return the canonical transform decision state name.

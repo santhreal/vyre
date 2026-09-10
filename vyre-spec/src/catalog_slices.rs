@@ -25,31 +25,6 @@ const EXPR_VARIANTS: &[&str] = &[
     "Opaque",
 ];
 
-const LAW_CATALOG: &[&str] = &[
-    "commutative",
-    "associative",
-    "identity",
-    "left-identity",
-    "right-identity",
-    "self-inverse",
-    "idempotent",
-    "absorbing",
-    "left-absorbing",
-    "right-absorbing",
-    "involution",
-    "de-morgan",
-    "monotone",
-    "monotonic",
-    "bounded",
-    "complement",
-    "distributive",
-    "lattice-absorption",
-    "inverse-of",
-    "trichotomy",
-    "zero-product",
-    "custom",
-];
-
 /// Return the frozen catalog of core `Expr` variant names.
 #[must_use]
 pub fn expr_variants() -> &'static [&'static str] {
@@ -57,7 +32,12 @@ pub fn expr_variants() -> &'static [&'static str] {
 }
 
 /// Return the catalog of all algebraic-law variant fingerprints.
+///
+/// Derived from [`crate::LawFamily`], which is closed against
+/// [`crate::AlgebraicLaw`]. The former hand-written list was two members
+/// behind that enum, and both categorical laws were unreachable through this
+/// catalog while the check on it compared one hand list's length to another's.
 #[must_use]
 pub fn law_catalog() -> &'static [&'static str] {
-    LAW_CATALOG
+    crate::law_family::law_family_names()
 }

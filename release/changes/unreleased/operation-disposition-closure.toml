@@ -1,0 +1,2 @@
+category = "changed"
+text = "Every registered semantic operation records the transform disposition its own reference-oracle run derives, and a recorded decision the run contradicts fails the conformance suite."

@@ -1,19 +1,13 @@
 //! Fixtures the registry-derived and adversarial gates in this crate share.
 //!
-//! The over-fire dispatch floor, the dominator-tree oracle helper, and the
-//! adversarial case macros. ONE home so no two gates can drift on the floor and
-//! no suite writes its own case loop.
-// The set every including binary used to restate at its own `mod` declaration.
-#![allow(clippy::assertions_on_constants, clippy::identity_op, dead_code)]
-#![allow(unused_imports, unused_macros, unused_mut, unused_variables)]
+//! The dominator-tree oracle helper and the packer, in one home so no suite
+//! writes its own.
 
 use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
 
 /// Little-endian u32 packing, the same shipped packer every other suite uses.
 pub(crate) use vyre_primitives::wire::pack_u32_slice as u32_bytes;
-
-pub(crate) use vyre_test_support::overfire_grid;
 
 pub(crate) fn reference_eval_idoms(
     program: &Program,
@@ -41,64 +35,4 @@ pub(crate) fn reference_eval_idoms(
         .chunks_exact(4)
         .map(|c| u32::from_le_bytes(c.try_into().expect("u32 output chunk has four bytes")))
         .collect()
-}
-
-macro_rules! adversarial_unary_vec_cases {
-    ($($name:ident: $input:expr => $expected:expr, $message:expr;)+) => {
-        $(
-            #[test]
-            fn $name() {
-                let input = $input;
-                let expected = $expected;
-                let actual = cpu_ref(&input);
-                assert_eq!(actual, expected, "{}", $message);
-            }
-        )+
-    };
-}
-
-macro_rules! adversarial_binary_vec_cases {
-    ($($name:ident: $lhs:expr, $rhs:expr => $expected:expr, $message:expr;)+) => {
-        $(
-            #[test]
-            fn $name() {
-                let lhs = $lhs;
-                let rhs = $rhs;
-                let expected = $expected;
-                let actual = cpu_ref(&lhs, &rhs);
-                assert_eq!(actual, expected, "{}", $message);
-            }
-        )+
-    };
-}
-
-macro_rules! adversarial_binary_vec_usize_cases {
-    ($($name:ident: $lhs:expr, $rhs:expr, $len:expr => $expected:expr, $message:expr;)+) => {
-        $(
-            #[test]
-            fn $name() {
-                let lhs = $lhs;
-                let rhs = $rhs;
-                let len = $len;
-                let expected = $expected;
-                let actual = cpu_ref(&lhs, &rhs, len);
-                assert_eq!(actual, expected, "{}", $message);
-            }
-        )+
-    };
-}
-
-macro_rules! adversarial_vec_u32_cases {
-    ($($name:ident: $input:expr, $param:expr => $expected:expr, $message:expr;)+) => {
-        $(
-            #[test]
-            fn $name() {
-                let input = $input;
-                let param = $param;
-                let expected = $expected;
-                let actual = cpu_ref(&input, param);
-                assert_eq!(actual, expected, "{}", $message);
-            }
-        )+
-    };
 }

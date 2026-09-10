@@ -114,3 +114,10 @@ path = "tests/cert_regression_pin/main.rs"
 name = "all_tests_device_tests"
 path = "tests/all_tests_device_tests.rs"
 required-features = ["device-tests"]
+
+# Isolated: the survey executes every provable law family against every
+# registered operation through the reference oracle, which is the whole
+# registry run once per family and does not belong in `all_tests`.
+[[test]]
+name = "operation_disposition_closure"
+path = "tests/operation_disposition_closure.rs"

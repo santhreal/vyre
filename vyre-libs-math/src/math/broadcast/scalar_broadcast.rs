@@ -40,7 +40,7 @@ inventory::submit! {
         ]]),
     )
     .with_category("math")
-    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
+    .with_uncharacterized()
 }
 
 #[cfg(test)]

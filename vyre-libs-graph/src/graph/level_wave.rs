@@ -261,7 +261,7 @@ inventory::submit! {
             ]
         }),
     )
-    .with_opaque("graph traversal and topological structural analysis")
+    .with_no_legal_rewrite()
 }
 
 #[cfg(test)]

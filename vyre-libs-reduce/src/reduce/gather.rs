@@ -51,6 +51,7 @@ inventory::submit! {
         }),
     )
     .with_laws(IndexedMoveKind::Gather.laws())
+    .with_no_legal_rewrite()
 }
 
 #[cfg(test)]

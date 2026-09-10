@@ -7,7 +7,8 @@ use crate::geometry::{GeometryConstraintConflict, GeometryRequirements};
 use crate::ir::Program;
 use crate::numeric::NumericContract;
 use crate::operation::records::{
-    ConformanceProvider, ContractProvider, LoweringProvider, OperationFixtures, SemanticDescriptor,
+    AbsenceDecision, ConformanceProvider, ContractProvider, LoweringProvider, OperationFixtures,
+    SemanticDescriptor,
 };
 use crate::operation::semantic_op::SemanticOperation;
 use crate::operation::semantics::{OperationEffects, OperationTier};
@@ -43,8 +44,8 @@ pub struct OperationRegistration {
     pub explicit_effects: Option<OperationEffects>,
     /// Optional explicit closed capabilities.
     pub explicit_capabilities: Option<RequiredCapabilities>,
-    /// Optional explicit opaque / no-transform reason.
-    pub opaque_reason: Option<&'static str>,
+    /// Recorded decision when the operation declares no unconditional law.
+    pub absence: Option<AbsenceDecision>,
 }
 
 impl OperationRegistration {
@@ -73,7 +74,7 @@ impl OperationRegistration {
             source_file: Location::caller().file(),
             explicit_effects: None,
             explicit_capabilities: None,
-            opaque_reason: None,
+            absence: None,
         }
     }
 
@@ -155,30 +156,33 @@ impl OperationRegistration {
         self
     }
 
-    /// Attach an explicit opaque / no-transform decision with a one-line reason.
+    /// Record that no law family produces a verdict against this operation, so
+    /// its algebraic behavior is not characterized.
     #[must_use]
-    pub const fn with_opaque(mut self, reason: &'static str) -> Self {
-        self.opaque_reason = Some(reason);
+    pub const fn with_uncharacterized(mut self) -> Self {
+        self.absence = Some(AbsenceDecision::Uncharacterized);
         self
     }
 
-    /// Attach an explicit no-transform decision with a one-line reason.
+    /// Record that every law family whose witness this operation's shape admits
+    /// is refuted, so no rewrite of it is legal.
     #[must_use]
-    pub const fn with_no_transform(mut self, reason: &'static str) -> Self {
-        self.opaque_reason = Some(reason);
+    pub const fn with_no_legal_rewrite(mut self) -> Self {
+        self.absence = Some(AbsenceDecision::NoLegalRewrite);
         self
     }
 
-    /// Return the recorded opaque / no-transform decision reason, if any.
+    /// Return the recorded law-absence decision, if any.
     #[must_use]
-    pub const fn opaque_reason(&self) -> Option<&'static str> {
-        self.opaque_reason
+    pub const fn absence(&self) -> Option<AbsenceDecision> {
+        self.absence
     }
 
-    /// Whether this operation has a recorded transform decision (either laws or an explicit opaque/no-transform decision).
+    /// Whether this operation records a transform decision: either declared
+    /// laws or an explicit law-absence decision.
     #[must_use]
     pub const fn has_transform_decision(&self) -> bool {
-        !self.laws.is_empty() || self.opaque_reason.is_some()
+        !self.laws.is_empty() || self.absence.is_some()
     }
 
     /// Attach the source file that owns this registration.
@@ -297,7 +301,7 @@ impl OperationRegistration {
             geometry_requirements: self.geometry_requirements,
             explicit_effects: self.explicit_effects,
             explicit_capabilities: self.explicit_capabilities,
-            opaque_reason: self.opaque_reason,
+            absence: self.absence,
         }
     }
 
@@ -332,14 +336,16 @@ impl OperationRegistration {
     /// Construct the canonical semantic contract record.
     #[must_use]
     pub fn contract_record(&self) -> vyre_spec::SemanticContractRecord {
-        super::semantic_op::build_contract_record(
-            self.id,
-            self.signature.as_ref(),
-            self.explicit_effects,
-            self.numeric,
-            self.laws,
-            self.opaque_reason,
-        )
+        super::semantic_op::build_contract_record(&super::semantic_op::ContractFacts {
+            id: self.id,
+            signature: self.signature.as_ref(),
+            effects: self.direct_effects(),
+            capabilities: self.direct_required_capabilities(),
+            numeric: self.numeric,
+            laws: self.laws,
+            absence: self.absence,
+            program: self.program(),
+        })
     }
 }
 
@@ -360,7 +366,7 @@ impl From<&'static OperationRegistration> for SemanticOperation {
             source_file: registration.source_file,
             explicit_effects: registration.explicit_effects,
             explicit_capabilities: registration.explicit_capabilities,
-            opaque_reason: registration.opaque_reason,
+            absence: registration.absence,
         }
     }
 }

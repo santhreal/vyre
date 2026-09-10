@@ -145,4 +145,5 @@ inventory::submit! {
         }),
     )
     .with_laws(&["distributive"])
+    .with_no_legal_rewrite()
 }

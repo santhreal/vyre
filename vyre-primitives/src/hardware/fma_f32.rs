@@ -54,7 +54,8 @@ submit_hardware_intrinsic! {
     capabilities: vyre_foundation::program_caps::RequiredCapabilities::NONE,
     inputs_count: 3,
     outputs_count: 1,
-    semantic: crate::hardware::catalog::HardwareSemantic::FmaF32
+    semantic: crate::hardware::catalog::HardwareSemantic::FmaF32,
+    decision: [.with_uncharacterized()]
 }
 
 #[cfg(test)]

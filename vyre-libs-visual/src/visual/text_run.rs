@@ -283,5 +283,5 @@ inventory::submit! {
         }),
     )
     .with_category("visual")
-    .with_opaque("subpixel text run and glyph accumulation rasterization")
+    .with_uncharacterized()
 }

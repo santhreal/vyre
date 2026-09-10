@@ -186,5 +186,5 @@ inventory::submit! {
         }),
     )
     .with_category("visual")
-    .with_opaque("pixel layout rasterization and spatial color transformation")
+    .with_uncharacterized()
 }

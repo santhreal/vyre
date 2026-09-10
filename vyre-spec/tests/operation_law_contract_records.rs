@@ -9,14 +9,14 @@ use vyre_spec::{
 
 #[test]
 fn guarded_law_with_executable_proof_validates() {
-    let law = GuardedLaw::unconditional(AlgebraicLaw::Commutative);
+    let law = GuardedLaw::declared(AlgebraicLaw::Commutative);
     assert_eq!(law.validate(), Ok(()));
 }
 
 #[test]
 fn law_with_no_executable_proof_evidence_is_rejected_by_name() {
     let law =
-        GuardedLaw::unconditional(AlgebraicLaw::Associative).with_proof_method(ProofMethod::None);
+        GuardedLaw::declared(AlgebraicLaw::Associative).with_proof_method(ProofMethod::None);
     let result = law.validate();
     assert_eq!(
         result,
@@ -33,7 +33,7 @@ fn law_with_no_executable_proof_evidence_is_rejected_by_name() {
 #[test]
 fn counterexample_generator_failing_hypothesis_fails_law_not_test() {
     let generator = CounterexampleGenerator::deterministic("subtraction-commutativity-falsifier");
-    let law = GuardedLaw::unconditional(AlgebraicLaw::Commutative)
+    let law = GuardedLaw::declared(AlgebraicLaw::Commutative)
         .with_counterexample_generator(generator);
 
     // Test a non-commutative operation (e.g. integer subtraction: a - b != b - a)
@@ -55,7 +55,7 @@ fn counterexample_generator_failing_hypothesis_fails_law_not_test() {
 #[test]
 fn counterexample_generator_passing_on_true_hypothesis() {
     let generator = CounterexampleGenerator::deterministic("addition-commutativity-verifier");
-    let law = GuardedLaw::unconditional(AlgebraicLaw::Commutative)
+    let law = GuardedLaw::declared(AlgebraicLaw::Commutative)
         .with_counterexample_generator(generator);
 
     // Test a truly commutative operation (integer addition: a + b == b + a)
@@ -112,7 +112,7 @@ fn contract_record_with_empty_laws_decision_is_rejected() {
 
 #[test]
 fn contract_record_with_guarded_laws_validates() {
-    let law = GuardedLaw::unconditional(AlgebraicLaw::Commutative)
+    let law = GuardedLaw::declared(AlgebraicLaw::Commutative)
         .with_direction(LawDirection::Bidirectional)
         .with_guard(LawGuard::ExactOnly)
         .with_proof_method(ProofMethod::ExhaustiveU8);
@@ -123,7 +123,7 @@ fn contract_record_with_guarded_laws_validates() {
 
 #[test]
 fn contract_record_serde_roundtrip() {
-    let law = GuardedLaw::unconditional(AlgebraicLaw::Idempotent)
+    let law = GuardedLaw::declared(AlgebraicLaw::Idempotent)
         .with_direction(LawDirection::LeftToRight)
         .with_guard(LawGuard::Unconditional)
         .with_proof_method(ProofMethod::ExhaustiveU16);
@@ -144,6 +144,7 @@ fn contract_record_serde_roundtrip() {
         range_preconditions: RangeContract::unbounded(),
         resource_bounds: ResourceBoundsContract::Unbounded,
         decision: TransformDecision::GuardedLaws(vec![law]),
+        rejected_labels: Vec::new(),
     };
 
     let serialized = serde_json::to_string(&record).expect("serialization succeeds");
@@ -184,7 +185,7 @@ fn contract_record_with_unrecorded_decision_fails_validation() {
 
 #[test]
 fn four_states_are_mutually_exclusive_and_exhaustive() {
-    let law = GuardedLaw::unconditional(AlgebraicLaw::Commutative);
+    let law = GuardedLaw::declared(AlgebraicLaw::Commutative);
     let s1 = TransformDecision::GuardedLaws(vec![law]);
     let s2 = TransformDecision::NoTransform {
         reason: "non-composable architecture".to_string(),
@@ -222,7 +223,7 @@ fn four_states_are_mutually_exclusive_and_exhaustive() {
 
 #[test]
 fn law_with_zero_witness_count_is_rejected_as_no_executable_proof() {
-    let law = GuardedLaw::unconditional(AlgebraicLaw::Associative).with_proof_method(
+    let law = GuardedLaw::declared(AlgebraicLaw::Associative).with_proof_method(
         ProofMethod::WitnessedU32 {
             seed: 0x1234,
             count: 0,
@@ -239,7 +240,8 @@ fn law_with_zero_witness_count_is_rejected_as_no_executable_proof() {
 
 #[test]
 fn law_with_inverted_guard_range_is_rejected() {
-    let law = GuardedLaw::unconditional(AlgebraicLaw::Bounded { lo: 0, hi: 100 })
+    let law = GuardedLaw::declared(AlgebraicLaw::Bounded { lo: 0, hi: 100 })
+        .with_proof_method(ProofMethod::ExhaustiveU16)
         .with_guard(LawGuard::Range { lo: 100, hi: 10 });
     let result = law.validate();
     assert!(matches!(
@@ -250,7 +252,7 @@ fn law_with_inverted_guard_range_is_rejected() {
 
 #[test]
 fn law_with_empty_compiler_levels_is_rejected() {
-    let mut law = GuardedLaw::unconditional(AlgebraicLaw::Idempotent);
+    let mut law = GuardedLaw::declared(AlgebraicLaw::Idempotent);
     law.affected_compiler_levels.clear();
     let result = law.validate();
     assert!(matches!(

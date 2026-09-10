@@ -1,18 +1,4 @@
-//! Wire helpers for hash tests.
-#![allow(dead_code, unused_imports, unused_variables)]
-
-
-
-
-
-pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as decode_u32_words;
-pub(crate) use vyre_primitives::wire::pack_u32_slice as u32_bytes;
-
-
-
-
-
-
+//! Hash oracles for this crate's tests.
 
 pub(crate) fn hostile_bytes(seed: u32) -> Vec<u8> {
     let len = 1 + (seed as usize % 512);

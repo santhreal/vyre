@@ -375,5 +375,5 @@ inventory::submit! {
         }),
     )
     .with_category("visual")
-    .with_opaque("extended porter-duff and ui blend mode compositing")
+    .with_uncharacterized()
 }

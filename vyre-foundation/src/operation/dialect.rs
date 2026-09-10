@@ -44,7 +44,7 @@ macro_rules! declare_dialect_op {
         $(semantic_version: $sem_ver:expr,)?
         $(signature: $sig:expr,)?
         $(laws: $laws:expr,)?
-        $(opaque_reason: $opaque:expr,)?
+        $(absence: $absence:expr,)?
         $(numeric: $num:expr,)?
         $(geometry_requirements: $geom:expr,)?
         $(explicit_effects: $eff:expr,)?
@@ -82,7 +82,7 @@ macro_rules! declare_dialect_op {
                     },
                     explicit_effects: None $(.or(Some($eff)))?,
                     explicit_capabilities: None $(.or(Some($caps)))?,
-                    opaque_reason: None $(.or(Some($opaque)))?,
+                    absence: None $(.or(Some($absence)))?,
                 }
             }
             $crate::inventory::submit! {
@@ -128,7 +128,7 @@ macro_rules! declare_dialect_op {
                             },
                             explicit_effects: None $(.or(Some($eff)))?,
                             explicit_capabilities: None $(.or(Some($caps)))?,
-                            opaque_reason: None $(.or(Some($opaque)))?,
+                            absence: None $(.or(Some($absence)))?,
                         };
                         let op = $crate::operation::SemanticOperation {
                             id: desc.id,
@@ -145,7 +145,7 @@ macro_rules! declare_dialect_op {
                             source_file: file!(),
                             explicit_effects: desc.explicit_effects,
                             explicit_capabilities: desc.explicit_capabilities,
-                            opaque_reason: desc.opaque_reason,
+                            absence: desc.absence,
                         };
                         op.contract_record()
                     }),

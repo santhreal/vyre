@@ -58,6 +58,7 @@ inventory::submit! {
         }),
     )
     .with_laws(IndexedMoveKind::Scatter.laws())
+    .with_no_legal_rewrite()
 }
 
 #[cfg(test)]

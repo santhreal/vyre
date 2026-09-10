@@ -1,4 +1,4 @@
-//! `operation-law-decisions` - enforce every registered semantic operation carries algebraic laws or an explicit opaque decision.
+//! `operation-law-decisions` - enforce every registered semantic operation carries algebraic laws or an explicit recorded absence class.
 //!
 //! The live registry answers for the operations linked into this binary. A
 //! registration in a test file is not one of them: it reaches the registry only
@@ -48,35 +48,22 @@ impl xtask::gate::GateBehavior for OperationLawDecisions {
 }
 
 /// Check that every operation in `operations` carries either valid algebraic laws
-/// or an explicit, non-placeholder opaque decision.
+/// or an explicit recorded absence class.
 #[must_use]
 pub fn check_operations(operations: &[SemanticOperation]) -> Vec<Finding> {
     let mut findings = Vec::new();
     let known_laws: BTreeSet<&str> = vyre_spec::law_catalog().iter().copied().collect();
 
     for op in operations {
-        if op.laws.is_empty() && op.opaque_reason().is_none() {
+        if op.laws.is_empty() && op.absence().is_none() {
             findings.push(Finding::new(
                 format!(
-                    "operation `{}` has neither an algebraic law nor an explicit opaque decision",
+                    "operation `{}` records neither an algebraic law nor an absence class",
                     op.id
                 ),
-                "declare algebraic laws with .with_laws(...) or an explicit opaque decision with .with_opaque(\"...\")",
+                "declare algebraic laws with .with_laws(...), or record why none applies with .with_no_legal_rewrite() or .with_uncharacterized()",
             ));
             continue;
-        }
-
-        if let Some(reason) = op.opaque_reason() {
-            let trimmed = reason.trim();
-            if trimmed.len() < 5 || is_placeholder(trimmed) {
-                findings.push(Finding::new(
-                    format!(
-                        "operation `{}` records an invalid or placeholder opaque reason `{reason}`",
-                        op.id
-                    ),
-                    "state a concrete, non-empty one-line reason explaining why no algebraic transform applies",
-                ));
-            }
         }
 
         for law in op.laws {
@@ -124,7 +111,7 @@ pub fn check_sources(root: &Path) -> (usize, Vec<Finding>) {
                 format!(
                     "{path}:{line}: operation registration records no transform decision"
                 ),
-                "declare the algebraic laws it obeys with `with_laws`, or state why it has none with `with_opaque`; an undeclared registration panics registry validation and poisons the registry for every later reader in that binary",
+                "declare the algebraic laws it obeys with `with_laws`, or record why it has none with `with_no_legal_rewrite` or `with_uncharacterized`; an undeclared registration panics registry validation and poisons the registry for every later reader in that binary",
             ));
         }
     }
@@ -159,20 +146,20 @@ fn submission_blocks(masked: &str) -> Vec<(usize, &str)> {
     found
 }
 
-/// Whether a submission block records laws or an explicit opaque decision.
+/// Whether a submission block records laws or an explicit absence class.
 ///
 /// The builder forms and the struct-literal form are both accepted, because the
 /// dialect macro writes the fields directly. An empty `laws: &[]` is not a
 /// decision: that field is what a registration carrying no laws already says,
-/// and the macro pairs it with an `opaque_reason`.
+/// and the macro pairs it with an `absence` field.
 fn records_decision(block: &str) -> bool {
-    if block.contains("with_opaque(")
-        || block.contains("with_no_transform(")
+    if block.contains("with_uncharacterized(")
+        || block.contains("with_no_legal_rewrite(")
         || block.contains("with_laws(")
     {
         return true;
     }
-    if let Some(rest) = block.split_once("opaque_reason:").map(|(_, rest)| rest) {
+    if let Some(rest) = block.split_once("absence:").map(|(_, rest)| rest) {
         if rest.trim_start().starts_with("Some") {
             return true;
         }
@@ -181,23 +168,6 @@ fn records_decision(block: &str) -> bool {
         .split_once("laws:")
         .and_then(|(_, rest)| rest.split_once(']'))
         .is_some_and(|(list, _)| list.contains('"'))
-}
-
-fn is_placeholder(reason: &str) -> bool {
-    let lower = reason.to_ascii_lowercase();
-    matches!(
-        lower.as_str(),
-        "todo"
-            | "tbd"
-            | "placeholder"
-            | "none"
-            | "unimplemented"
-            | "opaque"
-            | "no-op"
-            | "no transform"
-            | "not implemented"
-    ) || lower.starts_with("todo:")
-        || lower.starts_with("placeholder:")
 }
 
 #[cfg(test)]
@@ -219,7 +189,7 @@ mod tests {
         assert_eq!(findings.len(), 1);
         assert!(findings[0]
             .message
-            .contains("neither an algebraic law nor an explicit opaque decision"));
+            .contains("neither an algebraic law nor an absence class"));
     }
 
     #[test]
@@ -238,37 +208,35 @@ mod tests {
     }
 
     #[test]
-    fn an_operation_with_valid_opaque_reason_is_clean() {
+    fn an_operation_recording_uncharacterized_is_clean() {
         static REG: OperationRegistration = OperationRegistration::new_unconstrained(
-            "test::opaque_operation",
+            "test::uncharacterized_operation",
             OperationTier::Library,
             None,
             None,
             None,
         )
-        .with_opaque("cryptographic hash compression state step");
+        .with_uncharacterized();
         let op = SemanticOperation::from(&REG);
         let findings = check_operations(&[op]);
         assert!(findings.is_empty(), "expected 0 findings, got {findings:?}");
     }
 
     #[test]
-    fn an_operation_with_placeholder_opaque_reason_is_reported() {
+    fn an_operation_recording_no_legal_rewrite_is_clean() {
         static REG: OperationRegistration = OperationRegistration::new_unconstrained(
-            "test::placeholder_operation",
+            "test::no_legal_rewrite_operation",
             OperationTier::Library,
             None,
             None,
             None,
         )
-        .with_opaque("todo");
+        .with_no_legal_rewrite();
         let op = SemanticOperation::from(&REG);
         let findings = check_operations(&[op]);
-        assert_eq!(findings.len(), 1);
-        assert!(findings[0]
-            .message
-            .contains("invalid or placeholder opaque reason"));
+        assert!(findings.is_empty(), "expected 0 findings, got {findings:?}");
     }
+
     /// WHY: this is the assertion the live-registry check cannot make. A
     /// registration in a test file reaches the registry only in the binary that
     /// compiles it, so the tree is the only place every one of them is visible
@@ -299,13 +267,13 @@ mod tests {
             "}\n",
             "inventory::submit! {\n",
             "    OperationRegistration::new_unconstrained(B, T, None, None, None)\n",
-            "        .with_opaque(\"an indexed read states no reorderable law\")\n",
+            "        .with_uncharacterized()\n",
             "}\n",
             "inventory::submit! {\n",
-            "    OperationRegistration { laws: &[\"commutative\"], opaque_reason: None }\n",
+            "    OperationRegistration { laws: &[\"commutative\"], absence: None }\n",
             "}\n",
             "inventory::submit! {\n",
-            "    OperationRegistration { laws: &[], opaque_reason: Some(\"macro states it\") }\n",
+            "    OperationRegistration { laws: &[], absence: Some(Uncharacterized) }\n",
             "}\n",
             "    inventory::submit! {\n",
             "        OperationRegistration::new_unconstrained(C, T, None, None, None)\n",
@@ -327,10 +295,10 @@ mod tests {
     #[test]
     fn an_empty_law_list_is_not_a_decision() {
         assert!(!records_decision(
-            "{ OperationRegistration { laws: &[], opaque_reason: None } }"
+            "{ OperationRegistration { laws: &[], absence: None } }"
         ));
         assert!(records_decision(
-            "{ OperationRegistration { laws: &[\"idempotent\"], opaque_reason: None } }"
+            "{ OperationRegistration { laws: &[\"idempotent\"], absence: None } }"
         ));
     }
 }

@@ -444,7 +444,7 @@ inventory::submit! {
         }),
     )
     .with_category("math")
-    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
+    .with_no_legal_rewrite()
 }
 
 inventory::submit! {
@@ -457,7 +457,7 @@ inventory::submit! {
         }),
     )
     .with_category("math")
-    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
+    .with_uncharacterized()
 }
 
 inventory::submit! {
@@ -478,5 +478,5 @@ inventory::submit! {
         }),
     )
     .with_category("math")
-    .with_opaque("numerical evaluation and domain-specific arithmetic kernel")
+    .with_uncharacterized()
 }

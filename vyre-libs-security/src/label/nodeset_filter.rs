@@ -104,6 +104,7 @@ inventory::submit! {
         }),
     )
     .with_laws(&["idempotent"])
+    .with_uncharacterized()
 }
 
 #[cfg(test)]

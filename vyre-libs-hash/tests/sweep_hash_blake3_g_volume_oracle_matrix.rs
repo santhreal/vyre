@@ -3,8 +3,8 @@
 #![forbid(unsafe_code)]
 #![cfg(feature = "hash")]
 
-use crate::wire_words;
-use wire_words::oracle_blake3_g;
+use crate::hash_oracles;
+use hash_oracles::oracle_blake3_g;
 
 use vyre_libs_hash::hash::blake3::MSG_SCHEDULE;
 use vyre_reference::composition_witness::blake3_g_witness as cpu_blake3_g;

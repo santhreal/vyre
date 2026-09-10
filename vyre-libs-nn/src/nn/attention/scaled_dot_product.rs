@@ -644,7 +644,7 @@ inventory::submit! {
     )
     .with_category("nn")
     .with_numeric(vyre_foundation::numeric::NumericContract::ieee_f32(4))
-    .with_opaque("neural network layer activation or tensor contraction step")
+    .with_uncharacterized()
 }
 
 const EXPECTED_REFERENCE_ATTENTION_OUTPUT_BYTES: [u8; 16] = [
@@ -668,7 +668,7 @@ inventory::submit! {
         }),
     )
     .with_category("nn")
-    .with_opaque("neural network layer activation or tensor contraction step")
+    .with_uncharacterized()
 }
 
 #[cfg(test)]

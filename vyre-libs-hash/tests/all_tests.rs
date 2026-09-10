@@ -1,7 +1,7 @@
 //! One binary for every integration test in this crate.
 
-#[path = "wire_words/mod.rs"]
-pub mod wire_words;
+#[path = "hash_oracles/mod.rs"]
+pub mod hash_oracles;
 
 #[path = "fnv1a64_builder_parity.rs"]
 pub mod fnv1a64_builder_parity;

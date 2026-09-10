@@ -78,7 +78,8 @@ macro_rules! define_dialect {
                     version: $op_version:literal,
                     summary: $op_summary:literal,
                     signature: $op_sig:expr,
-                    is_composable: $is_composable:literal
+                    is_composable: $is_composable:literal,
+                    decision: $op_decision:expr
                     $(, build: $op_build:expr )?
                     $(, test_inputs: $op_inputs:expr )?
                     $(, expected_output: $op_expected:expr )?
@@ -472,7 +473,7 @@ macro_rules! define_dialect {
                         source_file: file!(),
                         explicit_effects: None,
                         explicit_capabilities: None,
-                        opaque_reason: Some("dialect-defined elementwise logical operation"),
+                        absence: $op_decision,
                     }
                 }
             )*

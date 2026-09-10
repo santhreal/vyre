@@ -323,6 +323,7 @@ macro_rules! define_bitwise_in_place_op {
         inventory_target_bytes: [$($inventory_target_bytes:expr),* $(,)?],
         inventory_operand_bytes: [$($inventory_operand_bytes:expr),* $(,)?],
         inventory_expected_bytes: [$($inventory_expected_bytes:expr),* $(,)?],
+        decision: [$($decision:tt)*],
         cases: {
             $(
                 $case_name:ident: {
@@ -363,15 +364,11 @@ macro_rules! define_bitwise_in_place_op {
                 }),
             )
             .with_laws(match BitwiseBinaryOp::$op_kind {
-                BitwiseBinaryOp::And => &["idempotent"],
-                BitwiseBinaryOp::Or => &["idempotent"],
+                BitwiseBinaryOp::And | BitwiseBinaryOp::Or => &["idempotent"],
                 BitwiseBinaryOp::Xor => &["self-inverse"],
                 BitwiseBinaryOp::AndNot => &[],
             })
-            .with_opaque(match BitwiseBinaryOp::$op_kind {
-                BitwiseBinaryOp::AndNot => "in-place non-symmetric bitset difference target and not operand",
-                _ => "bitwise in-place word combination",
-            })
+            $($decision)*
         }
 
         #[cfg(test)]

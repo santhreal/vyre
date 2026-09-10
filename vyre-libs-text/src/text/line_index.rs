@@ -308,7 +308,7 @@ inventory::submit! {
     )
     .with_category("text")
     .with_geometry_requirements(line_index_requirements())
-    .with_opaque("text encoding classification and character frequency scanning")
+    .with_uncharacterized()
 }
 
 #[cfg(test)]

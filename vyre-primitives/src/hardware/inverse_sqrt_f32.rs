@@ -67,7 +67,8 @@ submit_hardware_intrinsic! {
     capabilities: vyre_foundation::program_caps::RequiredCapabilities::NONE,
     inputs_count: 1,
     outputs_count: 1,
-    semantic: crate::hardware::catalog::HardwareSemantic::InverseSqrtF32
+    semantic: crate::hardware::catalog::HardwareSemantic::InverseSqrtF32,
+    decision: [.with_no_legal_rewrite()]
 }
 
 #[cfg(test)]

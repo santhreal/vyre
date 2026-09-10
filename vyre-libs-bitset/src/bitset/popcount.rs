@@ -70,6 +70,7 @@ inventory::submit! {
         }),
     )
     .with_laws(&["bounded"])
+    .with_no_legal_rewrite()
 }
 
 #[cfg(test)]

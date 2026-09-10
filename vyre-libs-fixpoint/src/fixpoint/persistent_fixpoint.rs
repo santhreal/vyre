@@ -824,7 +824,7 @@ inventory::submit! {
             ]]
         }),
     )
-    .with_opaque("iterative dataflow fixpoint iteration step")
+    .with_uncharacterized()
 }
 
 #[cfg(test)]

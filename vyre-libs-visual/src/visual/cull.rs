@@ -100,5 +100,5 @@ inventory::submit! {
         }),
     )
     .with_category("visual")
-    .with_opaque("2d axis-aligned bounding box viewport culling")
+    .with_uncharacterized()
 }

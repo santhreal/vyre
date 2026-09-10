@@ -641,6 +641,16 @@ pub enum ProofMethod {
         /// Decision procedure name.
         name: String,
     },
+    /// Discharged by executing the named metamorphic witness over the
+    /// operation's own program through the reference oracle.
+    ///
+    /// The case count is the number of registered fixture cases the witness
+    /// ran, which is a property of the operation rather than of the law, so the
+    /// prover reports it alongside the verdict.
+    ReferenceOracleWitness {
+        /// Stable witness name.
+        witness: String,
+    },
     /// No executable proof method provided (invalid for production contracts).
     None,
 }
@@ -656,6 +666,7 @@ impl ProofMethod {
             Self::ExhaustiveFloat { .. } => "exhaustive-float",
             Self::SmtQfBv { .. } => "smt-qf-bv",
             Self::DecisionProcedure { .. } => "decision-procedure",
+            Self::ReferenceOracleWitness { .. } => "reference-oracle-witness",
             Self::None => "none",
         }
     }
@@ -670,16 +681,18 @@ impl ProofMethod {
             | Self::ExhaustiveU16
             | Self::ExhaustiveFloat { .. }
             | Self::SmtQfBv { .. }
-            | Self::DecisionProcedure { .. } => true,
+            | Self::DecisionProcedure { .. }
+            | Self::ReferenceOracleWitness { .. } => true,
         }
     }
 }
 impl Default for ProofMethod {
+    /// No method stated, so nothing is proven.
+    ///
+    /// The former default claimed a 1024-case witness run that no code
+    /// performed, which made an unstated method read as a discharged one.
     fn default() -> Self {
-        Self::WitnessedU32 {
-            seed: 0x5EED_C0DE,
-            count: 1024,
-        }
+        Self::None
     }
 }
 
@@ -884,25 +897,19 @@ pub struct GuardedLaw {
 }
 
 impl GuardedLaw {
-    /// Construct a guarded law with unconditional exact semantics.
+    /// Construct the law record its family's obligation declares.
+    ///
+    /// Every field comes from [`crate::LawFamily::obligation`], so a law whose
+    /// statement needs a payload a bare name cannot carry is built with
+    /// [`ProofMethod::None`] and rejected by [`Self::validate`]. The former
+    /// constructor stamped a bidirectional unconditional law with a 1024-case
+    /// witness run onto every law it was handed, whatever the law was and
+    /// whether or not anything ran.
     #[must_use]
-    pub fn unconditional(law: AlgebraicLaw) -> Self {
-        let mut affected = smallvec::SmallVec::new();
-        affected.push(IrLevel::Logical);
-        affected.push(IrLevel::Schedule);
-        Self {
-            law,
-            direction: LawDirection::Bidirectional,
-            guard: LawGuard::Unconditional,
-            numerical_contract: crate::op_contract::NumericBehavior::Exact,
-            proof_method: ProofMethod::WitnessedU32 {
-                seed: 0x5EED_C0DE,
-                count: 1024,
-            },
-            counterexample_generator: CounterexampleGenerator::deterministic("default-generator"),
-            canonical_form: None,
-            affected_compiler_levels: affected,
-        }
+    pub fn declared(law: AlgebraicLaw) -> Self {
+        crate::law_family::LawFamily::of(&law)
+            .obligation()
+            .guarded_law(law)
     }
 
     /// Attach a proof method.
@@ -943,16 +950,17 @@ impl GuardedLaw {
         self
     }
 
-    /// Validate the law: rejects laws with no executable proof evidence or invalid guards.
+    /// Validate the record's shape: guard bounds and affected compiler levels.
+    ///
+    /// Says nothing about whether the law is proven. A declaration carrying a
+    /// family name and no payload is a well-formed record of an unproven law,
+    /// and reporting that separately is what
+    /// [`crate::AbsenceClass::LawUnrecorded`] is for.
     ///
     /// # Errors
-    /// Returns [`LawValidationError`] if `proof_method` is `None`, count is 0, guard is invalid, or affected compiler levels is empty.
-    pub fn validate(&self) -> Result<(), LawValidationError> {
-        if !self.proof_method.has_executable_proof() {
-            return Err(LawValidationError::NoExecutableProofEvidence {
-                law: self.law.name().into(),
-            });
-        }
+    /// Returns [`LawValidationError::InvalidGuard`] when the guard range is
+    /// inverted or no compiler level is affected.
+    pub fn validate_shape(&self) -> Result<(), LawValidationError> {
         if let LawGuard::Range { lo, hi } = self.guard {
             if lo > hi {
                 return Err(LawValidationError::InvalidGuard {
@@ -968,6 +976,20 @@ impl GuardedLaw {
             });
         }
         Ok(())
+    }
+
+    /// Validate the law as a proven one: shape plus executable proof evidence.
+    ///
+    /// # Errors
+    /// Returns [`LawValidationError::NoExecutableProofEvidence`] when the proof
+    /// method runs nothing, or the shape errors of [`Self::validate_shape`].
+    pub fn validate(&self) -> Result<(), LawValidationError> {
+        if !self.proof_method.has_executable_proof() {
+            return Err(LawValidationError::NoExecutableProofEvidence {
+                law: self.law.name().into(),
+            });
+        }
+        self.validate_shape()
     }
 
     /// Run counterexample verification against an implementation predicate.

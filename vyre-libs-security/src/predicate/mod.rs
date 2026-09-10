@@ -215,6 +215,7 @@ macro_rules! define_tag_family_predicate {
                     Some(|| crate::predicate::traversal::single_output_fixture_expected(&EXPECTED_REGISTRATION_BYTES)),
                 )
                 .with_laws(&["idempotent"])
+                .with_no_legal_rewrite()
             }
 
             #[cfg(test)]
@@ -279,6 +280,7 @@ macro_rules! define_fixed_forward_edge_predicate {
                     Some(|| crate::predicate::traversal::single_output_fixture_expected(&EXPECTED_REGISTRATION_BYTES)),
                 )
                 .with_laws(&["monotonic"])
+                .with_uncharacterized()
             }
 
             #[cfg(test)]

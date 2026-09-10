@@ -109,6 +109,7 @@ inventory::submit! {
         }),
     )
     .with_laws(&["monotonic"])
+    .with_uncharacterized()
 }
 
 inventory::submit! {
@@ -128,6 +129,7 @@ inventory::submit! {
         }),
     )
     .with_laws(&["monotonic"])
+    .with_uncharacterized()
 }
 
 #[cfg(test)]

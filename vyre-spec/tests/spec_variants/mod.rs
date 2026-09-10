@@ -13,7 +13,6 @@
 //! themselves, on the type that owns the variants. `CollectiveOp` is
 //! `#[non_exhaustive]` and publishes no such list, so its table is written by
 //! hand here.
-#![allow(dead_code)]
 
 use proptest::prelude::*;
 use vyre_spec::ExtensionDataTypeId;

@@ -159,5 +159,5 @@ inventory::submit! {
         }),
     )
     .with_category("visual")
-    .with_opaque("layout prefix scan sum")
+    .with_uncharacterized()
 }

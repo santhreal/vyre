@@ -84,5 +84,5 @@ inventory::submit! {
             vec![vec![EXPECTED_PACKED_RGBA_MAP_OUTPUT_BYTES.to_vec()]]
         }),
     )
-    .with_opaque("pixel layout rasterization and spatial color transformation")
+    .with_uncharacterized()
 }

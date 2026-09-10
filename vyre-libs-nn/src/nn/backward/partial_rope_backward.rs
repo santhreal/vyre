@@ -158,5 +158,5 @@ inventory::submit! {
         }),
     )
     .with_category("nn")
-    .with_opaque("neural network layer activation or tensor contraction step")
+    .with_uncharacterized()
 }

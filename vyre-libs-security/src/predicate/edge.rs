@@ -82,4 +82,5 @@ inventory::submit! {
         }),
     )
     .with_laws(&["distributive"])
+    .with_uncharacterized()
 }

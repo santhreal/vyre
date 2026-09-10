@@ -284,5 +284,5 @@ inventory::submit! {
         }),
     )
     .with_category("visual")
-    .with_opaque("rgba to grayscale conversion")
+    .with_uncharacterized()
 }

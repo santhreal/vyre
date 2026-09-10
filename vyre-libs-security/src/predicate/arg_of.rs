@@ -88,4 +88,5 @@ inventory::submit! {
         }),
     )
     .with_laws(&["inverse-of"])
+    .with_uncharacterized()
 }

@@ -10,6 +10,7 @@ pub mod representation;
 
 /// Expected output words for the canonical 2x2 u32 matmul fixture shared by
 /// the `matmul_tiled` and `semiring_gemm` registrations.
+#[cfg(feature = "math-kernels")]
 pub(crate) const MATMUL_2X2_EXPECTED_WORDS: [u32; 4] = [19, 22, 43, 50];
 
 /// Ensure all feature-selected library operation registrations are retained by the linker.

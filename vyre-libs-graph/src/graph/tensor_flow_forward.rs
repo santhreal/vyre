@@ -327,7 +327,7 @@ inventory::submit! {
         ]]),
         Some(|| vec![vec![EXPECTED_TENSOR_FLOW_PROPAGATE_EDGES_BYTES.to_vec()]]),
     )
-    .with_opaque("graph traversal and topological structural analysis")
+    .with_uncharacterized()
 }
 
 const EXPECTED_TENSOR_FLOW_FORWARD_OUTPUT_BYTES: [u8; 4] = [0x10, 0x11, 0x00, 0x00];
@@ -348,4 +348,5 @@ inventory::submit! {
         }),
     )
     .with_laws(&["distributive"])
+    .with_uncharacterized()
 }

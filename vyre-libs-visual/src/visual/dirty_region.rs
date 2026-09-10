@@ -184,5 +184,5 @@ inventory::submit! {
         }),
     )
     .with_category("visual")
-    .with_opaque("retained resource sub-rectangle dirty region patch")
+    .with_uncharacterized()
 }

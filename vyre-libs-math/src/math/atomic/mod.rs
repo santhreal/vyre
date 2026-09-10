@@ -76,6 +76,7 @@ macro_rules! define_atomic_serial_module {
                 vyre_foundation::ir::AtomicOp::Exchange => &["custom"],
                 _ => &[],
             })
+            .with_uncharacterized()
         }
 
         #[cfg(test)]

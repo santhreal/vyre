@@ -552,7 +552,7 @@ pub const GATES_H_P: [GateDescriptor; 62] = [
     },
     GateDescriptor {
         name: "operation-law-decisions",
-        help: "Enforce every registered semantic operation carries algebraic laws or an explicit opaque decision",
+        help: "Enforce every registered semantic operation carries algebraic laws or an explicit recorded absence class",
         package: "xtask-registry",
         areas: &["prepublish"],
         subject: "registered operations",
