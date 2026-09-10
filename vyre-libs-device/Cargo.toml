@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Compiler-internal device boundary contracts, memory ownership, and resident graph layout"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-device"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "internal-engine"

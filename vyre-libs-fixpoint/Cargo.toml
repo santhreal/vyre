@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Deterministic fixpoint iteration kernels and grid synchronization barriers"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-fixpoint"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "extension-sdk"

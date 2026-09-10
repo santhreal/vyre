@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Compiler-internal static analysis, cost models, dataflow fixpoint, and diagnostics"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-analysis"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "internal-engine"

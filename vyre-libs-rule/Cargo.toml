@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Detection rule engine conditions, formulas, and program evaluation builders"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-rule"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "extension-sdk"

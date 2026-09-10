@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Compiler-internal numerical solvers, autotuning, and spectral schedule analysis"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-solvers"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "internal-engine"

@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Virtual filesystem DMA asynchronous block load and asset resolution compositions"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-vfs"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "extension-sdk"

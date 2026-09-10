@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Security taint analysis compositions, predicate evaluators, and label resolvers"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-security"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "extension-sdk"

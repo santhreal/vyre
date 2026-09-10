@@ -11,6 +11,7 @@ homepage.workspace = true
 description = "Workgroup reduction trees, atomic scalar reductions, and prefix scans"
 readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-reduce"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 
 [package.metadata.vyre]
 publication_class = "extension-sdk"
