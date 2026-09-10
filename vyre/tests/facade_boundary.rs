@@ -9,7 +9,7 @@
 //! 3. The compiler module is an explicit, curated namespace rather than a whole-crate re-export.
 //! 4. Adversarial re-export additions (optimizer, search, lowering, driver, runtime worker) are caught.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use syn::{Item, ItemMod, ItemUse, UsePath, UseRename, UseTree, Visibility};
 
 /// Disallowed module path segments in public facade re-exports.
@@ -34,9 +34,14 @@ pub(crate) const FORBIDDEN_INTERNAL_PATH_SEGMENTS: &[&str] = &[
     "dispatch_table",
 ];
 
+/// The facade source of this checkout.
+///
+/// The crate directory is resolved from the working directory through the
+/// workspace member roster. A compiled-in manifest path names whichever
+/// checkout last built this binary through the shared target directory, so the
+/// re-exports read would be that tree's.
 fn facade_source_path() -> PathBuf {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir.join("src/lib.rs")
+    vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")).join("src/lib.rs")
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

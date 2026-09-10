@@ -1,17 +1,6 @@
-//! Wire helpers for tests.
-#![allow(dead_code, unused_imports, unused_variables)]
-
-
-
-
+//! Pattern oracles and wire access for this crate's tests.
 
 pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as decode_u32_words;
-pub(crate) use vyre_primitives::wire::pack_u32_slice as u32_bytes;
-
-
-
-
-
 
 #[cfg(feature = "pattern")]
 pub(crate) fn reference_dedup_regions(

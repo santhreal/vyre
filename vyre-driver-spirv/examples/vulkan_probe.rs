@@ -19,8 +19,8 @@ fn main() {
 
     println!("Building program...");
     let program = elementwise_add_program(4);
-    let a = u32_values_to_bytes(&[1, 2, 3, 4]);
-    let b = u32_values_to_bytes(&[10, 20, 30, 40]);
+    let a = pack_words(&[1, 2, 3, 4]);
+    let b = pack_words(&[10, 20, 30, 40]);
 
     println!("Lowering to SPIR-V...");
     let spv = vyre_driver_spirv::SpirvBackend::program_to_spv(&program)
@@ -32,7 +32,7 @@ fn main() {
         Ok(outputs) => {
             println!("Dispatch succeeded! {} output buffers", outputs.len());
             for (index, output) in outputs.iter().enumerate() {
-                println!("  output[{index}]: {:?}", bytes_to_u32_values(output));
+                println!("  output[{index}]: {:?}", unpack_words(output));
             }
         }
         Err(error) => println!("Dispatch failed: {error}"),

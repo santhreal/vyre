@@ -31,38 +31,10 @@ use vyre_reference::composition_witness::{
     classic_ac_candidate_suffix3_bloom_words_witness,
 };
 use vyre_reference::value::Value;
+use vyre_test_support::word_corpora::Lcg;
 
 /// A labeled literal-set fixture with its haystack and region starts.
 pub type PresenceCase = (String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>);
-
-/// Deterministic LCG so failures reproduce from the case index alone.
-pub struct Lcg(pub u64);
-
-impl Lcg {
-    /// Seed the generator.
-    #[must_use]
-    pub fn new(seed: u64) -> Self {
-        Self(seed)
-    }
-
-    /// Advance the state and return the next 32 bits.
-    pub fn next_u32(&mut self) -> u32 {
-        self.0 = self
-            .0
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
-        (self.0 >> 33) as u32
-    }
-
-    /// A value in `0..n`, or `0` when `n` is zero.
-    pub fn below(&mut self, n: u32) -> u32 {
-        if n == 0 {
-            0
-        } else {
-            self.next_u32() % n
-        }
-    }
-}
 
 /// `region = largest r with region_starts[r] <= end_pos`. `region_starts` is
 /// ascending and starts at 0, so this is `upper_bound(end_pos) - 1`.

@@ -86,5 +86,5 @@ inventory::submit! {
             ]]
         }),
     )
-    .with_opaque("virtual filesystem path resolution and inode mapping")
+    .with_uncharacterized()
 }

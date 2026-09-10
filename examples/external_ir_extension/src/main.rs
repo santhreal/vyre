@@ -31,7 +31,7 @@ inventory::submit! {
         None,
     )
     .with_category("fixture")
-    .with_opaque("the fixture stores one constant, so it carries no law to state")
+    .with_uncharacterized()
 }
 
 struct ExternalTargetCompiler {
@@ -71,7 +71,8 @@ fn unavailable_dispatch() -> Result<Box<dyn vyre_driver::VyreBackend>, BackendEr
     ))
 }
 
-fn supported_operations() -> &'static HashSet<OpId> {
+/// The one canonical semantic operation this target claims.
+fn semantic_operations() -> &'static HashSet<OpId> {
     static OPERATIONS: LazyLock<HashSet<OpId>> =
         LazyLock::new(|| HashSet::from([OPERATION_ID.into()]));
     &OPERATIONS
@@ -92,8 +93,14 @@ inventory::submit! {
         payload_format: Some(TARGET_NAME),
         reference_oracle: false,
         factory: unavailable_dispatch,
-        semantic_operations: supported_operations,
-        supported_ops: supported_operations,
+        // The two sets answer different questions. `semantic_operations` is the
+        // catalog this target claims; `supported_ops` is the language-level IR
+        // this target lowers, and the facet registry publishes a facet only
+        // where the second covers every node of the first's canonical program.
+        // Naming the semantic id in both left the target claiming an operation
+        // whose `vyre.node.store` it never declared.
+        semantic_operations: semantic_operations,
+        supported_ops: vyre_driver::core_supported_ops,
         target_compiler: Some(target_compiler),
         materializer: None,
     }

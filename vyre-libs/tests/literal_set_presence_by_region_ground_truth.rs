@@ -25,9 +25,10 @@ use crate::presence_oracle;
 
 use presence_oracle::{
     assert_presence_matches, edge_cases, random_haystack, random_literals, random_region_starts,
-    scale_cases, Lcg, PackedCase,
+    scale_cases, PackedCase,
 };
 use vyre_libs::pattern::classic_ac::try_build_ac_bounded_ranges_suffix3_presence_by_region_program;
+use vyre_test_support::word_corpora::Lcg;
 
 /// Evaluate the region-presence GPU program on the CPU reference backend and
 /// return the decoded per-region presence bitmap.
