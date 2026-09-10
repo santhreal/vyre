@@ -4,17 +4,14 @@
 //! feed-forward or routed expert block, in the order the forward pass runs
 //! them.
 
-use vyre::ir::{
-    BufferAccess, GraphInput, GraphOutput, GraphValueId, ProgramGraph, ShapeDim,
-    ValueLifetime,
-};
+use vyre::ir::{BufferAccess, GraphValueId, ProgramGraph, ShapeDim, ValueLifetime};
 use vyre_libs::nn::{
     activation::{residual_add_typed, swiglu_typed},
     linear::linear_rows_no_bias_out_in_typed,
-    norm::learned_rms_norm,
 };
 
-use super::{make_contract, ModelGraphBuilder, TranslationError};
+use super::rms_norm_node::{add_learned_rms_norm, RmsNormNames};
+use super::{graph_input, graph_output, make_contract, ModelGraphBuilder, TranslationError};
 
 impl ModelGraphBuilder<'_> {
     pub(super) fn build_layer(
@@ -30,63 +27,19 @@ impl ModelGraphBuilder<'_> {
         let dtype = self.config.dtype.clone();
 
         // 1. Input RMSNorm / LayerNorm
-        let input_norm_weight = graph.add_external_value(
-            format!("{prefix}.input_layernorm.weight"),
-            make_contract(
-                dtype.clone(),
-                vec![ShapeDim::Known(u64::from(hidden_dim))],
-                ValueLifetime::Constant,
-                BufferAccess::ReadOnly,
-            ),
-        )?;
-
-        let norm_prog = learned_rms_norm(
-            "input",
-            "weight",
-            "output",
+        let norm_out = add_learned_rms_norm(
+            graph,
+            RmsNormNames {
+                weight: format!("{prefix}.input_layernorm.weight"),
+                node: format!("{prefix}.input_norm"),
+                output: format!("{prefix}.normalized_attn_in"),
+            },
+            input_hidden,
+            hidden_shape,
             rows,
             hidden_dim,
             self.config.norm_eps,
             dtype.clone(),
-        )
-        .map_err(|e| TranslationError::Primitive(e.to_string()))?;
-
-        let (_, norm_out) = graph.add_node(
-            format!("{prefix}.input_norm"),
-            norm_prog,
-            vec![
-                GraphInput {
-                    buffer: "input".into(),
-                    value: input_hidden,
-                    contract: make_contract(
-                        dtype.clone(),
-                        hidden_shape.to_vec(),
-                        ValueLifetime::Invocation,
-                        BufferAccess::ReadOnly,
-                    ),
-                },
-                GraphInput {
-                    buffer: "weight".into(),
-                    value: input_norm_weight,
-                    contract: make_contract(
-                        dtype.clone(),
-                        vec![ShapeDim::Known(u64::from(hidden_dim))],
-                        ValueLifetime::Constant,
-                        BufferAccess::ReadOnly,
-                    ),
-                },
-            ],
-            vec![GraphOutput {
-                buffer: "output".into(),
-                name: format!("{prefix}.normalized_attn_in"),
-                contract: make_contract(
-                    dtype.clone(),
-                    hidden_shape.to_vec(),
-                    ValueLifetime::Invocation,
-                    BufferAccess::ReadWrite,
-                ),
-                retained_successor_of: None,
-            }],
         )?;
 
         // 2. Attention Projections and Core Attention (MLA or GQA/MHA)
@@ -173,45 +126,38 @@ impl ModelGraphBuilder<'_> {
                 format!("{prefix}.q_proj"),
                 q_proj_prog,
                 vec![
-                    GraphInput {
-                        buffer: "input".into(),
-                        value: norm_out[0],
-                        contract: make_contract(
-                            dtype.clone(),
-                            hidden_shape.to_vec(),
-                            ValueLifetime::Invocation,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                    GraphInput {
-                        buffer: "weight".into(),
-                        value: q_weight,
-                        contract: make_contract(
-                            dtype.clone(),
-                            vec![
-                                ShapeDim::Known(u64::from(q_dim)),
-                                ShapeDim::Known(u64::from(hidden_dim)),
-                            ],
-                            ValueLifetime::Constant,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                ],
-                vec![GraphOutput {
-                    buffer: "output".into(),
-                    name: format!("{prefix}.q_states"),
-                    contract: make_contract(
+                    graph_input(
+                        "input",
+                        norm_out,
+                        dtype.clone(),
+                        hidden_shape.to_vec(),
+                        ValueLifetime::Invocation,
+                        BufferAccess::ReadOnly,
+                    ),
+                    graph_input(
+                        "weight",
+                        q_weight,
                         dtype.clone(),
                         vec![
-                            ShapeDim::Known(u64::from(self.workload.batch_size)),
-                            ShapeDim::Known(u64::from(self.workload.sequence_len)),
                             ShapeDim::Known(u64::from(q_dim)),
+                            ShapeDim::Known(u64::from(hidden_dim)),
                         ],
-                        ValueLifetime::Invocation,
-                        BufferAccess::ReadWrite,
+                        ValueLifetime::Constant,
+                        BufferAccess::ReadOnly,
                     ),
-                    retained_successor_of: None,
-                }],
+                ],
+                vec![graph_output(
+                    "output",
+                    format!("{prefix}.q_states"),
+                    dtype.clone(),
+                    vec![
+                        ShapeDim::Known(u64::from(self.workload.batch_size)),
+                        ShapeDim::Known(u64::from(self.workload.sequence_len)),
+                        ShapeDim::Known(u64::from(q_dim)),
+                    ],
+                    ValueLifetime::Invocation,
+                    BufferAccess::ReadWrite,
+                )],
             )?;
 
             // Output projection
@@ -230,45 +176,38 @@ impl ModelGraphBuilder<'_> {
                 format!("{prefix}.o_proj"),
                 o_proj_prog,
                 vec![
-                    GraphInput {
-                        buffer: "input".into(),
-                        value: q_outs[0],
-                        contract: make_contract(
-                            dtype.clone(),
-                            vec![
-                                ShapeDim::Known(u64::from(self.workload.batch_size)),
-                                ShapeDim::Known(u64::from(self.workload.sequence_len)),
-                                ShapeDim::Known(u64::from(q_dim)),
-                            ],
-                            ValueLifetime::Invocation,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                    GraphInput {
-                        buffer: "weight".into(),
-                        value: o_weight,
-                        contract: make_contract(
-                            dtype.clone(),
-                            vec![
-                                ShapeDim::Known(u64::from(hidden_dim)),
-                                ShapeDim::Known(u64::from(q_dim)),
-                            ],
-                            ValueLifetime::Constant,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                ],
-                vec![GraphOutput {
-                    buffer: "output".into(),
-                    name: format!("{prefix}.attn_out"),
-                    contract: make_contract(
+                    graph_input(
+                        "input",
+                        q_outs[0],
                         dtype.clone(),
-                        hidden_shape.to_vec(),
+                        vec![
+                            ShapeDim::Known(u64::from(self.workload.batch_size)),
+                            ShapeDim::Known(u64::from(self.workload.sequence_len)),
+                            ShapeDim::Known(u64::from(q_dim)),
+                        ],
                         ValueLifetime::Invocation,
-                        BufferAccess::ReadWrite,
+                        BufferAccess::ReadOnly,
                     ),
-                    retained_successor_of: None,
-                }],
+                    graph_input(
+                        "weight",
+                        o_weight,
+                        dtype.clone(),
+                        vec![
+                            ShapeDim::Known(u64::from(hidden_dim)),
+                            ShapeDim::Known(u64::from(q_dim)),
+                        ],
+                        ValueLifetime::Constant,
+                        BufferAccess::ReadOnly,
+                    ),
+                ],
+                vec![graph_output(
+                    "output",
+                    format!("{prefix}.attn_out"),
+                    dtype.clone(),
+                    hidden_shape.to_vec(),
+                    ValueLifetime::Invocation,
+                    BufferAccess::ReadWrite,
+                )],
             )?;
             o_outs[0]
         } else {
@@ -315,45 +254,38 @@ impl ModelGraphBuilder<'_> {
                 format!("{prefix}.q_proj"),
                 q_proj_prog,
                 vec![
-                    GraphInput {
-                        buffer: "input".into(),
-                        value: norm_out[0],
-                        contract: make_contract(
-                            dtype.clone(),
-                            hidden_shape.to_vec(),
-                            ValueLifetime::Invocation,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                    GraphInput {
-                        buffer: "weight".into(),
-                        value: q_weight,
-                        contract: make_contract(
-                            dtype.clone(),
-                            vec![
-                                ShapeDim::Known(u64::from(q_dim)),
-                                ShapeDim::Known(u64::from(hidden_dim)),
-                            ],
-                            ValueLifetime::Constant,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                ],
-                vec![GraphOutput {
-                    buffer: "output".into(),
-                    name: format!("{prefix}.q_states"),
-                    contract: make_contract(
+                    graph_input(
+                        "input",
+                        norm_out,
+                        dtype.clone(),
+                        hidden_shape.to_vec(),
+                        ValueLifetime::Invocation,
+                        BufferAccess::ReadOnly,
+                    ),
+                    graph_input(
+                        "weight",
+                        q_weight,
                         dtype.clone(),
                         vec![
-                            ShapeDim::Known(u64::from(self.workload.batch_size)),
-                            ShapeDim::Known(u64::from(self.workload.sequence_len)),
                             ShapeDim::Known(u64::from(q_dim)),
+                            ShapeDim::Known(u64::from(hidden_dim)),
                         ],
-                        ValueLifetime::Invocation,
-                        BufferAccess::ReadWrite,
+                        ValueLifetime::Constant,
+                        BufferAccess::ReadOnly,
                     ),
-                    retained_successor_of: None,
-                }],
+                ],
+                vec![graph_output(
+                    "output",
+                    format!("{prefix}.q_states"),
+                    dtype.clone(),
+                    vec![
+                        ShapeDim::Known(u64::from(self.workload.batch_size)),
+                        ShapeDim::Known(u64::from(self.workload.sequence_len)),
+                        ShapeDim::Known(u64::from(q_dim)),
+                    ],
+                    ValueLifetime::Invocation,
+                    BufferAccess::ReadWrite,
+                )],
             )?;
 
             // Output projection
@@ -372,45 +304,38 @@ impl ModelGraphBuilder<'_> {
                 format!("{prefix}.o_proj"),
                 o_proj_prog,
                 vec![
-                    GraphInput {
-                        buffer: "input".into(),
-                        value: q_outs[0],
-                        contract: make_contract(
-                            dtype.clone(),
-                            vec![
-                                ShapeDim::Known(u64::from(self.workload.batch_size)),
-                                ShapeDim::Known(u64::from(self.workload.sequence_len)),
-                                ShapeDim::Known(u64::from(q_dim)),
-                            ],
-                            ValueLifetime::Invocation,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                    GraphInput {
-                        buffer: "weight".into(),
-                        value: o_weight,
-                        contract: make_contract(
-                            dtype.clone(),
-                            vec![
-                                ShapeDim::Known(u64::from(hidden_dim)),
-                                ShapeDim::Known(u64::from(q_dim)),
-                            ],
-                            ValueLifetime::Constant,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                ],
-                vec![GraphOutput {
-                    buffer: "output".into(),
-                    name: format!("{prefix}.attn_out"),
-                    contract: make_contract(
+                    graph_input(
+                        "input",
+                        q_outs[0],
                         dtype.clone(),
-                        hidden_shape.to_vec(),
+                        vec![
+                            ShapeDim::Known(u64::from(self.workload.batch_size)),
+                            ShapeDim::Known(u64::from(self.workload.sequence_len)),
+                            ShapeDim::Known(u64::from(q_dim)),
+                        ],
                         ValueLifetime::Invocation,
-                        BufferAccess::ReadWrite,
+                        BufferAccess::ReadOnly,
                     ),
-                    retained_successor_of: None,
-                }],
+                    graph_input(
+                        "weight",
+                        o_weight,
+                        dtype.clone(),
+                        vec![
+                            ShapeDim::Known(u64::from(hidden_dim)),
+                            ShapeDim::Known(u64::from(q_dim)),
+                        ],
+                        ValueLifetime::Constant,
+                        BufferAccess::ReadOnly,
+                    ),
+                ],
+                vec![graph_output(
+                    "output",
+                    format!("{prefix}.attn_out"),
+                    dtype.clone(),
+                    hidden_shape.to_vec(),
+                    ValueLifetime::Invocation,
+                    BufferAccess::ReadWrite,
+                )],
             )?;
             o_outs[0]
         };
@@ -424,99 +349,48 @@ impl ModelGraphBuilder<'_> {
             format!("{prefix}.attn_residual_add"),
             attn_residual_prog,
             vec![
-                GraphInput {
-                    buffer: "a".into(),
-                    value: input_hidden,
-                    contract: make_contract(
-                        dtype.clone(),
-                        hidden_shape.to_vec(),
-                        ValueLifetime::Invocation,
-                        BufferAccess::ReadOnly,
-                    ),
-                },
-                GraphInput {
-                    buffer: "b".into(),
-                    value: attn_out,
-                    contract: make_contract(
-                        dtype.clone(),
-                        hidden_shape.to_vec(),
-                        ValueLifetime::Invocation,
-                        BufferAccess::ReadOnly,
-                    ),
-                },
-            ],
-            vec![GraphOutput {
-                buffer: "out".into(),
-                name: format!("{prefix}.hidden_after_attn"),
-                contract: make_contract(
+                graph_input(
+                    "a",
+                    input_hidden,
                     dtype.clone(),
                     hidden_shape.to_vec(),
                     ValueLifetime::Invocation,
-                    BufferAccess::ReadWrite,
+                    BufferAccess::ReadOnly,
                 ),
-                retained_successor_of: None,
-            }],
+                graph_input(
+                    "b",
+                    attn_out,
+                    dtype.clone(),
+                    hidden_shape.to_vec(),
+                    ValueLifetime::Invocation,
+                    BufferAccess::ReadOnly,
+                ),
+            ],
+            vec![graph_output(
+                "out",
+                format!("{prefix}.hidden_after_attn"),
+                dtype.clone(),
+                hidden_shape.to_vec(),
+                ValueLifetime::Invocation,
+                BufferAccess::ReadWrite,
+            )],
         )?;
         let hidden_after_attn = attn_res_outs[0];
 
         // 4. Post-Attention Normalization
-        let post_norm_weight = graph.add_external_value(
-            format!("{prefix}.post_attention_layernorm.weight"),
-            make_contract(
-                dtype.clone(),
-                vec![ShapeDim::Known(u64::from(hidden_dim))],
-                ValueLifetime::Constant,
-                BufferAccess::ReadOnly,
-            ),
-        )?;
-
-        let post_norm_prog = learned_rms_norm(
-            "input",
-            "weight",
-            "output",
+        let post_norm_outs = add_learned_rms_norm(
+            graph,
+            RmsNormNames {
+                weight: format!("{prefix}.post_attention_layernorm.weight"),
+                node: format!("{prefix}.post_attention_norm"),
+                output: format!("{prefix}.normalized_mlp_in"),
+            },
+            hidden_after_attn,
+            hidden_shape,
             rows,
             hidden_dim,
             self.config.norm_eps,
             dtype.clone(),
-        )
-        .map_err(|e| TranslationError::Primitive(e.to_string()))?;
-
-        let (_, post_norm_outs) = graph.add_node(
-            format!("{prefix}.post_attention_norm"),
-            post_norm_prog,
-            vec![
-                GraphInput {
-                    buffer: "input".into(),
-                    value: hidden_after_attn,
-                    contract: make_contract(
-                        dtype.clone(),
-                        hidden_shape.to_vec(),
-                        ValueLifetime::Invocation,
-                        BufferAccess::ReadOnly,
-                    ),
-                },
-                GraphInput {
-                    buffer: "weight".into(),
-                    value: post_norm_weight,
-                    contract: make_contract(
-                        dtype.clone(),
-                        vec![ShapeDim::Known(u64::from(hidden_dim))],
-                        ValueLifetime::Constant,
-                        BufferAccess::ReadOnly,
-                    ),
-                },
-            ],
-            vec![GraphOutput {
-                buffer: "output".into(),
-                name: format!("{prefix}.normalized_mlp_in"),
-                contract: make_contract(
-                    dtype.clone(),
-                    hidden_shape.to_vec(),
-                    ValueLifetime::Invocation,
-                    BufferAccess::ReadWrite,
-                ),
-                retained_successor_of: None,
-            }],
         )?;
 
         // 5. MLP or MoE Layer
@@ -598,41 +472,34 @@ impl ModelGraphBuilder<'_> {
                 format!("{prefix}.gate_proj"),
                 gate_prog,
                 vec![
-                    GraphInput {
-                        buffer: "input".into(),
-                        value: post_norm_outs[0],
-                        contract: make_contract(
-                            dtype.clone(),
-                            hidden_shape.to_vec(),
-                            ValueLifetime::Invocation,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                    GraphInput {
-                        buffer: "weight".into(),
-                        value: gate_weight,
-                        contract: make_contract(
-                            dtype.clone(),
-                            vec![
-                                ShapeDim::Known(u64::from(inter_dim)),
-                                ShapeDim::Known(u64::from(hidden_dim)),
-                            ],
-                            ValueLifetime::Constant,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                ],
-                vec![GraphOutput {
-                    buffer: "output".into(),
-                    name: format!("{prefix}.gate_out"),
-                    contract: make_contract(
+                    graph_input(
+                        "input",
+                        post_norm_outs,
                         dtype.clone(),
-                        intermediate_shape.clone(),
+                        hidden_shape.to_vec(),
                         ValueLifetime::Invocation,
-                        BufferAccess::ReadWrite,
+                        BufferAccess::ReadOnly,
                     ),
-                    retained_successor_of: None,
-                }],
+                    graph_input(
+                        "weight",
+                        gate_weight,
+                        dtype.clone(),
+                        vec![
+                            ShapeDim::Known(u64::from(inter_dim)),
+                            ShapeDim::Known(u64::from(hidden_dim)),
+                        ],
+                        ValueLifetime::Constant,
+                        BufferAccess::ReadOnly,
+                    ),
+                ],
+                vec![graph_output(
+                    "output",
+                    format!("{prefix}.gate_out"),
+                    dtype.clone(),
+                    intermediate_shape.clone(),
+                    ValueLifetime::Invocation,
+                    BufferAccess::ReadWrite,
+                )],
             )?;
 
             // Up projection
@@ -651,41 +518,34 @@ impl ModelGraphBuilder<'_> {
                 format!("{prefix}.up_proj"),
                 up_prog,
                 vec![
-                    GraphInput {
-                        buffer: "input".into(),
-                        value: post_norm_outs[0],
-                        contract: make_contract(
-                            dtype.clone(),
-                            hidden_shape.to_vec(),
-                            ValueLifetime::Invocation,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                    GraphInput {
-                        buffer: "weight".into(),
-                        value: up_weight,
-                        contract: make_contract(
-                            dtype.clone(),
-                            vec![
-                                ShapeDim::Known(u64::from(inter_dim)),
-                                ShapeDim::Known(u64::from(hidden_dim)),
-                            ],
-                            ValueLifetime::Constant,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                ],
-                vec![GraphOutput {
-                    buffer: "output".into(),
-                    name: format!("{prefix}.up_out"),
-                    contract: make_contract(
+                    graph_input(
+                        "input",
+                        post_norm_outs,
                         dtype.clone(),
-                        intermediate_shape.clone(),
+                        hidden_shape.to_vec(),
                         ValueLifetime::Invocation,
-                        BufferAccess::ReadWrite,
+                        BufferAccess::ReadOnly,
                     ),
-                    retained_successor_of: None,
-                }],
+                    graph_input(
+                        "weight",
+                        up_weight,
+                        dtype.clone(),
+                        vec![
+                            ShapeDim::Known(u64::from(inter_dim)),
+                            ShapeDim::Known(u64::from(hidden_dim)),
+                        ],
+                        ValueLifetime::Constant,
+                        BufferAccess::ReadOnly,
+                    ),
+                ],
+                vec![graph_output(
+                    "output",
+                    format!("{prefix}.up_out"),
+                    dtype.clone(),
+                    intermediate_shape.clone(),
+                    ValueLifetime::Invocation,
+                    BufferAccess::ReadWrite,
+                )],
             )?;
 
             // SwiGLU activation
@@ -696,38 +556,31 @@ impl ModelGraphBuilder<'_> {
                 format!("{prefix}.swiglu"),
                 swiglu_prog,
                 vec![
-                    GraphInput {
-                        buffer: "gate".into(),
-                        value: gate_outs[0],
-                        contract: make_contract(
-                            dtype.clone(),
-                            intermediate_shape.clone(),
-                            ValueLifetime::Invocation,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                    GraphInput {
-                        buffer: "up".into(),
-                        value: up_outs[0],
-                        contract: make_contract(
-                            dtype.clone(),
-                            intermediate_shape.clone(),
-                            ValueLifetime::Invocation,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                ],
-                vec![GraphOutput {
-                    buffer: "out".into(),
-                    name: format!("{prefix}.swiglu_out"),
-                    contract: make_contract(
+                    graph_input(
+                        "gate",
+                        gate_outs[0],
                         dtype.clone(),
                         intermediate_shape.clone(),
                         ValueLifetime::Invocation,
-                        BufferAccess::ReadWrite,
+                        BufferAccess::ReadOnly,
                     ),
-                    retained_successor_of: None,
-                }],
+                    graph_input(
+                        "up",
+                        up_outs[0],
+                        dtype.clone(),
+                        intermediate_shape.clone(),
+                        ValueLifetime::Invocation,
+                        BufferAccess::ReadOnly,
+                    ),
+                ],
+                vec![graph_output(
+                    "out",
+                    format!("{prefix}.swiglu_out"),
+                    dtype.clone(),
+                    intermediate_shape.clone(),
+                    ValueLifetime::Invocation,
+                    BufferAccess::ReadWrite,
+                )],
             )?;
 
             // Down projection
@@ -746,41 +599,34 @@ impl ModelGraphBuilder<'_> {
                 format!("{prefix}.down_proj"),
                 down_prog,
                 vec![
-                    GraphInput {
-                        buffer: "input".into(),
-                        value: swiglu_outs[0],
-                        contract: make_contract(
-                            dtype.clone(),
-                            intermediate_shape,
-                            ValueLifetime::Invocation,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                    GraphInput {
-                        buffer: "weight".into(),
-                        value: down_weight,
-                        contract: make_contract(
-                            dtype.clone(),
-                            vec![
-                                ShapeDim::Known(u64::from(hidden_dim)),
-                                ShapeDim::Known(u64::from(inter_dim)),
-                            ],
-                            ValueLifetime::Constant,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                ],
-                vec![GraphOutput {
-                    buffer: "output".into(),
-                    name: format!("{prefix}.mlp_out"),
-                    contract: make_contract(
+                    graph_input(
+                        "input",
+                        swiglu_outs[0],
                         dtype.clone(),
-                        hidden_shape.to_vec(),
+                        intermediate_shape,
                         ValueLifetime::Invocation,
-                        BufferAccess::ReadWrite,
+                        BufferAccess::ReadOnly,
                     ),
-                    retained_successor_of: None,
-                }],
+                    graph_input(
+                        "weight",
+                        down_weight,
+                        dtype.clone(),
+                        vec![
+                            ShapeDim::Known(u64::from(hidden_dim)),
+                            ShapeDim::Known(u64::from(inter_dim)),
+                        ],
+                        ValueLifetime::Constant,
+                        BufferAccess::ReadOnly,
+                    ),
+                ],
+                vec![graph_output(
+                    "output",
+                    format!("{prefix}.mlp_out"),
+                    dtype.clone(),
+                    hidden_shape.to_vec(),
+                    ValueLifetime::Invocation,
+                    BufferAccess::ReadWrite,
+                )],
             )?;
             down_outs[0]
         };
@@ -794,38 +640,31 @@ impl ModelGraphBuilder<'_> {
             format!("{prefix}.mlp_residual_add"),
             mlp_residual_prog,
             vec![
-                GraphInput {
-                    buffer: "a".into(),
-                    value: hidden_after_attn,
-                    contract: make_contract(
-                        dtype.clone(),
-                        hidden_shape.to_vec(),
-                        ValueLifetime::Invocation,
-                        BufferAccess::ReadOnly,
-                    ),
-                },
-                GraphInput {
-                    buffer: "b".into(),
-                    value: mlp_out,
-                    contract: make_contract(
-                        dtype.clone(),
-                        hidden_shape.to_vec(),
-                        ValueLifetime::Invocation,
-                        BufferAccess::ReadOnly,
-                    ),
-                },
-            ],
-            vec![GraphOutput {
-                buffer: "out".into(),
-                name: format!("{prefix}.layer_output"),
-                contract: make_contract(
-                    dtype,
+                graph_input(
+                    "a",
+                    hidden_after_attn,
+                    dtype.clone(),
                     hidden_shape.to_vec(),
                     ValueLifetime::Invocation,
-                    BufferAccess::ReadWrite,
+                    BufferAccess::ReadOnly,
                 ),
-                retained_successor_of: None,
-            }],
+                graph_input(
+                    "b",
+                    mlp_out,
+                    dtype.clone(),
+                    hidden_shape.to_vec(),
+                    ValueLifetime::Invocation,
+                    BufferAccess::ReadOnly,
+                ),
+            ],
+            vec![graph_output(
+                "out",
+                format!("{prefix}.layer_output"),
+                dtype,
+                hidden_shape.to_vec(),
+                ValueLifetime::Invocation,
+                BufferAccess::ReadWrite,
+            )],
         )?;
 
         Ok(mlp_res_outs[0])

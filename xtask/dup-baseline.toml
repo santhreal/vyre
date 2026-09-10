@@ -38,8 +38,8 @@ total_lines = 16002
 
 [[crate]]
 name = "consumers"
-duplicate_lines = 112
-total_lines = 4472
+duplicate_lines = 92
+total_lines = 4253
 
 [[crate]]
 name = "examples"

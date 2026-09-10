@@ -6,14 +6,15 @@
 
 use thiserror::Error;
 use vyre::ir::{
-    BufferAccess, DataType, GraphInput, GraphOutput, ProgramGraph, ProgramGraphError,
+    BufferAccess, DataType, GraphInput, GraphOutput, GraphValueId, ProgramGraph, ProgramGraphError,
     ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_libs::nn::{
-    activation::embedding_typed, linear::linear_rows_no_bias_out_in_typed, norm::learned_rms_norm,
-};
+use vyre_libs::nn::{activation::embedding_typed, linear::linear_rows_no_bias_out_in_typed};
 
 mod layer;
+mod rms_norm_node;
+
+use rms_norm_node::{add_learned_rms_norm, RmsNormNames};
 
 use crate::config::ModelConfig;
 use crate::workload::WorkloadEnvelope;
@@ -48,6 +49,46 @@ fn make_contract(
         shape,
         access,
         lifetime,
+    }
+}
+
+/// One node input, bound to a graph value under a stated contract.
+///
+/// Every input this translator declares states the same six facts in the same
+/// order. Written out per site it is a seven-line block, and the sites that
+/// carry it disagreed on nothing except those six values.
+fn graph_input(
+    buffer: &str,
+    value: GraphValueId,
+    dtype: DataType,
+    shape: Vec<ShapeDim>,
+    lifetime: ValueLifetime,
+    access: BufferAccess,
+) -> GraphInput {
+    GraphInput {
+        buffer: buffer.into(),
+        value,
+        contract: make_contract(dtype, shape, lifetime, access),
+    }
+}
+
+/// One node output, published under `name`.
+///
+/// No output this translator declares succeeds a retained value, so the node
+/// writes a fresh graph value each time.
+fn graph_output(
+    buffer: &str,
+    name: impl Into<String>,
+    dtype: DataType,
+    shape: Vec<ShapeDim>,
+    lifetime: ValueLifetime,
+    access: BufferAccess,
+) -> GraphOutput {
+    GraphOutput {
+        buffer: buffer.into(),
+        name: name.into(),
+        contract: make_contract(dtype, shape, lifetime, access),
+        retained_successor_of: None,
     }
 }
 
@@ -179,63 +220,19 @@ impl<'a> ModelGraphBuilder<'a> {
         }
 
         // 3. Final Normalization
-        let final_norm_weight = graph.add_external_value(
-            "model.norm.weight",
-            make_contract(
-                dtype.clone(),
-                vec![ShapeDim::Known(u64::from(hidden_dim))],
-                ValueLifetime::Constant,
-                BufferAccess::ReadOnly,
-            ),
-        )?;
-
-        let final_norm_prog = learned_rms_norm(
-            "input",
-            "weight",
-            "output",
+        let final_norm_out = add_learned_rms_norm(
+            &mut graph,
+            RmsNormNames {
+                weight: "model.norm.weight".into(),
+                node: "final_norm".into(),
+                output: "final_hidden_states".into(),
+            },
+            current_hidden,
+            &hidden_shape,
             rows,
             hidden_dim,
             self.config.norm_eps,
             dtype.clone(),
-        )
-        .map_err(|e| TranslationError::Primitive(e.to_string()))?;
-
-        let (_, final_norm_out) = graph.add_node(
-            "final_norm",
-            final_norm_prog,
-            vec![
-                GraphInput {
-                    buffer: "input".into(),
-                    value: current_hidden,
-                    contract: make_contract(
-                        dtype.clone(),
-                        hidden_shape.clone(),
-                        ValueLifetime::Invocation,
-                        BufferAccess::ReadOnly,
-                    ),
-                },
-                GraphInput {
-                    buffer: "weight".into(),
-                    value: final_norm_weight,
-                    contract: make_contract(
-                        dtype.clone(),
-                        vec![ShapeDim::Known(u64::from(hidden_dim))],
-                        ValueLifetime::Constant,
-                        BufferAccess::ReadOnly,
-                    ),
-                },
-            ],
-            vec![GraphOutput {
-                buffer: "output".into(),
-                name: "final_hidden_states".into(),
-                contract: make_contract(
-                    dtype.clone(),
-                    hidden_shape.clone(),
-                    ValueLifetime::Invocation,
-                    BufferAccess::ReadWrite,
-                ),
-                retained_successor_of: None,
-            }],
         )?;
 
         // 4. LM Head Logits Projection (if language model)
@@ -274,45 +271,37 @@ impl<'a> ModelGraphBuilder<'a> {
                 "lm_head",
                 lm_head_prog,
                 vec![
-                    GraphInput {
-                        buffer: "input".into(),
-                        value: final_norm_out[0],
-                        contract: make_contract(
-                            dtype.clone(),
-                            hidden_shape.clone(),
-                            ValueLifetime::Invocation,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                    GraphInput {
-                        buffer: "weight".into(),
-                        value: lm_head_weight,
-                        contract: make_contract(
-                            dtype.clone(),
-                            vec![
-                                ShapeDim::Known(u64::from(self.config.vocab_size)),
-                                ShapeDim::Known(u64::from(hidden_dim)),
-                            ],
-                            ValueLifetime::Constant,
-                            BufferAccess::ReadOnly,
-                        ),
-                    },
-                ],
-                vec![GraphOutput {
-                    buffer: "output".into(),
-                    name: "logits".into(),
-                    contract: make_contract(
-                        dtype,
-                        logits_shape,
-                        ValueLifetime::Output,
-                        BufferAccess::ReadWrite,
+                    graph_input(
+                        "input",
+                        final_norm_out,
+                        dtype.clone(),
+                        hidden_shape.clone(),
+                        ValueLifetime::Invocation,
+                        BufferAccess::ReadOnly,
                     ),
-                    retained_successor_of: None,
-                }],
+                    graph_input(
+                        "weight",
+                        lm_head_weight,
+                        dtype.clone(),
+                        vec![
+                            ShapeDim::Known(u64::from(self.config.vocab_size)),
+                            ShapeDim::Known(u64::from(hidden_dim)),
+                        ],
+                        ValueLifetime::Constant,
+                        BufferAccess::ReadOnly,
+                    ),
+                ],
+                vec![graph_output(
+                    "output",
+                    "logits",
+                    dtype,
+                    logits_shape,
+                    ValueLifetime::Output,
+                    BufferAccess::ReadWrite,
+                )],
             )?;
         }
 
         Ok(graph)
     }
-
 }

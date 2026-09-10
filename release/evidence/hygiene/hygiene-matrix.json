@@ -1,10 +1,10 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"5f6cf9ef935abe9bf2024884dd19f3d0ec5a6674","commit_timestamp":"1789060281","parent_commit":"16f40bdf4dd3645780a75b7aa268f53ce60c937c","dirty":true,"source_fingerprint":"git:5f6cf9ef935abe9bf2024884dd19f3d0ec5a6674:dirty=true:worktree=8e3c80cb1064c6e30a7976eedc88d0997f6baf27262a98a8028c866a95cbcd36"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"df2f410f57e03906e94817e986b0f633c2a20799","commit_timestamp":"1789061230","parent_commit":"5f6cf9ef935abe9bf2024884dd19f3d0ec5a6674","dirty":true,"source_fingerprint":"git:df2f410f57e03906e94817e986b0f633c2a20799:dirty=true:worktree=2a66838599deda94710b32a99a332d4b600f0dd80c4c8b881de69bc6b746fec2"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4823,
+  "scanned_files": 4826,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -3703,7 +3703,7 @@
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 227,
+      "line": 261,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3713,7 +3713,7 @@
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 241,
+      "line": 275,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3723,7 +3723,7 @@
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 289,
+      "line": 323,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3733,7 +3733,7 @@
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 351,
+      "line": 385,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3743,7 +3743,7 @@
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 404,
+      "line": 438,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3753,27 +3753,7 @@
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 408,
-      "pattern": "expect_call",
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 462,
-      "pattern": "panic_macro",
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 479,
+      "line": 442,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -3784,6 +3764,26 @@
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
       "line": 496,
+      "pattern": "panic_macro",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-test-support/src/artifact_fixtures.rs",
+      "line": 513,
+      "pattern": "expect_call",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-test-support/src/artifact_fixtures.rs",
+      "line": 530,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5323,7 +5323,7 @@
     },
     {
       "path": "vyre/tests/facade_boundary.rs",
-      "line": 187,
+      "line": 185,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5333,7 +5333,7 @@
     },
     {
       "path": "vyre/tests/facade_boundary.rs",
-      "line": 207,
+      "line": 205,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5343,7 +5343,7 @@
     },
     {
       "path": "vyre-aot/tests/compile_request_fidelity.rs",
-      "line": 241,
+      "line": 212,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5353,7 +5353,7 @@
     },
     {
       "path": "vyre-aot/tests/compile_request_fidelity.rs",
-      "line": 272,
+      "line": 243,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -8364,55 +8364,55 @@
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 227,
+      "line": 261,
       "pattern": "expect_call",
       "text": ".expect(\"fixture request must compile. Fix: correct the graph or raise the artifact-bytes bound this fixture sets\")"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 241,
+      "line": 275,
       "pattern": "expect_call",
       "text": ".expect(\"fixture request must compile. Fix: correct the graph or the placement this fixture compiles it under\")"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 289,
+      "line": 323,
       "pattern": "expect_call",
       "text": ".expect(\"fixture request must validate. Fix: correct the graph, the device facts, or the mesh this fixture places it on\")"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 351,
+      "line": 385,
       "pattern": "expect_call",
       "text": ".expect(\"fixture mesh must authenticate. Fix: correct the device and link records this two-device mesh declares\")"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 404,
+      "line": 438,
       "pattern": "expect_call",
       "text": ".expect(\"fixture resource must be valid. Fix: correct the buffer declaration the program carries for this value\");"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 408,
+      "line": 442,
       "pattern": "expect_call",
       "text": ".expect("
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 462,
+      "line": 496,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|| panic!(\"fixture artifact records no geometry for node {}\", node.0));"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 479,
+      "line": 513,
       "pattern": "expect_call",
       "text": "TargetPayloadFormat::new(FIXTURE_TARGET, version).expect(\"fixture format must be valid\")"
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 496,
+      "line": 530,
       "pattern": "expect_call",
       "text": ".expect(\"fixture profile must be valid\")"
     },
@@ -9347,28 +9347,28 @@
     },
     {
       "path": "vyre/tests/facade_boundary.rs",
-      "line": 187,
+      "line": 185,
       "pattern": "source_inspection_test",
       "text": "test `facade_exposes_zero_internal_implementation_symbols` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "facade_exposes_zero_internal_implementation_symbols"
     },
     {
       "path": "vyre/tests/facade_boundary.rs",
-      "line": 207,
+      "line": 205,
       "pattern": "source_inspection_test",
       "text": "test `facade_compiler_module_is_curated_not_whole_crate_alias` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "facade_compiler_module_is_curated_not_whole_crate_alias"
     },
     {
       "path": "vyre-aot/tests/compile_request_fidelity.rs",
-      "line": 241,
+      "line": 212,
       "pattern": "source_inspection_test",
       "text": "test `the_crate_constructs_no_compile_input_of_its_own` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "the_crate_constructs_no_compile_input_of_its_own"
     },
     {
       "path": "vyre-aot/tests/compile_request_fidelity.rs",
-      "line": 272,
+      "line": 243,
       "pattern": "source_inspection_test",
       "text": "test `every_public_target_compile_entry_point_consumes_a_validated_request` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_public_target_compile_entry_point_consumes_a_validated_request"

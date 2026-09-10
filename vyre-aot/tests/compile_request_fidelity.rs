@@ -19,13 +19,12 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use vyre_aot::{compile, ValidatedCompileRequest};
-use vyre_foundation::ir::{BufferAccess, DataType, ProgramGraph, ValueLifetime};
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::{
     CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     SearchBudget,
 };
-use vyre_test_support::artifact_fixtures::{contract, graph_over};
+use vyre_test_support::artifact_fixtures::params_and_out_graph;
 
 use crate::fixture_target;
 
@@ -45,34 +44,6 @@ const RANKED_BUDGET: SearchBudget = SearchBudget::new(8, 1_000, 2, 0, 10_000_000
 /// The budget a wrapper hardcoded: one candidate, so nothing is ranked.
 const ONE_CANDIDATE_BUDGET: SearchBudget = SearchBudget::new(1, 1_000, 1, 0, 10_000_000);
 
-/// The graph every case here compiles: two canonical resources, one node.
-fn fixture_graph() -> ProgramGraph {
-    graph_over(
-        "main",
-        [64, 1, 1],
-        &[
-            (
-                "params",
-                contract(
-                    DataType::U32,
-                    256,
-                    BufferAccess::ReadOnly,
-                    ValueLifetime::Invocation,
-                ),
-            ),
-            (
-                "out",
-                contract(
-                    DataType::U32,
-                    64,
-                    BufferAccess::WriteOnly,
-                    ValueLifetime::Output,
-                ),
-            ),
-        ],
-    )
-}
-
 /// The live facts a caller holding a backend passes.
 fn live_device_facts() -> DeviceFacts {
     DeviceFacts::new(BackendCapabilities::default(), 1_024)
@@ -88,7 +59,7 @@ fn request(
     search_budget: SearchBudget,
 ) -> ValidatedCompileRequest {
     CompileRequest::new(
-        fixture_graph(),
+        params_and_out_graph(),
         ExternalFacts::new(facts_digest, BTreeMap::new()),
         device,
         search_budget,

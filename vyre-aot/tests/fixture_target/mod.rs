@@ -6,13 +6,13 @@ use vyre_aot::{
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 use vyre_driver::Device;
-use vyre_foundation::ir::{BufferAccess, DataType, Program, ProgramGraph, ValueLifetime};
+use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_megakernel::{
     compile_selected_modules, EmittedTargetModule, TargetModuleBundle, TargetModuleImage,
 };
 use vyre_megakernel::{TargetCompileError, TargetCompiler};
 
-use vyre_test_support::artifact_fixtures::{compile_graph, contract, graph_over};
+use vyre_test_support::artifact_fixtures::{compile_graph, params_and_out_graph};
 
 pub(crate) const FIXTURE_TARGET_ID: vyre_aot::TargetId =
     vyre_aot::TargetId::expect_valid("fixture-target");
@@ -261,33 +261,7 @@ pub(crate) fn compiled_artifact_for_launcher() -> ArtifactEnvelope {
 }
 
 fn compiled_artifact_with_format(format_name: &str) -> ArtifactEnvelope {
-    let neutral = compile_graph(
-        graph_over(
-            "main",
-            [64, 1, 1],
-            &[
-                (
-                    "params",
-                    contract(
-                        DataType::U32,
-                        256,
-                        BufferAccess::ReadOnly,
-                        ValueLifetime::Invocation,
-                    ),
-                ),
-                (
-                    "out",
-                    contract(
-                        DataType::U32,
-                        64,
-                        BufferAccess::WriteOnly,
-                        ValueLifetime::Output,
-                    ),
-                ),
-            ],
-        ),
-        0,
-    );
+    let neutral = compile_graph(params_and_out_graph(), 0);
     let node = neutral.nodes()[0].id;
     let launch = recorded_launch(&neutral, node);
     let params = neutral

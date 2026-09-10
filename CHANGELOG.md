@@ -7376,6 +7376,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The downstream graphics app consumer package compiles and passes its test
   suite against the current runtime API, and the consumer-compilation gate
   verifies that out-of-workspace consumer packages build without errors.
+- The rule that a consumer workspace declares no production dependency on an
+  internal crate is checked against every consumer manifest and derives the
+  forbidden set from each member's declared publication class, instead of
+  reading a field that moved out of the ownership manifest.
 - Logical contractions lower into scalar, SIMT tiled, and matrix-instruction
   candidate strategies in lowering rather than library builders, and TileMatmul
   bitwise-packs F16 fragment operand pairs across warp lanes.

@@ -120,57 +120,6 @@ fn consumer_package_depends_on_vyre_and_vyre_libs() {
 }
 
 #[test]
-fn consumer_manifest_carries_zero_forbidden_publication_class_dependencies() {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest_dir
-        .parent()
-        .expect("consumers dir")
-        .parent()
-        .expect("workspace root");
-
-    let ownership_path = workspace_root.join("docs/CRATE_OWNERSHIP.toml");
-    let ownership_str = std::fs::read_to_string(&ownership_path)
-        .unwrap_or_else(|e| panic!("failed to read {}: {e}", ownership_path.display()));
-    let ownership: toml::Value =
-        toml::from_str(&ownership_str).expect("parse CRATE_OWNERSHIP.toml");
-
-    let mut forbidden_classes = std::collections::BTreeMap::new();
-    if let Some(crates) = ownership.get("crate").and_then(|c| c.as_array()) {
-        for c in crates {
-            if let (Some(pkg), Some(class)) = (
-                c.get("package").and_then(|p| p.as_str()),
-                c.get("publication_class").and_then(|cls| cls.as_str()),
-            ) {
-                if class == "internal-engine" || class == "private-test-support" {
-                    forbidden_classes.insert(pkg.to_string(), class.to_string());
-                }
-            }
-        }
-    }
-
-    let manifest_path = manifest_dir.join("Cargo.toml");
-    let manifest_content = std::fs::read_to_string(&manifest_path)
-        .unwrap_or_else(|e| panic!("failed to read {}: {e}", manifest_path.display()));
-    let manifest_toml: toml::Value = toml::from_str(&manifest_content).expect("parse Cargo.toml");
-
-    let mut production_deps = Vec::new();
-    if let Some(deps) = manifest_toml.get("dependencies").and_then(|d| d.as_table()) {
-        for dep_name in deps.keys() {
-            production_deps.push(dep_name.clone());
-        }
-    }
-
-    for dep in &production_deps {
-        if let Some(class) = forbidden_classes.get(dep.as_str()) {
-            panic!(
-                "Consumer manifest `{}` declares forbidden production dependency `{dep}` with publication_class `{class}`. Consumers must depend only on the published facade and public SDKs.",
-                manifest_path.display()
-            );
-        }
-    }
-}
-
-#[test]
 fn dependency_closure_proves_zero_model_identifiers_in_workspace_public_surface() {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let workspace_root = manifest_dir

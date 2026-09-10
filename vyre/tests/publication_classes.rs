@@ -13,6 +13,8 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::{Path, PathBuf};
 
+use crate::collected_errors::collected;
+
 /// Valid publication classes for workspace members.
 pub(crate) const VALID_PUBLICATION_CLASSES: &[&str] = &[
     "stable-consumer-sdk",
@@ -124,7 +126,7 @@ fn versionless<'a>(
     })
 }
 
-fn load_workspace_members(root: &Path) -> BTreeMap<String, MemberInfo> {
+pub(crate) fn load_workspace_members(root: &Path) -> BTreeMap<String, MemberInfo> {
     let root_cargo_path = root.join("Cargo.toml");
     let root_cargo_str = std::fs::read_to_string(&root_cargo_path)
         .expect("root Cargo.toml must exist and be readable");
@@ -292,11 +294,7 @@ pub(crate) fn validate_publication_classes(
         }
     }
 
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        Err(errors)
-    }
+    collected(errors)
 }
 
 /// Validates that no publishable package depends on a non-publishable package via normal or build deps.
@@ -331,11 +329,7 @@ pub(crate) fn validate_publishable_dependency_closure(
         }
     }
 
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        Err(errors)
-    }
+    collected(errors)
 }
 
 /// Validates that the publishable set and the roster are the same set.
@@ -366,11 +360,7 @@ pub(crate) fn validate_publishable_roster(
         }
     }
 
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        Err(errors)
-    }
+    collected(errors)
 }
 
 /// Computes the topological release order for all publishable packages.

@@ -5,6 +5,12 @@
 //! binary for the whole set. A test that cannot share a process stays its own
 //! target and states why in `xtask/test-harness-isolation.toml`.
 
+#[path = "collected_errors.rs"]
+pub mod collected_errors;
+
+#[path = "consumer_manifest_boundary.rs"]
+mod consumer_manifest_boundary;
+
 #[path = "program_fixtures/mod.rs"]
 pub mod program_fixtures;
 

@@ -12,6 +12,8 @@
 use std::path::PathBuf;
 use syn::{Item, ItemMod, ItemUse, UsePath, UseRename, UseTree, Visibility};
 
+use crate::collected_errors::collected;
+
 /// Disallowed module path segments in public facade re-exports.
 pub(crate) const FORBIDDEN_INTERNAL_PATH_SEGMENTS: &[&str] = &[
     "optimizer",
@@ -176,11 +178,7 @@ pub(crate) fn validate_facade_exports(exports: &[ExportedPath]) -> Result<(), Ve
         }
     }
 
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        Err(errors)
-    }
+    collected(errors)
 }
 
 #[test]

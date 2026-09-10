@@ -187,6 +187,40 @@ pub fn graph_over(
     graph
 }
 
+/// One node over a read-only parameter block and a write-only result.
+///
+/// The ahead-of-time suites compile this graph to compare artifact identities,
+/// so the two element counts, the two access modes and the workgroup size are
+/// part of what those comparisons mean. Two copies of it drift into two graphs
+/// that no longer produce the same identity, and the assertions keep passing
+/// against different subjects.
+pub fn params_and_out_graph() -> ProgramGraph {
+    graph_over(
+        "main",
+        [64, 1, 1],
+        &[
+            (
+                "params",
+                contract(
+                    DataType::U32,
+                    256,
+                    BufferAccess::ReadOnly,
+                    ValueLifetime::Invocation,
+                ),
+            ),
+            (
+                "out",
+                contract(
+                    DataType::U32,
+                    64,
+                    BufferAccess::WriteOnly,
+                    ValueLifetime::Output,
+                ),
+            ),
+        ],
+    )
+}
+
 /// Compile a fixture graph under the facts and bounded search every fixture uses.
 ///
 /// `facts_seed` fills the external facts digest, which participates in the
