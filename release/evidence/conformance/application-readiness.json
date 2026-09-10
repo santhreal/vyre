@@ -1,0 +1,244 @@
+{
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/app-runnable","commit":"f17887e2ddfa95611a8a03066ecea8633c741cf4","commit_timestamp":"1789030773","parent_commit":"3898169601b712348a4e58438359bdf933ffaa6e","dirty":true,"source_fingerprint":"git:f17887e2ddfa95611a8a03066ecea8633c741cf4:dirty=true:worktree=59c6b18e626f657c0db3c87dd4f8b412f6b9029eaae5555acb11fb7705d48932"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "schema_version": 2,
+  "receipt_schema_version": 1,
+  "generic_frontend_dialects": [
+    {
+      "dialect_id": "vyre-libs::logical",
+      "name": "dialect",
+      "version": 1,
+      "min_supported_version": 1,
+      "tier": "Library",
+      "category": "logical",
+      "operations": [
+        {
+          "id": "vyre-libs::logical::nand",
+          "name": "nand",
+          "version": 1,
+          "is_composable": true,
+          "has_registered_builder": true,
+          "signature_inputs": 2,
+          "signature_outputs": 1
+        },
+        {
+          "id": "vyre-libs::logical::nor",
+          "name": "nor",
+          "version": 1,
+          "is_composable": true,
+          "has_registered_builder": true,
+          "signature_inputs": 2,
+          "signature_outputs": 1
+        }
+      ]
+    }
+  ],
+  "artifact_modules": [
+    {
+      "backend_id": "cuda",
+      "target_id": "cuda",
+      "target_format": "ptx",
+      "reference_oracle": false,
+      "has_target_compiler": true,
+      "has_materializer": true,
+      "semantic_operation_count": 358,
+      "artifact_schema_version": 18,
+      "payload_schema_version": 4
+    },
+    {
+      "backend_id": "spirv",
+      "target_id": "spirv",
+      "target_format": "spv",
+      "reference_oracle": false,
+      "has_target_compiler": true,
+      "has_materializer": true,
+      "semantic_operation_count": 358,
+      "artifact_schema_version": 18,
+      "payload_schema_version": 4
+    },
+    {
+      "backend_id": "wgpu",
+      "target_id": "wgpu",
+      "target_format": "wgsl",
+      "reference_oracle": false,
+      "has_target_compiler": true,
+      "has_materializer": true,
+      "semantic_operation_count": 358,
+      "artifact_schema_version": 18,
+      "payload_schema_version": 4
+    }
+  ],
+  "applications": [
+    {
+      "application_id": "vyre-libs::logical",
+      "stages": [
+        "vyre-libs::logical::nand",
+        "vyre-libs::logical::nor"
+      ],
+      "graph_node_count": 2,
+      "graph_internal_edge_count": 1,
+      "graph_closure_error": null,
+      "compile_request_error": null,
+      "compile_error": null,
+      "artifact_schema_version": 18,
+      "artifact_identity_stable": true,
+      "resource_roster": [
+        {
+          "name": "s0_a",
+          "element_count": 4,
+          "byte_count": 16,
+          "lifetime": "Invocation",
+          "first_stage": 0,
+          "last_stage": 0
+        },
+        {
+          "name": "s0_b",
+          "element_count": 4,
+          "byte_count": 16,
+          "lifetime": "Invocation",
+          "first_stage": 0,
+          "last_stage": 0
+        },
+        {
+          "name": "s0_out",
+          "element_count": 4,
+          "byte_count": 16,
+          "lifetime": "Invocation",
+          "first_stage": 0,
+          "last_stage": 0
+        },
+        {
+          "name": "s1_b",
+          "element_count": 4,
+          "byte_count": 16,
+          "lifetime": "Invocation",
+          "first_stage": 0,
+          "last_stage": 0
+        },
+        {
+          "name": "s1_out",
+          "element_count": 4,
+          "byte_count": 16,
+          "lifetime": "Output",
+          "first_stage": 0,
+          "last_stage": 0
+        }
+      ],
+      "unbound_graph_values": [],
+      "unresolved_abi_bindings": [],
+      "selected_topology": "topology:sequential",
+      "artifact_features": [
+        "fused",
+        "groups:1",
+        "topology:sequential"
+      ],
+      "targets": [
+        {
+          "backend_id": "cuda",
+          "target_format": "ptx",
+          "entry_point_count": 1,
+          "module_count": 1,
+          "arm_assignment_count": 1,
+          "bundle_topology": "topology:sequential",
+          "target_features": [
+            "fused",
+            "groups:1",
+            "topology:sequential"
+          ],
+          "envelope_admitted": true
+        },
+        {
+          "backend_id": "spirv",
+          "target_format": "spv",
+          "entry_point_count": 1,
+          "module_count": 1,
+          "arm_assignment_count": 1,
+          "bundle_topology": "topology:sequential",
+          "target_features": [
+            "fused",
+            "groups:1",
+            "topology:sequential"
+          ],
+          "envelope_admitted": true
+        },
+        {
+          "backend_id": "wgpu",
+          "target_format": "wgsl",
+          "entry_point_count": 1,
+          "module_count": 1,
+          "arm_assignment_count": 1,
+          "bundle_topology": "topology:sequential",
+          "target_features": [
+            "fused",
+            "groups:1",
+            "topology:sequential"
+          ],
+          "envelope_admitted": true
+        }
+      ],
+      "target_errors": [],
+      "device_certified_by": [
+        "cuda-conformance.json",
+        "wgpu-conformance.json"
+      ],
+      "uncertified_stages": []
+    }
+  ],
+  "device_execution_certificates": [
+    {
+      "certificate_file": "cuda-conformance.json",
+      "backend_id": "cuda",
+      "schema_version": 4,
+      "device_measured": true,
+      "devices": [
+        "NVIDIA GeForce RTX 5090"
+      ],
+      "total_pairs": 358,
+      "distinct_op_count": 358,
+      "catalog_required_op_count": 358,
+      "catalog_covered_op_count": 358,
+      "missing_catalog_ops": [],
+      "blockers": []
+    },
+    {
+      "certificate_file": "reference-conformance.json",
+      "backend_id": "cpu-ref",
+      "schema_version": 4,
+      "device_measured": false,
+      "devices": [],
+      "total_pairs": 358,
+      "distinct_op_count": 358,
+      "catalog_required_op_count": 358,
+      "catalog_covered_op_count": 358,
+      "missing_catalog_ops": [],
+      "blockers": []
+    },
+    {
+      "certificate_file": "wgpu-conformance.json",
+      "backend_id": "wgpu",
+      "schema_version": 4,
+      "device_measured": true,
+      "devices": [
+        "NVIDIA GeForce RTX 5090"
+      ],
+      "total_pairs": 358,
+      "distinct_op_count": 358,
+      "catalog_required_op_count": 358,
+      "catalog_covered_op_count": 358,
+      "missing_catalog_ops": [],
+      "blockers": [
+        "`cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all` exited with exit status: 1; stderr: Finished `release` profile [optimized] target(s) in 0.20s\n     Running `/mnt/FlareTraining/santh-archive/cargo-target/release/vyre-conform dispatch --backend wgpu --ops all`",
+        "wgpu conformance reported 1 failed pair(s)"
+      ]
+    }
+  ],
+  "benchmark_evidence": {
+    "read_error": null,
+    "required_closed_families": 14,
+    "matched_required_families": 14,
+    "release_suite_case_count": 24,
+    "missing_evidence_artifacts": [],
+    "missing_required_baseline_families": [],
+    "blockers": []
+  },
+  "blockers": []
+}
