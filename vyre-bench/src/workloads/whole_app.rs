@@ -2277,20 +2277,13 @@ pub fn write_whole_application_evidence_artifacts(
 ) -> Result<Vec<PathBuf>, String> {
     let matrix = generate_whole_application_evidence_suite(backend_id, measured_samples)?;
 
-    std::fs::create_dir_all(artifacts_dir)
-        .map_err(|err| format!("Failed to create artifacts directory: {err}"))?;
-
+    let root = xtask::checkout::checkout_root();
     let mut written_paths = Vec::new();
 
-    // Write domain matrix
     let matrix_path = artifacts_dir.join("whole-application-domain-matrix.json");
-    let matrix_json = serde_json::to_string_pretty(&matrix)
-        .map_err(|err| format!("Failed to serialize domain matrix: {err}"))?;
-    std::fs::write(&matrix_path, format!("{matrix_json}\n"))
-        .map_err(|err| format!("Failed to write {matrix_path:?}: {err}"))?;
+    record_whole_application_artifact(&root, &matrix_path, &matrix)?;
     written_paths.push(matrix_path);
 
-    // Write individual workload records
     for record in &matrix.records {
         let file_name = match record.domain {
             ApplicationDomain::DenseNumerical => "whole-app-dense-numerical-pipeline.json",
@@ -2300,12 +2293,27 @@ pub fn write_whole_application_evidence_artifacts(
             }
         };
         let record_path = artifacts_dir.join(file_name);
-        let record_json = serde_json::to_string_pretty(record)
-            .map_err(|err| format!("Failed to serialize record `{}`: {err}", record.workload_id))?;
-        std::fs::write(&record_path, format!("{record_json}\n"))
-            .map_err(|err| format!("Failed to write {record_path:?}: {err}"))?;
+        record_whole_application_artifact(&root, &record_path, record)?;
         written_paths.push(record_path);
     }
 
     Ok(written_paths)
+}
+
+/// Record one whole-application artifact under the devices that measured it.
+///
+/// These records carry wall times a device produced, so the measurement class
+/// is `Device` and the stamp names every device the run could see. The suite
+/// refuses to run without one, so a host-only record here would be false.
+fn record_whole_application_artifact(
+    root: &Path,
+    path: &Path,
+    body: &impl serde::Serialize,
+) -> Result<(), String> {
+    xtask::artifact_gate::write_recorded(
+        root,
+        path,
+        xtask::evidence_record::MeasurementRecord::device(),
+        body,
+    )
 }

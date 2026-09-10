@@ -1,43 +1,18 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"11228c3a072a6775dcd8dfd2b05c691d4d46da85","commit_timestamp":"1789018394","parent_commit":"87c28374432ff627bf04a1b232bb48b644ddcd63","dirty":true,"source_fingerprint":"git:11228c3a072a6775dcd8dfd2b05c691d4d46da85:dirty=true:worktree=071d26465647e28352727ec3d4bb735e35669f987f68aa10a08f08d3653e1f6f"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"ec3b8b7f3a7a9e149a3b675e2b12284a007f504f","commit_timestamp":"1789031808","parent_commit":"3a82c9b09452693304802c2fe440594c140b6e0d","dirty":true,"source_fingerprint":"git:ec3b8b7f3a7a9e149a3b675e2b12284a007f504f:dirty=true:worktree=d8a686f54e65749111f644c98ad9a049b0eeb7dce372f5d56fb3af3515f49824"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 1,
-  "unattributed_count": 56,
-  "attributed_count": 21,
+  "unattributed_count": 49,
+  "attributed_count": 35,
   "artifacts": [
-    {
-      "path": "release/evidence/benchmarks/bench-release-axes.json",
-      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
-      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/bench-release-axes.json` with the provenance it wrote"
-    },
-    {
-      "path": "release/evidence/benchmarks/compiler-grade-thesis-workloads.json",
-      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
-      "recapture": "declare `release/evidence/benchmarks/compiler-grade-thesis-workloads.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
-    },
-    {
-      "path": "release/evidence/benchmarks/cpu-only-100x-proof.json",
-      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
-      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/cpu-only-100x-proof.json` with the provenance it wrote"
-    },
     {
       "path": "release/evidence/benchmarks/cuda-ptx-patterns.json",
       "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
       "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/cuda-ptx-patterns.json` with the provenance it wrote"
     },
     {
-      "path": "release/evidence/benchmarks/cuda-release-suite.json",
-      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
-      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/cuda-release-suite.json` with the provenance it wrote"
-    },
-    {
       "path": "release/evidence/benchmarks/dataflow-analysis-release.json",
       "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
       "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/dataflow-analysis-release.json` with the provenance it wrote"
-    },
-    {
-      "path": "release/evidence/benchmarks/frontier-leaderboard.json",
-      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
-      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/frontier-leaderboard.json` with the provenance it wrote"
     },
     {
       "path": "release/evidence/benchmarks/megakernel-condition-100x-proof.json",
@@ -58,11 +33,6 @@
       "path": "release/evidence/benchmarks/megakernel-latency-cuda.json",
       "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
       "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/megakernel-latency-cuda.json` with the provenance it wrote"
-    },
-    {
-      "path": "release/evidence/benchmarks/release-workload-matrix.json",
-      "reason": "carries no provenance record, and `release-workload-matrix` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
-      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-workload-matrix --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/release-workload-matrix.json` with the provenance it wrote"
     },
     {
       "path": "release/evidence/benchmarks/resident-optimizer-pipeline.json",
@@ -243,11 +213,6 @@
       "path": "release/evidence/benchmarks/workload-13-callgraph-reachability.json",
       "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
       "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-13-callgraph-reachability.json` with the provenance it wrote"
-    },
-    {
-      "path": "release/evidence/benchmarks/workload-14-compound-fused-filter.json",
-      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
-      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-14-compound-fused-filter.json` with the provenance it wrote"
     },
     {
       "path": "release/evidence/benchmarks/workload-15-adaptive-routing.json",
