@@ -12,7 +12,7 @@ use crate::api::metric::{digest64_buffers, elapsed_ns, MetricStats};
 use crate::api::suite::SuiteKind;
 use crate::report::json::{benchmark_device_signature, benchmark_held_out_corpus_id, CaseReport};
 
-use super::collect::collect_samples;
+use super::collect::{collect_samples, derive_roofline_fractions};
 use super::stats::{compute_stats, percentile};
 use super::target_samples;
 use super::RunConfig;
@@ -208,6 +208,8 @@ pub(super) fn run_case(
     if samples.get("wall_ns").is_none_or(Vec::is_empty) {
         return Err("benchmark produced no wall_ns samples".to_string());
     }
+
+    derive_roofline_fractions(&mut samples);
 
     let mut metrics = BTreeMap::new();
     for (name, values) in samples {

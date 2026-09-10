@@ -20,17 +20,6 @@ pub(super) fn custom_metric_value(
         .map(|point| point.value)
 }
 
-pub(super) fn gpu_counter_value(
-    metrics: &crate::api::metric::BenchMetrics,
-    name: &str,
-) -> Option<u64> {
-    metrics
-        .gpu_counter
-        .iter()
-        .find(|counter| counter.name == name)
-        .map(|counter| counter.value)
-}
-
 pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'static str> {
     if let Some(key) = graph::custom_graph_metric_key(prefix, name) {
         return Some(key);

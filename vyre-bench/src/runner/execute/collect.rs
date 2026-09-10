@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use crate::api::case::BenchRun;
 
 use super::metric_keys::{
-    custom_metric_key, custom_metric_value, derived_metric_key, gpu_counter_value, metric_key,
+    custom_metric_key, custom_metric_value, derived_metric_key, metric_key,
     rate_per_second_x1000,
 };
 
@@ -176,19 +176,44 @@ pub(super) fn collect_derived_metrics(
             }
         }
     }
+}
 
-    if let Some(peak_gb_s_x1000) =
-        gpu_counter_value(metrics, "memory_peak_gb_s_x1000").filter(|v| *v > 0)
-    {
-        if let (Some(dev_bytes), Some(device_ns)) = (device_bytes, device_ns) {
-            let achieved_gb_s_x1000 = rate_per_second_x1000(dev_bytes, device_ns, 1_000_000_000);
-            if let Some(key) = derived_metric_key(prefix, "roofline_mem_pct_x1000") {
-                samples.entry(key).or_default().push(
-                    ((u128::from(achieved_gb_s_x1000) * 100_000) / u128::from(peak_gb_s_x1000))
-                        .min(u128::from(u64::MAX)) as u64,
-                );
-            }
-        }
+/// Derive the roofline memory fraction from the whole achieved-rate series.
+///
+/// The device memory peak is a device property, and NVML telemetry is captured
+/// on one sample per run, so a per-sample derivation produced exactly one
+/// roofline sample: the one paired with that telemetry. When that sample was a
+/// scheduling outlier, the fraction stated a small percentage of the device
+/// while the achieved-rate p50 over the same 200 samples stated 39% of peak,
+/// and a bandwidth contract evaluated against it flipped between runs on one
+/// binary. The fraction is computed once per achieved-rate sample against the
+/// run's peak instead, so its p50 is the p50 of the rate.
+///
+/// Does not catch a wrong `memory_peak_gb_s_x1000`; that is the device
+/// telemetry's own figure.
+pub(super) fn derive_roofline_fractions(samples: &mut BTreeMap<&'static str, Vec<u64>>) {
+    let Some(peak_gb_s_x1000) = samples
+        .get("memory_peak_gb_s_x1000")
+        .and_then(|values| values.iter().copied().find(|value| *value > 0))
+    else {
+        return;
+    };
+    let Some(fractions) = samples.get("device_gb_s_x1000").map(|rates| {
+        rates
+            .iter()
+            .map(|achieved_gb_s_x1000| {
+                ((u128::from(*achieved_gb_s_x1000) * 100_000) / u128::from(peak_gb_s_x1000))
+                    .min(u128::from(u64::MAX)) as u64
+            })
+            .collect::<Vec<u64>>()
+    }) else {
+        return;
+    };
+    if fractions.is_empty() {
+        return;
+    }
+    if let Some(key) = derived_metric_key("", "roofline_mem_pct_x1000") {
+        samples.insert(key, fractions);
     }
 }
 
@@ -198,7 +223,10 @@ mod tests {
 
     use crate::api::metric::{BenchMetrics, MetricPoint};
 
-    use super::{collect_derived_metrics, collect_metric_fields};
+    use super::{
+        collect_derived_metrics, collect_gpu_counters, collect_metric_fields,
+        derive_roofline_fractions,
+    };
 
     fn metrics_with_host_only(input_bytes: u64, wall_ns: u64) -> BenchMetrics {
         BenchMetrics {
@@ -337,13 +365,68 @@ mod tests {
             ..Default::default()
         };
         let mut samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
+        collect_gpu_counters("", &metrics, &mut samples);
         collect_derived_metrics("", &metrics, &mut samples);
+        derive_roofline_fractions(&mut samples);
 
         // 8650752 B / 10828 ns = 798.924 GB/s, which is 44.582% of 1792 GB/s.
         // Against wall time it would have been 91.943 GB/s, or 5.131%.
         assert_eq!(
             samples["roofline_mem_pct_x1000"][0], 44_582,
             "Fix: roofline_mem_pct_x1000 must divide device bytes by device active time."
+        );
+    }
+
+    /// WHY: the device memory peak arrives with NVML telemetry, which is
+    /// captured on one sample per run. A fraction derived per sample therefore
+    /// existed for exactly that one sample, and its p50 was that sample's
+    /// value: a scheduling outlier on the telemetry sample stated 2.907% of a
+    /// 1792 GB/s device for a run whose achieved-rate p50 was 39%, and a
+    /// bandwidth contract read against it failed on one run of the same binary
+    /// and passed on the next two. The fraction must span the whole
+    /// achieved-rate series so its p50 tracks the rate's p50.
+    ///
+    /// Does not catch a peak that changes mid-run; the first positive reading
+    /// stands for the run.
+    #[test]
+    fn roofline_fraction_spans_every_achieved_rate_sample() {
+        let mut samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
+        // Three fast samples and one outlier, with telemetry captured on the
+        // outlier: 798.924, 798.924, 798.924, and 52.1 GB/s.
+        samples.insert(
+            "device_gb_s_x1000",
+            vec![798_924, 798_924, 798_924, 52_100],
+        );
+        samples.insert("memory_peak_gb_s_x1000", vec![1_792_000]);
+        derive_roofline_fractions(&mut samples);
+
+        assert_eq!(
+            samples["roofline_mem_pct_x1000"],
+            vec![44_582, 44_582, 44_582, 2_907],
+            "Fix: the roofline fraction must be derived once per achieved-rate sample."
+        );
+    }
+
+    /// WHY: without device memory-peak telemetry there is no denominator, and
+    /// a case whose contract states a bandwidth fraction must fail closed on
+    /// the absent metric rather than read a fabricated one.
+    #[test]
+    fn roofline_fraction_is_absent_without_a_device_peak() {
+        let mut samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
+        samples.insert("device_gb_s_x1000", vec![798_924]);
+        derive_roofline_fractions(&mut samples);
+
+        assert!(
+            !samples.contains_key("roofline_mem_pct_x1000"),
+            "Fix: a roofline fraction must not be published without a measured device peak."
+        );
+
+        let mut rate_less: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
+        rate_less.insert("memory_peak_gb_s_x1000", vec![1_792_000]);
+        derive_roofline_fractions(&mut rate_less);
+        assert!(
+            !rate_less.contains_key("roofline_mem_pct_x1000"),
+            "Fix: a roofline fraction must not be published without a measured device rate."
         );
     }
 
