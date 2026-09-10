@@ -227,16 +227,17 @@ fn every_denied_lint_has_a_mutation_case() {
         denied.len()
     );
 
-    // `unsafe_code` and `missing_docs` are held by `lint-unsafe-budget` and the
-    // crate-root attribute scan in `lint_hygiene`, which reject the file rather
-    // than the shape. Every other denied lint needs a case here.
-    const OWNED_ELSEWHERE: &[&str] = &["unsafe_code", "missing_docs"];
-
+    // The split between what the compiler proves here and what a gate proves is
+    // declared once, beside the gate that reads it, so a lint promoted to `deny`
+    // is answered for in one place rather than two that can disagree.
     let covered: Vec<&str> = MUTATIONS.iter().map(|case| case.lint).collect();
     let missing: Vec<&str> = denied
         .iter()
         .map(|lint| lint.as_str())
-        .filter(|lint| !OWNED_ELSEWHERE.contains(lint) && !covered.contains(lint))
+        .filter(|lint| {
+            !xtask::gates::lint_hygiene::LINTS_OWNED_ELSEWHERE.contains(lint)
+                && !covered.contains(lint)
+        })
         .collect();
 
     assert!(

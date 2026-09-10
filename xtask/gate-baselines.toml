@@ -344,6 +344,10 @@ name = "lego-trend"
 findings = 0
 
 [[gate]]
+name = "lint-denied-override"
+findings = 0
+
+[[gate]]
 name = "lint-expect-fix"
 findings = 0
 

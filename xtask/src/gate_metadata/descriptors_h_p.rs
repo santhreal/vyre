@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with H through P.
-pub const GATES_H_P: [GateDescriptor; 61] = [
+pub const GATES_H_P: [GateDescriptor; 62] = [
     GateDescriptor {
         name: "heuristic-audit",
         help: "Enforce heuristic-audit contracts",
@@ -369,6 +369,18 @@ pub const GATES_H_P: [GateDescriptor; 61] = [
         prerequisites: &[],
         resource_class: ResourceClass::Process,
         proof: "xtask_registry::gates::lego_audit::trend::tests::every_intended_collapse_is_also_a_declared_leaf",
+    },
+    GateDescriptor {
+        name: "lint-denied-override",
+        help: "Enforce lint-denied-override contracts",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "tracked source files",
+        inputs: &[],
+        artifacts: &[],
+        prerequisites: &[],
+        resource_class: ResourceClass::Cpu,
+        proof: "crate::gates::lint_hygiene::tests::a_production_allow_of_a_denied_lint_is_reported_and_an_expect_with_a_reason_is_not",
     },
     GateDescriptor {
         name: "lint-expect-fix",

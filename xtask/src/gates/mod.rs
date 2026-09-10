@@ -186,6 +186,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("layering", &layering::Layering),
     ("neutral-crates", &layering::NeutralCrates),
     ("lego-quick", &lego_quick::LegoQuick),
+    ("lint-denied-override", &lint_hygiene::DeniedLintOverride),
     ("lint-expect-fix", &lint_hygiene::ExpectHasFix),
     ("lint-liveness-evasion", &lint_hygiene::LivenessEvasion),
     ("lint-one-policy", &lint_hygiene::OneLintPolicy),
