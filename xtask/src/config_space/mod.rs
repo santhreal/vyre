@@ -711,25 +711,6 @@ pub fn generate_covering_set(package: &str, features: &[String]) -> Vec<Covering
     entries
 }
 
-/// Source files a scanner must skip because they carry feature names as data.
-const CFG_SCAN_EXEMPT: &[&str] = &[
-    "structure-gate/src/cfg_test.rs",
-    "structure-gate/src/source_scan.rs",
-    "structure-gate/src/registration_text.rs",
-    "structure-gate/tests/test_gated_modules.rs",
-    "xtask/src/gates/scan.rs",
-    "xtask/src/gates/lego_quick.rs",
-    "xtask/src/gates/hygiene_matrix/rules.rs",
-    "xtask/src/gates/test_only_capability.rs",
-    "xtask/src/gates/device_test_gating.rs",
-    "xtask/src/gates/host_oracle_elimination",
-    "xtask/src/config_space",
-    "xtask/tests/tree_contracts/config_space_contracts.rs",
-    "vyre-bench/tests/feature_cfg_contract.rs",
-    "xtask-registry/tests/registry_contracts/registration_visibility.rs",
-    "xtask-registry/src/gates/configuration_model.rs",
-];
-
 /// Every `cfg(feature = ...)` reading a feature the owning package never declares.
 #[must_use]
 fn scan_workspace_cfgs(root: &Path, members: &[String], graph: &FeatureGraph) -> Vec<String> {
@@ -768,12 +749,6 @@ fn scan_workspace_cfgs(root: &Path, members: &[String], graph: &FeatureGraph) ->
                 .strip_prefix(root)
                 .map(|path| path.display().to_string())
                 .unwrap_or_else(|_| path.display().to_string());
-            if CFG_SCAN_EXEMPT
-                .iter()
-                .any(|exempt| relative.contains(exempt))
-            {
-                continue;
-            }
             let inside_submember = members.iter().any(|other| {
                 other != member && other.len() > member.len() && path.starts_with(root.join(other))
             });
@@ -782,14 +757,19 @@ fn scan_workspace_cfgs(root: &Path, members: &[String], graph: &FeatureGraph) ->
             }
 
             let content = fs::read_to_string(path).unwrap_or_default();
-            for line in content.lines() {
-                if let Some(feature) = extract_cfg_feature(line) {
-                    if !declared.contains(&feature) {
-                        findings.push(format!(
-                            "Crate `{package}` at `{relative}` reads undeclared feature `{feature}`"
-                        ));
+            match cfg_features_in(&content) {
+                Ok(features) => {
+                    for feature in features {
+                        if !declared.contains(&feature) {
+                            findings.push(format!(
+                                "Crate `{package}` at `{relative}` reads undeclared feature `{feature}`"
+                            ));
+                        }
                     }
                 }
+                Err(error) => findings.push(format!(
+                    "Crate `{package}` at `{relative}` does not parse as Rust, so the features it reads are unknown: {error}"
+                )),
             }
         }
     }
@@ -799,17 +779,56 @@ fn scan_workspace_cfgs(root: &Path, members: &[String], graph: &FeatureGraph) ->
     findings
 }
 
-/// The feature name one `cfg` attribute line reads, if it reads one.
-#[must_use]
-fn extract_cfg_feature(line: &str) -> Option<String> {
-    let trimmed = line.trim_start();
-    if !trimmed.starts_with("#[cfg") && !trimmed.starts_with("#![cfg") {
-        return None;
+/// Every feature name the `cfg` and `cfg_attr` attributes of one Rust source
+/// text read.
+///
+/// # Errors
+///
+/// When the text does not parse as Rust. A file whose attributes cannot be
+/// read is reported rather than treated as reading no feature, because a
+/// silent skip covers less of the tree than the caller believes.
+pub fn cfg_features_in(source: &str) -> Result<BTreeSet<String>, syn::Error> {
+    let file = syn::parse_file(source)?;
+    let mut collector = CfgFeatures::default();
+    syn::visit::visit_file(&mut collector, &file);
+    Ok(collector.features)
+}
+
+/// Every feature name the `cfg` and `cfg_attr` attributes of one file read.
+///
+/// Attributes are read from the parsed syntax tree rather than from source
+/// text. A line scan cannot tell an attribute from the same characters inside
+/// a string literal, and it stops at the first `feature` on the line, so
+/// `any(feature = "a", feature = "b")` hid `b`.
+#[derive(Default)]
+struct CfgFeatures {
+    features: BTreeSet<String>,
+}
+
+impl<'ast> syn::visit::Visit<'ast> for CfgFeatures {
+    fn visit_attribute(&mut self, attribute: &'ast syn::Attribute) {
+        if !attribute.path().is_ident("cfg") && !attribute.path().is_ident("cfg_attr") {
+            return;
+        }
+        let Ok(list) = attribute.meta.require_list() else {
+            return;
+        };
+        let tokens = list.tokens.to_string();
+        let mut rest = tokens.as_str();
+        while let Some(index) = rest.find("feature") {
+            rest = rest[index + "feature".len()..].trim_start();
+            let Some(after_equals) = rest.strip_prefix('=') else {
+                continue;
+            };
+            let after_equals = after_equals.trim_start();
+            let Some(literal) = after_equals.strip_prefix('"') else {
+                continue;
+            };
+            let Some(end) = literal.find('"') else {
+                return;
+            };
+            self.features.insert(literal[..end].to_string());
+            rest = &literal[end + 1..];
+        }
     }
-    let index = trimmed.find("feature")?;
-    let rest = trimmed[index + "feature".len()..].trim_start();
-    let rest = rest.strip_prefix('=')?.trim_start();
-    let rest = rest.strip_prefix('"')?;
-    let end = rest.find('"')?;
-    Some(rest[..end].to_string())
 }

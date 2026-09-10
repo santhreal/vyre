@@ -57,6 +57,7 @@ structure-gate = { path = "../structure-gate" }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+walkdir = { workspace = true }
 
 [[test]]
 name = "all_tests"

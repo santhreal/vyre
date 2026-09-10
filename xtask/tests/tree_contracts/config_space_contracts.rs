@@ -404,3 +404,109 @@ fn a_stale_configuration_space_schema_fails_closed() {
         }
     );
 }
+
+/// A `cfg` written inside a string literal is data, not an attribute.
+///
+/// The reader was a line scan: any line whose trimmed start was `#[cfg` counted,
+/// so a test fixture holding attribute text reported its own fixture features as
+/// undeclared. Fifteen source files were exempted from the scan to suppress that,
+/// and every exemption also stopped the scan from reading the real attributes in
+/// those files.
+#[test]
+fn a_cfg_inside_a_string_literal_reads_no_feature() {
+    let source = r####"
+#[cfg(feature = "real")]
+pub mod gated;
+
+fn fixture() -> &'static str {
+    r#"
+#[cfg(feature = "fixture_only")]
+pub mod not_an_attribute;
+"#
+}
+
+const TEXT: &str = "#[cfg(feature = \"quoted_only\")]";
+"####;
+    let features = cfg_features_in(source).expect("the fixture parses as Rust");
+    assert_eq!(
+        features,
+        BTreeSet::from(["real".to_string()]),
+        "a feature name inside a string literal is data and must not be read as an attribute"
+    );
+}
+
+/// Every feature in one `cfg`, not the first.
+///
+/// The line scan returned after the first `feature = "..."` it found, so the
+/// second operand of `any`, `all` and `not` was never checked against the
+/// declared set and an undeclared name there was reported by nothing.
+#[test]
+fn every_feature_in_one_cfg_is_read() {
+    let source = r#"
+#[cfg(any(feature = "first", feature = "second"))]
+pub mod pair;
+
+#[cfg(all(feature = "third", not(feature = "fourth")))]
+pub mod nested;
+
+#[cfg_attr(feature = "fifth", derive(Debug))]
+pub struct Attributed;
+
+impl Attributed {
+    #[cfg(feature = "sixth")]
+    pub fn gated(&self) {}
+}
+"#;
+    let features = cfg_features_in(source).expect("the fixture parses as Rust");
+    assert_eq!(
+        features,
+        BTreeSet::from([
+            "first".to_string(),
+            "second".to_string(),
+            "third".to_string(),
+            "fourth".to_string(),
+            "fifth".to_string(),
+            "sixth".to_string(),
+        ]),
+        "a cfg with several operands reads every feature it names, at every nesting depth"
+    );
+}
+
+/// A file that does not parse is reported, not read as reading no feature.
+#[test]
+fn an_unparseable_source_is_reported() {
+    let error = cfg_features_in("pub mod (").expect_err("a malformed source must be reported");
+    assert!(
+        !error.to_string().is_empty(),
+        "the parse failure must carry the reason the attributes could not be read"
+    );
+}
+
+/// The checkout carries no file the scan has to skip.
+///
+/// The scan reads attributes from a parsed syntax tree, so a file holding
+/// attribute text as data needs no exemption. This fails if an exemption list
+/// grows back, because each entry silently stops the scan from reading the
+/// real attributes in that file too.
+#[test]
+fn every_workspace_source_file_parses_for_the_cfg_scan() {
+    let root = checkout_root();
+    let mut unreadable = Vec::new();
+    for entry in walkdir::WalkDir::new(root.join("xtask/src"))
+        .into_iter()
+        .filter_map(Result::ok)
+    {
+        let path = entry.path();
+        if path.extension().and_then(|extension| extension.to_str()) != Some("rs") {
+            continue;
+        }
+        let source = std::fs::read_to_string(path).expect("a workspace source file is readable");
+        if cfg_features_in(&source).is_err() {
+            unreadable.push(path.display().to_string());
+        }
+    }
+    assert!(
+        unreadable.is_empty(),
+        "the cfg scan cannot read the attributes of {unreadable:?}"
+    );
+}
