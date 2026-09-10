@@ -42,17 +42,21 @@ impl MemoryOrdering {
         Self::GridSync,
     ];
 
+    /// Wire tag reserved for the grid-scope barrier, the one variant this
+    /// model adds to the closed atomic set.
+    const GRID_SYNC_WIRE_TAG: u8 = 5;
+
     /// Stable wire tag for this ordering.
+    ///
+    /// The five atomic variants carry the tag [`AtomicOrdering`] assigns them.
+    /// Both models encode into one wire schema, so a second tag table here
+    /// would be free to drift away from the one that decodes.
     #[must_use]
     #[inline]
     pub const fn wire_tag(self) -> u8 {
-        match self {
-            Self::Relaxed => 0,
-            Self::Acquire => 1,
-            Self::Release => 2,
-            Self::AcqRel => 3,
-            Self::SeqCst => 4,
-            Self::GridSync => 5,
+        match self.to_atomic_ordering() {
+            Some(ordering) => ordering.wire_tag(),
+            None => Self::GRID_SYNC_WIRE_TAG,
         }
     }
 
@@ -64,16 +68,26 @@ impl MemoryOrdering {
     /// ordering in this schema.
     #[inline]
     pub fn from_wire_tag(tag: u8) -> Result<Self, String> {
-        match tag {
-            0 => Ok(Self::Relaxed),
-            1 => Ok(Self::Acquire),
-            2 => Ok(Self::Release),
-            3 => Ok(Self::AcqRel),
-            4 => Ok(Self::SeqCst),
-            5 => Ok(Self::GridSync),
-            other => Err(format!(
-                "InvalidDiscriminant: memory ordering tag {other} is unknown. Fix: reserialize with a compatible VYRE wire schema."
-            )),
+        if tag == Self::GRID_SYNC_WIRE_TAG {
+            return Ok(Self::GridSync);
+        }
+        AtomicOrdering::from_wire_tag(tag)
+            .map(Self::from_atomic_ordering)
+            .map_err(|_| format!(
+                "InvalidDiscriminant: memory ordering tag {tag} is unknown. Fix: reserialize with a compatible VYRE wire schema."
+            ))
+    }
+
+    /// Widen a closed atomic ordering into the legacy combined model.
+    #[must_use]
+    #[inline]
+    pub const fn from_atomic_ordering(ordering: AtomicOrdering) -> Self {
+        match ordering {
+            AtomicOrdering::Relaxed => Self::Relaxed,
+            AtomicOrdering::Acquire => Self::Acquire,
+            AtomicOrdering::Release => Self::Release,
+            AtomicOrdering::AcqRel => Self::AcqRel,
+            AtomicOrdering::SeqCst => Self::SeqCst,
         }
     }
 
@@ -141,16 +155,14 @@ impl MemoryOrdering {
     }
 
     /// Join two orderings to the weakest ordering that satisfies both.
+    ///
+    /// Grid synchronization absorbs everything. Below it the lattice is the
+    /// closed atomic one, so [`AtomicOrdering::join`] decides it.
     #[must_use]
     pub const fn join(self, other: Self) -> Self {
-        use MemoryOrdering::{AcqRel, Acquire, GridSync, Relaxed, Release, SeqCst};
-        match (self, other) {
-            (GridSync, _) | (_, GridSync) => GridSync,
-            (SeqCst, _) | (_, SeqCst) => SeqCst,
-            (AcqRel, _) | (_, AcqRel) | (Acquire, Release) | (Release, Acquire) => AcqRel,
-            (Acquire, Acquire) => Acquire,
-            (Release, Release) => Release,
-            (Relaxed, ordering) | (ordering, Relaxed) => ordering,
+        match (self.to_atomic_ordering(), other.to_atomic_ordering()) {
+            (Some(left), Some(right)) => Self::from_atomic_ordering(left.join(right)),
+            _ => Self::GridSync,
         }
     }
 }

@@ -392,6 +392,10 @@ pub mod symbolic_shape_interner;
 #[path = "declarative_verifier.rs"]
 pub mod declarative_verifier;
 
+/// Integration tests from `tests/memory_ordering_models_agree.rs`.
+#[path = "memory_ordering_models_agree.rs"]
+pub mod memory_ordering_models_agree;
+
 /// Integration tests from `tests/memory_pass_alias_owner.rs`.
 #[path = "memory_pass_alias_owner.rs"]
 pub mod memory_pass_alias_owner;
