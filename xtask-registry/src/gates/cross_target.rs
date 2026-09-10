@@ -229,20 +229,27 @@ fn check_triple(
 
 /// The first real error cargo printed, so the finding names the cause rather
 /// than the last line of a build log.
+///
+/// A failure whose stderr carries no error line still has to name itself. The
+/// first non-empty line is reported as context rather than as the cause,
+/// because a warning presented as the reason a target check failed sends the
+/// reader after the wrong thing.
 fn first_error_line(stderr: &str) -> String {
-    stderr
+    if let Some(error) = stderr
         .lines()
         .find(|line| line.starts_with("error:") || line.starts_with("error["))
         .or_else(|| stderr.lines().find(|line| line.contains("error:")))
-        .unwrap_or_else(|| {
-            stderr
-                .lines()
-                .find(|line| !line.trim().is_empty())
-                .unwrap_or("the target check reported no error line")
-        })
-        .trim()
-        .to_string()
+    {
+        return error.trim().to_string();
+    }
+    match stderr.lines().find(|line| !line.trim().is_empty()) {
+        Some(context) => format!("{NO_ERROR_LINE}: {}", context.trim()),
+        None => NO_ERROR_LINE.to_string(),
+    }
 }
+
+/// What a failing target check reports when its stderr carries no error line.
+const NO_ERROR_LINE: &str = "the target check reported no error line";
 
 /// Every `target_os` the workspace source branches on, with the arm that claimed
 /// it.
@@ -408,11 +415,36 @@ mod tests {
         );
     }
 
+    /// A failure with no error line names itself and keeps what was printed.
+    ///
+    /// Both halves are the contract. Reporting only the sentinel makes the
+    /// finding unactionable, and reporting only the warning presents it as the
+    /// cause of the failure, which it is not.
     #[test]
     fn a_failure_with_no_error_line_still_names_itself() {
+        let reported = first_error_line("warning: something\n");
+        assert!(
+            reported.starts_with(NO_ERROR_LINE),
+            "Fix: a failure with no error line must say so, got {reported:?}"
+        );
+        assert!(
+            reported.contains("warning: something"),
+            "Fix: the reported line must carry what was printed, got {reported:?}"
+        );
+    }
+
+    /// Empty stderr has no context to carry, so it is the bare sentinel.
+    #[test]
+    fn a_failure_with_empty_stderr_is_the_bare_sentinel() {
+        assert_eq!(first_error_line("   \n\n"), NO_ERROR_LINE);
+    }
+
+    /// A warning is never promoted to the cause when a real error follows it.
+    #[test]
+    fn a_warning_before_an_error_is_not_the_reported_cause() {
         assert_eq!(
-            first_error_line("warning: something\n"),
-            "the target check reported no error line"
+            first_error_line("warning: something\nerror: the real cause\n"),
+            "error: the real cause"
         );
     }
 }

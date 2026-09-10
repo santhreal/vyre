@@ -1,6 +1,6 @@
 //! Canonical live operation schema contract tests.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::PathBuf;
 use std::process::{Command, Output};
@@ -473,8 +473,7 @@ fn stale_operation_count_fails_closed() {
     });
 }
 
-/// Every crate that submits a registration in source appears in the live
-/// registry.
+/// Every operation a crate declares in source is live in the registry.
 ///
 /// WHY: the registry is observed by linking the operation crates into this
 /// binary. Drop one of those links and the registry still answers with hundreds
@@ -484,38 +483,49 @@ fn stale_operation_count_fails_closed() {
 /// grepping `list-ops` output for the string `vyre-primitives::`, which judged
 /// one crate and only through the CLI.
 ///
-/// The expected set is read out of the sources at run time, so a third
-/// registering crate is covered the day it registers.
+/// Declared ids are compared against live ids. An earlier form compared crate
+/// names against the namespace an id claims, which are different things: every
+/// composition in the twenty-odd `vyre-libs-*` crates publishes under the
+/// `vyre-libs::` namespace, so the comparison comes out empty on both sides
+/// regardless of what is linked. Comparing ids also catches a single dropped
+/// registration, not only a whole crate going dark.
+///
+/// The expected set is read out of the sources at run time, so a crate that
+/// starts registering is covered the day it does.
 ///
 /// What it does not catch: a registration whose id reaches
 /// `inventory::submit!` through a macro parameter defined in another file. The
-/// source scan does not model those, so a crate that registers only that way is
-/// not in the expected set.
+/// source scan does not model those, so an operation registered only that way
+/// is not in the expected set.
 #[test]
-fn every_registering_crate_appears_in_the_live_registry() {
+fn every_declared_operation_is_live_in_the_registry() {
     let scanned = structure_gate::scan(&workspace_root());
-    let registering: BTreeSet<&str> = scanned
-        .registrations
-        .iter()
-        .map(|registration| registration.crate_name.as_str())
-        .collect();
     assert!(
-        !registering.is_empty(),
+        !scanned.registrations.is_empty(),
         "Fix: no crate in the workspace submits an operation registration the source scan can see, so this contract is judging nothing"
     );
 
     let registry = vyre_registry_link::operation::live_operation_registry();
-    let linked: BTreeSet<&str> = registry
-        .iter()
-        .filter_map(|operation| operation.id.split_once("::"))
-        .map(|(crate_name, _)| crate_name)
-        .collect();
+    let live: BTreeSet<&str> = registry.iter().map(|operation| operation.id).collect();
 
-    let missing: Vec<&str> = registering.difference(&linked).copied().collect();
+    let mut missing: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    for registration in &scanned.registrations {
+        if !live.contains(registration.op_id.as_str()) {
+            missing
+                .entry(registration.crate_name.as_str())
+                .or_default()
+                .push(registration.op_id.as_str());
+        }
+    }
+
+    let total: usize = missing.values().map(Vec::len).sum();
+    let detail: Vec<String> = missing
+        .iter()
+        .map(|(crate_name, ids)| format!("{crate_name} ({})", ids.join(", ")))
+        .collect();
     assert!(
         missing.is_empty(),
-        "Fix: {} crate(s) register operations in source but contribute none to the live registry, so xtask-registry does not link them: {}",
-        missing.len(),
-        missing.join(", ")
+        "Fix: {total} operation(s) declared in source are absent from the live registry, so xtask-registry does not link the crate that declares them: {}",
+        detail.join("; ")
     );
 }
