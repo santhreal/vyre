@@ -266,16 +266,12 @@ impl GridSyncSplitBackend {
         if self.inner.honors_float_lowering(mode) {
             return Ok(());
         }
-        let ops = vyre_foundation::fp_parity::approximable_operations(program);
-        let name = if ops.is_empty() {
-            format!("float lowering mode `{}`", mode.cache_label())
-        } else {
-            format!(
-                "float lowering mode `{}` for operation(s) {}",
-                mode.cache_label(),
-                ops.join(", ")
-            )
-        };
+        // `fp_parity::blocked_contraction_feature` is the single definition of
+        // the name a contraction-blocking mode refuses under. A mode that
+        // permits contraction has no operation set behind it, so a backend
+        // refusing one refuses the mode alone.
+        let name = vyre_foundation::fp_parity::blocked_contraction_feature(program, mode)
+            .unwrap_or_else(|| format!("float lowering mode `{}`", mode.cache_label()));
         Err(BackendError::UnsupportedFeature {
             name,
             backend: self.inner.id().to_string(),

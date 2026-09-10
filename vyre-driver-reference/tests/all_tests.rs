@@ -32,3 +32,7 @@ pub mod production_registry_execution_domain;
 /// Integration tests from `tests/semantic_execution.rs`.
 #[path = "semantic_execution.rs"]
 pub mod semantic_execution;
+
+/// Integration tests from `tests/strict_float_lowering.rs`.
+#[path = "strict_float_lowering.rs"]
+pub mod strict_float_lowering;

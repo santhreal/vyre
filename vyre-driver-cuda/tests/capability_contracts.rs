@@ -315,36 +315,81 @@ fn cuda_registration_dispatch_borrowed_into_reuses_caller_output_slot() {
     );
 }
 
+/// The unwrapped backend answers every float lowering mode, or refuses it by
+/// name.
+///
+/// WHY: `GridSyncSplitBackend` refuses a mode the wrapped backend does not
+/// lower, and every registry caller comes through it. `cuda_factory` does not:
+/// it is the raw factory the registration holds, and a caller holding one
+/// reaches compilation without passing the wrapper. So the backend states its
+/// own answer and refuses on its own, and both halves are asserted here over
+/// the whole mode roster rather than over two modes named by hand.
+///
+/// Both message shapes are exercised. `require_lowered_float_mode` and
+/// `BackendError::reject_blocked_contraction` build one string for a program
+/// carrying approximable operations and another for one carrying none, and the
+/// expectation is taken from `fp_parity::blocked_contraction_feature`, which is
+/// the one owner of both.
 #[test]
 fn cuda_float_lowering_capability_honesty_and_refusal() {
     let backend = cuda_factory()
         .expect("Fix: CUDA backend factory must succeed on the GPU-required test host.");
 
-    assert!(
-        backend.honors_float_lowering(FloatLoweringMode::Contracted),
-        "Fix: CUDA must advertise support for FloatLoweringMode::Contracted."
-    );
-    assert!(
-        !backend.honors_float_lowering(FloatLoweringMode::StrictIeee),
-        "Fix: CUDA must not advertise support for FloatLoweringMode::StrictIeee."
-    );
-
-    let program = Program::wrapped(
+    let constant_store = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::F32).with_count(1)],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::f32(1.0))],
     );
-    let mut config = DispatchConfig::default();
-    config.float_lowering = FloatLoweringMode::StrictIeee;
+    let transcendental = vyre_test_support::strict_float_programs::f32_multiply_add_program(
+        4,
+        Some(vyre_foundation::ir::UnOp::Sin),
+    );
+    assert!(
+        vyre_foundation::fp_parity::approximable_operations(&constant_store).is_empty()
+            && !vyre_foundation::fp_parity::approximable_operations(&transcendental).is_empty(),
+        "Fix: the two witness programs must differ in whether they carry an approximable \
+         operation, or both cases below exercise one refusal shape."
+    );
 
-    let result = backend.dispatch(&program, &[], &config);
-    assert!(
-        result.is_err(),
-        "Fix: CUDA backend must refuse strict IEEE float lowering mode."
-    );
-    let err_msg = result.unwrap_err().to_string();
-    assert!(
-        err_msg.contains("strict-ieee") && err_msg.contains("cuda") && err_msg.contains("Fix:"),
-        "Fix: CUDA strict-mode refusal must name the mode, backend, and remediation: {err_msg}"
-    );
+    for &mode in FloatLoweringMode::EVERY {
+        for program in [&constant_store, &transcendental] {
+            let mut config = DispatchConfig::default();
+            config.float_lowering = mode;
+
+            let Some(expected) =
+                vyre_foundation::fp_parity::blocked_contraction_feature(program, mode)
+            else {
+                assert!(
+                    backend.honors_float_lowering(mode),
+                    "Fix: mode `{}` permits contraction, so CUDA must state that it lowers it.",
+                    mode.cache_label()
+                );
+                continue;
+            };
+
+            assert!(
+                !backend.honors_float_lowering(mode),
+                "Fix: CUDA states it lowers `{}`. The PTX emitter selects the native approximate \
+                 transcendentals and leaves the multiply-add pair for the assembler to contract, \
+                 so a strict answer would be contracted arithmetic under a bit-identity request.",
+                mode.cache_label()
+            );
+            let error = backend.dispatch(program, &[], &config).expect_err(&format!(
+                "Fix: CUDA does not lower `{}` and must refuse the dispatch rather than answer \
+                 it with contracted arithmetic.",
+                mode.cache_label()
+            ));
+            let message = error.to_string();
+            assert!(
+                message.contains(&expected),
+                "Fix: the CUDA refusal must name the mode and the blocked operations exactly as \
+                 `fp_parity::blocked_contraction_feature` spells them, which is `{expected}`; \
+                 got `{message}`"
+            );
+            assert!(
+                message.contains(vyre_driver_cuda::CUDA_BACKEND_ID) && message.contains("Fix:"),
+                "Fix: the CUDA refusal must name the backend and carry remediation: {message}"
+            );
+        }
+    }
 }

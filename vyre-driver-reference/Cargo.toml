@@ -34,8 +34,12 @@ workspace = true
 [dev-dependencies]
 vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # The shared semantic-execution graph, bindings, and request every backend
-# contract proves the seam with.
-vyre-test-support = { workspace = true, features = ["semantic-requests"] }
+# contract proves the seam with, plus the strict-float witness program the
+# strict-lowering contract runs, which `ir-fixtures` carries.
+vyre-test-support = { workspace = true, features = [
+    "ir-fixtures",
+    "semantic-requests",
+] }
 # The linkage owner, so the registry closure reads the registry the declared
 # drivers actually submit into. Without it this crate's test binary links no
 # driver and enumerates an empty registry, which makes the closure vacuous.

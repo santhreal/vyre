@@ -166,6 +166,10 @@ pub mod external_resource_path_agreement;
 #[path = "extraction_memory_verifier_cost_model.rs"]
 pub mod extraction_memory_verifier_cost_model;
 
+/// Integration tests from `tests/float_lowering_refusal.rs`.
+#[path = "float_lowering_refusal.rs"]
+pub mod float_lowering_refusal;
+
 /// Integration tests from `tests/fusion_contracts.rs`.
 #[path = "fusion_contracts.rs"]
 pub mod fusion_contracts;
@@ -370,3 +374,7 @@ pub mod support_certificate_join;
 /// Integration tests from `tests/concrete_driver_dependency_boundaries.rs`.
 #[path = "concrete_driver_dependency_boundaries.rs"]
 pub mod concrete_driver_dependency_boundaries;
+
+/// Integration tests from `tests/target_facet_lowering_arms.rs`.
+#[path = "target_facet_lowering_arms.rs"]
+pub mod target_facet_lowering_arms;
