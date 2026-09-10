@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"4fb673a849e6bd3e2dc15a09a52c323d6110bcd5","commit_timestamp":"1789041652","parent_commit":"5d82cd9b5ae3c50d8caf6384a8752d741406e91d","dirty":true,"source_fingerprint":"git:4fb673a849e6bd3e2dc15a09a52c323d6110bcd5:dirty=true:worktree=a500e17273abd01bc01ecaccf64dbd485cdf2cc3ff9a849a03babd72360dbda7"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"2266679d03f10e0f9a6c0f57e9403a0f3a75b1be","commit_timestamp":"1789058206","parent_commit":"e59835f70328a259bdd154cbe098fe6aa7111c65","dirty":true,"source_fingerprint":"git:2266679d03f10e0f9a6c0f57e9403a0f3a75b1be:dirty=true:worktree=0347e5672720ca9148b425ec6be6e20e5bd6553d0a5eae845da8eeb3df45f904"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -29,37 +29,43 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 272,
-      "pattern": "documented_panic_contract",
-      "text": "lane.join().expect(\"a member source lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
-    },
-    {
-      "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 358,
-      "pattern": "documented_panic_contract",
-      "text": "lane.join().expect(\"a crate root lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
-    },
-    {
-      "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 536,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
-    },
-    {
-      "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 537,
-      "pattern": "documented_panic_contract",
-      "text": "if let Some(root) = ROOTS.lock().expect(POISONED).get(&start) {"
-    },
-    {
-      "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 543,
+      "line": 176,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 549,
+      "line": 302,
+      "pattern": "documented_panic_contract",
+      "text": "lane.join().expect(\"a member source lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 388,
+      "pattern": "documented_panic_contract",
+      "text": "lane.join().expect(\"a crate root lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 566,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 567,
+      "pattern": "documented_panic_contract",
+      "text": "if let Some(root) = ROOTS.lock().expect(POISONED).get(&start) {"
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 573,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 579,
       "pattern": "documented_panic_contract",
       "text": "ROOTS.lock().expect(POISONED).insert(start, root.clone());"
     },
@@ -167,13 +173,13 @@
     },
     {
       "path": "vyre-foundation/src/diagnostics/mod.rs",
-      "line": 911,
+      "line": 779,
       "pattern": "documented_panic_contract",
       "text": "serde_json::to_vec(self).expect("
     },
     {
       "path": "vyre-foundation/src/diagnostics/mod.rs",
-      "line": 926,
+      "line": 794,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"serde_json emits UTF-8. Fix: none; this cannot fail\")"
     },
@@ -886,8 +892,8 @@
       "text": "panic!(\"vyre-runtime work-unit partition failed: {error}\");"
     },
     {
-      "path": "vyre-spec/src/schema_registry.rs",
-      "line": 170,
+      "path": "vyre-spec/src/schema_registry/mod.rs",
+      "line": 174,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"unregistered schema id\")"
     },
@@ -1739,7 +1745,7 @@
     },
     {
       "path": "xtask/src/artifact_gate.rs",
-      "line": 586,
+      "line": 595,
       "pattern": "documented_panic_contract",
       "text": "let (lane_entries, lane_errors) = handle.join().expect("
     },

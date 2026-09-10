@@ -204,6 +204,11 @@ pub fn vyre_libs_builder::builder::gemm::fixed_mul_16_16_signed_expr(left: vyre_
 pub fn vyre_libs_builder::builder::gemm::semiring_accumulate_expr(semiring: vyre_spec::semiring::Semiring, acc: vyre_foundation::ir_inner::model::generated::Expr, val: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs_builder::builder::gemm::semiring_combine_expr(semiring: vyre_spec::semiring::Semiring, a: vyre_foundation::ir_inner::model::generated::Expr, b: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
 pub fn vyre_libs_builder::builder::gemm::tiled_workgroup_bound(facts: &vyre_megakernel::device_facts::DeviceFacts) -> core::option::Option<u32>
+pub fn vyre_libs_builder::builder::matrix_tile::bind_output_tile_coordinates(shape: vyre_libs_builder::builder::matrix_tile::MatrixShape, tile: vyre_libs_builder::builder::matrix_tile::TileShape, names: vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::matrix_tile::cooperative_slab_loop(a: &str, b: &str, a_tile_name: &str, b_tile_name: &str, shape: vyre_libs_builder::builder::matrix_tile::MatrixShape, tile: vyre_libs_builder::builder::matrix_tile::TileShape, in_bounds: &vyre_foundation::ir_inner::model::generated::Expr, arithmetic: &vyre_libs_builder::builder::matrix_tile::TileArithmetic<'_>) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_builder::builder::matrix_tile::in_output_bounds(row: vyre_foundation::ir_inner::model::generated::Expr, col: vyre_foundation::ir_inner::model::generated::Expr, shape: vyre_libs_builder::builder::matrix_tile::MatrixShape) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::matrix_tile::output_tile_shape(workgroup: [u32; 3]) -> core::result::Result<(u32, u32, u32), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_builder::builder::matrix_tile::padded_tile_lane_count(m: u32, n: u32, out_rows: u32, out_cols: u32, lanes: u32) -> core::result::Result<u32, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
 pub fn vyre_libs_builder::builder::range_ordering::match_order(left_id: vyre_foundation::ir_inner::model::generated::Expr, right_id: vyre_foundation::ir_inner::model::generated::Expr, res_name: &str) -> (alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, vyre_foundation::ir_inner::model::generated::Expr)
 pub fn vyre_libs_builder::builder::reduction::ReductionComposer::build(self) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_builder::builder::reduction::ReductionComposer::new(generator: &'static str, buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, workgroup_size: [u32; 3]) -> Self
@@ -313,6 +318,7 @@ pub fn vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef::u32_2d(name:
 pub fn vyre_libs_builder::plumbing::operand::tensor_ref::check_dtype(r: &vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, expected: vyre_spec::data_type::DataType, op: &'static str) -> core::result::Result<(), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
 pub fn vyre_libs_builder::plumbing::operand::tensor_ref::check_shape(r: &vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, expected: &[u32], op: &'static str) -> core::result::Result<(), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
 pub fn vyre_libs_builder::plumbing::operand::tensor_ref::check_unique_names(refs: &[&vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef], op: &'static str) -> core::result::Result<(), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_builder::plumbing::operand::tensor_ref::element_count(name: &str, shape: &[u32]) -> core::result::Result<u32, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
 pub fn vyre_libs_builder::plumbing::program::attribution::attribute_child(parent_op_id: &str, child_op_id: &str, program: vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_builder::plumbing::program::attribution::attribute_child_nodes(parent_op_id: &str, child_op_id: &str, program: &vyre_foundation::ir_inner::model::program::definition::Program) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub fn vyre_libs_builder::plumbing::program::attribution::attribute_serial_child(parent_op_id: &str, child_op_id: &str, program: vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_foundation::ir_inner::model::program::definition::Program
@@ -334,6 +340,7 @@ pub mod vyre_libs_builder::builder::cooperative
 pub mod vyre_libs_builder::builder::csr
 pub mod vyre_libs_builder::builder::elementwise
 pub mod vyre_libs_builder::builder::gemm
+pub mod vyre_libs_builder::builder::matrix_tile
 pub mod vyre_libs_builder::builder::range_ordering
 pub mod vyre_libs_builder::builder::reduction
 pub mod vyre_libs_builder::builder::state_machine
@@ -405,6 +412,10 @@ pub struct vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>
 pub struct vyre_libs_builder::builder::elementwise::ElementwiseComposer
 pub struct vyre_libs_builder::builder::gemm::ContractionComposer
 pub struct vyre_libs_builder::builder::gemm::ContractionOutputTile
+pub struct vyre_libs_builder::builder::matrix_tile::MatrixShape
+pub struct vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames
+pub struct vyre_libs_builder::builder::matrix_tile::TileArithmetic<'a>
+pub struct vyre_libs_builder::builder::matrix_tile::TileShape
 pub struct vyre_libs_builder::builder::reduction::ReductionComposer
 pub struct vyre_libs_builder::builder::reduction::ReductionPhase
 pub struct vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>
@@ -524,6 +535,24 @@ pub vyre_libs_builder::builder::gemm::ContractionTiling::RegisterTiled
 pub vyre_libs_builder::builder::gemm::ContractionTiling::RegisterTiled::columns: u32
 pub vyre_libs_builder::builder::gemm::ContractionTiling::RegisterTiled::rows: u32
 pub vyre_libs_builder::builder::gemm::ContractionTiling::RegisterTiled::workgroup_size: [u32; 3]
+pub vyre_libs_builder::builder::matrix_tile::MatrixShape::k: u32
+pub vyre_libs_builder::builder::matrix_tile::MatrixShape::m: u32
+pub vyre_libs_builder::builder::matrix_tile::MatrixShape::n: u32
+pub vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames::col: &'static str
+pub vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames::lane_col: &'static str
+pub vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames::lane_row: &'static str
+pub vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames::row: &'static str
+pub vyre_libs_builder::builder::matrix_tile::TileArithmetic::accumulate: &'a dyn core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub vyre_libs_builder::builder::matrix_tile::TileArithmetic::combine: &'a dyn core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub vyre_libs_builder::builder::matrix_tile::TileArithmetic::pad: vyre_foundation::ir_inner::model::generated::Expr
+pub vyre_libs_builder::builder::matrix_tile::TileShape::a_values: u32
+pub vyre_libs_builder::builder::matrix_tile::TileShape::b_values: u32
+pub vyre_libs_builder::builder::matrix_tile::TileShape::k_tile: u32
+pub vyre_libs_builder::builder::matrix_tile::TileShape::lanes: u32
+pub vyre_libs_builder::builder::matrix_tile::TileShape::out_cols: u32
+pub vyre_libs_builder::builder::matrix_tile::TileShape::out_rows: u32
+pub vyre_libs_builder::builder::matrix_tile::TileShape::x_lanes: u32
+pub vyre_libs_builder::builder::matrix_tile::TileShape::y_lanes: u32
 pub vyre_libs_builder::builder::reduction::ReductionPhase::accumulate: vyre_foundation::ir_inner::model::generated::Node
 pub vyre_libs_builder::builder::reduction::ReductionPhase::publish: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
 pub vyre_libs_builder::builder::reduction::ReductionPhase::reductions: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>

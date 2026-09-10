@@ -8,9 +8,10 @@ use super::{
     QuantizedLinear4BitPlannerEvidence, QuantizedLinear4BitSpec,
     LINEAR_4BIT_AFFINE_GROUPED_OUTPUT_DRIFT_ABS_TOLERANCE,
 };
+use vyre_libs_builder::builder::matrix_tile::MatrixShape;
 use vyre_libs_math::math::linalg::{
     plan_matmul_kernel, F32MatmulMode, MatmulFallbackReason, MatmulKernelCapabilities,
-    MatmulKernelPath, MatmulKernelPlan, MatrixShape,
+    MatmulKernelPath, MatmulKernelPlan,
 };
 
 /// Build planner evidence for [`super::linear_4bit_affine_grouped_typed`].

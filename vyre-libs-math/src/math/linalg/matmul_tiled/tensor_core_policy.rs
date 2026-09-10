@@ -2,7 +2,7 @@
 
 use vyre_foundation::ir::DataType;
 
-use super::shape::MatrixShape;
+use vyre_libs_builder::builder::matrix_tile::MatrixShape;
 
 /// Selected kernel lowering path for tiled matrix multiplication.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

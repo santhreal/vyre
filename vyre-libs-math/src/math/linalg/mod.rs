@@ -15,7 +15,7 @@ pub use matmul_strassen::{matmul_strassen_2x2, matmul_strassen_one_level};
 pub use matmul_tiled::{
     matmul_bias_tiled, matmul_tiled, plan_matmul_kernel, F32MatmulMode, MatmulBiasTiled,
     MatmulFallbackReason, MatmulKernelCapabilities, MatmulKernelPath, MatmulKernelPlan,
-    MatmulTiled, MatrixShape, TensorCoreTileShape,
+    MatmulTiled, TensorCoreTileShape,
 };
 
 use vyre_libs_builder::builder::gemm::ContractionComposer;

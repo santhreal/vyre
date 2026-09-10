@@ -1,12 +1,16 @@
 //! Contraction program assembly routines for dense GEMM, batched matmul, projections, and Strassen.
 
-use vyre_foundation::composition::{wrap_anonymous_region, wrap_region};
+use vyre_foundation::composition::wrap_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::gemm_algebra::ContractionSemiring;
 use super::ContractionEpilogue;
 use crate::plumbing::operand::element_zero::element_zero;
-use crate::plumbing::operand::tensor_ref::TensorRefError;
+use crate::plumbing::operand::tensor_ref::{element_count, TensorRefError};
+
+use super::contraction_buffers::{
+    matmul_2d_counts, matmul_2d_operands, projection_counts, projection_operands,
+};
 
 /// Assemble 2D GEMM with 1D linear dispatch.
 pub(super) fn build_matmul_2d_linear(
@@ -23,24 +27,7 @@ pub(super) fn build_matmul_2d_linear(
     epilogue: &ContractionEpilogue,
     workgroup_size: [u32; 3],
 ) -> Result<Program, TensorRefError> {
-    let a_count = m
-        .checked_mul(k)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: a.to_string(),
-            shape: vec![m, k],
-        })?;
-    let b_count = k
-        .checked_mul(n)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: b.to_string(),
-            shape: vec![k, n],
-        })?;
-    let out_count = m
-        .checked_mul(n)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: out.to_string(),
-            shape: vec![m, n],
-        })?;
+    let (a_count, b_count, out_count) = matmul_2d_counts(a, b, out, m, k, n)?;
 
     let idx = Expr::LogicalIndex { axis: 0 };
     let row_expr = Expr::div(idx.clone(), Expr::u32(n));
@@ -107,45 +94,11 @@ pub(super) fn build_matmul_2d_linear(
         ],
     )];
 
-    let mut buffers = vec![
-        BufferDecl::storage(a, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(a_count),
-        BufferDecl::storage(b, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(b_count),
-    ];
-    let mut next_slot = 2;
-    if let Some(bias_name) = bias {
-        buffers.push(
-            BufferDecl::storage(bias_name, next_slot, BufferAccess::ReadOnly, dtype.clone())
-                .with_count(n),
-        );
-        next_slot += 1;
-    }
-    if let ContractionEpilogue::QuantizedScale {
-        row_scales,
-        batch_scales,
-    } = epilogue
-    {
-        buffers.push(
-            BufferDecl::storage(row_scales, next_slot, BufferAccess::ReadOnly, dtype.clone())
-                .with_count(m),
-        );
-        buffers.push(
-            BufferDecl::storage(
-                batch_scales,
-                next_slot + 1,
-                BufferAccess::ReadOnly,
-                dtype.clone(),
-            )
-            .with_count(1),
-        );
-        next_slot += 2;
-    }
+    let (mut buffers, next_slot) =
+        matmul_2d_operands(a, a_count, b, b_count, bias, epilogue, dtype, m, n);
     buffers.push(BufferDecl::output(out, next_slot, dtype.clone()).with_count(out_count));
 
-    let region = if generator.starts_with("anonymous::") {
-        wrap_anonymous_region(generator, body)
-    } else {
-        wrap_region(generator, body, None)
-    };
+    let region = wrap_region(generator, body, None);
 
     Ok(Program::wrapped(buffers, workgroup_size, vec![region]))
 }
@@ -163,44 +116,12 @@ pub(super) fn build_batched_3d_contraction(
     dtype: &DataType,
     workgroup_size: [u32; 3],
 ) -> Result<Program, TensorRefError> {
-    let a_batch_stride = m
-        .checked_mul(k)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: a.to_string(),
-            shape: vec![batch, m, k],
-        })?;
-    let b_batch_stride = k
-        .checked_mul(n)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: b.to_string(),
-            shape: vec![batch, k, n],
-        })?;
-    let out_batch_stride =
-        m.checked_mul(n)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: out.to_string(),
-                shape: vec![batch, m, n],
-            })?;
-    let a_count =
-        batch
-            .checked_mul(a_batch_stride)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: a.to_string(),
-                shape: vec![batch, m, k],
-            })?;
-    let b_count =
-        batch
-            .checked_mul(b_batch_stride)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: b.to_string(),
-                shape: vec![batch, k, n],
-            })?;
-    let out_count = batch.checked_mul(out_batch_stride).ok_or_else(|| {
-        TensorRefError::ElementCountOverflow {
-            name: out.to_string(),
-            shape: vec![batch, m, n],
-        }
-    })?;
+    let a_batch_stride = element_count(a, &[m, k])?;
+    let b_batch_stride = element_count(b, &[k, n])?;
+    let out_batch_stride = element_count(out, &[m, n])?;
+    let a_count = element_count(a, &[batch, a_batch_stride])?;
+    let b_count = element_count(b, &[batch, b_batch_stride])?;
+    let out_count = element_count(out, &[batch, out_batch_stride])?;
 
     let idx = Expr::var("idx");
     let batch_idx = Expr::var("batch_idx");
@@ -272,11 +193,7 @@ pub(super) fn build_batched_3d_contraction(
         BufferDecl::output(out, 2, dtype.clone()).with_count(out_count),
     ];
 
-    let region = if generator.starts_with("anonymous::") {
-        wrap_anonymous_region(generator, body)
-    } else {
-        wrap_region(generator, body, None)
-    };
+    let region = wrap_region(generator, body, None);
 
     Ok(Program::wrapped(buffers, workgroup_size, vec![region]))
 }
@@ -297,25 +214,8 @@ pub(super) fn build_batched_rows_contraction(
     weight_out_in: bool,
     workgroup_size: [u32; 3],
 ) -> Result<Program, TensorRefError> {
-    let input_count =
-        rows.checked_mul(in_dim)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: x.to_string(),
-                shape: vec![rows, in_dim],
-            })?;
-    let output_count =
-        rows.checked_mul(out_dim)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: out.to_string(),
-                shape: vec![rows, out_dim],
-            })?;
-    let weight_count =
-        in_dim
-            .checked_mul(out_dim)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: w.to_string(),
-                shape: vec![in_dim, out_dim],
-            })?;
+    let (input_count, weight_count, output_count) =
+        projection_counts(x, w, out, rows, in_dim, out_dim)?;
 
     let index = Expr::var("index");
     let row = Expr::div(index.clone(), Expr::u32(out_dim));
@@ -377,25 +277,11 @@ pub(super) fn build_batched_rows_contraction(
         ),
     ];
 
-    let mut buffers = vec![
-        BufferDecl::storage(x, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(input_count),
-        BufferDecl::storage(w, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(weight_count),
-    ];
-    let output_slot = if let Some(name) = bias {
-        buffers.push(
-            BufferDecl::storage(name, 2, BufferAccess::ReadOnly, dtype.clone()).with_count(out_dim),
-        );
-        3
-    } else {
-        2
-    };
+    let (mut buffers, output_slot) =
+        projection_operands(x, input_count, w, weight_count, bias, out_dim, dtype);
     buffers.push(BufferDecl::output(out, output_slot, dtype.clone()).with_count(output_count));
 
-    let region = if generator.starts_with("anonymous::") {
-        wrap_anonymous_region(generator, body)
-    } else {
-        wrap_region(generator, body, None)
-    };
+    let region = wrap_region(generator, body, None);
 
     Ok(Program::wrapped(buffers, workgroup_size, vec![region]))
 }
@@ -414,13 +300,7 @@ pub(super) fn build_block_1d_contraction(
     tile: u32,
     dtype: &DataType,
 ) -> Result<Program, TensorRefError> {
-    let weight_count =
-        in_dim
-            .checked_mul(out_dim)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: w.to_string(),
-                shape: vec![in_dim, out_dim],
-            })?;
+    let weight_count = element_count(w, &[in_dim, out_dim])?;
     let tile_count = in_dim.div_ceil(tile);
     let lane = Expr::var("lane");
     let kk = Expr::var("kk");
@@ -486,25 +366,11 @@ pub(super) fn build_block_1d_contraction(
         ),
     ];
 
-    let mut buffers = vec![
-        BufferDecl::storage(x, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(in_dim),
-        BufferDecl::storage(w, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(weight_count),
-    ];
-    let output_slot = if let Some(b) = bias {
-        buffers.push(
-            BufferDecl::storage(b, 2, BufferAccess::ReadOnly, dtype.clone()).with_count(out_dim),
-        );
-        3
-    } else {
-        2
-    };
+    let (mut buffers, output_slot) =
+        projection_operands(x, in_dim, w, weight_count, bias, out_dim, dtype);
     buffers.push(BufferDecl::output(out, output_slot, dtype.clone()).with_count(out_dim));
 
-    let region = if generator.starts_with("anonymous::") {
-        wrap_anonymous_region(generator, body)
-    } else {
-        wrap_region(generator, body, None)
-    };
+    let region = wrap_region(generator, body, None);
 
     Ok(Program::wrapped(buffers, [256, 1, 1], vec![region]))
 }
@@ -552,11 +418,7 @@ pub(super) fn build_matvec_contraction(
         BufferDecl::storage(out, 2, BufferAccess::ReadWrite, dtype.clone()).with_count(n),
     ];
 
-    let region = if generator.starts_with("anonymous::") {
-        wrap_anonymous_region(generator, body)
-    } else {
-        wrap_region(generator, body, None)
-    };
+    let region = wrap_region(generator, body, None);
 
     Ok(Program::wrapped(buffers, workgroup_size, vec![region]))
 }

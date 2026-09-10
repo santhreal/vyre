@@ -3,8 +3,8 @@
 use vyre_foundation::ir::{DataType, Expr, Node};
 
 use super::mma_fragment::matmul_mma_fragment;
-use super::shape::{MatrixShape, TileShape};
-use super::tile_coords::{bind_output_tile_coordinates, OutputTileCoordNames};
+use vyre_libs_builder::builder::matrix_tile::{MatrixShape, TileShape};
+use vyre_libs_builder::builder::matrix_tile::{bind_output_tile_coordinates, OutputTileCoordNames};
 
 /// Build the MMA-oriented body for a full M16N8-aligned tile.
 ///

@@ -9,6 +9,9 @@ use vyre_foundation::ir::{DataType, Expr, Program};
 use vyre_megakernel::DeviceFacts;
 use vyre_spec::Semiring;
 
+#[path = "contraction_buffers.rs"]
+mod contraction_buffers;
+
 #[path = "gemm_algebra.rs"]
 mod gemm_algebra;
 pub use gemm_algebra::*;

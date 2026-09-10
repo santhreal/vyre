@@ -1,10 +1,10 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"4fb673a849e6bd3e2dc15a09a52c323d6110bcd5","commit_timestamp":"1789041652","parent_commit":"5d82cd9b5ae3c50d8caf6384a8752d741406e91d","dirty":true,"source_fingerprint":"git:4fb673a849e6bd3e2dc15a09a52c323d6110bcd5:dirty=true:worktree=a500e17273abd01bc01ecaccf64dbd485cdf2cc3ff9a849a03babd72360dbda7"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"2266679d03f10e0f9a6c0f57e9403a0f3a75b1be","commit_timestamp":"1789058206","parent_commit":"e59835f70328a259bdd154cbe098fe6aa7111c65","dirty":true,"source_fingerprint":"git:2266679d03f10e0f9a6c0f57e9403a0f3a75b1be:dirty=true:worktree=0347e5672720ca9148b425ec6be6e20e5bd6553d0a5eae845da8eeb3df45f904"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4790,
+  "scanned_files": 4816,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -50,7 +50,7 @@
     },
     {
       "pattern": "documented_panic_contract",
-      "count": 210
+      "count": 211
     },
     {
       "pattern": "expect_call",
@@ -66,7 +66,7 @@
     },
     {
       "pattern": "source_inspection_test",
-      "count": 141
+      "count": 144
     },
     {
       "pattern": "std_thread_sleep",
@@ -124,7 +124,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 57
+      "count": 58
     },
     {
       "owner_lane": "coordination",
@@ -140,7 +140,15 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 59
+      "count": 57
+    },
+    {
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true,
+      "count": 2
     },
     {
       "owner_lane": "coordination",
@@ -292,7 +300,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 26
+      "count": 29
     },
     {
       "owner_lane": "testing_evidence",
@@ -354,7 +362,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 53
+      "count": 54
     },
     {
       "owner_lane": "coordination",
@@ -381,7 +389,16 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 59
+      "count": 57
+    },
+    {
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": true,
+      "count": 2
     },
     {
       "owner_lane": "coordination",
@@ -633,7 +650,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 9
+      "count": 12
     },
     {
       "owner_lane": "testing_evidence",
@@ -1620,18 +1637,33 @@
       },
       {
         "file": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
-        "test": "file_roles_classify_every_vyre_libs_file_uniquely",
-        "reason": "Judge the file-role closure that classifies every composition-domain source\nfile, including that an unregistered nested file and two overlapping roles both\nfail it. The subject under test is a rule over the file tree, so the tree is its\ninput; a role assignment produces no run-time artifact to observe instead."
+        "test": "a_registration_in_a_partition_crate_is_placed_by_its_own_domain",
+        "reason": "Judge the file-role closure that classifies every composition-domain source\nfile, the placement rule that resolves a registration against the crate family\nits operation id names, and the canonical block skeletons that must be defined\nonce in a shared builder module. The subject under test is a rule over the file\ntree and over the workspace roster, so both are its input; a role assignment\nproduces no run-time artifact to observe instead."
       },
       {
         "file": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
-        "test": "new_unregistered_nested_file_fails_role_closure",
-        "reason": "Judge the file-role closure that classifies every composition-domain source\nfile, including that an unregistered nested file and two overlapping roles both\nfail it. The subject under test is a rule over the file tree, so the tree is its\ninput; a role assignment produces no run-time artifact to observe instead."
+        "test": "every_production_file_in_the_family_has_exactly_one_role",
+        "reason": "Judge the file-role closure that classifies every composition-domain source\nfile, the placement rule that resolves a registration against the crate family\nits operation id names, and the canonical block skeletons that must be defined\nonce in a shared builder module. The subject under test is a rule over the file\ntree and over the workspace roster, so both are its input; a role assignment\nproduces no run-time artifact to observe instead."
+      },
+      {
+        "file": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
+        "test": "the_shared_builder_role_is_the_builder_module_of_a_family_crate",
+        "reason": "Judge the file-role closure that classifies every composition-domain source\nfile, the placement rule that resolves a registration against the crate family\nits operation id names, and the canonical block skeletons that must be defined\nonce in a shared builder module. The subject under test is a rule over the file\ntree and over the workspace roster, so both are its input; a role assignment\nproduces no run-time artifact to observe instead."
+      },
+      {
+        "file": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
+        "test": "a_file_outside_every_declared_domain_fails_role_closure",
+        "reason": "Judge the file-role closure that classifies every composition-domain source\nfile, the placement rule that resolves a registration against the crate family\nits operation id names, and the canonical block skeletons that must be defined\nonce in a shared builder module. The subject under test is a rule over the file\ntree and over the workspace roster, so both are its input; a role assignment\nproduces no run-time artifact to observe instead."
+      },
+      {
+        "file": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
+        "test": "every_canonical_block_skeleton_is_defined_in_a_shared_builder_module",
+        "reason": "Judge the file-role closure that classifies every composition-domain source\nfile, the placement rule that resolves a registration against the crate family\nits operation id names, and the canonical block skeletons that must be defined\nonce in a shared builder module. The subject under test is a rule over the file\ntree and over the workspace roster, so both are its input; a role assignment\nproduces no run-time artifact to observe instead."
       },
       {
         "file": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
         "test": "overlapping_file_roles_fails_role_closure",
-        "reason": "Judge the file-role closure that classifies every composition-domain source\nfile, including that an unregistered nested file and two overlapping roles both\nfail it. The subject under test is a rule over the file tree, so the tree is its\ninput; a role assignment produces no run-time artifact to observe instead."
+        "reason": "Judge the file-role closure that classifies every composition-domain source\nfile, the placement rule that resolves a registration against the crate family\nits operation id names, and the canonical block skeletons that must be defined\nonce in a shared builder module. The subject under test is a rule over the file\ntree and over the workspace roster, so both are its input; a role assignment\nproduces no run-time artifact to observe instead."
       },
       {
         "file": "vyre-emit-naga/tests/grid_sync_dispatch_segments.rs",
@@ -1639,7 +1671,10 @@
         "reason": "Read the nested-body control enum to enumerate the variant space this contract\ncovers, so a new control variant reaches the case list without an edit here.\nA hardcoded list of variants goes stale in silence, which for an exhaustiveness\ncontract is the same as having no contract. The enum declaration is the only\nstatement of the variant space; the type produces no run-time listing to\nenumerate instead."
       }
     ],
-    "blockers": []
+    "blockers": [
+      "docs/testing/STRUCTURAL_GATES.toml: `every_declared_law_has_a_recorded_derivation` names `vyre-foundation/tests/law_derived_region_alternatives.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
+      "docs/testing/STRUCTURAL_GATES.toml: `schedule_calculus_operator_set_is_closed_against_source_at_runtime` names `vyre-foundation/tests/schedule_calculus_contracts.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one."
+    ]
   },
   "panic_budget": {
     "schema_version": 1,
@@ -1803,7 +1838,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 272,
+      "line": 176,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1813,7 +1848,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 358,
+      "line": 302,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1823,7 +1858,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 536,
+      "line": 388,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1833,7 +1868,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 537,
+      "line": 566,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1843,7 +1878,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 543,
+      "line": 567,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1853,7 +1888,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 549,
+      "line": 573,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1863,7 +1898,17 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 669,
+      "line": 579,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 699,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1873,7 +1918,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 704,
+      "line": 734,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1883,7 +1928,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 740,
+      "line": 770,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "production",
@@ -1893,7 +1938,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 760,
+      "line": 790,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "production",
@@ -2143,7 +2188,7 @@
     },
     {
       "path": "vyre-foundation/src/diagnostics/mod.rs",
-      "line": 911,
+      "line": 779,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -2153,7 +2198,7 @@
     },
     {
       "path": "vyre-foundation/src/diagnostics/mod.rs",
-      "line": 926,
+      "line": 794,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "production",
@@ -3512,8 +3557,8 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-spec/src/schema_registry.rs",
-      "line": 170,
+      "path": "vyre-spec/src/schema_registry/mod.rs",
+      "line": 174,
       "pattern": "documented_panic_contract",
       "owner_lane": "foundation_wire",
       "surface": "production",
@@ -5033,7 +5078,7 @@
     },
     {
       "path": "structure-gate/tests/node_child_descent_owner.rs",
-      "line": 571,
+      "line": 541,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5093,7 +5138,7 @@
     },
     {
       "path": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
-      "line": 617,
+      "line": 648,
       "pattern": "source_inspection_test",
       "owner_lane": "bench_harness",
       "surface": "test",
@@ -5103,7 +5148,7 @@
     },
     {
       "path": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
-      "line": 698,
+      "line": 744,
       "pattern": "source_inspection_test",
       "owner_lane": "bench_harness",
       "surface": "test",
@@ -5113,7 +5158,7 @@
     },
     {
       "path": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
-      "line": 750,
+      "line": 802,
       "pattern": "source_inspection_test",
       "owner_lane": "bench_harness",
       "surface": "test",
@@ -5313,7 +5358,7 @@
     },
     {
       "path": "vyre-foundation/tests/ir_variant_shape_owner_closure.rs",
-      "line": 760,
+      "line": 755,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5323,17 +5368,7 @@
     },
     {
       "path": "vyre-foundation/tests/ir_variant_shape_owner_closure.rs",
-      "line": 810,
-      "pattern": "source_inspection_test",
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-foundation/tests/law_derived_region_alternatives.rs",
-      "line": 121,
+      "line": 805,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5372,16 +5407,6 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-foundation/tests/schedule_calculus_contracts.rs",
-      "line": 257,
-      "pattern": "source_inspection_test",
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "vyre-libs/tests/device_resident_token_fact_graph_ownership.rs",
       "line": 59,
       "pattern": "source_inspection_test",
@@ -5400,6 +5425,26 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false
+    },
+    {
+      "path": "vyre-libs/tests/facade_reexport_closure.rs",
+      "line": 78,
+      "pattern": "source_inspection_test",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
+    },
+    {
+      "path": "vyre-libs/tests/facade_reexport_closure.rs",
+      "line": 116,
+      "pattern": "source_inspection_test",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "release_blocker": true
     },
     {
       "path": "vyre-libs/tests/family_duplication_budget.rs",
@@ -5553,7 +5598,7 @@
     },
     {
       "path": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
-      "line": 120,
+      "line": 119,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5563,7 +5608,7 @@
     },
     {
       "path": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
-      "line": 153,
+      "line": 152,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5573,7 +5618,7 @@
     },
     {
       "path": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
-      "line": 183,
+      "line": 182,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5583,7 +5628,7 @@
     },
     {
       "path": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
-      "line": 211,
+      "line": 210,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5593,7 +5638,7 @@
     },
     {
       "path": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
-      "line": 231,
+      "line": 230,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5803,7 +5848,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 92,
+      "line": 96,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5813,7 +5858,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 129,
+      "line": 133,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5823,7 +5868,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 151,
+      "line": 155,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5833,7 +5878,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 180,
+      "line": 184,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5843,7 +5888,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 208,
+      "line": 212,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5853,7 +5898,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 242,
+      "line": 246,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5863,7 +5908,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 274,
+      "line": 278,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5873,7 +5918,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 289,
+      "line": 293,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5883,7 +5928,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 311,
+      "line": 315,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5893,7 +5938,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 331,
+      "line": 335,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5903,7 +5948,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 347,
+      "line": 351,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5913,7 +5958,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 397,
+      "line": 401,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5923,7 +5968,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 439,
+      "line": 443,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5933,7 +5978,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 461,
+      "line": 465,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5943,7 +5988,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 497,
+      "line": 501,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5953,7 +5998,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 527,
+      "line": 531,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5963,7 +6008,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 560,
+      "line": 564,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5973,7 +6018,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 605,
+      "line": 609,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5983,7 +6028,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 644,
+      "line": 648,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -5993,7 +6038,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 679,
+      "line": 683,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6003,7 +6048,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 713,
+      "line": 717,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6013,7 +6058,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 747,
+      "line": 751,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6023,7 +6068,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 772,
+      "line": 776,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6033,7 +6078,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 800,
+      "line": 804,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6043,7 +6088,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 824,
+      "line": 828,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6053,7 +6098,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 854,
+      "line": 858,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6063,7 +6108,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 878,
+      "line": 882,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6073,7 +6118,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 902,
+      "line": 906,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6083,7 +6128,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 959,
+      "line": 963,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6093,7 +6138,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 982,
+      "line": 986,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6103,7 +6148,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1008,
+      "line": 1012,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6113,7 +6158,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1033,
+      "line": 1037,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6123,7 +6168,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1057,
+      "line": 1061,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6133,7 +6178,7 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1081,
+      "line": 1085,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6143,7 +6188,7 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/tests.rs",
-      "line": 1866,
+      "line": 1356,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "test",
@@ -6243,7 +6288,7 @@
     },
     {
       "path": "xtask/src/artifact_gate.rs",
-      "line": 586,
+      "line": 595,
       "pattern": "documented_panic_contract",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -6313,7 +6358,7 @@
     },
     {
       "path": "xtask/src/gate_proof_validation.rs",
-      "line": 512,
+      "line": 602,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -6853,7 +6898,7 @@
     },
     {
       "path": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
-      "line": 547,
+      "line": 731,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -6863,7 +6908,7 @@
     },
     {
       "path": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
-      "line": 583,
+      "line": 850,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -6873,7 +6918,37 @@
     },
     {
       "path": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
-      "line": 602,
+      "line": 895,
+      "pattern": "source_inspection_test",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
+      "line": 935,
+      "pattern": "source_inspection_test",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
+      "line": 951,
+      "pattern": "source_inspection_test",
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
+      "line": 1055,
       "pattern": "source_inspection_test",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -6882,7 +6957,7 @@
       "release_blocker": false
     }
   ],
-  "release_blocker_count": 0,
+  "release_blocker_count": 2,
   "findings": [
     {
       "path": "conform/vyre-conform/src/coordinator.rs",
@@ -6928,64 +7003,70 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 272,
-      "pattern": "documented_panic_contract",
-      "text": "lane.join().expect(\"a member source lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
-    },
-    {
-      "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 358,
-      "pattern": "documented_panic_contract",
-      "text": "lane.join().expect(\"a crate root lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
-    },
-    {
-      "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 536,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
-    },
-    {
-      "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 537,
-      "pattern": "documented_panic_contract",
-      "text": "if let Some(root) = ROOTS.lock().expect(POISONED).get(&start) {"
-    },
-    {
-      "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 543,
+      "line": 176,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 549,
+      "line": 302,
+      "pattern": "documented_panic_contract",
+      "text": "lane.join().expect(\"a member source lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 388,
+      "pattern": "documented_panic_contract",
+      "text": "lane.join().expect(\"a crate root lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 566,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 567,
+      "pattern": "documented_panic_contract",
+      "text": "if let Some(root) = ROOTS.lock().expect(POISONED).get(&start) {"
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 573,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "structure-gate/src/workspace_manifest.rs",
+      "line": 579,
       "pattern": "documented_panic_contract",
       "text": "ROOTS.lock().expect(POISONED).insert(start, root.clone());"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 669,
+      "line": 699,
       "pattern": "source_inspection_test",
       "text": "test `a_second_request_for_the_tree_does_not_walk_it_again` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "a_second_request_for_the_tree_does_not_walk_it_again"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 704,
+      "line": 734,
       "pattern": "source_inspection_test",
       "text": "test `a_subtree_range_holds_exactly_the_sources_under_it` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "a_subtree_range_holds_exactly_the_sources_under_it"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 740,
+      "line": 770,
       "pattern": "source_inspection_test",
       "text": "test `a_second_request_for_the_same_roster_shares_the_first_read` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "a_second_request_for_the_same_roster_shares_the_first_read"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 760,
+      "line": 790,
       "pattern": "source_inspection_test",
       "text": "test `a_narrower_roster_is_not_served_the_wider_read` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "a_narrower_roster_is_not_served_the_wider_read"
@@ -7136,13 +7217,13 @@
     },
     {
       "path": "vyre-foundation/src/diagnostics/mod.rs",
-      "line": 911,
+      "line": 779,
       "pattern": "documented_panic_contract",
       "text": "serde_json::to_vec(self).expect("
     },
     {
       "path": "vyre-foundation/src/diagnostics/mod.rs",
-      "line": 926,
+      "line": 794,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"serde_json emits UTF-8. Fix: none; this cannot fail\")"
     },
@@ -7957,8 +8038,8 @@
       "text": "write!(f, \"invalid or placeholder opaque reason: `{reason}`\")"
     },
     {
-      "path": "vyre-spec/src/schema_registry.rs",
-      "line": 170,
+      "path": "vyre-spec/src/schema_registry/mod.rs",
+      "line": 174,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"unregistered schema id\")"
     },
@@ -8877,7 +8958,7 @@
     },
     {
       "path": "structure-gate/tests/node_child_descent_owner.rs",
-      "line": 571,
+      "line": 541,
       "pattern": "source_inspection_test",
       "text": "test `the_child_slot_vocabulary_is_read_off_the_enum_the_owner_walks` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "the_child_slot_vocabulary_is_read_off_the_enum_the_owner_walks"
@@ -8919,21 +9000,21 @@
     },
     {
       "path": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
-      "line": 617,
+      "line": 648,
       "pattern": "source_inspection_test",
       "text": "test `test_every_record_field_has_a_recorded_source` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "test_every_record_field_has_a_recorded_source"
     },
     {
       "path": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
-      "line": 698,
+      "line": 744,
       "pattern": "source_inspection_test",
       "text": "test `test_producer_carries_no_measurement_constants` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "test_producer_carries_no_measurement_constants"
     },
     {
       "path": "vyre-bench/tests/application_domain_release_evidence_contracts.rs",
-      "line": 750,
+      "line": 802,
       "pattern": "source_inspection_test",
       "text": "test `test_no_test_writes_into_tracked_evidence_paths` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "test_no_test_writes_into_tracked_evidence_paths"
@@ -9073,24 +9154,17 @@
     },
     {
       "path": "vyre-foundation/tests/ir_variant_shape_owner_closure.rs",
-      "line": 760,
+      "line": 755,
       "pattern": "source_inspection_test",
       "text": "test `the_node_visitor_trait_declares_one_hook_per_declared_variant` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "the_node_visitor_trait_declares_one_hook_per_declared_variant"
     },
     {
       "path": "vyre-foundation/tests/ir_variant_shape_owner_closure.rs",
-      "line": 810,
+      "line": 805,
       "pattern": "source_inspection_test",
       "text": "test `every_node_visitor_implementation_in_the_workspace_is_recorded` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_node_visitor_implementation_in_the_workspace_is_recorded"
-    },
-    {
-      "path": "vyre-foundation/tests/law_derived_region_alternatives.rs",
-      "line": 121,
-      "pattern": "source_inspection_test",
-      "text": "test `every_declared_law_has_a_recorded_derivation` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "every_declared_law_has_a_recorded_derivation"
     },
     {
       "path": "vyre-foundation/tests/region_law_derivation.rs",
@@ -9114,13 +9188,6 @@
       "test": "folder_and_interpreter_agree_on_every_unary_operator_and_width"
     },
     {
-      "path": "vyre-foundation/tests/schedule_calculus_contracts.rs",
-      "line": 257,
-      "pattern": "source_inspection_test",
-      "text": "test `schedule_calculus_operator_set_is_closed_against_source_at_runtime` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "schedule_calculus_operator_set_is_closed_against_source_at_runtime"
-    },
-    {
       "path": "vyre-libs/tests/device_resident_token_fact_graph_ownership.rs",
       "line": 59,
       "pattern": "source_inspection_test",
@@ -9133,6 +9200,20 @@
       "pattern": "source_inspection_test",
       "text": "test `the_resident_layout_is_declared_in_exactly_one_crate` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "the_resident_layout_is_declared_in_exactly_one_crate"
+    },
+    {
+      "path": "vyre-libs/tests/facade_reexport_closure.rs",
+      "line": 78,
+      "pattern": "source_inspection_test",
+      "text": "test `the_facade_re_exports_every_module_its_partition_crates_publish` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "the_facade_re_exports_every_module_its_partition_crates_publish"
+    },
+    {
+      "path": "vyre-libs/tests/facade_reexport_closure.rs",
+      "line": 116,
+      "pattern": "source_inspection_test",
+      "text": "test `link_anchor_references_every_partition_crate` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "link_anchor_references_every_partition_crate"
     },
     {
       "path": "vyre-libs/tests/family_duplication_budget.rs",
@@ -9241,35 +9322,35 @@
     },
     {
       "path": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
-      "line": 120,
+      "line": 119,
       "pattern": "source_inspection_test",
       "text": "test `the_wrapper_set_is_derived_and_not_empty` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "the_wrapper_set_is_derived_and_not_empty"
     },
     {
       "path": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
-      "line": 153,
+      "line": 152,
       "pattern": "source_inspection_test",
       "text": "test `every_dispatch_wrapper_names_the_graph_primitive_it_wraps` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_dispatch_wrapper_names_the_graph_primitive_it_wraps"
     },
     {
       "path": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
-      "line": 183,
+      "line": 182,
       "pattern": "source_inspection_test",
       "text": "test `every_dispatch_wrapper_names_its_primitive_cpu_reference` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_dispatch_wrapper_names_its_primitive_cpu_reference"
     },
     {
       "path": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
-      "line": 211,
+      "line": 210,
       "pattern": "source_inspection_test",
       "text": "test `no_dispatch_wrapper_is_shadowed_by_an_older_module_path` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "no_dispatch_wrapper_is_shadowed_by_an_older_module_path"
     },
     {
       "path": "vyre-libs-graph/tests/graph_single_source_contracts.rs",
-      "line": 231,
+      "line": 230,
       "pattern": "source_inspection_test",
       "text": "test `the_dispatch_module_declares_every_wrapper_once` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "the_dispatch_module_declares_every_wrapper_once"
@@ -9416,245 +9497,245 @@
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 92,
+      "line": 96,
       "pattern": "source_inspection_test",
       "text": "test `canonical_semantic_executor_exact_path_derives_execution_methods` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "canonical_semantic_executor_exact_path_derives_execution_methods"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 129,
+      "line": 133,
       "pattern": "source_inspection_test",
       "text": "test `clean_production_code_produces_no_findings` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "clean_production_code_produces_no_findings"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 151,
+      "line": 155,
       "pattern": "source_inspection_test",
       "text": "test `expected_output_with_wire_pack_and_literal_helper_is_convicted` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "expected_output_with_wire_pack_and_literal_helper_is_convicted"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 180,
+      "line": 184,
       "pattern": "source_inspection_test",
       "text": "test `gpu_dispatcher_boundary_and_validation_functions_are_permitted` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "gpu_dispatcher_boundary_and_validation_functions_are_permitted"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 208,
+      "line": 212,
       "pattern": "source_inspection_test",
       "text": "test `compiler_planner_reachable_from_builder_is_permitted` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "compiler_planner_reachable_from_builder_is_permitted"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 242,
+      "line": 246,
       "pattern": "source_inspection_test",
       "text": "test `cfg_test_cpu_ref_is_permitted_and_not_flagged` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "cfg_test_cpu_ref_is_permitted_and_not_flagged"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 274,
+      "line": 278,
       "pattern": "source_inspection_test",
       "text": "test `cfg_test_item_level_function_body_vyre_reference_is_not_misclassified` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "cfg_test_item_level_function_body_vyre_reference_is_not_misclassified"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 289,
+      "line": 293,
       "pattern": "source_inspection_test",
       "text": "test `cfg_test_impl_block_is_scoped_as_test` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "cfg_test_impl_block_is_scoped_as_test"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 311,
+      "line": 315,
       "pattern": "source_inspection_test",
       "text": "test `cfg_test_trait_block_is_scoped_as_test` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "cfg_test_trait_block_is_scoped_as_test"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 331,
+      "line": 335,
       "pattern": "source_inspection_test",
       "text": "test `mutation_oracle_detection_catches_production_vyre_reference_usage` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_oracle_detection_catches_production_vyre_reference_usage"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 347,
+      "line": 351,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_allows_test_inputs_generator_and_catches_expected_output_oracle` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_allows_test_inputs_generator_and_catches_expected_output_oracle"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 397,
+      "line": 401,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_struct_literal_catches_expected_output_oracle` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_struct_literal_catches_expected_output_oracle"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 439,
+      "line": 443,
       "pattern": "source_inspection_test",
       "text": "test `control_bogus_local_operation_registration_does_not_false_positive` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "control_bogus_local_operation_registration_does_not_false_positive"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 461,
+      "line": 465,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_catches_inline_closure_loop_and_math` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_catches_inline_closure_loop_and_math"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 497,
+      "line": 501,
       "pattern": "source_inspection_test",
       "text": "test `clean_operation_registration_allows_literal_and_const_byte_array` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "clean_operation_registration_allows_literal_and_const_byte_array"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 527,
+      "line": 531,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_catches_wire_pack_in_expected_output` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_catches_wire_pack_in_expected_output"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 560,
+      "line": 564,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_catches_helper_function_in_expected_output` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_catches_helper_function_in_expected_output"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 605,
+      "line": 609,
       "pattern": "source_inspection_test",
       "text": "test `every_registration_constructor_convicts_a_host_oracle_in_expected_output` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_registration_constructor_convicts_a_host_oracle_in_expected_output"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 644,
+      "line": 648,
       "pattern": "source_inspection_test",
       "text": "test `mutation_operation_registration_catches_local_closure_alias_in_expected_output` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_operation_registration_catches_local_closure_alias_in_expected_output"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 679,
+      "line": 683,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_err_fallback_branch_oracle` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_err_fallback_branch_oracle"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 713,
+      "line": 717,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_unwrap_or_else_fallback_oracle` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_unwrap_or_else_fallback_oracle"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 747,
+      "line": 751,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_post_dispatch_iter_any_reduction` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_post_dispatch_iter_any_reduction"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 772,
+      "line": 776,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_match_ok_post_dispatch_iter_any` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_match_ok_post_dispatch_iter_any"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 800,
+      "line": 804,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_map_closure_post_dispatch_reduction` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_map_closure_post_dispatch_reduction"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 824,
+      "line": 828,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_post_dispatch_loop_accumulation` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_post_dispatch_loop_accumulation"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 854,
+      "line": 858,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_dispatcher_post_dispatch_filter_count_reduction` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_dispatcher_post_dispatch_filter_count_reduction"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 878,
+      "line": 882,
       "pattern": "source_inspection_test",
       "text": "test `clean_dispatcher_allows_inter_dispatch_staging_loop` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "clean_dispatcher_allows_inter_dispatch_staging_loop"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 902,
+      "line": 906,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_escaped_cache_invalidation_post_dispatch_host_projection` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_escaped_cache_invalidation_post_dispatch_host_projection"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 959,
+      "line": 963,
       "pattern": "source_inspection_test",
       "text": "test `clean_dispatcher_allows_strict_fixed_width_decoder_only_return` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "clean_dispatcher_allows_strict_fixed_width_decoder_only_return"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 982,
+      "line": 986,
       "pattern": "source_inspection_test",
       "text": "test `clean_dispatcher_allows_optional_local_and_capacity_reserve_decoder_loop` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "clean_dispatcher_allows_optional_local_and_capacity_reserve_decoder_loop"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1008,
+      "line": 1012,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_decoder_loop_independent_constant_append` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_decoder_loop_independent_constant_append"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1033,
+      "line": 1037,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_decoder_loop_subsliced_width_mismatch` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_decoder_loop_subsliced_width_mismatch"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1057,
+      "line": 1061,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_decoder_loop_bitshift_transform` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_decoder_loop_bitshift_transform"
     },
     {
       "path": "xtask/src/gates/host_oracle_elimination_tests_part1.rs",
-      "line": 1081,
+      "line": 1085,
       "pattern": "source_inspection_test",
       "text": "test `mutation_catches_unqualified_or_custom_from_le_bytes_helper` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "mutation_catches_unqualified_or_custom_from_le_bytes_helper"
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/tests.rs",
-      "line": 1866,
+      "line": 1356,
       "pattern": "source_inspection_test",
       "text": "test `every_xtask_crate_carries_the_release_tooling_rules` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "every_xtask_crate_carries_the_release_tooling_rules"
@@ -9724,7 +9805,7 @@
     },
     {
       "path": "xtask/src/artifact_gate.rs",
-      "line": 586,
+      "line": 595,
       "pattern": "documented_panic_contract",
       "text": "let (lane_entries, lane_errors) = handle.join().expect("
     },
@@ -9766,7 +9847,7 @@
     },
     {
       "path": "xtask/src/gate_proof_validation.rs",
-      "line": 512,
+      "line": 602,
       "pattern": "source_inspection_test",
       "text": "test `all_descriptor_proofs_resolve_to_real_tests` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "all_descriptor_proofs_resolve_to_real_tests"
@@ -10096,25 +10177,50 @@
     },
     {
       "path": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
-      "line": 547,
+      "line": 731,
       "pattern": "source_inspection_test",
-      "text": "test `file_roles_classify_every_vyre_libs_file_uniquely` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "file_roles_classify_every_vyre_libs_file_uniquely"
+      "text": "test `a_registration_in_a_partition_crate_is_placed_by_its_own_domain` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "a_registration_in_a_partition_crate_is_placed_by_its_own_domain"
     },
     {
       "path": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
-      "line": 583,
+      "line": 850,
       "pattern": "source_inspection_test",
-      "text": "test `new_unregistered_nested_file_fails_role_closure` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "new_unregistered_nested_file_fails_role_closure"
+      "text": "test `every_production_file_in_the_family_has_exactly_one_role` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "every_production_file_in_the_family_has_exactly_one_role"
     },
     {
       "path": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
-      "line": 602,
+      "line": 895,
+      "pattern": "source_inspection_test",
+      "text": "test `the_shared_builder_role_is_the_builder_module_of_a_family_crate` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "the_shared_builder_role_is_the_builder_module_of_a_family_crate"
+    },
+    {
+      "path": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
+      "line": 935,
+      "pattern": "source_inspection_test",
+      "text": "test `a_file_outside_every_declared_domain_fails_role_closure` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "a_file_outside_every_declared_domain_fails_role_closure"
+    },
+    {
+      "path": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
+      "line": 951,
       "pattern": "source_inspection_test",
       "text": "test `overlapping_file_roles_fails_role_closure` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "overlapping_file_roles_fails_role_closure"
+    },
+    {
+      "path": "xtask-registry/src/gates/lego_audit/semantic_organization.rs",
+      "line": 1055,
+      "pattern": "source_inspection_test",
+      "text": "test `every_canonical_block_skeleton_is_defined_in_a_shared_builder_module` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "every_canonical_block_skeleton_is_defined_in_a_shared_builder_module"
     }
   ],
-  "blockers": []
+  "blockers": [
+    "2 release-blocking source hygiene finding(s) remain; 519 total finding(s) preserved in classification output",
+    "docs/testing/STRUCTURAL_GATES.toml: `every_declared_law_has_a_recorded_derivation` names `vyre-foundation/tests/law_derived_region_alternatives.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one.",
+    "docs/testing/STRUCTURAL_GATES.toml: `schedule_calculus_operator_set_is_closed_against_source_at_runtime` names `vyre-foundation/tests/schedule_calculus_contracts.rs`, which contains no source-inspecting test. Fix: delete the row; a registry that outlives its gate exempts nothing and hides the next one."
+  ]
 }

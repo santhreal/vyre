@@ -22,10 +22,10 @@ an architecture-manifest change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-libs-math/tests/adversarial_math.rs`:
+Run the checked-in behavior from `vyre-libs-math/tests/adversarial.rs`:
 
 ```console
-./cargo_full test -p vyre-libs-math --test adversarial_math
+./cargo_full test -p vyre-libs-math --test adversarial
 ```
 
 ### Features

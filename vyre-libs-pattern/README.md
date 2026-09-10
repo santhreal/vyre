@@ -22,10 +22,10 @@ an architecture-manifest change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-libs-pattern/tests/all_tests.rs`:
+Run the checked-in behavior from `vyre-libs-pattern/tests/adversarial_matching.rs`:
 
 ```console
-./cargo_full test -p vyre-libs-pattern --test all_tests
+./cargo_full test -p vyre-libs-pattern --test adversarial_matching
 ```
 
 ### Features

@@ -4,13 +4,21 @@
 //! tile row or column from that staged value, so the read count per
 //! contraction step falls from two per output to one per tile edge.
 
-use vyre_foundation::composition::{wrap_anonymous_region, wrap_region};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::composition::wrap_region;
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use super::gemm_algebra::ContractionSemiring;
 use super::ContractionEpilogue;
 use crate::plumbing::operand::element_zero::element_zero;
-use crate::plumbing::operand::tensor_ref::TensorRefError;
+use crate::plumbing::operand::tensor_ref::{element_count, TensorRefError};
+
+use super::contraction_buffers::{
+    matmul_2d_counts, matmul_2d_operands, projection_counts, projection_operands,
+};
+use crate::builder::matrix_tile::{
+    bind_output_tile_coordinates, cooperative_slab_loop, in_output_bounds, output_tile_shape,
+    padded_tile_lane_count, MatrixShape, OutputTileCoordNames, TileArithmetic, TileShape,
+};
 
 /// Assemble a row-batched affine projection where one invocation accumulates a
 /// `tile_rows x tile_columns` tile of outputs.
@@ -48,25 +56,8 @@ pub(super) fn build_batched_rows_register_tiled(
         });
     }
 
-    let input_count =
-        rows.checked_mul(in_dim)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: x.to_string(),
-                shape: vec![rows, in_dim],
-            })?;
-    let output_count =
-        rows.checked_mul(out_dim)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: out.to_string(),
-                shape: vec![rows, out_dim],
-            })?;
-    let weight_count =
-        in_dim
-            .checked_mul(out_dim)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: w.to_string(),
-                shape: vec![in_dim, out_dim],
-            })?;
+    let (input_count, weight_count, output_count) =
+        projection_counts(x, w, out, rows, in_dim, out_dim)?;
     let row_tiles = rows.div_ceil(tile_rows);
     let column_tiles = out_dim.div_ceil(tile_columns);
     let tile_count =
@@ -215,25 +206,11 @@ pub(super) fn build_batched_rows_register_tiled(
         ),
     ];
 
-    let mut buffers = vec![
-        BufferDecl::storage(x, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(input_count),
-        BufferDecl::storage(w, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(weight_count),
-    ];
-    let output_slot = if let Some(name) = bias {
-        buffers.push(
-            BufferDecl::storage(name, 2, BufferAccess::ReadOnly, dtype.clone()).with_count(out_dim),
-        );
-        3
-    } else {
-        2
-    };
+    let (mut buffers, output_slot) =
+        projection_operands(x, input_count, w, weight_count, bias, out_dim, dtype);
     buffers.push(BufferDecl::output(out, output_slot, dtype.clone()).with_count(output_count));
 
-    let region = if generator.starts_with("anonymous::") {
-        wrap_anonymous_region(generator, body)
-    } else {
-        wrap_region(generator, body, None)
-    };
+    let region = wrap_region(generator, body, None);
 
     Ok(Program::wrapped(buffers, workgroup_size, vec![region]))
 }
@@ -257,92 +234,28 @@ pub(super) fn build_matmul_2d_cooperative(
     epilogue: &ContractionEpilogue,
     workgroup_size: [u32; 3],
 ) -> Result<Program, TensorRefError> {
-    let a_count = m
-        .checked_mul(k)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: a.to_string(),
-            shape: vec![m, k],
-        })?;
-    let b_count = k
-        .checked_mul(n)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: b.to_string(),
-            shape: vec![k, n],
-        })?;
-    let out_count = m
-        .checked_mul(n)
-        .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: out.to_string(),
-            shape: vec![m, n],
-        })?;
+    let (a_count, b_count, out_count) = matmul_2d_counts(a, b, out, m, k, n)?;
 
-    let out_cols = workgroup_size[0].max(1);
-    let out_rows = workgroup_size[1]
-        .max(1)
-        .saturating_mul(workgroup_size[2].max(1));
-    let lanes =
-        out_cols
-            .checked_mul(out_rows)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: "workgroup_lanes".to_string(),
-                shape: vec![out_rows, out_cols],
-            })?;
+    let shape = MatrixShape { m, k, n };
+    let (out_cols, out_rows, lanes) = output_tile_shape(workgroup_size)?;
     let k_tile = tile;
+    let a_tile_count = element_count(a_tile_name, &[out_rows, k_tile])?;
+    let b_tile_count = element_count(b_tile_name, &[k_tile, out_cols])?;
+    let padded_out_count = padded_tile_lane_count(m, n, out_rows, out_cols, lanes)?;
+    let tile_shape = TileShape {
+        k_tile,
+        out_rows,
+        out_cols,
+        x_lanes: workgroup_size[0].max(1),
+        y_lanes: workgroup_size[1].max(1),
+        lanes,
+        a_values: a_tile_count,
+        b_values: b_tile_count,
+    };
 
-    let a_tile_count =
-        out_rows
-            .checked_mul(k_tile)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: a_tile_name.to_string(),
-                shape: vec![out_rows, k_tile],
-            })?;
-    let b_tile_count =
-        k_tile
-            .checked_mul(out_cols)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: b_tile_name.to_string(),
-                shape: vec![k_tile, out_cols],
-            })?;
-
-    let row_tiles = m.div_ceil(out_rows);
-    let col_tiles = n.div_ceil(out_cols);
-    let total_tiles =
-        row_tiles
-            .checked_mul(col_tiles)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: "matmul_tiled_tiles".to_string(),
-                shape: vec![row_tiles, col_tiles],
-            })?;
-    let padded_out_count =
-        total_tiles
-            .checked_mul(lanes)
-            .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: "matmul_tiled_launch_lanes".to_string(),
-                shape: vec![row_tiles, col_tiles, lanes],
-            })?;
-
-    let k_tile_count = k.div_ceil(k_tile);
-    let load_passes = a_tile_count.max(b_tile_count).div_ceil(lanes).max(1);
-
-    let local = Expr::var("local");
     let row = Expr::var("row");
     let col = Expr::var("col");
-
-    let local_expr = Expr::add(
-        Expr::add(
-            Expr::LogicalWithinTileId { axis: 0 },
-            Expr::mul(Expr::LogicalWithinTileId { axis: 1 }, Expr::u32(out_cols)),
-        ),
-        Expr::mul(
-            Expr::LogicalWithinTileId { axis: 2 },
-            Expr::u32(out_cols.saturating_mul(workgroup_size[1].max(1))),
-        ),
-    );
-
-    let in_bounds = Expr::and(
-        Expr::lt(row.clone(), Expr::u32(m)),
-        Expr::lt(col.clone(), Expr::u32(n)),
-    );
+    let in_bounds = in_output_bounds(row.clone(), col.clone(), shape);
 
     let store_value = match epilogue {
         ContractionEpilogue::None => Expr::var("acc"),
@@ -371,227 +284,42 @@ pub(super) fn build_matmul_2d_cooperative(
 
     let out_index = Expr::add(Expr::mul(row.clone(), Expr::u32(n)), col.clone());
 
-    let body = vec![
-        Node::let_bind("local", local_expr),
-        Node::let_bind("tile_block", Expr::LogicalTileId { axis: 0 }),
-        Node::let_bind("tile_cols", Expr::u32(col_tiles)),
-        Node::let_bind(
-            "tile_row_base",
-            Expr::mul(
-                Expr::div(Expr::var("tile_block"), Expr::var("tile_cols")),
-                Expr::u32(out_rows),
-            ),
-        ),
-        Node::let_bind(
-            "tile_col_base",
-            Expr::mul(
-                Expr::rem(Expr::var("tile_block"), Expr::var("tile_cols")),
-                Expr::u32(out_cols),
-            ),
-        ),
-        Node::let_bind("local_row", Expr::div(local.clone(), Expr::u32(out_cols))),
-        Node::let_bind("local_col", Expr::rem(local.clone(), Expr::u32(out_cols))),
-        Node::let_bind(
-            "row",
-            Expr::add(Expr::var("tile_row_base"), Expr::var("local_row")),
-        ),
-        Node::let_bind(
-            "col",
-            Expr::add(Expr::var("tile_col_base"), Expr::var("local_col")),
-        ),
-        Node::let_bind("acc", semiring.identity_expr(dtype)),
-        Node::loop_for(
-            "tile_idx",
-            Expr::u32(0),
-            Expr::u32(k_tile_count),
-            vec![
-                Node::let_bind(
-                    "k_base",
-                    Expr::mul(Expr::var("tile_idx"), Expr::u32(k_tile)),
-                ),
-                Node::loop_for(
-                    "load_pass",
-                    Expr::u32(0),
-                    Expr::u32(load_passes),
-                    vec![
-                        Node::let_bind(
-                            "a_linear",
-                            Expr::add(
-                                local.clone(),
-                                Expr::mul(Expr::var("load_pass"), Expr::u32(lanes)),
-                            ),
-                        ),
-                        Node::if_then(
-                            Expr::lt(Expr::var("a_linear"), Expr::u32(a_tile_count)),
-                            vec![
-                                Node::let_bind(
-                                    "a_local_row",
-                                    Expr::div(Expr::var("a_linear"), Expr::u32(k_tile)),
-                                ),
-                                Node::let_bind(
-                                    "a_local_k",
-                                    Expr::rem(Expr::var("a_linear"), Expr::u32(k_tile)),
-                                ),
-                                Node::let_bind(
-                                    "a_row",
-                                    Expr::add(Expr::var("tile_row_base"), Expr::var("a_local_row")),
-                                ),
-                                Node::let_bind(
-                                    "a_k",
-                                    Expr::add(Expr::var("k_base"), Expr::var("a_local_k")),
-                                ),
-                                Node::Store {
-                                    buffer: a_tile_name.into(),
-                                    index: Expr::var("a_linear"),
-                                    value: semiring.identity_expr(dtype),
-                                },
-                                Node::if_then(
-                                    Expr::and(
-                                        Expr::lt(Expr::var("a_row"), Expr::u32(m)),
-                                        Expr::lt(Expr::var("a_k"), Expr::u32(k)),
-                                    ),
-                                    vec![Node::Store {
-                                        buffer: a_tile_name.into(),
-                                        index: Expr::var("a_linear"),
-                                        value: Expr::load(
-                                            a,
-                                            Expr::add(
-                                                Expr::mul(Expr::var("a_row"), Expr::u32(k)),
-                                                Expr::var("a_k"),
-                                            ),
-                                        ),
-                                    }],
-                                ),
-                            ],
-                        ),
-                        Node::let_bind(
-                            "b_linear",
-                            Expr::add(
-                                local.clone(),
-                                Expr::mul(Expr::var("load_pass"), Expr::u32(lanes)),
-                            ),
-                        ),
-                        Node::if_then(
-                            Expr::lt(Expr::var("b_linear"), Expr::u32(b_tile_count)),
-                            vec![
-                                Node::let_bind(
-                                    "b_local_k",
-                                    Expr::div(Expr::var("b_linear"), Expr::u32(out_cols)),
-                                ),
-                                Node::let_bind(
-                                    "b_local_col",
-                                    Expr::rem(Expr::var("b_linear"), Expr::u32(out_cols)),
-                                ),
-                                Node::let_bind(
-                                    "b_k",
-                                    Expr::add(Expr::var("k_base"), Expr::var("b_local_k")),
-                                ),
-                                Node::let_bind(
-                                    "b_col",
-                                    Expr::add(Expr::var("tile_col_base"), Expr::var("b_local_col")),
-                                ),
-                                Node::Store {
-                                    buffer: b_tile_name.into(),
-                                    index: Expr::var("b_linear"),
-                                    value: semiring.identity_expr(dtype),
-                                },
-                                Node::if_then(
-                                    Expr::and(
-                                        Expr::lt(Expr::var("b_k"), Expr::u32(k)),
-                                        Expr::lt(Expr::var("b_col"), Expr::u32(n)),
-                                    ),
-                                    vec![Node::Store {
-                                        buffer: b_tile_name.into(),
-                                        index: Expr::var("b_linear"),
-                                        value: Expr::load(
-                                            b,
-                                            Expr::add(
-                                                Expr::mul(Expr::var("b_k"), Expr::u32(n)),
-                                                Expr::var("b_col"),
-                                            ),
-                                        ),
-                                    }],
-                                ),
-                            ],
-                        ),
-                    ],
-                ),
-                Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
-                Node::loop_for(
-                    "tile_k",
-                    Expr::u32(0),
-                    Expr::u32(k_tile),
-                    vec![Node::if_then(
-                        in_bounds.clone(),
-                        vec![Node::assign(
-                            "acc",
-                            semiring.accumulate_expr(
-                                Expr::var("acc"),
-                                semiring.combine_expr(
-                                    Expr::load(
-                                        a_tile_name,
-                                        Expr::add(
-                                            Expr::mul(Expr::var("local_row"), Expr::u32(k_tile)),
-                                            Expr::var("tile_k"),
-                                        ),
-                                    ),
-                                    Expr::load(
-                                        b_tile_name,
-                                        Expr::add(
-                                            Expr::mul(Expr::var("tile_k"), Expr::u32(out_cols)),
-                                            Expr::var("local_col"),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                        )],
-                    )],
-                ),
-                Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
-            ],
-        ),
-        Node::if_then(
-            in_bounds,
-            vec![Node::Store {
-                buffer: out.into(),
-                index: out_index,
-                value: store_value,
-            }],
-        ),
-    ];
+    let mut body = bind_output_tile_coordinates(
+        shape,
+        tile_shape,
+        OutputTileCoordNames {
+            lane_row: "local_row",
+            lane_col: "local_col",
+            row: "row",
+            col: "col",
+        },
+    );
+    body.push(Node::let_bind("acc", semiring.identity_expr(dtype)));
+    body.push(cooperative_slab_loop(
+        a,
+        b,
+        a_tile_name,
+        b_tile_name,
+        shape,
+        tile_shape,
+        &in_bounds,
+        &TileArithmetic {
+            pad: semiring.identity_expr(dtype),
+            combine: &|left, right| semiring.combine_expr(left, right),
+            accumulate: &|acc, value| semiring.accumulate_expr(acc, value),
+        },
+    ));
+    body.push(Node::if_then(
+        in_bounds,
+        vec![Node::Store {
+            buffer: out.into(),
+            index: out_index,
+            value: store_value,
+        }],
+    ));
 
-    let mut buffers = vec![
-        BufferDecl::storage(a, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(a_count),
-        BufferDecl::storage(b, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(b_count),
-    ];
-    let mut next_slot = 2;
-    if let Some(bias_name) = bias {
-        buffers.push(
-            BufferDecl::storage(bias_name, next_slot, BufferAccess::ReadOnly, dtype.clone())
-                .with_count(n),
-        );
-        next_slot += 1;
-    }
-    if let ContractionEpilogue::QuantizedScale {
-        row_scales,
-        batch_scales,
-    } = epilogue
-    {
-        buffers.push(
-            BufferDecl::storage(row_scales, next_slot, BufferAccess::ReadOnly, dtype.clone())
-                .with_count(m),
-        );
-        buffers.push(
-            BufferDecl::storage(
-                batch_scales,
-                next_slot + 1,
-                BufferAccess::ReadOnly,
-                dtype.clone(),
-            )
-            .with_count(1),
-        );
-        next_slot += 2;
-    }
+    let (mut buffers, next_slot) =
+        matmul_2d_operands(a, a_count, b, b_count, bias, epilogue, dtype, m, n);
     buffers.push(BufferDecl::workgroup(
         a_tile_name,
         a_tile_count,
@@ -610,11 +338,7 @@ pub(super) fn build_matmul_2d_cooperative(
     }
     buffers.push(out_decl);
 
-    let region = if generator.starts_with("anonymous::") {
-        wrap_anonymous_region(generator, body)
-    } else {
-        wrap_region(generator, body, None)
-    };
+    let region = wrap_region(generator, body, None);
 
     Ok(Program::wrapped(buffers, [lanes, 1, 1], vec![region]))
 }

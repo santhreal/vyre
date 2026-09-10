@@ -208,7 +208,7 @@ pub fn vyre_libs_math::math::linalg::matmul_bias_tiled(a: &str, b: &str, bias: &
 pub fn vyre_libs_math::math::linalg::matmul_strassen_2x2(a: &str, b: &str, c: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_math::math::linalg::matmul_strassen_one_level(a: &str, b: &str, c: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
 pub fn vyre_libs_math::math::linalg::matmul_tiled(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_libs_math::math::linalg::plan_matmul_kernel(dtype: &vyre_spec::data_type::DataType, shape: vyre_libs_math::math::linalg::MatrixShape, tile: u32, split_k_slices: u32, f32_mode: vyre_libs_math::math::linalg::F32MatmulMode, capabilities: vyre_libs_math::math::linalg::MatmulKernelCapabilities) -> vyre_libs_math::math::linalg::MatmulKernelPlan
+pub fn vyre_libs_math::math::linalg::plan_matmul_kernel(dtype: &vyre_spec::data_type::DataType, shape: vyre_libs_builder::builder::matrix_tile::MatrixShape, tile: u32, split_k_slices: u32, f32_mode: vyre_libs_math::math::linalg::F32MatmulMode, capabilities: vyre_libs_math::math::linalg::MatmulKernelCapabilities) -> vyre_libs_math::math::linalg::MatmulKernelPlan
 pub fn vyre_libs_math::math::lzcnt_u32(input: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_math::math::matrix_diagonal_extract::matrix_diagonal_extract(matrix: &str, diagonal: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_libs_math::math::matrix_diagonal_extract::matrix_diagonal_extract_body(matrix: &str, diagonal: &str, n: u32, lanes: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
@@ -361,7 +361,6 @@ pub struct vyre_libs_math::math::linalg::MatmulBiasTiled
 pub struct vyre_libs_math::math::linalg::MatmulKernelCapabilities
 pub struct vyre_libs_math::math::linalg::MatmulKernelPlan
 pub struct vyre_libs_math::math::linalg::MatmulTiled
-pub struct vyre_libs_math::math::linalg::MatrixShape
 pub struct vyre_libs_math::math::sinkhorn_iterate::SinkhornBuffers<'a>
 pub struct vyre_libs_math::math::sinkhorn_iterate::SinkhornExtents
 pub struct vyre_libs_math::math::sparse_selector::SparseKernelSelectorEvidence
@@ -420,9 +419,6 @@ pub vyre_libs_math::math::linalg::MatmulKernelPlan::ragged_tiles: bool
 pub vyre_libs_math::math::linalg::MatmulKernelPlan::selected_path: vyre_libs_math::math::linalg::MatmulKernelPath
 pub vyre_libs_math::math::linalg::MatmulKernelPlan::split_k_slices: u32
 pub vyre_libs_math::math::linalg::MatmulKernelPlan::tile_shape: core::option::Option<vyre_libs_math::math::linalg::TensorCoreTileShape>
-pub vyre_libs_math::math::linalg::MatrixShape::k: u32
-pub vyre_libs_math::math::linalg::MatrixShape::m: u32
-pub vyre_libs_math::math::linalg::MatrixShape::n: u32
 pub vyre_libs_math::math::linalg::TensorCoreTileShape::M16N8K16
 pub vyre_libs_math::math::linalg::TensorCoreTileShape::M16N8K4
 pub vyre_libs_math::math::prefix_scan::ScanKind::ExclusiveSum

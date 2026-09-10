@@ -30,6 +30,7 @@ pub mod elementwise;
 use elementwise::ElementwiseComposer;
 /// Canonical matrix multiplication and contraction IR composer.
 pub mod gemm;
+pub mod matrix_tile;
 /// Domain-neutral byte-range ordering predicates over the scanner output
 /// contract.
 pub mod range_ordering;

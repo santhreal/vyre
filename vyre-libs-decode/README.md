@@ -22,10 +22,10 @@ an architecture-manifest change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-libs-decode/tests/all_tests.rs`:
+Run the checked-in behavior from `vyre-libs-decode/tests/adversarial_decode.rs`:
 
 ```console
-./cargo_full test -p vyre-libs-decode --test all_tests
+./cargo_full test -p vyre-libs-decode --test adversarial_decode
 ```
 
 ### Features

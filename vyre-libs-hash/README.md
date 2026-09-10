@@ -22,10 +22,10 @@ an architecture-manifest change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-libs-hash/tests/all_tests.rs`:
+Run the checked-in behavior from `vyre-libs-hash/tests/adversarial_hash.rs`:
 
 ```console
-./cargo_full test -p vyre-libs-hash --test all_tests
+./cargo_full test -p vyre-libs-hash --test adversarial_hash
 ```
 
 ### Features

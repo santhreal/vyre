@@ -170,6 +170,22 @@ pub enum TensorRefError {
     },
 }
 
+/// The number of elements a tensor of `shape` holds, named `name` in the
+/// error a product outside u32 produces.
+///
+/// Every buffer count a program declares is a product of extents, and a
+/// product that leaves u32 is the same failure whichever operand it came
+/// from.
+pub fn element_count(name: &str, shape: &[u32]) -> Result<u32, TensorRefError> {
+    shape
+        .iter()
+        .try_fold(1u32, |count, extent| count.checked_mul(*extent))
+        .ok_or_else(|| TensorRefError::ElementCountOverflow {
+            name: name.to_string(),
+            shape: shape.to_vec(),
+        })
+}
+
 /// Verify that every name in `refs` is unique. Returns
 /// [`TensorRefError::NameCollision`] on the first duplicate.
 pub fn check_unique_names(refs: &[&TensorRef], op: &'static str) -> Result<(), TensorRefError> {

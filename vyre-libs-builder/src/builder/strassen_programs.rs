@@ -1,6 +1,6 @@
 //! Strassen contraction program assembly, closed-form and one level deep.
 
-use vyre_foundation::composition::{wrap_anonymous_region, wrap_region};
+use vyre_foundation::composition::wrap_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::plumbing::operand::tensor_ref::TensorRefError;
@@ -109,11 +109,7 @@ pub(super) fn build_strassen_2x2(
     // in every invocation a fusion widens this arm to. One invocation owns the
     // contraction, so the guard names it.
     let body = vec![Node::if_then(Expr::is_first_logical_point(), body)];
-    let region = if generator.starts_with("anonymous::") {
-        wrap_anonymous_region(generator, body)
-    } else {
-        wrap_region(generator, body, None)
-    };
+    let region = wrap_region(generator, body, None);
 
     Ok(Program::wrapped(buffers, [1, 1, 1], vec![region]))
 }
@@ -377,11 +373,7 @@ pub(super) fn build_strassen_one_level(
         BufferDecl::output(c, 2, DataType::F32).with_count(total),
     ];
 
-    let region = if generator.starts_with("anonymous::") {
-        wrap_anonymous_region(generator, body)
-    } else {
-        wrap_region(generator, body, None)
-    };
+    let region = wrap_region(generator, body, None);
 
     Ok(Program::wrapped(buffers, [64, 1, 1], vec![region]))
 }

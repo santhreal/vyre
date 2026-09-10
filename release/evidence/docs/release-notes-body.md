@@ -1886,6 +1886,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   tier classification, and registration now live in `vyre-foundation`; library
   fixture views live in `vyre-libs`; conformance execution and parity policy
   live in `vyre-conform`; self-substrate behavior tests live with their owner.
+- Cooperative matrix tiling, contraction buffer rosters and tensor element
+  counts each resolve to a single builder owner, and `MatrixShape` is exported
+  from `vyre-libs-builder` instead of `vyre-libs-math`.
 - The cross-backend u32 parity suites read one op table instead of one
   hand-written test per op. `synthetic_binop_parity`, its CUDA twin, and both
   `div_zero_shift_mask` suites loop over the shared table with a per-backend

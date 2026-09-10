@@ -98628,7 +98628,7 @@ seam = "libs-builder"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
 stability = "extension"
-exported_item_count = 581
+exported_item_count = 610
 
   [[package.item]]
   path = "impl core::fmt::Debug for vyre_libs_builder::builder::gemm::ContractionEpilogue"
@@ -100612,6 +100612,202 @@ exported_item_count = 581
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile"
+  kind = "mod"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::MatrixShape"
+  kind = "struct"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::MatrixShape::k: u32"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::MatrixShape::m: u32"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::MatrixShape::n: u32"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames"
+  kind = "struct"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames::col: &'static str"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames::lane_col: &'static str"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames::lane_row: &'static str"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames::row: &'static str"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::TileArithmetic::accumulate: &'a dyn core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::TileArithmetic::combine: &'a dyn core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::TileArithmetic::pad: vyre_foundation::ir_inner::model::generated::Expr"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::TileArithmetic<'a>"
+  kind = "struct"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::TileShape"
+  kind = "struct"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::TileShape::a_values: u32"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::TileShape::b_values: u32"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::TileShape::k_tile: u32"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::TileShape::lanes: u32"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::TileShape::out_cols: u32"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::TileShape::out_rows: u32"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::TileShape::x_lanes: u32"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::TileShape::y_lanes: u32"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::bind_output_tile_coordinates(shape: vyre_libs_builder::builder::matrix_tile::MatrixShape, tile: vyre_libs_builder::builder::matrix_tile::TileShape, names: vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::cooperative_slab_loop(a: &str, b: &str, a_tile_name: &str, b_tile_name: &str, shape: vyre_libs_builder::builder::matrix_tile::MatrixShape, tile: vyre_libs_builder::builder::matrix_tile::TileShape, in_bounds: &vyre_foundation::ir_inner::model::generated::Expr, arithmetic: &vyre_libs_builder::builder::matrix_tile::TileArithmetic<'_>) -> vyre_foundation::ir_inner::model::generated::Node"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::in_output_bounds(row: vyre_foundation::ir_inner::model::generated::Expr, col: vyre_foundation::ir_inner::model::generated::Expr, shape: vyre_libs_builder::builder::matrix_tile::MatrixShape) -> vyre_foundation::ir_inner::model::generated::Expr"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::output_tile_shape(workgroup: [u32; 3]) -> core::result::Result<(u32, u32, u32), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::matrix_tile::padded_tile_lane_count(m: u32, n: u32, out_rows: u32, out_cols: u32, lanes: u32) -> core::result::Result<u32, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_libs_builder::builder::range_ordering"
   kind = "mod"
   stability = "extension"
@@ -102279,6 +102475,13 @@ exported_item_count = 581
 
   [[package.item]]
   path = "vyre_libs_builder::plumbing::operand::tensor_ref::check_unique_names(refs: &[&vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef], op: &'static str) -> core::result::Result<(), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::plumbing::operand::tensor_ref::element_count(name: &str, shape: &[u32]) -> core::result::Result<u32, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -113636,7 +113839,7 @@ seam = "libs-math"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
 stability = "extension"
-exported_item_count = 484
+exported_item_count = 480
 
   [[package.item]]
   path = "impl core::error::Error for vyre_libs_math::math::sparse_selector::SparseKernelSelectorError"
@@ -115340,34 +115543,6 @@ exported_item_count = 484
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_libs_math::math::linalg::MatrixShape"
-  kind = "struct"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_libs_math::math::linalg::MatrixShape::k: u32"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_libs_math::math::linalg::MatrixShape::m: u32"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_libs_math::math::linalg::MatrixShape::n: u32"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_libs_math::math::linalg::TensorCoreTileShape"
   kind = "enum"
   stability = "extension"
@@ -115438,7 +115613,7 @@ exported_item_count = 484
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_libs_math::math::linalg::plan_matmul_kernel(dtype: &vyre_spec::data_type::DataType, shape: vyre_libs_math::math::linalg::MatrixShape, tile: u32, split_k_slices: u32, f32_mode: vyre_libs_math::math::linalg::F32MatmulMode, capabilities: vyre_libs_math::math::linalg::MatmulKernelCapabilities) -> vyre_libs_math::math::linalg::MatmulKernelPlan"
+  path = "vyre_libs_math::math::linalg::plan_matmul_kernel(dtype: &vyre_spec::data_type::DataType, shape: vyre_libs_builder::builder::matrix_tile::MatrixShape, tile: u32, split_k_slices: u32, f32_mode: vyre_libs_math::math::linalg::F32MatmulMode, capabilities: vyre_libs_math::math::linalg::MatmulKernelCapabilities) -> vyre_libs_math::math::linalg::MatmulKernelPlan"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
