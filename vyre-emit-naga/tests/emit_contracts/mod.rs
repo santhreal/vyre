@@ -100,6 +100,7 @@ mod binop;
 mod byte_element_load;
 mod cache_entry;
 mod descriptor_control;
+mod f32_division;
 mod global_store_bounds;
 mod grid_index_space;
 mod pattern_audit;

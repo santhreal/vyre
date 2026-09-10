@@ -196,9 +196,13 @@ impl BodyBuilder<'_> {
         // is its operand type (`binary_result_type` -> operand 0), so an i32_ty
         // result means signed operands. wgpu/spirv/metal all route through this
         // emitter, so the one fix covers every naga-derived backend.
+        let f32_divide = matches!(effective_binop, BinOp::Div)
+            && self.binary_result_type(op, effective_binop)? == self.types.f32_ty;
         let signed_mod = matches!(effective_binop, BinOp::Mod)
             && self.binary_result_type(op, effective_binop)? == self.types.i32_ty;
-        let value = if signed_mod {
+        let value = if f32_divide {
+            self.emit_f32_divide(left_eff, right_eff)
+        } else if signed_mod {
             let quotient = self.append_expr(Expression::Binary {
                 op: BinaryOperator::Divide,
                 left: left_eff,
@@ -324,6 +328,97 @@ impl BodyBuilder<'_> {
             .named_expressions
             .insert(published, format!("vyre_rounded_{}", published.index()));
         published
+    }
+
+    /// A correctly-rounded f32 quotient.
+    ///
+    /// `BinaryOperator::Divide` alone is not one. Vulkan requires `OpFDiv` to
+    /// land within 2.5 ULP of the exact quotient and nothing more, so a target
+    /// answers it with a hardware reciprocal estimate and a refinement step
+    /// that stops one short of the final rounding. Measured on an NVIDIA
+    /// adapter through the wgpu backend, five of eight f32 quotients came back
+    /// one ULP from the correctly-rounded value, `36.0 / 200.0` among them. The
+    /// reference oracle divides in IEEE-754 round-to-nearest-even and the PTX
+    /// emitter selects `div.rn.f32`, so a bare `Divide` is the one lowering of
+    /// this operator that states a different quotient than the operator has.
+    /// `fp_parity::recorded_approximability` records the same contract from the
+    /// other side: division is outside the approximable set, so it is held to
+    /// the elementary window rather than the transcendental one.
+    ///
+    /// One ULP passes that window on its own. It does not survive composition:
+    /// `tensor_train_decompose` feeds a quotient into a Jacobi rotation and
+    /// reads back a Gram matrix whose small eigenvalue is 518 times as
+    /// sensitive as its input, which turned the single ULP into 164 and failed
+    /// the operation against the oracle.
+    ///
+    /// The correction is Markstein's. `residual` is the exact remainder
+    /// `left - right * quotient`, exact because a fused multiply-add rounds
+    /// once and the remainder of a quotient already within a few ULP fits in
+    /// f32. Folding it back through a reciprocal moves the result into the
+    /// correct ULP. Both fused multiply-adds are `MathFunction::Fma`, which
+    /// asks for the single rounding the algorithm needs; a target that split
+    /// one into a multiply and an add would leave the residual inexact, so the
+    /// pair is measured rather than assumed, by
+    /// `vyre-emit-naga/tests/f32_division_rounding.rs`.
+    ///
+    /// The refinement is defined for a finite non-zero divisor. Division by
+    /// zero, an infinite operand and a NaN operand all drive `residual` or the
+    /// reciprocal to NaN, so the correction is admitted only where it produced
+    /// a finite value and the plain quotient stands everywhere else. That keeps
+    /// every special-value answer the operator already had, including the
+    /// oracle's `x / 0` contract, and costs one comparison.
+    pub(in crate::emitter) fn emit_f32_divide(
+        &mut self,
+        left: naga::Handle<Expression>,
+        right: naga::Handle<Expression>,
+    ) -> naga::Handle<Expression> {
+        let quotient = self.append_expr(Expression::Binary {
+            op: BinaryOperator::Divide,
+            left,
+            right,
+        });
+        let negated = self.append_expr(Expression::Unary {
+            op: naga::UnaryOperator::Negate,
+            expr: right,
+        });
+        let residual = self.append_expr(Expression::Math {
+            fun: naga::MathFunction::Fma,
+            arg: negated,
+            arg1: Some(quotient),
+            arg2: Some(left),
+            arg3: None,
+        });
+        let one = self.append_expr(Expression::Literal(Literal::F32(1.0)));
+        let reciprocal = self.append_expr(Expression::Binary {
+            op: BinaryOperator::Divide,
+            left: one,
+            right,
+        });
+        let corrected = self.append_expr(Expression::Math {
+            fun: naga::MathFunction::Fma,
+            arg: residual,
+            arg1: Some(reciprocal),
+            arg2: Some(quotient),
+            arg3: None,
+        });
+        let magnitude = self.append_expr(Expression::Math {
+            fun: naga::MathFunction::Abs,
+            arg: corrected,
+            arg1: None,
+            arg2: None,
+            arg3: None,
+        });
+        let largest_finite = self.append_expr(Expression::Literal(Literal::F32(f32::MAX)));
+        let refined = self.append_expr(Expression::Binary {
+            op: BinaryOperator::LessEqual,
+            left: magnitude,
+            right: largest_finite,
+        });
+        self.append_expr(Expression::Select {
+            condition: refined,
+            accept: corrected,
+            reject: quotient,
+        })
     }
 
     fn emit_synthetic_binop(
