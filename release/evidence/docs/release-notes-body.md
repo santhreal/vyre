@@ -1273,6 +1273,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   per-item cost instead of one host submit, one completion wait and one
   four-byte readback per measured sample. The scatter pattern is unchanged: its
   program already batches sixteen record sets into one launch.
+- `DiagnosticPermissiveReport` carries a digest of the bytes a permissive run
+  produced instead of the values themselves, and has no `certificate` method.
+  Permissive incapability is a property of the type rather than a check a
+  caller can ignore the result of.
 - xtask gates --write-baseline records a measured finding count only when it is
   at or below the pin already recorded, and fails naming every gate that
   reports more, so a run can no longer legalize a red gate.
@@ -1439,6 +1443,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   and `vyre_libs::operation_catalog::all_entries` is now `library_entries`, so
   a caller reads the tier it names instead of filtering an intrinsic-only
   catalog for a library operation.
+- A strict reference execution refuses an out-of-bounds load, store, atomic or
+  async copy span at the access site, naming the index and the extent it
+  exceeded, instead of absorbing it and reporting a tally after the run. The
+  absorbed value never enters the value graph, so no output is derived from an
+  index the program did not gate. Diagnostic permissive mode still absorbs the
+  access and counts it.
 - `examples/external_backend_extension` registers a dispatch backend from
   outside the workspace. It described `vyre_driver::VyreBackend` as sealed
   against outside implementations and built a program instead, which stated a
@@ -4172,6 +4182,17 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre_driver::validation::ProgramValidationCaps::support` and
   `vyre_pass_engine::optimizer::pipeline::gpu_sequential_three_pass`, which the
   crates already exported without a snapshot entry to diff against.
+- The reference oracle evaluates a program through one route. The
+  dual-reference registry, the statement executor, the storage-graph
+  interpreter and the flat adapters were four more answers to the same node
+  semantics, and every `reference_eval*` entry point now resolves to the
+  canonical evaluator. `vyre_reference::dual`, `dual_impls`, `dual_registry`,
+  `cpu_op`, `dialect_dispatch`, `flat_cpu`, `expr`, `node`, `sequential` and
+  `run_storage_graph` are removed; `reference_eval_expr` with `ReferenceMemory`
+  evaluates one expression against the same evaluator.
+- The reference oracle refuses an out-of-bounds load, store, or atomic at the
+  access site on every entry point; the diagnostic entry points that measure
+  absorbed accesses keep the zero-fill and no-op behavior.
 - The runtime module that owns persistent slot residency is
   `vyre-runtime/src/resident_work_queue/`, and its lane, its test files, and
   its architecture page carry the same name. The directory was `megakernel/`, a
@@ -5173,6 +5194,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - vyre-libs-solvers resolves the dataflow compaction wrappers. The bitset,
   fixpoint and math kernels they call are defined in vyre-libs-bitset,
   vyre-libs-fixpoint and vyre-libs-math, and the imports name those crates.
+- A declared output byte range that is inverted, unaddressable, or past the
+  buffer is refused instead of falling back to the whole buffer.
 - A registration is rejected when the tier it declares is one the crate that
   minted its id cannot carry, and when the id names no crate at all.
 - A default build of vyre-libs emitted programs whose child regions named
@@ -5971,6 +5994,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   gone, each reference has one name, and the exploded arm now asserts what the
   substrate actually owes: the CSR the reference builds is the declared one,
   with one row offset per node plus the terminator.
+- `ReferenceErrorClass::ALL` is derived from an exhaustive successor chain
+  instead of a hand-written array. A new failure class no longer compiles until
+  it is placed in the chain, so a class cannot be added and left out of the
+  list in silence.
 - The registered CUDA backend resolves one shared device handle for both its
   dispatch facet and its materializer facet. Each facet used to call
   `CudaBackend::acquire()` on every request, so a seven-stage resident
@@ -6675,6 +6702,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   each carry their own buffer's bounds test, which is what makes device results
   agree with the reference interpreter for a program whose buffers have
   different lengths.
+- A subgroup shuffle whose source lane falls outside the active subgroup is
+  refused on both the u32 and f32 value paths instead of returning zero.
 - The operation matrix reads the owner directory for a domain from the tree, so
   an id whose domain moved under another module, such as the optimizer and
   quantization compositions under nn, names the directory that carries its code
@@ -6913,6 +6942,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre_driver_dispatch_launches_total`, the input byte count and the output
   byte count only ever advanced on the resident path. Every backend that does
   not override the method went uncounted.
+- The bounded-interleaving schedule policy runs the forward, reversed, and
+  rotated step orders derived from the declared workgroup extent and refuses
+  when two orders disagree on an output, instead of running the forward order
+  alone.
 - The hygiene scan carries plain-string state across lines, so a fixture
   literal continued with a backslash no longer closes the enclosing
   `#[cfg(test)]` module early and no longer reports test assertions as
@@ -9326,6 +9359,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Tile IR lowering decomposes tile operations into neutral register SSA values
   matching the reference oracle, taking MatrixMma only for supported fragment
   shapes and supporting broadcast elementwise.
+- Tile matmul and tile reduce read the extents the `TileDecl` or `TileLoad`
+  declared instead of inferring a shape from the element count, and refuse an
+  operand whose declared extents do not account for its elements.
 - The gate crates resolve the checkout they report on from the working
   directory at run time, through `structure_gate::workspace_root`, and no
   checkout-identifying variable is declared in the cargo config. A
