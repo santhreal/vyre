@@ -86,7 +86,6 @@ pub use backend::{
 };
 pub use external_resource::{
     CudaExternalMemoryDescriptor, CudaExternalMemoryHandle, CudaExternalResourceImporter,
-    CudaImportedResource,
 };
 pub use stream::CudaLaunchResourceCounts;
 /// CUDA megakernel global-barrier minimization for dependency-typed waves.

@@ -8,6 +8,9 @@
 //! 4. Generation advancement detects and rejects stale frame access.
 //! 5. Device loss invalidates all resources, dependent views, and dependent pipelines.
 //! 6. Runtime variant space enumeration covers every format class and memory kind.
+//! 7. Admission is bounded: the admitted-record table and both dependent
+//!    indexes stop growing under unbounded admission, the newest admission
+//!    survives, and an evicted record leaves no dependent-index entry behind.
 
 use vyre_driver::{
     all_external_memory_kinds, all_format_classes, all_image_formats, all_sync_protocols,

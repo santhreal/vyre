@@ -14,6 +14,7 @@ use crate::release::conformance_op_matrix::{
     evaluate_op_matrix_coverage, read_conformance_required_op_matrix,
 };
 use serde::{Deserialize, Serialize};
+use crate::release::conformance_evidence_semantics::ORACLE_RECORD_ID;
 
 const MIN_RELEASE_OP_PAIRS: usize = 49;
 const MAX_RELEASE_CONFORMANCE_TEXT_BYTES: u64 = 8_388_608;
@@ -99,7 +100,7 @@ impl crate::gate::GateBehavior for ReleaseConformanceGate {
             Err(message) => {
                 report.find(Finding::new(
                     message,
-                    "Pass --backend with one of cuda, wgpu, metal, cpu-ref, reference, or all.",
+                    "Pass --backend with one of cuda, wgpu, metal, reference-oracle, or all.",
                 ));
                 return Ok(report);
             }
@@ -117,8 +118,12 @@ impl crate::gate::GateBehavior for ReleaseConformanceGate {
     }
 }
 
-/// The artifact each backend records, keyed by its normalised backend id.
-const BACKEND_ARTIFACTS: &[(&str, &str)] = &[
+/// The artifact each executor records, keyed by its id.
+///
+/// Three of these are backends and the fourth is the reference oracle, which
+/// dispatches on no device. They share a table because a release reads one
+/// record per executor, not because the oracle is a backend.
+const EXECUTOR_ARTIFACTS: &[(&str, &str)] = &[
     ("cuda", "release/evidence/conformance/cuda-conformance.json"),
     ("wgpu", "release/evidence/conformance/wgpu-conformance.json"),
     (
@@ -126,7 +131,7 @@ const BACKEND_ARTIFACTS: &[(&str, &str)] = &[
         "release/evidence/conformance/metal-conformance.json",
     ),
     (
-        "cpu-ref",
+        ORACLE_RECORD_ID,
         "release/evidence/conformance/reference-conformance.json",
     ),
 ];
@@ -139,27 +144,18 @@ const RELEASE_LOG: &str = "release/evidence/conformance/release-gate-log.json";
 /// states that no device took part rather than naming the devices this host
 /// happens to have. Every other backend dispatches on a device, and the record
 /// names the one it dispatched on.
-fn measurement_of(backend_id: &str) -> crate::evidence_record::MeasurementRecord {
-    if backend_id == "cpu-ref" {
+fn measurement_of(executor_id: &str) -> crate::evidence_record::MeasurementRecord {
+    if executor_id == ORACLE_RECORD_ID {
         crate::evidence_record::MeasurementRecord::HostOnly
     } else {
         crate::evidence_record::MeasurementRecord::device()
     }
 }
 
-/// `reference` is the caller's spelling of the backend the runner calls `cpu-ref`.
-fn backend_id_of(backend: &str) -> &str {
-    if backend == "reference" {
-        "cpu-ref"
-    } else {
-        backend
-    }
-}
-
-fn artifact_of(backend_id: &str) -> Option<&'static str> {
-    BACKEND_ARTIFACTS
+fn artifact_of(executor_id: &str) -> Option<&'static str> {
+    EXECUTOR_ARTIFACTS
         .iter()
-        .find(|(id, _)| *id == backend_id)
+        .find(|(id, _)| *id == executor_id)
         .map(|(_, artifact)| *artifact)
 }
 
@@ -172,11 +168,11 @@ fn artifact_of(backend_id: &str) -> Option<&'static str> {
 fn audit(workspace_root: &Path, config: &Config) -> Inspection {
     let mut inspection = Inspection::new();
     for backend in &config.backends {
-        let backend_id = backend_id_of(backend);
+        let backend_id = backend.as_str();
         let Some(artifact) = artifact_of(backend_id) else {
             inspection.find(Finding::new(
                 format!("unsupported release conformance backend `{backend}`"),
-                "Pass one of cuda, wgpu, metal, cpu-ref, reference, or all.",
+                "Pass one of cuda, wgpu, metal, reference-oracle, or all.",
             ));
             continue;
         };
@@ -324,14 +320,14 @@ fn measure(workspace_root: &Path, config: &Config) -> Inspection {
     let mut inspection = Inspection::new();
     let mut failures = Vec::new();
     for backend in &config.backends {
-        let backend_id = backend_id_of(backend);
+        let backend_id = backend.as_str();
         let Some(artifact) = artifact_of(backend_id) else {
             failures.push(format!(
                 "unsupported release conformance backend `{backend}`"
             ));
             inspection.find(Finding::new(
                 format!("unsupported release conformance backend `{backend}`"),
-                "Pass one of cuda, wgpu, metal, cpu-ref, reference, or all.",
+                "Pass one of cuda, wgpu, metal, reference-oracle, or all.",
             ));
             continue;
         };
@@ -347,11 +343,7 @@ fn measure(workspace_root: &Path, config: &Config) -> Inspection {
         }
         inspection.generates_evidence(artifact, measurement_of(backend_id), &body);
     }
-    inspection.generates_evidence(
-        RELEASE_LOG,
-        crate::evidence_record::MeasurementRecord::HostOnly,
-        &release_log(workspace_root, config, &failures),
-    );
+    inspection.generates_host_evidence(RELEASE_LOG, &release_log(workspace_root, config, &failures));
     inspection
 }
 
@@ -969,7 +961,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
     let mut backends = vec![
         "cuda".to_string(),
         "wgpu".to_string(),
-        "cpu-ref".to_string(),
+        ORACLE_RECORD_ID.to_string(),
     ];
     let mut index = 0;
     while index < args.len() {
@@ -978,7 +970,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
             "--backend" => {
                 let Some(value) = args.get(index + 1) else {
                     return Err(
-                        "Fix: --backend requires cuda, wgpu, metal, cpu-ref, reference, or all."
+                        "Fix: --backend requires cuda, wgpu, metal, reference-oracle, or all."
                             .to_string(),
                     );
                 };
@@ -986,16 +978,16 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
                     vec![
                         "cuda".to_string(),
                         "wgpu".to_string(),
-                        "cpu-ref".to_string(),
+                        ORACLE_RECORD_ID.to_string(),
                     ]
                 } else if matches!(
                     value.as_str(),
-                    "cuda" | "wgpu" | "metal" | "cpu-ref" | "reference"
+                    "cuda" | "wgpu" | "metal" | ORACLE_RECORD_ID
                 ) {
                     vec![value.clone()]
                 } else {
                     return Err(
-                        "Fix: --backend requires cuda, wgpu, metal, cpu-ref, reference, or all."
+                        "Fix: --backend requires cuda, wgpu, metal, reference-oracle, or all."
                             .to_string(),
                     );
                 };
@@ -1277,7 +1269,7 @@ mod tests {
         let descriptor = crate::gate_metadata::descriptor_by_name("release-conformance");
         let mut expected: Vec<&str> = vec![
             artifact_of("cuda").expect("cuda artifact"),
-            artifact_of("cpu-ref").expect("cpu-ref artifact"),
+            artifact_of(ORACLE_RECORD_ID).expect("oracle artifact"),
             artifact_of("wgpu").expect("wgpu artifact"),
             RELEASE_LOG,
         ];

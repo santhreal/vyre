@@ -137,6 +137,61 @@ pub struct NativeToolInput {
     pub is_system_provided: bool,
 }
 
+/// Where one code generator's source is: a single file, or a module directory.
+#[derive(Clone, Copy, Debug)]
+enum GeneratorSource {
+    /// Generator defined in one file, hashed on its own.
+    File(&'static str),
+    /// Generator defined in a directory, hashed at every depth below it.
+    Tree(&'static str),
+}
+
+impl GeneratorSource {
+    /// Digest of the source, or the reason it could not be measured.
+    ///
+    /// # Errors
+    ///
+    /// Propagates `UnmeasuredFact` from the file or tree read.
+    fn digest(self, root: &Path) -> Result<String, ProvenanceError> {
+        match self {
+            Self::File(path) => hash_source_file(root, path),
+            Self::Tree(path) => hash_source_tree(root, path),
+        }
+    }
+}
+
+/// Every code generator whose source digest a provenance document records,
+/// with the artifacts each one writes.
+///
+/// The document builder and the contract test below both read this table, so a
+/// generator added here is checked for a measurable source path without a
+/// second list to keep in step.
+const CODE_GENERATORS: &[(&str, GeneratorSource, &[&str])] = &[
+    (
+        "vyre-macros",
+        GeneratorSource::Tree("vyre-macros/src"),
+        &["registration", "lowering", "dispatch"],
+    ),
+    (
+        "xtask-registry",
+        GeneratorSource::Tree("xtask-registry/src"),
+        &[
+            "docs/generated/op-inventory.toml",
+            "docs/generated/catalog.toml",
+        ],
+    ),
+    (
+        "structure-gate",
+        GeneratorSource::Tree("structure-gate/src"),
+        &["structure-assertions"],
+    ),
+    (
+        "vyre-foundation::source_digest",
+        GeneratorSource::File("vyre-foundation/src/source_digest.rs"),
+        &["VYRE_PTX_LOWERING_DIGEST", "VYRE_NAGA_LOWERING_DIGEST"],
+    ),
+];
+
 /// Code generator or procedural macro artifact.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CodeGeneratorInput {
@@ -349,39 +404,16 @@ impl ReleaseProvenanceAuthority {
             },
         ];
 
-        let code_generators = vec![
-            CodeGeneratorInput {
-                name: "vyre-macros".to_string(),
-                source_digest: hash_directory_or_default(root, "vyre-macros/src"),
-                target_outputs: vec![
-                    "registration".to_string(),
-                    "lowering".to_string(),
-                    "dispatch".to_string(),
-                ],
-            },
-            CodeGeneratorInput {
-                name: "xtask-registry".to_string(),
-                source_digest: hash_file_or_default(root, "xtask/src/gate_metadata.rs"),
-                target_outputs: vec![
-                    "docs/generated/op-inventory.toml".to_string(),
-                    "docs/generated/catalog.toml".to_string(),
-                    "xtask/ci-registry.toml".to_string(),
-                ],
-            },
-            CodeGeneratorInput {
-                name: "structure-gate".to_string(),
-                source_digest: hash_directory_or_default(root, "conform/structure-gate/src"),
-                target_outputs: vec!["structure-assertions".to_string()],
-            },
-            CodeGeneratorInput {
-                name: "vyre-foundation::source_digest".to_string(),
-                source_digest: hash_file_or_default(root, "vyre-foundation/src/source_digest.rs"),
-                target_outputs: vec![
-                    "VYRE_PTX_LOWERING_DIGEST".to_string(),
-                    "VYRE_NAGA_LOWERING_DIGEST".to_string(),
-                ],
-            },
-        ];
+        let code_generators = CODE_GENERATORS
+            .iter()
+            .map(|(name, source, outputs)| {
+                Ok(CodeGeneratorInput {
+                    name: (*name).to_string(),
+                    source_digest: source.digest(root)?,
+                    target_outputs: outputs.iter().map(|output| (*output).to_string()).collect(),
+                })
+            })
+            .collect::<Result<Vec<_>, ProvenanceError>>()?;
 
         let benchmark_baselines = collect_benchmark_baselines(root);
         let schemas = collect_persisted_schemas(root);
@@ -389,7 +421,7 @@ impl ReleaseProvenanceAuthority {
 
         let rustc_version = measure_rustc_version()?;
         let cargo_version = measure_cargo_version()?;
-        let bom_timestamp = timestamp::rfc3339_utc(measure_source_date_epoch(root)?);
+        let bom_timestamp = timestamp::rfc3339_utc(measure_source_date_epoch(root)?)?;
 
         // Canonical deterministic archive hash derived from all components
         let mut archive_hasher = blake3::Hasher::new();
@@ -742,38 +774,76 @@ pub fn is_license_expression_approved(license_expr: &str, allowed_set: &BTreeSet
         || normalized == "BSD-1-Clause"
 }
 
-fn hash_file_or_default(root: &Path, rel_path: &str) -> String {
+/// Digest of one file a code generator is defined in.
+///
+/// # Errors
+///
+/// Returns `UnmeasuredFact` when the path reaches no file. A generator whose
+/// source cannot be read has no measured digest, and a sentinel string in that
+/// field reads as one: `hash_file_or_default` answered `file_missing` and left
+/// `xtask/src/gate_metadata.rs` in the roster after the table became the
+/// `xtask/src/gate_metadata` directory, so the document attested that sentinel
+/// as the generator's source.
+fn hash_source_file(root: &Path, rel_path: &str) -> Result<String, ProvenanceError> {
     let full = root.join(rel_path);
-    if let Ok(bytes) = fs::read(&full) {
-        blake3::hash(&bytes).to_hex().to_string()
-    } else {
-        "file_missing".to_string()
-    }
+    let bytes = fs::read(&full).map_err(|error| ProvenanceError::UnmeasuredFact {
+        fact: format!("source digest of `{rel_path}`"),
+        reason: error.to_string(),
+    })?;
+    Ok(blake3::hash(&bytes).to_hex().to_string())
 }
 
-fn hash_directory_or_default(root: &Path, rel_dir: &str) -> String {
+/// Digest of every file under one directory, at any depth.
+///
+/// The path folded into the hash beside each file's bytes is relative to the
+/// directory. Hashing the absolute path made the digest a fact about where the
+/// checkout sits, so two checkouts of one commit attested different bytes for
+/// the same source. The walk is recursive because a generator's source is its
+/// whole module: `vyre-macros/src/pass` was outside a single-level read, so a
+/// change to the macro pass moved no digest.
+///
+/// # Errors
+///
+/// Returns `UnmeasuredFact` when the directory supplies no file. Git tracks
+/// files rather than directories, so a name whose source moved leaves the
+/// directory behind in every checkout that pulled the deletion, and a name that
+/// never existed leaves nothing. Both hold no content. Reading `.is_dir()` and
+/// answering `dir_missing` kept `conform/structure-gate/src` in the roster after
+/// the crate moved to `structure-gate/src`.
+fn hash_source_tree(root: &Path, rel_dir: &str) -> Result<String, ProvenanceError> {
     let full = root.join(rel_dir);
-    if !full.is_dir() {
-        return "dir_missing".to_string();
-    }
+    let unmeasured = |reason: String| ProvenanceError::UnmeasuredFact {
+        fact: format!("source digest of `{rel_dir}`"),
+        reason,
+    };
     let mut files = Vec::new();
-    if let Ok(entries) = fs::read_dir(&full) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_file() {
-                if let Ok(bytes) = fs::read(&path) {
-                    files.push((path.to_string_lossy().to_string(), bytes));
-                }
-            }
+    for entry in walkdir::WalkDir::new(&full).sort_by_file_name() {
+        let entry = entry.map_err(|error| unmeasured(error.to_string()))?;
+        if !entry.file_type().is_file() {
+            continue;
         }
+        let relative = entry
+            .path()
+            .strip_prefix(&full)
+            .map_err(|error| unmeasured(error.to_string()))?
+            .to_string_lossy()
+            .replace('\\', "/");
+        let bytes = fs::read(entry.path())
+            .map_err(|error| unmeasured(format!("{relative}: {error}")))?;
+        files.push((relative, bytes));
     }
-    files.sort_by(|a, b| a.0.cmp(&b.0));
+    if files.is_empty() {
+        return Err(unmeasured(
+            "the directory supplies no file, so the name reaches no source".to_string(),
+        ));
+    }
+    files.sort_by(|left, right| left.0.cmp(&right.0));
     let mut hasher = blake3::Hasher::new();
     for (name, content) in files {
         hasher.update(name.as_bytes());
         hasher.update(&content);
     }
-    hasher.finalize().to_hex().to_string()
+    Ok(hasher.finalize().to_hex().to_string())
 }
 
 fn collect_benchmark_baselines(root: &Path) -> Vec<BenchmarkBaselineInput> {
@@ -1018,7 +1088,7 @@ mod measurement_tests {
             let seconds = parse_epoch_second(declared, "SOURCE_DATE_EPOCH")
                 .expect("a bare integer is a unix second");
             assert_eq!(
-                timestamp::rfc3339_utc(seconds),
+                timestamp::rfc3339_utc(seconds).expect("a representable second"),
                 rendered,
                 "for {declared:?}"
             );
@@ -1033,6 +1103,97 @@ mod measurement_tests {
         assert!(
             RELEASE_PROVENANCE_SCHEMA_VERSION > 1,
             "a v1 document carries no measured timestamp and must not verify"
+        );
+    }
+
+    /// WHY: a source digest is the fact a rebuild is checked against, so a
+    /// path that reaches no source has to stop the document. Answering a
+    /// sentinel string instead let two generator paths go stale unnoticed,
+    /// `xtask/src/gate_metadata.rs` after it became a directory and
+    /// `conform/structure-gate/src` after the crate moved, and the published
+    /// document recorded `file_missing` and `dir_missing` as their digests.
+    ///
+    /// What it does not catch: a path that reaches source belonging to a
+    /// different generator than the row names.
+    #[test]
+    fn a_generator_path_that_reaches_no_source_stops_the_document() {
+        let root = crate::checkout::checkout_root();
+        let absent_tree = hash_source_tree(&root, "vyre-provenance-absent-directory");
+        let Err(ProvenanceError::UnmeasuredFact { fact, .. }) = absent_tree else {
+            panic!("a directory holding no source produced a digest: {absent_tree:?}");
+        };
+        assert_eq!(fact, "source digest of `vyre-provenance-absent-directory`");
+
+        let empty_tree = tempfile::tempdir().expect("a temporary directory is required");
+        let named = empty_tree.path().join("src");
+        fs::create_dir(&named).expect("the empty directory is required");
+        let measured = hash_source_tree(empty_tree.path(), "src");
+        let Err(ProvenanceError::UnmeasuredFact { fact, .. }) = measured else {
+            panic!("an empty directory produced a digest: {measured:?}");
+        };
+        assert_eq!(fact, "source digest of `src`");
+
+        let absent_file = hash_source_file(&root, "vyre-provenance-absent-file.rs");
+        let Err(ProvenanceError::UnmeasuredFact { fact, .. }) = absent_file else {
+            panic!("an absent file produced a digest: {absent_file:?}");
+        };
+        assert_eq!(fact, "source digest of `vyre-provenance-absent-file.rs`");
+    }
+
+    /// WHY: a generator row names a path, and the path goes stale when the
+    /// source moves. The row set is read from `CODE_GENERATORS` at run time,
+    /// so a generator added later is judged here without a second list.
+    ///
+    /// What it does not catch: a row whose path reaches source that belongs to
+    /// a different generator than the row names.
+    #[test]
+    fn every_generator_in_the_roster_measures_a_digest() {
+        let root = crate::checkout::checkout_root();
+        assert!(
+            !CODE_GENERATORS.is_empty(),
+            "an empty roster proves no generator path"
+        );
+        for (name, source, outputs) in CODE_GENERATORS {
+            let digest = source
+                .digest(&root)
+                .unwrap_or_else(|error| panic!("{name}: {error}"));
+            assert_eq!(
+                digest.len(),
+                64,
+                "{name} carries no blake3 digest: {digest}"
+            );
+            assert!(!outputs.is_empty(), "{name} records no generated artifact");
+        }
+    }
+
+    /// WHY: the digest is published so a rebuild elsewhere can be compared
+    /// against it. Folding the absolute path of each file into the hash made
+    /// the digest a fact about the checkout's location, so the same commit
+    /// unpacked at a second path attested different bytes and every
+    /// comparison failed.
+    #[test]
+    fn a_tree_digest_is_independent_of_where_the_tree_sits() {
+        let first = tempfile::tempdir().expect("a temporary directory is required");
+        let second = tempfile::tempdir().expect("a second temporary directory is required");
+        for base in [first.path(), second.path()] {
+            fs::create_dir_all(base.join("src/pass")).expect("the fixture tree is required");
+            fs::write(base.join("src/lib.rs"), b"pub fn one() {}\n").expect("the fixture is required");
+            fs::write(base.join("src/pass/mod.rs"), b"pub fn two() {}\n")
+                .expect("the nested fixture is required");
+        }
+        let left = hash_source_tree(first.path(), "src").expect("the fixture tree is measurable");
+        let right = hash_source_tree(second.path(), "src").expect("the fixture tree is measurable");
+        assert_eq!(
+            left, right,
+            "the same source at two paths produced two digests"
+        );
+
+        fs::write(first.path().join("src/pass/mod.rs"), b"pub fn three() {}\n")
+            .expect("the nested fixture is rewritable");
+        let changed = hash_source_tree(first.path(), "src").expect("the fixture tree is measurable");
+        assert_ne!(
+            left, changed,
+            "a change below the top level of the tree moved no digest"
         );
     }
 }

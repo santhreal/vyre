@@ -5,7 +5,6 @@
 #[non_exhaustive] pub enum vyre_megakernel::RiskStatistic
 #[non_exhaustive] pub enum vyre_megakernel::TargetCompileError
 #[non_exhaustive] pub enum vyre_megakernel::WorkloadAggregation
-#[non_exhaustive] pub enum vyre_megakernel::legality::FusionRejectionReason
 impl core::convert::From<&vyre_megakernel::TargetCompileError> for vyre_foundation::diagnostics::Diagnostic
 impl core::convert::From<vyre_megakernel::TargetCompileError> for vyre_foundation::diagnostics::Diagnostic
 impl core::default::Default for vyre_megakernel::ExecutionTopology
@@ -74,7 +73,6 @@ impl vyre_megakernel::allocation::AllocationPlan
 impl vyre_megakernel::allocation::AllocationRegion
 impl vyre_megakernel::allocation::ValuePlacement
 impl vyre_megakernel::cost::CostBreakdown
-impl vyre_megakernel::legality::FusionRejectionReason
 impl vyre_megakernel::measure::CandidateMeasurement
 impl vyre_megakernel::measure::DeviceState
 impl vyre_megakernel::measure::MeasurementEnvironment
@@ -273,7 +271,6 @@ pub const fn vyre_megakernel::WorkloadProfile::pushed(self, item: vyre_megakerne
 pub const fn vyre_megakernel::WorkloadProfile::single() -> Self
 pub const fn vyre_megakernel::WorkloadProfile::with_aggregation(self, aggregation: vyre_megakernel::WorkloadAggregation) -> Self
 pub const fn vyre_megakernel::allocation::AllocationPlan::empty() -> Self
-pub const fn vyre_megakernel::legality::FusionRejectionReason::code(self) -> &'static str
 pub const fn vyre_megakernel::measure::DeviceState::is_unreported(&self) -> bool
 pub const fn vyre_megakernel::measure::DeviceState::unreported() -> Self
 pub const fn vyre_megakernel::measure::MeasurementProtocol::launches_per_candidate(&self) -> u32
@@ -797,7 +794,7 @@ pub vyre_megakernel::FusionRecord::legality: alloc::vec::Vec<vyre_megakernel::Di
 pub vyre_megakernel::FusionRecord::members: alloc::vec::Vec<vyre_megakernel::ArtifactNodeId>
 pub vyre_megakernel::FusionRecord::stage: u32
 pub vyre_megakernel::FusionRejection::from: vyre_megakernel::ArtifactNodeId
-pub vyre_megakernel::FusionRejection::reason: vyre_megakernel::legality::FusionRejectionReason
+pub vyre_megakernel::FusionRejection::reason: vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason
 pub vyre_megakernel::FusionRejection::to: vyre_megakernel::ArtifactNodeId
 pub vyre_megakernel::FusionRejection::value: vyre_megakernel::ArtifactValueId
 pub vyre_megakernel::GeometryRecord::barrier_phases: alloc::vec::Vec<vyre_megakernel::BarrierPhaseRecord>
@@ -1165,18 +1162,7 @@ pub vyre_megakernel::cost::CostUnit::Count
 pub vyre_megakernel::cost::CostUnit::Nanoseconds
 pub vyre_megakernel::cost::CostUnit::Registers
 pub vyre_megakernel::legality::FusionDecision::Legal
-pub vyre_megakernel::legality::FusionDecision::Rejected(vyre_megakernel::legality::FusionRejectionReason)
-pub vyre_megakernel::legality::FusionRejectionReason::DependencyCycle
-pub vyre_megakernel::legality::FusionRejectionReason::ExcessiveRegisters
-pub vyre_megakernel::legality::FusionRejectionReason::ExcessiveSharedMemory
-pub vyre_megakernel::legality::FusionRejectionReason::GenuinelyIllegalGeometry
-pub vyre_megakernel::legality::FusionRejectionReason::IncompatibleIterationSpace
-pub vyre_megakernel::legality::FusionRejectionReason::LifecycleBoundary
-pub vyre_megakernel::legality::FusionRejectionReason::MultipleConsumers
-pub vyre_megakernel::legality::FusionRejectionReason::NotProducerConsumer
-pub vyre_megakernel::legality::FusionRejectionReason::SynchronizationBoundary
-pub vyre_megakernel::legality::FusionRejectionReason::UnknownGraphMember
-pub vyre_megakernel::legality::FusionRejectionReason::WorkgroupMismatch
+pub vyre_megakernel::legality::FusionDecision::Rejected(vyre_foundation::execution_plan::fusion::legality::FusionRejectionReason)
 pub vyre_megakernel::measure::CandidateMeasurement::analytic_rank: u32
 pub vyre_megakernel::measure::CandidateMeasurement::estimate: vyre_megakernel::measure::SampleEstimate
 pub vyre_megakernel::measure::CandidateMeasurement::identity: vyre_megakernel::Digest

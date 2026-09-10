@@ -16,20 +16,18 @@
 //! that runtime GPU assertions hold.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::path::Path;
 
 use toml::Value;
 
+use crate::cargo_runner::Diagnostic;
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 use crate::gates::test_target_membership::{self, TestTarget};
+use crate::gates::workflow_commands;
 
 /// The feature that admits a device-acquiring test.
 const FEATURE: &str = "device-tests";
-
-/// Directory containing CI workflows.
-const WORKFLOWS: &str = ".github/workflows";
 
 /// Compile every `device-tests`-admitted test target without running it.
 pub struct DeviceTestCompilation;
@@ -135,60 +133,15 @@ pub fn workflow_feature_pairings(
     tree: &Tree,
 ) -> Result<BTreeMap<String, BTreeSet<String>>, GateError> {
     let mut pairings: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
-    for path in tree.paths() {
-        if path.starts_with(WORKFLOWS) && path.extension().is_some_and(|e| e == "yml") {
-            let text = tree.read(path)?;
-            let collapsed = text
-                .lines()
-                .filter(|line| !line.trim_start().starts_with('#'))
-                .flat_map(str::split_whitespace)
-                .collect::<Vec<_>>()
-                .join(" ");
-            for segment in collapsed.split("./cargo_full").skip(1) {
-                let command = segment.split("- name:").next().unwrap_or(segment);
-                if !command.contains(FEATURE) {
-                    continue;
-                }
-                let mut packages = BTreeSet::new();
-                let mut features = BTreeSet::new();
-                let mut tokens = command.split(' ');
-                while let Some(token) = tokens.next() {
-                    match token {
-                        "-p" | "--package" => {
-                            if let Some(pkg) = tokens.next() {
-                                packages.insert(pkg.trim_matches(['\'', '"']).to_string());
-                            }
-                        }
-                        "--features" => {
-                            if let Some(fts) = tokens.next() {
-                                for ft in fts.trim_matches(['\'', '"']).split(',') {
-                                    if !ft.is_empty() {
-                                        features.insert(ft.to_string());
-                                    }
-                                }
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-                for pkg in packages {
-                    pairings
-                        .entry(pkg)
-                        .or_default()
-                        .extend(features.iter().cloned());
-                }
-            }
+    for command in workflow_commands::enabling_in_tree(tree, FEATURE)? {
+        for package in command.packages {
+            pairings
+                .entry(package)
+                .or_default()
+                .extend(command.features.iter().cloned());
         }
     }
     Ok(pairings)
-}
-
-/// One compiler diagnostic parsed from `--message-format=json`.
-struct Diagnostic {
-    target: Option<String>,
-    file: Option<String>,
-    line: Option<u32>,
-    message: String,
 }
 
 /// Run cargo check for one package's admitted test targets and collect any compiler errors.
@@ -198,40 +151,15 @@ fn check_package_targets(
     targets: &[TestTarget],
     features: &BTreeSet<String>,
 ) -> Result<Vec<Finding>, GateError> {
-    let cargo = crate::cargo_runner::binary(root);
     let feature_list = features.iter().cloned().collect::<Vec<_>>().join(",");
-
-    let mut cmd = Command::new(&cargo);
-    cmd.arg("check")
-        .arg("-p")
-        .arg(package)
-        .arg("--features")
-        .arg(&feature_list)
-        .arg("--message-format=json");
-
+    let mut arguments = vec!["check", "-p", package, "--features", &feature_list];
     for target in targets {
-        cmd.arg("--test").arg(&target.name);
+        arguments.push("--test");
+        arguments.push(&target.name);
     }
-    cmd.current_dir(root);
+    let run = crate::cargo_runner::diagnostics(root, &arguments, false)?;
 
-    let output = cmd.output().map_err(|error| {
-        GateError::new(
-            format!("cannot run `cargo check -p {package} --features {feature_list}`: {error}"),
-            "restore the cargo_full wrapper at the workspace root",
-        )
-    })?;
-
-    let target_names: BTreeSet<String> = targets.iter().map(|t| t.name.clone()).collect();
-    let primary_target = targets
-        .first()
-        .map(|t| t.name.as_str())
-        .unwrap_or("all_tests");
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let diagnostics = parse_compiler_diagnostics(&stdout);
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    if let Some(missing) = crate::cargo_runner::unmeasured(&stderr) {
+    if let Some(missing) = run.unmeasured {
         return Ok(vec![Finding::new(
             format!(
                 "`cargo check -p {package}` measured nothing: the build named `{missing}`, which the build directory does not carry"
@@ -240,101 +168,56 @@ fn check_package_targets(
         )]);
     }
 
-    if !output.status.success() && diagnostics.is_empty() {
+    let target_names: BTreeSet<&str> = targets.iter().map(|target| target.name.as_str()).collect();
+    let primary_target = targets
+        .first()
+        .map(|target| target.name.as_str())
+        .unwrap_or("all_tests");
+
+    if run.failed_silently() {
         return Ok(vec![Finding::new(
             format!(
                 "`cargo check -p {package} --features {feature_list}` exited {} and emitted no compiler diagnostic: {}",
-                output.status.code().unwrap_or(-1),
-                stderr.trim()
+                run.code(),
+                run.stderr.trim()
             ),
             format!("repair the build of test target `{primary_target}` in `{package}` or remove its `{FEATURE}` admission"),
         )]);
     }
 
-    let mut findings = Vec::new();
-    for diag in diagnostics {
-        let tgt = match &diag.target {
-            Some(t) if target_names.contains(t) => t.as_str(),
-            _ => primary_target,
-        };
-        let msg = format!("{package} (test target `{tgt}`): {}", diag.message);
-        let fix = format!(
-            "repair test target `{tgt}` in `{package}` or remove its `{FEATURE}` admission"
-        );
-
-        let finding = match (diag.file, diag.line) {
-            (Some(file), Some(line)) => {
-                let file_path = PathBuf::from(file);
-                let relative = file_path.strip_prefix(root).unwrap_or(&file_path);
-                Finding::at(relative, line, msg, fix)
-            }
-            (Some(file), None) => {
-                let file_path = PathBuf::from(file);
-                let relative = file_path.strip_prefix(root).unwrap_or(&file_path);
-                Finding::in_file(relative, msg, fix)
-            }
-            (None, _) => Finding::new(msg, fix),
-        };
-        findings.push(finding);
-    }
+    let findings = run
+        .found
+        .iter()
+        .map(|diagnostic| attribute(root, package, diagnostic, &target_names, primary_target))
+        .collect();
 
     Ok(findings)
 }
 
-/// Parse compiler error diagnostics from `--message-format=json` lines.
-fn parse_compiler_diagnostics(stdout: &str) -> Vec<Diagnostic> {
-    let mut diagnostics = Vec::new();
-    for line in stdout.lines() {
-        let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
-            continue;
-        };
-        if value.get("reason").and_then(serde_json::Value::as_str) != Some("compiler-message") {
-            continue;
-        }
-        let Some(message) = value.get("message") else {
-            continue;
-        };
-        let level = message.get("level").and_then(serde_json::Value::as_str);
-        if level != Some("error") {
-            continue;
-        }
-        let text = message
-            .get("message")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("the compiler reported an error with no message")
-            .to_string();
-
-        let target_name = value
-            .get("target")
-            .and_then(|t| t.get("name"))
-            .and_then(serde_json::Value::as_str)
-            .map(str::to_string);
-
-        let primary = message
-            .get("spans")
-            .and_then(serde_json::Value::as_array)
-            .and_then(|spans| {
-                spans.iter().find(|span| {
-                    span.get("is_primary")
-                        .and_then(serde_json::Value::as_bool)
-                        .unwrap_or(false)
-                })
-            });
-
-        diagnostics.push(Diagnostic {
-            target: target_name,
-            file: primary
-                .and_then(|span| span.get("file_name"))
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_string),
-            line: primary
-                .and_then(|span| span.get("line_start"))
-                .and_then(serde_json::Value::as_u64)
-                .and_then(|line| u32::try_from(line).ok()),
-            message: text,
-        });
-    }
-    diagnostics
+/// Attribute one diagnostic to the test target whose build it explains.
+///
+/// Cargo names the target it was building, and that name is trusted only when
+/// this invocation asked for it. Anything else is attributed to the first
+/// target requested: a diagnostic raised while building a dependency of the
+/// test target is still the reason that target does not build, and dropping it
+/// would let the gate report a package that does not compile as clean.
+fn attribute(
+    root: &Path,
+    package: &str,
+    diagnostic: &Diagnostic,
+    target_names: &BTreeSet<&str>,
+    primary_target: &str,
+) -> Finding {
+    let target = match diagnostic.target.as_deref() {
+        Some(named) if target_names.contains(named) => named,
+        _ => primary_target,
+    };
+    let message = format!("{package} (test target `{target}`): {}", diagnostic.message);
+    let fix =
+        format!("repair test target `{target}` in `{package}` or remove its `{FEATURE}` admission");
+    diagnostic
+        .place(root, &message, &fix)
+        .unwrap_or_else(|| Finding::new(message.clone(), fix.clone()))
 }
 
 #[cfg(test)]
@@ -431,37 +314,6 @@ jobs:
         );
     }
 
-    /// WHY: a compiler error diagnostic is converted into an actionable finding naming package and target.
-    #[test]
-    fn diagnostic_to_finding_formats_message_and_fix() {
-        let diag = Diagnostic {
-            target: Some("all_tests".to_string()),
-            file: Some("vyre-driver-wgpu/tests/connected_graph.rs".to_string()),
-            line: Some(42),
-            message: "no method named `target_payload` found".to_string(),
-        };
-        let finding_msg = format!(
-            "vyre-driver-wgpu (test target `all_tests`): {}",
-            diag.message
-        );
-        let fix = "repair test target `all_tests` in `vyre-driver-wgpu` or remove its `device-tests` admission";
-        let finding = Finding::at(
-            Path::new("vyre-driver-wgpu/tests/connected_graph.rs"),
-            42,
-            finding_msg,
-            fix,
-        );
-        assert_eq!(
-            finding.message,
-            "vyre-driver-wgpu (test target `all_tests`): no method named `target_payload` found"
-        );
-        assert_eq!(
-            finding.fix,
-            "repair test target `all_tests` in `vyre-driver-wgpu` or remove its `device-tests` admission"
-        );
-        assert_eq!(finding.line, Some(42));
-    }
-
     /// WHY: a package declaring `device-tests` in `[features]` is discovered and its admitted targets enumerated.
     #[test]
     fn admitted_test_targets_discovers_declaring_members() {
@@ -516,19 +368,53 @@ path = "tests/all_tests.rs"
         assert_eq!(a_targets[0].name, "all_tests");
     }
 
-    /// WHY: compiler JSON diagnostics parsing extracts error messages and ignores warnings and notes.
+    /// WHY: attribution is what makes a finding actionable, and it is the one
+    /// decision this gate makes about a diagnostic. A diagnostic raised while
+    /// building something other than a requested test target still explains why
+    /// that target does not build, so it is attributed to the first target
+    /// asked for rather than dropped or blamed on a target nobody requested.
     #[test]
-    fn compiler_json_diagnostics_extracts_errors_and_ignores_warnings() {
-        let json_output = r#"
-{"reason":"compiler-message","package_id":"vyre-foo 0.8.0","target":{"name":"all_tests","kind":["test"]},"message":{"level":"warning","message":"unused variable","spans":[]}}
-{"reason":"compiler-message","package_id":"vyre-foo 0.8.0","target":{"name":"all_tests","kind":["test"]},"message":{"level":"error","message":"no method named `target_payload` found","spans":[{"file_name":"tests/foo.rs","line_start":12,"is_primary":true}]}}
-{"reason":"build-finished","success":false}
-"#;
-        let diags = parse_compiler_diagnostics(json_output);
-        assert_eq!(diags.len(), 1);
-        assert_eq!(diags[0].target.as_deref(), Some("all_tests"));
-        assert_eq!(diags[0].file.as_deref(), Some("tests/foo.rs"));
-        assert_eq!(diags[0].line, Some(12));
-        assert_eq!(diags[0].message, "no method named `target_payload` found");
+    fn a_diagnostic_naming_an_unrequested_target_is_attributed_to_the_requested_one() {
+        let requested: BTreeSet<&str> = ["all_tests"].into_iter().collect();
+        let root = Path::new("/checkout");
+
+        let named = Diagnostic {
+            target: Some("all_tests".to_string()),
+            file: Some("/checkout/vyre-driver-wgpu/tests/connected_graph.rs".to_string()),
+            line: Some(42),
+            message: "no method named `target_payload` found".to_string(),
+        };
+        let finding = attribute(root, "vyre-driver-wgpu", &named, &requested, "all_tests");
+        assert_eq!(
+            finding.message,
+            "vyre-driver-wgpu (test target `all_tests`): no method named `target_payload` found"
+        );
+        assert_eq!(
+            finding.fix,
+            "repair test target `all_tests` in `vyre-driver-wgpu` or remove its `device-tests` admission"
+        );
+        assert_eq!(finding.line, Some(42));
+        assert_eq!(
+            finding.file.as_deref(),
+            Some(Path::new("vyre-driver-wgpu/tests/connected_graph.rs")),
+            "an absolute compiler path is stated relative to the checkout"
+        );
+
+        let elsewhere = Diagnostic {
+            target: Some("build-script-build".to_string()),
+            file: None,
+            line: None,
+            message: "linker `cc` not found".to_string(),
+        };
+        let finding = attribute(root, "vyre-driver-wgpu", &elsewhere, &requested, "all_tests");
+        assert_eq!(
+            finding.message,
+            "vyre-driver-wgpu (test target `all_tests`): linker `cc` not found",
+            "a diagnostic from outside the requested targets still explains their build"
+        );
+        assert!(
+            finding.file.is_none(),
+            "a diagnostic with no span states no location"
+        );
     }
 }

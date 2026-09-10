@@ -95,55 +95,16 @@ impl crate::gate::GateBehavior for CommittedEvidenceProvenance {
     }
 }
 
-/// The newest commit touching each committed artifact under [`EVIDENCE_DIR`].
-///
-/// One history walk answers every path. `git log -1 -- <path>` per artifact
-/// walks the whole history again for each one, which is what made this gate
-/// cost tens of minutes on a network checkout: the commits arrive newest-first,
-/// so the first mention of a path is the commit that carries it.
+/// The newest commit touching each committed artifact under [`EVIDENCE_DIR`],
+/// as this gate's error type.
 fn carrier_commits(ctx: &GateCtx) -> Result<BTreeMap<String, String>, GateError> {
-    let log = git(
-        ctx,
-        &[
-            "-c",
-            "core.quotePath=false",
-            "log",
-            "--format=%H",
-            "--name-only",
-            "--no-renames",
-            "--",
-            EVIDENCE_DIR,
-        ],
-    )?;
-    let mut carriers = BTreeMap::new();
-    let mut commit = String::new();
-    for line in String::from_utf8_lossy(&log).lines() {
-        if line.is_empty() {
-            continue;
-        }
-        if is_commit_id(line) {
-            commit = line.to_string();
-            continue;
-        }
-        if commit.is_empty() {
-            return Err(GateError::new(
-                format!("git log reported path `{line}` before any commit"),
-                "read the log as commit-then-paths records",
-            ));
-        }
-        carriers
-            .entry(line.to_string())
-            .or_insert_with(|| commit.clone());
-    }
-    Ok(carriers)
-}
-
-/// Whether a log line is a commit id rather than a path.
-///
-/// A path under `release/evidence` cannot be 40 hex characters, so the two
-/// record kinds are distinguishable without a separator.
-fn is_commit_id(line: &str) -> bool {
-    line.len() == 40 && line.bytes().all(|byte| byte.is_ascii_hexdigit())
+    source_provenance::carrier_commits(&ctx.root, EVIDENCE_DIR).map_err(|issue| {
+        GateError::new(
+            issue,
+            "judge a checkout with its history present; a shallow clone cannot resolve the \
+             commit an artifact was recorded against",
+        )
+    })
 }
 
 /// Run one git command in the judged tree, or name what could not be read.

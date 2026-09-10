@@ -1,5 +1,5 @@
 {
-  "source_fingerprint": "git:3cfaa0ef1ac2f973c5c9b7be833ce2c0d92fbb6a:dirty=true:worktree=1a84f9b42d0ec3966c0bdfb981195799375b3803273dd0c87c96e1bc6c4cb782",
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"a7e465caa5988e7852bdd9bacbc142045cc47c54","commit_timestamp":"1789032719","parent_commit":"0dab1d138112ddf7b8bcdddb988829588b890d7d","dirty":true,"source_fingerprint":"git:a7e465caa5988e7852bdd9bacbc142045cc47c54:dirty=true:worktree=a64143202249db38634f874d499f55ac0bac82d3eeafa1ea6d1dc70c770bd61b"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 3,
   "command_count": 16,
   "artifact_count": 75,

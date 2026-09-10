@@ -280,19 +280,10 @@ impl DeviceFacts {
     /// deviceless host into a clean record.
     #[must_use]
     pub fn probe() -> Vec<Self> {
-        let Ok(output) = Command::new("nvidia-smi")
-            .args(["--query-gpu=name,driver_version", "--format=csv,noheader"])
-            .output()
-        else {
-            return Vec::new();
-        };
-        if !output.status.success() {
-            return Vec::new();
-        }
-        String::from_utf8_lossy(&output.stdout)
-            .lines()
-            .filter_map(Self::parse_csv_row)
-            .collect()
+        crate::device_probe::query_rows(
+            &["--query-gpu=name,driver_version", "--format=csv,noheader"],
+            Self::parse_csv_row,
+        )
     }
 
     /// One `name, driver_version` row of the canonical device query.

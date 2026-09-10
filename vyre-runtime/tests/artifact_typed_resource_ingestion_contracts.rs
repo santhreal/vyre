@@ -1,6 +1,6 @@
 //! Typed external-resource ingestion transaction and binding closure contracts.
 //!
-//! BACKLOG row 49 requires one bounded typed-resource ingestion transaction that maps
+//! The contract requires one bounded typed-resource ingestion transaction that maps
 //! files, byte ranges, generated data, or caller memory into artifact value ids through
 //! concrete-driver transfers, verifying identity, lifetime, completion, and multi-entry ABIs.
 
@@ -248,7 +248,7 @@ fn typed_resource_ingestion_validates_abi_and_workspace_bindings() {
     session.free_workspace(workspace).expect("free workspace");
 }
 
-/// WHY: BACKLOG row 49 contract - a partially valid dataset leaves no allocation dispatch-visible.
+/// WHY: contract: a partially valid dataset leaves no allocation dispatch-visible.
 #[test]
 fn partially_valid_dataset_leaves_no_allocation_dispatch_visible() {
     let (session, materializer, _artifact) = create_test_session();
@@ -342,7 +342,7 @@ fn partially_valid_dataset_leaves_no_allocation_dispatch_visible() {
     session.free_workspace(workspace).expect("free workspace");
 }
 
-/// WHY: BACKLOG row 49 contract - a mismatched typed schema is rejected before upload.
+/// WHY: contract: a mismatched typed schema is rejected before upload.
 #[test]
 fn mismatched_typed_schema_is_rejected_before_upload() {
     let (session, materializer, _artifact) = create_test_session();
@@ -471,7 +471,7 @@ fn mismatched_typed_schema_is_rejected_before_upload() {
     session.free_workspace(workspace).expect("free workspace");
 }
 
-/// WHY: BACKLOG row 49 maps files, byte ranges, generated data, caller memory, and pre-allocated resident resources.
+/// WHY: The contract maps files, byte ranges, generated data, caller memory, and pre-allocated resident resources.
 #[test]
 fn typed_resource_ingestion_supports_all_source_variants() {
     let (session, _materializer, _artifact) = create_test_session();

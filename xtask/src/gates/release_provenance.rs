@@ -32,20 +32,10 @@ impl GateBehavior for ReleaseProvenanceGate {
             }
         };
 
-        // 1. Verify every dependency is policy-approved and has a valid license classification
-        let mut unapproved_count = 0usize;
-        for dep in &authority.dependencies {
-            if !dep.is_policy_approved {
-                unapproved_count += 1;
-                inspection.find(Finding::in_file(
-                    PathBuf::from("Cargo.lock"),
-                    format!(
-                        "dependency '{}@{}' has unapproved license '{}' or violates policy in deny.toml",
-                        dep.name, dep.version, dep.license
-                    ),
-                    "choose an approved license or replace the dependency with a policy-compliant alternative",
-                ));
-            }
+        let unapproved = unapproved_license_findings(&authority);
+        let unapproved_count = unapproved.len();
+        for finding in unapproved {
+            inspection.find(finding);
         }
 
         // 2. Verify build script safety and bounded read contracts
@@ -122,63 +112,91 @@ impl GateBehavior for ReleaseProvenanceGate {
     }
 }
 
+/// One finding per dependency whose license the policy does not admit.
+///
+/// The verdict is separated from the run so it can be proven without a
+/// checkout: asking the live tree whether its own dependencies are approved
+/// answers what the tree happens to hold, not what the gate does with an
+/// unapproved one, and the tree is green precisely when that path never runs.
+fn unapproved_license_findings(authority: &ReleaseProvenanceAuthority) -> Vec<Finding> {
+    authority
+        .dependencies
+        .iter()
+        .filter(|dependency| !dependency.is_policy_approved)
+        .map(|dependency| {
+            Finding::in_file(
+                PathBuf::from("Cargo.lock"),
+                format!(
+                    "dependency '{}@{}' has unapproved license '{}' or violates policy in deny.toml",
+                    dependency.name, dependency.version, dependency.license
+                ),
+                "choose an approved license or replace the dependency with a policy-compliant alternative",
+            )
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
+
     use crate::checkout::checkout_root;
+    use crate::provenance::PinnedCrateDependency;
 
-    #[test]
-    fn release_provenance_gate_enforces_clean_tree_and_rejects_unapproved_dependencies() {
-        let root = checkout_root();
-        let authority = ReleaseProvenanceAuthority::inspect_workspace(&root)
-            .expect("inspect workspace for release provenance");
-
-        assert!(!authority.dependencies.is_empty());
-        assert!(authority.is_offline_capable);
-        assert!(!authority.lockfile_digest.is_empty());
-
-        for dep in &authority.dependencies {
-            assert!(
-                dep.is_policy_approved,
-                "dependency '{}@{}' with license '{}' must be policy-approved",
-                dep.name, dep.version, dep.license
-            );
+    fn dependency(name: &str, license: &str, approved: bool) -> PinnedCrateDependency {
+        PinnedCrateDependency {
+            name: name.to_string(),
+            version: "1.0.0".to_string(),
+            checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                .to_string(),
+            source: "registry+https://github.com/rust-lang/crates.io-index".to_string(),
+            license: license.to_string(),
+            is_policy_approved: approved,
         }
     }
 
+    /// WHY: this is the one verdict the gate reaches on its own, and a green
+    /// checkout never exercises it. A test that asked the live tree whether its
+    /// dependencies are approved passed on the answer being yes and would go on
+    /// passing if the mapping to a finding were deleted. The finding has to name
+    /// the dependency and the license, because a reader of `Cargo.lock` has no
+    /// other way to tell which of several hundred rows the gate refused.
     #[test]
-    fn release_provenance_gate_rejects_banned_dependencies() {
+    fn an_unapproved_license_becomes_a_finding_naming_the_dependency() {
         let root = checkout_root();
         let mut authority = ReleaseProvenanceAuthority::inspect_workspace(&root)
             .expect("inspect workspace for release provenance");
+        authority.dependencies = vec![
+            dependency("approved-crate", "MIT", true),
+            dependency("agpl-crate", "AGPL-3.0-only", false),
+        ];
 
-        // Simulate injection of banned dependency
-        authority
-            .dependencies
-            .push(crate::provenance::PinnedCrateDependency {
-                name: "proc-macro1".to_string(),
-                version: "1.0.0".to_string(),
-                checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                    .to_string(),
-                source: "registry+https://github.com/rust-lang/crates.io-index".to_string(),
-                license: "MIT".to_string(),
-                is_policy_approved: false,
-            });
+        let findings = unapproved_license_findings(&authority);
+        assert_eq!(findings.len(), 1, "only the unapproved dependency is named");
+        assert!(
+            findings[0].message.contains("agpl-crate@1.0.0")
+                && findings[0].message.contains("AGPL-3.0-only"),
+            "the finding must name the dependency and its license: {}",
+            findings[0].message
+        );
+        assert_eq!(findings[0].file.as_deref(), Some(Path::new("Cargo.lock")));
 
-        let unapproved = authority
-            .dependencies
-            .iter()
-            .filter(|d| !d.is_policy_approved)
-            .count();
-        assert_eq!(unapproved, 1);
+        authority.dependencies = vec![dependency("approved-crate", "MIT", true)];
+        assert!(
+            unapproved_license_findings(&authority).is_empty(),
+            "an approved dependency states nothing"
+        );
     }
 
+    /// WHY: a build script that reaches the network makes the build
+    /// irreproducible and unattributable, and the release provenance record
+    /// this gate writes would state otherwise.
     #[test]
-    fn release_provenance_gate_rejects_network_reading_build_script() {
+    fn a_build_script_reaching_the_network_is_refused() {
         let root = checkout_root();
         let mut authority = ReleaseProvenanceAuthority::inspect_workspace(&root)
             .expect("inspect workspace for release provenance");
-
         authority
             .build_scripts
             .push(crate::provenance::BuildScriptContract {
@@ -190,11 +208,12 @@ mod tests {
                 has_bounded_reads: true,
             });
 
-        let result = authority.verify_build_scripts(&root);
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("network access is strictly forbidden"));
+        let error = authority
+            .verify_build_scripts(&root)
+            .expect_err("a network-reading build script is refused");
+        assert!(
+            error.to_string().contains("network access is strictly forbidden"),
+            "{error}"
+        );
     }
 }

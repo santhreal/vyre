@@ -1,13 +1,13 @@
 {
-  "source_fingerprint": "git:585fbeae622524cd57d1c874cfcc1afcd8cfd148:dirty=true:worktree=bb4cc14eccd5d7350b8e701677c767edc7dfdfdb793c52ec16da550af621fd3f",
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"a7e465caa5988e7852bdd9bacbc142045cc47c54","commit_timestamp":"1789032719","parent_commit":"0dab1d138112ddf7b8bcdddb988829588b890d7d","dirty":true,"source_fingerprint":"git:a7e465caa5988e7852bdd9bacbc142045cc47c54:dirty=true:worktree=a64143202249db38634f874d499f55ac0bac82d3eeafa1ea6d1dc70c770bd61b"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 6,
-  "op_count": 349,
-  "distinct_op_count": 349,
-  "catalog_required_op_count": 349,
-  "catalog_covered_op_count": 349,
+  "op_count": 358,
+  "distinct_op_count": 358,
+  "catalog_required_op_count": 358,
+  "catalog_covered_op_count": 358,
   "missing_catalog_ops": [],
-  "release_backend_row_count": 1047,
-  "supported_release_backend_row_count": 1047,
+  "release_backend_row_count": 1074,
+  "supported_release_backend_row_count": 1074,
   "release_backend_rows": [
     "vyre-primitives::hardware::bit_reverse_u32:reference:supported",
     "vyre-primitives::hardware::bit_reverse_u32:cuda:supported",
@@ -1023,6 +1023,9 @@
     "vyre-libs::vfs::resolve:reference:supported",
     "vyre-libs::vfs::resolve:cuda:supported",
     "vyre-libs::vfs::resolve:wgpu:supported",
+    "vyre-libs::visual::apply_scissor_rect:reference:supported",
+    "vyre-libs::visual::apply_scissor_rect:cuda:supported",
+    "vyre-libs::visual::apply_scissor_rect:wgpu:supported",
     "vyre-libs::visual::blur:reference:supported",
     "vyre-libs::visual::blur:cuda:supported",
     "vyre-libs::visual::blur:wgpu:supported",
@@ -1035,6 +1038,15 @@
     "vyre-libs::visual::composite:reference:supported",
     "vyre-libs::visual::composite:cuda:supported",
     "vyre-libs::visual::composite:wgpu:supported",
+    "vyre-libs::visual::composite_blend:reference:supported",
+    "vyre-libs::visual::composite_blend:cuda:supported",
+    "vyre-libs::visual::composite_blend:wgpu:supported",
+    "vyre-libs::visual::cull_boxes_2d:reference:supported",
+    "vyre-libs::visual::cull_boxes_2d:cuda:supported",
+    "vyre-libs::visual::cull_boxes_2d:wgpu:supported",
+    "vyre-libs::visual::dirty_region_patch:reference:supported",
+    "vyre-libs::visual::dirty_region_patch:cuda:supported",
+    "vyre-libs::visual::dirty_region_patch:wgpu:supported",
     "vyre-libs::visual::downsample:reference:supported",
     "vyre-libs::visual::downsample:cuda:supported",
     "vyre-libs::visual::downsample:wgpu:supported",
@@ -1050,9 +1062,24 @@
     "vyre-libs::visual::gradient:reference:supported",
     "vyre-libs::visual::gradient:cuda:supported",
     "vyre-libs::visual::gradient:wgpu:supported",
+    "vyre-libs::visual::layout_prefix_scan:reference:supported",
+    "vyre-libs::visual::layout_prefix_scan:cuda:supported",
+    "vyre-libs::visual::layout_prefix_scan:wgpu:supported",
     "vyre-libs::visual::packed_rgba_map:reference:supported",
     "vyre-libs::visual::packed_rgba_map:cuda:supported",
     "vyre-libs::visual::packed_rgba_map:wgpu:supported",
+    "vyre-libs::visual::path_raster:reference:supported",
+    "vyre-libs::visual::path_raster:cuda:supported",
+    "vyre-libs::visual::path_raster:wgpu:supported",
+    "vyre-libs::visual::resample:reference:supported",
+    "vyre-libs::visual::resample:cuda:supported",
+    "vyre-libs::visual::resample:wgpu:supported",
+    "vyre-libs::visual::rgba_to_grayscale:reference:supported",
+    "vyre-libs::visual::rgba_to_grayscale:cuda:supported",
+    "vyre-libs::visual::rgba_to_grayscale:wgpu:supported",
+    "vyre-libs::visual::text_run:reference:supported",
+    "vyre-libs::visual::text_run:cuda:supported",
+    "vyre-libs::visual::text_run:wgpu:supported",
     "vyre-libs::visual::upsample:reference:supported",
     "vyre-libs::visual::upsample:cuda:supported",
     "vyre-libs::visual::upsample:wgpu:supported"
@@ -48717,6 +48744,147 @@
       "blockers": []
     },
     {
+      "op_id": "vyre-libs::visual::apply_scissor_rect",
+      "backend": "reference",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::apply_scissor_rect",
+      "backend": "cuda",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::apply_scissor_rect",
+      "backend": "wgpu",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
       "op_id": "vyre-libs::visual::blur",
       "backend": "reference",
       "status": "supported",
@@ -49235,6 +49403,429 @@
     },
     {
       "op_id": "vyre-libs::visual::composite",
+      "backend": "wgpu",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::composite_blend",
+      "backend": "reference",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::composite_blend",
+      "backend": "cuda",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::composite_blend",
+      "backend": "wgpu",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::cull_boxes_2d",
+      "backend": "reference",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::cull_boxes_2d",
+      "backend": "cuda",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::cull_boxes_2d",
+      "backend": "wgpu",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::dirty_region_patch",
+      "backend": "reference",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::dirty_region_patch",
+      "backend": "cuda",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::dirty_region_patch",
       "backend": "wgpu",
       "status": "supported",
       "test_paths": [
@@ -49986,6 +50577,147 @@
       "blockers": []
     },
     {
+      "op_id": "vyre-libs::visual::layout_prefix_scan",
+      "backend": "reference",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::layout_prefix_scan",
+      "backend": "cuda",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::layout_prefix_scan",
+      "backend": "wgpu",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
       "op_id": "vyre-libs::visual::packed_rgba_map",
       "backend": "reference",
       "status": "supported",
@@ -50081,6 +50813,570 @@
     },
     {
       "op_id": "vyre-libs::visual::packed_rgba_map",
+      "backend": "wgpu",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::path_raster",
+      "backend": "reference",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::path_raster",
+      "backend": "cuda",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::path_raster",
+      "backend": "wgpu",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::resample",
+      "backend": "reference",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::resample",
+      "backend": "cuda",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::resample",
+      "backend": "wgpu",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::rgba_to_grayscale",
+      "backend": "reference",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::rgba_to_grayscale",
+      "backend": "cuda",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::rgba_to_grayscale",
+      "backend": "wgpu",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::text_run",
+      "backend": "reference",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::text_run",
+      "backend": "cuda",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth/mod.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": false,
+          "source": "no referenced test exercises the unsupported diagnostic path"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::text_run",
       "backend": "wgpu",
       "status": "supported",
       "test_paths": [
@@ -50282,14 +51578,13 @@
   "op_matrix_blocked_release_rows": [],
   "op_matrix_errors": [],
   "duplicate_op_ids": [],
-  "fixture_required_count": 349,
-  "fixture_input_count": 349,
-  "expected_output_count": 349,
+  "fixture_required_count": 358,
+  "fixture_input_count": 358,
+  "expected_output_count": 358,
   "dispatch_backends": [
     "cuda",
     "spirv",
-    "wgpu",
-    "cpu-ref"
+    "wgpu"
   ],
   "ci_blocking_gate_count": 5,
   "ci_gates": [
@@ -52758,6 +54053,13 @@
       "tolerance_ulp": 0
     },
     {
+      "id": "vyre-libs::visual::apply_scissor_rect",
+      "requires_fixture": true,
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
       "id": "vyre-libs::visual::blur",
       "requires_fixture": true,
       "has_test_inputs": true,
@@ -52780,6 +54082,27 @@
     },
     {
       "id": "vyre-libs::visual::composite",
+      "requires_fixture": true,
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-libs::visual::composite_blend",
+      "requires_fixture": true,
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-libs::visual::cull_boxes_2d",
+      "requires_fixture": true,
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-libs::visual::dirty_region_patch",
       "requires_fixture": true,
       "has_test_inputs": true,
       "has_expected_output": true,
@@ -52821,7 +54144,42 @@
       "tolerance_ulp": 0
     },
     {
+      "id": "vyre-libs::visual::layout_prefix_scan",
+      "requires_fixture": true,
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
       "id": "vyre-libs::visual::packed_rgba_map",
+      "requires_fixture": true,
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-libs::visual::path_raster",
+      "requires_fixture": true,
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-libs::visual::resample",
+      "requires_fixture": true,
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-libs::visual::rgba_to_grayscale",
+      "requires_fixture": true,
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-libs::visual::text_run",
       "requires_fixture": true,
       "has_test_inputs": true,
       "has_expected_output": true,
@@ -52899,634 +54257,7 @@
     }
   ],
   "blockers": [
-    "OP_MATRIX claims `vyre-primitives::hardware::bit_reverse_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::fma_f32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::inverse_sqrt_f32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::popcount_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::storage_barrier:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::subgroup_add:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::subgroup_ballot:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::subgroup_shuffle:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::workgroup_barrier:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::and:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::and_not:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::equal:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::four_russians_apply_byte_lut:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::four_russians_dense_matvec_byte_lut:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::or:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::select1_query:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::stochastic_and_mul:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::subset_of:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::builder::indexed_map:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::builder::strided_accumulate:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::decode::base64:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::decode::encodex:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::decode::hex:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::decode::inflate_stored_block:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::decode::rle_segment_lengths:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::decode::ziftsieve_literal_copy:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::geom::clifford2_geometric_product:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::geom::tfn_scalar_mix:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::ast_walk_postorder:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::ast_walk_preorder:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::csr_backward_or_changed:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::csr_backward_traverse:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::csr_forward_or_changed:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::csr_forward_traverse:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::csr_forward_traverse_excluding:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::csr_frontier_degree_sum:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::csr_queue_strided_forward_traverse:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::dominator_frontier:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::dominator_frontier_pred_check:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::dominator_tree:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::dominator_tree_depth:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::dominator_tree_intersect_step:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::dominator_tree_lca:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::functor_apply:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::level_wave:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::monoidal_compose:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::motif:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::path_reconstruct:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::persistent_bfs:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::persistent_bfs_step:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::scc_decompose:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::sum_product_evaluate:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::sum_product_evaluate_leveled:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::tensor_flow_forward:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::tensor_flow_propagate_edges:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::union_find:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::vast_descend_leftmost_leaf:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::vast_walk_postorder:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::vast_walk_preorder:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::blake3_compress:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::blake3_g:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::blake3_round:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::multi_hash:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::ntt_butterfly_stage:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::sparse_fft_bin_hash:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::label::nodeset_filter:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::label::resolve_family:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::llm::logit_adjust:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::llm::paged_kv_append:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::llm::paged_kv_gather:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::llm::sample_token:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::logical::nand:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::logical::nor:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::algebra::bool_semiring_matmul:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::algebra::join:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::algebra::meet:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::algebra::minplus_mul:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::algebra::sketch_mix:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::amg_v_cycle:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::amg_v_cycle::v_cycle_phase:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_add_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_and_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_compare_exchange_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_exchange_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_max_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_min_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_or_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_xor_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::avg_floor:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::bellman_shortest_path:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::bhattacharyya_coefficient:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::bigint_add_carry:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::broadcast:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::clamp_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::conformal_threshold:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::conv1d:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::conv::conv2d_3x3_direct:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::conv::im2col_3x3:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::dot:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::dot_partial:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::fft::fft4_complex:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::fft::fft_convolve_circular_complex:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::fft::fft_radix2:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::fft::pointwise_complex_multiply_conjugate:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::fft::scale_conjugate_inverse:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::gaussian_rdp_step:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::givens_rotate_pair:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::hensel_lift_step:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::iht_threshold:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::interval_merge:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::jacobi_apply_rotation:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::linalg::matmul_strassen_2x2:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::lzcnt_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::matmul:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::matmul_bias:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::matmul_bias_tiled:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::matmul_tiled:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::matrix_diagonal_extract:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::matrix_identity_fill:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::mori_zwanzig_project_step:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::mp_edge_clip:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::newton_schulz_poly5_f32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::qsvt_block_encode:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::quantized::i4x8_batched_matmul_f32_scaled:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::quantized::i4x8_batched_matmul_top1_f32_scaled:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::quantized::i4x8_batched_matvec_f32_scaled:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::quantized::i4x8_matvec_f32_scaled:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::quantized::unpack_i4x8:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::randomized_projection_step:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::reduce_mean:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::reduce_variance:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::scallop_join:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::semiring_gemm:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::sheaf_laplacian_eigenvalue:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::sheaf_laplacian_eigenvalue::power_iteration_phase:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::sinkhorn_iterate:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::softmax_step:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::square:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::succinct::rank1_query:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::symmetric_eigen_jacobi:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::tensor_network_pair_contract:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::tensor_train_decompose:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::tzcnt_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::weighted_sum_fma_f32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::wrapping_neg:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention::online_softmax:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention::quest_paging:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention_max_pass:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention_reference:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::cross_entropy:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::embedding:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::flash_attention:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::gelu:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::gqa_attention:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::layerwise_ln_scale:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::leaky_relu_sq:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::leaky_relu_sq_backward:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::linear:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::linear_4bit:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::linear_4bit_affine_grouped:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::linear_relu:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::linear_silu:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::linear_tiled:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::ln_scale_backward:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::logit_softcap:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::logit_softcap_backward:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::mlp_4x_leaky_sq:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::mlp_4x_leaky_sq::hidden_projection:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::mlp_4x_leaky_sq::output_projection:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::mlp_backward:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::moe_gate:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::moe_gate::softmax_stats:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::moe_gate::weight_write:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::parallel_residual_block:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::partial_rope:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::partial_rope_backward:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::qk_gain:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::qk_gain_backward:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::quest_score_pages:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::quest_select_top_k:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::relu:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::residual_add:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::residual_block_backward:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::rms_norm_linear:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::sigmoid_gate:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::silu:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::skip_gate_backward:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::softmax_top_k:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::swiglu:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::top_k:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::optim::ema_apply:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::optim::muoneq_r:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::optim::newton_schulz_5step:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::ast_binding_strength:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::ast_cfg_blocks:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::ast_cse_hash_probe:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::ast_cse_structural_hash:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::ast_shunting_yard:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::ast_shunting_yard_reduce:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::core_delimiter_match:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::line_splice_classify:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::planar_rewrite_exclusion_check:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::planar_rewrite_schedule:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::python312_extract_calls:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::python312_extract_decorators:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::python312_extract_imports:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::python312_extract_structure:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::python312_extract_with_blocks:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::python312_lexer:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::ssa_dominance_scan:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::whitespace_classify_word:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::aho_corasick:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::bracket_match:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::compact_hits:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::cooperative_dfa:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::emit_hit:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::regex_dfa:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::regex_scan:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::substring_search:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::arg_of:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::call_to:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::edge:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::in_file:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::in_function:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::in_package:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::literal_of:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::node_kind_eq:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::return_value_of:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::size_argument_of:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::byte_shuffle:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::gptq_round:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::gptq_sdclip:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int4_batched_matmul_f32_scaled:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int4_batched_matmul_top1_f32_scaled:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int4_batched_matvec_f32_scaled:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int4_matvec_f32_scaled:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int6_pack:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int6_unpack:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int8_pack:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int8_unpack:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::all:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::any:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::count_non_zero:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::gather:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::grid_stride_tree_sum_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::histogram:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::max:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::min:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::radix_sort:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::range_counts_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::scatter:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::segment_reduce_sum:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::sum:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::workgroup_any_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::workgroup_max_f32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::workgroup_max_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::workgroup_min_f32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::workgroup_min_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::workgroup_sum_f32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::workgroup_sum_u32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::representation::unpack_4bit_f32:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::aliases_dataflow:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::bounded_by_comparison:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::dominance_predecessors:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::flows_to:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::flows_to_to_sink:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::flows_to_with_sanitizer:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::label_by_family:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::sanitized_by:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::taint_flow:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::taint_pollution:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::text::byte_histogram_256:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::text::char_class:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::text::encoding_classify:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::text::line_index:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::text::utf8_shape_counts:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::text::utf8_validate:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::vfs::resolve:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::blur:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::box_shadow:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::cell_grid:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::composite:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::downsample:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::glass:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::glyph_grid:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::packed_rgba_map:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::upsample:cuda` is supported, and the recorded cuda conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::bit_reverse_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::fma_f32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::inverse_sqrt_f32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::popcount_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::storage_barrier:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::subgroup_add:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::subgroup_ballot:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::subgroup_shuffle:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-primitives::hardware::workgroup_barrier:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::four_russians_apply_byte_lut:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::four_russians_dense_matvec_byte_lut:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::not:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::or:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::or_into:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::popcount:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::select1_query:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::set_bit:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::stochastic_and_mul:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::subset_of:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::test_bit:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::xor:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::xor_into:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::bitset::zero:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::builder::indexed_map:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::builder::strided_accumulate:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::decode::base64:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::decode::encodex:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::decode::hex:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::decode::inflate_stored_block:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::decode::rle_segment_lengths:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::decode::ziftsieve_literal_copy:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::fixpoint::bitset_fixpoint:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::fixpoint::persistent_fixpoint:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::geom::clifford2_geometric_product:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::geom::tfn_scalar_mix:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::ast_walk_postorder:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::ast_walk_preorder:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::csr_backward_or_changed:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::csr_backward_traverse:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::csr_forward_or_changed:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::csr_forward_traverse:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::csr_forward_traverse_excluding:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::csr_frontier_degree_sum:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::csr_queue_strided_forward_traverse:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::dominator_frontier:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::dominator_frontier_pred_check:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::dominator_tree:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::dominator_tree_depth:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::dominator_tree_intersect_step:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::dominator_tree_lca:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::functor_apply:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::level_wave:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::monoidal_compose:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::motif:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::path_reconstruct:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::persistent_bfs:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::persistent_bfs_step:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::scc_decompose:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::sheaf_diffusion_step:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::sum_product_evaluate:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::sum_product_evaluate_leveled:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::tensor_flow_forward:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::tensor_flow_propagate_edges:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::union_find:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::vast_descend_leftmost_leaf:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::vast_walk_postorder:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::graph::vast_walk_preorder:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::adler32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::blake3_compress:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::blake3_g:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::blake3_round:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::crc32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::fnv1a32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::fnv1a64:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::multi_hash:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::ntt_butterfly_stage:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::hash::sparse_fft_bin_hash:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::label::nodeset_filter:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::label::resolve_family:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::llm::logit_adjust:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::llm::nucleus_select:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::llm::paged_kv_append:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::llm::paged_kv_gather:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::llm::sample_token:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::logical::nand:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::logical::nor:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::algebra::bool_semiring_matmul:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::algebra::join:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::algebra::meet:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::algebra::minplus_mul:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::algebra::sketch_mix:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::amg_jacobi_step:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::amg_v_cycle:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::amg_v_cycle::v_cycle_phase:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_add_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_and_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_compare_exchange_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_exchange_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_max_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_min_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_or_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::atomic_xor_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::atomic::lru_update_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::avg_floor:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::bellman_shortest_path:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::bhattacharyya_coefficient:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::bigint_add_carry:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::broadcast:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::clamp_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::conformal_threshold:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::conv1d:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::conv::conv2d_3x3_direct:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::conv::im2col_3x3:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::dot:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::dot_partial:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::eigenvector_column_sign:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::fft::fft4_complex:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::fft::fft_convolve_circular_complex:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::fft::fft_radix2:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::fft::pointwise_complex_multiply_conjugate:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::fft::scale_conjugate_inverse:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::gaussian_rdp_step:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::givens_rotate_pair:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::hensel_lift_step:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::iht_threshold:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::interval_merge:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::jacobi_apply_rotation:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::linalg::matmul_strassen_2x2:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::lzcnt_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::matmul:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::matmul_bias:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::matmul_bias::scalar:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::matmul_bias_tiled:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::matmul_tiled:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::matrix_diagonal_extract:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::matrix_identity_fill:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::mori_zwanzig_project_step:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::mp_edge_clip:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::newton_schulz_poly5_f32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::qsvt_block_encode:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::quantized::i4x8_batched_matmul_f32_scaled:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::quantized::i4x8_batched_matmul_top1_f32_scaled:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::quantized::i4x8_batched_matvec_f32_scaled:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::quantized::i4x8_dot_f32_scaled:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::quantized::i4x8_dot_i32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::quantized::i4x8_matvec_f32_scaled:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::quantized::unpack_i4x8:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::randomized_projection_step:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::reduce_mean:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::reduce_variance:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::scallop_join:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::scan_prefix_sum:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::semiring_gemm:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::sheaf_laplacian_eigenvalue:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::sheaf_laplacian_eigenvalue::power_iteration_phase:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::sinkhorn_iterate:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::softmax_step:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::square:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::succinct::rank1_query:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::succinct::rank1_superblocks:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::symmetric_eigen_jacobi:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::tensor_network_pair_contract:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
     "OP_MATRIX claims `vyre-libs::math::tensor_train_decompose:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::tzcnt_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::weighted_sum_fma_f32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::math::wrapping_neg:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention::absorb_values:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention::online_softmax:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention::quest_paging:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention::tile_scores:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention::turboquant:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention_max_pass:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention_reference:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention_sum_pass:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::attention_write_pass:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::cross_entropy:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::embedding:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::flash_attention:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::gelu:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::gqa_attention:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::layer_norm:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::layerwise_ln_scale:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::leaky_relu_sq:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::leaky_relu_sq_backward:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::linear:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::linear_4bit:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::linear_4bit_affine_grouped:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::linear_relu:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::linear_silu:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::linear_tiled:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::ln_scale_backward:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::logit_softcap:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::logit_softcap_backward:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::mlp_4x_leaky_sq:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::mlp_4x_leaky_sq::hidden_projection:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::mlp_4x_leaky_sq::output_projection:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::mlp_backward:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::moe_gate:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::moe_gate::softmax_stats:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::moe_gate::weight_write:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::parallel_residual_block:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::partial_rope:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::partial_rope_backward:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::qk_gain:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::qk_gain_backward:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::quest_score_pages:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::quest_select_top_k:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::quest_zero_fill:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::relu:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::residual_add:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::residual_block_backward:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::rms_norm:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::rms_norm_linear:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::sigmoid_gate:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::silu:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::skip_gate:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::skip_gate_backward:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::softmax:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::softmax_top_k:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::swiglu:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::nn::top_k:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::opt::homotopy_euler_predictor:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::optim::adamw_step:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::optim::ema_apply:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::optim::muon_update:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::optim::muoneq_r:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::optim::newton_schulz_5step:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::ast_binding_strength:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::ast_cfg_blocks:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::ast_cse_hash_probe:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::ast_cse_structural_hash:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::ast_shunting_yard:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::ast_shunting_yard_reduce:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::core_delimiter_match:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::line_splice_classify:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::planar_rewrite_exclusion_check:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::planar_rewrite_schedule:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::python312_extract_calls:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::python312_extract_decorators:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::python312_extract_imports:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::python312_extract_structure:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::python312_extract_with_blocks:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::python312_lexer:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::ssa_dominance_scan:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::parsing::whitespace_classify_word:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::aho_corasick:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::bracket_match:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::compact_hits:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::cooperative_dfa:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::emit_hit:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::regex_dfa:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::regex_scan:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::pattern::substring_search:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::arg_of:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::call_to:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::edge:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::in_file:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::in_function:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::in_package:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::literal_of:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::node_kind_eq:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::return_value_of:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::predicate::size_argument_of:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::byte_shuffle:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::gptq_round:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::gptq_sdclip:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int4_batched_matmul_f32_scaled:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int4_batched_matmul_top1_f32_scaled:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int4_batched_matvec_f32_scaled:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int4_dot_f32_scaled:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int4_dot_i32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int4_matvec_f32_scaled:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int6_pack:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int6_unpack:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int8_pack:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::quant::int8_unpack:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::all:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::any:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::count:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::count_non_zero:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::gather:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::grid_stride_tree_sum_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::histogram:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::max:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::min:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::multi_block_prefix_scan_inclusive_sum:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::radix_sort:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::range_counts_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::scatter:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::segment_reduce_sum:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::sum:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::workgroup_any_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::workgroup_max_f32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::workgroup_max_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::workgroup_min_f32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::workgroup_min_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::workgroup_sum_f32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::reduce::workgroup_sum_u32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::representation::unpack_4bit_f32:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::aliases_dataflow:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::auth_check_dominates:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::bounded_by_comparison:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::buffer_size_check:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::dominance_predecessors:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::flows_to:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::flows_to_to_sink:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::flows_to_with_sanitizer:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::format_string_check:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::integer_overflow_arith:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::label_by_family:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::lock_dominates:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::path_canonical:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::sanitized_by:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::sanitizer_dominates:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::sink_intersection:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::sql_param_bound:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::taint_flow:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::taint_kill:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::taint_pollution:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::unchecked_return:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::security::xss_escape:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::text::byte_histogram_256:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::text::char_class:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::text::encoding_classify:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::text::line_index:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::text::utf8_shape_counts:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::text::utf8_validate:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::vfs::resolve:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::blur:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::box_shadow:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::cell_grid:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::composite:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::downsample:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::filter_chain:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::glass:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::glyph_grid:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::gradient:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::packed_rgba_map:wgpu` is supported, and the recorded wgpu conformance run reports it failing",
-    "OP_MATRIX claims `vyre-libs::visual::upsample:wgpu` is supported, and the recorded wgpu conformance run reports it failing"
+    "required dispatch backend `cpu-ref` is missing"
   ]
 }

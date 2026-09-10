@@ -70,6 +70,11 @@ structure-gate = { path = "../structure-gate" }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+# The oracle's own id, for the contract that holds it equal to the label a
+# release reads. This crate links both sides, which is the only place the two
+# can be compared; the library itself derives its roster from the backend
+# registry and needs no reference driver.
+vyre-driver-reference.workspace = true
 
 # A `tests/<name>/main.rs` target is already one binary for its whole module
 # tree, so it stays a target of its own.

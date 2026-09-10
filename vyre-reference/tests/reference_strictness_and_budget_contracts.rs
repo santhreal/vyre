@@ -1,19 +1,22 @@
-//! Contracts for row 86: strict, budgeted, independent reference oracle.
+//! Contracts for the strict, budgeted, independent reference oracle.
 //!
-//! WHY: Proves that the reference oracle:
-//! 1. Interprets IR directly without invoking production optimizer, schedule, lowering, or emitter transforms.
-//! 2. Returns structured oracle errors across all eight failure classes without default fallbacks.
-//! 3. Strictly terminates under work budget exhaustion and reports the bound.
-//! 4. Proves diagnostic permissive mode cannot issue expected outputs or certificates.
-//! 5. Directly evaluates single-rank collectives without external lowering passes.
+//! WHY: proves that the oracle
+//! 1. interprets IR directly without invoking production optimizer, schedule,
+//!    lowering, or emitter transforms;
+//! 2. returns a structured failure class rather than a default value, at the
+//!    site of the fault;
+//! 3. terminates under work budget exhaustion and reports the bound;
+//! 4. cannot issue an expected output or a certificate from permissive mode;
+//! 5. evaluates single-rank collectives directly without external lowering.
 
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, CommGroup, DataType, Expr, Ident, Node, Program,
 };
+use vyre_reference::value::Value;
 use vyre_reference::{
-    DeterministicSchedulePolicy, ExecutionStrictness, ReferenceBudget, ReferenceError,
-    ReferenceErrorClass, ReferenceErrorKind, ReferenceRequest, WorkloadEnvelope,
-    REFERENCE_ORACLE_VERSION, REFERENCE_REQUEST_SCHEMA_VERSION,
+    DeterministicSchedulePolicy, ExecutionStrictness, ReferenceBudget, ReferenceErrorClass,
+    ReferenceRequest, WorkloadEnvelope, REFERENCE_ORACLE_VERSION,
+    REFERENCE_REQUEST_SCHEMA_VERSION,
 };
 
 #[test]
@@ -96,93 +99,159 @@ fn oracle_path_invokes_no_production_transforms() {
     );
 }
 
-#[test]
-fn each_of_eight_failure_classes_returns_structured_error() {
-    // Prove that every member of the 8 failure classes is distinct and returns its own structured error class.
-    for class in ReferenceErrorClass::ALL {
-        let err: ReferenceError = match class {
-            ReferenceErrorClass::MissingValue => {
-                ReferenceError::missing_value("input buffer `in` was not supplied")
-            }
-            ReferenceErrorClass::TypeMismatch => {
-                ReferenceError::type_mismatch("store index is not u32")
-            }
-            ReferenceErrorClass::Poison => {
-                ReferenceError::poison("buffer lock was poisoned during access")
-            }
-            ReferenceErrorClass::Overflow => {
-                ReferenceError::overflow("workgroup invocation count overflows u32")
-            }
-            ReferenceErrorClass::OutOfBoundsAccess => {
-                ReferenceError::out_of_bounds("load index 100 past buffer extent 4")
-            }
-            ReferenceErrorClass::IncompleteDispatchSemantics => {
-                ReferenceError::incomplete_dispatch_semantics(
-                    "workgroup size contains zero dimension",
-                )
-            }
-            ReferenceErrorClass::Nontermination => {
-                ReferenceError::nontermination("infinite loop detected")
-            }
-            ReferenceErrorClass::BudgetExhaustion => {
-                ReferenceError::budget_exhaustion("work ceiling of 1000 steps exceeded")
-            }
-        };
+/// The classes a host fault raises, which no IR program can request.
+///
+/// `Poison` needs a thread to panic while holding a buffer lock, and the oracle
+/// fails closed with a process-level abort rather than a `ReferenceError` when
+/// that happens, which `oob.rs` proves in place. `Nontermination` is reported
+/// through `BudgetExhaustion` because the work ceiling is what observes a
+/// non-terminating program. Both are named here so a reader sees the decision
+/// instead of an absence.
+const HOST_FAULT_CLASSES: [ReferenceErrorClass; 2] = [
+    ReferenceErrorClass::Poison,
+    ReferenceErrorClass::Nontermination,
+];
 
-        // Exhaustive compile-time match with NO catch-all `_` arm.
-        match err.error_class() {
-            ReferenceErrorClass::MissingValue => {
-                assert_eq!(class, ReferenceErrorClass::MissingValue);
-                assert!(matches!(
-                    err.kind(),
-                    ReferenceErrorKind::MissingValue { .. }
-                ));
-            }
-            ReferenceErrorClass::TypeMismatch => {
-                assert_eq!(class, ReferenceErrorClass::TypeMismatch);
-                assert!(matches!(
-                    err.kind(),
-                    ReferenceErrorKind::TypeMismatch { .. }
-                ));
-            }
-            ReferenceErrorClass::Poison => {
-                assert_eq!(class, ReferenceErrorClass::Poison);
-                assert!(matches!(err.kind(), ReferenceErrorKind::Poison { .. }));
-            }
-            ReferenceErrorClass::Overflow => {
-                assert_eq!(class, ReferenceErrorClass::Overflow);
-                assert!(matches!(err.kind(), ReferenceErrorKind::Overflow { .. }));
-            }
-            ReferenceErrorClass::OutOfBoundsAccess => {
-                assert_eq!(class, ReferenceErrorClass::OutOfBoundsAccess);
-                assert!(matches!(
-                    err.kind(),
-                    ReferenceErrorKind::OutOfBoundsAccess { .. }
-                ));
-            }
-            ReferenceErrorClass::IncompleteDispatchSemantics => {
-                assert_eq!(class, ReferenceErrorClass::IncompleteDispatchSemantics);
-                assert!(matches!(
-                    err.kind(),
-                    ReferenceErrorKind::IncompleteDispatchSemantics { .. }
-                ));
-            }
-            ReferenceErrorClass::Nontermination => {
-                assert_eq!(class, ReferenceErrorClass::Nontermination);
-                assert!(matches!(
-                    err.kind(),
-                    ReferenceErrorKind::Nontermination { .. }
-                ));
-            }
-            ReferenceErrorClass::BudgetExhaustion => {
-                assert_eq!(class, ReferenceErrorClass::BudgetExhaustion);
-                assert!(matches!(
-                    err.kind(),
-                    ReferenceErrorKind::BudgetExhaustion { .. }
-                ));
-            }
-        }
+/// WHY: strict mode is the mode whose outputs a device is graded against. An
+/// out-of-bounds load absorbed as a zero, a store dropped, or an atomic
+/// answered with `old = 0` produces an output the program never computed, and
+/// the oracle then certifies it. Each case below drives one class through
+/// `ReferenceRequest::execute` and requires the structured class at the site.
+#[test]
+fn strict_execution_refuses_every_fault_class_it_can_raise() {
+    for (class, program, inputs) in strictness_cases() {
+        let request = ReferenceRequest::new(program, inputs, ReferenceBudget::bounded(65_536));
+        let error = match request.execute() {
+            Ok(result) => panic!(
+                "Fix: the {} case must fail, got {} outputs",
+                class.name(),
+                result.outputs.len()
+            ),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.error_class(),
+            class,
+            "Fix: the {} case must return its own failure class, got: {error}",
+            class.name()
+        );
     }
+}
+
+/// WHY: the class space is derived, so a new class must be placed rather than
+/// silently uncovered. This requires every member of
+/// `ReferenceErrorClass::ALL` to be either driven by a case above or recorded
+/// in `HOST_FAULT_CLASSES`.
+#[test]
+fn every_failure_class_is_either_driven_or_recorded_as_a_host_fault() {
+    let driven: Vec<ReferenceErrorClass> = strictness_cases()
+        .into_iter()
+        .map(|(class, _, _)| class)
+        .collect();
+    for class in ReferenceErrorClass::ALL {
+        assert!(
+            driven.contains(&class) || HOST_FAULT_CLASSES.contains(&class),
+            "Fix: failure class `{}` is neither driven by a strictness case nor \
+             recorded in HOST_FAULT_CLASSES; add a case or record the decision.",
+            class.name()
+        );
+    }
+}
+
+/// One program per failure class a strict execution can raise, with the inputs
+/// it is submitted with.
+fn strictness_cases() -> Vec<(ReferenceErrorClass, Program, Vec<Value>)> {
+    vec![
+        (
+            ReferenceErrorClass::MissingValue,
+            Program::wrapped(
+                vec![
+                    BufferDecl::read("in", 0, DataType::U32).with_count(1),
+                    BufferDecl::output("out", 1, DataType::U32).with_count(1),
+                ],
+                [1, 1, 1],
+                vec![Node::store(
+                    "out",
+                    Expr::u32(0),
+                    Expr::load("in", Expr::u32(0)),
+                )],
+            ),
+            Vec::new(),
+        ),
+        (
+            ReferenceErrorClass::TypeMismatch,
+            Program::wrapped(
+                vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+                [1, 1, 1],
+                vec![Node::store(
+                    "out",
+                    Expr::u32(0),
+                    Expr::bitand(Expr::f32(1.5), Expr::u32(3)),
+                )],
+            ),
+            Vec::new(),
+        ),
+        (
+            ReferenceErrorClass::Overflow,
+            Program::wrapped(
+                vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+                [u32::MAX, u32::MAX, u32::MAX],
+                vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
+            ),
+            Vec::new(),
+        ),
+        (
+            ReferenceErrorClass::OutOfBoundsAccess,
+            Program::wrapped(
+                vec![
+                    BufferDecl::read("in", 0, DataType::U32).with_count(1),
+                    BufferDecl::output("out", 1, DataType::U32).with_count(1),
+                ],
+                [1, 1, 1],
+                vec![Node::store(
+                    "out",
+                    Expr::u32(0),
+                    Expr::load("in", Expr::u32(64)),
+                )],
+            ),
+            vec![Value::from(7u32.to_le_bytes().to_vec())],
+        ),
+        (
+            ReferenceErrorClass::IncompleteDispatchSemantics,
+            Program::wrapped(
+                vec![
+                    BufferDecl::storage("src", 0, BufferAccess::ReadOnly, DataType::U32)
+                        .with_count(1),
+                    BufferDecl::storage("dst", 1, BufferAccess::ReadWrite, DataType::U32)
+                        .with_count(1),
+                ],
+                [1, 1, 1],
+                vec![Node::AllGather {
+                    input: Ident::from("src"),
+                    output: Ident::from("dst"),
+                    group: CommGroup(7),
+                }],
+            ),
+            vec![
+                Value::from(1u32.to_le_bytes().to_vec()),
+                Value::from(0u32.to_le_bytes().to_vec()),
+            ],
+        ),
+        (
+            ReferenceErrorClass::BudgetExhaustion,
+            Program::wrapped(
+                vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+                [1, 1, 1],
+                vec![Node::Loop {
+                    var: Ident::from("i"),
+                    from: Expr::u32(0),
+                    to: Expr::u32(1_000_000),
+                    body: vec![Node::store("out", Expr::u32(0), Expr::var("i"))],
+                }],
+            ),
+            Vec::new(),
+        ),
+    ]
 }
 
 #[test]
@@ -236,7 +305,7 @@ fn permissive_mode_cannot_issue_expected_output_or_certificate() {
     );
 
     let inputs = vec![vyre_reference::value::Value::from(
-        42u32.to_le_bytes().to_vec(),
+        DISTINCTIVE_OUTPUT.to_le_bytes().to_vec(),
     )];
     let permissive_request = ReferenceRequest::new(program, inputs, ReferenceBudget::standard())
         .with_strictness(ExecutionStrictness::DiagnosticPermissive);
@@ -247,17 +316,32 @@ fn permissive_mode_cannot_issue_expected_output_or_certificate() {
         .expect_err("strict execute() must fail on permissive request");
     assert_eq!(strict_err.error_class(), ReferenceErrorClass::TypeMismatch);
 
-    // Calling execute_permissive() returns diagnostic report.
+    // A permissive run reports what it absorbed and nothing a device could be
+    // graded against. The report's own runtime data must not carry the bytes a
+    // strict run would have produced, which is what a refusal method checked at
+    // call time never established: a caller that ignored the `Result` still had
+    // the value in hand.
     let report = permissive_request
         .execute_permissive()
         .expect("permissive execution succeeds");
-
-    // Report CANNOT issue a certificate.
-    let cert_err = report
-        .certificate()
-        .expect_err("permissive report must refuse to issue a certificate");
-    assert_eq!(cert_err.error_class(), ReferenceErrorClass::TypeMismatch);
+    let recorded = format!("{report:?}");
+    for byte in DISTINCTIVE_OUTPUT.to_le_bytes() {
+        assert!(
+            byte == 0 || !recorded.contains(&byte.to_string()),
+            "Fix: a permissive report must not carry output bytes; found {byte} in {recorded}"
+        );
+    }
+    assert_eq!(
+        report.output_digest.len(),
+        64,
+        "Fix: a permissive report must summarize its bytes as a digest, got: {}",
+        report.output_digest
+    );
+    assert_eq!(report.oob_report.total(), 0);
 }
+
+/// A value no digest, tally, or step count can produce by coincidence.
+const DISTINCTIVE_OUTPUT: u32 = 0xDEAD_BEEF;
 
 #[test]
 fn single_rank_collectives_interpreted_directly_without_lowering() {

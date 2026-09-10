@@ -37,6 +37,8 @@ pub(crate) mod expr_parts;
 pub(crate) mod expr_visitor;
 /// Per-variant `Node` decisions: nesting, scalar binding, operands, buffers.
 pub(crate) mod node_bodies;
+/// Which buffers a `Node` variant names, split by direction.
+pub(crate) mod node_buffers;
 pub(crate) mod node_parts;
 /// The exhaustive `Node` visitor contract and its traversal entry points.
 pub(crate) mod node_visitor;

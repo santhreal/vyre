@@ -103,16 +103,21 @@ fn each_source_language_has_one_frontend() {
     );
 }
 
-/// The workspace roster is a reviewed, closed list.
+/// Every crate in the checkout is one the root manifest decided about.
 ///
-/// This is also what keeps a product out of the platform: a product consumes the
-/// compiler, so a member that ships one makes the facade depend on it, and the
-/// only way such a crate becomes a member is by being added to the reviewed
-/// roster. The direct edge is held separately by the `layering` gate, which
-/// names the facade as substrate-neutral.
+/// A directory holding a manifest and named by neither `members` nor
+/// `exclude` is in the graph or out of it by accident. This is also what
+/// keeps a product out of the platform: adding one as a member is the edit
+/// this reads, and the facade edge it would create is held separately by the
+/// `layering` gate, which names the facade as substrate-neutral.
 #[test]
-fn the_workspace_roster_matches_the_reviewed_list() {
-    let failures = roster_failures(&workspace().members);
+fn every_crate_in_the_checkout_is_declared() {
+    let workspace = workspace();
+    let failures = roster_failures(
+        &workspace.manifest_directories,
+        &workspace.members,
+        &workspace.excludes,
+    );
 
     assert!(failures.is_empty(), "{}", report("roster", &failures));
 }

@@ -40,11 +40,7 @@ fn inspect() -> Inspection {
     let registry = vyre_bench::registry::collect_all();
     let matrix = build_release_matrix(&registry);
     report_blockers(&matrix, &mut inspection);
-    inspection.generates_evidence(
-        ARTIFACT,
-        xtask::evidence_record::MeasurementRecord::HostOnly,
-        &matrix,
-    );
+    inspection.generates_host_evidence(ARTIFACT, &matrix);
     inspection
 }
 

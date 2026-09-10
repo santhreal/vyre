@@ -1,7 +1,6 @@
 //! Bitwise CPU/GPU parity for the five f32 transcendentals.
 //!
-//! `BACKLOG.md` row 136 owns this contract. It was aspirational and every test
-//! here was ignored, for three measured reasons:
+//! This contract was aspirational and every test here was ignored, for three measured reasons:
 //!
 //! 1. WGSL hardware transcendentals are not correctly rounded. The spec defers
 //!    to the hardware, which uses an approximation ROM good to a few ulps.

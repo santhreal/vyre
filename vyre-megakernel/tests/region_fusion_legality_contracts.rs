@@ -7,7 +7,8 @@
 
 use vyre_foundation::execution_plan::fusion::{FusionCandidateKind, FusionCandidateSet};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_megakernel::legality::{analyze_fusion_pair, FusionDecision, FusionRejectionReason};
+use vyre_foundation::execution_plan::fusion::FusionRejectionReason;
+use vyre_megakernel::legality::{analyze_fusion_pair, FusionDecision};
 use vyre_megakernel::{ArtifactNodeId, ArtifactValueId, ExecutionTopology};
 
 use vyre_test_support::graph_fixtures::producer_consumer_pair;

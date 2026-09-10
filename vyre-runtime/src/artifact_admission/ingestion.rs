@@ -1,6 +1,6 @@
 //! Typed external-resource schemas, datasets, AOT bundle manifests, and ingestion transactions.
 //!
-//! BACKLOG row 49 defines a bounded typed-resource ingestion transaction that maps
+//! The contract defines a bounded typed-resource ingestion transaction that maps
 //! files, byte ranges, generated data, or caller memory into artifact value ids
 //! through concrete-driver transfers, verifying identity, dtype, element count,
 //! access, generation, and lifetime before any allocation becomes dispatch-visible.

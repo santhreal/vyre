@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use vyre_foundation::execution_plan::fusion::FusionRejectionReason;
 use vyre_foundation::ir::{BufferAccess, Program, ProgramGraph, ValueLifetime};
 
 use crate::candidate::{CandidatePlan, ExecutionTopology, ResidentPartitionMode};
@@ -8,54 +9,6 @@ use crate::{
     ArtifactNodeId, ArtifactValueId, DependencyEdge, DependencyEndpoint, DependencyKind,
     DeviceFacts, FusionGroupId,
 };
-/// Stable reason that prevents two graph nodes from sharing one generated kernel.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[non_exhaustive]
-pub enum FusionRejectionReason {
-    /// A referenced node or value is absent from the graph.
-    UnknownGraphMember,
-    /// The value does not connect the proposed producer and consumer.
-    NotProducerConsumer,
-    /// The value crosses an invocation or retained-state boundary.
-    LifecycleBoundary,
-    /// More than one node consumes the value.
-    MultipleConsumers,
-    /// The programs declare different workgroup geometry.
-    WorkgroupMismatch,
-    /// The programs declare different workgroup geometry and one of them
-    /// reasons about the size of its own workgroup, so no fused geometry works.
-    SynchronizationBoundary,
-    /// Contracting the proposed group would create a dependency cycle.
-    DependencyCycle,
-    /// Iteration spaces have incompatible ranks, extents, or tiling shapes.
-    IncompatibleIterationSpace,
-    /// Required workgroup shared memory exceeds target or adapter budget.
-    ExcessiveSharedMemory,
-    /// Register pressure of the fused kernel exceeds hardware bounds.
-    ExcessiveRegisters,
-    /// The geometry semantics or invocation guards explicitly conflict.
-    GenuinelyIllegalGeometry,
-}
-
-impl FusionRejectionReason {
-    /// Stable machine-readable diagnostic code.
-    #[must_use]
-    pub const fn code(self) -> &'static str {
-        match self {
-            Self::UnknownGraphMember => "MKL001_UNKNOWN_GRAPH_MEMBER",
-            Self::NotProducerConsumer => "MKL002_NOT_PRODUCER_CONSUMER",
-            Self::LifecycleBoundary => "MKL003_LIFECYCLE_BOUNDARY",
-            Self::MultipleConsumers => "MKL004_MULTIPLE_CONSUMERS",
-            Self::WorkgroupMismatch => "MKL005_WORKGROUP_MISMATCH",
-            Self::SynchronizationBoundary => "MKL006_SYNCHRONIZATION_BOUNDARY",
-            Self::DependencyCycle => "MKL007_DEPENDENCY_CYCLE",
-            Self::IncompatibleIterationSpace => "MKL008_INCOMPATIBLE_ITERATION_SPACE",
-            Self::ExcessiveSharedMemory => "MKL009_EXCESSIVE_SHARED_MEMORY",
-            Self::ExcessiveRegisters => "MKL010_EXCESSIVE_REGISTERS",
-            Self::GenuinelyIllegalGeometry => "MKL011_GENUINELY_ILLEGAL_GEOMETRY",
-        }
-    }
-}
 
 /// Legality result for one proposed producer-consumer fusion.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

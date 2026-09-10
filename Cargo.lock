@@ -3436,6 +3436,7 @@ dependencies = [
  "vyre-conform-spec",
  "vyre-driver",
  "vyre-driver-cuda",
+ "vyre-driver-reference",
  "vyre-driver-spirv",
  "vyre-driver-wgpu",
  "vyre-foundation",
@@ -4245,6 +4246,7 @@ dependencies = [
  "smallvec",
  "tempfile",
  "thiserror 2.0.19",
+ "toml",
  "tracing",
  "ureq",
  "vyre-driver",
@@ -4968,6 +4970,7 @@ name = "xtask"
 version = "0.1.0"
 dependencies = [
  "blake3",
+ "jiff",
  "proc-macro2",
  "quote",
  "serde",
@@ -5009,6 +5012,7 @@ dependencies = [
  "toml",
  "vyre",
  "vyre-driver",
+ "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs",
  "vyre-megakernel",

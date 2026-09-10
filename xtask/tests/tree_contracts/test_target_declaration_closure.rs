@@ -84,18 +84,33 @@ fn autodiscovery_is_off(member: &Member) -> bool {
         == Some(false)
 }
 
-/// Every `.rs` file directly under one member's `tests/` directory.
-fn test_files_directly_under(tree: &Tree, member: &Member) -> Vec<String> {
+/// Every `.rs` file the tree lists anywhere under one member's `tests/`.
+///
+/// Whether a member carries tests is read from this listing. Asking whether
+/// `tests/` is a directory reads nothing: a member whose test files moved to
+/// another crate leaves the directory behind in every checkout that pulled the
+/// deletion, and that shell then reads as a member carrying tests with no
+/// `[[test]]` row.
+fn test_files_under(tree: &Tree, member: &Member) -> Vec<String> {
     let prefix = format!("{}/tests/", member.path);
     tree.paths()
         .iter()
         .filter_map(|path| path.to_str())
         .filter(|path| path.ends_with(".rs"))
+        .filter(|path| path.starts_with(&prefix))
+        .map(str::to_string)
+        .collect()
+}
+
+/// Every `.rs` file directly under one member's `tests/` directory.
+fn test_files_directly_under(tree: &Tree, member: &Member) -> Vec<String> {
+    let prefix = format!("{}/tests/", member.path);
+    test_files_under(tree, member)
+        .into_iter()
         .filter(|path| {
             path.strip_prefix(&prefix)
                 .is_some_and(|rest| !rest.contains('/'))
         })
-        .map(str::to_string)
         .collect()
 }
 
@@ -156,14 +171,16 @@ fn every_test_file_of_a_member_without_autodiscovery_is_compiled_by_a_target() {
 /// nothing is a member walk or a file walk that stopped resolving. Each
 /// assertion here is a property of the grouped-harness layout rather than a
 /// recorded count, so it holds as members and files come and go and fails when
-/// a walk collapses.
+/// a walk collapses. Carrying tests is read from the tracked file listing, so a
+/// `tests/` directory git left behind after its files moved contributes no
+/// member to the set.
 #[test]
 fn the_walk_judges_a_declared_set_the_tree_supplies() {
     let tree = tree();
     let members = members(&tree);
     let with_tests: Vec<&Member> = members
         .iter()
-        .filter(|member| tree.absolute(&member.path).join("tests").is_dir())
+        .filter(|member| !test_files_under(&tree, member).is_empty())
         .collect();
 
     let discovering: Vec<&str> = with_tests
@@ -173,7 +190,7 @@ fn the_walk_judges_a_declared_set_the_tree_supplies() {
         .collect();
     assert!(
         discovering.is_empty(),
-        "Fix: set autotests = false. A member with a tests/ directory that leaves \
+        "Fix: set autotests = false. A member that carries test files and leaves \
          autodiscovery on links each file as its own target as well as running it \
          inside a harness, so one test reports twice: {}",
         discovering.join(", ")

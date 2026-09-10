@@ -65,6 +65,7 @@ use quote::ToTokens;
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 use crate::gates::test_target_membership;
+use crate::gates::workflow_commands;
 
 /// The feature that admits a device-acquiring test.
 const FEATURE: &str = "device-tests";
@@ -576,14 +577,7 @@ impl Coverage {
 /// What some workflow step builds with the admission feature.
 fn enabling_lanes(tree: &Tree) -> Result<Coverage, GateError> {
     let mut coverage = Coverage::default();
-    let mut workflows: Vec<&std::path::Path> = tree
-        .paths()
-        .iter()
-        .filter(|path| path.starts_with(WORKFLOWS) && path.extension().is_some_and(|e| e == "yml"))
-        .map(std::path::PathBuf::as_path)
-        .collect();
-    workflows.sort_unstable();
-    for path in workflows {
+    for path in workflow_commands::workflow_files(tree) {
         coverage.absorb(coverage_of(&tree.read(path)?));
     }
     Ok(coverage)
@@ -591,66 +585,25 @@ fn enabling_lanes(tree: &Tree) -> Result<Coverage, GateError> {
 
 /// What one workflow's steps build with the admission feature.
 ///
-/// Every invocation in these workflows begins `./cargo_full`, so splitting on
-/// it yields one command per segment. A segment is cut at the next step header
-/// so a `-p` in one step cannot borrow a `--features` from the next. `--test`
-/// takes the next token as a target name; `--tests` is a different token and
-/// selects every test target, which is the unfiltered case.
-///
-/// Comment lines are dropped before the split. These workflows explain their
-/// steps in prose, and prose quotes commands: reading a commented command as
-/// coverage lets a sentence satisfy the rule while no lane runs anything, which
-/// is the one way a gate can certify what it never checked. Dropping whole
-/// comment lines cannot break a folded scalar, whose continuation lines are
-/// argv and never start with `#`.
+/// A step that names no test target selects every one of them, which is the
+/// unfiltered case and covers the whole package.
 fn coverage_of(text: &str) -> Coverage {
     let mut coverage = Coverage::default();
-    let collapsed = text
-        .lines()
-        .filter(|line| !line.trim_start().starts_with('#'))
-        .flat_map(str::split_whitespace)
-        .collect::<Vec<_>>()
-        .join(" ");
-    for segment in collapsed.split("./cargo_full").skip(1) {
-        let command = segment.split("- name:").next().unwrap_or(segment);
-        if !command.contains(FEATURE) {
-            continue;
-        }
-        let mut packages = BTreeSet::new();
-        let mut targets = BTreeSet::new();
-        let mut tokens = command.split(' ');
-        while let Some(token) = tokens.next() {
-            match token {
-                "-p" | "--package" => {
-                    if let Some(package) = tokens.next() {
-                        packages.insert(package.to_string());
-                    }
-                }
-                "--test" => {
-                    if let Some(target) = tokens.next() {
-                        targets.insert(target.to_string());
-                    }
-                }
-                _ => {}
-            }
-        }
-        for package in packages {
-            if targets.is_empty() {
+    for command in workflow_commands::enabling(text, FEATURE) {
+        for package in command.packages {
+            if command.targets.is_empty() {
                 coverage.whole.insert(package);
             } else {
                 coverage
                     .named
                     .entry(package)
                     .or_default()
-                    .extend(targets.iter().cloned());
+                    .extend(command.targets.iter().cloned());
             }
         }
     }
     coverage
 }
-
-/// Where the live workflows are.
-const WORKFLOWS: &str = ".github/workflows";
 
 /// The concrete backend types, read from the driver members that own them.
 fn backend_roster(tree: &Tree) -> Result<BTreeSet<String>, GateError> {

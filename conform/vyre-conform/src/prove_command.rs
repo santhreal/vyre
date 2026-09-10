@@ -169,7 +169,7 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
             let _ = write!(
                 &mut failing_detail,
                 "  - ({}, {}): {}",
-                pair.backend_id, pair.op_id, pair.message
+                pair.executor_id, pair.op_id, pair.message
             );
             failing_count += 1;
         }
@@ -202,7 +202,7 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
     hash_proof_plan(&mut hasher, &plan);
     for pair in &pairs {
         hasher.update(pair.op_id.as_bytes());
-        hasher.update(pair.backend_id.as_bytes());
+        hasher.update(pair.executor_id.as_bytes());
         hasher.update(&[u8::from(pair.passed)]);
         hasher.update(pair.message.as_bytes());
     }

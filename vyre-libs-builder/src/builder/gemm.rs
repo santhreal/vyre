@@ -20,6 +20,12 @@ mod gemm_contracts;
 #[path = "gemm_programs.rs"]
 mod gemm_programs;
 use gemm_programs::*;
+#[path = "strassen_programs.rs"]
+mod strassen_programs;
+use strassen_programs::*;
+#[path = "tiled_gemm_programs.rs"]
+mod tiled_gemm_programs;
+use tiled_gemm_programs::*;
 
 use crate::builder::{check_tensors, BuildOptions};
 use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
@@ -190,12 +196,13 @@ impl ContractionOutputTile {
 ///
 /// The invocation count is the largest whole number of subgroups the stated
 /// per-workgroup invocation limit holds. A device that states no subgroup size
-/// contributes only its invocation limit, and one that states neither leaves
-/// the declared workgroup unchanged.
-fn tiled_workgroup(facts: &DeviceFacts, declared: [u32; 3]) -> [u32; 3] {
+/// contributes only its invocation limit, and one that states neither reports
+/// a bound at all.
+#[must_use]
+pub fn tiled_workgroup_bound(facts: &DeviceFacts) -> Option<u32> {
     let limit = facts.max_invocations_per_workgroup();
     if limit == 0 {
-        return declared;
+        return None;
     }
     let subgroup = facts.subgroup_size();
     let invocations = if subgroup == 0 {
@@ -203,10 +210,7 @@ fn tiled_workgroup(facts: &DeviceFacts, declared: [u32; 3]) -> [u32; 3] {
     } else {
         (limit / subgroup) * subgroup
     };
-    if invocations == 0 {
-        return declared;
-    }
-    [invocations, 1, 1]
+    (invocations != 0).then_some(invocations)
 }
 
 /// Geometry of contraction tensors.
@@ -622,16 +626,15 @@ impl ContractionComposer {
         self
     }
 
-    /// State the facts of the device the contraction will run on and select
-    /// the physical tiling those facts admit.
+    /// State the facts of the device the contraction will run on and derive
+    /// the register tile those facts admit.
     ///
     /// A row-batched contraction accumulates the largest output tile the
-    /// declared extents and the stated register budget admit, and the launch
-    /// takes the largest whole number of subgroups the stated invocation limit
-    /// holds. Facts that admit no tile leave the untiled candidate selected,
-    /// which is also what a later [`Self::with_tiling`] call states
-    /// explicitly: admissibility is decided here, before any candidate is
-    /// ranked.
+    /// declared extents and the stated register budget admit. The launch keeps
+    /// the declared workgroup. The invocation limit the device states is a
+    /// fact, reported by `tiled_workgroup_bound`, and ranking a launch shape
+    /// against it is one cost model's decision rather than this builder's:
+    /// widening a launch here would also move geometry the artifact froze.
     #[must_use]
     pub fn with_device_facts(mut self, facts: DeviceFacts) -> Self {
         self.device = facts;
@@ -652,7 +655,7 @@ impl ContractionComposer {
                 self.tiling = ContractionTiling::RegisterTiled {
                     rows: tile.rows,
                     columns: tile.columns,
-                    workgroup_size: tiled_workgroup(&facts, declared),
+                    workgroup_size: declared,
                 };
             }
         }

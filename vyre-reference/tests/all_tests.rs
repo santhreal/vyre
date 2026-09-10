@@ -5,11 +5,6 @@
 //! binary for the whole set. A test that cannot share a process stays its own
 //! target and states why in `xtask/test-harness-isolation.toml`.
 
-/// Shared fixture module from `tests/dual_volume/mod.rs`.
-#[allow(missing_docs)]
-#[path = "dual_volume/mod.rs"]
-pub mod dual_volume;
-
 /// Shared fixture module from `tests/flat_expr_eval/mod.rs`.
 #[allow(missing_docs)]
 #[path = "flat_expr_eval/mod.rs"]
@@ -72,26 +67,6 @@ pub mod composition_witness_scheduling_contracts;
 #[path = "core_contracts/mod.rs"]
 pub mod core_contracts;
 
-/// Integration tests from `tests/dual_arith_reference_contracts.rs`.
-#[path = "dual_arith_reference_contracts.rs"]
-pub mod dual_arith_reference_contracts;
-
-/// Integration tests from `tests/dual_reference_parity.rs`.
-#[path = "dual_reference_parity.rs"]
-pub mod dual_reference_parity;
-
-/// Integration tests from `tests/dual_reference_property_contracts.rs`.
-#[path = "dual_reference_property_contracts.rs"]
-pub mod dual_reference_property_contracts;
-
-/// Integration tests from `tests/dual_registry_adversarial_contract.rs`.
-#[path = "dual_registry_adversarial_contract.rs"]
-pub mod dual_registry_adversarial_contract;
-
-/// Integration tests from `tests/dual_scalar_evaluator_matrix.rs`.
-#[path = "dual_scalar_evaluator_matrix.rs"]
-pub mod dual_scalar_evaluator_matrix;
-
 /// Integration tests from `tests/expr_adversarial_proptest.rs`.
 #[path = "expr_adversarial_proptest.rs"]
 pub mod expr_adversarial_proptest;
@@ -103,15 +78,6 @@ pub mod f32_comparison_property_contracts;
 /// Integration tests from `tests/fixed_width_value_property_contracts.rs`.
 #[path = "fixed_width_value_property_contracts.rs"]
 pub mod fixed_width_value_property_contracts;
-
-/// Integration tests from `tests/flat_cpu_input_contract.rs`.
-#[path = "flat_cpu_input_contract.rs"]
-pub mod flat_cpu_input_contract;
-
-/// Integration tests from `tests/fnv1a32_zero.rs`.
-#[allow(missing_docs)]
-#[path = "fnv1a32_zero.rs"]
-pub mod fnv1a32_zero;
 
 /// Integration tests from `tests/gap_transcendentals_parity.rs`.
 #[path = "gap_transcendentals_parity.rs"]
@@ -164,6 +130,10 @@ pub mod reference_error_contract;
 #[path = "reference_eval_fma_select_generated.rs"]
 pub mod reference_eval_fma_select_generated;
 
+/// Integration tests from `tests/reference_expression_compositionality_property_contracts.rs`.
+#[path = "reference_expression_compositionality_property_contracts.rs"]
+pub mod reference_expression_compositionality_property_contracts;
+
 /// Integration tests from `tests/reference_output_byte_stability.rs`.
 #[path = "reference_output_byte_stability.rs"]
 pub mod reference_output_byte_stability;
@@ -191,14 +161,6 @@ pub mod single_rank_collective_reference;
 #[path = "step_ceiling_contract.rs"]
 pub mod step_ceiling_contract;
 
-/// Integration tests from `tests/storage_graph_generated_adversarial.rs`.
-#[path = "storage_graph_generated_adversarial.rs"]
-pub mod storage_graph_generated_adversarial;
-
-/// Integration tests from `tests/storage_graph_scalar_matrix.rs`.
-#[path = "storage_graph_scalar_matrix.rs"]
-pub mod storage_graph_scalar_matrix;
-
 /// Integration tests from `tests/strict_transcendental_accuracy.rs`.
 #[path = "strict_transcendental_accuracy.rs"]
 pub mod strict_transcendental_accuracy;
@@ -215,50 +177,6 @@ pub mod subgroup_edge_contract;
 /// Integration tests from `tests/subnormal_contract.rs`.
 #[path = "subnormal_contract.rs"]
 pub mod subnormal_contract;
-
-/// Integration tests from `tests/sweep_dual_arith_oracle_matrix.rs`.
-#[path = "sweep_dual_arith_oracle_matrix.rs"]
-pub mod sweep_dual_arith_oracle_matrix;
-
-/// Integration tests from `tests/sweep_dual_bitwise_and_volume_oracle_matrix.rs`.
-#[path = "sweep_dual_bitwise_and_volume_oracle_matrix.rs"]
-pub mod sweep_dual_bitwise_and_volume_oracle_matrix;
-
-/// Integration tests from `tests/sweep_dual_bitwise_clz_volume_oracle_matrix.rs`.
-#[path = "sweep_dual_bitwise_clz_volume_oracle_matrix.rs"]
-pub mod sweep_dual_bitwise_clz_volume_oracle_matrix;
-
-/// Integration tests from `tests/sweep_dual_bitwise_not_volume_oracle_matrix.rs`.
-#[path = "sweep_dual_bitwise_not_volume_oracle_matrix.rs"]
-pub mod sweep_dual_bitwise_not_volume_oracle_matrix;
-
-/// Integration tests from `tests/sweep_dual_bitwise_or_volume_oracle_matrix.rs`.
-#[path = "sweep_dual_bitwise_or_volume_oracle_matrix.rs"]
-pub mod sweep_dual_bitwise_or_volume_oracle_matrix;
-
-/// Integration tests from `tests/sweep_dual_bitwise_popcount_volume_oracle_matrix.rs`.
-#[path = "sweep_dual_bitwise_popcount_volume_oracle_matrix.rs"]
-pub mod sweep_dual_bitwise_popcount_volume_oracle_matrix;
-
-/// Integration tests from `tests/sweep_dual_bitwise_shift_left_volume_oracle_matrix.rs`.
-#[path = "sweep_dual_bitwise_shift_left_volume_oracle_matrix.rs"]
-pub mod sweep_dual_bitwise_shift_left_volume_oracle_matrix;
-
-/// Integration tests from `tests/sweep_dual_bitwise_shift_right_volume_oracle_matrix.rs`.
-#[path = "sweep_dual_bitwise_shift_right_volume_oracle_matrix.rs"]
-pub mod sweep_dual_bitwise_shift_right_volume_oracle_matrix;
-
-/// Integration tests from `tests/sweep_dual_bitwise_xor_volume_oracle_matrix.rs`.
-#[path = "sweep_dual_bitwise_xor_volume_oracle_matrix.rs"]
-pub mod sweep_dual_bitwise_xor_volume_oracle_matrix;
-
-/// Integration tests from `tests/sweep_dual_compare_eq_volume_oracle_matrix.rs`.
-#[path = "sweep_dual_compare_eq_volume_oracle_matrix.rs"]
-pub mod sweep_dual_compare_eq_volume_oracle_matrix;
-
-/// Integration tests from `tests/sweep_dual_compare_lt_volume_oracle_matrix.rs`.
-#[path = "sweep_dual_compare_lt_volume_oracle_matrix.rs"]
-pub mod sweep_dual_compare_lt_volume_oracle_matrix;
 
 /// Integration tests from `tests/tile_reference_contracts.rs`.
 #[path = "tile_reference_contracts.rs"]

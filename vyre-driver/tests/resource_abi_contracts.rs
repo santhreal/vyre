@@ -13,7 +13,7 @@
 use vyre_driver::{
     all_alias_set_kinds, all_external_memory_kinds, all_format_classes, all_image_formats,
     all_layout_states, all_lifetime_state_kinds, all_provenance_kinds, all_sync_protocols,
-    all_usage_flags, authenticate_external_import, AdmittedResourceRecord,
+    all_usage_flags, authenticate_external_import, AdmissionState, AdmittedResourceRecord,
     AdmittedResourceRecordExt, ColorInterpretation, ExternalEventKind, ExternalMemoryKind,
     ExternalResourceRegistry, FormatClass, ImageDimensions, ImageFormat, ResidentOwner,
     ResourceAbiError, ResourceAliasSet, ResourceLayoutState, ResourceLifetimeState,
@@ -241,7 +241,7 @@ fn pre_allocation_rejection_of_unsupported_import_combinations() {
 
 #[test]
 fn external_resource_registry_and_device_loss_view_invalidation() {
-    let registry = ExternalResourceRegistry::new();
+    let registry = ExternalResourceRegistry::new("device loss contract");
 
     let owner = ResidentOwner::new().expect("mint resident owner");
     let record1 = AdmittedResourceRecord::new_2d_owned(
@@ -376,4 +376,150 @@ impl ToStringHelper for FormatClass {
     fn to_string(&self) -> String {
         format!("{self:?}")
     }
+}
+
+/// How many admissions every bounded-admission case drives past the ceiling.
+///
+/// The capacity constant is private to `vyre-driver`, so no test can read it.
+/// This number only has to exceed it; every assertion below compares measured
+/// live counts against each other rather than against a pinned ceiling.
+const ADMISSIONS_PAST_THE_CEILING: u64 = 2048;
+
+/// The device every bounded-admission case admits into.
+const BOUNDED_DEVICE: u64 = 9;
+
+/// A record that passes admission, distinguished only by `resource_id`.
+fn admissible_record(resource_id: u64) -> AdmittedResourceRecord {
+    AdmittedResourceRecord::new_external_import_2d(
+        resource_id,
+        BOUNDED_DEVICE,
+        ImageFormat::Rgba8Unorm,
+        ColorInterpretation::Srgb,
+        64,
+        64,
+        256,
+        ResourcePermittedUsages::SAMPLED.union(ResourcePermittedUsages::TRANSFER_DST),
+        ExternalMemoryKind::DmaBuf,
+        0x9000_0000 | resource_id,
+        TimelineSyncProtocol::ImplicitQueue,
+    )
+}
+
+/// Admit `count` distinct resources into a fresh registry and return how many
+/// records it still holds, read from the device-loss report.
+fn live_records_after(count: u64) -> usize {
+    let registry = ExternalResourceRegistry::new("bounded admission contract");
+    for resource_id in 1..=count {
+        registry
+            .admit_resource(admissible_record(resource_id))
+            .expect("an admissible record is admitted");
+    }
+    registry
+        .invalidate_on_device_loss(BOUNDED_DEVICE)
+        .invalidated_resources
+        .len()
+}
+
+/// An admission has no matching release, so a caller that imports one surface
+/// per frame admits without end. The live count must reach a ceiling and stay
+/// there whatever it is asked for past that point.
+#[test]
+fn the_admitted_resource_table_stops_growing_under_unbounded_admission() {
+    let at_ceiling = live_records_after(ADMISSIONS_PAST_THE_CEILING);
+    assert!(
+        at_ceiling < ADMISSIONS_PAST_THE_CEILING as usize,
+        "the table held {at_ceiling} of {ADMISSIONS_PAST_THE_CEILING} admissions, so it is unbounded"
+    );
+    for extra in [1u64, 63, 512] {
+        assert_eq!(
+            at_ceiling,
+            live_records_after(ADMISSIONS_PAST_THE_CEILING + extra),
+            "{extra} admissions past the ceiling moved the live count"
+        );
+    }
+}
+
+#[test]
+fn eviction_takes_the_oldest_admission_and_spares_the_newest() {
+    let registry = ExternalResourceRegistry::new("bounded admission contract");
+    for resource_id in 1..=ADMISSIONS_PAST_THE_CEILING {
+        registry
+            .admit_resource(admissible_record(resource_id))
+            .expect("an admissible record is admitted");
+    }
+
+    registry
+        .register_dependent_view(ADMISSIONS_PAST_THE_CEILING, 1)
+        .expect("the newest admission is still held");
+
+    let err = registry
+        .register_dependent_view(1, 2)
+        .expect_err("the oldest admission was evicted");
+    assert_eq!(
+        err,
+        ResourceAbiError::ResourceInvalidated { resource_id: 1 }
+    );
+
+    let surviving = registry
+        .invalidate_on_device_loss(BOUNDED_DEVICE)
+        .invalidated_resources;
+    let oldest_survivor = *surviving.first().expect("the table is not empty");
+    let expected: Vec<u64> = (oldest_survivor..=ADMISSIONS_PAST_THE_CEILING).collect();
+    assert_eq!(
+        surviving, expected,
+        "the survivors are not the contiguous newest admissions"
+    );
+}
+
+/// An evicted record leaves nothing behind in either dependent index.
+///
+/// Re-admitting the evicted id is the only way a caller can observe what the
+/// indexes still hold under it: device loss reports dependents of the records
+/// it invalidates, so a leaked entry under an id the table no longer holds is
+/// never read. Without the re-admission this case passes against an
+/// implementation that never clears an index, and both indexes then grow
+/// without bound under the admission the record table does bound.
+#[test]
+fn evicting_a_record_drops_its_dependent_view_and_artifact_entries() {
+    let registry = ExternalResourceRegistry::new("bounded admission contract");
+    registry
+        .admit_resource(admissible_record(1))
+        .expect("an admissible record is admitted");
+    registry
+        .register_dependent_view(1, 8001)
+        .expect("register a view on the first admission");
+    registry
+        .register_dependent_artifact(1, 9001)
+        .expect("register an artifact on the first admission");
+
+    for resource_id in 2..=ADMISSIONS_PAST_THE_CEILING {
+        registry
+            .admit_resource(admissible_record(resource_id))
+            .expect("an admissible record is admitted");
+    }
+    assert_eq!(
+        registry.admission(1),
+        AdmissionState::Absent,
+        "resource 1 was not evicted, so this case proves nothing"
+    );
+
+    registry
+        .admit_resource(admissible_record(1))
+        .expect("the evicted id is admissible again");
+
+    let report = registry.invalidate_on_device_loss(BOUNDED_DEVICE);
+    assert!(
+        report.invalidated_resources.contains(&1),
+        "the re-admitted record is not in the report"
+    );
+    assert_eq!(
+        report.invalidated_views,
+        Vec::<u64>::new(),
+        "the evicted record left a dependent view entry behind"
+    );
+    assert_eq!(
+        report.invalidated_artifacts,
+        Vec::<u64>::new(),
+        "the evicted record left a dependent artifact entry behind"
+    );
 }

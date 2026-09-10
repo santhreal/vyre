@@ -1,6 +1,6 @@
 //! Multi-domain ProgramGraph composition, validation, analysis, and wire contracts.
 //!
-//! BACKLOG row 48 requires a domain-neutral graph construction API that composes
+//! The contract requires a domain-neutral graph construction API that composes
 //! arbitrary operations, nested subgraphs, retained state, streams, and effects
 //! across unrelated domains through one production path without special cases.
 

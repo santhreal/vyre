@@ -255,9 +255,13 @@ fn schedule_calculus_all_operators_declare_preconditions_resources_effects_and_p
 
 #[test]
 fn schedule_calculus_operator_set_is_closed_against_source_at_runtime() {
-    let source = std::fs::read_to_string("vyre-foundation/src/schedule/tree.rs")
-        .or_else(|_| std::fs::read_to_string("src/schedule/tree.rs"))
-        .expect("schedule tree.rs source must be accessible for runtime closure check");
+    let declaring = vyre_test_support::monorepo::declaring_source_file("pub enum ScheduleOp {");
+    let source = std::fs::read_to_string(&declaring).unwrap_or_else(|error| {
+        panic!(
+            "read the declaration of ScheduleOp at {}: {error}",
+            declaring.display()
+        )
+    });
 
     let enum_marker = "pub enum ScheduleOp {";
     let start_idx = source
@@ -445,15 +449,20 @@ fn schedule_calculus_partial_schedule_and_symbolic_parameters() {
     let mut bindings = HashMap::new();
     bindings.insert("tile_dim_k".to_string(), 32);
 
+    let selected = ScheduleResourceBounds::default();
     let plan = partial
-        .instantiate(&bindings)
+        .instantiate(&bindings, selected.clone())
         .expect("instantiation within legal bounds succeeds");
     assert_eq!(plan.version, 2);
+    assert_eq!(
+        plan.resource_bounds, selected,
+        "the plan validates under the bounds the caller selected, not one the schedule invented"
+    );
 
     // Out-of-bounds parameter instantiation fails closed
     let mut invalid_bindings = HashMap::new();
     invalid_bindings.insert("tile_dim_k".to_string(), 128); // Exceeds max_value: 64
-    assert!(partial.instantiate(&invalid_bindings).is_err());
+    assert!(partial.instantiate(&invalid_bindings, selected).is_err());
 }
 
 #[test]

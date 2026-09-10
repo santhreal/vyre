@@ -1,6 +1,6 @@
 //! Floor validation and unmeasured floor refusal.
 //!
-//! BACKLOG row 95 requires:
+//! The contract requires:
 //! A known blocker: one registered case, the resident optimizer pipeline, carries
 //! the floor `min_speedup_over_baseline = 0.10` in `docs/optimization/BENCH_TARGETS.toml`,
 //! which was written before any device measured it. Make an unmeasured floor impossible to

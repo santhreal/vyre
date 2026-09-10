@@ -22,7 +22,6 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::artifact_gate::{settle_inspection, Inspection};
-use crate::evidence_record::MeasurementRecord;
 use crate::gate::{Finding, GateBehavior, GateCtx, GateError, Report};
 use crate::gates::platform_support_matrix::{
     PortabilityLedger, PortabilityRun, EVIDENCE_EMULATED, EVIDENCE_NATIVE, LEDGER_PATH,
@@ -73,7 +72,7 @@ impl GateBehavior for PortabilityEvidenceGate {
 
         let agreed = agreed_identities(&ledger);
         inspection.generates_document_text(PIN_SOURCE_PATH, pinned_source(&ctx.root, &agreed)?);
-        inspection.generates_evidence(LEDGER_PATH, MeasurementRecord::HostOnly, &ledger);
+        inspection.generates_host_evidence(LEDGER_PATH, &ledger);
 
         let mut report = settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.note(format!(

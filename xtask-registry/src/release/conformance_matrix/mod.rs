@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 
 use vyre_driver::backend_dispatches;
 use xtask::gate::{Finding, GateCtx, GateError, Report};
-use xtask::release::conformance_evidence_semantics::REQUIRED_BACKENDS;
+use xtask::release::conformance_evidence_semantics::REQUIRED_DISPATCH_BACKENDS;
 use xtask::release::conformance_op_matrix::{
     evaluate_op_matrix_coverage, read_conformance_required_op_matrix,
 };
@@ -31,6 +31,8 @@ mod case_classes;
 mod evidence;
 mod evidence_agreement;
 mod scan_matrix;
+
+pub use self::evidence_agreement::RECORDED_BACKENDS;
 
 /// Registered conformance op floor. 49 is the count measured when the floor was
 /// set, against 327 registered today. Which operations a release ships is a
@@ -82,27 +84,7 @@ impl xtask::gate::GateBehavior for ConformanceMatrixGate {
             });
         }
         entries.sort_by(|left, right| left.id.cmp(&right.id));
-        let registered_backends =
-        vyre_registry_link::backend::live_backend_registry_by_precedence().map_err(|error| {
-            GateError::new(
-                format!("the backend registry did not start: {error}"),
-                "repair the backend registration this error names; conformance coverage cannot be measured without the live backend list",
-            )
-        })?;
-        let mut dispatch_backends = Vec::new();
-        for backend in registered_backends {
-            if backend_dispatches(backend.id).map_err(|error| {
-            GateError::new(
-                format!(
-                    "the backend registry did not start while asking whether `{}` dispatches: {error}",
-                    backend.id
-                ),
-                "repair the backend registration this error names",
-            )
-        })? {
-            dispatch_backends.push(backend.id.to_string());
-        }
-        }
+        let dispatch_backends = dispatch_backend_roster()?;
         let fixture_required_count = entries
             .iter()
             .filter(|entry| entry.requires_fixture)
@@ -191,7 +173,7 @@ impl xtask::gate::GateBehavior for ConformanceMatrixGate {
             ));
         }
         blockers.append(&mut catalog_blockers);
-        for required in REQUIRED_BACKENDS {
+        for required in REQUIRED_DISPATCH_BACKENDS {
             if !dispatch_backends.iter().any(|backend| backend == required) {
                 blockers.push(format!("required dispatch backend `{required}` is missing"));
             }
@@ -350,11 +332,7 @@ impl xtask::gate::GateBehavior for ConformanceMatrixGate {
                 "close the conformance gap this blocker names, then run the gate again",
             ));
         }
-        inspection.generates_evidence(
-            &relative,
-            xtask::evidence_record::MeasurementRecord::HostOnly,
-            &matrix,
-        );
+        inspection.generates_host_evidence(&relative, &matrix);
         let mut report = xtask::artifact_gate::settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.note(format!(
             "{} registered conformance op entry(ies)",
@@ -362,6 +340,47 @@ impl xtask::gate::GateBehavior for ConformanceMatrixGate {
         ));
         Ok(report)
     }
+}
+
+/// Every backend the registry reports as dispatching, in precedence order.
+///
+/// The roster is the registered backend set and nothing else. The reference
+/// interpreter is compared against, not dispatched to: it submits no
+/// `BackendRegistration`, and `vyre-driver-reference` owns a closure that
+/// fails when any registry entry executes on the host. A release requiring it
+/// here asked the registry for a member the registry exists to refuse, so the
+/// requirement reported missing on every run and named a repair that would
+/// have put a CPU execution route back into discovery and precedence.
+///
+/// Each entry answers for itself, through the `dispatches` flag it submitted.
+///
+/// # Errors
+/// Returns the registry startup error when providers conflict.
+pub fn dispatch_backend_roster() -> Result<Vec<String>, GateError> {
+    let registered = vyre_registry_link::backend::live_backend_registry_by_precedence().map_err(
+        |error| {
+            GateError::new(
+                format!("the backend registry did not start: {error}"),
+                "repair the backend registration this error names; conformance coverage cannot be measured without the live backend list",
+            )
+        },
+    )?;
+    let mut roster = Vec::with_capacity(registered.len());
+    for backend in registered {
+        let dispatches = backend_dispatches(backend.id).map_err(|error| {
+            GateError::new(
+                format!(
+                    "the backend registry did not start while asking whether `{}` dispatches: {error}",
+                    backend.id
+                ),
+                "repair the backend registration this error names",
+            )
+        })?;
+        if dispatches {
+            roster.push(backend.id.to_string());
+        }
+    }
+    Ok(roster)
 }
 
 fn default_output() -> PathBuf {

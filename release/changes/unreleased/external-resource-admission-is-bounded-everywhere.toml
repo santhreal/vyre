@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The driver external resource registry now bounds its admitted record table, which grew without limit while every backend copy of it evicted at a ceiling."

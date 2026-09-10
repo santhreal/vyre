@@ -1,6 +1,6 @@
 //! Content-addressed evidence storage for benchmark receipts.
 //!
-//! BACKLOG row 95 requires a content-addressed evidence store where two runs of the same
+//! The contract requires a content-addressed evidence store where two runs of the same
 //! workload on the same binaries and device facts produce the same content address, and a
 //! change to any recorded field produces a different one.
 

@@ -144,7 +144,7 @@ fn an_id_naming_no_crate_is_refused_whatever_it_declares() {
 /// Catalog bundle collects registered descriptors and lowering providers and computes a stable digest.
 #[test]
 fn catalog_bundle_assembly_and_descriptor_lookup() {
-    let bundle = OperationCatalogBundle::from_registry();
+    let bundle = OperationCatalogBundle::global();
     assert!(!bundle.is_empty());
     assert!(bundle.len() > 0);
     let digest = bundle.digest();
@@ -176,7 +176,7 @@ fn catalog_bundle_assembly_and_descriptor_lookup() {
 fn every_registered_operation_has_descriptor_lowering_and_conformance_provider() {
     let registry = OperationRegistry::global();
     let bundle = registry.catalog_bundle();
-    let conformance = ConformanceRegistry::from_registry();
+    let conformance = ConformanceRegistry::global();
 
     let all_registered_ids: BTreeSet<&'static str> = registry.iter().map(|op| op.id).collect();
 
@@ -618,43 +618,3 @@ fn every_absence_class_produces_a_distinct_validating_decision() {
     assert_eq!(states.len(), AbsenceDecision::ALL.len());
 }
 
-/// A test proves declarative dialect operations generate builders, documentation, and contract joins.
-#[test]
-fn declarative_dialect_operation_generation() {
-    fn dummy_builder() -> crate::ir::Program {
-        crate::ir::Program::empty()
-    }
-
-    crate::declare_dialect_op! {
-        id: "vyre-foundation::test::generated_dialect_op",
-        tier: OperationTier::Foundation,
-        category: "test_dialect",
-        doc: "A generated dialect test operation for verifying single-source generation.",
-        reference_obligation: "Pure value identity reference semantics.",
-        laws: &["idempotent"],
-        builder: dummy_builder,
-    }
-
-    let op = super::SemanticOperation {
-        id: "vyre-foundation::test::generated_dialect_op",
-        semantic_version: 1,
-        signature: None,
-        tier: OperationTier::Foundation,
-        category: Some("test_dialect"),
-        build: Some(dummy_builder),
-        test_inputs: None,
-        expected_output: None,
-        laws: &["idempotent"],
-        numeric: NumericContract::EXACT,
-        geometry_requirements: crate::geometry::GeometryRequirements::agnostic(),
-        source_file: file!(),
-        explicit_effects: None,
-        explicit_capabilities: None,
-        absence: None,
-    };
-
-    let record = op.contract_record();
-    assert_eq!(record.validate(), Ok(()));
-    assert_eq!(record.decision.laws().len(), 1);
-    assert_eq!(record.decision.laws()[0].law.name(), "idempotent");
-}

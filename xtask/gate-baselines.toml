@@ -592,6 +592,10 @@ name = "variant-list-closure"
 findings = 0
 
 [[gate]]
+name = "verification-budget"
+findings = 0
+
+[[gate]]
 name = "verify-rewrite-proofs"
 findings = 0
 

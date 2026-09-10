@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The composition placement gate resolves a registration against every crate of the composition family rather than the facade crate alone, and reports a registration whose operation id names one family owner while its source sits under another. The domain roster is read from each family crate's module declarations instead of a frozen list, and a canonical block skeleton is read from the parse tree instead of a substring match, so a name occurring in a doc comment, inside a longer identifier, or under `cfg(test)` no longer counts as its definition."

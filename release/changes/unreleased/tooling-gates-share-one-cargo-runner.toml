@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The gates that build the workspace, the consumers and the device test targets share one cargo invocation, one diagnostic parse and one placement of a diagnostic relative to the checkout, so a build that produced no diagnostics and a nonzero exit is judged the same way by each. Two gates that read the workflow command grammar, two that walk a crate's sources, and two evidence writers that query the host device driver likewise have one owner each."

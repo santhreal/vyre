@@ -62,18 +62,17 @@ pub use workspace_manifest::{
     workspace_excludes, workspace_members, workspace_root, workspace_root_from, MAX_SOURCE_BYTES,
 };
 pub use workspace_rules::{
-    category_home_failures, frontend_owner_failures, materializer_admission_failures,
-    operation_identity_failures, registration_owner_failures, registry_link_failures,
-    roster_failures, substrate_home_failures, DiscardingImport, Registration,
+    category_home_failures, frontend_owner_failures, is_category_a_crate,
+    materializer_admission_failures, operation_identity_failures, registration_owner_failures,
+    registry_link_failures, roster_failures, substrate_home_failures, DiscardingImport,
+    Registration, CATEGORY_A_CRATE, CATEGORY_C_CRATE,
 };
 
 use crate::workspace_manifest::{
     crate_source_roots, member_sources, read_source_bounded, relative, tree_files, MemberSource,
     SELF_CRATE,
 };
-use crate::workspace_rules::{
-    crate_declares_frontend, CATEGORY_A_CRATE, CATEGORY_C_CRATE, FRONTEND_OWNERS,
-};
+use crate::workspace_rules::{crate_declares_frontend, FRONTEND_OWNERS};
 
 use crate::backend_vocabulary::is_test_source;
 use crate::module_layout::{
@@ -89,6 +88,10 @@ use crate::registration_text::parse_registrations;
 pub struct Workspace {
     /// Workspace member paths from the root manifest.
     pub members: Vec<String>,
+    /// Workspace exclude paths from the root manifest.
+    pub excludes: Vec<String>,
+    /// Every checkout directory holding a `Cargo.toml`, root-relative.
+    pub manifest_directories: Vec<String>,
     /// Every `OperationRegistration` found in member sources.
     pub registrations: Vec<Registration>,
     /// Source paths naming the substrate concept.
@@ -118,6 +121,8 @@ pub struct Workspace {
 #[must_use]
 pub fn scan(root: &Path) -> Workspace {
     let members = workspace_members(root);
+    let excludes = workspace_excludes(root);
+    let manifest_directories = crate::workspace_manifest::manifest_directories(root);
     let sources = member_sources(root, &members);
     let registrations = scan_registrations(&sources);
     let substrate_paths = scan_substrate_paths(&sources);
@@ -133,6 +138,8 @@ pub fn scan(root: &Path) -> Workspace {
         backend_vocabulary::scan_foreign_glob_reexports(root, &crate_roots);
     Workspace {
         members,
+        excludes,
+        manifest_directories,
         registrations,
         substrate_paths,
         frontend_paths,
@@ -170,7 +177,11 @@ pub fn source_file_roster(root: &Path) -> Vec<String> {
 pub fn violations(root: &Path) -> Vec<String> {
     let workspace = scan(root);
     let mut failures = Vec::new();
-    failures.extend(roster_failures(&workspace.members));
+    failures.extend(roster_failures(
+        &workspace.manifest_directories,
+        &workspace.members,
+        &workspace.excludes,
+    ));
     failures.extend(registration_owner_failures(&workspace.registrations));
     failures.extend(operation_identity_failures(
         &workspace.registrations,

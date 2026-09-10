@@ -6,9 +6,31 @@ use vyre_conform::backend_selection::backend_registration;
 use vyre_conform::oracle::OracleSession;
 use vyre_conform::witness_plan::plan_witness_inputs_into;
 use vyre_conform_spec::ConformanceResult;
+use vyre_driver_reference::ORACLE_EXECUTOR_ID;
 use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
+
+/// What a dispatch run executes against.
+///
+/// The oracle is not a backend, so it is not reachable by spelling a backend
+/// id. A caller selects one or the other and the two carry different executor
+/// ids into every row.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Executor<'a> {
+    Backend(&'a str),
+    Oracle,
+}
+
+impl<'a> Executor<'a> {
+    fn executor_id(self) -> &'a str {
+        match self {
+            Executor::Backend(id) => id,
+            Executor::Oracle => ORACLE_EXECUTOR_ID,
+        }
+    }
+}
+
 pub(crate) fn dispatch_pairs(
-    backend_id: &str,
+    executor: Executor<'_>,
     ops: &str,
 ) -> Result<Vec<ConformanceResult>, String> {
     let entries = unified_entries();
@@ -20,10 +42,9 @@ pub(crate) fn dispatch_pairs(
     // judged backend with 349 defects rather than a backend nothing judged.
     // The oracle answers from the reference interpreter and registers no device
     // backend, so the route is chosen once rather than re-tested per op.
-    let backend = if is_oracle_backend(backend_id) {
-        None
-    } else {
-        Some(backend_registration(backend_id)?)
+    let backend = match executor {
+        Executor::Oracle => None,
+        Executor::Backend(id) => Some(backend_registration(id)?),
     };
     let mut pairs = Vec::with_capacity(selected_entries.len());
 
@@ -33,7 +54,7 @@ pub(crate) fn dispatch_pairs(
             Err(error) => {
                 pairs.push(ConformanceResult {
                     op_id: entry.id.into(),
-                    backend_id: backend_id.into(),
+                    executor_id: executor.executor_id().into(),
                     passed: false,
                     message: error,
                     replay_capsule: None,
@@ -44,18 +65,14 @@ pub(crate) fn dispatch_pairs(
 
         pairs.push(match backend {
             Some(backend) => compare_backend_against_reference(backend, &prepared),
-            None => dispatch_oracle(&prepared, backend_id),
+            None => dispatch_oracle(&prepared),
         });
     }
 
     Ok(pairs)
 }
 
-fn is_oracle_backend(backend_id: &str) -> bool {
-    backend_id == "cpu-ref" || backend_id == "reference" || backend_id == "oracle"
-}
-
-fn dispatch_oracle(prepared: &PreparedEntry, backend_id: &str) -> ConformanceResult {
+fn dispatch_oracle(prepared: &PreparedEntry) -> ConformanceResult {
     let session = OracleSession::new(prepared.program.clone());
     let mut planned_inputs = Vec::with_capacity(prepared.input_plan.source_count());
     for (case_index, inputs) in prepared.cases.iter().enumerate() {
@@ -64,7 +81,7 @@ fn dispatch_oracle(prepared: &PreparedEntry, backend_id: &str) -> ConformanceRes
         {
             return ConformanceResult {
                 op_id: prepared.id.into(),
-                backend_id: backend_id.to_string(),
+                executor_id: ORACLE_EXECUTOR_ID.to_string(),
                 passed: false,
                 message: format!("witness input planning failed for case {case_index}: {error}"),
                 replay_capsule: None,
@@ -82,7 +99,7 @@ fn dispatch_oracle(prepared: &PreparedEntry, backend_id: &str) -> ConformanceRes
                 Err(error) => {
                     return ConformanceResult {
                         op_id: prepared.id.into(),
-                        backend_id: backend_id.to_string(),
+                        executor_id: ORACLE_EXECUTOR_ID.to_string(),
                         passed: false,
                         message: format!("oracle fixpoint failed on case {case_index}: {error}"),
                         replay_capsule: None,
@@ -95,7 +112,7 @@ fn dispatch_oracle(prepared: &PreparedEntry, backend_id: &str) -> ConformanceRes
                 Err(error) => {
                     return ConformanceResult {
                         op_id: prepared.id.into(),
-                        backend_id: backend_id.to_string(),
+                        executor_id: ORACLE_EXECUTOR_ID.to_string(),
                         passed: false,
                         message: format!("oracle evaluation failed on case {case_index}: {error}"),
                         replay_capsule: None,
@@ -109,7 +126,7 @@ fn dispatch_oracle(prepared: &PreparedEntry, backend_id: &str) -> ConformanceRes
         {
             return ConformanceResult {
                 op_id: prepared.id.into(),
-                backend_id: backend_id.to_string(),
+                executor_id: ORACLE_EXECUTOR_ID.to_string(),
                 passed: false,
                 message: format!(
                     "oracle output diverged on case {case_index}: {detail}. Fix: align reference implementation with expected output fixture."
@@ -120,7 +137,7 @@ fn dispatch_oracle(prepared: &PreparedEntry, backend_id: &str) -> ConformanceRes
     }
     ConformanceResult {
         op_id: prepared.id.into(),
-        backend_id: backend_id.to_string(),
+        executor_id: ORACLE_EXECUTOR_ID.to_string(),
         passed: true,
         message: format!(
             "{} witness case(s) passed through reference oracle",

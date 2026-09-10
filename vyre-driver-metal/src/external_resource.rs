@@ -5,20 +5,20 @@
 //!
 //! This module provides Metal driver integration for IOSurface shared textures, shared buffers,
 //! and `MTLSharedEvent` timeline synchronization.
-
-use std::collections::{HashMap, HashSet};
-use std::sync::RwLock;
-
-use vyre_foundation::failure_domain::reclaim_poisoned_write;
-
-/// The subsystem every poison report in this module names as the owner.
-const OWNER: &str = "metal backend external resource registry";
+//!
+//! Admission, the two dependent indexes, the ceiling every import is bounded
+//! by and device-loss invalidation belong to
+//! [`ExternalResourceRegistry`]. What is Metal here is the handle an import
+//! carries and the combinations authentication rejects.
 
 use vyre_driver::{
-    AdmittedResourceRecord, DeviceLossInvalidationReport, ExternalMemoryKind, ImageDimensions,
-    ImageFormat, ResourceAbiError, ResourcePermittedUsages, ResourceTransitionSchedule,
-    TimelineSyncProtocol, TransitionExecutionReport,
+    AdmittedResourceRecord, DeviceLossInvalidationReport, ExternalMemoryKind,
+    ExternalResourceRegistry, ImageDimensions, ImageFormat, ImportedResource, ResourceAbiError,
+    ResourcePermittedUsages, TimelineSyncProtocol,
 };
+
+/// The subsystem every poison report from this registry names as the owner.
+const OWNER: &str = "metal backend external resource registry";
 
 /// Metal external memory handle representation.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -55,28 +55,11 @@ pub struct MetalExternalMemoryDescriptor {
     pub sync_protocol: TimelineSyncProtocol,
 }
 
-/// An admitted zero-copy imported Metal resource.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct MetalImportedResource {
-    /// Associated resource record.
-    pub record: AdmittedResourceRecord,
-    /// External memory handle.
-    pub handle: MetalExternalMemoryHandle,
-    /// Whether this resource operates with zero host copies.
-    pub is_zero_copy: bool,
-    /// Current mutation generation.
-    pub generation: u64,
-    /// Device validity flag.
-    pub is_valid: bool,
-}
-
 /// Metal concrete external resource importer and synchronization engine.
 #[derive(Debug)]
 pub struct MetalExternalResourceImporter {
     device_id: u64,
-    imported_resources: RwLock<HashMap<u64, MetalImportedResource>>,
-    dependent_views: RwLock<HashMap<u64, HashSet<u64>>>,
-    dependent_pipelines: RwLock<HashMap<u64, HashSet<u64>>>,
+    registry: ExternalResourceRegistry<MetalExternalMemoryHandle>,
 }
 
 impl MetalExternalResourceImporter {
@@ -85,10 +68,15 @@ impl MetalExternalResourceImporter {
     pub fn new(device_id: u64) -> Self {
         Self {
             device_id,
-            imported_resources: RwLock::new(HashMap::new()),
-            dependent_views: RwLock::new(HashMap::new()),
-            dependent_pipelines: RwLock::new(HashMap::new()),
+            registry: ExternalResourceRegistry::new(OWNER),
         }
+    }
+
+    /// The admitted resources of this device, their dependent views and their
+    /// dependent artifacts.
+    #[must_use]
+    pub fn registry(&self) -> &ExternalResourceRegistry<MetalExternalMemoryHandle> {
+        &self.registry
     }
 
     /// Pre-allocation capability check: reject unsupported combinations before any allocation.
@@ -135,6 +123,7 @@ impl MetalExternalResourceImporter {
 
         Ok(())
     }
+
     /// Import external memory into Metal with zero host copies.
     ///
     /// # Errors
@@ -166,158 +155,17 @@ impl MetalExternalResourceImporter {
             descriptor.sync_protocol,
         );
 
-        let imported = MetalImportedResource {
+        self.registry.admit(ImportedResource {
             record: record.clone(),
             handle: descriptor.handle,
-            is_zero_copy: true,
-            generation: 1,
-            is_valid: true,
-        };
-
-        let mut map = match self.imported_resources.write() {
-            Ok(g) => g,
-            Err(_) => {
-                return Err(ResourceAbiError::ResourceInvalidated {
-                    resource_id: descriptor.resource_id,
-                })
-            }
-        };
-        map.insert(descriptor.resource_id, imported);
+        })?;
 
         Ok(record)
     }
 
-    /// Register a dependent view on an imported resource.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ResourceAbiError::ResourceInvalidated`] if the resource is invalidated or not found.
-    pub fn register_dependent_view(
-        &self,
-        resource_id: u64,
-        view_id: u64,
-    ) -> Result<(), ResourceAbiError> {
-        let map = match self.imported_resources.read() {
-            Ok(g) => g,
-            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
-        };
-        let resource = map
-            .get(&resource_id)
-            .ok_or(ResourceAbiError::ResourceInvalidated { resource_id })?;
-        if !resource.is_valid {
-            return Err(ResourceAbiError::ResourceInvalidated { resource_id });
-        }
-        drop(map);
-
-        let mut views = match self.dependent_views.write() {
-            Ok(g) => g,
-            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
-        };
-        views.entry(resource_id).or_default().insert(view_id);
-        Ok(())
-    }
-
-    /// Register a dependent pipeline on an imported resource.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ResourceAbiError::ResourceInvalidated`] if the resource is invalidated or not found.
-    pub fn register_dependent_pipeline(
-        &self,
-        resource_id: u64,
-        pipeline_id: u64,
-    ) -> Result<(), ResourceAbiError> {
-        let map = match self.imported_resources.read() {
-            Ok(g) => g,
-            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
-        };
-        let resource = map
-            .get(&resource_id)
-            .ok_or(ResourceAbiError::ResourceInvalidated { resource_id })?;
-        if !resource.is_valid {
-            return Err(ResourceAbiError::ResourceInvalidated { resource_id });
-        }
-        drop(map);
-
-        let mut pipelines = match self.dependent_pipelines.write() {
-            Ok(g) => g,
-            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id }),
-        };
-        pipelines
-            .entry(resource_id)
-            .or_default()
-            .insert(pipeline_id);
-        Ok(())
-    }
-
-    /// Execute a transition schedule with exact timeline semaphore waits/signals.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ResourceAbiError::ResourceInvalidated`] if any resource is invalid.
-    pub fn execute_transition_schedule(
-        &self,
-        schedule: &ResourceTransitionSchedule,
-    ) -> Result<TransitionExecutionReport, ResourceAbiError> {
-        let map = match self.imported_resources.read() {
-            Ok(g) => g,
-            Err(_) => return Err(ResourceAbiError::ResourceInvalidated { resource_id: 0 }),
-        };
-        for (resource_id, _) in &schedule.transitions {
-            let res = map
-                .get(resource_id)
-                .ok_or(ResourceAbiError::ResourceInvalidated {
-                    resource_id: *resource_id,
-                })?;
-            if !res.is_valid {
-                return Err(ResourceAbiError::ResourceInvalidated {
-                    resource_id: *resource_id,
-                });
-            }
-        }
-
-        let report = TransitionExecutionReport::execute_exact(schedule);
-        Ok(report)
-    }
-
-    /// Invalidate all resources, views, and dependent pipelines on device loss.
+    /// Invalidate every resource of this device, and every view and artifact
+    /// derived from one.
     pub fn invalidate_on_device_loss(&self) -> DeviceLossInvalidationReport {
-        let mut report = DeviceLossInvalidationReport {
-            device_id: self.device_id,
-            invalidated_resources: Vec::new(),
-            invalidated_views: Vec::new(),
-            invalidated_artifacts: Vec::new(),
-        };
-
-        let mut map = reclaim_poisoned_write(
-            &self.imported_resources,
-            OWNER,
-            "the imported external resource table",
-        );
-        let mut views =
-            reclaim_poisoned_write(&self.dependent_views, OWNER, "the dependent view index");
-        let mut pipelines = reclaim_poisoned_write(
-            &self.dependent_pipelines,
-            OWNER,
-            "the dependent pipeline index",
-        );
-
-        for (res_id, res) in map.iter_mut() {
-            res.is_valid = false;
-            res.record.invalidate_on_device_loss();
-            report.invalidated_resources.push(*res_id);
-
-            if let Some(view_set) = views.remove(res_id) {
-                report.invalidated_views.extend(view_set);
-            }
-            if let Some(pipe_set) = pipelines.remove(res_id) {
-                report.invalidated_artifacts.extend(pipe_set);
-            }
-        }
-
-        report.invalidated_resources.sort_unstable();
-        report.invalidated_views.sort_unstable();
-        report.invalidated_artifacts.sort_unstable();
-        report
+        self.registry.invalidate_on_device_loss(self.device_id)
     }
 }

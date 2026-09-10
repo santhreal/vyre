@@ -257,7 +257,16 @@ fn fingerprint_of(commit: &str, changed: &[ChangedPath]) -> String {
 }
 
 /// Paths no source digest covers, because writing them is what a generator does.
-const EXCLUDE_EVIDENCE: &str = ":!release/evidence/**";
+///
+/// `release/evidence/**` is the corpus itself. The release provenance document
+/// is a projection of the stamps in that corpus and holds nothing a generator
+/// reads, so counting it as source made recording evidence change the source
+/// the recording names: every capture dirtied the next one and no sequence of
+/// commits reached a matching fingerprint.
+const EXCLUDED_FROM_SOURCE: [&str; 2] = [
+    ":!release/evidence/**",
+    ":!docs/generated/release-provenance.toml",
+];
 
 /// The label the source-difference digest is taken under.
 const SOURCE_DIFF_FORMAT: &[u8] = b"vyre-source-diff-v2";
@@ -288,28 +297,34 @@ fn changed_in_worktree(root: &Path) -> Option<Vec<ChangedPath>> {
     let tracked = git_bytes(
         root,
         &[
-            "diff",
-            "--name-only",
-            "--no-renames",
-            "-z",
-            "HEAD",
-            "--",
-            ".",
-            EXCLUDE_EVIDENCE,
-        ],
+            &[
+                "diff",
+                "--name-only",
+                "--no-renames",
+                "-z",
+                "HEAD",
+                "--",
+                ".",
+            ],
+            &EXCLUDED_FROM_SOURCE[..],
+        ]
+        .concat(),
     )
     .ok()?;
     let untracked = git_bytes(
         root,
         &[
-            "ls-files",
-            "--others",
-            "--exclude-standard",
-            "-z",
-            "--",
-            ".",
-            EXCLUDE_EVIDENCE,
-        ],
+            &[
+                "ls-files",
+                "--others",
+                "--exclude-standard",
+                "-z",
+                "--",
+                ".",
+            ],
+            &EXCLUDED_FROM_SOURCE[..],
+        ]
+        .concat(),
     )
     .unwrap_or_default();
     Some(
@@ -336,16 +351,19 @@ fn changed_between(root: &Path, base: &str, carrier: &str) -> Result<Vec<Changed
     let names = git_bytes(
         root,
         &[
-            "diff",
-            "--name-only",
-            "--no-renames",
-            "-z",
-            base,
-            carrier,
-            "--",
-            ".",
-            EXCLUDE_EVIDENCE,
-        ],
+            &[
+                "diff",
+                "--name-only",
+                "--no-renames",
+                "-z",
+                base,
+                carrier,
+                "--",
+                ".",
+            ],
+            &EXCLUDED_FROM_SOURCE[..],
+        ]
+        .concat(),
     )
     .map_err(|error| format!("git cannot compare `{base}` with `{carrier}`: {error}"))?;
     let paths = ordered_paths(&[&names]);
@@ -376,6 +394,69 @@ fn committed_objects(root: &Path, objects: &[String]) -> Vec<Option<Content>> {
         // per-object read reported before.
         Err(_) => objects.iter().map(|_| None).collect(),
     }
+}
+
+/// The newest commit touching each committed path under `pathspec`.
+///
+/// One history walk answers every path. `git log -1 -- <path>` per artifact
+/// walks the whole history again for each one, which is what made the
+/// committed-provenance sweep cost tens of minutes on a network checkout: the
+/// commits arrive newest-first, so the first mention of a path is the commit
+/// that carries it.
+///
+/// # Errors
+///
+/// Returns the sentence a gate reports when git cannot run or when the log is
+/// not a sequence of commit-then-paths records.
+pub fn carrier_commits(root: &Path, pathspec: &str) -> Result<BTreeMap<String, String>, String> {
+    let output = Command::new("git")
+        .args([
+            "-c",
+            "core.quotePath=false",
+            "log",
+            "--format=%H",
+            "--name-only",
+            "--no-renames",
+            "--",
+            pathspec,
+        ])
+        .current_dir(root)
+        .output()
+        .map_err(|error| format!("git log over `{pathspec}` could not run: {error}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "git log over `{pathspec}` failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    let mut carriers = BTreeMap::new();
+    let mut commit = String::new();
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        if line.is_empty() {
+            continue;
+        }
+        if is_commit_id(line) {
+            commit = line.to_string();
+            continue;
+        }
+        if commit.is_empty() {
+            return Err(format!(
+                "git log over `{pathspec}` reported path `{line}` before any commit"
+            ));
+        }
+        carriers
+            .entry(line.to_string())
+            .or_insert_with(|| commit.clone());
+    }
+    Ok(carriers)
+}
+
+/// Whether a log line is a commit id rather than a path.
+///
+/// A tracked path cannot be 40 hex characters with no separator, so the two
+/// record kinds are distinguishable without one.
+fn is_commit_id(line: &str) -> bool {
+    line.len() == 40 && line.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 /// What each requested `<commit>:<path>` object holds, as text, in order.
@@ -590,23 +671,71 @@ mod tests {
         );
     }
 
+    /// Writing anything the source digest excludes leaves the tree clean.
+    ///
+    /// The set is read from `EXCLUDED_FROM_SOURCE` rather than listed here, so
+    /// a path added to the exclusion is proven without anyone remembering to
+    /// extend this. Iterating the constant cannot see an entry that was
+    /// deleted, so each entry the corpus depends on is also asserted by name
+    /// below.
     #[test]
-    fn a_committed_evidence_artifact_does_not_dirty_the_tree_it_describes() {
+    fn no_excluded_path_dirties_the_tree_a_record_names() {
+        for pathspec in EXCLUDED_FROM_SOURCE {
+            let relative = pathspec
+                .strip_prefix(":!")
+                .expect("Fix: every exclusion is a negative git pathspec.")
+                .replace("**", "generated-artifact.json");
+            let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
+            crate::fixture_checkout::seeded(dir.path());
+            let target = dir.path().join(&relative);
+            std::fs::create_dir_all(target.parent().expect("Fix: the path names a parent."))
+                .expect("Fix: create the excluded directory.");
+            std::fs::write(&target, "{}\n").expect("Fix: write the excluded artifact.");
+
+            let fingerprint = capture(dir.path()).expect("Fix: the checkout still names a commit.");
+
+            assert!(
+                fingerprint.ends_with(":dirty=false"),
+                "Fix: `{relative}` is excluded from the source digest, so writing it must leave the tree clean; fingerprint={fingerprint}"
+            );
+        }
+    }
+
+    /// The release provenance projection is excluded, by name.
+    ///
+    /// Iterating the exclusion set proves whatever is in it and nothing about
+    /// what was taken out, so removing this entry would leave the loop above
+    /// green. Recording evidence rewrites this document, and counting it as
+    /// source made every capture dirty the next one, which is a state no
+    /// sequence of commits recovers from.
+    #[test]
+    fn the_release_provenance_projection_is_excluded_from_the_source_digest() {
+        assert!(
+            EXCLUDED_FROM_SOURCE.contains(&":!docs/generated/release-provenance.toml"),
+            "Fix: the release provenance document is a projection of the evidence stamps; counting it as source makes recording evidence change the source the recording names"
+        );
+    }
+
+    /// The exclusion covers one named projection, not every generated document.
+    ///
+    /// A generated document that a compile reads is source to every record
+    /// that names it. Widening the exclusion to `docs/generated/**` would let
+    /// a crate graph or an ownership table change under a stamp that still
+    /// claimed to name the tree.
+    #[test]
+    fn a_generated_document_outside_the_exclusion_dirties_the_tree() {
         let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
         crate::fixture_checkout::seeded(dir.path());
-        std::fs::create_dir_all(dir.path().join("release/evidence/metadata"))
-            .expect("Fix: create the evidence directory.");
-        std::fs::write(
-            dir.path().join("release/evidence/metadata/matrix.json"),
-            "{}\n",
-        )
-        .expect("Fix: write an evidence artifact.");
+        let target = dir.path().join("docs/generated/crate-graph.toml");
+        std::fs::create_dir_all(target.parent().expect("Fix: the path names a parent."))
+            .expect("Fix: create the generated directory.");
+        std::fs::write(&target, "graph = []\n").expect("Fix: write the generated document.");
 
         let fingerprint = capture(dir.path()).expect("Fix: the checkout still names a commit.");
 
         assert!(
-            fingerprint.ends_with(":dirty=false"),
-            "Fix: writing evidence must not make the tree it describes dirty; fingerprint={fingerprint}"
+            fingerprint.contains(":dirty=true:worktree="),
+            "Fix: only the release provenance projection is excluded; every other generated document is source; fingerprint={fingerprint}"
         );
     }
 

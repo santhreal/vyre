@@ -1,6 +1,6 @@
-//! Comprehensive benchmark measurement record for BACKLOG row 47.
+//! Comprehensive benchmark measurement record.
 //!
-//! BACKLOG row 47 requires:
+//! The contract requires:
 //! "Benchmarks record compile time, candidate count, prediction error,
 //! emitted register/spill/shared metrics, raw device samples, estimator and uncertainty,
 //! device time, p50/p99 latency, throughput, memory, workspace traffic,

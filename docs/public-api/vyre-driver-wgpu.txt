@@ -149,12 +149,10 @@ pub fn vyre_driver_wgpu::WgpuDeviceBuffer::byte_len(&self) -> usize
 pub fn vyre_driver_wgpu::WgpuDeviceBuffer::debug_label(&self) -> core::option::Option<&str>
 pub fn vyre_driver_wgpu::WgpuDeviceBuffer::handle(&self) -> &vyre_driver_wgpu::buffer::GpuBufferHandle
 pub fn vyre_driver_wgpu::WgpuExternalResourceImporter::authenticate_import(&self, descriptor: &vyre_driver_wgpu::WgpuExternalMemoryDescriptor) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
-pub fn vyre_driver_wgpu::WgpuExternalResourceImporter::execute_transition_schedule(&self, schedule: &vyre_driver::semantic_resource_abi::ResourceTransitionSchedule) -> core::result::Result<vyre_driver::semantic_resource_abi::TransitionExecutionReport, vyre_spec::resource_capability::ResourceAbiError>
 pub fn vyre_driver_wgpu::WgpuExternalResourceImporter::import_external_resource(&self, descriptor: vyre_driver_wgpu::WgpuExternalMemoryDescriptor) -> core::result::Result<vyre_spec::resource_capability::AdmittedResourceRecord, vyre_spec::resource_capability::ResourceAbiError>
 pub fn vyre_driver_wgpu::WgpuExternalResourceImporter::invalidate_on_device_loss(&self) -> vyre_driver::semantic_resource_abi::DeviceLossInvalidationReport
 pub fn vyre_driver_wgpu::WgpuExternalResourceImporter::new(device_id: u64) -> Self
-pub fn vyre_driver_wgpu::WgpuExternalResourceImporter::register_dependent_pipeline(&self, resource_id: u64, pipeline_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
-pub fn vyre_driver_wgpu::WgpuExternalResourceImporter::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>
+pub fn vyre_driver_wgpu::WgpuExternalResourceImporter::registry(&self) -> &vyre_driver::semantic_resource_abi::ExternalResourceRegistry<vyre_driver_wgpu::WgpuExternalMemoryHandle>
 pub fn vyre_driver_wgpu::artifact_materializer(backend: vyre_driver_wgpu::WgpuBackend) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::buffer::BindGroupCache::default() -> Self
 pub fn vyre_driver_wgpu::buffer::BindGroupCache::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -332,7 +330,6 @@ pub struct vyre_driver_wgpu::WgpuBackendStats
 pub struct vyre_driver_wgpu::WgpuDeviceBuffer
 pub struct vyre_driver_wgpu::WgpuExternalMemoryDescriptor
 pub struct vyre_driver_wgpu::WgpuExternalResourceImporter
-pub struct vyre_driver_wgpu::WgpuImportedResource
 pub struct vyre_driver_wgpu::buffer::BindGroupCache
 pub struct vyre_driver_wgpu::buffer::BindGroupCacheStats
 pub struct vyre_driver_wgpu::buffer::BufferPool
@@ -386,24 +383,19 @@ pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_hit_rate: f64
 pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_hits: u64
 pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_insertions: u64
 pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_misses: u64
-pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::dimensions: vyre_spec::resource_capability::ImageDimensions
-pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::format: vyre_spec::resource_capability::ImageFormat
+pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::dimensions: vyre_spec::resource_capability::image::ImageDimensions
+pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::format: vyre_spec::resource_capability::image::ImageFormat
 pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::handle: vyre_driver_wgpu::WgpuExternalMemoryHandle
 pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::permitted_usages: vyre_spec::resource_capability::ResourcePermittedUsages
 pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::resource_id: u64
 pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::row_pitch_bytes: u32
-pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::sync_protocol: vyre_spec::resource_capability::TimelineSyncProtocol
+pub vyre_driver_wgpu::WgpuExternalMemoryDescriptor::sync_protocol: vyre_spec::resource_capability::sampler::TimelineSyncProtocol
 pub vyre_driver_wgpu::WgpuExternalMemoryHandle::DmaBuf(i32)
 pub vyre_driver_wgpu::WgpuExternalMemoryHandle::HalTexture(usize)
 pub vyre_driver_wgpu::WgpuExternalMemoryHandle::HostBuffer
 pub vyre_driver_wgpu::WgpuExternalMemoryHandle::HostBuffer::byte_size: u64
 pub vyre_driver_wgpu::WgpuExternalMemoryHandle::HostBuffer::ptr: usize
 pub vyre_driver_wgpu::WgpuExternalMemoryHandle::Win32Nt(usize)
-pub vyre_driver_wgpu::WgpuImportedResource::generation: u64
-pub vyre_driver_wgpu::WgpuImportedResource::handle: vyre_driver_wgpu::WgpuExternalMemoryHandle
-pub vyre_driver_wgpu::WgpuImportedResource::is_valid: bool
-pub vyre_driver_wgpu::WgpuImportedResource::is_zero_copy: bool
-pub vyre_driver_wgpu::WgpuImportedResource::record: vyre_spec::resource_capability::AdmittedResourceRecord
 pub vyre_driver_wgpu::buffer::BindGroupCacheStats::entries: usize
 pub vyre_driver_wgpu::buffer::BindGroupCacheStats::evictions: usize
 pub vyre_driver_wgpu::buffer::BindGroupCacheStats::hits: usize

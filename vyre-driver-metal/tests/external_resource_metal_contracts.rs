@@ -5,6 +5,9 @@
 //! 2. Zero-copy import records exact dimensions, aligned row pitch, and provenance without host copies.
 //! 3. Timeline synchronization executes exact wait/signal points without device-wide stalls.
 //! 4. Device loss invalidates all dependent views and pipelines.
+//! 5. Import is bounded: the imported-resource table and both dependent
+//!    indexes stop growing under unbounded import, the newest import survives,
+//!    and an evicted record leaves no dependent-index entry behind.
 
 use vyre_driver::{
     ExternalMemoryKind, ImageDimensions, ImageFormat, ResourceAbiError, ResourceLayoutState,
@@ -114,6 +117,7 @@ fn metal_zero_copy_resource_import_and_schedule_execution() {
     });
 
     let report = importer
+        .registry()
         .execute_transition_schedule(&schedule)
         .expect("execute schedule");
 
@@ -145,10 +149,12 @@ fn metal_device_loss_invalidates_views_and_pipelines() {
 
     // Register dependent view and pipeline
     importer
+        .registry()
         .register_dependent_view(301, 6001)
         .expect("register view 6001");
     importer
-        .register_dependent_pipeline(301, 7001)
+        .registry()
+        .register_dependent_artifact(301, 7001)
         .expect("register pipeline 7001");
 
     // Invalidate on device loss
@@ -162,6 +168,7 @@ fn metal_device_loss_invalidates_views_and_pipelines() {
     let mut schedule = ResourceTransitionSchedule::new();
     schedule.add_transition(301, ResourceUsageTransition::storage_to_color_attachment());
     let err = importer
+        .registry()
         .execute_transition_schedule(&schedule)
         .expect_err("operation on invalidated resource must fail");
 

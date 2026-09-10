@@ -140,11 +140,6 @@ const WAIVERS: &[Waiver] = &[
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
-        path: "vyre-libs/tests/indexed_map_composition_contracts.rs",
-        seam: "semantic-library",
-        reason: "domain test walk, owned by the vyre-libs lane",
-    },
-    Waiver {
         path: "vyre-libs/tests/loop_unroll_trip1_idempotence.rs",
         seam: "semantic-library",
         reason: "domain test walk, owned by the vyre-libs lane",
@@ -155,32 +150,12 @@ const WAIVERS: &[Waiver] = &[
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
-        path: "vyre-libs/tests/optimized_programs.rs",
-        seam: "semantic-library",
-        reason: "domain test walk, owned by the vyre-libs lane",
-    },
-    Waiver {
-        path: "vyre-libs/tests/parsing_walker_clone_family.rs",
-        seam: "semantic-library",
-        reason: "domain test walk, owned by the vyre-libs lane",
-    },
-    Waiver {
         path: "vyre-libs/tests/region_chain_invariant.rs",
         seam: "semantic-library",
         reason: "domain test walk, owned by the vyre-libs lane",
     },
     Waiver {
-        path: "vyre-libs/tests/workgroup_cooperative_tiling.rs",
-        seam: "semantic-library",
-        reason: "domain test walk, owned by the vyre-libs lane",
-    },
-    Waiver {
         path: "vyre-reference/src/execution/hashmap/step/node_step.rs",
-        seam: "reference-semantics",
-        reason: "the reference evaluator interprets each variant, so its dispatch is the decision, not a descent shortcut",
-    },
-    Waiver {
-        path: "vyre-reference/src/execution/node.rs",
         seam: "reference-semantics",
         reason: "the reference evaluator interprets each variant, so its dispatch is the decision, not a descent shortcut",
     },
@@ -298,11 +273,6 @@ const WAIVERS: &[Waiver] = &[
         path: "vyre-foundation/tests/tile_nodes_contracts.rs",
         seam: "foundation-ir",
         reason: "tile node contract descent verification oracle",
-    },
-    Waiver {
-        path: "vyre-libs/tests/adversarial_math.rs",
-        seam: "semantic-library",
-        reason: "test oracle deliberately independent of the production walker it audits",
     },
     Waiver {
         path: "vyre-libs/tests/ir_shape/mod.rs",

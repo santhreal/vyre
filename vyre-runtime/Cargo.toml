@@ -64,6 +64,9 @@ vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-req
 tempfile.workspace = true
 serde_json.workspace = true
 proptest.workspace = true
+# The unsafe-permission contract reads the lint level from the manifest that
+# owns it rather than from a duplicate attribute in lib.rs.
+toml.workspace = true
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
 libc.workspace = true

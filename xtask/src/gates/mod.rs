@@ -105,7 +105,9 @@ pub mod tracked_modules;
 pub mod unification;
 pub mod use_paths;
 pub mod variant_list_closure;
+pub mod verification_budget;
 pub mod wire_determinism;
+pub mod workflow_commands;
 pub mod workspace_build;
 pub mod worktree_lifetime;
 
@@ -277,6 +279,10 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     (
         "variant-list-closure",
         &variant_list_closure::VariantListClosure,
+    ),
+    (
+        "verification-budget",
+        &verification_budget::VerificationBudget,
     ),
     ("wire-determinism", &wire_determinism::WireDeterminism),
     ("workspace-check", &workspace_build::WorkspaceCheck),

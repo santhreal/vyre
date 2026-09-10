@@ -99,6 +99,13 @@ fn duplicate_finding(left: &str, right: &str, score: f64) -> Finding {
     )
 }
 
+/// Settle the duplicate report, attributed by where the caller put it.
+///
+/// The path comes from `--duplicate-report-json`, so it is wherever the caller
+/// named. Under `release/evidence` the report is a recorded measurement and has
+/// to name the tree it came from. Anywhere else nothing reads a provenance
+/// head, and asking for one is refused rather than written. Both forms render
+/// through the same serializer, so the bytes differ only by the stamp.
 fn settle_duplicate_report(
     report: &mut Report,
     root: &Path,
@@ -106,11 +113,18 @@ fn settle_duplicate_report(
     path: &Path,
     duplicates: &DuplicateFamilyReport,
 ) {
-    let recorded = xtask::evidence_record::EvidenceArtifact::new(
-        xtask::evidence_record::MeasurementRecord::HostOnly,
-        duplicates,
-    );
-    match Generated::evidence(path, &recorded) {
+    let rendered = if xtask::artifact_gate::records_provenance(path) {
+        Generated::evidence(
+            path,
+            &xtask::evidence_record::EvidenceArtifact::new(
+                xtask::evidence_record::MeasurementRecord::HostOnly,
+                duplicates,
+            ),
+        )
+    } else {
+        Generated::document(path, duplicates)
+    };
+    match rendered {
         Ok(generated) => {
             report.produced(path);
             for finding in settle(root, "whats-similar", &[generated], write) {
@@ -374,29 +388,88 @@ mod tests {
         report
     }
 
+    /// A throwaway checkout, so a recorded artifact has a tree to name.
+    ///
+    /// Provenance capture resolves the commit through git. A bare temporary
+    /// directory is not a checkout, so the recorded arm would settle with a
+    /// refusal and the stamped path would never be exercised.
+    fn temp_checkout() -> tempfile::TempDir {
+        let root = tempfile::tempdir().unwrap();
+        let git = |args: &[&str]| {
+            let status = std::process::Command::new("git")
+                .args(args)
+                .current_dir(root.path())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()
+                .expect("Fix: git must be available to build a temporary checkout");
+            assert!(status.success(), "Fix: `git {}` failed", args.join(" "));
+        };
+        git(&["init", "--quiet"]);
+        git(&[
+            "-c",
+            "user.name=vyre",
+            "-c",
+            "user.email=vyre@invalid",
+            "commit",
+            "--quiet",
+            "--allow-empty",
+            "-m",
+            "root",
+        ]);
+        root
+    }
+
     /// Comparison mode must derive and compare the report without writing it;
     /// write mode must install those exact derived bytes.
+    ///
+    /// Both path kinds are exercised, because the attribution follows the path
+    /// and the two arms are separate code. A report outside `release/evidence`
+    /// is a plain document, and one under it is a recorded measurement that
+    /// carries a provenance head. Asking for the wrong one is refused, so a
+    /// single-path test passes while the other arm is unreachable.
     #[test]
     fn duplicate_report_respects_write_authority() {
-        let root = tempfile::tempdir().unwrap();
-        let path = std::path::Path::new("report.json");
-        let duplicates = duplicate_family_report(
-            "xtask whats-similar --all --duplicate-report-json report.json",
-            "registered-op-ir-shape",
-            Vec::new(),
-        );
+        for relative in ["report.json", "release/evidence/whats-similar.json"] {
+            let root = temp_checkout();
+            let path = std::path::Path::new(relative);
+            let duplicates = duplicate_family_report(
+                "xtask whats-similar --all --duplicate-report-json report.json",
+                "registered-op-ir-shape",
+                Vec::new(),
+            );
 
-        let mut comparison = Report::clean();
-        settle_duplicate_report(&mut comparison, root.path(), false, path, &duplicates);
-        assert_eq!(comparison.count(), 1);
-        assert!(!root.path().join(path).exists());
+            let mut comparison = Report::clean();
+            settle_duplicate_report(&mut comparison, root.path(), false, path, &duplicates);
+            assert_eq!(
+                comparison.count(),
+                1,
+                "Fix: comparing a missing `{relative}` must report exactly one finding"
+            );
+            assert!(
+                !root.path().join(path).exists(),
+                "Fix: comparison mode must not write `{relative}`"
+            );
 
-        let mut writer = Report::clean();
-        settle_duplicate_report(&mut writer, root.path(), true, path, &duplicates);
-        assert_eq!(writer.count(), 0);
-        assert!(fs::read_to_string(root.path().join(path))
-            .unwrap()
-            .contains("\"family_count\": 0"));
+            let mut writer = Report::clean();
+            settle_duplicate_report(&mut writer, root.path(), true, path, &duplicates);
+            assert_eq!(
+                writer.count(),
+                0,
+                "Fix: writing `{relative}` must settle clean"
+            );
+            let written = fs::read_to_string(root.path().join(path))
+                .unwrap_or_else(|error| panic!("Fix: `{relative}` must be written: {error}"));
+            assert!(
+                written.contains("\"family_count\": 0"),
+                "Fix: `{relative}` must carry the derived body"
+            );
+            assert_eq!(
+                written.contains("\"provenance\""),
+                xtask::artifact_gate::records_provenance(path),
+                "Fix: `{relative}` must carry a provenance head only under release/evidence"
+            );
+        }
     }
 
     /// Shape similarity is only a candidate generator. Different canonical

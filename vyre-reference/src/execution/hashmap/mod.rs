@@ -24,6 +24,7 @@ use crate::{
     atomics,
     oob::{self, Buffer},
     value::Value,
+    workgroup::InvocationIds,
 };
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::{AtomicOp, BufferAccess, Expr, Program};
@@ -136,6 +137,28 @@ pub fn output_index(program: &Program, name: &str) -> Option<usize> {
         .iter()
         .filter(|decl| is_reference_output(decl))
         .position(|decl| decl.name() == name)
+}
+
+/// Evaluate one expression for one lane through this evaluator.
+///
+/// The single-expression entry point in `execution::single_expr` builds the
+/// lane state and calls this. No subgroup snapshots exist for a lane evaluated
+/// on its own, so a collective that reads its peers finds an empty peer set and
+/// refuses rather than answering from a fabricated neighbour.
+pub(crate) fn eval_expr_public(
+    expr: &Expr,
+    ids: InvocationIds,
+    entry: &[vyre_foundation::ir::Node],
+    memory: &mut HashmapMemory,
+) -> Result<Value, ReferenceError> {
+    let mut invocation = HashmapInvocation::new(ids, 0, entry);
+    eval_expr(
+        expr,
+        &mut invocation,
+        memory,
+        #[cfg(feature = "subgroup-ops")]
+        &[],
+    )
 }
 
 #[doc = " Execute a vyre IR program using hashmap-backed locals."]
@@ -401,15 +424,13 @@ pub(crate) fn run_hashmap_reference(
     output_decls
         .into_iter()
         .map(|decl| {
-            storage
-                .remove(decl.name())
-                .map(|buffer| output_value(buffer, &decl))
-                .ok_or_else(|| {
-                    let name = decl.name();
-                    ReferenceError::new(format!(
-                        "missing output buffer `{name}` after dispatch. Fix: keep buffer declarations unique."
-                    ))
-                })
+            let buffer = storage.remove(decl.name()).ok_or_else(|| {
+                let name = decl.name();
+                ReferenceError::new(format!(
+                    "missing output buffer `{name}` after dispatch. Fix: keep buffer declarations unique."
+                ))
+            })?;
+            output_value(buffer, &decl)
         })
         .collect()
 }
@@ -477,7 +498,7 @@ fn eval_expr(
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
             )?;
-            Ok(oob::load(resolve_buffer(memory, buffer)?, idx))
+            oob::load(resolve_buffer(memory, buffer)?, idx)
         }
         Expr::BufLen { buffer } => Ok(Value::U32(resolve_buffer(memory, buffer)?.len())),
         Expr::InvocationId { axis } => axis_value(invocation.ids.global, *axis),
@@ -729,10 +750,10 @@ fn eval_atomic(
         )
     })?;
     let target = atomic_buffer_mut(memory, buffer)?;
-    let Some(old) = oob::atomic_load(target, idx) else {
+    let Some(old) = oob::atomic_load(target, idx)? else {
         return Ok(Value::U32(0));
     };
     let (old, new) = atomics::apply(op, old, expected, value)?;
-    oob::atomic_store(target, idx, new);
+    oob::atomic_store(target, idx, new)?;
     Ok(Value::U32(old))
 }

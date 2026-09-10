@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The artifact topology contract asserts the selected execution topology by value and reads it back from the lowered target module bundle, so a lowering that drops the topology onto the sequential baseline fails."

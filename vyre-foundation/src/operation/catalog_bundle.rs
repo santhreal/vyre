@@ -2,6 +2,7 @@
 //! and digest participate in request and artifact identity.
 
 use std::collections::BTreeMap;
+use std::sync::LazyLock;
 
 use super::records::{LoweringProvider, SemanticDescriptor};
 use super::registration::OperationRegistration;
@@ -65,9 +66,24 @@ impl OperationCatalogBundle {
         }
     }
 
-    /// Compute the immutable catalog bundle from the global registry.
+    /// Return the process-wide catalog bundle, built once from the global
+    /// registry.
+    ///
+    /// The walk over the link-time inventory grows with the registration
+    /// count, so it happens here and once. A caller that needs an owned value
+    /// clones this one rather than reading the inventory again.
     #[must_use]
-    pub fn from_registry() -> Self {
+    pub fn global() -> &'static Self {
+        static BUNDLE: LazyLock<OperationCatalogBundle> =
+            LazyLock::new(OperationCatalogBundle::from_registry);
+        &BUNDLE
+    }
+
+    /// Compute the immutable catalog bundle from the global registry.
+    ///
+    /// Reachable only through `global`, which runs it once.
+    #[must_use]
+    pub(crate) fn from_registry() -> Self {
         let mut descriptors = BTreeMap::new();
         let mut lowering_providers = BTreeMap::new();
         let extensions = BTreeMap::new();

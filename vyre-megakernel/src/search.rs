@@ -1,3 +1,4 @@
+use vyre_foundation::execution_plan::fusion::FusionRejectionReason;
 use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_foundation::numeric::NumericContract;
 
@@ -7,7 +8,7 @@ use crate::{
     derive,
     facts::{DataflowEdge, PlanningFacts},
     law_candidates::LawDerivationError,
-    legality::{analyze_fusion_pair, FusionDecision, FusionRejectionReason},
+    legality::{analyze_fusion_pair, FusionDecision},
     objective::CompileObjective,
     DependencyEdge, DeviceFacts, SearchBudget, SearchWork,
 };

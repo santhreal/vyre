@@ -1,7 +1,7 @@
 //! Connected-graph compilation, artifact envelope materialization, resident binding,
 //! and device execution conformance test suite.
 //!
-//! BACKLOG row 56 requires representative connected graphs from unrelated domains to execute
+//! The contract requires representative connected graphs from unrelated domains to execute
 //! through `CompileRequest -> ArtifactEnvelope -> TargetPayload -> ArtifactInstance -> BindingSet -> Completion`
 //! and match independent semantics under declared tolerances. Tests fail if execution substitutes
 //! per-node host interpretation or if a requested device is unavailable. Graphs cover pure dataflow,
@@ -943,30 +943,50 @@ fn unavailable_device_fails_closed_without_host_substitution() {
     );
 }
 
+/// A probe that fails names the correction; a probe that succeeds hands back the
+/// backend its registration declared.
+///
+/// The frozen `BackendError` contract requires a `Fix:` remediation section, and
+/// that is the whole difference between a configuration failure a caller can act
+/// on and one reported as a bare string. Asserting only that the message is
+/// non-empty passed for every error type ever constructed, including one that
+/// says nothing, so the assertion could not fail on the defect its name claims.
+///
+/// The success arm is the same question from the other side: a registration whose
+/// factory hands back a different backend routes every later dispatch to the
+/// wrong device while every id in the artifact still reads as the requested one.
+///
+/// Behind `device-tests` because acquisition reaches real hardware through the
+/// registry without naming a driver type.
+#[cfg(feature = "device-tests")]
 #[test]
 fn device_probe_failure_is_reported_loudly_as_configuration_failure() {
     let registry = live_backend_registry().expect("valid backend registry");
-    for reg in registry.iter() {
-        if !reg.reference_oracle {
-            match reg.acquire() {
-                Ok(dev) => {
-                    assert!(
-                        !dev.device_profile().backend.is_empty(),
-                        "acquired device `{}` must report non-empty backend name",
-                        reg.id
-                    );
-                }
-                Err(err) => {
-                    let err_msg = err.to_string();
-                    assert!(
-                        !err_msg.is_empty(),
-                        "probe failure on `{}` must carry detailed configuration diagnostics",
-                        reg.id
-                    );
-                }
+    let mut judged = 0_usize;
+    for reg in registry.iter().filter(|reg| !reg.reference_oracle) {
+        judged += 1;
+        match reg.acquire() {
+            Ok(device) => assert_eq!(
+                device.id(),
+                reg.id,
+                "registration `{}` handed back backend `{}`",
+                reg.id,
+                device.id()
+            ),
+            Err(error) => {
+                let message = error.to_string();
+                assert!(
+                    message.contains("Fix:"),
+                    "probe failure on `{}` must name the correction: {message}",
+                    reg.id
+                );
             }
         }
     }
+    assert!(
+        judged > 0,
+        "Fix: the registry declared no production backend, so this proved nothing"
+    );
 }
 
 fn execute_case_through_production_route(

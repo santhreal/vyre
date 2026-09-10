@@ -217,11 +217,7 @@ fn inspect(workspace_root: &Path) -> Inspection {
     for report in &run.reports {
         inspection.notes.push(report.clone());
     }
-    inspection.generates_evidence(
-        RELEASE_EVIDENCE_RUN_ARTIFACT,
-        xtask::evidence_record::MeasurementRecord::HostOnly,
-        &run,
-    );
+    inspection.generates_host_evidence(RELEASE_EVIDENCE_RUN_ARTIFACT, &run);
     inspection
 }
 
@@ -256,11 +252,7 @@ fn release_evidence_run(
             })
             .collect(),
     );
-    inspection.generates_evidence(
-        EXPECTED_ARTIFACT_REGISTRY,
-        xtask::evidence_record::MeasurementRecord::HostOnly,
-        &expected_artifact_registry,
-    );
+    inspection.generates_host_evidence(EXPECTED_ARTIFACT_REGISTRY, &expected_artifact_registry);
     let final_artifacts = inspect_expected_artifacts(
         workspace_root,
         &["release-evidence"],

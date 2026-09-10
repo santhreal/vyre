@@ -30,7 +30,7 @@ pub(crate) fn compare_backend_against_reference(
     if backend.reference_oracle && !prepared.expected_is_recorded {
         return ConformanceResult {
             op_id: prepared.id.into(),
-            backend_id,
+            executor_id: backend_id,
             passed: false,
             message: "the backend under test is the reference interpreter and this operation records no expected outputs, so the comparison would be that interpreter against itself. Fix: record expected_output bytes for this operation, or prove it on a backend that is not the oracle.".to_string(),
             replay_capsule: None,
@@ -47,7 +47,7 @@ pub(crate) fn compare_backend_against_reference(
             {
                 return ConformanceResult {
                     op_id: prepared.id.into(),
-                    backend_id,
+                    executor_id: backend_id,
                     passed: false,
                     message: format!(
                         "witness input planning failed for first case: {error}. Fix: fixture cases must match Program buffer declarations."
@@ -61,7 +61,7 @@ pub(crate) fn compare_backend_against_reference(
             Err(error) => {
                 return ConformanceResult {
                     op_id: prepared.id.into(),
-                    backend_id,
+                    executor_id: backend_id,
                     passed: false,
                     message: format!(
                         "execution route failed before case execution: {error}. Fix: repair graph compilation, target payload emission, materialization, or backend dispatch."
@@ -87,7 +87,7 @@ pub(crate) fn compare_backend_against_reference(
                     Err(error) => {
                         return ConformanceResult {
                         op_id: prepared.id.into(),
-                        backend_id: backend_id.clone(),
+                        executor_id: backend_id.clone(),
                         passed: false,
                         message: format!(
                             "production fixpoint artifact route failed on case {case_index}: {error}. Fix: repair compiler, payload, materialization, retained bindings, or submission."
@@ -102,7 +102,7 @@ pub(crate) fn compare_backend_against_reference(
                 {
                     return ConformanceResult {
                     op_id: prepared.id.into(),
-                    backend_id: backend_id.clone(),
+                    executor_id: backend_id.clone(),
                     passed: false,
                     message: format!(
                         "backend output diverged from vyre-reference after fixpoint convergence on case {case_index}: {detail}. Fix: align backend.dispatch with vyre-reference under the backend-transcendental-aware ULP window (byte-exact for non-F32, <= program-derived ULP cap for F32)."
@@ -124,7 +124,7 @@ pub(crate) fn compare_backend_against_reference(
                 {
                     return ConformanceResult {
                         op_id: prepared.id.into(),
-                        backend_id: backend_id.clone(),
+                        executor_id: backend_id.clone(),
                         passed: false,
                         message: error,
                         replay_capsule: None,
@@ -142,7 +142,7 @@ pub(crate) fn compare_backend_against_reference(
                         {
                             return ConformanceResult {
                             op_id: prepared.id.into(),
-                            backend_id: backend_id.clone(),
+                            executor_id: backend_id.clone(),
                             passed: false,
                             message: format!(
                                 "backend output diverged from vyre-reference on case {case_index}: {detail}. Fix: align backend.dispatch with vyre-reference under the backend-transcendental-aware ULP window (byte-exact for non-F32, <= program-derived ULP cap for F32)."
@@ -161,7 +161,7 @@ pub(crate) fn compare_backend_against_reference(
                     Ok(Err(error)) => {
                         return ConformanceResult {
                         op_id: prepared.id.into(),
-                        backend_id: backend_id.clone(),
+                        executor_id: backend_id.clone(),
                         passed: false,
                         message: format!(
                             "backend dispatch failed on case {case_index}: {error}. Fix: make backend.dispatch execute this witness."
@@ -172,7 +172,7 @@ pub(crate) fn compare_backend_against_reference(
                     Err(payload) => {
                         return ConformanceResult {
                         op_id: prepared.id.into(),
-                        backend_id: backend_id.clone(),
+                        executor_id: backend_id.clone(),
                         passed: false,
                         message: format!(
                             "backend dispatch panicked on case {case_index}: {}. Fix: backend.dispatch must return BackendError instead of unwinding, then execute this witness.",
@@ -193,7 +193,7 @@ pub(crate) fn compare_backend_against_reference(
     };
     ConformanceResult {
         op_id: prepared.id.into(),
-        backend_id,
+        executor_id: backend_id,
         passed: true,
         message: format!("{checked_cases} witness case(s) matched vyre-reference {proof}"),
         replay_capsule: None,

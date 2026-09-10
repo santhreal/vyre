@@ -290,11 +290,7 @@ fn inspect(vyre_root: &Path) -> Inspection {
              The blocker stays in the artifact, so committing it does not clear this finding.",
         );
     }
-    inspection.generates_evidence(
-        ARTIFACT,
-        crate::evidence_record::MeasurementRecord::HostOnly,
-        &readiness,
-    );
+    inspection.generates_host_evidence(ARTIFACT, &readiness);
     inspection
 }
 

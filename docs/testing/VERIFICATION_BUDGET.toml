@@ -1,0 +1,131 @@
+# What verification costs this workspace, per tier.
+#
+# `cargo xtask verification-budget` derives every number here from the tree: the
+# test targets cargo builds, the binaries they link, the test sources
+# byte-identical to a test source in another package, and the bytes the tier's
+# test sources occupy. A tier with no row fails, and a row for a tier the
+# ownership record no longer declares fails as stale.
+#
+# The three counts are exact in both directions. Over the row means targets
+# arrived with no decision recorded for them. Under the row means the row now
+# covers the next target added to the tier instead of reporting it, so it is
+# lowered to what the tree measures. Additional targets are legitimate whenever
+# they buy real process, feature, package or backend isolation; the row is where
+# that decision is written down.
+#
+# Disk use is a ceiling. One edited assertion moves it, so an exact pin would be
+# red on most commits and would be raised until it meant nothing.
+#
+# `--write-budget` records a row for a tier that has none and touches nothing
+# else, so it cannot erase an intentional red. `--lower-budget TIER` sets one
+# row to what the tree measures and refuses to raise any of its numbers.
+
+schema = 1
+
+[tier.backend-neutral]
+compile_units = 6
+link_units = 7
+duplicate_source_bytes = 0
+disk_use_bytes = 520622
+
+[tier.compiler-boundary]
+compile_units = 1
+link_units = 2
+duplicate_source_bytes = 0
+disk_use_bytes = 444153
+
+[tier.concrete-backend]
+compile_units = 7
+link_units = 12
+duplicate_source_bytes = 0
+disk_use_bytes = 2288940
+
+[tier.conformance]
+compile_units = 5
+link_units = 8
+duplicate_source_bytes = 0
+disk_use_bytes = 520678
+
+[tier.emitter]
+compile_units = 4
+link_units = 8
+duplicate_source_bytes = 0
+disk_use_bytes = 533850
+
+[tier.facade]
+compile_units = 1
+link_units = 2
+duplicate_source_bytes = 0
+disk_use_bytes = 63795
+
+[tier.foundation]
+compile_units = 3
+link_units = 6
+duplicate_source_bytes = 0
+disk_use_bytes = 2697479
+
+[tier.libraries]
+compile_units = 32
+link_units = 55
+duplicate_source_bytes = 22010
+disk_use_bytes = 2960135
+
+[tier.lowering]
+compile_units = 1
+link_units = 2
+duplicate_source_bytes = 0
+disk_use_bytes = 248553
+
+[tier.packaging]
+compile_units = 1
+link_units = 2
+duplicate_source_bytes = 0
+disk_use_bytes = 89377
+
+[tier.pass-engine]
+compile_units = 3
+link_units = 4
+duplicate_source_bytes = 0
+disk_use_bytes = 77440
+
+[tier.primitives]
+compile_units = 2
+link_units = 3
+duplicate_source_bytes = 0
+disk_use_bytes = 74839
+
+[tier.registry-link]
+compile_units = 3
+link_units = 4
+duplicate_source_bytes = 0
+disk_use_bytes = 52572
+
+[tier.runtime]
+compile_units = 2
+link_units = 4
+duplicate_source_bytes = 0
+disk_use_bytes = 625007
+
+[tier.semantics]
+compile_units = 1
+link_units = 2
+duplicate_source_bytes = 0
+disk_use_bytes = 421265
+
+[tier.standalone-tooling]
+compile_units = 2
+link_units = 5
+duplicate_source_bytes = 0
+disk_use_bytes = 164739
+
+[tier.test-tooling]
+compile_units = 3
+link_units = 4
+duplicate_source_bytes = 0
+disk_use_bytes = 62306
+
+[tier.tooling]
+compile_units = 9
+link_units = 20
+duplicate_source_bytes = 1172
+disk_use_bytes = 1001052

@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with Q through Z.
-pub const GATES_Q_Z: [GateDescriptor; 38] = [
+pub const GATES_Q_Z: [GateDescriptor; 39] = [
     GateDescriptor {
         name: "readback-ring",
         help: "Enforce readback-ring contracts",
@@ -103,7 +103,7 @@ pub const GATES_Q_Z: [GateDescriptor; 38] = [
         ],
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::release_provenance::tests::release_provenance_gate_enforces_clean_tree_and_rejects_unapproved_dependencies",
+        proof: "crate::gates::release_provenance::tests::an_unapproved_license_becomes_a_finding_naming_the_dependency",
     },
     GateDescriptor {
         name: "release-workload-matrix",
@@ -135,18 +135,6 @@ pub const GATES_Q_Z: [GateDescriptor; 38] = [
         proof: "crate::gates::repo_hygiene::tests::a_double_extension_archive_is_still_an_artifact",
     },
     GateDescriptor {
-        name: "schema-authority",
-        help: "Enforce schema authority and typed decode contracts",
-        package: "xtask",
-        areas: &["contract-rules"],
-        subject: "production sources across the workspace",
-        inputs: &[],
-        artifacts: &[],
-        prerequisites: &[],
-        resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::schema_authority::tests::a_duplicated_version_literal_is_a_finding",
-    },
-    GateDescriptor {
         name: "schedule-ownership",
         help: "Enforce schedule-ownership contracts",
         package: "xtask",
@@ -157,6 +145,18 @@ pub const GATES_Q_Z: [GateDescriptor; 38] = [
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
         proof: "crate::gates::schedule_ownership::tests::a_construction_with_no_received_decision_is_a_finding",
+    },
+    GateDescriptor {
+        name: "schema-authority",
+        help: "Enforce schema authority and typed decode contracts",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "production sources across the workspace",
+        inputs: &[],
+        artifacts: &[],
+        prerequisites: &[],
+        resource_class: ResourceClass::Cpu,
+        proof: "crate::gates::schema_authority::tests::a_duplicated_version_literal_is_a_finding",
     },
     GateDescriptor {
         name: "script-ledger",
@@ -375,6 +375,24 @@ pub const GATES_Q_Z: [GateDescriptor; 38] = [
         proof: "crate::gates::variant_list_closure::tests::a_variant_the_list_omits_is_a_finding",
     },
     GateDescriptor {
+        name: "verification-budget",
+        help: "Measure what verification costs each tier and hold it to the budget its row \
+        declares: the test targets built for it, the binaries they link, the test sources \
+        byte-identical to a test source in another package, and the bytes the tier's test \
+        sources occupy. The three counts are exact in both directions and disk use is a \
+        ceiling. Also proves each shared contract body has one owning package and that no \
+        `#[path]` include in a test resolves outside its own package. Proves nothing about \
+        what the tests assert.",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "workspace tiers",
+        inputs: &["docs/CRATE_OWNERSHIP.toml", "docs/testing/VERIFICATION_BUDGET.toml"],
+        artifacts: &["docs/testing/VERIFICATION_BUDGET.toml", "release/evidence/tests/verification-budget.json"],
+        prerequisites: &[],
+        resource_class: ResourceClass::Io,
+        proof: "crate::gates::verification_budget::tests::a_count_below_its_row_fails_as_loudly_as_one_above",
+    },
+    GateDescriptor {
         name: "verify-rewrite-proofs",
         help: "Verify every optimizer rewrite proof fixture",
         package: "xtask-registry",
@@ -453,7 +471,7 @@ pub const GATES_Q_Z: [GateDescriptor; 38] = [
         artifacts: &[],
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::workspace_build::tests::workspace_check_invokes_cargo_check_across_all_features",
+        proof: "crate::gates::workspace_build::tests::every_workspace_gate_compiles_the_whole_workspace",
     },
     GateDescriptor {
         name: "workspace-clippy",
@@ -465,7 +483,7 @@ pub const GATES_Q_Z: [GateDescriptor; 38] = [
         artifacts: &[],
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::workspace_build::tests::the_driver_separator_bounds_the_cargo_arguments",
+        proof: "crate::gates::workspace_build::tests::only_clippy_sends_arguments_past_the_driver_separator",
     },
     GateDescriptor {
         name: "workspace-docs",
@@ -477,7 +495,7 @@ pub const GATES_Q_Z: [GateDescriptor; 38] = [
         artifacts: &[],
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::workspace_build::tests::only_the_gate_that_cannot_deny_a_warning_judges_one",
+        proof: "crate::cargo_runner::tests::only_the_gate_that_cannot_deny_a_warning_judges_one",
     },
     GateDescriptor {
         name: "workspace-membership",
@@ -501,6 +519,6 @@ pub const GATES_Q_Z: [GateDescriptor; 38] = [
         artifacts: &[],
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::workspace_build::tests::workspace_tests_resolves_tested_layer_contract",
+        proof: "crate::gates::workspace_build::tests::every_tested_layer_is_one_the_registry_declares",
     },
 ];

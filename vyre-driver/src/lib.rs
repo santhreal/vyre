@@ -336,15 +336,15 @@ pub use semantic_resource_abi::{
     all_format_classes, all_image_formats, all_image_view_kinds, all_layout_states,
     all_lifetime_state_kinds, all_mipmap_filter_modes, all_plane_kinds, all_provenance_kinds,
     all_swizzle_components, all_sync_protocols, all_usage_flags, authenticate_external_import,
-    AddressMode, AdmittedResourceRecord, AdmittedResourceRecordExt, BorderColor,
+    AddressMode, AdmissionState, AdmittedResourceRecord, AdmittedResourceRecordExt, BorderColor,
     ColorInterpretation, CompareFunction, ComponentSwizzle, DeviceLossInvalidationReport,
     ExternalEventCapability, ExternalEventKind, ExternalMemoryCapability, ExternalMemoryKind,
     ExternalResourceRegistry, FilterMode, FormatClass, ImageDimensions, ImageFormat, ImagePlane,
-    ImageViewDescriptor, ImageViewKind, MipmapFilterMode, PlaneKind, ResourceAbiError,
-    ResourceAliasSet, ResourceLayoutState, ResourceLifetimeState, ResourceOwnershipState,
-    ResourcePermittedUsages, ResourceProvenance, ResourceTransitionSchedule,
-    ResourceUsageTransition, SamplerCapability, SamplerDescriptor, SubresourceRange,
-    SwizzleComponent, TimelineSyncProtocol, TransitionExecutionReport,
+    ImageViewDescriptor, ImageViewKind, ImportedResource, MipmapFilterMode, PlaneKind,
+    ResourceAbiError, ResourceAliasSet, ResourceLayoutState, ResourceLifetimeState,
+    ResourceOwnershipState, ResourcePermittedUsages, ResourceProvenance,
+    ResourceTransitionSchedule, ResourceUsageTransition, SamplerCapability, SamplerDescriptor,
+    SubresourceRange, SwizzleComponent, TimelineSyncProtocol, TransitionExecutionReport,
 };
 pub use specialization::{versioned_specialization_artifact_key, vsa_specialization_key};
 pub use specialization::{SpecCacheKey, SpecMap, SpecValue};

@@ -1,4 +1,4 @@
-//! Three-domain whole-graph production compilation tests (BACKLOG row 48 and 51).
+//! Three-domain whole-graph production compilation tests.
 //!
 //! Proves that representative complete graphs from at least three unrelated domains
 //! (Dense Neural Pipeline, CSR Graph Traversal, and Streaming Parser Pipeline) compose

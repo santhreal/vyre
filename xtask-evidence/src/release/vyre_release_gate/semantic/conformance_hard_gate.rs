@@ -2,6 +2,7 @@ use std::path::Path;
 
 use super::super::checks::*;
 use super::super::gate_inputs::Requirement;
+use xtask::release::conformance_evidence_semantics::ORACLE_RECORD_ID;
 
 pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
     let Some(matrix) =
@@ -41,7 +42,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             .and_then(serde_json::Value::as_array)
             .cloned()
             .unwrap_or_default();
-        for backend in ["cuda", "wgpu", "cpu-ref"] {
+        for backend in ["cuda", "wgpu", ORACLE_RECORD_ID] {
             if !requested
                 .iter()
                 .any(|entry| entry.as_str() == Some(backend))

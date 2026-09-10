@@ -156,13 +156,14 @@ impl crate::gate::GateBehavior for TestMaterialPlacement {
             .filter(|member| member.name != SUPPORT_CRATE)
         {
             let defaults = default_features(member);
+            let named = path_declarations(&tree, &member.path)?;
             let prefix = format!("{}/src/", member.path);
             for path in tree.paths() {
                 let Some(file) = path.to_str() else { continue };
                 if !file.starts_with(&prefix) || !file.ends_with(".rs") {
                     continue;
                 }
-                if chain(&tree, &member.path, file, &defaults)?.test_only {
+                if chain(&tree, &member.path, file, &defaults, &named)?.test_only {
                     continue;
                 }
                 for line in support_references(&tree.read(file)?) {
@@ -181,6 +182,7 @@ impl crate::gate::GateBehavior for TestMaterialPlacement {
         let mut candidates = Vec::new();
         for member in &publishable {
             let defaults = default_features(member);
+            let named = path_declarations(&tree, &member.path)?;
             let prefix = format!("{}/src/", member.path);
             for path in tree.paths() {
                 let Some(file) = path.to_str() else { continue };
@@ -199,7 +201,7 @@ impl crate::gate::GateBehavior for TestMaterialPlacement {
                     member: member.path.clone(),
                     crate_name: member.name.clone(),
                     exports: exports(&text),
-                    gating: chain(&tree, &member.path, file, &defaults)?,
+                    gating: chain(&tree, &member.path, file, &defaults, &named)?,
                     module,
                 });
             }
@@ -318,22 +320,121 @@ fn exports(text: &str) -> BTreeSet<String> {
     found
 }
 
-/// What every `mod` declaration between the crate root and one file says.
+/// One out-of-line module declaration that names its own file.
+///
+/// A file reached through `#[path]` is a child of the module that declares it
+/// rather than of the directory holding it, so the layout walk in `chain`
+/// cannot reach it.
+#[derive(Debug)]
+struct PathDeclaration {
+    /// The file carrying the `mod` item.
+    parent: String,
+    /// The attribute text above that item, joined into one line.
+    attributes: String,
+}
+
+/// Every file in one member's `src/` tree that a `#[path]` attribute names.
+///
+/// The checkout carries 1621 of these declarations, and the suites written
+/// `#[cfg(test)] #[path = "<name>_tests.rs"] mod tests;` are why they are read.
+/// The layout walk looks for `mod <stem>;` in the parent the directory implies,
+/// finds nothing, and reads that as a file no declaration reaches; the support
+/// rule then reported five test-only suites as production source naming the
+/// test support crate.
+fn path_declarations(
+    tree: &Tree,
+    member: &str,
+) -> Result<BTreeMap<String, PathDeclaration>, GateError> {
+    let prefix = format!("{member}/src/");
+    let mut named = BTreeMap::new();
+    for path in tree.paths() {
+        let Some(parent) = path.to_str() else { continue };
+        if !parent.starts_with(&prefix) || !parent.ends_with(".rs") {
+            continue;
+        }
+        let directory = parent.rsplit_once('/').map_or("", |(head, _)| head);
+        for declaration in mod_declarations(&tree.read(parent)?) {
+            let Some(value) = declaration.path else { continue };
+            let Some(target) = joined(directory, &value) else {
+                continue;
+            };
+            named.insert(
+                target,
+                PathDeclaration {
+                    parent: parent.to_string(),
+                    attributes: declaration.attributes,
+                },
+            );
+        }
+    }
+    Ok(named)
+}
+
+/// A repository-relative path for a `#[path]` value read from `directory`.
+///
+/// The attribute resolves against the directory holding the file that carries
+/// the `mod` item. Some declarations climb out of that directory with `..`, so
+/// the segments are folded rather than concatenated.
+fn joined(directory: &str, value: &str) -> Option<String> {
+    let mut segments: Vec<&str> = directory
+        .split('/')
+        .filter(|part| !part.is_empty())
+        .collect();
+    for part in value.split('/') {
+        match part {
+            "" | "." => {}
+            ".." => {
+                segments.pop()?;
+            }
+            other => segments.push(other),
+        }
+    }
+    (!segments.is_empty()).then(|| segments.join("/"))
+}
+
+/// Fold one declaration's attributes into the reading so far.
+fn absorb(gating: &mut Gating, attributes: &str, defaults: &BTreeSet<String>) {
+    if is_test_only_attribute(attributes) {
+        gating.test_only = true;
+    }
+    for feature in features(attributes) {
+        if !defaults.contains(&feature) {
+            gating.features.insert(feature);
+        }
+    }
+}
+
+/// What every `mod` declaration above one file says about it.
+///
+/// `#[path]` links are followed first, up to the file that a directory segment
+/// names, and every attribute along the way is folded in. The walk then runs
+/// over that file's own segments. A cycle is a compile error rather than a tree
+/// this gate has to survive, and the visited set keeps a malformed one bounded.
 fn chain(
     tree: &Tree,
     member: &str,
     file: &str,
     defaults: &BTreeSet<String>,
+    named: &BTreeMap<String, PathDeclaration>,
 ) -> Result<Gating, GateError> {
     let mut gating = Gating {
         declared: true,
         ..Gating::default()
     };
-    let relative = file
+    let mut declaring = file.to_string();
+    let mut seen = BTreeSet::new();
+    while let Some(declaration) = named.get(&declaring) {
+        if !seen.insert(declaring.clone()) {
+            break;
+        }
+        absorb(&mut gating, &declaration.attributes, defaults);
+        declaring = declaration.parent.clone();
+    }
+    let relative = declaring
         .strip_prefix(&format!("{member}/src/"))
-        .unwrap_or(file)
+        .unwrap_or(&declaring)
         .strip_suffix(".rs")
-        .unwrap_or(file);
+        .unwrap_or(&declaring);
     let mut segments: Vec<&str> = relative.split('/').collect();
     if segments.last() == Some(&"mod") {
         segments.pop();
@@ -362,27 +463,42 @@ fn chain(
             gating.declared = false;
             break;
         };
-        if is_test_only_attribute(&attributes) {
-            gating.test_only = true;
-        }
-        for feature in features(&attributes) {
-            if !defaults.contains(&feature) {
-                gating.features.insert(feature);
-            }
-        }
+        absorb(&mut gating, &attributes, defaults);
     }
     Ok(gating)
 }
 
 /// The attribute text above one out-of-line `mod` declaration, joined into one
 /// line, or `None` when the parent declares no such module.
-///
-/// Joining is what reads a multi-line `#[cfg(any(...))]`, which is the shape
-/// `vyre-libs` gates most of its modules with; a per-line predicate sees only
-/// `#[cfg(any(` and concludes the module is unconditional.
 fn declaration(text: &str, module: &str) -> Option<String> {
-    let wanted = format!("mod {module};");
+    mod_declarations(text)
+        .into_iter()
+        .find(|declaration| declaration.module == module)
+        .map(|declaration| declaration.attributes)
+}
+
+/// One out-of-line `mod` declaration and what sits above it.
+#[derive(Debug)]
+struct ModDeclaration {
+    /// The identifier the declaration binds.
+    module: String,
+    /// The cfg attribute text above it, joined into one line.
+    attributes: String,
+    /// The file a `#[path]` attribute names, as the attribute spells it.
+    path: Option<String>,
+}
+
+/// Every out-of-line `mod` declaration in one file, in source order.
+///
+/// Attributes are joined across lines, which is what reads a multi-line
+/// `#[cfg(any(...))]`; a per-line predicate sees only `#[cfg(any(` and concludes
+/// the module is unconditional. A `#[path]` attribute is recorded beside the
+/// cfg text rather than replacing it, so a declaration carrying both is read as
+/// gated and relocated at once.
+fn mod_declarations(text: &str) -> Vec<ModDeclaration> {
+    let mut found = Vec::new();
     let mut attributes = String::new();
+    let mut path: Option<String> = None;
     let mut depth = 0i32;
     for line in text.lines() {
         let code = scan_code(line).code.trim();
@@ -392,14 +508,21 @@ fn declaration(text: &str, module: &str) -> Option<String> {
             depth += bracket_delta(code);
             continue;
         }
-        if declares(code, &wanted) {
-            return Some(attributes);
+        if let Some(module) = declared_module(code) {
+            found.push(ModDeclaration {
+                module,
+                attributes: std::mem::take(&mut attributes),
+                path: path.take(),
+            });
+            continue;
         }
         if code.starts_with("#[") {
             depth = bracket_delta(code);
             if depth > 0 {
                 attributes.clear();
                 attributes.push_str(code);
+            } else if let Some(named) = path_attribute(code) {
+                path = Some(named);
             } else if code.starts_with("#[cfg") {
                 attributes.clear();
                 attributes.push_str(code);
@@ -408,21 +531,41 @@ fn declaration(text: &str, module: &str) -> Option<String> {
         }
         if !code.is_empty() {
             attributes.clear();
+            path = None;
         }
     }
-    None
+    found
 }
 
-/// Whether one line of code is the wanted `mod` declaration, whatever its
-/// visibility.
-fn declares(code: &str, wanted: &str) -> bool {
-    match code.strip_suffix(wanted) {
-        None => false,
-        Some(prefix) => {
-            let prefix = prefix.trim();
-            prefix.is_empty() || prefix == "pub" || prefix.starts_with("pub(")
-        }
-    }
+/// The identifier one line declares as an out-of-line module, whatever its
+/// visibility, or `None` for anything else.
+fn declared_module(code: &str) -> Option<String> {
+    let rest = code.trim();
+    let rest = rest.strip_prefix("pub").map_or(rest, str::trim_start);
+    let rest = if rest.starts_with('(') {
+        rest.split_once(')')
+            .map_or(rest, |(_, tail)| tail.trim_start())
+    } else {
+        rest
+    };
+    let name = rest.strip_prefix("mod ")?.trim().strip_suffix(';')?.trim();
+    let named = !name.is_empty()
+        && name
+            .chars()
+            .all(|letter| letter.is_alphanumeric() || letter == '_');
+    named.then(|| name.to_string())
+}
+
+/// The file a `#[path]` attribute names, if the line is one.
+fn path_attribute(code: &str) -> Option<String> {
+    let inner = code.strip_prefix("#[")?.strip_suffix(']')?.trim();
+    let value = inner
+        .strip_prefix("path")?
+        .trim_start()
+        .strip_prefix('=')?
+        .trim();
+    let value = value.strip_prefix('"')?.strip_suffix('"')?;
+    (!value.is_empty()).then(|| value.to_string())
 }
 
 /// Whether one line of code declares a module at all, whatever its visibility.
@@ -692,7 +835,9 @@ fn support_references(text: &str) -> Vec<u32> {
 /// that has already been wrong twice: a substring match convicts
 /// `bellman_shortest_path.rs` on the word inside `shortest`, and a per-line
 /// attribute read calls a module gated by a multi-line `cfg(any(...))`
-/// unconditional.
+/// unconditional. The third is the `#[path]` link: the layout walk alone reads
+/// a relocated module as declared nowhere, and the support rule then convicts a
+/// suite a release build never compiles.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -830,6 +975,95 @@ mod tests {
             owner(&members, "release/changes/unreleased/x.toml").map(|member| member.path.as_str()),
             None,
             "a file under no member has no owner"
+        );
+    }
+
+    /// WHY: `#[path]` moves a module out of the position the directory implies.
+    /// The layout walk alone finds no `mod <stem>;` for the file, reads that as
+    /// a module no declaration reaches, and the support rule convicts a
+    /// `#[cfg(test)]` suite as production source. Both attribute orders ship in
+    /// the checkout, so both are read here.
+    #[test]
+    fn a_relocated_declaration_carries_both_its_cfg_and_its_file() {
+        let cfg_first =
+            mod_declarations("#[cfg(test)]\n#[path = \"target_tests.rs\"]\nmod tests;\n");
+        assert_eq!(cfg_first.len(), 1, "{cfg_first:?}");
+        assert_eq!(cfg_first[0].module, "tests");
+        assert_eq!(cfg_first[0].path.as_deref(), Some("target_tests.rs"));
+        assert!(is_test_only_attribute(&cfg_first[0].attributes));
+
+        let path_first = mod_declarations(
+            "#[path = \"materialize_tests.rs\"]\n#[cfg(test)]\nmod materialize_tests;\n",
+        );
+        assert_eq!(path_first.len(), 1, "{path_first:?}");
+        assert_eq!(path_first[0].module, "materialize_tests");
+        assert_eq!(path_first[0].path.as_deref(), Some("materialize_tests.rs"));
+        assert!(is_test_only_attribute(&path_first[0].attributes));
+    }
+
+    /// WHY: a declaration with no `#[path]` must stay unrelocated. Recording a
+    /// stale value on the next declaration would move an unrelated module.
+    #[test]
+    fn a_plain_declaration_names_no_file_and_does_not_inherit_one() {
+        let found = mod_declarations("#[path = \"a_tests.rs\"]\nmod a;\nmod b;\n");
+        assert_eq!(found.len(), 2, "{found:?}");
+        assert_eq!(found[0].path.as_deref(), Some("a_tests.rs"));
+        assert_eq!(found[1].path, None);
+    }
+
+    /// WHY: some declarations climb out of the directory holding them, so the
+    /// value is folded against it rather than appended to it.
+    #[test]
+    fn a_relocated_file_resolves_against_the_directory_that_declares_it() {
+        assert_eq!(
+            joined("vyre-megakernel/src", "target_tests.rs").as_deref(),
+            Some("vyre-megakernel/src/target_tests.rs")
+        );
+        assert_eq!(
+            joined("a/src/one/two", "../../../tests/internal/mod.rs").as_deref(),
+            Some("a/tests/internal/mod.rs")
+        );
+        assert_eq!(joined("a", "../../out.rs"), None);
+    }
+
+    /// WHY: the variant space is every relocated declaration the checkout
+    /// carries, enumerated from the tree rather than named here, so a suite
+    /// added under a new `#[path]` is covered the day it lands. Before the link
+    /// was followed every one of these read as compiled by a release build.
+    #[test]
+    fn every_test_only_relocated_module_in_the_checkout_reads_as_test_only() {
+        let root = crate::checkout::checkout_root();
+        let tree = Tree::open(&root).expect("Fix: the checkout must be listable");
+        let members = tree
+            .member_manifests()
+            .expect("Fix: every member manifest must parse");
+        let mut judged = 0usize;
+        let mut unread = Vec::new();
+        for member in members.iter().filter(|member| member.publishable()) {
+            let defaults = default_features(member);
+            let named =
+                path_declarations(&tree, &member.path).expect("Fix: every source must be readable");
+            for (file, declaration) in &named {
+                if !is_test_only_attribute(&declaration.attributes) {
+                    continue;
+                }
+                judged += 1;
+                let gating = chain(&tree, &member.path, file, &defaults, &named)
+                    .expect("Fix: every parent source must be readable");
+                if !gating.test_only {
+                    unread.push(format!("{file} declared by {}", declaration.parent));
+                }
+            }
+        }
+        assert!(
+            judged > 0,
+            "Fix: the checkout must carry a `#[cfg(test)] #[path = ...]` module for this to judge"
+        );
+        assert!(
+            unread.is_empty(),
+            "{} of {judged} relocated test-only module(s) read as compiled by a release build:\n{}",
+            unread.len(),
+            unread.join("\n")
         );
     }
 }

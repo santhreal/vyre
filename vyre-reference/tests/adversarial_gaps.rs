@@ -4,10 +4,11 @@
 use crate::flat_expr_eval;
 
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_reference::expr::Buffer;
-use vyre_reference::{expr as eval_expr, reference_eval, value::Value, workgroup::Memory};
+use vyre_reference::Buffer;
+use vyre_reference::workgroup::InvocationIds;
+use vyre_reference::{reference_eval, reference_eval_expr, value::Value, ReferenceMemory};
 
-use flat_expr_eval::{empty_program, eval_expr_value, float_bits, zero_invocation};
+use flat_expr_eval::{empty_program, eval_expr_value, float_bits};
 
 #[path = "contract_cases/adversarial_gaps__program_with_no_buffers_executes_pure_nodes.rs"]
 mod adversarial_gaps_program_with_no_buffers_executes_pure_nodes;

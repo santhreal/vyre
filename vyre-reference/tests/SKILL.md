@@ -52,16 +52,15 @@ input. Determinism is the contract.
 
 ## Active coverage
 
-- Workgroup execution runs on the hashmap interpreter with persistent locals,
-  which makes a subgroup snapshot cheap.
-- `run_storage_graph` is covered by `storage_graph_generated_adversarial`,
-  which builds 32768 generated acyclic graphs from a fixed seed and compares
-  the oracle against an independent recursive shadow evaluator.
-- 11 `sweep_*_oracle_matrix` targets enumerate a dimension exhaustively
-  instead of sampling it, and the crate declares each one in `Cargo.toml` so
-  a new dimension is a visible manifest change.
-- Dual-reference coverage is enforced by the registry tests for the bitwise
-  primitives that publish an independent second reference.
+- There is one evaluator. Every entry point routes into
+  `execution::hashmap`, so a case written against any of them exercises the
+  same semantics.
+- Workgroup execution runs on that interpreter with persistent locals, which
+  makes a subgroup snapshot cheap.
+- The generated matrices enumerate a dimension exhaustively instead of
+  sampling it.
+- The `composition_witness` suites judge the evaluator against independent
+  mathematical witnesses per semantic family rather than restating it.
 
 ## Cross-crate contracts
 
@@ -74,8 +73,7 @@ input. Determinism is the contract.
 - `Expr::Call` is resolved through `OperationRegistry::global()` and the CPU
   body through `reference_fn(op_id)`. No evaluator matches on an op-id
   string.
-- `dual_op_ids`, `resolve_dual` and `DualReferenceFacet` publish which
-  operations carry a second independent reference.
+- `reference_facets` publishes which registry operations carry a host body.
 - The `Value` output is consumed by the conform runners and by the
   byte-identity proofs in every backend.
 
@@ -87,8 +85,7 @@ property: the interpreter is the oracle, and it is allowed to be slow.
 ## Fuzz targets
 
 The crate declares no fuzz target. Coverage of the input space is enumerated
-by the `sweep_*_oracle_matrix` targets and the property tests rather than
-sampled, because the oracle has to be right on every point of a dimension,
+by the generated matrices and the property tests rather than sampled, because the oracle has to be right on every point of a dimension,
 not on a random subset.
 
 ## What NOT to test here

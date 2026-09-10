@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The workspace roster rule reads the checkout instead of a compiled-in copy of the root manifest, so a directory holding a `Cargo.toml` that neither `members` nor `exclude` names is reported. The copy could only report an edit to the manifest that skipped it, and the `fuzz` crate had been sitting outside both lists."

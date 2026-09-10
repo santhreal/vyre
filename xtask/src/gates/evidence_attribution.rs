@@ -32,7 +32,7 @@ use std::process::Command;
 use serde::Serialize;
 
 use crate::artifact_gate::{self, Inspection};
-use crate::evidence_record::{self, MeasurementRecord, ProvenanceIssue};
+use crate::evidence_record::{self, ProvenanceIssue};
 use crate::gate::{Finding, GateCtx, GateError, Report, ResourceClass};
 use crate::gate_metadata;
 
@@ -153,7 +153,7 @@ impl crate::gate::GateBehavior for EvidenceAttribution {
             artifacts: rows,
         };
         let unattributed = ledger.unattributed_count;
-        inspection.generates_evidence(UNATTRIBUTED_LEDGER, MeasurementRecord::HostOnly, &ledger);
+        inspection.generates_host_evidence(UNATTRIBUTED_LEDGER, &ledger);
         let mut report = artifact_gate::settle_inspection(ctx, ctx.gate_name()?, inspection);
         report.coverage.clear();
         report.cover(crate::gate::Coverage::complete_identities(
@@ -327,7 +327,9 @@ pub fn ledger_paths(ledger: &str) -> BTreeSet<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::evidence_record::{DeviceFacts, EvidenceProvenance, HostRecord, TreeRecord};
+    use crate::evidence_record::{
+        DeviceFacts, EvidenceProvenance, HostRecord, MeasurementRecord, TreeRecord,
+    };
 
     fn owner(class: ResourceClass) -> Option<(&'static str, ResourceClass)> {
         Some(("release-benchmarks", class))

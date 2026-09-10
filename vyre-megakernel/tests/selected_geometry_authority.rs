@@ -547,7 +547,7 @@ fn the_artifact_never_allocates_constant_storage() {
         format!("artifact.allocation.regions[{index}].owner")
     );
 }
-/// WHY: Backlog row 61 acceptance: an artifact's selected schedule is unchanged from
+/// WHY: an artifact's selected schedule is unchanged from
 /// selection through emission and submission. Every launch shape, workgroup size, grid,
 /// vector width, and resource bounds selected by vyre-megakernel must match verbatim
 /// across compilation, target emission, and module bundle encoding.
@@ -599,7 +599,7 @@ fn selected_schedule_is_invariant_from_selection_through_target_emission() {
     }
 }
 
-/// WHY: Backlog row 61 acceptance: a retune attempt after freeze is refused by name.
+/// WHY: a retune attempt after freeze is refused by name.
 /// Mutating workgroup, grid, shared memory, node association, or schedule facts after
 /// freeze is rejected with a diagnostic specifically naming the refused field.
 #[test]

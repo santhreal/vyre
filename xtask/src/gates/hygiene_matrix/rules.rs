@@ -148,8 +148,21 @@ pub(crate) fn has_documented_panic_contract(text: &str, line_index: usize) -> bo
         let line = lines[cursor];
         let trimmed = line.trim_start();
         // Only an enclosing item counts: a signature at or past the call's own indent
-        // belongs to a sibling, not to the function the call sits in.
-        if line.len() - trimmed.len() >= site_indent || !is_fn_signature_line(trimmed) {
+        // belongs to a sibling, not to the item the call sits in.
+        if line.len() - trimmed.len() >= site_indent {
+            continue;
+        }
+        let encloses = if is_fn_signature_line(trimmed) {
+            true
+        } else if is_const_block_item_line(trimmed) {
+            // A function-local `static X: LazyLock<_> = LazyLock::new(|| {` is
+            // declared by the function around it and carries no docs of its own,
+            // so an undocumented one must not end the walk before that function.
+            carries_doc_comment(&lines, cursor)
+        } else {
+            false
+        };
+        if !encloses {
             continue;
         }
         let mut doc = cursor;
@@ -199,30 +212,70 @@ pub(crate) fn has_documented_panic_contract(text: &str, line_index: usize) -> bo
 
 /// True when `trimmed` opens a function signature, whatever the leading keywords.
 pub(crate) fn is_fn_signature_line(trimmed: &str) -> bool {
+    walk_item_prefix(trimmed).is_some_and(|(rest, _)| rest.starts_with("fn "))
+}
+
+/// True when `trimmed` opens a `const` or `static` item whose initializer is a block.
+///
+/// A const block is evaluated while the crate compiles, so a `panic!` inside one is a
+/// build failure naming its own correction rather than a run-time fault. Its
+/// `# Panics` section declares the same contract a function's does, and matching only
+/// `fn` reported such a contract as undocumented, which no edit to the documented item
+/// could clear. Only a block initializer can hold a panic; `const N: usize = 8;`
+/// cannot.
+pub(crate) fn is_const_block_item_line(trimmed: &str) -> bool {
+    let Some((rest, binding)) = walk_item_prefix(trimmed) else {
+        return false;
+    };
+    binding
+        && trimmed.ends_with('{')
+        && rest.split_once(' ').is_some_and(|(name, _)| name.ends_with(':'))
+}
+
+/// Consume the visibility and item keywords at the head of `trimmed`.
+///
+/// Returns the remainder and whether a `const` or `static` keyword was among them, or
+/// `None` when the line does not open an item at all.
+fn walk_item_prefix(trimmed: &str) -> Option<(&str, bool)> {
     let mut rest = trimmed;
+    let mut binding = false;
     loop {
         if rest.starts_with("fn ") {
-            return true;
+            return Some((rest, binding));
         }
         if let Some(restricted) = rest.strip_prefix("pub(") {
-            let Some(close) = restricted.find(')') else {
-                return false;
-            };
+            let close = restricted.find(')')?;
             rest = restricted[close + 1..].trim_start();
             continue;
         }
-        let Some((head, tail)) = rest.split_once(' ') else {
-            return false;
-        };
+        let (head, tail) = rest.split_once(' ')?;
         let is_signature_keyword = head.starts_with("pub")
             || head.starts_with("extern")
             || head.starts_with('"')
-            || matches!(head, "const" | "async" | "unsafe" | "default");
+            || matches!(head, "const" | "static" | "async" | "unsafe" | "default");
         if !is_signature_keyword {
-            return false;
+            return Some((rest, binding));
         }
+        binding |= matches!(head, "const" | "static");
         rest = tail.trim_start();
     }
+}
+
+/// True when a `///` block sits above `index`, past any attributes or plain comments.
+fn carries_doc_comment(lines: &[&str], index: usize) -> bool {
+    let mut cursor = index;
+    while cursor > 0 {
+        cursor -= 1;
+        let previous = lines[cursor].trim();
+        if previous.starts_with("///") || previous.starts_with("//!") {
+            return true;
+        }
+        if previous.is_empty() || previous.starts_with("#[") || previous.starts_with("//") {
+            continue;
+        }
+        return false;
+    }
+    false
 }
 
 pub(crate) fn line_contains_blocked_pattern(

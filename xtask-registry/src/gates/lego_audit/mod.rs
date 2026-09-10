@@ -81,6 +81,7 @@ use self::trend::*;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::io;
+use std::path::{Path, PathBuf};
 use vyre::ir::{Expr, Node, Program};
 use xtask::gate::{Coverage, Finding, GateCtx, GateError, Report};
 
@@ -90,6 +91,38 @@ use xtask::gates::dedup_report::{
     DuplicateEvidence, DuplicateFamilyFinding, DuplicateFamilyReport, DuplicateSubject,
 };
 use xtask::gates::use_paths::{collect_use_paths, is_test_source_path};
+
+/// One member of the Category A crate family: its checkout-relative path and
+/// the `src` directory under it.
+pub(super) struct CategoryASource {
+    /// Checkout-relative member path, which is also the prefix a registration
+    /// source file carries.
+    pub(super) member: String,
+    /// Absolute path of the member's `src` directory.
+    pub(super) src: PathBuf,
+}
+
+/// Every workspace member that owns Category A source.
+///
+/// The family is a facade crate plus one crate per domain partition, and both
+/// the roster and the family predicate are read at run time, so a partition
+/// crate added to the manifest is judged on the next run. A rule that named
+/// `vyre-libs/src` instead judged the facade alone: every domain directory the
+/// placement rules are about lives under `vyre-libs-<domain>/src/`, so the
+/// facade's single `lib.rs` was the whole subject universe.
+pub(super) fn category_a_source_roots(root: &Path) -> Vec<CategoryASource> {
+    structure_gate::workspace_members(root)
+        .into_iter()
+        .filter_map(|member| {
+            let name = member.rsplit('/').next()?;
+            if !structure_gate::is_category_a_crate(name) {
+                return None;
+            }
+            let src = root.join(&member).join("src");
+            Some(CategoryASource { member, src })
+        })
+        .collect()
+}
 
 /// Check 0: every exemption is live.
 pub struct LegoExemptionLiveness;

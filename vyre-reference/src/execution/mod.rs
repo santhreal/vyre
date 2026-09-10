@@ -1,41 +1,38 @@
-//! Generic reference interpreter entry points.
+//! The canonical reference evaluator and its entry points.
 //!
-//! The stable statement-IR [`reference_eval`] entry point remains delegated to
-//! the existing invocation simulator until `Program` stores graph nodes
-//! directly.
+//! Every entry point here resolves the same way: normalize the submitted
+//! program to the top-level `Region` model, arm the work budget, and interpret
+//! the program through [`hashmap::run_hashmap_reference`]. There is one
+//! evaluator, so a node has one meaning for the whole crate.
 
 pub(crate) mod async_transfer;
 pub(crate) mod call;
-pub mod expr;
 pub(crate) mod expr_cast;
 pub(crate) mod hashmap;
-pub mod node;
-pub(crate) mod node_async;
-pub(crate) mod node_tile;
 pub(crate) mod node_tree;
 /// Thread-local arithmetic-IR-op counting for roofline / complexity analysis.
 pub mod op_count;
-pub mod sequential;
 /// Work ceiling that gives the interpreter a termination contract.
 pub mod step_budget;
+/// One-expression entry point into the canonical evaluator.
+pub(crate) mod single_expr;
 pub(crate) mod tile;
 pub(crate) mod typed_ops;
+
+use std::borrow::Cow;
+use vyre_foundation::ir::{Node, Program};
+
+use crate::value::Value;
 
 pub(crate) fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, crate::ReferenceError> {
     (axis < 3)
         .then(|| Value::U32(values[axis as usize]))
         .ok_or_else(|| {
-            crate::ReferenceError::new(format!(
+            crate::ReferenceError::incomplete_dispatch_semantics(format!(
                 "invocation/workgroup ID axis {axis} out of range. Fix: use 0, 1, or 2."
             ))
         })
 }
-use std::borrow::Cow;
-
-use rustc_hash::FxHashMap;
-use vyre_foundation::ir::{InterpCtx, Node, NodeId, NodeStorage, Program, Value as IrValue};
-
-use crate::value::Value;
 
 /// If the program satisfies the public top-level-Region model, return a
 /// byte-identical clone. If not, the usual case is
@@ -65,67 +62,139 @@ pub(crate) fn program_for_interpreter(
     Ok(normalized)
 }
 
+/// Deterministic step orders one schedule policy explores, in the order it
+/// explores them.
+///
+/// The match has no catch-all arm, so a new policy states its own exploration
+/// rather than borrowing the previous variant's. `BoundedInterleaving` used to
+/// borrow `Forward` here, which made every parity result under that policy a
+/// claim about a schedule the oracle never ran.
+fn explored_step_orders(
+    policy: crate::request::DeterministicSchedulePolicy,
+    program: &Program,
+) -> Vec<hashmap::LaneOrder> {
+    match policy {
+        crate::request::DeterministicSchedulePolicy::Forward => vec![hashmap::LaneOrder::Forward],
+        crate::request::DeterministicSchedulePolicy::LaneReversed => {
+            vec![hashmap::LaneOrder::Reversed]
+        }
+        crate::request::DeterministicSchedulePolicy::LaneRotated(by) => {
+            vec![hashmap::LaneOrder::Rotated(by)]
+        }
+        crate::request::DeterministicSchedulePolicy::BoundedInterleaving => {
+            bounded_interleaving_orders(program)
+        }
+    }
+}
+
+/// Step orders a bounded interleaving exploration covers.
+///
+/// Forward, reversed, and the rotations that move at least one lane without
+/// repeating the forward order, capped at
+/// [`MAX_BOUNDED_INTERLEAVINGS`]. The rotation count comes from the workgroup
+/// extent the program declares, so a one-lane workgroup explores one schedule
+/// and a wide one explores the cap rather than a number chosen here.
+fn bounded_interleaving_orders(program: &Program) -> Vec<hashmap::LaneOrder> {
+    let [sx, sy, sz] = program.workgroup_size();
+    let lanes = [sx, sy, sz].iter().copied().fold(1u32, u32::saturating_mul);
+    let mut orders = vec![hashmap::LaneOrder::Forward];
+    if lanes <= 1 {
+        return orders;
+    }
+    orders.push(hashmap::LaneOrder::Reversed);
+    for by in 1..lanes {
+        if orders.len() >= MAX_BOUNDED_INTERLEAVINGS {
+            break;
+        }
+        orders.push(hashmap::LaneOrder::Rotated(by));
+    }
+    orders
+}
+
+/// Schedules one bounded interleaving exploration runs at most.
+///
+/// The exploration is bounded so the oracle keeps a termination contract: the
+/// work budget covers every schedule together, and a wide workgroup would
+/// otherwise multiply one evaluation by its lane count.
+const MAX_BOUNDED_INTERLEAVINGS: usize = 4;
+
+/// Run `runnable` once per explored step order and return the outputs every
+/// order agreed on.
+///
+/// Two orders that disagree mean the program's result depends on the order the
+/// lanes were stepped in, which a device leaves driver-defined. The oracle has
+/// no single answer to certify in that case, so it names both schedules and the
+/// output that differs.
+fn run_explored_orders(
+    runnable: &Program,
+    request: &crate::request::ReferenceRequest,
+    orders: &[hashmap::LaneOrder],
+) -> Result<Vec<Value>, crate::ReferenceError> {
+    let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);
+    let mut agreed: Option<(hashmap::LaneOrder, Vec<Value>)> = None;
+    for &order in orders {
+        let outputs = hashmap::run_hashmap_reference(
+            runnable,
+            &request.resource_abi.inputs,
+            min_dispatch,
+            order,
+            request.workload_envelope.workgroup_grid,
+        )?;
+        match &agreed {
+            None => agreed = Some((order, outputs)),
+            Some((first_order, first_outputs)) => {
+                if let Some(index) = first_difference(first_outputs, &outputs) {
+                    return Err(crate::ReferenceError::incomplete_dispatch_semantics(format!(
+                        "schedule exploration disagreed: output {index} differs between step order \
+                         {first_order:?} and {order:?}. Fix: give every shared output slot a single \
+                         writer, or write it through a commutative atomic, so the program's result \
+                         does not depend on the order the lanes were stepped in."
+                    )));
+                }
+            }
+        }
+    }
+    agreed.map(|(_, outputs)| outputs).ok_or_else(|| {
+        crate::ReferenceError::incomplete_dispatch_semantics(
+            "the schedule policy explored no step order. Fix: state a policy that names at least \
+             one deterministic step order.",
+        )
+    })
+}
+
+/// Index of the first output two schedules disagree on.
+fn first_difference(left: &[Value], right: &[Value]) -> Option<usize> {
+    if left.len() != right.len() {
+        return Some(left.len().min(right.len()));
+    }
+    left.iter()
+        .zip(right)
+        .position(|(left, right)| left.to_bytes() != right.to_bytes())
+}
+
 pub(crate) fn run_with_request(
     request: &crate::request::ReferenceRequest,
 ) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
     crate::oob::reset_oob_report();
-    crate::oob::set_strict_mode(true);
-    let result = (|| {
-        let runnable = program_for_interpreter(&request.program)?;
-        let budget = step_budget::arm_with(&runnable, request.budget.work_ceiling);
-        let lane_order = match request.schedule_policy {
-            crate::request::DeterministicSchedulePolicy::Forward => hashmap::LaneOrder::Forward,
-            crate::request::DeterministicSchedulePolicy::LaneReversed => {
-                hashmap::LaneOrder::Reversed
-            }
-            crate::request::DeterministicSchedulePolicy::LaneRotated(by) => {
-                hashmap::LaneOrder::Rotated(by)
-            }
-            crate::request::DeterministicSchedulePolicy::BoundedInterleaving => {
-                hashmap::LaneOrder::Forward
-            }
-        };
-        let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);
-        let outputs = hashmap::run_hashmap_reference(
-            &runnable,
-            &request.resource_abi.inputs,
-            min_dispatch,
-            lane_order,
-            request.workload_envelope.workgroup_grid,
-        )?;
-        let steps = step_budget::charged();
-        drop(budget);
-        Ok((outputs, steps))
-    })();
-    crate::oob::set_strict_mode(false);
-    result
+    let _strictness = crate::oob::enter_strictness(true);
+    let runnable = program_for_interpreter(&request.program)?;
+    let budget = step_budget::arm_with(&runnable, request.budget.work_ceiling);
+    let orders = explored_step_orders(request.schedule_policy, &runnable);
+    let outputs = run_explored_orders(&runnable, request, &orders)?;
+    let steps = step_budget::charged();
+    drop(budget);
+    Ok((outputs, steps))
 }
 
 pub(crate) fn run_permissive_with_request(
     request: &crate::request::ReferenceRequest,
 ) -> Result<(Vec<Value>, u64, crate::oob::OobReport), crate::ReferenceError> {
     crate::oob::reset_oob_report();
-    crate::oob::set_strict_mode(false);
+    let _strictness = crate::oob::enter_strictness(false);
     let runnable = program_for_interpreter(&request.program)?;
     let budget = step_budget::arm_with(&runnable, request.budget.work_ceiling);
-    let lane_order = match request.schedule_policy {
-        crate::request::DeterministicSchedulePolicy::Forward => hashmap::LaneOrder::Forward,
-        crate::request::DeterministicSchedulePolicy::LaneReversed => hashmap::LaneOrder::Reversed,
-        crate::request::DeterministicSchedulePolicy::LaneRotated(by) => {
-            hashmap::LaneOrder::Rotated(by)
-        }
-        crate::request::DeterministicSchedulePolicy::BoundedInterleaving => {
-            hashmap::LaneOrder::Forward
-        }
-    };
-    let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);
-    let outputs = hashmap::run_hashmap_reference(
-        &runnable,
-        &request.resource_abi.inputs,
-        min_dispatch,
-        lane_order,
-        request.workload_envelope.workgroup_grid,
-    )?;
+    let orders = explored_step_orders(request.schedule_policy, &runnable);
+    let outputs = run_explored_orders(&runnable, request, &orders)?;
     let steps = step_budget::charged();
     let oob = crate::oob::oob_report();
     drop(budget);
@@ -246,9 +315,7 @@ pub fn reference_input_values(
 
 /// Execute a vyre IR program on the pure Rust reference interpreter.
 ///
-/// The current public [`Program`] model is statement-oriented, so this stable
-/// entry point delegates to the statement evaluator. Graph-shaped extension
-/// nodes use [`run_storage_graph`].
+/// Delegates to the one canonical evaluator; see the module docstring.
 pub fn reference_eval(
     program: &Program,
     inputs: &[Value],
@@ -278,7 +345,10 @@ pub fn reference_eval_oob_report(
     program: &Program,
     inputs: &[Value],
 ) -> Result<(Vec<Value>, crate::oob::OobReport), crate::ReferenceError> {
-    crate::oob::reset_oob_report();
+    // Diagnostic mode exists to MEASURE absorbed accesses, so this entry
+    // point opts out of the strict default for the duration of the run and
+    // reports the tally instead of refusing on it.
+    let _diagnostic = crate::oob::enter_strictness(false);
     let outputs = reference_eval(program, inputs)?;
     Ok((outputs, crate::oob::oob_report()))
 }
@@ -299,7 +369,7 @@ pub fn reference_eval_with_dispatch_oob_report(
     inputs: &[Value],
     min_dispatch_elements: u32,
 ) -> Result<(Vec<Value>, crate::oob::OobReport), crate::ReferenceError> {
-    crate::oob::reset_oob_report();
+    let _diagnostic = crate::oob::enter_strictness(false);
     let outputs = reference_eval_with_dispatch(program, inputs, min_dispatch_elements)?;
     Ok((outputs, crate::oob::oob_report()))
 }
@@ -356,8 +426,7 @@ pub fn reference_eval_with_step_ceiling(
 ) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
     let runnable = program_for_interpreter(program)?;
     let budget = step_budget::arm_with_mode(&runnable, ceiling, false);
-    let outputs =
-        hashmap::run_hashmap_reference(&runnable, inputs, 0, hashmap::LaneOrder::Forward, None)?;
+    let outputs = run_canonical(&runnable, inputs, 0, hashmap::LaneOrder::Forward, None)?;
     let steps = step_budget::charged();
     drop(budget);
     Ok((outputs, steps))
@@ -382,7 +451,7 @@ pub fn run_arena_reference_with_dispatch(
     min_dispatch_elements: u32,
 ) -> Result<Vec<Value>, crate::ReferenceError> {
     let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(
+    run_canonical(
         &program,
         inputs,
         min_dispatch_elements,
@@ -410,7 +479,7 @@ pub fn reference_eval_with_grid(
     grid: [u32; 3],
 ) -> Result<Vec<Value>, crate::ReferenceError> {
     let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Forward, Some(grid))
+    run_canonical(&program, inputs, 0, hashmap::LaneOrder::Forward, Some(grid))
 }
 
 /// Execute a program with the workgroup/invocation STEP ORDER reversed.
@@ -431,7 +500,7 @@ pub fn reference_eval_lane_reversed(
     inputs: &[Value],
 ) -> Result<Vec<Value>, crate::ReferenceError> {
     let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Reversed, None)
+    run_canonical(&program, inputs, 0, hashmap::LaneOrder::Reversed, None)
 }
 
 /// Execute a program with the workgroup/invocation STEP ORDER rotated left by `by`.
@@ -451,94 +520,31 @@ pub fn reference_eval_lane_rotated(
     by: u32,
 ) -> Result<Vec<Value>, crate::ReferenceError> {
     let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Rotated(by), None)
+    run_canonical(&program, inputs, 0, hashmap::LaneOrder::Rotated(by), None)
 }
 
-/// Interpret a compact [`NodeStorage`] graph and return output node values.
-pub fn run_storage_graph(
-    nodes: &[(NodeId, NodeStorage)],
-    outputs: &[NodeId],
-) -> Result<Vec<IrValue>, crate::ReferenceError> {
-    let mut graph = FxHashMap::with_capacity_and_hasher(nodes.len(), Default::default());
-    for (id, node) in nodes {
-        if graph.insert(*id, node).is_some() {
-            return Err(duplicate_node_error(*id));
-        }
-    }
-    let mut ctx = InterpCtx::default();
-    let mut states = FxHashMap::with_capacity_and_hasher(graph.len(), Default::default());
-
-    for output in outputs {
-        eval_storage_node(*output, &graph, &mut ctx, &mut states)?;
-    }
-
-    outputs
-        .iter()
-        .map(|id| ctx.get(*id).map_err(interp_error))
-        .collect()
+/// The one path from a legacy entry point into the canonical interpreter.
+///
+/// Strict refusal is the default for every entry point, and the strict check
+/// reads a per-thread out-of-bounds tally. Resetting the tally here rather
+/// than in each entry point is what keeps one evaluation from refusing on the
+/// accesses a previous evaluation on the same thread absorbed.
+fn run_canonical(
+    program: &Program,
+    inputs: &[Value],
+    min_dispatch_elements: u32,
+    order: hashmap::LaneOrder,
+    grid: Option<[u32; 3]>,
+) -> Result<Vec<Value>, crate::ReferenceError> {
+    crate::oob::reset_oob_report();
+    hashmap::run_hashmap_reference(program, inputs, min_dispatch_elements, order, grid)
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum VisitState {
-    Visiting,
-    Done,
-}
-
-fn eval_storage_node(
-    id: NodeId,
-    graph: &FxHashMap<NodeId, &NodeStorage>,
-    ctx: &mut InterpCtx,
-    states: &mut FxHashMap<NodeId, VisitState>,
-) -> Result<(), crate::ReferenceError> {
-    match states.get(&id).copied() {
-        Some(VisitState::Done) => return Ok(()),
-        Some(VisitState::Visiting) => return Err(cycle_error(id)),
-        None => {}
-    }
-
-    let node = *graph.get(&id).ok_or_else(|| missing_node_error(id))?;
-    states.insert(id, VisitState::Visiting);
-    let inputs = node.input_ids();
-    for input in &inputs {
-        eval_storage_node(*input, graph, ctx, states)?;
-    }
-    ctx.set_operands(inputs);
-    let value = node.interpret(ctx).map_err(interp_error)?;
-    ctx.set(id, value);
-    states.insert(id, VisitState::Done);
-    Ok(())
-}
-
-fn interp_error(error: vyre_foundation::ir::EvalError) -> crate::ReferenceError {
-    crate::ReferenceError::new(error.to_string())
-}
-
-fn missing_node_error(id: NodeId) -> crate::ReferenceError {
-    crate::ReferenceError::new(format!(
-        "graph references missing node {}. Fix: include every dependency in the interpreter input graph.",
-        id.0
-    ))
-}
-
-fn cycle_error(id: NodeId) -> crate::ReferenceError {
-    crate::ReferenceError::new(format!(
-        "graph contains a dependency cycle at node {}. Fix: submit an acyclic dataflow graph.",
-        id.0
-    ))
-}
-
-fn duplicate_node_error(id: NodeId) -> crate::ReferenceError {
-    crate::ReferenceError::new(format!(
-        "graph contains duplicate node {}. Fix: submit exactly one storage record for each NodeId before reference execution.",
-        id.0
-    ))
-}
-
-// Inline: covers the crate-private `missing_node_error`, which no integration test can reach.
+// Inline: reaches the crate-private normalization the public entry points share.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, NodeStorage};
+    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
 
     #[test]
     fn reference_eval_dispatches_singleton_atomic_flags_across_dynamic_byte_input() {
@@ -661,87 +667,5 @@ mod tests {
             1,
             "an explicit grid floor of haystack_len must cover every byte position"
         );
-    }
-
-    #[test]
-    fn generic_storage_graph_matches_recursive_oracle_for_10k_programs() {
-        let mut rng = 0x9e37_79b9_u64;
-        for case in 0..10_000 {
-            let graph = random_graph(&mut rng, case);
-            let output = graph.last().expect("Fix: generated graph is non-empty").0;
-            let expected =
-                recursive_value(output, &graph).expect("Fix: recursive oracle evaluates");
-            let actual = run_storage_graph(&graph, &[output])
-                .expect("Fix: generic graph interpreter evaluates")[0];
-            assert_eq!(actual, expected, "case {case}");
-        }
-    }
-
-    fn random_graph(rng: &mut u64, case: u32) -> Vec<(NodeId, NodeStorage)> {
-        let len = 2 + (next(rng) as usize % 31);
-        let mut graph = Vec::with_capacity(len);
-        graph.push((NodeId(0), NodeStorage::LitU32(case)));
-        graph.push((NodeId(1), NodeStorage::LitU32(next(rng))));
-        for index in 2..len {
-            let left = NodeId(next(rng) % index as u32);
-            let right = NodeId(next(rng) % index as u32);
-            let op = match next(rng) % 5 {
-                0 => BinOp::Add,
-                1 => BinOp::Sub,
-                2 => BinOp::Mul,
-                3 => BinOp::BitXor,
-                _ => BinOp::BitAnd,
-            };
-            graph.push((NodeId(index as u32), NodeStorage::BinOp { op, left, right }));
-        }
-        graph
-    }
-
-    fn recursive_value(
-        id: NodeId,
-        graph: &[(NodeId, NodeStorage)],
-    ) -> Result<IrValue, crate::ReferenceError> {
-        let node = graph
-            .iter()
-            .find(|(node_id, _)| *node_id == id)
-            .map(|(_, node)| node)
-            .ok_or_else(|| missing_node_error(id))?;
-        match node {
-            NodeStorage::LitU32(value) => Ok(IrValue::U32(*value)),
-            NodeStorage::BinOp { op, left, right } => {
-                let left = expect_u32(recursive_value(*left, graph)?)?;
-                let right = expect_u32(recursive_value(*right, graph)?)?;
-                let value = match op {
-                    BinOp::Add => left.wrapping_add(right),
-                    BinOp::Sub => left.wrapping_sub(right),
-                    BinOp::Mul => left.wrapping_mul(right),
-                    BinOp::BitXor => left ^ right,
-                    BinOp::BitAnd => left & right,
-                    _ => {
-                        return Err(crate::ReferenceError::new(
-                            "recursive parity oracle received unsupported op. Fix: keep test generation within the oracle domain.",
-                        ));
-                    }
-                };
-                Ok(IrValue::U32(value))
-            }
-            _ => Err(crate::ReferenceError::new(
-                "recursive parity oracle received unsupported node. Fix: keep test generation within the oracle domain.",
-            )),
-        }
-    }
-
-    fn expect_u32(value: IrValue) -> Result<u32, crate::ReferenceError> {
-        match value {
-            IrValue::U32(value) => Ok(value),
-            other => Err(crate::ReferenceError::new(format!(
-                "recursive parity oracle expected u32, got {other:?}. Fix: keep generated graphs scalar-u32 only."
-            ))),
-        }
-    }
-
-    fn next(rng: &mut u64) -> u32 {
-        *rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1);
-        (*rng >> 32) as u32
     }
 }

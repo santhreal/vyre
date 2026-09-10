@@ -79,6 +79,9 @@ jobs:
       - name: Pre-publish compiler and release contracts
         run: ./cargo_full run -p xtask -- gates --subset prepublish
 
+      - name: Conformance harness contracts
+        run: ./cargo_full run -p xtask -- gates --subset conformance
+
       # Structural rules that must hold while the workspace does not compile,
       # so they live in a crate that depends on no vyre crate.
       - name: Workspace structure

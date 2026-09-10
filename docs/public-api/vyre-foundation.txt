@@ -10,7 +10,6 @@
 #[non_exhaustive] pub enum vyre_foundation::dialect_lookup::AttrType
 #[non_exhaustive] pub enum vyre_foundation::execution_plan::InnovationTrack
 #[non_exhaustive] pub enum vyre_foundation::execution_plan::fusion::FusionError
-#[non_exhaustive] pub enum vyre_foundation::execution_plan::fusion::FusionRejectionReason
 #[non_exhaustive] pub enum vyre_foundation::graph_view::DataflowKind
 #[non_exhaustive] pub enum vyre_foundation::graph_view::EdgeKind
 #[non_exhaustive] pub enum vyre_foundation::graph_view::GraphValidateError
@@ -1251,6 +1250,7 @@ pub enum vyre_foundation::execution_plan::ProvenanceStrategy
 pub enum vyre_foundation::execution_plan::ReadbackStrategy
 pub enum vyre_foundation::execution_plan::fusion::FusionCandidateKind
 pub enum vyre_foundation::execution_plan::fusion::FusionLegalityVerdict
+pub enum vyre_foundation::execution_plan::fusion::FusionRejectionReason
 pub enum vyre_foundation::execution_plan::fusion::HandoffLocation
 pub enum vyre_foundation::execution_plan::fusion::RegionRelation
 pub enum vyre_foundation::execution_plan::fusion::TileResidency
@@ -2299,18 +2299,11 @@ pub fn vyre_foundation::operation::CallGraphClosure::solve_from_registrations<'a
 pub fn vyre_foundation::operation::CallGraphClosure::transitive_capabilities(&self, id: &str) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub fn vyre_foundation::operation::CallGraphClosure::transitive_effects(&self, id: &str) -> core::option::Option<vyre_foundation::operation::OperationEffects>
 pub fn vyre_foundation::operation::ConformanceRegistry::contains(&self, id: &str) -> bool
-pub fn vyre_foundation::operation::ConformanceRegistry::from_registry() -> Self
+pub fn vyre_foundation::operation::ConformanceRegistry::global() -> &'static Self
 pub fn vyre_foundation::operation::ConformanceRegistry::is_empty(&self) -> bool
 pub fn vyre_foundation::operation::ConformanceRegistry::iter(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &vyre_foundation::operation::ConformanceProvider> + '_
 pub fn vyre_foundation::operation::ConformanceRegistry::len(&self) -> usize
 pub fn vyre_foundation::operation::ConformanceRegistry::provider(&self, id: &str) -> core::option::Option<&vyre_foundation::operation::ConformanceProvider>
-pub fn vyre_foundation::operation::DialectOperationSpec::build_program(&self) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::operation::DialectOperationSpec::contract_record(&self) -> vyre_spec::op_contract::SemanticContractRecord
-pub fn vyre_foundation::operation::DialectOperationSpec::documentation(&self) -> &'static str
-pub fn vyre_foundation::operation::DialectOperationSpec::generate_property_input(&self, seed: u64) -> alloc::vec::Vec<u8>
-pub fn vyre_foundation::operation::DialectOperationSpec::id(&self) -> &'static str
-pub fn vyre_foundation::operation::DialectOperationSpec::metamorphic_test(&self, inputs: &[alloc::vec::Vec<u8>]) -> bool
-pub fn vyre_foundation::operation::DialectOperationSpec::reference_obligation(&self) -> &'static str
 pub fn vyre_foundation::operation::OperationCatalogBundle::artifact_identity(&self, request_or_program_digest: &[u8; 32]) -> [u8; 32]
 pub fn vyre_foundation::operation::OperationCatalogBundle::compute_digest(version: u32, descriptors: &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::SemanticDescriptor>, lowering_providers: &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::LoweringProvider>, extensions: &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>) -> [u8; 32]
 pub fn vyre_foundation::operation::OperationCatalogBundle::contains(&self, id: &str) -> bool
@@ -2319,7 +2312,7 @@ pub fn vyre_foundation::operation::OperationCatalogBundle::empty() -> Self
 pub fn vyre_foundation::operation::OperationCatalogBundle::extension(&self, name: &str) -> core::option::Option<&vyre_foundation::operation::ExtensionProvenance>
 pub fn vyre_foundation::operation::OperationCatalogBundle::extensions(&self) -> &alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>
 pub fn vyre_foundation::operation::OperationCatalogBundle::from_parts(descriptors: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::SemanticDescriptor>, lowering_providers: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::LoweringProvider>, extensions: alloc::collections::btree::map::BTreeMap<&'static str, vyre_foundation::operation::ExtensionProvenance>) -> Self
-pub fn vyre_foundation::operation::OperationCatalogBundle::from_registry() -> Self
+pub fn vyre_foundation::operation::OperationCatalogBundle::global() -> &'static Self
 pub fn vyre_foundation::operation::OperationCatalogBundle::is_empty(&self) -> bool
 pub fn vyre_foundation::operation::OperationCatalogBundle::len(&self) -> usize
 pub fn vyre_foundation::operation::OperationCatalogBundle::lowering(&self, id: &str) -> core::option::Option<&vyre_foundation::operation::LoweringProvider>
@@ -2350,8 +2343,6 @@ pub fn vyre_foundation::operation::OperationRegistry::global() -> &'static Self
 pub fn vyre_foundation::operation::OperationRegistry::iter(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = vyre_foundation::operation::SemanticOperation> + '_
 pub fn vyre_foundation::operation::OperationRegistry::transitive_capabilities(&self, id: &str) -> core::option::Option<vyre_foundation::program_caps::RequiredCapabilities>
 pub fn vyre_foundation::operation::OperationRegistry::transitive_effects(&self, id: &str) -> core::option::Option<vyre_foundation::operation::OperationEffects>
-pub fn vyre_foundation::operation::OperationVisitor::visit_effect(&mut self, effect: &str)
-pub fn vyre_foundation::operation::OperationVisitor::visit_operand(&mut self, name: &str)
 pub fn vyre_foundation::operation::SemanticOperation::callees(self) -> core::option::Option<&'static [&'static str]>
 pub fn vyre_foundation::operation::SemanticOperation::composite_version(self) -> u64
 pub fn vyre_foundation::operation::SemanticOperation::conformance_provider(self) -> vyre_foundation::operation::ConformanceProvider
@@ -3548,7 +3539,7 @@ pub fn vyre_foundation::region_ssa::lower_program_to_region_ssa(program: &vyre_f
 pub fn vyre_foundation::region_ssa::lower_region_ssa_to_program(module: &vyre_foundation::region_ssa::RegionModule) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::region_ssa::RegionSsaError>
 pub fn vyre_foundation::region_ssa::verify_dominance(func: &vyre_foundation::region_ssa::RegionFunction) -> core::result::Result<(), vyre_foundation::region_ssa::DominanceError>
 pub fn vyre_foundation::schedule::DependencyPreservationCertificate::new(theorem_id: impl core::convert::Into<alloc::string::String>, distance_bounds: alloc::vec::Vec<i64>, direction_preserved: bool) -> Self
-pub fn vyre_foundation::schedule::PartialSchedule::instantiate(&self, bindings: &std::collections::hash::map::HashMap<alloc::string::String, u64>) -> core::result::Result<vyre_foundation::schedule::SchedulePlan, vyre_foundation::schedule::ScheduleLegalityError>
+pub fn vyre_foundation::schedule::PartialSchedule::instantiate(&self, bindings: &std::collections::hash::map::HashMap<alloc::string::String, u64>, bounds: vyre_foundation::schedule::ScheduleResourceBounds) -> core::result::Result<vyre_foundation::schedule::SchedulePlan, vyre_foundation::schedule::ScheduleLegalityError>
 pub fn vyre_foundation::schedule::PartialSchedule::is_complete(&self) -> bool
 pub fn vyre_foundation::schedule::PartialSchedule::new(root: vyre_foundation::schedule::ScheduleTree, unassigned_regions: alloc::vec::Vec<u32>, symbolic_parameters: alloc::vec::Vec<vyre_foundation::schedule::SymbolicParameter>) -> Self
 pub fn vyre_foundation::schedule::ScheduleCostModel::evaluate(&self, plan: &vyre_foundation::schedule::SchedulePlan) -> vyre_foundation::schedule::ScheduleCostRecord
@@ -4106,7 +4097,6 @@ pub fn vyre_foundation::visit::walk_node_children_default<V: vyre_foundation::vi
 pub fn vyre_foundation::visit::walk_nodes(program: &vyre_foundation::ir::Program, f: impl core::ops::function::FnMut(&vyre_foundation::ir::Node))
 pub fn vyre_foundation::visit::walk_nodes_and_exprs<V: vyre_foundation::visit::NodeSink + vyre_foundation::visit::ExprSink>(program: &vyre_foundation::ir::Program, sink: &mut V)
 pub fn vyre_foundation::visit::walk_nodes_mut(program: &mut vyre_foundation::ir::Program, f: impl core::ops::function::FnMut(&mut vyre_foundation::ir::Node))
-pub macro vyre_foundation::declare_dialect_op!
 pub macro vyre_foundation::declare_operation!
 pub macro vyre_foundation::define_dialect!
 pub macro vyre_foundation::diagnostic_conversions!
@@ -4754,8 +4744,6 @@ pub trait vyre_foundation::extension::RuleConditionExt: core::fmt::Debug + core:
 pub trait vyre_foundation::failure_domain::StateOwnerRecovery
 pub trait vyre_foundation::ir::ExprNode: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_foundation::ir::NodeExtension: core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
-pub trait vyre_foundation::operation::DialectOperationSpec: core::marker::Send + core::marker::Sync + 'static
-pub trait vyre_foundation::operation::OperationVisitor
 pub trait vyre_foundation::optimizer::ProgramPass: vyre_foundation::optimizer::sealed::Sealed + core::marker::Send + core::marker::Sync
 pub trait vyre_foundation::optimizer::eqsat::ENodeLang: core::clone::Clone + core::cmp::Eq + core::hash::Hash
 pub trait vyre_foundation::optimizer::eqsat::Family<L: vyre_foundation::optimizer::eqsat::ENodeLang>

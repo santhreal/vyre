@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"4fcfdd253e098d5bcc852f7cfecb4ad60bc3c771","commit_timestamp":"1789028986","parent_commit":"c66e64f6e323404843eecf5c403c9fa54f445606","dirty":true,"source_fingerprint":"git:4fcfdd253e098d5bcc852f7cfecb4ad60bc3c771:dirty=true:worktree=e1260fba32008d1da96724c0d08e6cdffb020ae35183456af653956bab87adc8"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"4fb673a849e6bd3e2dc15a09a52c323d6110bcd5","commit_timestamp":"1789041652","parent_commit":"5d82cd9b5ae3c50d8caf6384a8752d741406e91d","dirty":true,"source_fingerprint":"git:4fb673a849e6bd3e2dc15a09a52c323d6110bcd5:dirty=true:worktree=a500e17273abd01bc01ecaccf64dbd485cdf2cc3ff9a849a03babd72360dbda7"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "source_manifest": "docs/optimization/THRESHOLD_POLICY.toml",
   "evidence_artifact": "release/evidence/hygiene/threshold-policy.json",

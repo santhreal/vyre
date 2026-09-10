@@ -226,6 +226,15 @@ impl Inspection {
         }
     }
 
+    /// Render `body` as one recorded evidence artifact no device took part in.
+    ///
+    /// The measurement class is in the name rather than an argument, which is
+    /// still the decision `generates_evidence` requires: a generator picks the
+    /// method that states what produced its numbers.
+    pub fn generates_host_evidence(&mut self, path: &str, body: &impl Serialize) {
+        self.generates_evidence(path, MeasurementRecord::HostOnly, body);
+    }
+
     /// Record one recorded evidence artifact whose bytes are already rendered.
     pub fn generates_evidence_text(
         &mut self,
@@ -669,18 +678,17 @@ pub fn records_provenance(path: &Path) -> bool {
     false
 }
 
-/// The complete provenance of `artifact`, when it is a recorded one.
+/// Whether the way an artifact is attributed agrees with where it is written.
 ///
-/// The two halves meet here. The generator supplied the measurement class, the
-/// run supplies the tree and the host, and neither half can be left out: a
-/// recorded artifact outside `release/evidence` and a document inside it are
+/// A recorded artifact outside `release/evidence` and a document inside it are
 /// both reported rather than written, so the path and the class cannot
-/// disagree about how the artifact will be read.
-fn provenance_of(root: &Path, artifact: &Generated) -> Result<Option<EvidenceProvenance>, Finding> {
-    let recorded = records_provenance(&artifact.path);
-    match (&artifact.attribution, recorded) {
-        (Attribution::BesideSource, false) => Ok(None),
-        (Attribution::BesideSource, true) => Err(Finding::in_file(
+/// disagree about how the artifact will be read. This is a fact about the two
+/// declarations alone and needs no tree, which is what lets a comparison ask
+/// it in a checkout git cannot identify.
+fn attribution_disagreement(artifact: &Generated) -> Option<Finding> {
+    match (&artifact.attribution, records_provenance(&artifact.path)) {
+        (Attribution::BesideSource, false) | (Attribution::Recorded(_), true) => None,
+        (Attribution::BesideSource, true) => Some(Finding::in_file(
             artifact.path.clone(),
             format!(
                 "`{}` is under release/evidence and was generated as a document, so it would carry no provenance",
@@ -688,7 +696,7 @@ fn provenance_of(root: &Path, artifact: &Generated) -> Result<Option<EvidencePro
             ),
             "Record it with `generates_evidence`, naming what took part in producing it, or generate it outside release/evidence.",
         )),
-        (Attribution::Recorded(_), false) => Err(Finding::in_file(
+        (Attribution::Recorded(_), false) => Some(Finding::in_file(
             artifact.path.clone(),
             format!(
                 "`{}` is generated as a recorded measurement and is not under release/evidence, so nothing reads its provenance",
@@ -696,7 +704,20 @@ fn provenance_of(root: &Path, artifact: &Generated) -> Result<Option<EvidencePro
             ),
             "Generate it with `generates_document`, or move the artifact under release/evidence.",
         )),
-        (Attribution::Recorded(measurement), true) => {
+    }
+}
+
+/// The complete provenance of `artifact`, when it is a recorded one.
+///
+/// The two halves meet here. The generator supplied the measurement class, the
+/// run supplies the tree and the host, and neither half can be left out.
+fn provenance_of(root: &Path, artifact: &Generated) -> Result<Option<EvidenceProvenance>, Finding> {
+    if let Some(finding) = attribution_disagreement(artifact) {
+        return Err(finding);
+    }
+    match &artifact.attribution {
+        Attribution::BesideSource => Ok(None),
+        Attribution::Recorded(measurement) => {
             EvidenceProvenance::capture(root, measurement.clone())
                 .map(Some)
                 .map_err(|error| {
@@ -841,7 +862,10 @@ fn compare_artifact(root: &Path, gate: &str, artifact: &Generated) -> Vec<Findin
             )];
         }
     };
-    if let Err(finding) = provenance_of(root, artifact) {
+    // A comparison reads what is committed. Identifying the tree running the
+    // gate is the recorder's business, and asking for it here made a checkout
+    // git cannot name suppress the body comparison entirely.
+    if let Some(finding) = attribution_disagreement(artifact) {
         return vec![finding];
     }
     if !records_provenance(&artifact.path) {
@@ -963,7 +987,7 @@ mod tests {
         assert!(
             findings
                 .iter()
-                .any(|finding| finding.message.contains("has no source fingerprint")),
+                .any(|finding| finding.message.contains("cannot be identified")),
             "Fix: a recorder that cannot identify its tree must refuse; findings={findings:?}"
         );
         assert!(
@@ -990,104 +1014,111 @@ mod tests {
             .is_file());
     }
 
+    /// WHY: an artifact is read by someone who no longer has the tree, so the
+    /// stamp on it has to name the tree the bytes under it came from. Leaving
+    /// an older stamp in place because the body did not change records a tree
+    /// the artifact is no longer committed alongside, and nothing downstream
+    /// could then correct it.
+    ///
+    /// The tree walk is memoized per root for the length of a run, so a second
+    /// tree is a second checkout rather than a commit on the first. That is
+    /// also the honest shape of the defect: the artifact travels between
+    /// checkouts, and the question is which one the stamp names.
+    ///
+    /// What this does not catch: whether the fingerprint git states is itself
+    /// correct. `source_provenance` owns that.
     #[test]
     fn re_recording_an_unchanged_body_restamps_the_tree_that_produced_it() {
-        let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
-        init_repository(dir.path());
         let body = "{\n  \"schema_version\": 1\n}\n";
+        let first_tree = tempfile::tempdir().expect("Fix: create a temporary directory.");
+        init_repository(first_tree.path(), "first tree");
+        let second_tree = tempfile::tempdir().expect("Fix: create a temporary directory.");
+        init_repository(second_tree.path(), "second tree");
 
-        let findings = settle(
-            dir.path(),
-            "metadata-matrix",
-            &[Generated::evidence_text(
-                ARTIFACT,
-                MeasurementRecord::HostOnly,
-                body,
-            )],
-            true,
-        );
         assert_eq!(
-            findings,
+            record_body(first_tree.path(), body),
             Vec::new(),
             "Fix: a clean checkout can be recorded."
         );
-        let recorded = std::fs::read_to_string(dir.path().join(ARTIFACT))
+        let recorded = std::fs::read_to_string(first_tree.path().join(ARTIFACT))
             .expect("Fix: the recorder wrote the artifact.");
-        assert!(
-            recorded.starts_with("{\n  \"source_fingerprint\": \"git:"),
-            "Fix: the tree must be named at the head of the artifact; recorded={recorded}"
+        assert_eq!(
+            fingerprint_of(&recorded),
+            format!("git:{}:dirty=false", head_commit(first_tree.path())),
+            "Fix: the stamp must name the tree the body was read from."
         );
 
-        commit_everything(dir.path(), "move the tree on");
+        // The artifact arrives in the second checkout carrying the first
+        // tree's stamp, and the body it is regenerated from is identical.
+        std::fs::create_dir_all(second_tree.path().join("release/evidence/metadata"))
+            .expect("Fix: create the evidence directory.");
+        std::fs::write(second_tree.path().join(ARTIFACT), &recorded)
+            .expect("Fix: carry the artifact into the second checkout.");
+
         assert_eq!(
-            settle(
-                dir.path(),
-                "metadata-matrix",
-                &[Generated::evidence_text(
-                    ARTIFACT,
-                    MeasurementRecord::HostOnly,
-                    body
-                )],
-                true,
-            ),
+            record_body(second_tree.path(), body),
             Vec::new(),
             "Fix: re-recording an unchanged body must find nothing."
         );
-
-        assert_ne!(
-            std::fs::read_to_string(dir.path().join(ARTIFACT)).expect("Fix: read the artifact."),
-            recorded,
-            "Fix: a stamp kept across a moved tree names a tree the artifact is no longer \
-             committed alongside, and nothing could then correct it."
+        let restamped = std::fs::read_to_string(second_tree.path().join(ARTIFACT))
+            .expect("Fix: read the artifact.");
+        assert_eq!(
+            fingerprint_of(&restamped),
+            format!("git:{}:dirty=false", head_commit(second_tree.path())),
+            "Fix: an unchanged body kept the stamp of a tree it is no longer committed alongside."
+        );
+        assert_eq!(
+            split_provenance(&restamped).1,
+            body,
+            "Fix: restamping must leave the body it was generated from untouched."
         );
     }
 
+    /// WHY: a changed body is a new recording. Rewriting the body while
+    /// dropping the stamp, or while leaving a stamp that no longer parses,
+    /// produces evidence nobody can attribute, which is the state this whole
+    /// mechanism exists to prevent.
+    ///
+    /// What this does not catch: a stamp naming the wrong tree. The test above
+    /// covers that.
     #[test]
     fn a_changed_body_is_re_attributed_to_the_tree_that_produced_it() {
         let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
-        init_repository(dir.path());
+        init_repository(dir.path(), "seed");
         assert_eq!(
-            settle(
-                dir.path(),
-                "metadata-matrix",
-                &[Generated::evidence_text(
-                    ARTIFACT,
-                    MeasurementRecord::HostOnly,
-                    "{\n  \"schema_version\": 1\n}\n"
-                )],
-                true,
-            ),
+            record_body(dir.path(), "{\n  \"schema_version\": 1\n}\n"),
             Vec::new(),
             "Fix: a clean checkout can be recorded."
         );
         let first = std::fs::read_to_string(dir.path().join(ARTIFACT))
             .expect("Fix: the recorder wrote the artifact.");
-        commit_everything(dir.path(), "move the tree on");
 
         assert_eq!(
-            settle(
-                dir.path(),
-                "metadata-matrix",
-                &[Generated::evidence_text(
-                    ARTIFACT,
-                    MeasurementRecord::HostOnly,
-                    "{\n  \"schema_version\": 2\n}\n"
-                )],
-                true,
-            ),
+            record_body(dir.path(), "{\n  \"schema_version\": 2\n}\n"),
             Vec::new(),
             "Fix: a changed body can be recorded."
         );
-
         let second = std::fs::read_to_string(dir.path().join(ARTIFACT))
             .expect("Fix: the recorder rewrote the artifact.");
-        assert_ne!(
-            fingerprint_of(&first),
+
+        assert_ne!(first, second, "Fix: the changed body must reach disk.");
+        assert_eq!(
+            split_provenance(&second).1,
+            "{\n  \"schema_version\": 2\n}\n",
+            "Fix: the body under the stamp must be the one that was generated."
+        );
+        assert_eq!(
             fingerprint_of(&second),
+            format!("git:{}:dirty=false", head_commit(dir.path())),
             "Fix: a new body is a new recording and must name the tree it came from."
         );
     }
 
+    /// WHY: an artifact carrying no provenance is unattributable, and the two
+    /// facts a reader needs about it are independent: that it names no tree,
+    /// and whether its body still matches what the tree generates. Reporting
+    /// only the first would hide a stale body behind a missing stamp, and one
+    /// regeneration would then be credited with fixing both.
     #[test]
     fn comparing_reports_an_unattributed_artifact_and_still_compares_the_body() {
         let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
@@ -1110,7 +1141,7 @@ mod tests {
         assert!(
             findings
                 .iter()
-                .any(|finding| finding.message.contains("names no source tree")),
+                .any(|finding| finding.message.contains("carries no provenance block")),
             "Fix: an artifact with no fingerprint must be reported; findings={findings:?}"
         );
         assert!(
@@ -1121,15 +1152,19 @@ mod tests {
         );
     }
 
+    /// WHY: an artifact travels with the commit that carries it, so the tree
+    /// named in its stamp is almost never the tree running the gate. Reading
+    /// the stamp as part of the body would make every artifact diverge one
+    /// commit after it was recorded, and the only way to silence that would be
+    /// to rewrite evidence nothing had regenerated.
     #[test]
     fn comparing_ignores_the_stamp_and_agrees_on_a_body_recorded_from_another_tree() {
         let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
         std::fs::create_dir_all(dir.path().join("release/evidence/metadata"))
             .expect("Fix: create the evidence directory.");
-        let stamped = format!(
-            "{{\n  \"source_fingerprint\": \"git:{}:dirty=false\",\n  \"schema_version\": 1\n}}\n",
-            "a".repeat(40)
-        );
+        let body = "{\n  \"schema_version\": 1\n}\n";
+        let stamped = evidence_record::stamp(body, &recorded_from_another_tree())
+            .expect("Fix: stamp the fixture artifact.");
         std::fs::write(dir.path().join(ARTIFACT), &stamped)
             .expect("Fix: commit an artifact recorded from another tree.");
 
@@ -1139,7 +1174,7 @@ mod tests {
             &[Generated::evidence_text(
                 ARTIFACT,
                 MeasurementRecord::HostOnly,
-                "{\n  \"schema_version\": 1\n}\n",
+                body,
             )],
             false,
         );
@@ -1149,6 +1184,38 @@ mod tests {
             Vec::new(),
             "Fix: the tree an artifact was recorded from is not a divergence from the tree reading it."
         );
+    }
+
+    /// A complete record naming a tree this host has never had.
+    fn recorded_from_another_tree() -> EvidenceProvenance {
+        let commit = "a".repeat(40);
+        EvidenceProvenance {
+            schema_version: evidence_record::EVIDENCE_PROVENANCE_SCHEMA_VERSION,
+            tree: evidence_record::TreeRecord::Attributed {
+                branch: "main".to_string(),
+                commit_timestamp: "1700000000".to_string(),
+                parent_commit: String::new(),
+                dirty: false,
+                source_fingerprint: format!("git:{commit}:dirty=false"),
+                commit,
+            },
+            host: evidence_record::HostRecord::capture(),
+            measurement: MeasurementRecord::HostOnly,
+        }
+    }
+
+    /// Record `body` as this gate's one evidence artifact in the tree at `root`.
+    fn record_body(root: &Path, body: &str) -> Vec<Finding> {
+        settle(
+            root,
+            "metadata-matrix",
+            &[Generated::evidence_text(
+                ARTIFACT,
+                MeasurementRecord::HostOnly,
+                body,
+            )],
+            true,
+        )
     }
 
     fn fingerprint_of(recorded: &str) -> String {
@@ -1161,7 +1228,20 @@ mod tests {
             .to_string()
     }
 
-    fn init_repository(dir: &Path) {
+    fn head_commit(dir: &Path) -> String {
+        let output = Command::new("git")
+            .args(["rev-parse", "HEAD"])
+            .current_dir(dir)
+            .output()
+            .expect("Fix: run git to read the fixture head.");
+        assert!(output.status.success(), "Fix: the fixture has no head.");
+        String::from_utf8(output.stdout)
+            .expect("Fix: git states the head in UTF-8.")
+            .trim()
+            .to_string()
+    }
+
+    fn init_repository(dir: &Path, seed: &str) {
         std::fs::write(dir.join("tracked.txt"), "original\n")
             .expect("Fix: write the tracked file.");
         for args in [
@@ -1171,7 +1251,7 @@ mod tests {
         ] {
             run_git(dir, &args);
         }
-        commit_everything(dir, "seed");
+        commit_everything(dir, seed);
     }
 
     fn commit_everything(dir: &Path, message: &str) {

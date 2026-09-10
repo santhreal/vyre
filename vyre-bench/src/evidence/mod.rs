@@ -1,6 +1,6 @@
 //! Versioned benchmark protocol and content-addressed evidence store.
 //!
-//! BACKLOG row 95 requires one versioned benchmark protocol and content-addressed
+//! The contract requires one versioned benchmark protocol and content-addressed
 //! evidence store recording workload and input identity, semantic graph, resource identity,
 //! compiler and backend binaries, objective, budgets, target facts, environment,
 //! candidate funnel, selected portfolio, emitted resources, native baseline,

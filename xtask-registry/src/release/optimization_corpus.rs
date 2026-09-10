@@ -104,11 +104,7 @@ fn inspect() -> Inspection {
     let cases = generate_release_corpus();
     let manifest = manifest_for(&cases);
     report_corpus_completeness(&manifest, &mut inspection);
-    inspection.generates_evidence(
-        CORPUS,
-        xtask::evidence_record::MeasurementRecord::HostOnly,
-        &manifest,
-    );
+    inspection.generates_host_evidence(CORPUS, &manifest);
     contracts(&manifest, &mut inspection);
     family_manifest(&manifest, &mut inspection);
     case_manifest(&cases, &manifest, &mut inspection);
@@ -174,23 +170,19 @@ fn report_corpus_completeness(manifest: &OptimizationCorpusManifest, inspection:
 }
 
 fn contracts(manifest: &OptimizationCorpusManifest, inspection: &mut Inspection) {
-    inspection.generates_evidence(
-        CONTRACTS,
-        xtask::evidence_record::MeasurementRecord::HostOnly,
-        &OptimizationCorpusContracts {
-            schema_version: 2,
-            required_min_cases: manifest.required_min_cases,
-            generated_cases: manifest.generated_cases,
-            verified_cases: manifest.verified_cases,
-            optimized_cases: manifest.optimized_cases,
-            non_converged_cases: manifest.non_converged_cases,
-            total_nodes_before: manifest.total_nodes_before,
-            total_nodes_after: manifest.total_nodes_after,
-            pass_instance_count: manifest.pass_instance_count,
-            changed_pass_instances: manifest.changed_pass_instances,
-            blockers: manifest.blockers.clone(),
-        },
-    );
+    inspection.generates_host_evidence(CONTRACTS, &OptimizationCorpusContracts {
+        schema_version: 2,
+        required_min_cases: manifest.required_min_cases,
+        generated_cases: manifest.generated_cases,
+        verified_cases: manifest.verified_cases,
+        optimized_cases: manifest.optimized_cases,
+        non_converged_cases: manifest.non_converged_cases,
+        total_nodes_before: manifest.total_nodes_before,
+        total_nodes_after: manifest.total_nodes_after,
+        pass_instance_count: manifest.pass_instance_count,
+        changed_pass_instances: manifest.changed_pass_instances,
+        blockers: manifest.blockers.clone(),
+    });
 }
 
 fn family_manifest(manifest: &OptimizationCorpusManifest, inspection: &mut Inspection) {
@@ -221,18 +213,14 @@ fn family_manifest(manifest: &OptimizationCorpusManifest, inspection: &mut Inspe
             ),
         );
     }
-    inspection.generates_evidence(
-        FAMILIES,
-        xtask::evidence_record::MeasurementRecord::HostOnly,
-        &OptimizationFamilyManifest {
-            schema_version: 2,
-            required_family_count: REQUIRED_FAMILIES.len(),
-            required_families: REQUIRED_FAMILIES,
-            missing_required_families,
-            families: &manifest.families,
-            blockers,
-        },
-    );
+    inspection.generates_host_evidence(FAMILIES, &OptimizationFamilyManifest {
+        schema_version: 2,
+        required_family_count: REQUIRED_FAMILIES.len(),
+        required_families: REQUIRED_FAMILIES,
+        missing_required_families,
+        families: &manifest.families,
+        blockers,
+    });
 }
 
 fn case_manifest(
@@ -278,19 +266,15 @@ fn case_manifest(
             ),
         );
     }
-    inspection.generates_evidence(
-        CASES,
-        xtask::evidence_record::MeasurementRecord::HostOnly,
-        &OptimizationCaseManifest {
-            schema_version: 2,
-            required_min_cases: manifest.required_min_cases,
-            generated_cases: cases.len(),
-            unique_case_ids: seen.len(),
-            duplicate_case_ids,
-            entries,
-            blockers,
-        },
-    );
+    inspection.generates_host_evidence(CASES, &OptimizationCaseManifest {
+        schema_version: 2,
+        required_min_cases: manifest.required_min_cases,
+        generated_cases: cases.len(),
+        unique_case_ids: seen.len(),
+        duplicate_case_ids,
+        entries,
+        blockers,
+    });
 }
 
 fn pass_manifest(inspection: &mut Inspection) {
@@ -304,17 +288,13 @@ fn pass_manifest(inspection: &mut Inspection) {
              own id.",
         );
     }
-    inspection.generates_evidence(
-        PASSES,
-        xtask::evidence_record::MeasurementRecord::HostOnly,
-        &OptimizerPassManifest {
-            schema_version: 1,
-            executable_passes,
-            catalog_entries: entries.len(),
-            entries,
-            blockers,
-        },
-    );
+    inspection.generates_host_evidence(PASSES, &OptimizerPassManifest {
+        schema_version: 1,
+        executable_passes,
+        catalog_entries: entries.len(),
+        entries,
+        blockers,
+    });
 }
 
 fn hex(bytes: &[u8]) -> String {

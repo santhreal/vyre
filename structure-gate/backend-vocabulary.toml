@@ -328,7 +328,7 @@ name = "metal"
 reason = "the Apple platform sharing mechanism an imported handle is, named beside its `Win32Nt` and `DmaBuf` siblings; a neutral word would describe a mechanism that does not exist"
 
 [[interface]]
-prefix = "vyre-spec/src/resource_capability.rs"
+prefix = "vyre-spec/src/resource_capability"
 name = "metal"
 reason = "the Apple platform sharing mechanism an imported allocation and its shared event are, named beside their `DmaBuf`, `Win32Nt`, `Win32Kmt` and `OpaqueFd` siblings; a neutral word would describe a mechanism that does not exist"
 

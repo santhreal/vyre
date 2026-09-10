@@ -801,10 +801,7 @@ fn an_intra_layer_edge_a_layer_does_not_admit_fails_closed() {
         crate_row("a", "a", "one", ""),
         crate_row("b", "b", "one", ""),
     ];
-    seal(
-        temp.path(),
-        manifest(&[layer_row("one", 1, &[], "")], rows),
-    );
+    seal(temp.path(), manifest(&[layer_row("one", 1, &[], "")], rows));
 
     let report = run(temp.path());
     let unadmitted = messages(&report);

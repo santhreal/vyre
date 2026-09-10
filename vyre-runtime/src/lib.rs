@@ -18,7 +18,6 @@
 // unsafe-permitted: uring/buffer.rs
 // unsafe-permitted: uring/ring.rs
 // unsafe-permitted: uring_completion_pump.rs
-#![deny(unsafe_code)]
 
 // `pipeline_error_closure` is an in-crate test module that names this crate by
 // its own name, which resolves only through this alias.

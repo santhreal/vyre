@@ -11,8 +11,14 @@ use crate::ir::Program;
 use crate::logical::LogicalRegion;
 
 /// Stable machine-readable reason that prevents two regions or programs from fusing.
+///
+/// Matchable exhaustively across crates on purpose. A rejection reason is
+/// classified again outside this crate, into the prune reason a search
+/// certificate reports, and a wildcard arm there would file a reason nobody
+/// classified under whichever bucket the arm happened to name. Adding a
+/// variant is meant to stop that compiling until each classifier states where
+/// the new reason belongs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[non_exhaustive]
 pub enum FusionRejectionReason {
     /// A referenced node or value is absent from the graph.
     UnknownGraphMember,

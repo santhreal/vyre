@@ -22,6 +22,11 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use xtask::release::conformance_op_matrix::OpMatrixReleaseBackendSpec;
+use xtask::source_provenance;
+
+/// Where the per-backend conformance runs are recorded, as one pathspec for the
+/// carrier walk that dates them.
+const CONFORMANCE_EVIDENCE_DIR: &str = "release/evidence/conformance";
 
 /// Backend as the matrix spells it, paired with its recorded artifact and the
 /// `backend_id` that artifact uses.
@@ -30,7 +35,7 @@ use xtask::release::conformance_op_matrix::OpMatrixReleaseBackendSpec;
 /// `reference`, the file is `reference-conformance.json` and the runner writes
 /// `cpu-ref` inside it. Keeping all three together is what stops a rule from
 /// silently matching nothing.
-const RECORDED_BACKENDS: &[(&str, &str, &str)] = &[
+pub const RECORDED_BACKENDS: &[(&str, &str, &str)] = &[
     (
         "reference",
         "release/evidence/conformance/reference-conformance.json",
@@ -52,9 +57,34 @@ const RECORDED_BACKENDS: &[(&str, &str, &str)] = &[
 const CLAIMS_SUPPORT: &str = "supported";
 
 /// Blockers for every disagreement between the matrix and the recorded runs.
+///
+/// A record is dated before it is read. A device run measures the source it
+/// was taken against, so a record pinned to a tree the carrier commit does not
+/// hold answers a question about some other source, and every cell judged
+/// against it is judged on a guess. Reading one anyway is how a passing
+/// operation was reported as failing on wgpu: the record predated the emitter
+/// change that fixed it. An undatable record is reported as unusable, once per
+/// backend, and its cells are left unjudged rather than judged wrongly.
 pub(super) fn disagreements(root: &Path, specs: &[OpMatrixReleaseBackendSpec]) -> Vec<String> {
     let mut blockers = Vec::new();
+    let carriers = match source_provenance::carrier_commits(root, CONFORMANCE_EVIDENCE_DIR) {
+        Ok(carriers) => carriers,
+        Err(issue) => {
+            blockers.push(format!(
+                "cannot date the recorded conformance runs, so none of them can be read as \
+                 evidence about this tree: {issue}"
+            ));
+            return blockers;
+        }
+    };
     for (backend, artifact, recorded_id) in RECORDED_BACKENDS {
+        if let Err(verdict) = record_is_about_this_tree(root, artifact, carriers.get(*artifact)) {
+            blockers.push(format!(
+                "the recorded {backend} conformance run in `{artifact}` is not evidence about \
+                 this tree, so no OP_MATRIX `{backend}` cell was judged against it: {verdict}"
+            ));
+            continue;
+        }
         let observed = match read_pairs(&root.join(artifact), recorded_id) {
             Ok(observed) => observed,
             Err(problem) => {
@@ -87,6 +117,42 @@ pub(super) fn disagreements(root: &Path, specs: &[OpMatrixReleaseBackendSpec]) -
         }
     }
     blockers
+}
+
+/// Whether a recorded run measured the source the commit carrying it holds.
+///
+/// A record that is not committed, and one whose worktree copy differs from
+/// the committed copy, has nothing here to be dated against: it was just
+/// regenerated, and the artifact gate judges its body against the tree. Every
+/// other record either names a source the carrier reproduces or names one
+/// nothing here can rebuild, and the second is not evidence about this tree.
+fn record_is_about_this_tree(
+    root: &Path,
+    artifact: &str,
+    carrier: Option<&String>,
+) -> Result<(), String> {
+    let Some(carrier) = carrier else {
+        return Ok(());
+    };
+    let Ok(worktree) = super::read_text_bounded(&root.join(artifact)) else {
+        // Unreadable here means `read_pairs` reports it against its own path.
+        return Ok(());
+    };
+    let object = format!("{carrier}:{artifact}");
+    let committed = source_provenance::committed_texts(root, std::slice::from_ref(&object))
+        .into_iter()
+        .next()
+        .flatten()
+        .ok_or_else(|| format!("`{object}` could not be read out of the object store"))?;
+    if worktree != committed {
+        return Ok(());
+    }
+    let (record, _) = xtask::artifact_gate::split_provenance(&committed);
+    let record = record.map_err(|issue| issue.predicate())?;
+    let fingerprint = record.tree.source_fingerprint().ok_or_else(|| {
+        "it records no source fingerprint, so nothing names the source it measured".to_string()
+    })?;
+    source_provenance::resolves_against(root, fingerprint, carrier)
 }
 
 /// Every operation the recorded run reports on, and whether it passed.
@@ -159,9 +225,11 @@ mod tests {
 
     /// Write the three artifacts, giving `wgpu` the pairs supplied and the
     /// other two a passing pair for every operation named.
-    fn recorded(pairs: &[(&str, bool)]) -> tempfile::TempDir {
-        let root = tempfile::tempdir().expect("a temp directory");
-        std::fs::create_dir_all(root.path().join("release/evidence/conformance"))
+    ///
+    /// Bodies only. A caller decides whether they get a stamp and a commit,
+    /// because whether a record can be dated is the thing under test.
+    fn write_records(root: &Path, pairs: &[(&str, bool)]) {
+        std::fs::create_dir_all(root.join("release/evidence/conformance"))
             .expect("the evidence directory");
         for (_backend, artifact, recorded_id) in RECORDED_BACKENDS {
             let rows = pairs
@@ -175,12 +243,38 @@ mod tests {
                 })
                 .collect::<Vec<_>>();
             let document = serde_json::json!({ "pairs": rows });
-            std::fs::write(
-                root.path().join(artifact),
-                serde_json::to_string(&document).expect("the document serializes"),
-            )
-            .expect("the artifact is written");
+            let body = format!(
+                "{}\n",
+                serde_json::to_string_pretty(&document).expect("the document serializes")
+            );
+            std::fs::write(root.join(artifact), body).expect("the artifact is written");
         }
+    }
+
+    /// Stamp every written record with the provenance of the tree as it stands.
+    fn stamp_records(root: &Path) {
+        let provenance = xtask::evidence_record::EvidenceProvenance::capture(
+            root,
+            xtask::evidence_record::MeasurementRecord::HostOnly,
+        )
+        .expect("the fixture checkout names a tree");
+        for (_backend, artifact, _recorded_id) in RECORDED_BACKENDS {
+            let path = root.join(artifact);
+            let body = std::fs::read_to_string(&path).expect("the artifact is readable");
+            let stamped =
+                xtask::evidence_record::stamp(&body, &provenance).expect("the artifact stamps");
+            std::fs::write(&path, stamped).expect("the artifact is written");
+        }
+    }
+
+    /// A checkout carrying three records that each name the source their own
+    /// commit holds, which is the only state in which a cell may be judged.
+    fn recorded(pairs: &[(&str, bool)]) -> tempfile::TempDir {
+        let root = tempfile::tempdir().expect("a temp directory");
+        xtask::fixture_checkout::seeded(root.path());
+        write_records(root.path(), pairs);
+        stamp_records(root.path());
+        xtask::fixture_checkout::commit_worktree(root.path(), "record conformance runs");
         root
     }
 
@@ -240,6 +334,7 @@ mod tests {
     #[test]
     fn a_missing_recorded_run_is_a_blocker_rather_than_a_pass() {
         let root = tempfile::tempdir().expect("a temp directory");
+        xtask::fixture_checkout::seeded(root.path());
         let blockers = disagreements(root.path(), &[spec("op::runs", "wgpu", "supported")]);
         assert_eq!(blockers.len(), RECORDED_BACKENDS.len(), "{blockers:?}");
         assert!(
@@ -248,6 +343,89 @@ mod tests {
                 .all(|blocker| blocker.contains("cannot judge OP_MATRIX")),
             "{blockers:?}"
         );
+    }
+
+    /// WHY: the defect this dating rule closes. A wgpu record captured before
+    /// an emitter change was read as current, so an operation that passes on
+    /// the device was reported as failing and the corrective action a reader
+    /// was handed was to fix a lowering that is already correct. A record the
+    /// carrier commit does not reproduce is refused, and the wording has to
+    /// send a reader to the recapture rather than to the operation.
+    #[test]
+    fn a_record_the_carrier_does_not_reproduce_is_refused_rather_than_read() {
+        let root = tempfile::tempdir().expect("a temp directory");
+        xtask::fixture_checkout::seeded(root.path());
+        write_records(root.path(), &[("op::runs", false)]);
+        stamp_records(root.path());
+        // A source change the same commit carries, which the stamp predates.
+        std::fs::write(root.path().join("tracked.txt"), "changed after the run\n")
+            .expect("the tracked source changes");
+        xtask::fixture_checkout::commit_worktree(root.path(), "record conformance runs");
+
+        let blockers = disagreements(root.path(), &[spec("op::runs", "wgpu", "supported")]);
+
+        assert_eq!(blockers.len(), RECORDED_BACKENDS.len(), "{blockers:?}");
+        for blocker in &blockers {
+            assert!(
+                blocker.contains("is not evidence about this tree"),
+                "Fix: a record the carrier does not reproduce must be refused as a record; \
+                 {blocker}"
+            );
+            assert!(
+                blocker.contains("does not name the source"),
+                "Fix: the refusal must name why the record cannot be dated; {blocker}"
+            );
+        }
+    }
+
+    /// WHY: the two verdicts must stay distinguishable. A stale record and a
+    /// device that really failed are different defects with different
+    /// corrective actions, and the whole cost of the original defect was that
+    /// a reader could not tell them apart. Both halves are asserted against
+    /// the same claim so that collapsing either wording turns this red.
+    #[test]
+    fn a_stale_record_and_a_real_failure_read_differently() {
+        let stale = tempfile::tempdir().expect("a temp directory");
+        xtask::fixture_checkout::seeded(stale.path());
+        write_records(stale.path(), &[("op::runs", false)]);
+        stamp_records(stale.path());
+        std::fs::write(stale.path().join("tracked.txt"), "changed after the run\n")
+            .expect("the tracked source changes");
+        xtask::fixture_checkout::commit_worktree(stale.path(), "record conformance runs");
+        let claim = [spec("op::runs", "wgpu", "supported")];
+
+        let refused = disagreements(stale.path(), &claim);
+        let failing = disagreements(recorded(&[("op::runs", false)]).path(), &claim);
+
+        assert!(
+            refused.iter().all(|blocker| !blocker.contains("failing")),
+            "Fix: a record nothing can date says nothing about whether the op failed; {refused:?}"
+        );
+        assert_eq!(failing.len(), 1, "{failing:?}");
+        assert!(
+            failing[0].contains("reports it failing")
+                && !failing[0].contains("is not evidence about this tree"),
+            "Fix: a record the carrier reproduces is read, and a failing pair stays a failing \
+             pair; {failing:?}"
+        );
+    }
+
+    /// WHY: the adversarial boundary. Dating a record against the commit
+    /// carrying it must not refuse one that was just regenerated and is not
+    /// committed yet, or every recapture would have to be committed before the
+    /// gate that judges it could run, and a release would be gated on a commit
+    /// nobody could make green first. A worktree copy that differs from the
+    /// committed copy is a fresh capture, and its cells are judged.
+    #[test]
+    fn a_regenerated_record_is_judged_rather_than_refused() {
+        let root = recorded(&[("op::runs", true)]);
+        write_records(root.path(), &[("op::runs", false)]);
+        stamp_records(root.path());
+
+        let blockers = disagreements(root.path(), &[spec("op::runs", "wgpu", "supported")]);
+
+        assert_eq!(blockers.len(), 1, "{blockers:?}");
+        assert!(blockers[0].contains("reports it failing"), "{blockers:?}");
     }
 
     /// WHY: `reference` in the matrix is `cpu-ref` in the artifact. Matching on

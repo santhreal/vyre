@@ -8,6 +8,7 @@
 #![forbid(unsafe_code)]
 
 mod cli_docs;
+mod dispatch_backend_roster;
 mod handrolled_operations;
 mod implementation_family_closure;
 mod operation_schema;

@@ -57,7 +57,7 @@ impl OperationRegistry {
             }
         }
         let call_graph = CallGraphClosure::solve_from_registrations(ordered.iter().copied());
-        let catalog_bundle = OperationCatalogBundle::from_registry();
+        let catalog_bundle = OperationCatalogBundle::global().clone();
         Ok(Self {
             ordered,
             by_id,

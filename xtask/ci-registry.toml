@@ -748,6 +748,11 @@ subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "verification-budget"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "verify-rewrite-proofs"
 subsets = ["prepublish"]
 workflows = ["gates.yml", "release-evidence.yml"]

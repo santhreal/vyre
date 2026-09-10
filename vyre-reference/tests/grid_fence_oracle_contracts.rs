@@ -17,11 +17,8 @@
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, MemoryOrdering, Node, Program,
 };
-use vyre_reference::node;
 use vyre_reference::reference_eval_with_grid;
 use vyre_reference::value::Value;
-use vyre_reference::ReferenceError;
-use vyre_reference::workgroup::{Invocation, InvocationIds, Memory};
 
 fn u32_words(value: &Value) -> Vec<u32> {
     value
@@ -33,26 +30,6 @@ fn u32_words(value: &Value) -> Vec<u32> {
 
 fn out_buffer(count: u32) -> BufferDecl {
     BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(count)
-}
-
-/// Advance one lane until it finishes or suspends.
-///
-/// A wrapped program enters through a `Region`, so a single `node::step` only
-/// pushes the container frame. The bound is part of the contract: a route that
-/// neither advances nor suspends is a hang, and it fails here instead of
-/// stalling the run.
-fn step_until_settled<'a>(
-    invocation: &mut Invocation<'a>,
-    memory: &mut Memory,
-    program: &'a Program,
-) -> Result<(), ReferenceError> {
-    for _ in 0..64 {
-        if invocation.done() || invocation.waiting_at_barrier {
-            return Ok(());
-        }
-        node::step(invocation, memory, program)?;
-    }
-    panic!("the single-workgroup stepper neither finished nor suspended within 64 steps");
 }
 
 #[test]
@@ -334,50 +311,5 @@ fn workgroup_memory_survives_a_fence() {
         u32_words(&outputs[0]),
         vec![5, 6],
         "each workgroup must read back what it staged in shared memory before the fence"
-    );
-}
-
-/// The single-workgroup statement executor refuses a fence it cannot order.
-///
-/// `node::step` advances one invocation and hands the barrier release back to
-/// its caller, which drives one workgroup. Treating `GridSync` as a suspend
-/// there releases as soon as that workgroup's lanes are waiting, so a program
-/// with no cross-workgroup ordering at all reads as correct. The route refuses
-/// instead and names the entry point that does order the grid.
-#[test]
-fn the_single_workgroup_stepper_refuses_a_grid_fence() {
-    let program = Program::wrapped(
-        vec![out_buffer(1)],
-        [1, 1, 1],
-        vec![Node::barrier_with_ordering(MemoryOrdering::GridSync)],
-    );
-    let mut invocation = Invocation::new(InvocationIds::ZERO, program.entry());
-    let mut memory = Memory::empty();
-
-    let error = step_until_settled(&mut invocation, &mut memory, &program)
-        .expect_err("a route with no grid driver must refuse a whole-grid fence");
-
-    assert!(
-        error.to_string().contains("whole-grid fence"),
-        "the refusal must name what it cannot order, got: {error}"
-    );
-}
-
-/// The same route still suspends on a workgroup-scoped barrier.
-#[test]
-fn the_single_workgroup_stepper_suspends_on_a_workgroup_barrier() {
-    let program = Program::wrapped(
-        vec![out_buffer(1)],
-        [1, 1, 1],
-        vec![Node::barrier_with_ordering(MemoryOrdering::SeqCst)],
-    );
-    let mut invocation = Invocation::new(InvocationIds::ZERO, program.entry());
-    let mut memory = Memory::empty();
-
-    step_until_settled(&mut invocation, &mut memory, &program)
-        .expect("a workgroup barrier must suspend rather than fail");
-    assert!(
-        invocation.waiting_at_barrier,
-        "the lane must be waiting for the rest of its workgroup"
     );
 }

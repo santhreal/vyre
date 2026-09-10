@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "device-tests")]
+use vyre_driver_reference::ORACLE_EXECUTOR_ID;
 
 /// WHY: this drives two real `prove` shards through the built binary, which
 /// acquires a device. On a runner with no driver the acquisition aborts the
@@ -47,9 +49,9 @@ fn prove_merges_live_gpu_certificate_shards() {
     );
     let mut backends = std::collections::BTreeSet::new();
     for pair in pairs {
-        let backend = pair["backend_id"]
+        let backend = pair["executor_id"]
             .as_str()
-            .expect("Fix: merged live pair must carry backend_id");
+            .expect("Fix: merged live pair must carry executor_id");
         backends.insert(backend.to_string());
         assert_eq!(
             pair["passed"].as_bool(),
@@ -64,7 +66,7 @@ fn prove_merges_live_gpu_certificate_shards() {
             "Fix: VYRE_BACKEND={selected} merged shards must preserve only the selected backend."
         );
     } else {
-        for required in ["cuda", "wgpu", "cpu-ref"] {
+        for required in ["cuda", "wgpu", ORACLE_EXECUTOR_ID] {
             assert!(
                 backends.contains(required),
                 "Fix: merged live GPU shards must preserve backend `{required}`."

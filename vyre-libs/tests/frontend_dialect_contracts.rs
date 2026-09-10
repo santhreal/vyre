@@ -1,6 +1,6 @@
 //! Frontend dialect, schema, field, resource, and layout contracts test suite.
 //!
-//! BACKLOG row 55 requires versioned domain-neutral schema, field, resource, layout,
+//! The contract requires versioned domain-neutral schema, field, resource, layout,
 //! and translation contracts with exhaustive visitors and canonical identity, proving
 //! unknown, duplicate, missing, incompatible, overflowing, and unused members fail
 //! before compilation. Core compiler types, fixtures, and diagnostics contain no downstream

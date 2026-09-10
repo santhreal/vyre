@@ -9,16 +9,30 @@ use crate::workspace_manifest::crate_ident;
 /// `Program` built from existing IR, including compiler-internal domains such
 /// as solvers, encoding, analysis, scheduling, device and graph dispatch. Who
 /// calls it does not move it; only rewriting it in host Rust does.
-pub(crate) const CATEGORY_A_CRATE: &str = "vyre-libs";
+///
+/// The name is both the facade crate and the first segment of every Category A
+/// operation id, so a placement rule reads the owning family off the id.
+pub const CATEGORY_A_CRATE: &str = "vyre-libs";
 
-/// Returns true if the crate name is the Category A facade or any domain partition crate.
-pub(crate) fn is_category_a_crate(crate_name: &str) -> bool {
+/// Returns true if the crate name is the Category A facade or any domain
+/// partition crate.
+///
+/// The family is a prefix rather than a roster, so a partition crate added to
+/// the workspace is Category A the moment the manifest names it. Every rule
+/// that resolves a composition's home reads this predicate, because a second
+/// copy of the family drifts the day a partition is added.
+#[must_use]
+pub fn is_category_a_crate(crate_name: &str) -> bool {
     crate_name == CATEGORY_A_CRATE || crate_name.starts_with("vyre-libs-")
 }
+
 /// Category C owner: strict hardware intrinsics, one emitter arm and one
 /// reference-interpreter arm each. Absorbed the former standalone hardware
 /// crate on 2026-08-13; the intrinsics live in `vyre-primitives/src/hardware`.
-pub(crate) const CATEGORY_C_CRATE: &str = "vyre-primitives";
+///
+/// Like [`CATEGORY_A_CRATE`], the name is also the id prefix of every operation
+/// the crate owns.
+pub const CATEGORY_C_CRATE: &str = "vyre-primitives";
 
 /// Directory that owns every module named `*substrate*`.
 ///
@@ -34,72 +48,6 @@ pub(crate) const SUBSTRATE_HOME: &str = "vyre-foundation/src/substrate";
 /// caller can reach, so it names the concept without becoming a second home.
 /// Production source elsewhere in the same crate is still a second home.
 pub(crate) const SUBSTRATE_HOME_TESTS: &str = "vyre-foundation/tests/";
-
-/// Closed workspace roster. A new member is a reviewable change here first.
-pub(crate) const ALLOWED_MEMBERS: &[&str] = &[
-    "conform/vyre-conform",
-    "conform/vyre-conform-spec",
-    "vyre",
-    "vyre-alloc-probe",
-    "vyre-aot",
-    // Sole owner of the registry link anchors: it names every crate that submits
-    // into an inventory registry so no consumer has to.
-    REGISTRY_LINK_OWNER,
-    "vyre-bench",
-    "vyre-debug",
-    "vyre-driver",
-    "vyre-driver-cuda",
-    "vyre-driver-metal",
-    "vyre-driver-reference",
-    "vyre-driver-spirv",
-    "vyre-driver-wgpu",
-    "vyre-emit-metal",
-    "vyre-emit-naga",
-    "vyre-emit-ptx",
-    "vyre-emit-spirv",
-    "vyre-foundation",
-    "vyre-libs",
-    "vyre-libs-analysis",
-    "vyre-libs-bitset",
-    "vyre-libs-builder",
-    "vyre-libs-decode",
-    "vyre-libs-device",
-    "vyre-libs-encoding",
-    "vyre-libs-fixpoint",
-    "vyre-libs-graph",
-    "vyre-libs-hash",
-    "vyre-libs-math",
-    "vyre-libs-nn",
-    "vyre-libs-parsing",
-    "vyre-libs-pattern",
-    "vyre-libs-reasoning",
-    "vyre-libs-reduce",
-    "vyre-libs-rule",
-    "vyre-libs-scheduling",
-    "vyre-libs-security",
-    "vyre-libs-solvers",
-    "vyre-libs-text",
-    "vyre-libs-vfs",
-    "vyre-libs-visual",
-    "vyre-lints",
-    "vyre-lower",
-    "vyre-macros",
-    "vyre-megakernel",
-    "vyre-primitives",
-    "vyre-reference",
-    "vyre-runtime",
-    "vyre-safetensors",
-    // Narrowed to the optimizer pass engine and renamed with that narrowing.
-    "vyre-pass-engine",
-    "vyre-spec",
-    "vyre-test-support",
-    "structure-gate",
-    "xtask",
-    // The xtask subcommands that link vyre. Split out so a source edit no
-    // longer rebuilds the compiler before a text-reading gate can run.
-    "xtask-evidence",
-    "xtask-registry",
-];
 
 /// Source languages and the single crate that owns each frontend.
 ///
@@ -140,20 +88,51 @@ impl Registration {
     }
 }
 
-/// Reject workspace members outside the reviewed roster.
-pub fn roster_failures(members: &[String]) -> Vec<String> {
+/// Reject a crate directory the root manifest never decided about.
+///
+/// The roster used to be a compiled-in copy of the `members` array, compared
+/// against the array it was copied from. That reports one thing: an edit to
+/// the manifest that skipped the copy. It never reads the tree, so a crate
+/// directory added beside the members it lists is invisible to it, which is
+/// the case the message claimed to cover.
+///
+/// `members` and `exclude` together are the decision. A directory holding a
+/// manifest and named by neither is a crate whose place in the graph nothing
+/// records: cargo loads it, refuses it, or resolves it as its own workspace
+/// depending on where it sits and which of them is invoked. A member with no
+/// manifest behind it is the same gap from the other side, and cargo refuses
+/// the whole workspace over it. An `exclude` row is a decision about a
+/// directory whether or not a manifest is in it today, so it is not judged
+/// that way.
+pub fn roster_failures(
+    manifest_directories: &[String],
+    members: &[String],
+    excludes: &[String],
+) -> Vec<String> {
+    let declared: BTreeSet<&str> = members
+        .iter()
+        .chain(excludes)
+        .map(String::as_str)
+        .collect();
     let mut failures = Vec::new();
-    for member in members {
-        if !ALLOWED_MEMBERS.contains(&member.as_str()) {
-            failures.push(format!(
-                "workspace member `{member}` is not on the reviewed roster; a product crate belongs outside this workspace, and a new platform crate is added to ALLOWED_MEMBERS in the same change"
-            ));
+    for directory in manifest_directories {
+        if declared.contains(directory.as_str()) {
+            continue;
         }
+        if excludes
+            .iter()
+            .any(|excluded| directory.starts_with(&format!("{excluded}/")))
+        {
+            continue;
+        }
+        failures.push(format!(
+            "`{directory}/Cargo.toml` is a crate the root manifest neither lists in `members` nor in `exclude`; add it to one of them"
+        ));
     }
-    for allowed in ALLOWED_MEMBERS {
-        if !members.iter().any(|member| member == allowed) {
+    for member in members {
+        if !manifest_directories.contains(member) {
             failures.push(format!(
-                "roster lists `{allowed}` but the workspace does not contain it; delete the stale roster entry"
+                "the root manifest lists member `{member}` but no manifest sits there; delete the stale entry"
             ));
         }
     }
@@ -444,9 +423,14 @@ mod tests {
         assert!(failures.is_empty(), "{failures:?}");
     }
 
-    /// Every workspace member the identity rule judges against.
+    /// The members the identity cases below name.
+    ///
+    /// The identity rule asks whether an id's namespace is a member, so a
+    /// case needs the members its ids claim and nothing else. It used to read
+    /// a compiled-in copy of the whole workspace roster, which let a case
+    /// pass on a name no case had written down.
     fn roster() -> Vec<String> {
-        ALLOWED_MEMBERS
+        ["vyre-foundation", "vyre-libs", "vyre-primitives"]
             .iter()
             .map(|name| (*name).to_string())
             .collect()
@@ -648,14 +632,83 @@ mod tests {
         assert!(failures.is_empty(), "{failures:?}");
     }
 
-    #[test]
-    fn a_product_crate_on_the_roster_is_rejected() {
-        let failures = roster_failures(&["vyre-foundation".to_string(), "vyre-scan".to_string()]);
+    fn paths(paths: &[&str]) -> Vec<String> {
+        paths.iter().map(|path| (*path).to_string()).collect()
+    }
 
+    #[test]
+    fn a_crate_directory_on_neither_manifest_list_is_rejected() {
+        let failures = roster_failures(
+            &paths(&["fuzz", "vyre-foundation"]),
+            &paths(&["vyre-foundation"]),
+            &paths(&["examples/external_ir_extension"]),
+        );
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(failures[0].contains("`fuzz/Cargo.toml`"), "{failures:?}");
+    }
+
+    #[test]
+    fn a_declared_member_and_a_declared_exclude_are_accepted() {
+        let failures = roster_failures(
+            &paths(&["examples/external_ir_extension", "vyre-foundation"]),
+            &paths(&["vyre-foundation"]),
+            &paths(&["examples/external_ir_extension"]),
+        );
+
+        assert!(failures.is_empty(), "{failures:?}");
+    }
+
+    /// An excluded directory is its own workspace, so its members are its own.
+    #[test]
+    fn a_crate_nested_under_an_exclude_is_accepted() {
+        let failures = roster_failures(
+            &paths(&["consumers/app", "consumers/app/plugin"]),
+            &Vec::new(),
+            &paths(&["consumers/app"]),
+        );
+
+        assert!(failures.is_empty(), "{failures:?}");
+    }
+
+    /// A member directory is this workspace's, so a crate inside one is too.
+    #[test]
+    fn a_crate_nested_under_a_member_is_rejected() {
+        let failures = roster_failures(
+            &paths(&["vyre-foundation", "vyre-foundation/fuzz"]),
+            &paths(&["vyre-foundation"]),
+            &Vec::new(),
+        );
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
         assert!(
-            failures.iter().any(|f| f.contains("vyre-scan")),
+            failures[0].contains("`vyre-foundation/fuzz/Cargo.toml`"),
             "{failures:?}"
         );
+    }
+
+    #[test]
+    fn a_member_with_no_manifest_behind_it_is_rejected() {
+        let failures = roster_failures(
+            &paths(&["vyre-foundation"]),
+            &paths(&["vyre-foundation", "vyre-departed"]),
+            &Vec::new(),
+        );
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(failures[0].contains("vyre-departed"), "{failures:?}");
+    }
+
+    /// An `exclude` row is a decision about a directory, manifest or not.
+    #[test]
+    fn an_exclude_naming_a_directory_with_no_manifest_is_accepted() {
+        let failures = roster_failures(
+            &paths(&["vyre-foundation"]),
+            &paths(&["vyre-foundation"]),
+            &paths(&["examples/libs-template"]),
+        );
+
+        assert!(failures.is_empty(), "{failures:?}");
     }
 
     fn discarding_import(file: &str, named: &str) -> DiscardingImport {

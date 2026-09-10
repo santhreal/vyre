@@ -518,12 +518,25 @@ pub(crate) fn join_f64(values: &[f64]) -> String {
 }
 
 /// Write raw samples where `Bench` collects them for the shared table.
+///
+/// Every failure path reports what could not be written and what to do about
+/// it. A run that produced samples and dropped them without a word looks
+/// exactly like a run that produced none.
 pub(crate) fn write_sidecar(phase: &str, body: &str) {
     let Ok(home) = std::env::var("HOME") else {
+        println!(
+            "[host-cost] samples not persisted: HOME is unset. \
+             Fix: set HOME, or read the samples from this run's stdout."
+        );
         return;
     };
     let dir = std::path::Path::new(&home).join(".cache/exatok-bench/reports");
-    if std::fs::create_dir_all(&dir).is_err() {
+    if let Err(error) = std::fs::create_dir_all(&dir) {
+        println!(
+            "[host-cost] samples not persisted: could not create {}: {error}. \
+             Fix: grant write access to that directory, or point HOME at a writable path.",
+            dir.display()
+        );
         return;
     }
     let stamp = std::time::SystemTime::now()
@@ -532,7 +545,11 @@ pub(crate) fn write_sidecar(phase: &str, body: &str) {
         .unwrap_or(0);
     let path = dir.join(format!("enqueue-{phase}-{stamp}.json"));
     if let Err(error) = std::fs::write(&path, body) {
-        println!("[host-cost] could not persist samples to {path:?}: {error}");
+        println!(
+            "[host-cost] samples not persisted: could not write {}: {error}. \
+             Fix: free space on that filesystem, or point HOME at a writable path.",
+            path.display()
+        );
         return;
     }
     println!("[host-cost] raw samples: {}", path.display());

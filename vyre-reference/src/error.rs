@@ -25,17 +25,58 @@ pub enum ReferenceErrorClass {
 }
 
 impl ReferenceErrorClass {
-    /// All eight failure classes in the closed enum.
-    pub const ALL: [Self; 8] = [
-        Self::MissingValue,
-        Self::TypeMismatch,
-        Self::Poison,
-        Self::Overflow,
-        Self::OutOfBoundsAccess,
-        Self::IncompleteDispatchSemantics,
-        Self::Nontermination,
-        Self::BudgetExhaustion,
-    ];
+    /// Every failure class, in declaration order.
+    ///
+    /// Derived from the successor chain, whose match has no catch-all arm, so
+    /// a new class does not compile until it is placed in the chain and the
+    /// declared count is corrected.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the declared class count disagrees with the length of the
+    /// successor chain, in either direction. The expression is a `const`, so the panic
+    /// is evaluated while the crate is compiled and reports as a build
+    /// failure naming the correction. It cannot be reached at run time.
+    pub const ALL: [Self; Self::COUNT] = {
+        let mut classes = [Self::MissingValue; Self::COUNT];
+        let mut index = 1;
+        while index < Self::COUNT {
+            match classes[index - 1].successor() {
+                Some(next) => classes[index] = next,
+                None => panic!(
+                    "Fix: ReferenceErrorClass::COUNT exceeds the successor chain; correct COUNT."
+                ),
+            }
+            index += 1;
+        }
+        match classes[Self::COUNT - 1].successor() {
+            Some(_) => panic!(
+                "Fix: a ReferenceErrorClass is missing from ALL; raise COUNT to the chain length."
+            ),
+            None => classes,
+        }
+    };
+
+    /// Number of failure classes.
+    const COUNT: usize = 8;
+
+    /// The class declared after this one, or `None` for the last.
+    ///
+    /// The match has no catch-all arm, so adding a variant is a build failure
+    /// here rather than a silently short [`Self::ALL`].
+    #[must_use]
+    const fn successor(self) -> Option<Self> {
+        match self {
+            Self::MissingValue => Some(Self::TypeMismatch),
+            Self::TypeMismatch => Some(Self::Poison),
+            Self::Poison => Some(Self::Overflow),
+            Self::Overflow => Some(Self::OutOfBoundsAccess),
+            Self::OutOfBoundsAccess => Some(Self::IncompleteDispatchSemantics),
+            Self::IncompleteDispatchSemantics => Some(Self::Nontermination),
+            Self::Nontermination => Some(Self::BudgetExhaustion),
+            Self::BudgetExhaustion => None,
+        }
+    }
 
     /// Stable identifier for this error class.
     #[must_use]

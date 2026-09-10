@@ -84,7 +84,9 @@ exclude = [
     "examples/external_backend_extension",
     "examples/external_ir_extension",
     "examples/libs-template",
+    "fuzz",
     "vyre-foundation/fuzz",
+    "fuzz",
     "consumers/vyre-model-compiler",
     "consumers/vyre-graphics-app",
 ]
@@ -421,6 +423,10 @@ trybuild = "=1.0.116"
 assert_cmd = "=2.2.2"
 predicates = "=3.1.4"
 env_logger = "=0.11.10"
+# Deterministic UTC rendering for the release provenance documents. Default
+# features are off: nothing here reads a system time zone or bundles a tzdb,
+# and an epoch second is rendered the same way on every host.
+jiff = { version = "=0.2.25", default-features = false, features = ["std"] }
 core_affinity = "=0.8.3"
 
 [profile.release]

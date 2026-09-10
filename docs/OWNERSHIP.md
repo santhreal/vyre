@@ -125,6 +125,7 @@ Execute production artifacts against independent reference semantics, minimize c
 | `vyre-conform-spec` | `conformance-schema` | Versioned conformance case, result and certificate schemas. | None |
 | `vyre-driver` | `backend-contract` | The backend-neutral target, materialization, submission and completion contracts, and the driver registry every backend registers into. | None |
 | `vyre-driver-cuda` | `cuda-driver` | Native accelerator backend registration, capability probing and dispatch. | `default`, `device-tests`, `gpu` |
+| `vyre-driver-reference` | `reference-driver` | Registration of the reference oracle as a backend. | None |
 | `vyre-driver-spirv` | `spirv-driver` | SPIR-V backend registration, capability probing and dispatch. | `default`, `device-tests`, `gpu` |
 | `vyre-driver-wgpu` | `portable-driver` | Portable backend registration, capability probing and dispatch. | `default`, `device-tests`, `gpu` |
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
@@ -241,7 +242,7 @@ Adapt the reference interpreter to the backend contract for deterministic confor
 - Seam: `reference-driver`
 - Interface: Registration of the reference oracle as a backend.
 - Carried by the curated surface: `false`
-- Consumed by 0 production edge(s)
+- Consumed by 1 production edge(s)
 
 | Dependency | Seam crossed | Interface | Activated by |
 | --- | --- | --- | --- |

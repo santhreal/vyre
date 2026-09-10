@@ -241,6 +241,22 @@ impl Tree {
         self.scope(roots, &["rs"])
     }
 
+    /// Every Rust source of one crate, as text.
+    ///
+    /// The tree walk already excludes build output and version control, and a
+    /// crate with no `src` directory publishes nothing a source gate can judge.
+    pub fn crate_sources(&self, directory: &str) -> Result<Vec<String>, GateError> {
+        let root = format!("{directory}/src");
+        if !self.exists(&root) {
+            return Ok(Vec::new());
+        }
+        let mut sources = Vec::new();
+        for path in self.rust(&[root.as_str()])? {
+            sources.push(self.read(&path)?);
+        }
+        Ok(sources)
+    }
+
     /// Every Rust source in the tree.
     #[must_use]
     pub fn all_rust(&self) -> Vec<PathBuf> {

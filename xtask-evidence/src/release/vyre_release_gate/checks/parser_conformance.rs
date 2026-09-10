@@ -1,4 +1,5 @@
 use super::*;
+use xtask::release::conformance_evidence_semantics::ORACLE_RECORD_ID;
 
 pub(crate) fn check_backend_feature_marker_id(
     requirement_id: &str,
@@ -52,19 +53,28 @@ pub(crate) fn check_backend_conformance_report(
     ) else {
         return;
     };
-    let expected_backend = match suffix {
+    let expected_executor = match suffix {
         "cuda-conformance.json" => Some("cuda"),
         "wgpu-conformance.json" => Some("wgpu"),
-        "reference-conformance.json" => Some("cpu-ref"),
+        "reference-conformance.json" => Some(ORACLE_RECORD_ID),
         _ => None,
     };
-    if let Some(expected) = expected_backend {
-        let backend_id = report.get("backend_id").and_then(serde_json::Value::as_str);
-        if backend_id != Some(expected) {
+    if let Some(expected) = expected_executor {
+        // A record written before the oracle stopped being spelled as a
+        // backend carries `backend_id: "cpu-ref"`. This is the one place a
+        // recorded conformance report is read for its executor, so the legacy
+        // label is converted here rather than accepted as a second spelling
+        // anywhere else.
+        let recorded = report
+            .get("executor_id")
+            .or_else(|| report.get("backend_id"))
+            .and_then(serde_json::Value::as_str)
+            .map(|id| if id == "cpu-ref" { ORACLE_RECORD_ID } else { id });
+        if recorded != Some(expected) {
             failures.push(format!(
-                "requirement `{}` backend conformance `{suffix}` reports backend `{:?}`, expected `{expected}`",
+                "requirement `{}` backend conformance `{suffix}` reports executor `{:?}`, expected `{expected}`",
                 requirement.id,
-                backend_id
+                recorded
             ));
         }
     }
@@ -154,7 +164,7 @@ pub(crate) fn check_backend_conformance_report(
         failures,
     );
     if let (Some(expected), Some(pairs)) = (
-        expected_backend,
+        expected_executor,
         report.get("pairs").and_then(serde_json::Value::as_array),
     ) {
         for pair in pairs {
@@ -162,12 +172,16 @@ pub(crate) fn check_backend_conformance_report(
                 .get("op_id")
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("<unknown>");
-            let backend_id = pair.get("backend_id").and_then(serde_json::Value::as_str);
-            if backend_id != Some(expected) {
+            let recorded = pair
+                .get("executor_id")
+                .or_else(|| pair.get("backend_id"))
+                .and_then(serde_json::Value::as_str)
+                .map(|id| if id == "cpu-ref" { ORACLE_RECORD_ID } else { id });
+            if recorded != Some(expected) {
                 failures.push(format!(
-                    "requirement `{}` backend conformance `{suffix}` pair `{op_id}` reports backend `{:?}`, expected `{expected}`",
+                    "requirement `{}` backend conformance `{suffix}` pair `{op_id}` reports executor `{:?}`, expected `{expected}`",
                     requirement.id,
-                    backend_id
+                    recorded
                 ));
             }
         }
