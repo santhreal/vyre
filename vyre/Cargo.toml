@@ -30,6 +30,10 @@ serde_json.workspace = true
 syn.workspace = true
 toml.workspace = true
 vyre-libs = { workspace = true }
+# The run-time checkout-root resolver the facade contracts locate their sources
+# with. Default features are empty, so this joins no compiler crate to the dev
+# graph that is not already a dependency.
+vyre-test-support = { workspace = true }
 
 [package.metadata.docs.rs]
 all-features = true

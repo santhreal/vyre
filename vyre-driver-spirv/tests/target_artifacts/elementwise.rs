@@ -9,7 +9,6 @@
 //! the test fails is only informative while both ran the same program and the
 //! same binding layout.
 
-#![allow(dead_code)]
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 

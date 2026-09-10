@@ -1020,9 +1020,10 @@ fn compiler_source_crates_name_zero_workload_or_expert_baselines() {
         "vyre/src",
     ];
 
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("workspace root");
+    // Resolved from the working directory: a compiled-in manifest path names
+    // whichever checkout last built this binary through the shared target
+    // directory, and the scan would then read that tree's sources.
+    let root = vyre_test_support::monorepo::vyre_workspace_root();
 
     let mut violations = Vec::new();
 

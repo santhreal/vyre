@@ -6,7 +6,6 @@
 //! module, and these probes are not part of the crate's public surface.
 
 // The two inclusion sites assert over different subsets of these probes.
-#![allow(dead_code)]
 
 use naga::{BinaryOperator, Block, Expression, Statement, UnaryOperator};
 

@@ -6,7 +6,6 @@
 //! decision about this backend, so they are stated here once and every target
 //! reads them from here.
 
-#![allow(dead_code)]
 
 use vyre_foundation::ir::BufferAccess;
 use vyre_test_support::target_compiler_contract::{single_lane_artifact, TargetExpectation};

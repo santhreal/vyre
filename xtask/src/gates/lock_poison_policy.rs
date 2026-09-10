@@ -360,12 +360,12 @@ mod tests {
     ///
     /// A unit test runs with the cwd set to its own crate directory, so reading
     /// the tree from there reaches `xtask` and nothing else. That is a green run
-    /// over 151 files reported as a clean workspace.
+    /// over 151 files reported as a clean workspace. Resolved by walking up from
+    /// the working directory rather than from a compiled-in manifest path, which
+    /// names whichever checkout last built this unit through the shared target
+    /// directory.
     fn workspace_root() -> std::path::PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("the xtask manifest directory sits under the checkout root")
-            .to_path_buf()
+        structure_gate::workspace_root()
     }
 
     #[test]

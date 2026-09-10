@@ -6,7 +6,6 @@
 //! are only comparable while those copies agree, so the declaration lives here
 //! once.
 
-#![allow(dead_code, unreachable_pub)]
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 

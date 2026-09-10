@@ -1,6 +1,5 @@
 //! Executable contracts for the generated canonical deployment loader.
 
-#![allow(dead_code, unreachable_pub)]
 
 use crate::fixture_target;
 #[path = "../templates/artifact.rs.tmpl"]

@@ -10,7 +10,6 @@
 #![forbid(unsafe_code)]
 
 use std::fs;
-use std::path::PathBuf;
 
 use vyre_driver::{PeerAccessCapability, PeerLinkKind, PeerTopology, ResidentOwner, Resource};
 use vyre_foundation::ir::DataType;
@@ -391,8 +390,12 @@ fn proof_content_addressed_sharing_and_page_scrubbing() {
 
 #[test]
 fn proof_runtime_public_surface_contains_no_model_concepts() {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let src_dir = manifest_dir.join("src");
+    // The crate directory is resolved from the working directory through the
+    // workspace member roster. A compiled-in manifest path names whichever
+    // checkout last built this binary through the shared target directory, so
+    // the scan would read that tree's sources.
+    let src_dir =
+        vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")).join("src");
 
     let banned_terms = [
         // Generic model concepts

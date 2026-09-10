@@ -6,7 +6,6 @@
 //! target and states why in `xtask/test-harness-isolation.toml`.
 
 /// Shared fixture module from `tests/fixture_target/mod.rs`.
-#[allow(dead_code, unreachable_pub)]
 #[path = "fixture_target/mod.rs"]
 pub mod fixture_target;
 
@@ -35,7 +34,6 @@ pub mod compile_smoke;
 pub mod generated_artifact_manifest_matrix;
 
 /// Integration tests from `tests/generated_loader_contracts.rs`.
-#[allow(dead_code, unreachable_pub)]
 #[path = "generated_loader_contracts.rs"]
 pub mod generated_loader_contracts;
 

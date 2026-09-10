@@ -7,7 +7,6 @@
 //! refused. The read is stated once here and each case states only what its
 //! registry must contain.
 
-#![allow(dead_code)]
 
 use std::collections::BTreeSet;
 

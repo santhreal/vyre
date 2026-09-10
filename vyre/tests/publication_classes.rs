@@ -1,9 +1,10 @@
 //! Publication class validation and release ordering derivation.
 //!
 //! Asserts that:
-//! 1. Every workspace member declares an explicit, valid publication class in both its
-//!    Cargo.toml manifest under `[package.metadata.vyre.publication_class]` and in
-//!    `docs/CRATE_OWNERSHIP.toml`.
+//! 1. Every workspace member declares an explicit, valid publication class in
+//!    its own Cargo.toml under `[package.metadata.vyre.publication_class]`, has
+//!    a row in `docs/CRATE_OWNERSHIP.toml`, and that row does not restate the
+//!    class. One authority per fact.
 //! 2. No publishable package depends on an internal `publish = false` package via normal or
 //!    build dependencies.
 //! 3. Newly publishable packages are caught and validated against the declared class roster.
@@ -22,7 +23,12 @@ pub(crate) const VALID_PUBLICATION_CLASSES: &[&str] = &[
     "private-test-support",
 ];
 
-/// Known publishable package roster.
+/// The publishable package roster.
+///
+/// Held here so that publishing a crate, and unpublishing one, each require a
+/// recorded decision. [`validate_publishable_roster`] compares it against the
+/// `publish` flags in both directions, so either edit turns this suite red
+/// until the roster records it.
 pub(crate) const EXPECTED_PUBLISHABLE_PACKAGES: &[&str] = &[
     "vyre",
     "vyre-foundation",
@@ -37,7 +43,6 @@ pub(crate) const EXPECTED_PUBLISHABLE_PACKAGES: &[&str] = &[
     "vyre-spec",
     "vyre-macros",
     "vyre-primitives",
-    "vyre-pass-engine",
     "vyre-runtime",
     "vyre-safetensors",
     "vyre-libs-analysis",
@@ -63,23 +68,23 @@ pub(crate) const EXPECTED_PUBLISHABLE_PACKAGES: &[&str] = &[
     "vyre-libs-vfs",
     "vyre-libs-visual",
     "vyre-libs",
-    "vyre-aot",
-    "vyre-lints",
     "vyre-lower",
     "vyre-emit-naga",
     "vyre-emit-ptx",
     "vyre-emit-spirv",
     "vyre-emit-metal",
-    "vyre-debug",
 ];
 
+/// The checkout this run is inside.
+///
+/// Resolved from the working directory: a compiled-in manifest path names
+/// whichever checkout last built this binary through the shared target
+/// directory, and the roster read would then be that tree's manifest.
 fn workspace_root() -> PathBuf {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir.parent().expect("workspace root").to_path_buf()
+    vyre_test_support::monorepo::vyre_workspace_root()
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub(crate) struct MemberInfo {
     pub(crate) name: String,
     pub(crate) path: String,
@@ -188,7 +193,14 @@ fn load_workspace_members(root: &Path) -> BTreeMap<String, MemberInfo> {
     map
 }
 
-fn load_ownership_classes(root: &Path) -> BTreeMap<String, String> {
+/// The `publication_class` each `docs/CRATE_OWNERSHIP.toml` row restates, by package.
+///
+/// Schema 4 of that file states intent cargo does not carry: the layer, the
+/// seam, the interface and the responsibility. The publication class is a cargo
+/// fact, declared beside `publish` in each member's own manifest, so a row that
+/// carries one is a second authority and the value is returned here for
+/// [`validate_publication_classes`] to reject.
+fn load_ownership_classes(root: &Path) -> BTreeMap<String, Option<String>> {
     let ownership_path = root.join("docs/CRATE_OWNERSHIP.toml");
     let content =
         std::fs::read_to_string(&ownership_path).expect("CRATE_OWNERSHIP.toml must exist");
@@ -198,12 +210,11 @@ fn load_ownership_classes(root: &Path) -> BTreeMap<String, String> {
     if let Some(crates) = toml_val.get("crate").and_then(|c| c.as_array()) {
         for c in crates {
             let pkg = c.get("package").and_then(|p| p.as_str()).expect("package");
-            let pub_class = c
+            let restated = c
                 .get("publication_class")
                 .and_then(|p| p.as_str())
-                .unwrap_or_default()
-                .to_string();
-            map.insert(pkg.to_string(), pub_class);
+                .map(str::to_string);
+            map.insert(pkg.to_string(), restated);
         }
     }
     map
@@ -212,7 +223,7 @@ fn load_ownership_classes(root: &Path) -> BTreeMap<String, String> {
 /// Validates that all members declare explicit and valid publication classes.
 pub(crate) fn validate_publication_classes(
     members: &BTreeMap<String, MemberInfo>,
-    ownership_classes: &BTreeMap<String, String>,
+    ownership_classes: &BTreeMap<String, Option<String>>,
 ) -> Result<(), Vec<String>> {
     let mut errors = Vec::new();
 
@@ -232,16 +243,17 @@ pub(crate) fn validate_publication_classes(
             ));
         }
 
-        if let Some(ownership_class) = ownership_classes.get(name) {
-            if ownership_class != manifest_class {
-                errors.push(format!(
-                    "member `{name}` publication_class mismatch: Cargo.toml declares `{manifest_class}` but CRATE_OWNERSHIP.toml declares `{ownership_class}`"
-                ));
-            }
-        } else {
-            errors.push(format!(
+        match ownership_classes.get(name) {
+            Some(Some(restated)) => errors.push(format!(
+                "member `{name}` has `publication_class = \"{restated}\"` in \
+                 docs/CRATE_OWNERSHIP.toml; the class is declared beside `publish` in \
+                 {}/Cargo.toml and that is its one home",
+                info.path
+            )),
+            Some(None) => {}
+            None => errors.push(format!(
                 "member `{name}` has no entry in docs/CRATE_OWNERSHIP.toml"
-            ));
+            )),
         }
     }
 
@@ -291,7 +303,7 @@ pub(crate) fn validate_publishable_dependency_closure(
     }
 }
 
-/// Validates that every publishable crate is known in the expected roster.
+/// Validates that the publishable set and the roster are the same set.
 pub(crate) fn validate_publishable_roster(
     members: &BTreeMap<String, MemberInfo>,
 ) -> Result<(), Vec<String>> {
@@ -303,6 +315,19 @@ pub(crate) fn validate_publishable_roster(
             errors.push(format!(
                 "unexpected newly publishable package `{name}` appeared without updated roster and publication class policy"
             ));
+        }
+    }
+
+    for expected in &expected_set {
+        match members.get(*expected) {
+            Some(info) if info.publish => {}
+            Some(_) => errors.push(format!(
+                "roster names `{expected}` as publishable and its manifest declares `publish = false`; \
+                 unpublishing a crate is a decision the roster has to record"
+            )),
+            None => errors.push(format!(
+                "roster names `{expected}`, which is not a workspace member"
+            )),
         }
     }
 
@@ -447,11 +472,16 @@ fn release_ordering_is_derivable_from_dependency_graph() {
     let order = derive_release_ordering(&members)
         .expect("release ordering must derive cleanly without cycles");
 
-    assert!(
-        order.len() == EXPECTED_PUBLISHABLE_PACKAGES.len(),
-        "expected {} publishable packages in release order, got {}",
-        EXPECTED_PUBLISHABLE_PACKAGES.len(),
-        order.len()
+    let publishable: BTreeSet<&str> = members
+        .iter()
+        .filter(|(_, info)| info.publish)
+        .map(|(name, _)| name.as_str())
+        .collect();
+    let ordered: BTreeSet<&str> = order.iter().map(String::as_str).collect();
+
+    assert_eq!(
+        ordered, publishable,
+        "release order must cover exactly the publishable members this checkout declares"
     );
 
     // Verify topological property: for any package in the order, all its publishable dependencies appear earlier

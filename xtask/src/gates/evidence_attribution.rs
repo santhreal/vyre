@@ -470,10 +470,10 @@ mod tests {
     /// judged without anyone editing this gate.
     #[test]
     fn the_artifact_set_is_the_directory() {
-        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("the xtask manifest has a workspace above it")
-            .to_path_buf();
+        // Resolved from the working directory. A compiled-in manifest path
+        // names whichever checkout last built this unit through the shared
+        // target directory, so the corpus walked would be that tree's.
+        let root = structure_gate::workspace_root();
         let found = evidence_artifacts(&root).expect("the evidence directory is walkable");
         assert!(
             found.contains(&UNATTRIBUTED_LEDGER.to_string())
