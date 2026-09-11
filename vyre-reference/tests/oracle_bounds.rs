@@ -441,9 +441,15 @@ fn the_frame_ceiling_refuses_one_frame_past_the_limit_and_admits_the_limit() {
         let program = nested_blocks(depth);
         let limit = static_frame_depth(program.entry());
         block_limits.push(limit);
-        assert_admits(&program, ReferenceBudget::new(u64::MAX, 1 << 30, limit), limit);
+        assert_admits(
+            &program,
+            ReferenceBudget::new(u64::MAX, 1 << 30, limit),
+            "block",
+            limit,
+        );
         assert_refuses_depth(
             &program,
+            "block",
             limit - 1,
             &format!("the program's static body nesting reaches frame depth {limit}"),
         );
@@ -461,19 +467,32 @@ fn the_frame_ceiling_refuses_one_frame_past_the_limit_and_admits_the_limit() {
             "a loop shape whose static nesting {statically} already reaches the running depth \
              {limit} does not exercise the per-frame check"
         );
-        assert_admits(&program, ReferenceBudget::new(u64::MAX, 1 << 30, limit), limit);
+        assert_admits(
+            &program,
+            ReferenceBudget::new(u64::MAX, 1 << 30, limit),
+            "loop",
+            limit,
+        );
         assert_refuses_depth(
             &program,
+            "loop",
             limit - 1,
-            &format!("entering a nested body at frame depth {limit} passes the {} frame ceiling", limit - 1),
+            &format!(
+                "entering a nested body at frame depth {limit} passes the {} frame ceiling",
+                limit - 1
+            ),
         );
         // At the static nesting the pre-check is satisfied and the lane still
         // runs past the ceiling, so this side is held by the per-frame check
         // alone.
         assert_refuses_depth(
             &program,
+            "loop",
             statically,
-            &format!("entering a nested body at frame depth {} passes the {statically} frame ceiling", statically + 1),
+            &format!(
+                "entering a nested body at frame depth {} passes the {statically} frame ceiling",
+                statically + 1
+            ),
         );
     }
     assert_distinct(&loop_limits, "loop nesting");
@@ -551,20 +570,22 @@ fn the_allocation_ceiling_refuses_one_byte_past_the_limit_and_admits_the_limit()
     assert_distinct(&limits, "allocation");
 }
 
-/// Assert `program` evaluates under `budget`, whose frame ceiling is `limit`.
-fn assert_admits(program: &Program, budget: ReferenceBudget, limit: usize) {
+/// Assert `program`, whose nesting is `shape`, evaluates under `budget`, whose
+/// frame ceiling is `limit`.
+fn assert_admits(program: &Program, budget: ReferenceBudget, shape: &str, limit: usize) {
     let outcome = ReferenceRequest::new(program, &[], budget).outputs();
     assert!(
         outcome.is_ok(),
-        "a program reaching frame depth {limit} was refused against a {limit} frame ceiling: \
-         {outcome:?}. The ceiling bounds the depth a lane may reach, so a program that reaches it \
-         exactly is inside the bound."
+        "a {shape}-nested program reaching frame depth {limit} was refused against a {limit} \
+         frame ceiling: {outcome:?}. The ceiling bounds the depth a lane may reach, so a program \
+         that reaches it exactly is inside the bound."
     );
 }
 
-/// Assert `program` is refused with `BudgetExhaustion` under a frame ceiling of
-/// `limit`, and that the refusal states `expected`.
-fn assert_refuses_depth(program: &Program, limit: usize, expected: &str) {
+/// Assert `program`, whose nesting is `shape`, is refused with
+/// `BudgetExhaustion` under a frame ceiling of `limit`, and that the refusal
+/// states `expected`.
+fn assert_refuses_depth(program: &Program, shape: &str, limit: usize, expected: &str) {
     let outcome = ReferenceRequest::new(
         program,
         &[],
@@ -573,8 +594,9 @@ fn assert_refuses_depth(program: &Program, limit: usize, expected: &str) {
     .outputs();
     let error = match outcome {
         Ok(outputs) => panic!(
-            "a program nesting past a {limit} frame ceiling evaluated to {} output buffer(s) \
-             instead of being refused. `ReferenceBudget::max_recursion_depth` is not read.",
+            "a {shape}-nested program past a {limit} frame ceiling evaluated to {} output \
+             buffer(s) instead of being refused. `ReferenceBudget::max_recursion_depth` is not \
+             read.",
             outputs.len()
         ),
         Err(error) => error,
@@ -582,13 +604,14 @@ fn assert_refuses_depth(program: &Program, limit: usize, expected: &str) {
     assert_eq!(
         error.error_class(),
         ReferenceErrorClass::BudgetExhaustion,
-        "a program past the {limit} frame ceiling refused with the wrong class. Message: {}",
+        "a {shape}-nested program past the {limit} frame ceiling refused with the wrong class. \
+         Message: {}",
         error.message()
     );
     assert!(
         error.message().contains(expected),
-        "the refusal does not state the depth it crossed. Expected to contain `{expected}`, got: \
-         {}",
+        "the {shape}-nested refusal does not state the depth it crossed. Expected to contain \
+         `{expected}`, got: {}",
         error.message()
     );
 }
@@ -608,3 +631,4 @@ fn assert_distinct(limits: &[usize], shape: &str) {
          limit proves one number works rather than that the budget field is read."
     );
 }
+
