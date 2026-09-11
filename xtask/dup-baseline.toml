@@ -128,8 +128,8 @@ total_lines = 1171
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 1692
-total_lines = 147858
+duplicate_lines = 1687
+total_lines = 148518
 
 [[crate]]
 name = "vyre-libs"

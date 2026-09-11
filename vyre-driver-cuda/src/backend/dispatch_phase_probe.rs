@@ -457,6 +457,24 @@ pub(crate) fn arm_kernel_window(pool: &Arc<CudaLaunchResourcePool>) -> Option<Ar
     Some(ArmedKernelWindow)
 }
 
+/// Record one dispatch's counted quantities and arm its launch-loop window.
+///
+/// Both timed dispatch entry points open a measured dispatch the same way, and
+/// each spelled the count list and the guard comment out again. A count the
+/// two lists disagree on is a phase record that reads as a different dispatch
+/// shape depending on which entry point produced it.
+pub(crate) fn arm_dispatch(
+    program: &Program,
+    ptx_bytes: usize,
+    bindings: usize,
+    fixpoint_iterations: usize,
+    grid: [u32; 3],
+    pool: &Arc<CudaLaunchResourcePool>,
+) -> Option<ArmedKernelWindow> {
+    record_counts(program, ptx_bytes, bindings, fixpoint_iterations, grid);
+    arm_kernel_window(pool)
+}
+
 /// Record the inner window's start event on `stream`, when armed.
 pub(crate) fn open_kernel_window(stream: CUstream) {
     with_armed_kernel_window(|armed| armed.record_start(stream));
@@ -522,6 +540,31 @@ pub(crate) fn charge_kernel_window() {
             ),
         }
     });
+}
+
+/// Close a measured dispatch: charge its launch-loop window and emit the
+/// phase record, reading the dispatch count and the PTX cache from `backend`.
+pub(crate) fn emit_dispatch(
+    backend: &crate::backend::CudaBackend,
+    wall_ns: u64,
+    enqueue_ns: u64,
+    wait_ns: u64,
+    device_ns: Option<u64>,
+) {
+    if !enabled() {
+        return;
+    }
+    charge_kernel_window();
+    let ptx_cache = backend.ptx_source_cache_snapshot();
+    emit(
+        backend.telemetry.snapshot().timed_dispatches,
+        wall_ns,
+        enqueue_ns,
+        wait_ns,
+        device_ns,
+        ptx_cache.hits,
+        ptx_cache.misses,
+    );
 }
 
 /// Elapsed nanoseconds, saturating rather than fallible.
