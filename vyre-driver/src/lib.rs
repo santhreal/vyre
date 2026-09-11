@@ -123,7 +123,7 @@ pub(crate) mod pipeline;
 /// fence instead of a full grid-sync.
 pub mod pipeline_fusion;
 /// The dispatch-boundary rule that makes a read-only binding declaration true.
-pub mod read_only_alias;
+pub(crate) mod read_only_alias;
 /// Read-only semantic operation projections, migrations, and policy.
 pub(crate) mod registry;
 /// Backend-neutral reservation policy adapters.

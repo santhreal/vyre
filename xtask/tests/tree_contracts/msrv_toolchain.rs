@@ -138,9 +138,18 @@ fn every_cargo_fuzz_job_selects_nightly() {
                 Some("nightly"),
                 "Fix: fuzz job `{job}` must select nightly before running cargo-fuzz"
             );
+            let (wrapper, arguments) = trimmed.split_once(" +nightly fuzz run ").unwrap_or_else(|| {
+                panic!(
+                    "Fix: fuzz job `{job}` must invoke cargo-fuzz through the nightly toolchain: {trimmed}"
+                )
+            });
             assert!(
-                trimmed.starts_with("../../cargo_full +nightly fuzz run "),
-                "Fix: fuzz job `{job}` must invoke cargo-fuzz through the nightly toolchain: {trimmed}"
+                wrapper.trim_end_matches('"').ends_with("cargo_full"),
+                "Fix: fuzz job `{job}` must reach cargo-fuzz through the workspace `cargo_full` wrapper, whatever path shape the job uses to locate it: {trimmed}"
+            );
+            assert!(
+                !arguments.trim().is_empty(),
+                "Fix: fuzz job `{job}` names no fuzz target, so it runs nothing: {trimmed}"
             );
         }
     }

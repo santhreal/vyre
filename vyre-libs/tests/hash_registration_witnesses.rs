@@ -17,7 +17,7 @@ fn assert_registered_witness(id: &str, expected: Vec<Vec<Vec<u8>>>) {
     let declared = (entry.expected_output.expect("declared expected output"))();
     assert_eq!(declared, expected, "declared witness drift for {id}");
     assert_eq!(
-        vyre_test_support::registry_nets::declared_witness_bytes(id, &entry),
+        vyre_test_support::registry_nets::declared_witness_bytes(id, &entry).collect::<Vec<_>>(),
         expected,
         "CPU witness drift for {id}"
     );

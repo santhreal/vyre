@@ -30,7 +30,7 @@ fn assert_entry_matches_cases(
     expected: Vec<Vec<Vec<u8>>>,
 ) {
     assert_eq!(
-        vyre_test_support::registry_nets::declared_witness_bytes(id, entry),
+        vyre_test_support::registry_nets::declared_witness_bytes(id, entry).collect::<Vec<_>>(),
         expected,
         "CPU witness drift for {id}"
     );

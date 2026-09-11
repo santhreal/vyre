@@ -625,6 +625,7 @@ pub const GATES_A_G: [GateDescriptor; 56] = [
             "optimization-matrix",
             "package-readiness",
             "portability-evidence",
+            "readme-contract",
             "release-benchmarks",
             "release-conformance",
             "release-docs",

@@ -202,46 +202,6 @@ impl SemanticExecutor for StaticOutputs {
     }
 }
 
-/// A dispatcher that returns sequential output buffers across multiple dispatches.
-///
-/// The one consumer is the motif dispatch suite, which the `graph` and
-/// `graph-dispatch` features carry, so this is declared on the same pair. A
-/// blanket `dead_code` allowance is what stood here before, and it hid the
-/// unselected configurations from the only lint that reports them.
-pub struct SequentialOutputs {
-    contract: &'static str,
-    steps: std::sync::Mutex<Vec<Vec<Vec<u8>>>>,
-}
-
-impl SequentialOutputs {
-    /// Create a new sequential output dispatcher with the expected output steps.
-    pub fn new(contract: &'static str, steps: Vec<Vec<Vec<u8>>>) -> Self {
-        Self {
-            contract,
-            steps: std::sync::Mutex::new(steps),
-        }
-    }
-}
-
-impl SemanticExecutor for SequentialOutputs {
-    fn execute(
-        &self,
-        request: &SemanticExecutionRequest<'_>,
-    ) -> Result<SemanticExecutionOutput, SemanticExecutionError> {
-        let mut guard = self
-            .steps
-            .lock()
-            .expect("Fix: sequential-output dispatcher mutex should not be poisoned");
-        if guard.is_empty() {
-            return Err(SemanticExecutionError::Backend(format!(
-                "{}: sequential executor ran out of expected steps",
-                self.contract
-            )));
-        }
-        semantic_output(request, guard.remove(0))
-    }
-}
-
 /// Collect canonical input buffers in the order declared on the graph's first node.
 pub fn canonical_inputs(
     request: &SemanticExecutionRequest<'_>,

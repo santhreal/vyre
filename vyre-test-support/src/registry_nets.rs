@@ -464,8 +464,8 @@ pub fn hostile_contents(inputs: &[Value], index: u32) -> Vec<Value> {
         .collect()
 }
 
-/// Run a registered entry over its declared fixture inputs and return the
-/// output bytes, one inner vector per case.
+/// Run a registered entry over its declared fixture inputs and yield the output
+/// bytes of one case at a time, in fixture order.
 ///
 /// Four suites pinned registered outputs by restating the same loop: read
 /// `test_inputs`, build the neutral program, evaluate, and map each output
@@ -473,9 +473,17 @@ pub fn hostile_contents(inputs: &[Value], index: u32) -> Vec<Value> {
 /// per case, so a builder that carries state between calls cannot pass by
 /// being invoked once.
 ///
+/// Cases arrive one at a time rather than collected. The caller compares
+/// against a declared expectation it already holds, so the run never needs
+/// every case resident at once, and this crate carries a backend double that
+/// puts its sources under the dispatch-result depth contract.
+///
 /// Panics when the entry declares no fixture inputs or no neutral builder: a
 /// caller pinning a witness has already asserted the entry has both.
-pub fn declared_witness_bytes(id: &str, entry: &SemanticOperation) -> Vec<Vec<Vec<u8>>> {
+pub fn declared_witness_bytes<'a>(
+    id: &'a str,
+    entry: &SemanticOperation,
+) -> impl Iterator<Item = Vec<Vec<u8>>> + 'a {
     let inputs = (entry
         .test_inputs
         .unwrap_or_else(|| panic!("Fix: `{id}` must declare test inputs to pin a witness")))(
@@ -484,9 +492,9 @@ pub fn declared_witness_bytes(id: &str, entry: &SemanticOperation) -> Vec<Vec<Ve
         .build
         .unwrap_or_else(|| panic!("Fix: `{id}` must declare a neutral builder to pin a witness"));
     inputs
-        .iter()
+        .into_iter()
         .enumerate()
-        .map(|(case, input_set)| {
+        .map(move |(case, input_set)| {
             let values = input_set
                 .iter()
                 .cloned()
@@ -501,5 +509,4 @@ pub fn declared_witness_bytes(id: &str, entry: &SemanticOperation) -> Vec<Vec<Ve
                 .map(|value| value.to_bytes())
                 .collect()
         })
-        .collect()
 }

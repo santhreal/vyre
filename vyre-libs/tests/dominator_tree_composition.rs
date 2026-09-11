@@ -144,7 +144,8 @@ fn depth_phase_witness_matches_reference() {
         vyre_test_support::registry_nets::declared_witness_bytes(
             "vyre-libs::graph::dominator_tree_depth",
             &entry,
-        ),
+        )
+        .collect::<Vec<_>>(),
         declared,
         "CPU witness drift for dominator_tree_depth"
     );
@@ -201,7 +202,8 @@ fn intersect_phase_witness_matches_reference() {
         vyre_test_support::registry_nets::declared_witness_bytes(
             "vyre-libs::graph::dominator_tree_intersect_step",
             &entry,
-        ),
+        )
+        .collect::<Vec<_>>(),
         declared,
         "CPU witness drift for dominator_tree_intersect_step"
     );

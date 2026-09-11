@@ -96,12 +96,15 @@ name = "lowering"
 rank = 1
 purpose = "One verified selected-module representation between semantic IR and target emission."
 # The selected module is produced at the compiler boundary and consumed by the
-# emitters and the backends that load what they emit.
+# emitters and the backends that load what they emit. The marked-section
+# golden-corpus format is also defined here, so the fixture layer reads that
+# format from its owner instead of restating it.
 consumed_by = [
     "compiler-boundary",
     "concrete-backend",
     "emitter",
     "registry-link",
+    "test-tooling",
     "tooling",
 ]
 
