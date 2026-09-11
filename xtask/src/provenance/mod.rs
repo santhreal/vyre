@@ -987,15 +987,24 @@ fn measure_tool_version(tool: &str) -> Result<String, ProvenanceError> {
 /// compared across runs.
 ///
 /// `SOURCE_DATE_EPOCH` wins when it is set, which is what a distribution build
-/// sets to pin every generated timestamp. Otherwise the commit time of `HEAD`
-/// is the instant the tree being described came into existence.
+/// sets to pin every generated timestamp. Otherwise it is the commit time of
+/// the newest commit that changed source, which is the instant the tree being
+/// described came into existence.
+///
+/// Source here is what [`crate::source_provenance::EXCLUDED_FROM_SOURCE`]
+/// leaves, for the reason that constant states. Reading `HEAD` instead made
+/// this document impossible to commit: the write stamped the commit time of
+/// the tree it read, committing that write produced a newer commit, and the
+/// artifact was stale against its own carrier the moment it landed.
 fn measure_source_date_epoch(root: &Path) -> Result<i64, ProvenanceError> {
     if let Ok(declared) = std::env::var("SOURCE_DATE_EPOCH") {
         return parse_epoch_second(&declared, "SOURCE_DATE_EPOCH");
     }
+    let mut arguments = vec!["log", "-1", "--pretty=%ct", "--", "."];
+    arguments.extend(crate::source_provenance::EXCLUDED_FROM_SOURCE);
     let out = Command::new("git")
         .current_dir(root)
-        .args(["log", "-1", "--pretty=%ct"])
+        .args(&arguments)
         .output()
         .map_err(|error| ProvenanceError::UnmeasuredFact {
             fact: "source date epoch".to_string(),
@@ -1009,7 +1018,7 @@ fn measure_source_date_epoch(root: &Path) -> Result<i64, ProvenanceError> {
     }
     parse_epoch_second(
         &String::from_utf8_lossy(&out.stdout),
-        "git log -1 --pretty=%ct",
+        "git log -1 --pretty=%ct over the source paths",
     )
 }
 
@@ -1093,6 +1102,60 @@ mod measurement_tests {
                 "for {declared:?}"
             );
         }
+    }
+
+    /// WHY: closes the class where recording evidence moves the instant the
+    /// provenance document states, which made the document impossible to
+    /// commit: `--write` stamped the commit time of the tree it read, the
+    /// commit carrying that write was newer, and the next comparison reported
+    /// the artifact as stale against itself. The epoch answers for source, and
+    /// the evidence corpus and the document's own projection are not source.
+    ///
+    /// What this does not catch: a commit that changes source and evidence
+    /// together. That one does move the epoch, and should.
+    #[test]
+    fn committing_only_evidence_leaves_the_source_instant_where_it_was() {
+        let checkout = tempfile::tempdir().expect("Fix: create the fixture checkout.");
+        let root = checkout.path();
+        crate::fixture_checkout::seeded(root);
+        std::fs::create_dir_all(root.join("release/evidence/metadata"))
+            .expect("Fix: create the evidence directory.");
+        std::fs::write(root.join("src.rs"), "fn main() {}\n").expect("Fix: write the source file.");
+        crate::fixture_checkout::commit_worktree(root, "record source");
+        let after_source = measure_source_date_epoch(root)
+            .expect("Fix: measure the epoch after the source commit.");
+
+        // A commit one second later carrying only excluded paths.
+        std::thread::sleep(std::time::Duration::from_millis(1100));
+        std::fs::write(root.join("release/evidence/metadata/sbom.json"), "{}\n")
+            .expect("Fix: write the evidence artifact.");
+        std::fs::create_dir_all(root.join("docs/generated")).expect("Fix: create docs/generated.");
+        std::fs::write(
+            root.join("docs/generated/release-provenance.toml"),
+            "x = 1\n",
+        )
+        .expect("Fix: write the provenance projection.");
+        crate::fixture_checkout::commit_worktree(root, "record evidence");
+        let after_evidence = measure_source_date_epoch(root)
+            .expect("Fix: measure the epoch after the evidence commit.");
+
+        assert_eq!(
+            after_evidence, after_source,
+            "Fix: an evidence-only commit must leave the source instant alone, or the document \
+             this instant is written into is stale the moment it is committed."
+        );
+
+        std::thread::sleep(std::time::Duration::from_millis(1100));
+        std::fs::write(root.join("src.rs"), "fn main() { let _ = 1; }\n")
+            .expect("Fix: change the source file.");
+        crate::fixture_checkout::commit_worktree(root, "change source");
+        let after_change = measure_source_date_epoch(root)
+            .expect("Fix: measure the epoch after the source change.");
+        assert!(
+            after_change > after_source,
+            "Fix: a commit that changes source must move the instant: {after_change} is not past \
+             {after_source}."
+        );
     }
 
     /// WHY: the schema carries a field now, so a document written before it

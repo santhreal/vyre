@@ -263,7 +263,7 @@ fn fingerprint_of(commit: &str, changed: &[ChangedPath]) -> String {
 /// reads, so counting it as source made recording evidence change the source
 /// the recording names: every capture dirtied the next one and no sequence of
 /// commits reached a matching fingerprint.
-const EXCLUDED_FROM_SOURCE: [&str; 2] = [
+pub(crate) const EXCLUDED_FROM_SOURCE: [&str; 2] = [
     ":!release/evidence/**",
     ":!docs/generated/release-provenance.toml",
 ];
