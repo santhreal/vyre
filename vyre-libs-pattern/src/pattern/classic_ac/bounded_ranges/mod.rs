@@ -1,30 +1,30 @@
 //! The bounded-window Aho-Corasick scan builders, and the AC walk itself.
 //!
-//! This module owns the transition walk for the whole crate: the dense
-//! `state = transitions[state * 256 + byte]` step, the flat output-link span,
-//! the bounded suffix replay, the candidate-end byte gate, the per-region binary
-//! search, the range-bound arithmetic (`bounded_walk_prologue_nodes`,
-//! `match_span_start_nodes`, `ac_ranges_output_records_len`) and the fail-closed
-//! rejection path (`ac_ranges_program_or_fail_closed`). Every other AC builder
-//! here and under `scan/` projects from those primitives and supplies only what
-//! genuinely differs: its admission predicate, its emission, its prefilter
-//! shape. The gate widths and the program assembly built on top of them belong
-//! to the `prefilter` submodule, and the ungated scan below is one of its rows.
+//! This module owns the transition walk for the whole crate, split across
+//! three files: `walk` holds the dense
+//! `state = transitions[state * 256 + byte]` step, the flat output-link span
+//! and the bounded suffix replay; `emit` holds the per-region binary search
+//! and everything a walk writes once it has a record span; this file holds the
+//! candidate-end byte gate, the range-bound arithmetic
+//! (`ac_ranges_output_records_len`), the fail-closed rejection path
+//! (`ac_ranges_program_or_fail_closed`) and the scan builders themselves.
+//! Every other AC builder here and under `scan/` projects from those
+//! primitives and supplies only what genuinely differs: its admission
+//! predicate, its emission, its prefilter shape. The gate widths and the
+//! program assembly built on top of them belong to the `prefilter` submodule,
+//! and the ungated scan below is one of its rows.
 
-use vyre_foundation::composition::{bounded_index, bounded_index_when};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_libs_builder::builder::state_machine::TableStateMachineComposer;
-use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 
-use crate::pattern::builders::{
-    append_match, append_match_subgroup, load_packed_byte, load_packed_byte_expr,
-};
+use crate::pattern::builders::{append_match, append_match_subgroup, load_packed_byte_expr};
 
 use crate::pattern::CompiledDfa;
 
+pub(in crate::pattern) mod emit;
 mod prefilter;
 #[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]
 mod regex_exact;
+pub(in crate::pattern) mod walk;
 
 pub use prefilter::{
     build_ac_bounded_ranges_prefilter_program,
@@ -44,162 +44,14 @@ use prefilter::{build_ranges_scan, try_build_ranges_scan, PrefilterWidth};
 #[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]
 pub(in crate::pattern) use regex_exact::regex_exact_ranges_program;
 
-/// Advance `state` one byte through the dense `state * 256 + byte` transition
-/// row, with both operands folded inside the table.
-///
-/// THE Aho-Corasick transition step. The bounded suffix replay, the anchored
-/// forward walk, the per-region admission walk and the unbounded classic walk
-/// are each built from this one node, so a change to the table layout reaches
-/// all of them at once. `byte` is whatever the caller's haystack encoding
-/// yields: a direct element load for an unpacked haystack, or the masked byte
-/// [`ac_transition_step_nodes`] unpacks from a u32 word.
-///
-/// The state this reads is the previous step's table entry, and nothing
-/// constrains the contents of a read-only buffer, so `state * 256 + byte`
-/// indexes past the table on the step after an entry falls outside the state
-/// set. The state extent is the table's own run-time length over the row
-/// stride, which is identity for a table whose entries are states and covers
-/// every caller without a signature change.
-pub(in crate::pattern) fn ac_advance_state_node(transitions: &str, byte: Expr) -> Node {
-    let composer = TableStateMachineComposer::new(transitions);
-    let state_extent = Expr::div(Expr::buf_len(transitions), Expr::u32(composer.stride));
-    composer.bounded_advance_node(state_extent, byte)
-}
-
-/// One byte of the walk over a PACKED haystack: unpack the byte at `idx` from
-/// its u32 word, then [`ac_advance_state_node`].
-pub(in crate::pattern) fn ac_transition_step_nodes(
-    haystack: &str,
-    transitions: &str,
-    idx: Expr,
-) -> Vec<Node> {
-    let (load_byte, byte) = load_packed_byte(haystack, idx);
-    vec![load_byte, ac_advance_state_node(transitions, byte)]
-}
-
-/// How a walk introduces the results a later emit reads.
-///
-/// `Let` is the ordinary shape: the emit runs where the walk ran, inside the
-/// admission gate. `Assign` writes into names the caller bound outside that
-/// gate, which is what an emit carrying a subgroup collective needs, because a
-/// collective reads across lanes and a rejected lane never enters the gate.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub(in crate::pattern) enum WalkBinding {
-    /// Introduce the name here.
-    Let,
-    /// Write into a name the caller already bound.
-    Assign,
-}
-
-impl WalkBinding {
-    fn bind(self, name: &str, value: Expr) -> Node {
-        match self {
-            Self::Let => Node::let_bind(name, value),
-            Self::Assign => Node::assign(name, value),
-        }
-    }
-}
-
-/// Bind `out_begin`/`out_end` to the flat output-link span of the current
-/// `state`. Every walk pairs this with the transition step before emitting, so
-/// an `output_offsets` layout change has one place to land.
-///
-/// `state` is a transition-table entry, so both offsets are read at a
-/// data-derived index. Each read is folded against the offset buffer's own
-/// run-time length, which is identity for a well-formed table holding one
-/// offset per state plus the terminating end, and reads element zero for a
-/// state the table does not describe. A `length - 1` extent would wrap for a
-/// table declared with no offsets at all.
-pub(in crate::pattern) fn ac_output_span_nodes(output_offsets: &str) -> Vec<Node> {
-    ac_output_span_nodes_bound(output_offsets, WalkBinding::Let)
-}
-
-/// [`ac_output_span_nodes`] under an explicit [`WalkBinding`].
-pub(in crate::pattern) fn ac_output_span_nodes_bound(
-    output_offsets: &str,
-    binding: WalkBinding,
-) -> Vec<Node> {
-    vec![
-        binding.bind(
-            "out_begin",
-            Expr::load(
-                output_offsets,
-                bounded_index(Expr::var("state"), Expr::buf_len(output_offsets)),
-            ),
-        ),
-        binding.bind(
-            "out_end",
-            Expr::load(
-                output_offsets,
-                bounded_index(
-                    Expr::add(Expr::var("state"), Expr::u32(1)),
-                    Expr::buf_len(output_offsets),
-                ),
-            ),
-        ),
-    ]
-}
-
-/// Bounded-window walk prologue for the scan, count and presence builders: bind
-/// `state`/`scan_start`/`scan_end`, replay the suffix window
-/// `haystack[max(0, i + 1 - max_pattern_len)..=i]` from state 0, and bind the
-/// output-link span. Callers append their per-record emit loop.
-pub(in crate::pattern) fn bounded_walk_prologue_nodes(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    max_pattern_len: u32,
-) -> Vec<Node> {
-    bounded_walk_prologue_bound(
-        haystack,
-        transitions,
-        output_offsets,
-        max_pattern_len,
-        WalkBinding::Let,
-    )
-}
-
-/// [`bounded_walk_prologue_nodes`] under an explicit [`WalkBinding`].
-///
-/// `state` and `scan_start` are always introduced here: nothing outside the
-/// gate reads them. `scan_end` and the output-link span follow `binding`,
-/// because those three are exactly what an emit hoisted out of the gate needs.
-pub(in crate::pattern) fn bounded_walk_prologue_bound(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    max_pattern_len: u32,
-    binding: WalkBinding,
-) -> Vec<Node> {
-    let max_pattern_len = max_pattern_len.max(1);
-    let i = Expr::var("i");
-    let end = Expr::add(i.clone(), Expr::u32(1));
-    let scan_start = Expr::select(
-        Expr::lt(i, Expr::u32(max_pattern_len - 1)),
-        Expr::u32(0),
-        Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
-    );
-    let mut nodes = vec![
-        Node::let_bind("state", Expr::u32(0)),
-        Node::let_bind("scan_start", scan_start),
-        // `end` derives from the live `haystack_len` load, which is not an
-        // extent. The step body reads `haystack` through `load_packed_byte`,
-        // four bytes per word, so the real ceiling is four times its extent.
-        binding.bind(
-            "scan_end",
-            Expr::min(end, Expr::mul(Expr::buf_len(haystack), Expr::u32(4))),
-        ),
-        Node::loop_for(
-            "step",
-            Expr::var("scan_start"),
-            Expr::var("scan_end"),
-            ac_transition_step_nodes(haystack, transitions, Expr::var("step")),
-        ),
-    ];
-    nodes.extend(ac_output_span_nodes_bound(output_offsets, binding));
-    nodes
-}
-
+use emit::{
+    match_span_start_nodes, output_record_loop_node, presence_bit_write_node,
+    region_search_prologue_nodes, uniform_output_record_loop_nodes, RECORD_ACTIVE,
+};
+use walk::{
+    bounded_walk_matched_nodes, bounded_walk_prologue_bound, bounded_walk_prologue_nodes,
+    WalkBinding,
+};
 /// The candidate-end byte gate every prefiltered AC program opens with: bind the
 /// invocation index `i`, bound it against the live `haystack_len`, unpack the
 /// candidate byte, and run `accepted` only when that byte's bit is set in the
@@ -574,276 +426,6 @@ fn bounded_ranges_presence_by_region_nodes(
         max_pattern_len,
         region_and_emit,
     )
-}
-
-/// The region binary-search PROLOGUE shared by every region-attributed walk in
-/// `scan/`: the presence-only and fused presence+positions bounded builders here,
-/// and the anchored per-region walk in
-/// [`crate::pattern::regex_region_admission`]. Computes `rs_pos = i + region_base`
-/// (the GLOBAL byte position so a sharded dispatch attributes against the
-/// whole-batch region table), binary-searches `region_starts` for the largest
-/// region whose start `<= rs_pos`, and binds `rs_base = region * presence_words`
-/// (the per-region presence-row offset). The caller appends its own per-record
-/// emit loop after these nodes.
-///
-/// The row stride is floored at one word to match every presence-word helper in
-/// the crate (`presence_bitmap_words`, `presence_by_region_words`,
-/// `regex_admission_presence_words`): a zero stride would alias every region
-/// onto row 0 and report a batch-wide bitmap as a per-region one.
-///
-/// The `rs_mid - 1` arm can underflow to `u32::MAX` on the rejected `select`
-/// branch; it is discarded harmlessly (`rs_mid == 0` only when
-/// `rs_lo == rs_hi == 0`, where `region_starts[0] == 0 <= rs_pos` forces the
-/// `cond` arm). One source of truth for the lookup keeps the builders
-/// bit-identical by construction.
-pub(in crate::pattern) fn region_search_prologue_nodes(
-    region_starts: &str,
-    region_base: &str,
-    presence_words: u32,
-    log2_max_regions: u32,
-) -> Vec<Node> {
-    vec![
-        Node::let_bind(
-            "rs_pos",
-            Expr::add(Expr::var("i"), Expr::load(region_base, Expr::u32(0))),
-        ),
-        Node::let_bind("rs_lo", Expr::u32(0)),
-        Node::let_bind(
-            "rs_hi",
-            Expr::sub(Expr::buf_len(region_starts), Expr::u32(1)),
-        ),
-        Node::loop_for(
-            "rs_step",
-            Expr::u32(0),
-            Expr::u32(log2_max_regions.max(1)),
-            vec![
-                Node::let_bind(
-                    "rs_mid",
-                    Expr::div(
-                        Expr::add(
-                            Expr::add(Expr::var("rs_lo"), Expr::var("rs_hi")),
-                            Expr::u32(1),
-                        ),
-                        Expr::u32(2),
-                    ),
-                ),
-                Node::let_bind(
-                    "rs_cond",
-                    Expr::le(
-                        Expr::load(region_starts, Expr::var("rs_mid")),
-                        Expr::var("rs_pos"),
-                    ),
-                ),
-                Node::assign(
-                    "rs_lo",
-                    Expr::select(
-                        Expr::var("rs_cond"),
-                        Expr::var("rs_mid"),
-                        Expr::var("rs_lo"),
-                    ),
-                ),
-                Node::assign(
-                    "rs_hi",
-                    Expr::select(
-                        Expr::var("rs_cond"),
-                        Expr::var("rs_hi"),
-                        Expr::sub(Expr::var("rs_mid"), Expr::u32(1)),
-                    ),
-                ),
-            ],
-        ),
-        Node::let_bind(
-            "rs_base",
-            Expr::mul(Expr::var("rs_lo"), Expr::u32(presence_words.max(1))),
-        ),
-    ]
-}
-
-/// Walk the flat `output_records` span bound by [`ac_output_span_nodes`],
-/// binding `pattern_id` for each record before running `per_record`.
-///
-/// Every AC emit path iterates this one span identically and differs only in
-/// what it does with `pattern_id`, so the record layout is read in one place.
-/// That also makes this the one place `out_end`, which comes from the compiled
-/// table's `output_offsets`, is clamped to the extent it indexes.
-pub(in crate::pattern) fn output_record_loop_node(
-    output_records: &str,
-    per_record: Vec<Node>,
-) -> Node {
-    let mut body = vec![Node::let_bind(
-        "pattern_id",
-        Expr::load(output_records, Expr::var("out_idx")),
-    )];
-    body.extend(per_record);
-    Node::loop_for(
-        "out_idx",
-        Expr::var("out_begin"),
-        clamped_by_extents(Expr::var("out_end"), output_records, []),
-        body,
-    )
-}
-
-/// Name a lane binds to whether its current record-loop iteration addresses a
-/// real record. Every emit that runs under
-/// [`uniform_output_record_loop_nodes`] gates its writes on it.
-pub(in crate::pattern) const RECORD_ACTIVE: &str = "out_active";
-
-/// Subgroup-uniform counterpart of [`output_record_loop_node`], for an emit
-/// that runs a subgroup collective per record.
-///
-/// A collective reads a value out of a peer lane, so every lane of the
-/// subgroup has to reach it with that value bound. The record span is
-/// per-lane, so under [`output_record_loop_node`] a lane whose span is empty
-/// never enters the body, and the peer read of a name that lane never bound
-/// has no result at all: the program is not merely wrong, it cannot be
-/// evaluated. This walks `subgroup_max(span)` iterations in every lane of the
-/// subgroup and binds [`RECORD_ACTIVE`] to `out_k < out_span`, which puts the
-/// collective in uniform control flow and leaves the emit predicate to
-/// `per_record`.
-///
-/// The record index is folded to zero on an inactive iteration, so a lane
-/// walking another lane's trip count reads a slot that exists and emits
-/// nothing.
-///
-/// `active` names a caller predicate that says whether the span itself is
-/// real. A walk that runs its steps uniformly reaches this with a span left
-/// over from a step its lane never took, and zeroing the span here keeps
-/// [`ac_output_span_nodes`] the only writer of `out_begin` and `out_end`.
-pub(in crate::pattern) fn uniform_output_record_loop_nodes(
-    output_records: &str,
-    active: Option<Expr>,
-    per_record: Vec<Node>,
-) -> Vec<Node> {
-    let span_end = Expr::var("out_span_end");
-    let begin = Expr::var("out_begin");
-    let mut body = vec![
-        Node::let_bind(
-            RECORD_ACTIVE,
-            Expr::lt(Expr::var("out_k"), Expr::var("out_span")),
-        ),
-        Node::let_bind(
-            "out_idx",
-            bounded_index_when(
-                Expr::var(RECORD_ACTIVE),
-                Expr::add(begin.clone(), Expr::var("out_k")),
-            ),
-        ),
-        Node::let_bind(
-            "pattern_id",
-            Expr::load(output_records, Expr::var("out_idx")),
-        ),
-    ];
-    body.extend(per_record);
-    vec![
-        Node::let_bind(
-            "out_span_end",
-            clamped_by_extents(Expr::var("out_end"), output_records, []),
-        ),
-        Node::let_bind(
-            "out_span",
-            match active {
-                Some(active) => Expr::select(
-                    Expr::and(active, Expr::lt(begin.clone(), span_end.clone())),
-                    Expr::sub(span_end, begin),
-                    Expr::u32(0),
-                ),
-                None => Expr::select(
-                    Expr::lt(begin.clone(), span_end.clone()),
-                    Expr::sub(span_end, begin),
-                    Expr::u32(0),
-                ),
-            },
-        ),
-        Node::let_bind("out_uniform", Expr::subgroup_max(Expr::var("out_span"))),
-        Node::loop_for("out_k", Expr::u32(0), Expr::var("out_uniform"), body),
-    ]
-}
-
-/// Set this pattern's bit in a per-pattern bitset:
-/// `bitset[row_base + (pattern_id >> 5)] |= 1u32 << (pattern_id & 31)`.
-///
-/// `row_base` names the per-region row offset bound by
-/// [`region_search_prologue_nodes`]; `None` writes a single batch-wide bitmap.
-/// `prev_binding` receives the previous value, discarded, so the atomic
-/// read-modify-write is emitted as a side-effecting statement, the same idiom as
-/// `append_match`'s `_vyre_match_slot`. Setting the bit is idempotent, which is
-/// what lets concurrent lanes hitting one pattern skip the counter and the
-/// per-hit serialization the triple-append path pays.
-pub(in crate::pattern) fn pattern_bitset_or_node(
-    bitset: &str,
-    row_base: Option<&str>,
-    prev_binding: &str,
-) -> Node {
-    let word = Expr::shr(Expr::var("pattern_id"), Expr::u32(5));
-    let word = match row_base {
-        Some(base) => Expr::add(Expr::var(base), word),
-        None => word,
-    };
-    Node::let_bind(
-        prev_binding,
-        Expr::atomic_or(
-            bitset,
-            word,
-            Expr::shl(
-                Expr::u32(1),
-                Expr::bitand(Expr::var("pattern_id"), Expr::u32(31)),
-            ),
-        ),
-    )
-}
-
-/// [`pattern_bitset_or_node`] into the presence bitmap, under the binding name
-/// every presence builder in `scan/` emits.
-pub(in crate::pattern) fn presence_bit_write_node(presence: &str, row_base: Option<&str>) -> Node {
-    pattern_bitset_or_node(presence, row_base, "_vyre_presence_prev")
-}
-
-/// Bind `pat_len` and the match start for the pattern accepted at `scan_end`.
-///
-/// The subtraction is floored at zero: a pattern longer than the window walked
-/// so far would wrap, and the emitted span has to stay inside the haystack.
-///
-/// `pattern_id` is an `output_records` entry, so the length read is folded into
-/// `pattern_lengths`, which holds one length per compiled pattern.
-pub(in crate::pattern) fn match_span_start_nodes(pattern_lengths: &str) -> Vec<Node> {
-    vec![
-        Node::let_bind(
-            "pat_len",
-            Expr::load(
-                pattern_lengths,
-                bounded_index(Expr::var("pattern_id"), Expr::buf_len(pattern_lengths)),
-            ),
-        ),
-        Node::let_bind(
-            "match_start",
-            Expr::select(
-                Expr::lt(Expr::var("scan_end"), Expr::var("pat_len")),
-                Expr::u32(0),
-                Expr::sub(Expr::var("scan_end"), Expr::var("pat_len")),
-            ),
-        ),
-    ]
-}
-
-/// Bounded walk whose `matched` nodes run only for candidates that accept
-/// (`out_begin < out_end`), so a miss pays the walk and nothing else.
-///
-/// The region-attributed builders gate on this because the region binary search
-/// is pure overhead for a position with no records.
-pub(in crate::pattern) fn bounded_walk_matched_nodes(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    max_pattern_len: u32,
-    matched: Vec<Node>,
-) -> Vec<Node> {
-    let mut nodes =
-        bounded_walk_prologue_nodes(haystack, transitions, output_offsets, max_pattern_len);
-    nodes.push(Node::if_then(
-        Expr::lt(Expr::var("out_begin"), Expr::var("out_end")),
-        matched,
-    ));
-    nodes
 }
 
 /// FUSED presence-AND-positions region replay: one bounded-window DFA walk that, at

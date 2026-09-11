@@ -38,7 +38,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use vyre_foundation::match_result::ByteRange;
 
 use crate::pattern::builders::append_match;
-use crate::pattern::classic_ac::bounded_ranges::{
+use crate::pattern::classic_ac::bounded_ranges::emit::{
     output_record_loop_node, pattern_bitset_or_node, presence_bit_write_node,
 };
 #[cfg(test)]

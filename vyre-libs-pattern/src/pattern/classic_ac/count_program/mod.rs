@@ -6,9 +6,8 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use crate::pattern::builders::load_packed_byte_expr;
 
-use super::bounded_ranges::{
-    bounded_walk_prologue_nodes, candidate_end_gate_nodes, classic_ac_dfa_buffer_decls,
-};
+use super::bounded_ranges::walk::bounded_walk_prologue_nodes;
+use super::bounded_ranges::{candidate_end_gate_nodes, classic_ac_dfa_buffer_decls};
 use crate::pattern::CompiledDfa;
 
 mod suffix2;

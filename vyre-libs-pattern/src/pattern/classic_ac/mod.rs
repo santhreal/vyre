@@ -66,8 +66,8 @@ pub(crate) use count_program::{
 /// step is re-exported, for `dfa::aho_corasick_programs`; every other scan-level
 /// builder reaches `bounded_ranges` directly rather than through a second
 /// path.
-pub(in crate::pattern) use bounded_ranges::ac_advance_state_node;
-use bounded_ranges::ac_output_span_nodes;
+pub(in crate::pattern) use bounded_ranges::walk::ac_advance_state_node;
+use bounded_ranges::walk::ac_output_span_nodes;
 
 /// A classic AC automaton with precomputed flat output links.
 ///
@@ -186,7 +186,7 @@ pub fn classic_ac_program(
         ),
     ];
     per_position.extend(ac_output_span_nodes(output_offsets));
-    per_position.push(bounded_ranges::output_record_loop_node(
+    per_position.push(bounded_ranges::emit::output_record_loop_node(
         output_records,
         vec![
             Node::let_bind(

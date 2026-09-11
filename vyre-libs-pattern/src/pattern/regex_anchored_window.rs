@@ -36,8 +36,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use vyre_foundation::match_result::ByteRange;
 
 use crate::pattern::builders::append_match;
-use crate::pattern::classic_ac::bounded_ranges::{
-    ac_output_span_nodes, ac_transition_step_nodes, output_record_loop_node,
+use crate::pattern::classic_ac::bounded_ranges::emit::output_record_loop_node;
+use crate::pattern::classic_ac::bounded_ranges::walk::{
+    ac_output_span_nodes, ac_transition_step_nodes,
 };
 
 /// Collapse raw accepting ends to one longest match per `(start, pattern_id)`.

@@ -33,9 +33,12 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 #[cfg(test)]
 use crate::pattern::CompiledDfa;
 
-use crate::pattern::classic_ac::bounded_ranges::{
-    ac_output_span_nodes, ac_transition_step_nodes, classic_ac_dfa_buffer_decls,
+use crate::pattern::classic_ac::bounded_ranges::classic_ac_dfa_buffer_decls;
+use crate::pattern::classic_ac::bounded_ranges::emit::{
     output_record_loop_node, presence_bit_write_node, region_search_prologue_nodes,
+};
+use crate::pattern::classic_ac::bounded_ranges::walk::{
+    ac_output_span_nodes, ac_transition_step_nodes,
 };
 #[cfg(test)]
 use crate::pattern::regex_anchored_window::AnchoredWindowValidator;

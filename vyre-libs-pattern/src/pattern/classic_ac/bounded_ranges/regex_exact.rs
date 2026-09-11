@@ -8,11 +8,11 @@ use crate::pattern::regex_dfa::REGEX_DFA_OP_ID;
 use vyre_foundation::composition::wrap_child_region;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Ident, Node, Program};
 
-use super::{
-    ac_output_span_nodes, ac_output_span_nodes_bound, ac_transition_step_nodes,
-    output_record_loop_node, uniform_output_record_loop_nodes, AcInputBindings, WalkBinding,
-    RECORD_ACTIVE,
+use super::emit::{output_record_loop_node, uniform_output_record_loop_nodes, RECORD_ACTIVE};
+use super::walk::{
+    ac_output_span_nodes, ac_output_span_nodes_bound, ac_transition_step_nodes, WalkBinding,
 };
+use super::AcInputBindings;
 use crate::pattern::builders::{append_match, append_match_subgroup};
 use vyre_foundation::composition::bounded_index_when;
 
