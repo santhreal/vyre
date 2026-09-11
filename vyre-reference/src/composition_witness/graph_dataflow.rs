@@ -266,6 +266,7 @@ pub fn try_ddnnf_evaluate_witness_into(
                     }
                 }
             }
+            // The scrutinee is a numeric d-DNNF node tag, not an enum.
             _ => {}
         }
     }
@@ -304,6 +305,7 @@ pub fn try_ddnnf_evaluate_witness_into(
                 }
                 accumulator
             }
+            // The scrutinee is a numeric d-DNNF node tag, not an enum.
             _ => 0,
         };
     }

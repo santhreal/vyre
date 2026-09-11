@@ -23,6 +23,8 @@ pub(super) fn binop_f32(op: BinOp, left: f32, right: f32) -> Result<Value, crate
         BinOp::Gt => Ok(Value::Bool(left > right)),
         BinOp::Le => Ok(Value::Bool(left <= right)),
         BinOp::Ge => Ok(Value::Bool(left >= right)),
+        // `UnOp` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => Err(ReferenceError::incomplete_dispatch_semantics(format!(
             "binary op `{op:?}` is not defined for f32 operands. Fix: use arithmetic or comparison ops only for float primitives."
         ))),
@@ -61,6 +63,8 @@ pub(super) fn unop_f32(op: &UnOp, value: f32) -> Result<Value, crate::ReferenceE
         UnOp::Tanh => Ok(wrap(ieee754::canonical_tanh(value))),
         UnOp::Sinh => Ok(wrap(ieee754::canonical_sinh(value))),
         UnOp::Cosh => Ok(wrap(ieee754::canonical_cosh(value))),
+        // `BinOp` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => Err(ReferenceError::incomplete_dispatch_semantics(format!(
             "unary op `{op:?}` is not defined for f32 operands. Fix: use numeric or IEEE-754 classification ops only for float primitives."
         ))),

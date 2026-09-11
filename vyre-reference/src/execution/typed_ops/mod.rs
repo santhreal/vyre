@@ -58,6 +58,8 @@ fn u32_shared_binop(op: &BinOp, left: u32, right: u32) -> Option<Value> {
         BinOp::SaturatingSub => Some(Value::U32(left.saturating_sub(right))),
         BinOp::SaturatingMul => Some(Value::U32(left.saturating_mul(right))),
         BinOp::MulHigh => Some(Value::U32(((left as u64 * right as u64) >> 32) as u32)),
+        // `BinOp` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => None,
     }
 }
@@ -72,6 +74,8 @@ fn i32_shared_binop(op: &BinOp, left: i32, right: i32) -> Option<Value> {
         BinOp::SaturatingAdd => left.saturating_add(right),
         BinOp::SaturatingSub => left.saturating_sub(right),
         BinOp::SaturatingMul => left.saturating_mul(right),
+        // `BinOp` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => return None,
     };
     Some(Value::I32(v))
@@ -88,6 +92,8 @@ fn u64_shared_binop(op: &BinOp, left: u64, right: u64) -> Option<Value> {
         BinOp::SaturatingSub => left.saturating_sub(right),
         BinOp::SaturatingMul => left.saturating_mul(right),
         BinOp::MulHigh => ((left as u128 * right as u128) >> 64) as u64,
+        // `BinOp` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => return None,
     };
     Some(Value::U64(v))
@@ -141,6 +147,8 @@ pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, crate::Refer
                 ))),
             };
         }
+        // `UnOp` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => {}
     }
     match operand {
@@ -166,6 +174,8 @@ fn unpack_shift_mask(op: &UnOp) -> Option<(u32, u32)> {
         UnOp::Unpack4High => Some((4, 0x0F)),
         UnOp::Unpack8Low => Some((0, 0xFF)),
         UnOp::Unpack8High => Some((24, 0xFF)),
+        // `UnOp` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => None,
     }
 }
@@ -289,6 +299,8 @@ macro_rules! int_bin_helpers {
                 BinOp::Ge => Ok($ge(left, right)),
                 BinOp::And => Ok($and(left, right)),
                 BinOp::Or => Ok($or(left, right)),
+                // `BinOp` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+                // oracle_matches_are_exhaustive holds the named set to the declaration.
                 _ => Err(ReferenceError::incomplete_dispatch_semantics(format!(
                     "unsupported IR `unknown BinOp variant: {op:?}`. Fix: update vyre-reference for the new foundation IR variant."
                 ))),
@@ -348,6 +360,8 @@ macro_rules! int_un_helpers {
                 UnOp::Clz => Ok($clz(value)),
                 UnOp::Ctz => Ok($ctz(value)),
                 UnOp::ReverseBits => Ok($reverse_bits(value)),
+                // `UnOp` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+                // oracle_matches_are_exhaustive holds the named set to the declaration.
                 _ => Err(ReferenceError::incomplete_dispatch_semantics(format!(
                     "unsupported IR `unknown UnOp variant: {op:?}`. Fix: update vyre-reference for the new foundation IR variant."
                 ))),
@@ -553,6 +567,8 @@ fn binop_bool(op: BinOp, left: bool, right: bool) -> Result<Value, crate::Refere
         BinOp::Ne => Ok(Value::Bool(left != right)),
         BinOp::And => Ok(Value::Bool(left && right)),
         BinOp::Or => Ok(Value::Bool(left || right)),
+        // `BinOp` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => Err(ReferenceError::incomplete_dispatch_semantics(format!(
             "binary op `{op:?}` is not defined for bool operands. Fix: cast bools to u32 before numeric or bitwise operations."
         ))),
@@ -562,6 +578,8 @@ fn binop_bool(op: BinOp, left: bool, right: bool) -> Result<Value, crate::Refere
 fn unop_bool(op: &UnOp, value: bool) -> Result<Value, crate::ReferenceError> {
     match op {
         UnOp::LogicalNot => Ok(Value::Bool(!value)),
+        // `UnOp` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => Err(ReferenceError::incomplete_dispatch_semantics(format!(
             "unary op `{op:?}` is not defined for bool operands. Fix: cast bool to u32 before numeric or bitwise unary operations."
         ))),

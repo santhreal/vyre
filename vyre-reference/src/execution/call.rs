@@ -222,6 +222,7 @@ fn scalar_width(ty: &str) -> Option<usize> {
         "u32" | "i32" | "f32" | "vec-count" => Some(4),
         "u64" | "i64" | "f64" => Some(8),
         "u8" | "i8" | "bool" => Some(1),
+        // The scrutinee is a `&str` type spelling, an open set.
         _ => None,
     }
 }

@@ -59,17 +59,44 @@ pub(crate) enum LaneOrder {
     /// forward-vs-reversed comparison of a reversal-symmetric program. A rotation is
     /// asymmetric, so it separates lane identity from step position for real.
     Rotated(u32),
+    /// Workgroups stepped in reverse while the invocations inside each workgroup
+    /// keep their forward order. Only the STEPPING order changes; every invocation
+    /// keeps its true global/local ids.
+    ///
+    /// [`Reversed`](LaneOrder::Reversed) and [`Rotated`](LaneOrder::Rotated)
+    /// permute both axes together, so a program whose lanes are disjoint within a
+    /// workgroup but conflicting across workgroups has the same last writer under
+    /// every one of them once the two permutations cancel. Reversing only the
+    /// workgroup axis separates the two, which is the only order that surfaces a
+    /// cross-workgroup write-write conflict on a shared slot.
+    WorkgroupReversed,
+}
+
+/// Which dispatch axis a permutation is being applied to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum StepAxis {
+    /// The workgroup list of the whole dispatch.
+    Workgroup,
+    /// The invocation list inside one workgroup.
+    Lane,
 }
 
 /// Permute a dispatch-order list in place according to `lane_order`.
 ///
 /// One home for the permutation so the workgroup list and the per-workgroup
-/// invocation list cannot drift into stepping different orders.
-fn apply_step_order<T>(items: &mut [T], lane_order: LaneOrder) {
-    match lane_order {
-        LaneOrder::Forward => {}
-        LaneOrder::Reversed => items.reverse(),
-        LaneOrder::Rotated(by) => {
+/// invocation list cannot drift into stepping different orders. `axis` states
+/// which of the two lists is being permuted, because an order may move one axis
+/// without the other.
+///
+/// The match has no catch-all arm, so a new order states its own permutation on
+/// both axes rather than borrowing the previous variant's.
+fn apply_step_order<T>(items: &mut [T], lane_order: LaneOrder, axis: StepAxis) {
+    match (lane_order, axis) {
+        (LaneOrder::Forward, StepAxis::Workgroup | StepAxis::Lane)
+        | (LaneOrder::WorkgroupReversed, StepAxis::Lane) => {}
+        (LaneOrder::Reversed, StepAxis::Workgroup | StepAxis::Lane)
+        | (LaneOrder::WorkgroupReversed, StepAxis::Workgroup) => items.reverse(),
+        (LaneOrder::Rotated(by), StepAxis::Workgroup | StepAxis::Lane) => {
             if !items.is_empty() {
                 items.rotate_left(by as usize % items.len());
             }
@@ -86,8 +113,44 @@ fn apply_step_order<T>(items: &mut [T], lane_order: LaneOrder) {
 /// evaluates the fenced program the caller submitted rather than the segments
 /// a backend without a cooperative launch would cut it into.
 struct GridFenceHold<'a> {
+    /// Workgroup coordinates the held lanes belong to.
+    coords: [u32; 3],
     invocations: Vec<HashmapInvocation<'a>>,
     workgroup: FxHashMap<String, Buffer>,
+}
+
+/// Record one buffer access against the active race exploration.
+///
+/// The visibility scope and storage domain come from where the buffer resides:
+/// a workgroup-local buffer is coherent across the lanes of one workgroup, and
+/// a storage buffer is coherent across the device. Outside an exploration this
+/// records nothing, so an ordinary evaluation pays one thread-local read.
+pub(crate) fn note_buffer_access(
+    memory: &HashmapMemory,
+    buffer: &str,
+    index: u32,
+    invocation: &HashmapInvocation<'_>,
+    kind: crate::interleaving::MemoryAccessKind,
+) {
+    let (scope, domain) = if memory.workgroup.contains_key(buffer) {
+        (
+            vyre_foundation::ir::MemoryScope::Workgroup,
+            vyre_foundation::ir::StorageDomain::WorkgroupLocal,
+        )
+    } else {
+        (
+            vyre_foundation::ir::MemoryScope::Device,
+            vyre_foundation::ir::StorageDomain::DeviceGlobal,
+        )
+    };
+    crate::interleaving::note_access(
+        buffer,
+        u64::from(index),
+        invocation.ids.global,
+        kind,
+        scope,
+        domain,
+    );
 }
 
 /// True when the oracle RETURNS this buffer among its outputs. This is the SINGLE
@@ -357,7 +420,7 @@ pub(crate) fn run_hashmap_reference(
             }
         }
     }
-    apply_step_order(&mut wg_coords, lane_order);
+    apply_step_order(&mut wg_coords, lane_order, StepAxis::Workgroup);
     // A whole-grid fence orders every invocation in the dispatch. Each
     // workgroup runs until its lanes are done or suspended on the fence, the
     // suspended state is held, and no workgroup resumes until the whole grid
@@ -368,11 +431,12 @@ pub(crate) fn run_hashmap_reference(
     let mut suspended: Vec<GridFenceHold<'_>> = Vec::new();
     for &wg in &wg_coords {
         memory.reset_workgroup(program)?;
+        crate::interleaving::note_workgroup(wg);
         let mut invocations = create_invocations(program, wg, entry)?;
         // Permute the STEP order only; each invocation retains its true
         // global/local ids and linear_local_index (fields move with the
         // element), so semantics are unchanged for a race-free program.
-        apply_step_order(&mut invocations, lane_order);
+        apply_step_order(&mut invocations, lane_order, StepAxis::Lane);
         let fenced = run_invocations(
             &mut memory,
             &mut invocations,
@@ -381,21 +445,28 @@ pub(crate) fn run_hashmap_reference(
         )?;
         if fenced {
             suspended.push(GridFenceHold {
+                coords: wg,
                 invocations,
                 workgroup: std::mem::take(&mut memory.workgroup),
             });
         }
     }
     while !suspended.is_empty() {
+        // Every workgroup that is still resident has now reached the fence, so
+        // the fence generation advances once for the whole grid before any lane
+        // resumes past it.
+        crate::interleaving::note_grid_fence();
         let mut still_fenced = Vec::with_capacity(suspended.len());
         for hold in suspended {
             let GridFenceHold {
+                coords,
                 mut invocations,
                 workgroup,
             } = hold;
             // The lanes of this workgroup are still resident, so they resume
             // on the shared memory they left rather than a zeroed copy.
             memory.workgroup = workgroup;
+            crate::interleaving::note_workgroup(coords);
             for invocation in &mut invocations {
                 invocation.waiting_at_grid_fence = false;
             }
@@ -407,6 +478,7 @@ pub(crate) fn run_hashmap_reference(
             )?;
             if fenced {
                 still_fenced.push(GridFenceHold {
+                    coords,
                     invocations,
                     workgroup: std::mem::take(&mut memory.workgroup),
                 });
@@ -499,6 +571,13 @@ fn eval_expr(
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
             )?;
+            note_buffer_access(
+                memory,
+                buffer.as_str(),
+                idx,
+                invocation,
+                crate::interleaving::MemoryAccessKind::Read,
+            );
             oob::load(resolve_buffer(memory, buffer)?, idx)
         }
         Expr::BufLen { buffer } => Ok(Value::U32(resolve_buffer(memory, buffer)?.len())),
@@ -655,13 +734,14 @@ fn eval_expr(
             index,
             expected,
             value,
-            ordering: _,
+            ordering,
         } => eval_atomic(
             *op,
             buffer,
             index,
             expected.as_deref(),
             value,
+            *ordering,
             invocation,
             memory,
             #[cfg(feature = "subgroup-ops")]
@@ -709,6 +789,8 @@ fn eval_expr(
         // operator is not read.
         #[cfg(not(feature = "subgroup-ops"))]
         Expr::SubgroupReduce { op: _, value } => eval_expr(value, invocation, memory),
+        // `Expr` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => Err(ReferenceError::new("hashmap reference interpreter encountered an unknown expression variant. Fix: add explicit reference semantics for the new ExprNode before dispatch.")),
     }
 }
@@ -719,6 +801,7 @@ fn eval_atomic(
     index: &Expr,
     expected: Option<&Expr>,
     value: &Expr,
+    ordering: vyre_foundation::ir::MemoryOrdering,
     invocation: &mut HashmapInvocation<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
@@ -750,6 +833,22 @@ fn eval_atomic(
             "atomic value cannot be represented as u32. Fix: use a scalar u32-compatible argument.",
         )
     })?;
+    note_buffer_access(
+        memory,
+        buffer,
+        idx,
+        invocation,
+        crate::interleaving::MemoryAccessKind::Atomic {
+            // `GridSync` is barrier-only and not a valid atomic ordering, so an
+            // atomic that states it is recorded at the strongest ordering the
+            // closed atomic model has rather than at a relaxed default that
+            // would under-report the synchronization the program asked for.
+            ordering: ordering
+                .to_atomic_ordering()
+                .unwrap_or(vyre_foundation::ir::AtomicOrdering::SeqCst),
+            scope: ordering.memory_scope(),
+        },
+    );
     let target = atomic_buffer_mut(memory, buffer)?;
     let Some(old) = oob::atomic_load(target, idx)? else {
         return Ok(Value::U32(0));

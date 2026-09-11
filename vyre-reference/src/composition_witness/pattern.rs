@@ -33,6 +33,7 @@ pub fn bracket_match_witness_into(
                     output[index] = open;
                 }
             }
+            // The scrutinee is a numeric bracket tag, not an enum.
             _ => {}
         }
     }

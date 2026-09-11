@@ -151407,7 +151407,7 @@ seam = "reference-semantics"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_backend_extension"
 stability = "extension"
-exported_item_count = 1084
+exported_item_count = 1131
 
   [[package.item]]
   path = "impl core::cmp::Eq for vyre_reference::composition_witness::RuleConditionWitness"
@@ -151522,6 +151522,13 @@ exported_item_count = 1084
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "impl core::fmt::Display for vyre_reference::RaceFinding"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "impl core::fmt::Display for vyre_reference::ReferenceError"
   kind = "impl"
   stability = "extension"
@@ -151592,6 +151599,13 @@ exported_item_count = 1084
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "impl vyre_reference::RaceExplorationReport"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "impl vyre_reference::ReferenceBudget"
   kind = "impl"
   stability = "extension"
@@ -151656,6 +151670,13 @@ exported_item_count = 1084
 
   [[package.item]]
   path = "impl vyre_reference::composition_witness::AmgVcycleScratchWitness"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "impl vyre_reference::composition_witness::CompositionWitnessFamily"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -151991,6 +152012,13 @@ exported_item_count = 1084
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_reference::MAX_RACE_EXPLORATION_ORDERS: usize"
+  kind = "const"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_reference::MemoryAccessKind"
   kind = "enum"
   stability = "extension"
@@ -152061,6 +152089,13 @@ exported_item_count = 1084
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_reference::MemoryAccessRecord::grid_phase: u64"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_reference::MemoryAccessRecord::invocation: [u32; 3]"
   kind = "field"
   stability = "extension"
@@ -152083,6 +152118,13 @@ exported_item_count = 1084
 
   [[package.item]]
   path = "vyre_reference::MemoryAccessRecord::storage_domain: vyre_foundation::memory_model::storage::StorageDomain"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::MemoryAccessRecord::workgroup: [u32; 3]"
   kind = "field"
   stability = "extension"
   feature = "unconditional"
@@ -152175,6 +152217,139 @@ exported_item_count = 1084
   [[package.item]]
   path = "vyre_reference::REFERENCE_REQUEST_SCHEMA_VERSION: u32"
   kind = "const"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceExplorationReport"
+  kind = "struct"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceExplorationReport::findings: alloc::vec::Vec<vyre_reference::RaceFinding>"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceExplorationReport::is_race_free(&self) -> bool"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceExplorationReport::orders_explored: usize"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceExplorationReport::steps_executed: u64"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceFinding"
+  kind = "enum"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceFinding::ScheduleDisagreement"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceFinding::ScheduleDisagreement::first_order: alloc::string::String"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceFinding::ScheduleDisagreement::output_index: usize"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceFinding::ScheduleDisagreement::second_order: alloc::string::String"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceFinding::UnsynchronizedAccess"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceFinding::UnsynchronizedAccess::barrier_phase: u64"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceFinding::UnsynchronizedAccess::buffer: alloc::string::String"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceFinding::UnsynchronizedAccess::first: [u32; 3]"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceFinding::UnsynchronizedAccess::first_kind: vyre_reference::MemoryAccessKind"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceFinding::UnsynchronizedAccess::index: u64"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceFinding::UnsynchronizedAccess::second: [u32; 3]"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceFinding::UnsynchronizedAccess::second_kind: vyre_reference::MemoryAccessKind"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::RaceFinding::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result"
+  kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -152845,6 +153020,13 @@ exported_item_count = 1084
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>::declared_race_exploration_orders(&self) -> usize"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_reference::ReferenceRequest<'a>::execute(&self) -> core::result::Result<vyre_reference::StrictExecutionResult, vyre_reference::ReferenceError>"
   kind = "fn"
   stability = "extension"
@@ -152853,6 +153035,13 @@ exported_item_count = 1084
 
   [[package.item]]
   path = "vyre_reference::ReferenceRequest<'a>::execute_permissive(&self) -> core::result::Result<vyre_reference::DiagnosticPermissiveReport, vyre_reference::ReferenceError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ReferenceRequest<'a>::explore_races(&self) -> core::result::Result<vyre_reference::RaceExplorationReport, vyre_reference::ReferenceError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -152957,6 +153146,13 @@ exported_item_count = 1084
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_reference::ShadowMemory::advance_grid_phase(&mut self)"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_reference::ShadowMemory::current_barrier_phase(&self) -> u64"
   kind = "fn"
   stability = "extension"
@@ -152964,7 +153160,28 @@ exported_item_count = 1084
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_reference::ShadowMemory::current_grid_phase(&self) -> u64"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ShadowMemory::enter_workgroup(&mut self, workgroup: [u32; 3])"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_reference::ShadowMemory::new() -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::ShadowMemory::record_access(&mut self, buffer: &str, index: u64, invocation: [u32; 3], kind: vyre_reference::MemoryAccessKind, scope: vyre_foundation::memory_model::scope::MemoryScope, domain: vyre_foundation::memory_model::storage::StorageDomain) -> core::option::Option<vyre_reference::RaceFinding>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -153405,6 +153622,13 @@ exported_item_count = 1084
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_reference::composition_witness::COMPOSITION_WITNESS_FAMILIES: &[vyre_reference::composition_witness::CompositionWitnessFamily]"
+  kind = "const"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_reference::composition_witness::CRC32_INIT_WITNESS: u32"
   kind = "const"
   stability = "extension"
@@ -153414,6 +153638,41 @@ exported_item_count = 1084
   [[package.item]]
   path = "vyre_reference::composition_witness::CRC32_POLY_WITNESS: u32"
   kind = "const"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::CompositionWitnessFamily"
+  kind = "struct"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::CompositionWitnessFamily::family: &'static str"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::CompositionWitnessFamily::module(&self) -> core::option::Option<&'static str>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::CompositionWitnessFamily::probe(&self) -> core::option::Option<vyre_reference::composition_witness::WitnessProbe>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::CompositionWitnessFamily::witness: vyre_reference::composition_witness::FamilyWitness"
+  kind = "field"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -153736,6 +153995,48 @@ exported_item_count = 1084
   [[package.item]]
   path = "vyre_reference::composition_witness::FNV1A64_PRIME_WITNESS: u64"
   kind = "const"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::FamilyWitness"
+  kind = "enum"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::FamilyWitness::Absent"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::FamilyWitness::Absent::reason: &'static str"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::FamilyWitness::Owned"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::FamilyWitness::Owned::module: &'static str"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::FamilyWitness::Owned::probe: vyre_reference::composition_witness::WitnessProbe"
+  kind = "field"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -154107,6 +154408,13 @@ exported_item_count = 1084
   [[package.item]]
   path = "vyre_reference::composition_witness::LrProduction::rhs_len: u32"
   kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::MODULES_WITHOUT_A_CATALOG_FAMILY: &[(&str, &str)]"
+  kind = "const"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -154674,6 +154982,13 @@ exported_item_count = 1084
   [[package.item]]
   path = "vyre_reference::composition_witness::WitnessPostProcessedMatch::start: u32"
   kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::WitnessProbe = fn() -> u64"
+  kind = "type"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -158194,6 +158509,20 @@ exported_item_count = 1084
 
   [[package.item]]
   path = "vyre_reference::composition_witness::whitespace_classify_word_witness_into(words_in: &[u32], out: &mut alloc::vec::Vec<u32>)"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::witness_families() -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &'static vyre_reference::composition_witness::CompositionWitnessFamily>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::composition_witness::witness_family(family: &str) -> core::option::Option<&'static vyre_reference::composition_witness::CompositionWitnessFamily>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"

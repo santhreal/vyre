@@ -16,6 +16,7 @@ impl core::error::Error for vyre_reference::composition_witness::Base64DecodeWit
 impl core::error::Error for vyre_reference::composition_witness::FrontierTypedPlanWitnessError
 impl core::error::Error for vyre_reference::composition_witness::ParseLrWitnessError
 impl core::error::Error for vyre_reference::composition_witness::WitnessPostProcessError
+impl core::fmt::Display for vyre_reference::RaceFinding
 impl core::fmt::Display for vyre_reference::ReferenceError
 impl core::fmt::Display for vyre_reference::ReferenceInputMismatch
 impl core::fmt::Display for vyre_reference::composition_witness::Base64DecodeWitnessError
@@ -26,6 +27,7 @@ impl inventory::Collect for vyre_reference::ReferenceFacet
 impl vyre_foundation::diagnostics::ToDiagnostic for vyre_reference::ReferenceError
 impl vyre_reference::Buffer
 impl vyre_reference::OobReport
+impl vyre_reference::RaceExplorationReport
 impl vyre_reference::ReferenceBudget
 impl vyre_reference::ReferenceError
 impl vyre_reference::ReferenceErrorClass
@@ -36,6 +38,7 @@ impl vyre_reference::ShadowMemory
 impl vyre_reference::WorkloadEnvelope
 impl vyre_reference::composition_witness::AmgSolveScratchWitness
 impl vyre_reference::composition_witness::AmgVcycleScratchWitness
+impl vyre_reference::composition_witness::CompositionWitnessFamily
 impl vyre_reference::composition_witness::DnnfDag
 impl vyre_reference::composition_witness::ExplodedIfdsScratchWitness
 impl vyre_reference::composition_witness::FiniteCategory
@@ -66,9 +69,12 @@ pub const fn vyre_reference::ReferenceRequest<'a>::with_min_dispatch_elements(se
 pub const fn vyre_reference::ReferenceRequest<'a>::with_schedule_policy(self, policy: vyre_reference::DeterministicSchedulePolicy) -> Self
 pub const fn vyre_reference::ReferenceRequest<'a>::with_workload_envelope(self, envelope: vyre_reference::WorkloadEnvelope) -> Self
 pub const fn vyre_reference::ShadowMemory::current_barrier_phase(&self) -> u64
+pub const fn vyre_reference::ShadowMemory::current_grid_phase(&self) -> u64
 pub const fn vyre_reference::WorkloadEnvelope::for_workgroup_size(size: [u32; 3]) -> Self
 pub const fn vyre_reference::WorkloadEnvelope::with_grid(self, grid: [u32; 3]) -> Self
 pub const fn vyre_reference::WorkloadEnvelope::with_min_dispatch_elements(self, min: u32) -> Self
+pub const fn vyre_reference::composition_witness::CompositionWitnessFamily::module(&self) -> core::option::Option<&'static str>
+pub const fn vyre_reference::composition_witness::CompositionWitnessFamily::probe(&self) -> core::option::Option<vyre_reference::composition_witness::WitnessProbe>
 pub const fn vyre_reference::composition_witness::ZxColor::flip(self) -> Self
 pub const fn vyre_reference::composition_witness::adler32_finalize_witness(a: u32, b: u32) -> u32
 pub const fn vyre_reference::composition_witness::adler32_initial_a_witness() -> u32
@@ -85,6 +91,7 @@ pub const fn vyre_reference::composition_witness::is_structural_whitespace_witne
 pub const fn vyre_reference::composition_witness::l2p_zeroth_eval_witness(local_moment: f64) -> f64
 pub const fn vyre_reference::composition_witness::tensor_bit_index_witness(node: u32, ctx: u32, fld: u32, context_limit: u32, field_limit: u32) -> u32
 pub const fn vyre_reference::subgroup::SubgroupSimulator::width(&self) -> usize
+pub const vyre_reference::MAX_RACE_EXPLORATION_ORDERS: usize
 pub const vyre_reference::REFERENCE_ORACLE_VERSION: &str
 pub const vyre_reference::REFERENCE_REQUEST_SCHEMA_VERSION: u32
 pub const vyre_reference::ReferenceBudget::DEFAULT_MAX_MEMORY_BYTES: usize
@@ -92,12 +99,14 @@ pub const vyre_reference::ReferenceBudget::DEFAULT_MAX_RECURSION_DEPTH: usize
 pub const vyre_reference::ReferenceBudget::DEFAULT_WORK_CEILING: u64
 pub const vyre_reference::ReferenceErrorClass::ALL: [Self; 8]
 pub const vyre_reference::composition_witness::ADLER32_MOD_WITNESS: u32
+pub const vyre_reference::composition_witness::COMPOSITION_WITNESS_FAMILIES: &[vyre_reference::composition_witness::CompositionWitnessFamily]
 pub const vyre_reference::composition_witness::CRC32_INIT_WITNESS: u32
 pub const vyre_reference::composition_witness::CRC32_POLY_WITNESS: u32
 pub const vyre_reference::composition_witness::FNV1A32_OFFSET_WITNESS: u32
 pub const vyre_reference::composition_witness::FNV1A32_PRIME_WITNESS: u32
 pub const vyre_reference::composition_witness::FNV1A64_OFFSET_WITNESS: u64
 pub const vyre_reference::composition_witness::FNV1A64_PRIME_WITNESS: u64
+pub const vyre_reference::composition_witness::MODULES_WITHOUT_A_CATALOG_FAMILY: &[(&str, &str)]
 pub const vyre_reference::ieee754::BACKEND_ELEMENTARY_F32_ULP_BUDGET: u32
 pub const vyre_reference::ieee754::BACKEND_TRANSCENDENTAL_ULP_BUDGET: u32
 pub const vyre_reference::ieee754::REFERENCE_TRANSCENDENTAL_ULP_BUDGET: u32
@@ -109,11 +118,13 @@ pub const vyre_reference::workgroup::InvocationIds::ZERO: Self
 pub const vyre_reference::workgroup::MAX_WORKGROUP_BYTES: usize
 pub enum vyre_reference::DeterministicSchedulePolicy
 pub enum vyre_reference::MemoryAccessKind
+pub enum vyre_reference::RaceFinding
 pub enum vyre_reference::ReferenceErrorClass
 pub enum vyre_reference::ReferenceErrorKind
 pub enum vyre_reference::composition_witness::Base64DecodeWitnessError
 pub enum vyre_reference::composition_witness::Crc32MapReduceStepKindWitness
 pub enum vyre_reference::composition_witness::DnnfGate
+pub enum vyre_reference::composition_witness::FamilyWitness
 pub enum vyre_reference::composition_witness::FrontierDomainWitness
 pub enum vyre_reference::composition_witness::FrontierTypedPlanWitnessError
 pub enum vyre_reference::composition_witness::KanDirection
@@ -130,6 +141,8 @@ pub fn vyre_reference::Buffer::new(bytes: alloc::vec::Vec<u8>, element: vyre_spe
 pub fn vyre_reference::ExactResourceAbi<'a>::for_program(program: &'a vyre_foundation::ir_inner::model::program::definition::Program, inputs: &'a [vyre_reference::value::Value]) -> Self
 pub fn vyre_reference::InterleavingConfig::default() -> Self
 pub fn vyre_reference::OobReport::total(&self) -> u64
+pub fn vyre_reference::RaceExplorationReport::is_race_free(&self) -> bool
+pub fn vyre_reference::RaceFinding::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_reference::ReferenceError::budget_exhaustion(detail: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_reference::ReferenceError::error_class(&self) -> vyre_reference::ReferenceErrorClass
 pub fn vyre_reference::ReferenceError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -157,15 +170,20 @@ pub fn vyre_reference::ReferenceInputMismatch::fmt(&self, f: &mut core::fmt::For
 pub fn vyre_reference::ReferenceMemory::empty() -> Self
 pub fn vyre_reference::ReferenceMemory::storage_bytes(&self, name: &str) -> core::result::Result<alloc::vec::Vec<u8>, vyre_reference::ReferenceError>
 pub fn vyre_reference::ReferenceMemory::with_storage(self, name: &str, buffer: vyre_reference::Buffer) -> Self
+pub fn vyre_reference::ReferenceRequest<'a>::declared_race_exploration_orders(&self) -> usize
 pub fn vyre_reference::ReferenceRequest<'a>::execute(&self) -> core::result::Result<vyre_reference::StrictExecutionResult, vyre_reference::ReferenceError>
 pub fn vyre_reference::ReferenceRequest<'a>::execute_permissive(&self) -> core::result::Result<vyre_reference::DiagnosticPermissiveReport, vyre_reference::ReferenceError>
+pub fn vyre_reference::ReferenceRequest<'a>::explore_races(&self) -> core::result::Result<vyre_reference::RaceExplorationReport, vyre_reference::ReferenceError>
 pub fn vyre_reference::ReferenceRequest<'a>::new(program: &'a vyre_foundation::ir_inner::model::program::definition::Program, inputs: &'a [vyre_reference::value::Value], budget: vyre_reference::ReferenceBudget) -> Self
 pub fn vyre_reference::ReferenceRequest<'a>::outputs(&self) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
 pub fn vyre_reference::ReferenceRequest<'a>::outputs_and_steps(&self) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, u64), vyre_reference::ReferenceError>
 pub fn vyre_reference::ReferenceRequest<'a>::standard(program: &'a vyre_foundation::ir_inner::model::program::definition::Program, inputs: &'a [vyre_reference::value::Value]) -> Self
 pub fn vyre_reference::ReferenceRequest<'a>::with_numerical_contract(self, contract: vyre_spec::numeric_semantics::NumericSemantics) -> Self
 pub fn vyre_reference::ShadowMemory::advance_barrier_phase(&mut self, _scope: vyre_foundation::memory_model::scope::ExecutionScope)
+pub fn vyre_reference::ShadowMemory::advance_grid_phase(&mut self)
+pub fn vyre_reference::ShadowMemory::enter_workgroup(&mut self, workgroup: [u32; 3])
 pub fn vyre_reference::ShadowMemory::new() -> Self
+pub fn vyre_reference::ShadowMemory::record_access(&mut self, buffer: &str, index: u64, invocation: [u32; 3], kind: vyre_reference::MemoryAccessKind, scope: vyre_foundation::memory_model::scope::MemoryScope, domain: vyre_foundation::memory_model::storage::StorageDomain) -> core::option::Option<vyre_reference::RaceFinding>
 pub fn vyre_reference::ShadowMemory::record_and_check_access(&mut self, buffer: &str, index: u64, invocation: [u32; 3], kind: vyre_reference::MemoryAccessKind, scope: vyre_foundation::memory_model::scope::MemoryScope, domain: vyre_foundation::memory_model::storage::StorageDomain) -> core::result::Result<(), vyre_reference::ReferenceError>
 pub fn vyre_reference::WorkloadEnvelope::for_program(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> Self
 pub fn vyre_reference::atomics::apply(op: vyre_spec::atomic_op::AtomicOp, old: u32, expected: core::option::Option<u32>, value: u32) -> core::result::Result<(u32, u32), vyre_reference::ReferenceError>
@@ -673,6 +691,8 @@ pub fn vyre_reference::composition_witness::vietoris_rips_edges_witness(mask: &[
 pub fn vyre_reference::composition_witness::vsa_fingerprint_witness(kind_hv: &[u32], signature_hv: &[u32], region_hv: &[u32]) -> alloc::vec::Vec<u32>
 pub fn vyre_reference::composition_witness::whitespace_classify_word_witness(words_in: &[u32]) -> alloc::vec::Vec<u32>
 pub fn vyre_reference::composition_witness::whitespace_classify_word_witness_into(words_in: &[u32], out: &mut alloc::vec::Vec<u32>)
+pub fn vyre_reference::composition_witness::witness_families() -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &'static vyre_reference::composition_witness::CompositionWitnessFamily>
+pub fn vyre_reference::composition_witness::witness_family(family: &str) -> core::option::Option<&'static vyre_reference::composition_witness::CompositionWitnessFamily>
 pub fn vyre_reference::composition_witness::wrapping_sum_witness(values: &[u32]) -> u32
 pub fn vyre_reference::composition_witness::yoneda_embedding_witness(category: &vyre_reference::composition_witness::FiniteCategory, x: u32) -> alloc::vec::Vec<u32>
 pub fn vyre_reference::composition_witness::ziftsieve_extract_literals_witness(input: &[u8], max_output: usize) -> core::result::Result<vyre_reference::composition_witness::ZiftsieveLiteralWitness, alloc::string::String>
@@ -750,6 +770,7 @@ pub struct vyre_reference::InterleavingConfig
 pub struct vyre_reference::InterleavingReport
 pub struct vyre_reference::MemoryAccessRecord
 pub struct vyre_reference::OobReport
+pub struct vyre_reference::RaceExplorationReport
 pub struct vyre_reference::ReferenceBudget
 pub struct vyre_reference::ReferenceCertificate
 pub struct vyre_reference::ReferenceError
@@ -765,6 +786,7 @@ pub struct vyre_reference::composition_witness::AdjointPair
 pub struct vyre_reference::composition_witness::Adler32ChunkWitness
 pub struct vyre_reference::composition_witness::AmgSolveScratchWitness
 pub struct vyre_reference::composition_witness::AmgVcycleScratchWitness
+pub struct vyre_reference::composition_witness::CompositionWitnessFamily
 pub struct vyre_reference::composition_witness::Crc32ChunkWitness
 pub struct vyre_reference::composition_witness::Crc32MapReducePlanWitness
 pub struct vyre_reference::composition_witness::Crc32MapReduceStepWitness
@@ -787,6 +809,7 @@ pub struct vyre_reference::composition_witness::ZxSpider
 pub struct vyre_reference::subgroup::SubgroupSimulator
 pub struct vyre_reference::workgroup::InvocationIds
 pub trait vyre_reference::composition_witness::RuleEvaluationContextWitness
+pub type vyre_reference::composition_witness::WitnessProbe = fn() -> u64
 pub use vyre_reference::FP4_DECODE_TABLE
 pub use vyre_reference::I4_DECODE_TABLE
 pub use vyre_reference::InfinityBehavior
@@ -839,13 +862,30 @@ pub vyre_reference::MemoryAccessKind::Atomic::scope: vyre_foundation::memory_mod
 pub vyre_reference::MemoryAccessKind::Read
 pub vyre_reference::MemoryAccessKind::Write
 pub vyre_reference::MemoryAccessRecord::barrier_phase: u64
+pub vyre_reference::MemoryAccessRecord::grid_phase: u64
 pub vyre_reference::MemoryAccessRecord::invocation: [u32; 3]
 pub vyre_reference::MemoryAccessRecord::kind: vyre_reference::MemoryAccessKind
 pub vyre_reference::MemoryAccessRecord::memory_scope: vyre_foundation::memory_model::scope::MemoryScope
 pub vyre_reference::MemoryAccessRecord::storage_domain: vyre_foundation::memory_model::storage::StorageDomain
+pub vyre_reference::MemoryAccessRecord::workgroup: [u32; 3]
 pub vyre_reference::OobReport::oob_atomics: u64
 pub vyre_reference::OobReport::oob_loads: u64
 pub vyre_reference::OobReport::oob_stores: u64
+pub vyre_reference::RaceExplorationReport::findings: alloc::vec::Vec<vyre_reference::RaceFinding>
+pub vyre_reference::RaceExplorationReport::orders_explored: usize
+pub vyre_reference::RaceExplorationReport::steps_executed: u64
+pub vyre_reference::RaceFinding::ScheduleDisagreement
+pub vyre_reference::RaceFinding::ScheduleDisagreement::first_order: alloc::string::String
+pub vyre_reference::RaceFinding::ScheduleDisagreement::output_index: usize
+pub vyre_reference::RaceFinding::ScheduleDisagreement::second_order: alloc::string::String
+pub vyre_reference::RaceFinding::UnsynchronizedAccess
+pub vyre_reference::RaceFinding::UnsynchronizedAccess::barrier_phase: u64
+pub vyre_reference::RaceFinding::UnsynchronizedAccess::buffer: alloc::string::String
+pub vyre_reference::RaceFinding::UnsynchronizedAccess::first: [u32; 3]
+pub vyre_reference::RaceFinding::UnsynchronizedAccess::first_kind: vyre_reference::MemoryAccessKind
+pub vyre_reference::RaceFinding::UnsynchronizedAccess::index: u64
+pub vyre_reference::RaceFinding::UnsynchronizedAccess::second: [u32; 3]
+pub vyre_reference::RaceFinding::UnsynchronizedAccess::second_kind: vyre_reference::MemoryAccessKind
 pub vyre_reference::ReferenceBudget::admit_declared_work: bool
 pub vyre_reference::ReferenceBudget::max_memory_bytes: usize
 pub vyre_reference::ReferenceBudget::max_recursion_depth: usize
@@ -920,6 +960,8 @@ pub vyre_reference::composition_witness::Base64DecodeWitnessError::DecodedLength
 pub vyre_reference::composition_witness::Base64DecodeWitnessError::DecodedLengthOverflow::decoded_words: usize
 pub vyre_reference::composition_witness::Base64DecodeWitnessError::InvalidLength
 pub vyre_reference::composition_witness::Base64DecodeWitnessError::InvalidLength::len: usize
+pub vyre_reference::composition_witness::CompositionWitnessFamily::family: &'static str
+pub vyre_reference::composition_witness::CompositionWitnessFamily::witness: vyre_reference::composition_witness::FamilyWitness
 pub vyre_reference::composition_witness::Crc32ChunkWitness::crc: u32
 pub vyre_reference::composition_witness::Crc32ChunkWitness::len: u64
 pub vyre_reference::composition_witness::Crc32MapReducePlanWitness::chunk_size: core::num::nonzero::NonZeroU32
@@ -952,6 +994,11 @@ pub vyre_reference::composition_witness::ExplodedIfdsScratchWitness::gen_cursor:
 pub vyre_reference::composition_witness::ExplodedIfdsScratchWitness::gen_facts: alloc::vec::Vec<u32>
 pub vyre_reference::composition_witness::ExplodedIfdsScratchWitness::gen_offsets: alloc::vec::Vec<usize>
 pub vyre_reference::composition_witness::ExplodedIfdsScratchWitness::killed: alloc::vec::Vec<bool>
+pub vyre_reference::composition_witness::FamilyWitness::Absent
+pub vyre_reference::composition_witness::FamilyWitness::Absent::reason: &'static str
+pub vyre_reference::composition_witness::FamilyWitness::Owned
+pub vyre_reference::composition_witness::FamilyWitness::Owned::module: &'static str
+pub vyre_reference::composition_witness::FamilyWitness::Owned::probe: vyre_reference::composition_witness::WitnessProbe
 pub vyre_reference::composition_witness::FiniteCategory::hom_size: alloc::vec::Vec<u32>
 pub vyre_reference::composition_witness::FiniteCategory::n: u32
 pub vyre_reference::composition_witness::FiniteFunctor::object_map: alloc::vec::Vec<u32>

@@ -143,6 +143,7 @@ pub fn utf8_validate_witness(source: &[u8]) -> Vec<u32> {
                 0xe0 => (0xa0..=0xbf).contains(&second),
                 0xe1..=0xec | 0xee..=0xef => is_continuation(second),
                 0xed => (0x80..=0x9f).contains(&second),
+                // The scrutinee is a `u8` lead byte outside the three-byte UTF-8 lead range.
                 _ => false,
             };
             if second_valid && is_continuation(third) {
@@ -161,6 +162,7 @@ pub fn utf8_validate_witness(source: &[u8]) -> Vec<u32> {
                 0xf0 => (0x90..=0xbf).contains(&second),
                 0xf1..=0xf3 => is_continuation(second),
                 0xf4 => (0x80..=0x8f).contains(&second),
+                // The scrutinee is a `u8` lead byte outside the four-byte UTF-8 lead range.
                 _ => false,
             };
             if second_valid && is_continuation(third) && is_continuation(fourth) {

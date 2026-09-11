@@ -399,6 +399,7 @@ pub fn hex_decode_packed_witness(input: &[u8]) -> Vec<u32> {
             b'0'..=b'9' => u32::from(byte - b'0'),
             b'A'..=b'F' => u32::from(byte - b'A' + 10),
             b'a'..=b'f' => u32::from(byte - b'a' + 10),
+            // The scrutinee is a `u8`, whose value set the ASCII hex ranges do not cover.
             _ => 0,
         }
     }

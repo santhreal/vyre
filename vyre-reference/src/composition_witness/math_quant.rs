@@ -560,6 +560,7 @@ pub fn sum_product_evaluate_witness_into(
                 .iter()
                 .map(|&child| output[child as usize])
                 .product(),
+            // The scrutinee is a numeric sum-product node tag, not an enum.
             _ => 0.0,
         };
     }

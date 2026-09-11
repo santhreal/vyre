@@ -778,101 +778,107 @@ pub enum RuleConditionWitness {
 }
 
 impl PartialEq for RuleConditionWitness {
+    /// The outer match scrutinizes `self` alone, so it is exhaustive over the
+    /// declared variants and a new condition kind fails to compile here rather
+    /// than inheriting the mismatch arm's `false`. The mismatch answer moves
+    /// into each arm's `matches!`, which still reports `false` for every pair
+    /// of different kinds.
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::PatternExists { pattern_id: a }, Self::PatternExists { pattern_id: b }) => {
-                a == b
+        match self {
+            Self::PatternExists { pattern_id: a } => {
+                matches!(other, Self::PatternExists { pattern_id: b } if a == b)
             }
-            (
-                Self::PatternCountGt {
-                    pattern_id: a,
-                    threshold: ta,
-                },
+            Self::PatternCountGt {
+                pattern_id: a,
+                threshold: ta,
+            } => matches!(
+                other,
                 Self::PatternCountGt {
                     pattern_id: b,
                     threshold: tb,
-                },
-            )
-            | (
-                Self::PatternCountGte {
-                    pattern_id: a,
-                    threshold: ta,
-                },
+                } if (a, ta) == (b, tb)
+            ),
+            Self::PatternCountGte {
+                pattern_id: a,
+                threshold: ta,
+            } => matches!(
+                other,
                 Self::PatternCountGte {
                     pattern_id: b,
                     threshold: tb,
-                },
-            ) => (a, ta) == (b, tb),
-            (Self::FileSizeEq(a), Self::FileSizeEq(b))
-            | (Self::FileSizeNe(a), Self::FileSizeNe(b))
-            | (Self::FileSizeLt(a), Self::FileSizeLt(b))
-            | (Self::FileSizeLte(a), Self::FileSizeLte(b))
-            | (Self::FileSizeGt(a), Self::FileSizeGt(b))
-            | (Self::FileSizeGte(a), Self::FileSizeGte(b)) => a == b,
-            (Self::LiteralTrue, Self::LiteralTrue) | (Self::LiteralFalse, Self::LiteralFalse) => {
-                true
-            }
-            (
-                Self::RegexMatch {
-                    field: a,
-                    pattern: ap,
-                },
+                } if (a, ta) == (b, tb)
+            ),
+            Self::LiteralTrue => matches!(other, Self::LiteralTrue),
+            Self::LiteralFalse => matches!(other, Self::LiteralFalse),
+            Self::FileSizeEq(a) => matches!(other, Self::FileSizeEq(b) if a == b),
+            Self::FileSizeNe(a) => matches!(other, Self::FileSizeNe(b) if a == b),
+            Self::FileSizeLt(a) => matches!(other, Self::FileSizeLt(b) if a == b),
+            Self::FileSizeLte(a) => matches!(other, Self::FileSizeLte(b) if a == b),
+            Self::FileSizeGt(a) => matches!(other, Self::FileSizeGt(b) if a == b),
+            Self::FileSizeGte(a) => matches!(other, Self::FileSizeGte(b) if a == b),
+            Self::RegexMatch {
+                field: a,
+                pattern: ap,
+            } => matches!(
+                other,
                 Self::RegexMatch {
                     field: b,
                     pattern: bp,
-                },
-            ) => (a, ap) == (b, bp),
-            (
-                Self::SubstringMatch {
-                    haystack: a,
-                    needle: an,
-                },
+                } if (a, ap) == (b, bp)
+            ),
+            Self::SubstringMatch {
+                haystack: a,
+                needle: an,
+            } => matches!(
+                other,
                 Self::SubstringMatch {
                     haystack: b,
                     needle: bn,
-                },
-            ) => (a, an) == (b, bn),
-            (
-                Self::PrefixMatch {
-                    value: a,
-                    prefix: ap,
-                },
+                } if (a, an) == (b, bn)
+            ),
+            Self::PrefixMatch {
+                value: a,
+                prefix: ap,
+            } => matches!(
+                other,
                 Self::PrefixMatch {
                     value: b,
                     prefix: bp,
-                },
-            ) => (a, ap) == (b, bp),
-            (
-                Self::SuffixMatch {
-                    value: a,
-                    suffix: as_,
-                },
+                } if (a, ap) == (b, bp)
+            ),
+            Self::SuffixMatch {
+                value: a,
+                suffix: as_,
+            } => matches!(
+                other,
                 Self::SuffixMatch {
                     value: b,
                     suffix: bs,
-                },
-            ) => (a, as_) == (b, bs),
-            (
-                Self::RangeMatch {
-                    value: a,
-                    min: amin,
-                    max: amax,
-                },
+                } if (a, as_) == (b, bs)
+            ),
+            Self::RangeMatch {
+                value: a,
+                min: amin,
+                max: amax,
+            } => matches!(
+                other,
                 Self::RangeMatch {
                     value: b,
                     min: bmin,
                     max: bmax,
-                },
-            ) => (a, amin, amax) == (b, bmin, bmax),
-            (
-                Self::SetMembership { value: a, set: sa },
-                Self::SetMembership { value: b, set: sb },
-            ) => (a, sa) == (b, sb),
-            (Self::FieldInSet { field: a, set: sa }, Self::FieldInSet { field: b, set: sb }) => {
-                (a, sa) == (b, sb)
+                } if (a, amin, amax) == (b, bmin, bmax)
+            ),
+            Self::SetMembership { value: a, set: sa } => matches!(
+                other,
+                Self::SetMembership { value: b, set: sb } if (a, sa) == (b, sb)
+            ),
+            Self::FieldInSet { field: a, set: sa } => matches!(
+                other,
+                Self::FieldInSet { field: b, set: sb } if (a, sa) == (b, sb)
+            ),
+            Self::Opaque(a) => {
+                matches!(other, Self::Opaque(b) if a.extension_id() == b.extension_id())
             }
-            (Self::Opaque(a), Self::Opaque(b)) => a.extension_id() == b.extension_id(),
-            _ => false,
         }
     }
 }
