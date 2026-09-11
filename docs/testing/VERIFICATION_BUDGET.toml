@@ -50,7 +50,7 @@ disk_use_bytes = 520678
 compile_units = 4
 link_units = 8
 duplicate_source_bytes = 0
-disk_use_bytes = 533850
+disk_use_bytes = 541905
 
 [tier.facade]
 compile_units = 1

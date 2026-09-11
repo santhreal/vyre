@@ -21,6 +21,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
+use xtask::release::conformance_evidence_semantics::ORACLE_RECORD_ID;
 use xtask::release::conformance_op_matrix::OpMatrixReleaseBackendSpec;
 use xtask::source_provenance;
 
@@ -33,13 +34,14 @@ const CONFORMANCE_EVIDENCE_DIR: &str = "release/evidence/conformance";
 ///
 /// The three spellings differ for the reference backend: the matrix column is
 /// `reference`, the file is `reference-conformance.json` and the runner writes
-/// `cpu-ref` inside it. Keeping all three together is what stops a rule from
-/// silently matching nothing.
+/// [`ORACLE_RECORD_ID`] inside it, because that run takes the `--oracle`
+/// route rather than a registered backend. Keeping all three together is what
+/// stops a rule from silently matching nothing.
 pub const RECORDED_BACKENDS: &[(&str, &str, &str)] = &[
     (
         "reference",
         "release/evidence/conformance/reference-conformance.json",
-        "cpu-ref",
+        ORACLE_RECORD_ID,
     ),
     (
         "cuda",
@@ -428,15 +430,35 @@ mod tests {
         assert!(blockers[0].contains("reports it failing"), "{blockers:?}");
     }
 
-    /// WHY: `reference` in the matrix is `cpu-ref` in the artifact. Matching on
-    /// the matrix spelling would compare against zero pairs and report every
-    /// reference cell as uncovered, which is the failure mode that gets a rule
-    /// reverted rather than fixed.
+    /// WHY: `reference` in the matrix is [`ORACLE_RECORD_ID`] in the artifact.
+    /// Matching on the matrix spelling would compare against zero pairs and
+    /// report every reference cell as uncovered, which is the failure mode
+    /// that gets a rule reverted rather than fixed.
     #[test]
-    fn the_reference_column_is_matched_to_the_cpu_ref_artifact() {
+    fn the_reference_column_is_matched_to_the_oracle_artifact() {
         let root = recorded(&[("op::runs", true)]);
         let blockers = disagreements(root.path(), &[spec("op::runs", "reference", "supported")]);
         assert_eq!(blockers, Vec::<String>::new());
+    }
+
+    /// WHY: this table restates, per matrix column, the artifact path and the
+    /// `backend_id` the release conformance runner writes into it. Those two
+    /// facts are owned by
+    /// [`xtask::release::release_conformance::EXECUTOR_ARTIFACTS`], and when
+    /// the reference column moved from a registered backend to the `--oracle`
+    /// route the copy here kept the old spelling and every reference cell
+    /// read as uncovered. A row that names an artifact or an id the runner
+    /// never writes matches nothing, which is silent.
+    #[test]
+    fn every_recorded_backend_names_an_artifact_the_runner_writes() {
+        for (column, artifact, backend_id) in RECORDED_BACKENDS {
+            assert!(
+                xtask::release::release_conformance::EXECUTOR_ARTIFACTS
+                    .contains(&(backend_id, artifact)),
+                "Fix: matrix column `{column}` reads `{artifact}` expecting `{backend_id}`, \
+                 which the release conformance runner does not write."
+            );
+        }
     }
 
     /// WHY: an artifact whose pairs name another backend has been copied or

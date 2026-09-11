@@ -159,7 +159,7 @@ impl crate::gate::GateBehavior for ReleaseConformanceGate {
 /// Three of these are backends and the fourth is the reference oracle, which
 /// dispatches on no device. They share a table because a release reads one
 /// record per executor, not because the oracle is a backend.
-const EXECUTOR_ARTIFACTS: &[(&str, &str)] = &[
+pub const EXECUTOR_ARTIFACTS: &[(&str, &str)] = &[
     ("cuda", "release/evidence/conformance/cuda-conformance.json"),
     ("wgpu", "release/evidence/conformance/wgpu-conformance.json"),
     (
