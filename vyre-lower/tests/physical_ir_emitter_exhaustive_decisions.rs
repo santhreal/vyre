@@ -8,7 +8,6 @@
 //! 3. All target dialects (naga/wgsl, ptx, spirv, metal) must have explicit coverage.
 
 use std::collections::BTreeSet;
-use std::path::Path;
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, MemoryOrdering, SubgroupReduceOp, UnOp};
 use vyre_lower::variant_space::kernel_op_kind_variants;
 use vyre_lower::{
@@ -436,9 +435,7 @@ fn no_target_rejects_an_op_without_which_no_program_can_run() {
 
 #[test]
 fn emitter_dispatch_names_every_variant_rather_than_falling_through_a_catch_all() {
-    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("this crate is a workspace member, so its manifest has a parent");
+    let workspace_root = vyre_test_support::monorepo::vyre_workspace_root();
     let declared = kernel_op_kind_variants();
 
     for relative_path in [

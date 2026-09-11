@@ -205,6 +205,21 @@ pub(crate) fn value_byte_count(
     })
 }
 
+/// Resource lifetime class of one graph value lifetime.
+///
+/// Ranking, the resource records and the placement plan all classify storage by
+/// this one mapping, so a value cannot be retained state to one of them and an
+/// output to another.
+pub(crate) fn resource_lifetime(lifetime: ValueLifetime) -> ResourceLifetime {
+    match lifetime {
+        ValueLifetime::Constant => ResourceLifetime::Constant,
+        ValueLifetime::Invocation => ResourceLifetime::Invocation,
+        ValueLifetime::Retained => ResourceLifetime::Retained,
+        ValueLifetime::Output => ResourceLifetime::Output,
+        ValueLifetime::Stream => ResourceLifetime::Stream,
+    }
+}
+
 pub(crate) fn build_resources(
     graph: &ProgramGraph,
     bindings: &BTreeMap<String, u64>,
@@ -237,13 +252,7 @@ pub(crate) fn build_resources(
             name: value.name.clone(),
             element_count,
             byte_count,
-            lifetime: match value.contract.lifetime {
-                ValueLifetime::Constant => ResourceLifetime::Constant,
-                ValueLifetime::Invocation => ResourceLifetime::Invocation,
-                ValueLifetime::Retained => ResourceLifetime::Retained,
-                ValueLifetime::Output => ResourceLifetime::Output,
-                ValueLifetime::Stream => ResourceLifetime::Stream,
-            },
+            lifetime: resource_lifetime(value.contract.lifetime),
             retained_predecessor: value.retained_successor_of.map(|id| ArtifactValueId(id.0)),
             first_stage,
             last_stage,

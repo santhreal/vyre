@@ -60,6 +60,11 @@ program does not write reads back as zero on every backend.
 A `GraphOutput` may name `retained_successor_of`, which is the prior
 retained value the output replaces.
 
+A successor holds the storage of the value it replaces. The artifact
+allocates one region for the whole chain and binds every value in it to that
+region, so a reader of the successor reads what the predecessor wrote. A chain
+that ends in an `Output` ends there: the caller binds that buffer.
+
 ## Element type
 
 `DataType` is the frozen element vocabulary in `vyre-spec`. It is wide and

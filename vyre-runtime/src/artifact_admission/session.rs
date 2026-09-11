@@ -408,8 +408,16 @@ impl ArtifactSession {
                     .first()
                     .map(|e| e.name.clone())
                     .unwrap_or_default();
+                let resource_name = resources
+                    .iter()
+                    .find(|record| record.value == *value_id)
+                    .map_or_else(
+                        || "<no resource record carries this value>".to_string(),
+                        |record| record.name.clone(),
+                    );
                 return Err(ResourceIngestionError::MissingResource {
                     value: *value_id,
+                    resource_name,
                     entry_name,
                 }
                 .into());

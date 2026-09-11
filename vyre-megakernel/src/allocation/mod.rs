@@ -17,6 +17,8 @@
 mod derive;
 mod liveness;
 mod pack;
+#[cfg(test)]
+mod tests;
 
 use serde::{Deserialize, Serialize};
 
@@ -27,6 +29,26 @@ use crate::schema::ResourceLifetime;
 pub(crate) use derive::value_facts;
 pub(crate) use liveness::{peak, span, ValueLiveness};
 pub(crate) use pack::plan;
+
+/// Whether the artifact produces the storage and the runtime allocates it.
+///
+/// A caller binds every other value, so the plan states its bytes and layout
+/// and reserves nothing for it.
+///
+/// Exhaustive on purpose: a new lifetime class must state whether the artifact
+/// owns its storage before the packer reserves bytes for it, and a wildcard arm
+/// would file it under whichever answer happened to be first.
+pub(crate) fn owned_by_artifact(produced: bool, lifetime: ResourceLifetime) -> bool {
+    if !produced {
+        return false;
+    }
+    match lifetime {
+        ResourceLifetime::Invocation | ResourceLifetime::Retained | ResourceLifetime::Stream => {
+            true
+        }
+        ResourceLifetime::Constant | ResourceLifetime::Output => false,
+    }
+}
 
 /// Schema version of the allocation plan carried inside one artifact.
 ///
@@ -642,43 +664,74 @@ impl AllocationPlan {
         Ok(())
     }
 
-    /// Largest byte total live in any one stage on `device`, over the placements
-    /// of `owner` or over every placement when no owner is stated.
+    /// Largest byte total live in any one stage on `device`, over the regions
+    /// of `owner` or over every region when no owner is stated.
+    ///
+    /// Storage is counted once however many values hold it. A retained chain
+    /// places every value of the chain over the same bytes, and charging the
+    /// stage for each of them would report a device holding more bytes than its
+    /// regions reserve.
     fn live_peak(
         &self,
         device: DeviceSlot,
         owner: Option<RegionOwner>,
     ) -> Result<u64, CompileError> {
-        let placements: Vec<&ValuePlacement> = self
+        let regions: Vec<&AllocationRegion> = self
             .regions
             .iter()
             .filter(|region| {
                 region.device == device && owner.is_none_or(|owner| region.owner == owner)
             })
-            .flat_map(|region| region.placements.iter())
             .collect();
-        let final_stage = placements
+        let final_stage = regions
             .iter()
+            .flat_map(|region| region.placements.iter())
             .map(|placement| placement.last_stage)
             .max()
             .unwrap_or(0);
         let mut peak = 0u64;
         for stage in 0..=final_stage {
-            let live = placements
-                .iter()
-                .filter(|placement| placement.first_stage <= stage && stage <= placement.last_stage)
-                .try_fold(0u64, |total, placement| {
-                    total.checked_add(placement.bytes).ok_or_else(|| {
-                        overflow(
-                            "artifact.allocation.device_peaks",
-                            "live placement sum exceeds u64",
-                        )
-                    })
-                })?;
+            let mut live = 0u64;
+            for region in &regions {
+                let mut spans: Vec<(u64, u64)> = Vec::new();
+                for placement in &region.placements {
+                    if placement.first_stage > stage || stage > placement.last_stage {
+                        continue;
+                    }
+                    spans.push((placement.byte_offset, placement.end()?));
+                }
+                spans.sort_unstable();
+                let mut covered: Option<(u64, u64)> = None;
+                for (start, end) in spans {
+                    match covered {
+                        Some((held_start, held_end)) if start <= held_end => {
+                            covered = Some((held_start, held_end.max(end)));
+                        }
+                        Some((held_start, held_end)) => {
+                            live = sum_live(live, held_end - held_start)?;
+                            covered = Some((start, end));
+                        }
+                        None => covered = Some((start, end)),
+                    }
+                }
+                if let Some((held_start, held_end)) = covered {
+                    live = sum_live(live, held_end - held_start)?;
+                }
+            }
             peak = peak.max(live);
         }
         Ok(peak)
     }
+}
+
+/// Add one live span to a stage total, naming the plan field that overflowed.
+fn sum_live(total: u64, bytes: u64) -> Result<u64, CompileError> {
+    total.checked_add(bytes).ok_or_else(|| {
+        overflow(
+            "artifact.allocation.device_peaks",
+            "live placement sum exceeds u64",
+        )
+    })
 }
 
 fn invalid(

@@ -5,7 +5,10 @@
 //! answers to that used to exist, and the figure the objective ordered was not
 //! the figure the artifact recorded. Both now come from here.
 
+use std::collections::BTreeMap;
+
 use crate::identity::{ArtifactNodeId, ArtifactValueId, FusionGroupId};
+use crate::schema::ResourceLifetime;
 
 /// What one value contributes to the resident byte total, per candidate.
 ///
@@ -25,6 +28,10 @@ pub(crate) struct ValueLiveness {
     /// Whether a caller or a later submission reads the value after the last
     /// stage, which holds its storage to the end.
     pub(crate) survives_to_end: bool,
+    /// Storage class the resource records state for the value.
+    pub(crate) lifetime: ResourceLifetime,
+    /// Prior retained value whose storage this value advances.
+    pub(crate) retained_predecessor: Option<ArtifactValueId>,
 }
 
 /// Dependency stage the group holding `node` runs in.
@@ -67,6 +74,10 @@ pub(crate) fn span(
 /// This is the figure candidate ranking prices as peak memory and the figure the
 /// placement plan records, so a plan that disagrees with the ranking it won is a
 /// refused compile rather than a silent difference.
+///
+/// A retained successor the artifact owns advances the storage of the value it
+/// replaces instead of taking a second allocation, so a chain of them is charged
+/// for the widest value in it once, for every stage any of them is live.
 pub(crate) fn peak(values: &[ValueLiveness], node_groups: &[FusionGroupId], stages: &[u32]) -> u64 {
     let final_stage = stages.iter().copied().max().unwrap_or(0);
     let spans: Vec<(u32, u32)> = values
@@ -82,15 +93,59 @@ pub(crate) fn peak(values: &[ValueLiveness], node_groups: &[FusionGroupId], stag
             )
         })
         .collect();
+    let storage = storage_groups(values);
     let last_stage = spans.iter().map(|span| span.1).max().unwrap_or(0);
     let mut peak = 0u64;
+    let mut live: BTreeMap<u32, u64> = BTreeMap::new();
     for stage in 0..=last_stage {
-        let live = values
-            .iter()
-            .zip(&spans)
-            .filter(|(_, span)| span.0 <= stage && stage <= span.1)
-            .fold(0u64, |total, (value, _)| total.saturating_add(value.bytes));
-        peak = peak.max(live);
+        live.clear();
+        for ((value, span), group) in values.iter().zip(&spans).zip(&storage) {
+            if span.0 > stage || stage > span.1 {
+                continue;
+            }
+            let held = live.entry(*group).or_default();
+            *held = (*held).max(value.bytes);
+        }
+        let total = live
+            .values()
+            .fold(0u64, |total, bytes| total.saturating_add(*bytes));
+        peak = peak.max(total);
     }
     peak
+}
+
+/// One storage group per retained chain the artifact owns, identified by the
+/// first value in the chain, and one group per value for everything else.
+///
+/// A chain that leaves artifact-owned storage ends there: the caller binds the
+/// successor, so the two hold different bytes and are charged separately.
+fn storage_groups(values: &[ValueLiveness]) -> Vec<u32> {
+    let owned: BTreeMap<u32, bool> = values
+        .iter()
+        .map(|value| {
+            (
+                value.value.0,
+                super::owned_by_artifact(value.producer.is_some(), value.lifetime),
+            )
+        })
+        .collect();
+    let mut root: BTreeMap<u32, u32> = BTreeMap::new();
+    for value in values {
+        let joins = value
+            .retained_predecessor
+            .map(|prior| prior.0)
+            .filter(|prior| {
+                owned.get(prior).copied().unwrap_or(false)
+                    && owned.get(&value.value.0).copied().unwrap_or(false)
+            });
+        let group = joins
+            .and_then(|prior| root.get(&prior).copied())
+            .or(joins)
+            .unwrap_or(value.value.0);
+        root.insert(value.value.0, group);
+    }
+    values
+        .iter()
+        .map(|value| root.get(&value.value.0).copied().unwrap_or(value.value.0))
+        .collect()
 }

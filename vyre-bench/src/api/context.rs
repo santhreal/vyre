@@ -36,8 +36,22 @@ impl CpuReference {
 
 #[derive(Default)]
 pub(crate) struct CachedArtifactSessions {
-    sessions: BTreeMap<ArtifactSessionKey, Arc<vyre_runtime::artifact_admission::ArtifactSession>>,
+    sessions: BTreeMap<ArtifactSessionKey, CachedArtifact>,
     last_fingerprint: Option<[u8; 32]>,
+}
+
+/// One compiled benchmark artifact and the storage it produces for itself.
+///
+/// A backend with no device-wide barrier realizes a grid synchronization by
+/// cutting the kernel, and each segment publishes a retained successor of every
+/// value that crosses the cut. The caller names the initial value and never the
+/// successors, so the runtime allocates them once per compiled artifact and
+/// binds them on every submission. Allocating them per dispatch would put a
+/// device allocation inside the window the resident path exists to keep empty.
+#[derive(Clone)]
+pub(crate) struct CachedArtifact {
+    session: Arc<vyre_runtime::artifact_admission::ArtifactSession>,
+    workspace: Arc<vyre_runtime::artifact_admission::ArtifactWorkspace>,
 }
 
 /// A compiled benchmark artifact belongs to one program on one device profile.
@@ -92,6 +106,15 @@ impl BenchContext {
         prog: &vyre::ir::Program,
     ) -> Result<Arc<vyre_runtime::artifact_admission::ArtifactSession>, vyre_driver::BackendError>
     {
+        Ok(self.compiled_artifact_for(prog)?.session)
+    }
+
+    /// The compiled artifact for `prog` on this context's device, with the
+    /// storage the artifact allocates for its own values.
+    pub(crate) fn compiled_artifact_for(
+        &self,
+        prog: &vyre::ir::Program,
+    ) -> Result<CachedArtifact, vyre_driver::BackendError> {
         let fingerprint = prog.fingerprint();
         let key = (
             fingerprint,
@@ -105,8 +128,8 @@ impl BenchContext {
             ))
         })?;
         cached.last_fingerprint = Some(fingerprint);
-        if let Some(session) = cached.sessions.get(&key) {
-            return Ok(Arc::clone(session));
+        if let Some(artifact) = cached.sessions.get(&key) {
+            return Ok(artifact.clone());
         }
 
         let request = benchmark_compile_request(prog, self.preferred_backend.device_profile())?;
@@ -118,8 +141,14 @@ impl BenchContext {
             )
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?,
         );
-        cached.sessions.insert(key, Arc::clone(&session));
-        Ok(session)
+        let workspace = Arc::new(
+            session
+                .allocate_workspace()
+                .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?,
+        );
+        let artifact = CachedArtifact { session, workspace };
+        cached.sessions.insert(key, artifact.clone());
+        Ok(artifact)
     }
     pub(crate) fn take_artifact_session(
         &self,
@@ -130,8 +159,24 @@ impl BenchContext {
             ))
         })?;
         let fingerprint = cached.last_fingerprint.take();
-        cached.sessions.clear();
-        Ok(fingerprint)
+        let retired = std::mem::take(&mut cached.sessions);
+        drop(cached);
+        let mut release_failure = None;
+        for (_, artifact) in retired {
+            let CachedArtifact { session, workspace } = artifact;
+            let Some(workspace) = Arc::into_inner(workspace) else {
+                continue;
+            };
+            if let Err(error) = session.free_workspace(workspace) {
+                release_failure.get_or_insert_with(|| error.to_string());
+            }
+        }
+        match release_failure {
+            None => Ok(fingerprint),
+            Some(error) => Err(vyre_driver::BackendError::new(format!(
+                "benchmark artifact storage was not released: {error}. Fix: release the device before the next measurement so the next artifact allocates from a clean pool."
+            ))),
+        }
     }
 
     /// Compile and materialize the benchmark artifact outside measured submissions.
@@ -212,8 +257,10 @@ impl BenchContext {
         _config: &DispatchConfig,
         include_readback: bool,
     ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
-        let session = self.artifact_session_for(prog)?;
-        let bindings = bindings_for_program_resources(&session, prog, resources)?;
+        let artifact = self.compiled_artifact_for(prog)?;
+        let session = &artifact.session;
+        let bindings =
+            bindings_for_program_resources(session, &artifact.workspace, prog, resources)?;
         let start = Instant::now();
         let completion = session
             .submit_and_wait(bindings)
@@ -250,10 +297,16 @@ impl BenchContext {
         sets: &[&[vyre_driver::Resource]],
         _config: &DispatchConfig,
     ) -> Result<Vec<(vyre_driver::OutputBuffers, Option<u64>)>, vyre_driver::BackendError> {
-        let session = self.artifact_session_for(prog)?;
+        let artifact = self.compiled_artifact_for(prog)?;
+        let session = &artifact.session;
         let mut batches = Vec::with_capacity(sets.len());
         for resources in sets {
-            batches.push(bindings_for_program_resources(&session, prog, resources)?);
+            batches.push(bindings_for_program_resources(
+                session,
+                &artifact.workspace,
+                prog,
+                resources,
+            )?);
         }
         let completions = session
             .submit_resident_batch_and_wait(batches)
@@ -358,8 +411,14 @@ impl BenchContext {
                 )));
             }
         }
-        let session = self.artifact_session_for(step.program)?;
-        let bindings = bindings_for_program_resources(&session, step.program, step.resources)?;
+        let artifact = self.compiled_artifact_for(step.program)?;
+        let session = &artifact.session;
+        let bindings = bindings_for_program_resources(
+            session,
+            &artifact.workspace,
+            step.program,
+            step.resources,
+        )?;
         let completion = session
             .submit_and_wait(bindings.clone())
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
@@ -367,8 +426,19 @@ impl BenchContext {
     }
 }
 
+/// Bind one resident resource per declared program buffer, over the storage the
+/// artifact allocates for itself.
+///
+/// Splitting a kernel at a whole-grid fence republishes every value that
+/// crosses the cut under a new retained identity, so the value a program
+/// buffer name resolves to is the last segment's, not the caller's. A buffer
+/// whose value the artifact produces for itself is bound from the workspace
+/// and dropped from the caller dataset, which the runtime rejects rather than
+/// merges. The resource list keeps its position for every declared buffer, so
+/// the indices a case re-seeds by stay the program's own buffer order.
 fn bindings_for_program_resources(
     session: &vyre_runtime::artifact_admission::ArtifactSession,
+    workspace: &vyre_runtime::artifact_admission::ArtifactWorkspace,
     prog: &vyre::ir::Program,
     resources: &[vyre_driver::Resource],
 ) -> Result<vyre_driver::BindingSet, vyre_driver::BackendError> {
@@ -389,10 +459,13 @@ fn bindings_for_program_resources(
         let value_id = session
             .resource(decl.name())
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        if workspace.owns(value_id) {
+            continue;
+        }
         dataset.add_resident(value_id, resource.clone());
     }
     session
-        .ingest(&dataset)
+        .ingest_with_workspace(workspace, &dataset)
         .map_err(|error| vyre_driver::BackendError::new(error.to_string()))
 }
 

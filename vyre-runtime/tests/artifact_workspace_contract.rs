@@ -281,3 +281,132 @@ fn workspace_bindings_cover_the_workspace_and_demand_the_rest() {
         );
     }
 }
+
+const STATE: &str = "state";
+
+/// A two-stage artifact whose second entry advances the retained state the
+/// first published.
+///
+/// The successor is the whole point. It is a distinct canonical value that
+/// holds the storage of the value it replaces, so the plan places both in one
+/// region and the runtime must bind both to one buffer.
+fn retained_chain_artifact() -> Artifact {
+    let mut graph = ProgramGraph::new();
+    let (_, produced) = graph
+        .add_node(
+            "publish",
+            Program::wrapped(
+                vec![
+                    BufferDecl::storage(STATE, 0, BufferAccess::ReadWrite, DataType::U32)
+                        .with_count(1),
+                ],
+                [1, 1, 1],
+                vec![Node::store(STATE, Expr::u32(0), Expr::u32(7))],
+            ),
+            Vec::new(),
+            vec![GraphOutput {
+                buffer: STATE.into(),
+                name: STATE.into(),
+                contract: value(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("the chain fixture must accept its producer");
+    let state = *produced
+        .first()
+        .expect("the producer declares one retained value");
+    graph
+        .add_node(
+            "advance",
+            Program::wrapped(
+                vec![
+                    BufferDecl::storage(STATE, 0, BufferAccess::ReadWrite, DataType::U32)
+                        .with_count(1),
+                    BufferDecl::output(OUTPUT, 1, DataType::U32).with_count(1),
+                ],
+                [1, 1, 1],
+                vec![
+                    Node::store(STATE, Expr::u32(0), Expr::load(STATE, Expr::u32(0))),
+                    Node::store(OUTPUT, Expr::u32(0), Expr::load(STATE, Expr::u32(0))),
+                ],
+            ),
+            vec![GraphInput {
+                buffer: STATE.into(),
+                value: state,
+                contract: value(BufferAccess::ReadWrite, ValueLifetime::Retained),
+            }],
+            vec![
+                GraphOutput {
+                    buffer: STATE.into(),
+                    name: "state__next".into(),
+                    contract: value(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                    retained_successor_of: Some(state),
+                },
+                GraphOutput {
+                    buffer: OUTPUT.into(),
+                    name: OUTPUT.into(),
+                    contract: value(BufferAccess::WriteOnly, ValueLifetime::Output),
+                    retained_successor_of: None,
+                },
+            ],
+        )
+        .expect("the chain fixture must accept its consumer");
+    artifact_fixtures::compile_graph(graph, 0)
+}
+
+/// WHY: a retained successor advances the storage of the value it replaces. A
+/// runtime that allocated a second buffer for it would hand the entry after a
+/// kernel cut an allocation nothing wrote, and the reduction that published its
+/// partials before the cut would read zeros. One chain is one buffer.
+#[test]
+fn every_value_of_a_retained_chain_binds_one_buffer() {
+    let artifact = retained_chain_artifact();
+    let chain: Vec<ArtifactValueId> = artifact
+        .resources()
+        .iter()
+        .filter_map(|resource| {
+            resource
+                .retained_predecessor
+                .map(|predecessor| (predecessor, resource.value))
+        })
+        .flat_map(|(predecessor, successor)| [predecessor, successor])
+        .collect();
+    assert!(
+        !chain.is_empty(),
+        "Fix: the fixture must record a retained successor, or this contract is vacuous."
+    );
+
+    let mut envelope = ArtifactEnvelope::new(artifact.clone());
+    envelope
+        .attach_target_payload(fixture_target_payload(&artifact, FORMAT, vec![1, 2, 3, 4]))
+        .expect("the fixture payload must attach");
+    let materializer =
+        SessionFixtureMaterializer::new("workspace-artifact", "workspace-device", FORMAT);
+    let session = ArtifactSession::from_envelope_with_materializer(
+        &WORKSPACE_REGISTRATION,
+        envelope,
+        materializer,
+    )
+    .expect("the chain envelope must materialize");
+    let workspace = session
+        .allocate_workspace()
+        .expect("the recorded workspace must allocate");
+
+    let bound: Vec<_> = chain
+        .iter()
+        .map(|value| {
+            workspace
+                .bindings()
+                .get(value)
+                .unwrap_or_else(|| panic!("value {} of the chain is unbound", value.0))
+                .clone()
+        })
+        .collect();
+    for (value, resource) in chain.iter().zip(&bound) {
+        assert_eq!(
+            resource, &bound[0],
+            "value {} of the chain binds a second buffer",
+            value.0
+        );
+    }
+}

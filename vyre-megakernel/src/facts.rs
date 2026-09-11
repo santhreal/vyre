@@ -247,6 +247,10 @@ pub(crate) fn derive(
                 value.contract.lifetime,
                 ValueLifetime::Output | ValueLifetime::Retained
             ),
+            lifetime: crate::resource_records::resource_lifetime(value.contract.lifetime),
+            retained_predecessor: value
+                .retained_successor_of
+                .map(|prior| ArtifactValueId(prior.0)),
         });
         for node in value.producer.iter().chain(value.consumers.iter()) {
             if let Some(total) = node_touched_bytes.get_mut(node.0 as usize) {

@@ -130,6 +130,12 @@ value in the device space; the artifact never allocates constant storage. Two
 values may share bytes only when their alias classes match or their live ranges
 are disjoint.
 
+A retained successor holds the region of the value it advances, and the whole
+chain is one region as wide as its widest link. The liveness peak charges that
+storage once however many values of the chain are live at a stage. A chain
+whose successor is an output ends at the artifact boundary: the caller binds
+that buffer, so the two are placed apart.
+
 Lowering verifies its own bindings against the plan. A bound value the plan
 places nowhere, a group binding a value outside its live range, and a
 constant-space placement bound writable are rejected before emission.

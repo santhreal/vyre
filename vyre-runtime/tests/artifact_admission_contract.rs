@@ -896,11 +896,14 @@ fn typed_ingestion_includes_global_and_constant_target_resources() {
     let error = session
         .ingest(&partial_dataset)
         .expect_err("missing a constant target resource must fail closed");
+    let refusal = error.to_string();
     assert!(
-        error
-            .to_string()
-            .contains("missing required resource for canonical value 2"),
+        refusal.contains("canonical value 2"),
         "missing resource failure must report the missing value: {error}"
+    );
+    assert!(
+        refusal.contains("`rule_bitmap`"),
+        "missing resource failure must name the resource a caller supplies: {error}"
     );
 }
 

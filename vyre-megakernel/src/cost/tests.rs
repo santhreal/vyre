@@ -57,6 +57,8 @@ fn two_node_facts(live_values: u64, value_bytes: u64) -> PlanningFacts {
             producer: Some(crate::ArtifactNodeId(0)),
             consumers: vec![crate::ArtifactNodeId(1)],
             survives_to_end: false,
+            lifetime: crate::schema::ResourceLifetime::Invocation,
+            retained_predecessor: None,
         }],
     }
 }

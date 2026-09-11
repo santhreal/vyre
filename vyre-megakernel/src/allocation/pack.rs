@@ -56,23 +56,8 @@ pub(crate) struct ValueFact {
 
 impl ValueFact {
     /// Whether the artifact produces the storage and the runtime allocates it.
-    ///
-    /// A caller binds every other value, so the plan states its bytes and layout
-    /// and reserves nothing for it.
-    ///
-    /// Exhaustive on purpose: a new lifetime class must state whether the
-    /// artifact owns its storage before the packer reserves bytes for it, and a
-    /// wildcard arm would file it under whichever answer happened to be first.
     fn owned_by_artifact(&self) -> bool {
-        if !self.produced {
-            return false;
-        }
-        match self.lifetime {
-            ResourceLifetime::Invocation
-            | ResourceLifetime::Retained
-            | ResourceLifetime::Stream => true,
-            ResourceLifetime::Constant | ResourceLifetime::Output => false,
-        }
+        super::owned_by_artifact(self.produced, self.lifetime)
     }
 }
 
@@ -259,8 +244,9 @@ fn shares(
     cut
 }
 
-/// Hold `bytes` of one value on one device, reusing a dead region when the
-/// alias and stage facts permit it.
+/// Hold `bytes` of one value on one device, in the region its retained
+/// predecessor already holds, otherwise reusing a dead region when the alias
+/// and stage facts permit it.
 fn hold(
     space: &mut DeviceSpace,
     fact: &ValueFact,
@@ -305,6 +291,23 @@ fn hold(
             placements: vec![placement],
         });
         return;
+    }
+    // A retained successor advances the storage of the value it replaces, so it
+    // holds the same bytes rather than a second region. Separating them breaks
+    // the succession on every backend that realizes a whole-grid fence by
+    // cutting the kernel: the segment before the cut publishes the predecessor
+    // and the segment after it reads the successor, and two regions make that
+    // read return whatever the second allocation happened to contain.
+    if let Some(predecessor) = fact.retained_predecessor {
+        let held = space.slots.iter().position(|held| {
+            held.placements
+                .iter()
+                .any(|prior| prior.value == predecessor)
+        });
+        if let Some(existing) = held {
+            push(&mut space.slots[existing], placement);
+            return;
+        }
     }
     let reused = space.slots.iter().position(|held| {
         held.last_stage < fact.first_stage

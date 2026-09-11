@@ -569,10 +569,14 @@ impl ResourceManifest {
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum ResourceIngestionError {
     /// Missing required resource for an artifact entry point.
-    #[error("dataset missing required resource for canonical value {} (required by entry `{entry_name}`). Fix: supply a TypedResource for value {0} in the ingestion dataset.", value.0)]
+    #[error("dataset missing required resource `{resource_name}` for canonical value {} (required by entry `{entry_name}`). Fix: supply a TypedResource for `{resource_name}` in the ingestion dataset.", value.0)]
     MissingResource {
         /// Value identity.
         value: ArtifactValueId,
+        /// Stable graph value name the artifact resource set records, or the
+        /// sentence stating that the set records none. A caller binds by name,
+        /// so a value number alone leaves it comparing integers it never chose.
+        resource_name: String,
         /// Entry point name requiring this resource.
         entry_name: String,
     },
