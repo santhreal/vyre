@@ -34766,7 +34766,7 @@ seam = "foundation-ir"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 8823
+exported_item_count = 8861
 
   [[package.item]]
   path = "alloc::string::String::from(err: vyre_foundation::serial::wire::encode::WireEncodeErr) -> alloc::string::String"
@@ -35470,6 +35470,13 @@ exported_item_count = 8823
 
   [[package.item]]
   path = "impl core::fmt::Display for vyre_foundation::diagnostics::DiagnosticCode"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "impl core::fmt::Display for vyre_foundation::dialect::FieldType"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -36372,6 +36379,13 @@ exported_item_count = 8823
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "impl vyre_foundation::dialect::ExternalField"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "impl vyre_foundation::dialect::ExternalLayoutDeclaration"
   kind = "impl"
   stability = "extension"
@@ -36387,6 +36401,13 @@ exported_item_count = 8823
 
   [[package.item]]
   path = "impl vyre_foundation::dialect::FieldType"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "impl vyre_foundation::dialect::FieldValue"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -43631,6 +43652,41 @@ exported_item_count = 8823
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_foundation::dialect::ExternalField"
+  kind = "struct"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::ExternalField::declared_member: vyre_foundation::dialect::FieldType"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::ExternalField::decode(&self, dialect: &'static str, node_op: &str) -> core::result::Result<vyre_foundation::dialect::FieldValue, vyre_foundation::dialect::SchemaTranslationError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::ExternalField::name: alloc::string::String"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::ExternalField::raw_value: alloc::string::String"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_foundation::dialect::ExternalLayoutDeclaration"
   kind = "struct"
   stability = "extension"
@@ -43729,7 +43785,7 @@ exported_item_count = 8823
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::dialect::ExternalSchema::accept<V: vyre_foundation::dialect::ExternalSchemaVisitor>(&self, visitor: &mut V) -> core::result::Result<(), <V as vyre_foundation::dialect::ExternalSchemaVisitor>::Error>"
+  path = "vyre_foundation::dialect::ExternalSchema::accept<V: vyre_foundation::dialect::ExternalSchemaVisitor>(&self, dialect: &'static str, visitor: &mut V) -> core::result::Result<(), <V as vyre_foundation::dialect::ExternalSchemaVisitor>::Error>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -43792,14 +43848,14 @@ exported_item_count = 8823
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::dialect::ExternalSchemaNode::op_name: alloc::string::String"
+  path = "vyre_foundation::dialect::ExternalSchemaNode::fields: alloc::vec::Vec<vyre_foundation::dialect::ExternalField>"
   kind = "field"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::dialect::ExternalSchemaNode::raw_fields: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>"
+  path = "vyre_foundation::dialect::ExternalSchemaNode::op_name: alloc::string::String"
   kind = "field"
   stability = "extension"
   feature = "unconditional"
@@ -43813,14 +43869,21 @@ exported_item_count = 8823
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::dialect::ExternalSchemaVisitor::Error"
+  path = "vyre_foundation::dialect::ExternalSchemaVisitor::Error: core::convert::From<vyre_foundation::dialect::SchemaTranslationError>"
   kind = "type"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::dialect::ExternalSchemaVisitor::visit_field(&mut self, node_op: &str, field_name: &str, field_value: &str) -> core::result::Result<(), Self::Error>"
+  path = "vyre_foundation::dialect::ExternalSchemaVisitor::visit_field(&mut self, node_op: &str, field: &vyre_foundation::dialect::ExternalField) -> core::result::Result<(), Self::Error>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::ExternalSchemaVisitor::visit_field_value(&mut self, node_op: &str, field_name: &str, value: &vyre_foundation::dialect::FieldValue) -> core::result::Result<(), Self::Error>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -43897,6 +43960,13 @@ exported_item_count = 8823
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_foundation::dialect::FieldType::ALL: [Self; 10]"
+  kind = "const"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_foundation::dialect::FieldType::Bool"
   kind = "variant"
   stability = "extension"
@@ -43967,7 +44037,133 @@ exported_item_count = 8823
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_foundation::dialect::FieldType::accepts(self, external: Self) -> bool"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldType::as_str(self) -> &'static str"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldType::decode(self, raw: &str) -> core::result::Result<vyre_foundation::dialect::FieldValue, alloc::string::String>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldType::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldType::from_wire_tag(dialect: &'static str, tag: u16) -> core::result::Result<Self, vyre_foundation::dialect::SchemaTranslationError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_foundation::dialect::FieldType::parse_and_validate(&self, raw: &str) -> core::result::Result<(), alloc::string::String>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldType::wire_tag(self) -> u16"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldValue"
+  kind = "enum"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldValue::Bool(bool)"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldValue::Buffer(alloc::string::String)"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldValue::Bytes(alloc::vec::Vec<u8>)"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldValue::F32(f32)"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldValue::F64(f64)"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldValue::I32(i32)"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldValue::I64(i64)"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldValue::String(alloc::string::String)"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldValue::U32(u32)"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldValue::U64(u64)"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::FieldValue::field_type(&self) -> vyre_foundation::dialect::FieldType"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -44185,6 +44381,48 @@ exported_item_count = 8823
 
   [[package.item]]
   path = "vyre_foundation::dialect::SchemaTranslationError::DuplicateField::node_op: alloc::string::String"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::SchemaTranslationError::IncompatibleFieldMember"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::SchemaTranslationError::IncompatibleFieldMember::contract_member: vyre_foundation::dialect::FieldType"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::SchemaTranslationError::IncompatibleFieldMember::dialect: &'static str"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::SchemaTranslationError::IncompatibleFieldMember::external_member: vyre_foundation::dialect::FieldType"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::SchemaTranslationError::IncompatibleFieldMember::field: alloc::string::String"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::SchemaTranslationError::IncompatibleFieldMember::node_op: alloc::string::String"
   kind = "field"
   stability = "extension"
   feature = "unconditional"
@@ -44429,6 +44667,27 @@ exported_item_count = 8823
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_foundation::dialect::SchemaTranslationError::UnknownMemberTag"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::SchemaTranslationError::UnknownMemberTag::dialect: &'static str"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::SchemaTranslationError::UnknownMemberTag::tag: u16"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_foundation::dialect::SchemaTranslationError::UnmappedNode"
   kind = "variant"
   stability = "extension"
@@ -44555,7 +44814,14 @@ exported_item_count = 8823
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::dialect::validate_node_fields(dialect: &'static str, node_op: &str, raw_fields: &[(alloc::string::String, alloc::string::String)], declared_fields: &[vyre_foundation::dialect::FieldContract]) -> core::result::Result<(), vyre_foundation::dialect::SchemaTranslationError>"
+  path = "vyre_foundation::dialect::validate_member_compatibility(dialect: &'static str, node_op: &str, field: &str, contract_member: vyre_foundation::dialect::FieldType, external_member: vyre_foundation::dialect::FieldType) -> core::result::Result<(), vyre_foundation::dialect::SchemaTranslationError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_foundation::dialect::validate_node_fields(dialect: &'static str, node_op: &str, fields: &[vyre_foundation::dialect::ExternalField], declared_fields: &[vyre_foundation::dialect::FieldContract]) -> core::result::Result<(), vyre_foundation::dialect::SchemaTranslationError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"

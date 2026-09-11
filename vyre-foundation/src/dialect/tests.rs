@@ -9,10 +9,11 @@
 )]
 
 use crate::dialect::descriptor::DialectRegistry;
+use crate::dialect::member::FieldType;
 use crate::dialect::schema::{
-    validate_external_schema, validate_schema_identity, ExternalLayoutDeclaration,
-    ExternalResourceDeclaration, ExternalSchema, ExternalSchemaNode, FieldContract, FieldType,
-    ResourceAbi, ResourceBinding, SchemaTranslationError,
+    validate_external_schema, validate_schema_identity, ExternalField, ExternalLayoutDeclaration,
+    ExternalResourceDeclaration, ExternalSchema, ExternalSchemaNode, FieldContract, ResourceAbi,
+    ResourceBinding, SchemaTranslationError,
 };
 use crate::dialect::traits::Dialect;
 use crate::dialect::version::{validate_dialect_version, DialectVersionError};
@@ -285,9 +286,9 @@ fn test_external_schema_adversarial_rejections() {
     // Valid external node
     let valid_node = ExternalSchemaNode {
         op_name: "vyre-unit::dialect::alpha".to_string(),
-        raw_fields: vec![
-            ("scale".to_string(), "4".to_string()),
-            ("tag".to_string(), "active".to_string()),
+        fields: vec![
+            ExternalField { name: "scale".to_string(), declared_member: FieldType::U32, raw_value: "4".to_string() },
+            ExternalField { name: "tag".to_string(), declared_member: FieldType::String, raw_value: "active".to_string() },
         ],
         bound_resources: vec!["scratch_buf".to_string()],
     };
@@ -297,9 +298,9 @@ fn test_external_schema_adversarial_rejections() {
     // Adversarial Case 1: Unknown field
     let unknown_field_node = ExternalSchemaNode {
         op_name: "vyre-unit::dialect::alpha".to_string(),
-        raw_fields: vec![
-            ("scale".to_string(), "4".to_string()),
-            ("unrecognized_field".to_string(), "val".to_string()),
+        fields: vec![
+            ExternalField { name: "scale".to_string(), declared_member: FieldType::U32, raw_value: "4".to_string() },
+            ExternalField { name: "unrecognized_field".to_string(), declared_member: FieldType::String, raw_value: "val".to_string() },
         ],
         bound_resources: vec!["scratch_buf".to_string()],
     };
@@ -311,9 +312,9 @@ fn test_external_schema_adversarial_rejections() {
     // Adversarial Case 2: Duplicate field
     let duplicate_field_node = ExternalSchemaNode {
         op_name: "vyre-unit::dialect::alpha".to_string(),
-        raw_fields: vec![
-            ("scale".to_string(), "4".to_string()),
-            ("scale".to_string(), "8".to_string()),
+        fields: vec![
+            ExternalField { name: "scale".to_string(), declared_member: FieldType::U32, raw_value: "4".to_string() },
+            ExternalField { name: "scale".to_string(), declared_member: FieldType::U32, raw_value: "8".to_string() },
         ],
         bound_resources: vec!["scratch_buf".to_string()],
     };
@@ -325,7 +326,7 @@ fn test_external_schema_adversarial_rejections() {
     // Adversarial Case 3: Missing required field
     let missing_field_node = ExternalSchemaNode {
         op_name: "vyre-unit::dialect::alpha".to_string(),
-        raw_fields: vec![("tag".to_string(), "active".to_string())],
+        fields: vec![ExternalField { name: "tag".to_string(), declared_member: FieldType::String, raw_value: "active".to_string() }],
         bound_resources: vec!["scratch_buf".to_string()],
     };
     let err = validate_external_node(&missing_field_node)
@@ -339,7 +340,7 @@ fn test_external_schema_adversarial_rejections() {
     // Adversarial Case 4: Incomplete resource roster
     let incomplete_resource_node = ExternalSchemaNode {
         op_name: "vyre-unit::dialect::alpha".to_string(),
-        raw_fields: vec![("scale".to_string(), "4".to_string())],
+        fields: vec![ExternalField { name: "scale".to_string(), declared_member: FieldType::U32, raw_value: "4".to_string() }],
         bound_resources: vec![], // Missing scratch_buf
     };
     let err = validate_external_node(&incomplete_resource_node)
@@ -353,7 +354,7 @@ fn test_external_schema_adversarial_rejections() {
     // Adversarial Case 5: Unmapped external node (non-exhaustive mapping rejected)
     let unmapped_node = ExternalSchemaNode {
         op_name: "vyre-unit::dialect::unknown_op".to_string(),
-        raw_fields: vec![],
+        fields: vec![],
         bound_resources: vec![],
     };
     let err = validate_external_node(&unmapped_node).expect_err("unmapped node must fail closed");
@@ -378,9 +379,9 @@ fn test_external_schema_adversarial_rejections() {
     // Adversarial Case 7: Overflowing field value
     let overflowing_field_node = ExternalSchemaNode {
         op_name: "vyre-unit::dialect::alpha".to_string(),
-        raw_fields: vec![
-            ("scale".to_string(), "999999999999999999999999".to_string()),
-            ("tag".to_string(), "active".to_string()),
+        fields: vec![
+            ExternalField { name: "scale".to_string(), declared_member: FieldType::U32, raw_value: "999999999999999999999999".to_string() },
+            ExternalField { name: "tag".to_string(), declared_member: FieldType::String, raw_value: "active".to_string() },
         ],
         bound_resources: vec!["scratch_buf".to_string()],
     };

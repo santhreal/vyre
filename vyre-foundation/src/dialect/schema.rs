@@ -7,114 +7,9 @@
 //! with actionable `Fix:` diagnostics before compilation.
 
 use std::collections::BTreeSet;
-use std::num::ParseIntError;
 
+use super::member::{FieldType, FieldValue};
 use crate::ir::{BufferAccess, DataType};
-
-/// Value data types for fields in an external dialect contract.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum FieldType {
-    /// Unsigned 32-bit integer.
-    U32,
-    /// Signed 32-bit integer.
-    I32,
-    /// Unsigned 64-bit integer.
-    U64,
-    /// Signed 64-bit integer.
-    I64,
-    /// IEEE-754 32-bit float.
-    F32,
-    /// IEEE-754 64-bit float.
-    F64,
-    /// Boolean flag.
-    Bool,
-    /// UTF-8 string value.
-    String,
-    /// Opaque byte string.
-    Bytes,
-    /// Buffer identifier reference.
-    Buffer,
-}
-
-/// One integer width an external schema field can declare.
-trait IntegerLiteral: Sized {
-    /// Width name as it appears in a diagnostic.
-    const NAME: &'static str;
-
-    fn from_decimal(raw: &str) -> Result<Self, ParseIntError>;
-
-    fn from_hex(digits: &str) -> Result<Self, ParseIntError>;
-}
-
-macro_rules! integer_literal {
-    ($($ty:ty),+ $(,)?) => {$(
-        impl IntegerLiteral for $ty {
-            const NAME: &'static str = stringify!($ty);
-
-            fn from_decimal(raw: &str) -> Result<Self, ParseIntError> {
-                raw.parse()
-            }
-
-            fn from_hex(digits: &str) -> Result<Self, ParseIntError> {
-                Self::from_str_radix(digits, 16)
-            }
-        }
-    )+};
-}
-
-integer_literal!(u32, i32, u64, i64);
-
-/// Accept a decimal literal or a `0x`-prefixed hexadecimal one, rejecting overflow.
-fn validate_integer<T: IntegerLiteral>(raw: &str) -> Result<(), String> {
-    let parsed = match raw.strip_prefix("0x").or_else(|| raw.strip_prefix("0X")) {
-        Some(digits) => T::from_hex(digits),
-        None => T::from_decimal(raw),
-    };
-    parsed
-        .map(|_| ())
-        .map_err(|e| format!("invalid {} value `{raw}`: {e}", T::NAME))
-}
-
-impl FieldType {
-    /// Validate that a raw string value can be parsed into this field type without overflow.
-    ///
-    /// # Errors
-    ///
-    /// Returns a string describing the parse or bounds failure.
-    pub fn parse_and_validate(&self, raw: &str) -> Result<(), String> {
-        match self {
-            Self::U32 => validate_integer::<u32>(raw),
-            Self::I32 => validate_integer::<i32>(raw),
-            Self::U64 => validate_integer::<u64>(raw),
-            Self::I64 => validate_integer::<i64>(raw),
-            Self::F32 => raw
-                .parse::<f32>()
-                .map_err(|e| format!("invalid f32 value `{raw}`: {e}"))
-                .and_then(|f| {
-                    if f.is_finite() {
-                        Ok(())
-                    } else {
-                        Err(format!("f32 value `{raw}` is non-finite"))
-                    }
-                }),
-            Self::F64 => raw
-                .parse::<f64>()
-                .map_err(|e| format!("invalid f64 value `{raw}`: {e}"))
-                .and_then(|f| {
-                    if f.is_finite() {
-                        Ok(())
-                    } else {
-                        Err(format!("f64 value `{raw}` is non-finite"))
-                    }
-                }),
-            Self::Bool => raw
-                .parse::<bool>()
-                .map(|_| ())
-                .map_err(|e| format!("invalid bool value `{raw}`: {e}")),
-            Self::String | Self::Bytes | Self::Buffer => Ok(()),
-        }
-    }
-}
 
 /// Declared field specification for an operation in a dialect.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -159,6 +54,42 @@ pub struct LayoutContract {
     pub contiguous: bool,
 }
 
+/// Byte extent a strided layout spans, including the final element.
+///
+/// The one owner of the extent arithmetic. A static [`LayoutContract`] and a
+/// decoded [`ExternalLayoutDeclaration`] describe the same geometry and must
+/// agree on the capacity it needs, so both read this.
+///
+/// # Errors
+///
+/// Returns [`SchemaTranslationError::OverflowingLayout`] when the extent or the
+/// byte capacity overflows `u64`.
+fn layout_extent_bytes(
+    dialect: &'static str,
+    resource: &str,
+    element_type: &DataType,
+    shape: &[u64],
+    strides: &[u64],
+) -> Result<u64, SchemaTranslationError> {
+    let overflow = || SchemaTranslationError::OverflowingLayout {
+        dialect,
+        resource: resource.to_string(),
+    };
+    let elem_size = element_type.min_bytes() as u64;
+    let mut max_offset = 0_u64;
+    for (&extent, &stride) in shape.iter().zip(strides.iter()) {
+        if extent == 0 {
+            continue;
+        }
+        let span = (extent - 1).checked_mul(stride).ok_or_else(overflow)?;
+        max_offset = max_offset.checked_add(span).ok_or_else(overflow)?;
+    }
+    max_offset
+        .checked_add(1)
+        .and_then(|elements| elements.checked_mul(elem_size))
+        .ok_or_else(overflow)
+}
+
 impl LayoutContract {
     /// Compute minimum buffer capacity required by this layout in bytes.
     ///
@@ -166,37 +97,13 @@ impl LayoutContract {
     ///
     /// Returns [`SchemaTranslationError::OverflowingLayout`] if extent math overflows `u64`.
     pub fn compute_capacity(&self, dialect: &'static str) -> Result<u64, SchemaTranslationError> {
-        let elem_size = self.element_type.min_bytes() as u64;
-        let mut max_offset = 0_u64;
-        for (&d, &s) in self.shape.iter().zip(self.strides.iter()) {
-            if d == 0 {
-                continue;
-            }
-            let span = (d - 1).checked_mul(s).ok_or_else(|| {
-                SchemaTranslationError::OverflowingLayout {
-                    dialect,
-                    resource: self.name.to_string(),
-                }
-            })?;
-            max_offset = max_offset.checked_add(span).ok_or_else(|| {
-                SchemaTranslationError::OverflowingLayout {
-                    dialect,
-                    resource: self.name.to_string(),
-                }
-            })?;
-        }
-        let bytes = (max_offset.checked_add(1).ok_or_else(|| {
-            SchemaTranslationError::OverflowingLayout {
-                dialect,
-                resource: self.name.to_string(),
-            }
-        })?)
-        .checked_mul(elem_size)
-        .ok_or_else(|| SchemaTranslationError::OverflowingLayout {
+        layout_extent_bytes(
             dialect,
-            resource: self.name.to_string(),
-        })?;
-        Ok(bytes)
+            self.name,
+            &self.element_type,
+            self.shape,
+            self.strides,
+        )
     }
 }
 
@@ -273,13 +180,55 @@ impl ResourceAbi {
     }
 }
 
+/// One field an external schema node carries.
+///
+/// The declared member is the kind the external schema states the value has.
+/// It is separate from the member a dialect field contract declares, and the
+/// two are reconciled by [`super::validate_member_compatibility`], so a
+/// consumer on another schema version cannot widen a field past what the
+/// contract admits.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExternalField {
+    /// Field name.
+    pub name: String,
+    /// Member kind the external schema declares for this field.
+    pub declared_member: FieldType,
+    /// Raw textual value as the external schema carried it.
+    pub raw_value: String,
+}
+
+impl ExternalField {
+    /// Decode this field into a typed value of its declared member kind.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SchemaTranslationError::OverflowingField`] when the raw text
+    /// does not parse into the declared member without loss.
+    pub fn decode(
+        &self,
+        dialect: &'static str,
+        node_op: &str,
+    ) -> Result<FieldValue, SchemaTranslationError> {
+        self.declared_member.decode(&self.raw_value).map_err(|reason| {
+            SchemaTranslationError::OverflowingField {
+                dialect,
+                node_op: node_op.to_string(),
+                field: self.name.clone(),
+                field_type: self.declared_member,
+                value: self.raw_value.clone(),
+                reason,
+            }
+        })
+    }
+}
+
 /// External schema node representation used to validate neutral external models.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExternalSchemaNode {
     /// Operation name in the external schema.
     pub op_name: String,
-    /// Raw field key-value pairs (ordered to detect duplicates).
-    pub raw_fields: Vec<(String, String)>,
+    /// Declared fields in schema order, so a duplicate is observable.
+    pub fields: Vec<ExternalField>,
     /// Bound resource names provided by the external model.
     pub bound_resources: Vec<String>,
 }
@@ -324,37 +273,13 @@ impl ExternalLayoutDeclaration {
         &self,
         dialect: &'static str,
     ) -> Result<u64, SchemaTranslationError> {
-        let elem_size = self.element_type.min_bytes() as u64;
-        let mut max_offset = 0_u64;
-        for (&d, &s) in self.shape.iter().zip(self.strides.iter()) {
-            if d == 0 {
-                continue;
-            }
-            let span = (d - 1).checked_mul(s).ok_or_else(|| {
-                SchemaTranslationError::OverflowingLayout {
-                    dialect,
-                    resource: self.resource_name.clone(),
-                }
-            })?;
-            max_offset = max_offset.checked_add(span).ok_or_else(|| {
-                SchemaTranslationError::OverflowingLayout {
-                    dialect,
-                    resource: self.resource_name.clone(),
-                }
-            })?;
-        }
-        let bytes = (max_offset.checked_add(1).ok_or_else(|| {
-            SchemaTranslationError::OverflowingLayout {
-                dialect,
-                resource: self.resource_name.clone(),
-            }
-        })?)
-        .checked_mul(elem_size)
-        .ok_or_else(|| SchemaTranslationError::OverflowingLayout {
+        layout_extent_bytes(
             dialect,
-            resource: self.resource_name.clone(),
-        })?;
-        Ok(bytes)
+            &self.resource_name,
+            &self.element_type,
+            &self.shape,
+            &self.strides,
+        )
     }
 }
 
@@ -378,7 +303,7 @@ impl ExternalSchema {
     #[must_use]
     pub fn canonical_identity(&self) -> [u8; 32] {
         let mut hasher = blake3::Hasher::new();
-        hasher.update(b"vyre.external_schema.v1\0");
+        hasher.update(b"vyre.external_schema.v2\0");
         hasher.update(self.schema_id.as_bytes());
         hasher.update(&[0]);
         hasher.update(&self.version.to_le_bytes());
@@ -386,11 +311,12 @@ impl ExternalSchema {
         for node in &self.nodes {
             hasher.update(node.op_name.as_bytes());
             hasher.update(&[0]);
-            hasher.update(&(node.raw_fields.len() as u64).to_le_bytes());
-            for (k, v) in &node.raw_fields {
-                hasher.update(k.as_bytes());
+            hasher.update(&(node.fields.len() as u64).to_le_bytes());
+            for field in &node.fields {
+                hasher.update(field.name.as_bytes());
                 hasher.update(&[0]);
-                hasher.update(v.as_bytes());
+                hasher.update(&field.declared_member.wire_tag().to_le_bytes());
+                hasher.update(field.raw_value.as_bytes());
                 hasher.update(&[0]);
             }
             hasher.update(&(node.bound_resources.len() as u64).to_le_bytes());
@@ -430,7 +356,22 @@ impl ExternalSchema {
     }
 
     /// Exhaustively visit every component in this schema.
-    pub fn accept<V: ExternalSchemaVisitor>(&self, visitor: &mut V) -> Result<(), V::Error> {
+    ///
+    /// Each field is visited twice: once as the raw declaration the external
+    /// schema carried, and once as the typed value its declared member decodes
+    /// to, so a consumer reads a value of a known member kind rather than
+    /// re-parsing text.
+    ///
+    /// # Errors
+    ///
+    /// Returns the visitor's error, including the
+    /// [`SchemaTranslationError::OverflowingField`] raised when a raw value
+    /// does not parse into the member the external schema declared for it.
+    pub fn accept<V: ExternalSchemaVisitor>(
+        &self,
+        dialect: &'static str,
+        visitor: &mut V,
+    ) -> Result<(), V::Error> {
         visitor.visit_schema(&self.schema_id, self.version)?;
         for res in &self.declared_resources {
             visitor.visit_resource_declaration(res)?;
@@ -440,8 +381,10 @@ impl ExternalSchema {
         }
         for node in &self.nodes {
             visitor.visit_node(node)?;
-            for (k, v) in &node.raw_fields {
-                visitor.visit_field(&node.op_name, k, v)?;
+            for field in &node.fields {
+                visitor.visit_field(&node.op_name, field)?;
+                let value = field.decode(dialect, &node.op_name)?;
+                visitor.visit_field_value(&node.op_name, &field.name, &value)?;
             }
             for res in &node.bound_resources {
                 visitor.visit_resource_binding(&node.op_name, res)?;
@@ -454,7 +397,7 @@ impl ExternalSchema {
 /// Exhaustive visitor trait over external schema components.
 pub trait ExternalSchemaVisitor {
     /// Error type produced by the visitor.
-    type Error;
+    type Error: From<SchemaTranslationError>;
 
     /// Visit schema header.
     fn visit_schema(&mut self, schema_id: &str, version: u32) -> Result<(), Self::Error>;
@@ -462,12 +405,16 @@ pub trait ExternalSchemaVisitor {
     /// Visit a schema operation node.
     fn visit_node(&mut self, node: &ExternalSchemaNode) -> Result<(), Self::Error>;
 
-    /// Visit a field key-value pair within a node.
-    fn visit_field(
+    /// Visit a declared field within a node, before it is decoded.
+    fn visit_field(&mut self, node_op: &str, field: &ExternalField)
+        -> Result<(), Self::Error>;
+
+    /// Visit the typed value a declared field decodes to.
+    fn visit_field_value(
         &mut self,
         node_op: &str,
         field_name: &str,
-        field_value: &str,
+        value: &FieldValue,
     ) -> Result<(), Self::Error>;
 
     /// Visit a bound resource name within a node.
@@ -609,51 +556,75 @@ pub enum SchemaTranslationError {
         /// Resource element type.
         resource_type: DataType,
     },
+    /// An external field declares a member kind the field contract refuses.
+    #[error("Incompatible member `{external_member}` for field `{field}` in external schema node `{node_op}` for dialect `{dialect}`: the field contract declares `{contract_member}`. Fix: declare `{field}` as `{contract_member}` in the external schema, or widen the dialect field contract.")]
+    IncompatibleFieldMember {
+        /// Dialect identifier.
+        dialect: &'static str,
+        /// Node operation name.
+        node_op: String,
+        /// Field name.
+        field: String,
+        /// Member kind the dialect field contract declares.
+        contract_member: FieldType,
+        /// Member kind the external schema declares.
+        external_member: FieldType,
+    },
+    /// A wire tag names no declared generic schema member.
+    #[error("Unknown schema member wire tag `{tag}` for dialect `{dialect}`. Fix: rebuild the producer against a schema revision that declares tag `{tag}`, or re-encode the field with a member this revision declares.")]
+    UnknownMemberTag {
+        /// Dialect identifier.
+        dialect: &'static str,
+        /// Wire tag no declared member carries.
+        tag: u16,
+    },
 }
 
 /// Validate external schema node fields against a declared field contract.
 ///
 /// # Errors
 ///
-/// Returns [`SchemaTranslationError`] on unknown, duplicate, missing required, or overflowing fields.
+/// Returns [`SchemaTranslationError`] on unknown, duplicate, missing required,
+/// member-incompatible, or overflowing fields.
 pub fn validate_node_fields(
     dialect: &'static str,
     node_op: &str,
-    raw_fields: &[(String, String)],
+    fields: &[ExternalField],
     declared_fields: &[FieldContract],
 ) -> Result<(), SchemaTranslationError> {
     let mut seen_fields = BTreeSet::new();
-    let declared_names: BTreeSet<&'static str> = declared_fields.iter().map(|f| f.name).collect();
 
-    for (field_name, field_val) in raw_fields {
-        if !seen_fields.insert(field_name.as_str()) {
+    for field in fields {
+        if !seen_fields.insert(field.name.as_str()) {
             return Err(SchemaTranslationError::DuplicateField {
                 dialect,
                 node_op: node_op.to_string(),
-                field: field_name.clone(),
+                field: field.name.clone(),
             });
         }
-        if !declared_names.contains(field_name.as_str()) {
+        let Some(contract) = declared_fields.iter().find(|f| f.name == field.name) else {
             return Err(SchemaTranslationError::UnknownField {
                 dialect,
                 node_op: node_op.to_string(),
-                field: field_name.clone(),
+                field: field.name.clone(),
             });
-        }
-        if let Some(contract) = declared_fields
-            .iter()
-            .find(|f| f.name == field_name.as_str())
-        {
-            if let Err(reason) = contract.field_type.parse_and_validate(field_val) {
-                return Err(SchemaTranslationError::OverflowingField {
-                    dialect,
-                    node_op: node_op.to_string(),
-                    field: field_name.clone(),
-                    field_type: contract.field_type,
-                    value: field_val.clone(),
-                    reason,
-                });
-            }
+        };
+        super::member::validate_member_compatibility(
+            dialect,
+            node_op,
+            &field.name,
+            contract.field_type,
+            field.declared_member,
+        )?;
+        if let Err(reason) = contract.field_type.parse_and_validate(&field.raw_value) {
+            return Err(SchemaTranslationError::OverflowingField {
+                dialect,
+                node_op: node_op.to_string(),
+                field: field.name.clone(),
+                field_type: contract.field_type,
+                value: field.raw_value.clone(),
+                reason,
+            });
         }
     }
 
