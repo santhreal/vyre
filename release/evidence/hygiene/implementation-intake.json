@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"df2f410f57e03906e94817e986b0f633c2a20799","commit_timestamp":"1789061230","parent_commit":"5f6cf9ef935abe9bf2024884dd19f3d0ec5a6674","dirty":true,"source_fingerprint":"git:df2f410f57e03906e94817e986b0f633c2a20799:dirty=true:worktree=2a66838599deda94710b32a99a332d4b600f0dd80c4c8b881de69bc6b746fec2"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"956e5380ef0567214833a06e21d408b485495f5b","commit_timestamp":"1789106722","parent_commit":"7a6de622ef191cf7a9b79fca5d3d23f5f4ca6d97","dirty":false,"source_fingerprint":"git:956e5380ef0567214833a06e21d408b485495f5b:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "release_blocker_count": 0,
   "intake_summary": [
@@ -64,7 +64,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 64
+      "count": 65
     },
     {
       "owner_lane": "coordination",
@@ -73,7 +73,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 54
+      "count": 55
     },
     {
       "owner_lane": "coordination",
@@ -82,7 +82,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 50
+      "count": 49
     },
     {
       "owner_lane": "coordination",
@@ -91,7 +91,7 @@
       "hot_path": false,
       "pattern": "panic_macro",
       "release_blocker": false,
-      "count": 39
+      "count": 41
     },
     {
       "owner_lane": "coordination",
@@ -172,7 +172,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 6
+      "count": 8
     },
     {
       "owner_lane": "driver_wgpu",

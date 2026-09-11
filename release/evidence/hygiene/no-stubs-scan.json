@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"df2f410f57e03906e94817e986b0f633c2a20799","commit_timestamp":"1789061230","parent_commit":"5f6cf9ef935abe9bf2024884dd19f3d0ec5a6674","dirty":true,"source_fingerprint":"git:df2f410f57e03906e94817e986b0f633c2a20799:dirty=true:worktree=2a66838599deda94710b32a99a332d4b600f0dd80c4c8b881de69bc6b746fec2"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"956e5380ef0567214833a06e21d408b485495f5b","commit_timestamp":"1789106722","parent_commit":"7a6de622ef191cf7a9b79fca5d3d23f5f4ca6d97","dirty":false,"source_fingerprint":"git:956e5380ef0567214833a06e21d408b485495f5b:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
@@ -71,7 +71,7 @@
     },
     {
       "path": "vyre-libs-reduce/src/reduce/grid_stride_tree.rs",
-      "line": 117,
+      "line": 153,
       "pattern": "placeholder_text",
       "text": "// single-block form cannot drift into demanding a placeholder for its own"
     },
@@ -89,7 +89,7 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 198,
+      "line": 261,
       "pattern": "placeholder_text",
       "text": "// op whose fixture carried a placeholder for a backend-allocated output"
     },
@@ -137,19 +137,19 @@
     },
     {
       "path": "vyre-test-support/src/host_input_abi.rs",
-      "line": 252,
+      "line": 254,
       "pattern": "placeholder_text",
       "text": "/// Assert `backend` refuses a long-form input list carrying a placeholder for"
     },
     {
       "path": "vyre-test-support/src/host_input_abi.rs",
-      "line": 256,
+      "line": 258,
       "pattern": "placeholder_text",
       "text": "/// A placeholder slot is the shape a caller writes when it counts bindings"
     },
     {
       "path": "vyre-test-support/src/host_input_abi.rs",
-      "line": 276,
+      "line": 278,
       "pattern": "placeholder_text",
       "text": "// A placeholder for the backend-allocated output sits at binding index 1."
     },
@@ -263,19 +263,19 @@
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 337,
+      "line": 339,
       "pattern": "stub_text",
       "text": "/// pattern table row reading `text: \"todo!(\",` is that spelling, not a stub."
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 366,
+      "line": 368,
       "pattern": "placeholder_text",
       "text": "/// The family covers an unfinished item, a placeholder, and the macros and"
     },
     {
       "path": "xtask/src/gates/hygiene_matrix/rules.rs",
-      "line": 374,
+      "line": 376,
       "pattern": "FIXME",
       "text": "| \"FIXME\""
     },

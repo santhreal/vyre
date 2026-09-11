@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ab2e2b4ba58b45dc748e13ab540a57116d15ff8ff539182ce68210e5bfc7273a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 5090","driver_version":"580.178.04"}]}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"956e5380ef0567214833a06e21d408b485495f5b","commit_timestamp":"1789106722","parent_commit":"7a6de622ef191cf7a9b79fca5d3d23f5f4ca6d97","dirty":false,"source_fingerprint":"git:956e5380ef0567214833a06e21d408b485495f5b:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
   "schema_version": 4,
   "backend_id": "wgpu",
   "command": "cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all",
@@ -1091,8 +1091,8 @@
   "op_matrix_blocked_release_count": 0,
   "op_matrix_blocked_release_rows": [],
   "op_matrix_errors": [],
-  "passed_pairs": 357,
-  "failed_pairs": 1,
+  "passed_pairs": 358,
+  "failed_pairs": 0,
   "duplicate_op_ids": [],
   "diff_schema_version": 1,
   "diff_summary_count": 358,
@@ -2721,12 +2721,12 @@
     {
       "op_id": "vyre-libs::math::tensor_train_decompose",
       "backend_id": "wgpu",
-      "input_digest": "86433ecf8ba6b628834aa94de29b93d58f4739be352c1dd4d5ff6c1962f9ea44",
-      "output_digest": "bf0073c1f5d9341acb878f4588606be76e57ebe4aaba642fb57bae11ace65544",
+      "input_digest": "vyre-conform-input-envelope-v1:583d4c552c2e8fc975b7f0c150f7942038e3c20c2b1ca6a7d02b6a9c61d50d2d",
+      "output_digest": "vyre-conform-output-envelope-v1:36b3fe351b6c0d29de4de25900a40a5214c72bf435ea4bf39790c4a7ab9155bf",
       "timing_class": "not_reported",
-      "failure_class": "output_mismatch",
-      "passed": false,
-      "source": "input=replay_capsule;output=replay_capsule"
+      "failure_class": "passed",
+      "passed": true,
+      "source": "input=derived_pair_envelope;output=derived_pair_envelope"
     },
     {
       "op_id": "vyre-libs::math::tzcnt_u32",
@@ -5655,58 +5655,8 @@
     {
       "op_id": "vyre-libs::math::tensor_train_decompose",
       "backend_id": "wgpu",
-      "passed": false,
-      "message": "backend output diverged from vyre-reference on case 0: output buffer 2 (F32) exceeded the 128-ULP window; left=len=16 hex=582cc93e0000000000000000699b4b43 right=len=16 hex=b42bc93e00000000000000006b9b4b43. Fix: align backend.dispatch with vyre-reference under the backend-transcendental-aware ULP window (byte-exact for non-F32, <= program-derived ULP cap for F32).",
-      "replay_capsule": {
-        "backend_id": "wgpu",
-        "backend_output_blake3": "bf0073c1f5d9341acb878f4588606be76e57ebe4aaba642fb57bae11ace65544",
-        "backend_output_buffers_hex": [
-          "90241c3e8028b33e5c1f0c3f78aa3e3f",
-          "bf70124132272f41",
-          "582cc93e0000000000000000699b4b43",
-          "6466443f4d34243f4d3424bf6466443f",
-          "582cc93ecaf249f1"
-        ],
-        "backend_output_count": 5,
-        "case_index": 0,
-        "first_mismatch": {
-          "backend_byte": 144,
-          "backend_len": 16,
-          "byte_index": 0,
-          "kind": "byte",
-          "output_index": 0,
-          "reference_byte": 145,
-          "reference_len": 16
-        },
-        "minimization": {
-          "original_case_count": 1,
-          "retained_case_count": 1,
-          "strategy": "single_witness_case"
-        },
-        "op_id": "vyre-libs::math::tensor_train_decompose",
-        "program_blake3": "74554e4b756f5e1f86d5265799d28ae959d2aed163d0f05dd8820e15a75c88d8",
-        "reference_output_blake3": "c3074b233a07efd4264d92acc69398aec03a8bc64d5ce4e051a3d179b90a059a",
-        "reference_output_buffers_hex": [
-          "91241c3e8128b33e5c1f0c3f77aa3e3f",
-          "c070124134272f41",
-          "b42bc93e00000000000000006b9b4b43",
-          "6566443f4d34243f4d3424bf6566443f",
-          "b42bc93ecaf249f1"
-        ],
-        "reference_output_count": 5,
-        "replay_command": "vyre-conform dispatch --backend wgpu --ops vyre-libs::math::tensor_train_decompose",
-        "schema_version": 2,
-        "witness_input_blake3": "86433ecf8ba6b628834aa94de29b93d58f4739be352c1dd4d5ff6c1962f9ea44",
-        "witness_input_buffers_hex": [
-          "0000803f0000004000004040000080400000a0400000c0400000e04000000041",
-          "00000000000000000000000000000000",
-          "0000000000000000",
-          "00000000000000000000000000000000",
-          "00000000000000000000000000000000",
-          "0000000000000000"
-        ],
-        "witness_input_count": 6
-      }
+      "passed": true,
+      "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
     },
     {
       "op_id": "vyre-libs::math::tzcnt_u32",
@@ -6879,8 +6829,5 @@
       "message": "1 witness case(s) matched vyre-reference through canonical semantic artifact submission"
     }
   ],
-  "blockers": [
-    "`cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all` exited with exit status: 1; stderr: Finished `release` profile [optimized] target(s) in 0.20s\n     Running `/mnt/FlareTraining/santh-archive/cargo-target/release/vyre-conform dispatch --backend wgpu --ops all`",
-    "wgpu conformance reported 1 failed pair(s)"
-  ]
+  "blockers": []
 }

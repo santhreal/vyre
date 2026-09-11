@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"4fb673a849e6bd3e2dc15a09a52c323d6110bcd5","commit_timestamp":"1789041652","parent_commit":"5d82cd9b5ae3c50d8caf6384a8752d741406e91d","dirty":true,"source_fingerprint":"git:4fb673a849e6bd3e2dc15a09a52c323d6110bcd5:dirty=true:worktree=a500e17273abd01bc01ecaccf64dbd485cdf2cc3ff9a849a03babd72360dbda7"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"956e5380ef0567214833a06e21d408b485495f5b","commit_timestamp":"1789106722","parent_commit":"7a6de622ef191cf7a9b79fca5d3d23f5f4ca6d97","dirty":false,"source_fingerprint":"git:956e5380ef0567214833a06e21d408b485495f5b:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "tiers": [
     {
@@ -10,7 +10,7 @@
       "compile_units": 6,
       "link_units": 7,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 520622
+      "disk_use_bytes": 537317
     },
     {
       "tier": "compiler-boundary",
@@ -20,7 +20,7 @@
       "compile_units": 1,
       "link_units": 2,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 444153
+      "disk_use_bytes": 443369
     },
     {
       "tier": "concrete-backend",
@@ -34,7 +34,7 @@
       "compile_units": 7,
       "link_units": 12,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 2288940
+      "disk_use_bytes": 2263216
     },
     {
       "tier": "conformance",
@@ -45,7 +45,7 @@
       "compile_units": 5,
       "link_units": 8,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 520678
+      "disk_use_bytes": 513830
     },
     {
       "tier": "emitter",
@@ -58,7 +58,7 @@
       "compile_units": 4,
       "link_units": 8,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 533850
+      "disk_use_bytes": 541905
     },
     {
       "tier": "facade",
@@ -68,7 +68,7 @@
       "compile_units": 1,
       "link_units": 2,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 63795
+      "disk_use_bytes": 77252
     },
     {
       "tier": "foundation",
@@ -80,7 +80,7 @@
       "compile_units": 3,
       "link_units": 6,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 2697479
+      "disk_use_bytes": 2724915
     },
     {
       "tier": "libraries",
@@ -111,18 +111,18 @@
       ],
       "compile_units": 32,
       "link_units": 55,
-      "duplicate_source_bytes": 22010,
-      "disk_use_bytes": 2960135
+      "duplicate_source_bytes": 13845,
+      "disk_use_bytes": 2877968
     },
     {
       "tier": "lowering",
       "packages": [
         "vyre-lower"
       ],
-      "compile_units": 1,
-      "link_units": 2,
+      "compile_units": 2,
+      "link_units": 3,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 248553
+      "disk_use_bytes": 245575
     },
     {
       "tier": "packaging",
@@ -132,7 +132,7 @@
       "compile_units": 1,
       "link_units": 2,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 89377
+      "disk_use_bytes": 87973
     },
     {
       "tier": "pass-engine",
@@ -142,7 +142,7 @@
       "compile_units": 3,
       "link_units": 4,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 77440
+      "disk_use_bytes": 77902
     },
     {
       "tier": "primitives",
@@ -152,7 +152,7 @@
       "compile_units": 2,
       "link_units": 3,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 74839
+      "disk_use_bytes": 74724
     },
     {
       "tier": "registry-link",
@@ -173,7 +173,7 @@
       "compile_units": 2,
       "link_units": 4,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 625007
+      "disk_use_bytes": 631020
     },
     {
       "tier": "semantics",
@@ -183,7 +183,7 @@
       "compile_units": 1,
       "link_units": 2,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 421265
+      "disk_use_bytes": 529253
     },
     {
       "tier": "standalone-tooling",
@@ -194,7 +194,7 @@
       "compile_units": 2,
       "link_units": 5,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 164739
+      "disk_use_bytes": 163700
     },
     {
       "tier": "test-tooling",
@@ -204,7 +204,7 @@
       "compile_units": 3,
       "link_units": 4,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 62306
+      "disk_use_bytes": 62453
     },
     {
       "tier": "tooling",
@@ -219,7 +219,7 @@
       "compile_units": 9,
       "link_units": 20,
       "duplicate_source_bytes": 1172,
-      "disk_use_bytes": 1001052
+      "disk_use_bytes": 1005799
     }
   ],
   "shared_contracts": [
@@ -237,6 +237,10 @@
     },
     {
       "module": "vyre-test-support/src/backend_capabilities.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/backend_doubles.rs",
       "owner": "vyre-test-support"
     },
     {
@@ -316,7 +320,15 @@
       "owner": "vyre-test-support"
     },
     {
+      "module": "vyre-test-support/src/grid_sync_programs.rs",
+      "owner": "vyre-test-support"
+    },
+    {
       "module": "vyre-test-support/src/hardware_oracle.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/host_input_abi.rs",
       "owner": "vyre-test-support"
     },
     {
@@ -413,6 +425,10 @@
     },
     {
       "module": "vyre-test-support/src/target_compiler_contract.rs",
+      "owner": "vyre-test-support"
+    },
+    {
+      "module": "vyre-test-support/src/target_facet_join.rs",
       "owner": "vyre-test-support"
     },
     {

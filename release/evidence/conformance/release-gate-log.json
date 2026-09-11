@@ -1,11 +1,11 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ab2e2b4ba58b45dc748e13ab540a57116d15ff8ff539182ce68210e5bfc7273a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"956e5380ef0567214833a06e21d408b485495f5b","commit_timestamp":"1789106722","parent_commit":"7a6de622ef191cf7a9b79fca5d3d23f5f4ca6d97","dirty":false,"source_fingerprint":"git:956e5380ef0567214833a06e21d408b485495f5b:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 2,
   "command": "cargo_full run --bin xtask -- release-conformance",
   "requested_backends": [
     "cuda",
     "wgpu",
-    "cpu-ref"
+    "reference-oracle"
   ],
   "required_artifacts": [
     "cuda-conformance.json",
@@ -16,24 +16,21 @@
     {
       "path": "cuda-conformance.json",
       "exists": true,
-      "bytes": 331768,
+      "bytes": 325454,
       "read_error": null
     },
     {
       "path": "wgpu-conformance.json",
       "exists": true,
-      "bytes": 331576,
+      "bytes": 325454,
       "read_error": null
     },
     {
       "path": "reference-conformance.json",
       "exists": true,
-      "bytes": 314947,
+      "bytes": 320356,
       "read_error": null
     }
   ],
-  "blockers": [
-    "wgpu: `cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all` exited with exit status: 1; stderr: Finished `release` profile [optimized] target(s) in 0.20s\n     Running `/mnt/FlareTraining/santh-archive/cargo-target/release/vyre-conform dispatch --backend wgpu --ops all`",
-    "wgpu: wgpu conformance reported 1 failed pair(s)"
-  ]
+  "blockers": []
 }
