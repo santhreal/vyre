@@ -229,7 +229,7 @@ pub(super) fn evaluate_rules(
 ) -> Vec<Finding> {
     let mut findings = Vec::new();
 
-    // Check direct vyre_reference calls in production code
+    // A production path recorded as entering the oracle crate.
     for call in calls {
         if !call.is_in_test && call.callee == "vyre_reference" {
             findings.push(Finding::at(

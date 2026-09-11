@@ -1162,10 +1162,15 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
     }
 
     fn visit_path(&mut self, path: &'ast syn::Path) {
-        let path_str = quote::quote!(#path).to_string().replace(' ', "");
         let line = path.span().start().line as u32;
 
-        if path_str.contains("vyre_reference") || path_str.contains("SubgroupSimulator") {
+        // Segment-exact: a substring test convicted any identifier that merely
+        // ends in the crate name, such as a local `local_vyre_reference` module.
+        let enters_oracle = path
+            .segments
+            .iter()
+            .any(|segment| segment.ident == "vyre_reference" || segment.ident == "SubgroupSimulator");
+        if enters_oracle {
             self.record_call("vyre_reference".to_string(), line, false, CallContext::Walk);
         }
 

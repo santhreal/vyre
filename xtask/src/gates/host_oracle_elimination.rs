@@ -167,4 +167,48 @@ fn cpu_ref(input: &[u32]) -> Vec<u8> {
         assert!(findings[0].message.contains("`cpu_ref`"));
         assert_eq!(findings[0].line, Some(7));
     }
+
+    /// Every written form of a call into the oracle crate is convicted, and a
+    /// name that merely ends in those bytes is not.
+    ///
+    /// WHY: the rule compared the recorded callee with the bare crate name,
+    /// while a callee is recorded as the path the source writes. No Rust
+    /// source spells `vyre_reference(..)`, so the rule could not fire and a
+    /// production call into the interpreter was reported by the dependency
+    /// closure alone, which sees a manifest edge rather than a call.
+    ///
+    /// What it does not catch: a call through an item imported by `use`, or
+    /// through a manifest rename. Those reach the interpreter under a path
+    /// that does not name the crate, and the dependency closure is what
+    /// convicts them.
+    #[test]
+    fn a_production_path_into_the_oracle_crate_is_convicted_in_every_written_form() {
+        for call in [
+            "vyre_reference::ReferenceRequest::standard(program, inputs)",
+            "::vyre_reference::output_index(program, \"out\")",
+            "vyre_reference::value::Value::from(bytes)",
+        ] {
+            let code = format!("pub fn probe() {{ let _ = {call}; }}\n");
+            let findings = analyze_files(&[("vyre-libs/src/nn/probe.rs", code.as_str())]);
+            assert!(
+                findings
+                    .iter()
+                    .any(|finding| finding.message.contains("`vyre_reference`")),
+                "Fix: a production call written as `{call}` must be convicted"
+            );
+        }
+
+        let benign = "pub fn probe() { let _ = local_vyre_reference::helper(); }\n";
+        let findings = analyze_files(&[("vyre-libs/src/nn/probe.rs", benign)]);
+        assert!(
+            !findings
+                .iter()
+                .any(|finding| finding.message.contains("`vyre_reference`")),
+            "Fix: a path whose first segment only ends in the crate name is not a call into it: {:?}",
+            findings
+                .iter()
+                .map(|finding| finding.message.clone())
+                .collect::<Vec<_>>()
+        );
+    }
 }
