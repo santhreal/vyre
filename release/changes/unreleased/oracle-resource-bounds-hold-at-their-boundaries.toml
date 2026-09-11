@@ -1,0 +1,2 @@
+category = "Added"
+text = "The reference oracle's resource bounds hold at both sides of each boundary: a program of more than a million IR nodes ends in a `BudgetExhaustion` refusal rather than a stack overflow or an unbounded run, evaluation allocates 887.3 bytes per IR node against a 1200 byte ceiling, and `ReferenceBudget::max_recursion_depth` and `ReferenceBudget::max_memory_bytes` each refuse one unit past the limit and admit the limit at three distinct values."
