@@ -83,7 +83,7 @@ fn bytes_per_element(t: &DataType) -> u32 {
         DataType::U64 | DataType::I64 | DataType::F64 | DataType::Vec2U32 => 8,
         DataType::Vec4U32 => 16,
         DataType::Bytes => 1,
-        DataType::Array { element_size } => (*element_size).try_into().unwrap_or(u32::MAX),
+        DataType::Array { element_size } => *element_size,
         DataType::Vec { element, count } => {
             bytes_per_element(element).saturating_mul(u32::from(*count))
         }

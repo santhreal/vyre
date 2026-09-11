@@ -162,7 +162,9 @@ fn field_type_exhaustive_closure() {
         match ft {
             FieldType::U32 => {
                 assert!(ft.parse_and_validate("42").is_ok());
-                assert!(ft.parse_and_validate("0xFFFF_FFFF".replace('_', "").as_str()).is_ok());
+                assert!(ft
+                    .parse_and_validate("0xFFFF_FFFF".replace('_', "").as_str())
+                    .is_ok());
                 assert!(ft.parse_and_validate("4294967296").is_err());
             }
             FieldType::I32 => {
@@ -416,13 +418,9 @@ fn synthetic_fixtures_fail_closed_on_invalid_fields_and_resources() {
         layouts: &[],
     };
 
-    assert!(validate_node_resources(
-        DIALECT,
-        "conv",
-        &["input".into(), "weight".into()],
-        &abi,
-    )
-    .is_ok());
+    assert!(
+        validate_node_resources(DIALECT, "conv", &["input".into(), "weight".into()], &abi,).is_ok()
+    );
 
     let roster = validate_node_resources(DIALECT, "conv", &["input".into()], &abi)
         .expect_err("incomplete resources must fail");
@@ -655,7 +653,10 @@ fn external_schema_canonical_identity_and_visitor_closure() {
         .expect("schema visitor traversal must succeed");
 
     assert_eq!(recorder.visited_nodes.len(), 2);
-    assert_eq!(recorder.visited_fields, vec![("rate".to_string(), FieldType::U32)]);
+    assert_eq!(
+        recorder.visited_fields,
+        vec![("rate".to_string(), FieldType::U32)]
+    );
     assert_eq!(
         recorder.visited_values,
         vec![("rate".to_string(), FieldValue::U32(10))]

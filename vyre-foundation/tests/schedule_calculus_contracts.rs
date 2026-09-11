@@ -310,7 +310,7 @@ fn schedule_calculus_operator_set_is_closed_against_source_at_runtime() {
         .iter()
         .map(|op| {
             let debug = format!("{op:?}");
-            let name = debug.split(|c| c == '{' || c == '(').next().unwrap().trim();
+            let name = debug.split(['{', '(']).next().unwrap().trim();
             name.to_string()
         })
         .collect();

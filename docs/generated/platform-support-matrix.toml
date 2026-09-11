@@ -23,11 +23,11 @@ arch = "x86"
 pointer_width = "32"
 endianness = "little_endian"
 tier = "encoding"
-evidence = "executed-native"
-target_triple = "i686-unknown-linux-gnu"
+evidence = "none"
+target_triple = ""
 emulator = ""
-identity_digest = "26c194baded92c255b685f4a9d06694d8c84644c9fe64e61def661404ffa0918"
-requires = ""
+identity_digest = ""
+requires = "an executed run of the host identity suite on this cell, native or under a user-mode emulator"
 
 [[host_cells]]
 os = "linux"
@@ -83,11 +83,11 @@ arch = "s390x"
 pointer_width = "64"
 endianness = "big_endian"
 tier = "encoding"
-evidence = "executed-emulated"
-target_triple = "s390x-unknown-linux-gnu"
-emulator = "qemu-s390x-static"
-identity_digest = "26c194baded92c255b685f4a9d06694d8c84644c9fe64e61def661404ffa0918"
-requires = ""
+evidence = "none"
+target_triple = ""
+emulator = ""
+identity_digest = ""
+requires = "an executed run of the host identity suite on this cell, native or under a user-mode emulator"
 
 [[host_cells]]
 os = "linux"
@@ -1743,6 +1743,16 @@ publication_class = "private-test-support"
 [[package_features]]
 package = "vyre-test-support"
 feature = "driver-contracts"
+publication_class = "private-test-support"
+
+[[package_features]]
+package = "vyre-test-support"
+feature = "golden-corpus"
+publication_class = "private-test-support"
+
+[[package_features]]
+package = "vyre-test-support"
+feature = "host-input-abi"
 publication_class = "private-test-support"
 
 [[package_features]]

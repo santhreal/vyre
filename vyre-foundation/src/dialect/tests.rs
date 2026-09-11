@@ -287,8 +287,16 @@ fn test_external_schema_adversarial_rejections() {
     let valid_node = ExternalSchemaNode {
         op_name: "vyre-unit::dialect::alpha".to_string(),
         fields: vec![
-            ExternalField { name: "scale".to_string(), declared_member: FieldType::U32, raw_value: "4".to_string() },
-            ExternalField { name: "tag".to_string(), declared_member: FieldType::String, raw_value: "active".to_string() },
+            ExternalField {
+                name: "scale".to_string(),
+                declared_member: FieldType::U32,
+                raw_value: "4".to_string(),
+            },
+            ExternalField {
+                name: "tag".to_string(),
+                declared_member: FieldType::String,
+                raw_value: "active".to_string(),
+            },
         ],
         bound_resources: vec!["scratch_buf".to_string()],
     };
@@ -299,8 +307,16 @@ fn test_external_schema_adversarial_rejections() {
     let unknown_field_node = ExternalSchemaNode {
         op_name: "vyre-unit::dialect::alpha".to_string(),
         fields: vec![
-            ExternalField { name: "scale".to_string(), declared_member: FieldType::U32, raw_value: "4".to_string() },
-            ExternalField { name: "unrecognized_field".to_string(), declared_member: FieldType::String, raw_value: "val".to_string() },
+            ExternalField {
+                name: "scale".to_string(),
+                declared_member: FieldType::U32,
+                raw_value: "4".to_string(),
+            },
+            ExternalField {
+                name: "unrecognized_field".to_string(),
+                declared_member: FieldType::String,
+                raw_value: "val".to_string(),
+            },
         ],
         bound_resources: vec!["scratch_buf".to_string()],
     };
@@ -313,8 +329,16 @@ fn test_external_schema_adversarial_rejections() {
     let duplicate_field_node = ExternalSchemaNode {
         op_name: "vyre-unit::dialect::alpha".to_string(),
         fields: vec![
-            ExternalField { name: "scale".to_string(), declared_member: FieldType::U32, raw_value: "4".to_string() },
-            ExternalField { name: "scale".to_string(), declared_member: FieldType::U32, raw_value: "8".to_string() },
+            ExternalField {
+                name: "scale".to_string(),
+                declared_member: FieldType::U32,
+                raw_value: "4".to_string(),
+            },
+            ExternalField {
+                name: "scale".to_string(),
+                declared_member: FieldType::U32,
+                raw_value: "8".to_string(),
+            },
         ],
         bound_resources: vec!["scratch_buf".to_string()],
     };
@@ -326,7 +350,11 @@ fn test_external_schema_adversarial_rejections() {
     // Adversarial Case 3: Missing required field
     let missing_field_node = ExternalSchemaNode {
         op_name: "vyre-unit::dialect::alpha".to_string(),
-        fields: vec![ExternalField { name: "tag".to_string(), declared_member: FieldType::String, raw_value: "active".to_string() }],
+        fields: vec![ExternalField {
+            name: "tag".to_string(),
+            declared_member: FieldType::String,
+            raw_value: "active".to_string(),
+        }],
         bound_resources: vec!["scratch_buf".to_string()],
     };
     let err = validate_external_node(&missing_field_node)
@@ -340,7 +368,11 @@ fn test_external_schema_adversarial_rejections() {
     // Adversarial Case 4: Incomplete resource roster
     let incomplete_resource_node = ExternalSchemaNode {
         op_name: "vyre-unit::dialect::alpha".to_string(),
-        fields: vec![ExternalField { name: "scale".to_string(), declared_member: FieldType::U32, raw_value: "4".to_string() }],
+        fields: vec![ExternalField {
+            name: "scale".to_string(),
+            declared_member: FieldType::U32,
+            raw_value: "4".to_string(),
+        }],
         bound_resources: vec![], // Missing scratch_buf
     };
     let err = validate_external_node(&incomplete_resource_node)
@@ -380,8 +412,16 @@ fn test_external_schema_adversarial_rejections() {
     let overflowing_field_node = ExternalSchemaNode {
         op_name: "vyre-unit::dialect::alpha".to_string(),
         fields: vec![
-            ExternalField { name: "scale".to_string(), declared_member: FieldType::U32, raw_value: "999999999999999999999999".to_string() },
-            ExternalField { name: "tag".to_string(), declared_member: FieldType::String, raw_value: "active".to_string() },
+            ExternalField {
+                name: "scale".to_string(),
+                declared_member: FieldType::U32,
+                raw_value: "999999999999999999999999".to_string(),
+            },
+            ExternalField {
+                name: "tag".to_string(),
+                declared_member: FieldType::String,
+                raw_value: "active".to_string(),
+            },
         ],
         bound_resources: vec!["scratch_buf".to_string()],
     };

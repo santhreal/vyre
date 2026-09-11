@@ -90,7 +90,7 @@ fn a_weak_feature_reference_is_not_an_activation() {
              [features]\njson = [\"serde?/derive\"]\n",
     );
     let effect = feature_effect(&table, &BTreeSet::from(["serde".to_string()]));
-    assert!(effect.activated_by.get("serde").is_none());
+    assert!(!effect.activated_by.contains_key("serde"));
     assert_eq!(
         effect.enabled.get("serde"),
         Some(&BTreeSet::from(["derive".to_string()]))

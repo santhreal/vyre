@@ -630,7 +630,10 @@ fn a_body_with_no_effect_carries_no_tile_bound() {
     let ballot = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(RESOURCE_SPAN)],
         [256, 1, 1],
-        vec![Node::let_bind("mask", Expr::subgroup_ballot(Expr::bool(true)))],
+        vec![Node::let_bind(
+            "mask",
+            Expr::subgroup_ballot(Expr::bool(true)),
+        )],
     );
     assert!(launch_covers_full_input_span(&ballot));
     assert_eq!(guarded_logical_span(&ballot), Some(0));

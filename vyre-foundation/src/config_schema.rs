@@ -877,7 +877,7 @@ pub fn render_cli_help() -> String {
     for def in CANONICAL_CONFIG_FIELDS {
         out.push_str(&format!(
             "  --{} <{:?}> (default: '{}')\n      {}\n",
-            def.key.replace('.', "-").replace('_', "-"),
+            def.key.replace(['.', '_'], "-"),
             def.field_type,
             def.default_raw,
             def.help_text

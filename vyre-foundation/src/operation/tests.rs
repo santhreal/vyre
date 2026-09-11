@@ -146,7 +146,6 @@ fn an_id_naming_no_crate_is_refused_whatever_it_declares() {
 fn catalog_bundle_assembly_and_descriptor_lookup() {
     let bundle = OperationCatalogBundle::global();
     assert!(!bundle.is_empty());
-    assert!(bundle.len() > 0);
     let digest = bundle.digest();
     assert_ne!(*digest, [0u8; 32]);
 

@@ -510,7 +510,7 @@ fn every_public_attention_builder_has_a_recorded_decision() {
 
     let stale: Vec<&&str> = excluded
         .iter()
-        .filter(|name| !exported.contains(&(**name).to_string()))
+        .filter(|name| !exported.contains(**name))
         .collect();
     assert!(
         stale.is_empty(),

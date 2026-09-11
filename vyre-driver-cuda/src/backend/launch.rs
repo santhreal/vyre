@@ -555,12 +555,13 @@ impl CudaBackend {
     ) -> Result<(), BackendError> {
         let mut open_timing_window = Some(open_timing_window);
         for _ in 0..prepared.fixpoint_iterations {
-            // SAFETY: `stream` is owned by this dispatch's launch lease for the
-            // whole replay, so it outlives the memset; the memset is enqueued on
-            // the same stream as the launch below and is therefore ordered ahead
-            // of the kernel that waits on the counter.
             crate::backend::dispatch_phase_probe::measure_nested(
                 crate::backend::dispatch_phase_probe::Nested::BarrierReset,
+                // SAFETY: `stream` is owned by this dispatch's launch lease for
+                // the whole replay, so it outlives the memset; the memset is
+                // enqueued on the same stream as the launch below and is
+                // therefore ordered ahead of the kernel that waits on the
+                // counter.
                 || unsafe { module_globals.enqueue_barrier_reset(stream) },
             )?;
             if let Some(open) = open_timing_window.take() {

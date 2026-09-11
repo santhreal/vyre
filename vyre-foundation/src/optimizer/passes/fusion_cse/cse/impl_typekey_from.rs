@@ -34,9 +34,7 @@ impl From<&DataType> for TypeKey {
             DataType::I8 => Self(0x10),
             DataType::I16 => Self(0x11),
             DataType::I64 => Self(0x12),
-            DataType::Array { element_size } => {
-                Self(0x08 | (u64::try_from(*element_size).unwrap_or(u64::MAX) << 8))
-            }
+            DataType::Array { element_size } => Self(0x08 | (u64::from(*element_size) << 8)),
             DataType::Handle(id) => Self(0x13 | (u64::from(id.as_u32()) << 8)),
             DataType::Vec { element, count } => {
                 Self(0x14 | (u64::from(*count) << 8) | (Self::from(element.as_ref()).0 << 16))

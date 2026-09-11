@@ -786,13 +786,16 @@ fn discarded_read(line: &str) -> Option<String> {
     Some(value.to_string())
 }
 
-/// The identifiers of a line's code, with comments, string literals and
-/// keywords removed.
+/// The identifiers of a line's code, with comments, keywords and string prose
+/// removed, plus the inline format captures its string literals name.
 ///
 /// A name inside prose or inside a message is not a reference to the item, and a
 /// gate that counted one would report an item live because its own doc comment
 /// mentions it. A keyword is not a name either: no item can be called `let`, so
-/// a token that only the grammar can produce is not a reference to anything.
+/// a token that only the grammar can produce is not a reference to anything. An
+/// inline format capture is the opposite case: `format!("{NAME}")` resolves
+/// `NAME` in the surrounding scope and deleting the item breaks the build, so
+/// the capture is a reference and is counted as one.
 fn identifiers(line: &str) -> Vec<&str> {
     let mut found = Vec::new();
     let bytes = line.as_bytes();
@@ -801,10 +804,38 @@ fn identifiers(line: &str) -> Vec<&str> {
     while index < bytes.len() {
         let byte = bytes[index];
         if in_string {
-            index += if byte == b'\\' { 2 } else { 1 };
+            if byte == b'\\' {
+                index += 2;
+                continue;
+            }
             if byte == b'"' {
                 in_string = false;
+                index += 1;
+                continue;
             }
+            if byte == b'{' {
+                if bytes.get(index + 1) == Some(&b'{') {
+                    index += 2;
+                    continue;
+                }
+                let start = index + 1;
+                let mut end = start;
+                while end < bytes.len()
+                    && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'_')
+                {
+                    end += 1;
+                }
+                let token = &line[start..end];
+                let capture = matches!(bytes.get(end), Some(b'}' | b':'))
+                    && !token.is_empty()
+                    && !token.as_bytes()[0].is_ascii_digit();
+                if capture && !is_keyword(token) {
+                    found.push(token);
+                }
+                index = end;
+                continue;
+            }
+            index += 1;
             continue;
         }
         if byte == b'"' {
@@ -1447,6 +1478,31 @@ mod tests {
             vec!["panic"]
         );
         assert!(identifiers("/// marker_probe is documented here").is_empty());
+    }
+
+    /// WHY: an inline format capture is a real reference. `format!("{MARKER}")`
+    /// resolves `MARKER` in scope, so deleting the item breaks the build, yet
+    /// the capture sits inside a string literal where the scanner drops prose.
+    /// Missing it reported a production item as referenced only by tests, and
+    /// the advice on that finding is to delete the item.
+    #[test]
+    fn an_inline_format_capture_counts_as_a_reference_but_an_escaped_brace_does_not() {
+        assert_eq!(
+            identifiers("    panic!(\"read it through `{MARKER}` instead\");"),
+            vec!["panic", "MARKER"]
+        );
+        assert_eq!(
+            identifiers("    format!(\"{marker_probe:?} and {0} and {}\");"),
+            vec!["format", "marker_probe"]
+        );
+        assert_eq!(
+            identifiers("    format!(\"{{MARKER}} stays literal\");"),
+            vec!["format"]
+        );
+        assert_eq!(
+            identifiers("    format!(\"{ MARKER } is not a capture\");"),
+            vec!["format"]
+        );
     }
 
     /// WHY: `is_keyword` binary-searches the table, so an unsorted entry is not

@@ -154,5 +154,5 @@ inventory::submit! {
         }),
     )
     .with_category("visual")
-    .with_uncharacterized()
+    .with_no_legal_rewrite()
 }

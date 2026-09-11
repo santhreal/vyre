@@ -172,14 +172,7 @@ pub(super) fn put_memory_regions_with_scratch(
         shape.clear();
         put_leb_u64(shape, u64::from(buffer.count()));
         if let DataType::Array { element_size } = buffer.element() {
-            put_leb_u64(
-                shape,
-                u64::try_from(element_size).map_err(|_| {
-                    WireEncodeErr::static_msg(
-                        "Fix: array element size cannot fit u64; cap the element size.",
-                    )
-                })?,
-            );
+            put_leb_u64(shape, u64::from(element_size));
         }
         if let DataType::Handle(id) = buffer.element() {
             put_leb_u64(shape, u64::from(id.as_u32()));

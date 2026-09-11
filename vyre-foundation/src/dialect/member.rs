@@ -171,10 +171,7 @@ impl FieldType {
     ///
     /// Returns [`SchemaTranslationError::UnknownMemberTag`] for a tag no
     /// declared member carries.
-    pub fn from_wire_tag(
-        dialect: &'static str,
-        tag: u16,
-    ) -> Result<Self, SchemaTranslationError> {
+    pub fn from_wire_tag(dialect: &'static str, tag: u16) -> Result<Self, SchemaTranslationError> {
         Self::ALL
             .into_iter()
             .find(|member| member.wire_tag() == tag)

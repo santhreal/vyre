@@ -215,12 +215,10 @@ fn mutate_json_path(root: &mut serde_json::Value, path: &[String]) {
                     serde_json::Value::Object(_) => {}
                 }
             }
+        } else if let Some(next) = current.get_mut(segment) {
+            current = next;
         } else {
-            if let Some(next) = current.get_mut(segment) {
-                current = next;
-            } else {
-                return;
-            }
+            return;
         }
     }
 }

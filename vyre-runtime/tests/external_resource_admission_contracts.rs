@@ -90,7 +90,7 @@ fn pre_allocation_rejection_of_unsupported_combinations() {
         1024 * 4,
         ResourcePermittedUsages::DEPTH_STENCIL_ATTACHMENT,
         ExternalMemoryKind::DmaBuf,
-        0xDEAD_01,
+        0x00DE_AD01,
         TimelineSyncProtocol::ImplicitQueue,
     );
 
@@ -118,7 +118,7 @@ fn pre_allocation_rejection_of_unsupported_combinations() {
         2048,
         ResourcePermittedUsages::SAMPLED,
         ExternalMemoryKind::MetalSharedResource,
-        0xDEAD_02,
+        0x00DE_AD02,
         TimelineSyncProtocol::MetalSharedEvent {
             event_id: 1,
             signal_value: 1,
@@ -149,7 +149,7 @@ fn pre_allocation_rejection_of_unsupported_combinations() {
         400, // 400 is not 256-byte aligned (required 512)
         ResourcePermittedUsages::SAMPLED,
         ExternalMemoryKind::DmaBuf,
-        0xDEAD_03,
+        0x00DE_AD03,
         TimelineSyncProtocol::ImplicitQueue,
     );
 
@@ -180,7 +180,7 @@ fn pre_allocation_rejection_of_unsupported_combinations() {
     bad_usage.provenance = ResourceProvenance::ExternalImport {
         memory_kind: ExternalMemoryKind::DmaBuf,
         exportable: false,
-        handle_tag: 0xDEAD_04,
+        handle_tag: 0x00DE_AD04,
     };
 
     let err_usage = manager

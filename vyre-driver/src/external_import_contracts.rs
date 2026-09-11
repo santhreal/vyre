@@ -153,7 +153,7 @@ where
 
     let record = importer
         .import_external_resource(descriptor)
-        .expect("an admissible descriptor imports");
+        .expect("Fix: admit this descriptor in the policy under test; the zero-copy case observes nothing without an imported record");
 
     assert_eq!(record.resource_id, 201);
     assert_eq!(record.device_id, 2);
@@ -168,7 +168,7 @@ where
     let report = importer
         .registry()
         .execute_transition_schedule(&schedule)
-        .expect("an admitted resource executes its schedule");
+        .expect("Fix: accept a schedule against an admitted resource in the registry under test; the transition counts are unobservable otherwise");
 
     assert_eq!(report.transitions_executed, 1);
     assert_eq!(report.barriers_emitted, 1);
@@ -204,16 +204,16 @@ where
 
     importer
         .import_external_resource(descriptor)
-        .expect("an admissible descriptor imports");
+        .expect("Fix: admit this descriptor in the policy under test; device loss invalidates nothing without an imported record");
 
     importer
         .registry()
         .register_dependent_view(301, 4001)
-        .expect("a dependent view registers against an admitted record");
+        .expect("Fix: register a dependent view against an admitted record in the registry under test; view invalidation is unobservable otherwise");
     importer
         .registry()
         .register_dependent_artifact(301, 5001)
-        .expect("a dependent artifact registers against an admitted record");
+        .expect("Fix: register a dependent artifact against an admitted record in the registry under test; artifact invalidation is unobservable otherwise");
 
     let report = importer.invalidate_on_device_loss();
     assert_eq!(report.device_id, 3);

@@ -209,16 +209,16 @@ impl ExternalField {
         dialect: &'static str,
         node_op: &str,
     ) -> Result<FieldValue, SchemaTranslationError> {
-        self.declared_member.decode(&self.raw_value).map_err(|reason| {
-            SchemaTranslationError::OverflowingField {
+        self.declared_member
+            .decode(&self.raw_value)
+            .map_err(|reason| SchemaTranslationError::OverflowingField {
                 dialect,
                 node_op: node_op.to_string(),
                 field: self.name.clone(),
                 field_type: self.declared_member,
                 value: self.raw_value.clone(),
                 reason,
-            }
-        })
+            })
     }
 }
 
@@ -406,8 +406,7 @@ pub trait ExternalSchemaVisitor {
     fn visit_node(&mut self, node: &ExternalSchemaNode) -> Result<(), Self::Error>;
 
     /// Visit a declared field within a node, before it is decoded.
-    fn visit_field(&mut self, node_op: &str, field: &ExternalField)
-        -> Result<(), Self::Error>;
+    fn visit_field(&mut self, node_op: &str, field: &ExternalField) -> Result<(), Self::Error>;
 
     /// Visit the typed value a declared field decodes to.
     fn visit_field_value(

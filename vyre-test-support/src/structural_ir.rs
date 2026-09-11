@@ -525,7 +525,7 @@ fn localization(
             continue;
         }
         for line in [golden, measured].into_iter().flatten() {
-            if let Some(identity) = line.trim_start().split_whitespace().next() {
+            if let Some(identity) = line.split_whitespace().next() {
                 identities.insert(identity);
             }
         }

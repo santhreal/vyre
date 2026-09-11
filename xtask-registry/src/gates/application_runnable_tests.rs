@@ -212,7 +212,7 @@ fn the_receipt_schema_carries_no_product_family_name() {
 /// Every term in the prohibited vocabulary is refused when a value carries it.
 #[test]
 fn every_prohibited_domain_term_is_refused_in_a_receipt_value() {
-    assert!(!PROHIBITED_DOMAIN_TERMS.is_empty());
+    let mut refused = 0_usize;
     for term in PROHIBITED_DOMAIN_TERMS {
         let mut receipt = neutral_receipt();
         receipt.target_format = format!("primary-binary-{term}");
@@ -228,7 +228,12 @@ fn every_prohibited_domain_term_is_refused_in_a_receipt_value() {
             },
             "`{term}` was not refused"
         );
+        refused += 1;
     }
+    assert!(
+        refused > 0,
+        "Fix: keep at least one term in PROHIBITED_DOMAIN_TERMS; an empty vocabulary makes this test pass without refusing anything"
+    );
 }
 
 /// Every term in the prohibited vocabulary is refused when a nested value carries it.

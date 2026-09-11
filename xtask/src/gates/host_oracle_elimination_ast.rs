@@ -274,14 +274,12 @@ impl AstAnalysisVisitor {
                 is_in_test: false,
                 is_in_expected_output: true,
                 is_in_fallback: false,
-                ..walk
             },
             CallContext::FallbackFixture => CallSiteContext {
                 caller_fn_idx: None,
                 is_in_test: false,
                 is_in_expected_output: false,
                 is_in_fallback: true,
-                ..walk
             },
             CallContext::ExpectedOutputArgument => CallSiteContext {
                 is_in_expected_output: true,

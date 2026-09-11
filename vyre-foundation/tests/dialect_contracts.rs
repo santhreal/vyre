@@ -15,8 +15,8 @@ use vyre_foundation::define_dialect;
 use vyre_foundation::dialect::{
     admit_descriptor_versions, admit_program_versions, admit_registered_versions,
     validate_dialect_version, validate_schema_identity, Dialect, DialectRegistry,
-    DialectVersionError, ExternalField, ExternalSchemaNode, FieldContract, FieldType,
-    ResourceAbi, ResourceBinding, SchemaTranslationError, SemanticVersionRejection,
+    DialectVersionError, ExternalField, ExternalSchemaNode, FieldContract, FieldType, ResourceAbi,
+    ResourceBinding, SchemaTranslationError, SemanticVersionRejection,
 };
 use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::{BufferAccess, DataType, Expr};
@@ -362,7 +362,11 @@ fn dialect_external_schema_translation_and_adversarial_rejections() {
     // Adversarial Case 2: Unknown field
     let unknown_field_node = ExternalSchemaNode {
         op_name: "vyre-test::demo::invert".to_string(),
-        fields: vec![ExternalField { name: "extraneous_field".to_string(), declared_member: FieldType::U32, raw_value: "1".to_string() }],
+        fields: vec![ExternalField {
+            name: "extraneous_field".to_string(),
+            declared_member: FieldType::U32,
+            raw_value: "1".to_string(),
+        }],
         bound_resources: vec![],
     };
     let err =
@@ -374,8 +378,16 @@ fn dialect_external_schema_translation_and_adversarial_rejections() {
     let duplicate_field_node = ExternalSchemaNode {
         op_name: "vyre-test::demo::invert".to_string(),
         fields: vec![
-            ExternalField { name: "mask".to_string(), declared_member: FieldType::U32, raw_value: "0xFF".to_string() },
-            ExternalField { name: "mask".to_string(), declared_member: FieldType::U32, raw_value: "0x00".to_string() },
+            ExternalField {
+                name: "mask".to_string(),
+                declared_member: FieldType::U32,
+                raw_value: "0xFF".to_string(),
+            },
+            ExternalField {
+                name: "mask".to_string(),
+                declared_member: FieldType::U32,
+                raw_value: "0x00".to_string(),
+            },
         ],
         bound_resources: vec![],
     };

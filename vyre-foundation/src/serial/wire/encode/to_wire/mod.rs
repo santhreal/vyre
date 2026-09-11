@@ -229,8 +229,8 @@ fn reject_non_roundtrippable_shapes(
                     WireEncodeErr::Dynamic(Box::new(buf))
                 })?
             };
-            let start = range.start as u64;
-            let end = range.end as u64;
+            let start = range.start;
+            let end = range.end;
             if start > end {
                 let mut buf = arrayvec::ArrayString::<256>::new();
                 let mut tmp = itoa::Buffer::new();

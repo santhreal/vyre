@@ -1212,10 +1212,7 @@ mod measurement_tests {
     #[test]
     fn every_generator_in_the_roster_measures_a_digest() {
         let root = crate::checkout::checkout_root();
-        assert!(
-            !CODE_GENERATORS.is_empty(),
-            "an empty roster proves no generator path"
-        );
+        let mut measured = 0usize;
         for (name, source, outputs) in CODE_GENERATORS {
             let digest = source
                 .digest(&root)
@@ -1226,7 +1223,12 @@ mod measurement_tests {
                 "{name} carries no blake3 digest: {digest}"
             );
             assert!(!outputs.is_empty(), "{name} records no generated artifact");
+            measured += 1;
         }
+        assert!(
+            measured > 0,
+            "an empty roster proves no generator path, and this contract judged nothing"
+        );
     }
 
     /// WHY: the digest is published so a rebuild elsewhere can be compared

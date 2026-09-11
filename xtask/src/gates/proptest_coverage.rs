@@ -15,14 +15,25 @@
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
-/// Measured floor. 175 tracked files on 2026-08-15, down from 181 on
-/// 2026-08-12. The C frontend and the Rust frontend left the workspace in
-/// `1d28c2277f`, and eight of the 670 files that commit deleted carried
-/// property tests, measured against its deleted-file list. The invariants they
-/// generated inputs for have no subject in this workspace any more, which is
-/// the only reason this line may fall: every other lowering is a deleted test
-/// and is refused.
-const FLOOR: usize = 175;
+/// Measured floor. 174 tracked files, down from 175 on 2026-08-15, itself down
+/// from 181 on 2026-08-12. The C frontend and the Rust frontend left the
+/// workspace in `1d28c2277f`, and eight of the 670 files that commit deleted
+/// carried property tests, measured against its deleted-file list.
+///
+/// Two more files left the count without losing an invariant.
+/// `vyre-reference/tests/dual_reference_property_contracts.rs` generated
+/// inputs for the dual evaluator, which `75c0f39de0` deleted along with
+/// `dual_impls/**` when the oracle took one canonical evaluator.
+/// `9093ab27c8` merged the forward and backward CSR traversal parity files
+/// into `vyre-libs-graph/tests/csr_traverse_ir_parity_proptest.rs`, which
+/// carries both modules: one file fewer, the same two properties.
+///
+/// A subject that left the workspace and a consolidation that kept every
+/// property are the only two reasons this line may fall. Every other lowering
+/// is a deleted test and is refused. The third file `9093ab27c8` dropped,
+/// `adversarial_frontier_queue_clear.rs`, had a live subject and was restored
+/// as `vyre-libs-graph/tests/proptest_csr_frontier_queue_clear_out.rs`.
+const FLOOR: usize = 174;
 
 /// Stretch target tracked for the 0.7 release.
 const TARGET: usize = 200;
@@ -96,7 +107,7 @@ mod tests {
         "#;
         assert!(!scan::contains_any(non_proptest_source, MARKERS));
 
-        let carrying = 170;
+        let carrying = FLOOR - 5;
         let mut report = Report::clean();
         if carrying < FLOOR {
             report.find(Finding::new(
@@ -110,6 +121,6 @@ mod tests {
         assert_eq!(report.findings.len(), 1);
         assert!(report.findings[0]
             .message
-            .contains("below the floor of 175"));
+            .contains(&format!("5 file(s) below the floor of {FLOOR}")));
     }
 }

@@ -138,8 +138,12 @@ pub trait NodeVisitor {
 macro_rules! node_visitor_arm {
     ($name:ident($($param:ty),* $(,)?), $this:ident, $body:block) => {
         fn $name(&mut self $(, _: $param)*) -> ::core::ops::ControlFlow<Self::Break> {
-            #[allow(unused_variables)]
             let $this = self;
+            // An arm whose body ignores the receiver is ordinary, so the
+            // binding is read here rather than suppressed at the item. An
+            // `expect` would be the wrong shape: it fails on every arm that
+            // does use the receiver, which is most of them.
+            let _ = &$this;
             $body
         }
     };

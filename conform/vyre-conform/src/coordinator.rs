@@ -167,7 +167,7 @@ impl WorkerCoordinator {
             Err(e) => {
                 let mut receipt = WorkerReceipt {
                     receipt_version: WorkerReceipt::SCHEMA_VERSION,
-                    request_id: format!("req-prod-failed-lease"),
+                    request_id: "req-prod-failed-lease".to_string(),
                     case_id: case.case_id.clone(),
                     mode: WorkerMode::Production,
                     status: WorkerStatus::Quarantined {

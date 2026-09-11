@@ -510,7 +510,9 @@ pub fn entry_over(
 /// payload is attached, so a suite that spells one of them differently from the
 /// next tests a rejection it did not mean to state.
 pub fn payload_format(version: u16) -> TargetPayloadFormat {
-    TargetPayloadFormat::new(FIXTURE_TARGET, version).expect("fixture format must be valid")
+    TargetPayloadFormat::new(FIXTURE_TARGET, version).expect(
+        "Fix: pass a version this target admits; every fixture payload is built from this format",
+    )
 }
 
 /// The target profile the fixture payloads declare, at `version`.
@@ -519,8 +521,9 @@ pub fn payload_format(version: u16) -> TargetPayloadFormat {
 /// dynamic shared allocation: large enough for every fixture entry point and
 /// small enough that no device fact rejects it.
 pub fn target_profile(version: u16) -> TargetProfile {
-    TargetProfile::new(FIXTURE_TARGET, u64::from(version), [64, 1, 1], 64, 1_024, 0)
-        .expect("fixture profile must be valid")
+    TargetProfile::new(FIXTURE_TARGET, u64::from(version), [64, 1, 1], 64, 1_024, 0).expect(
+        "Fix: pass a version this target admits; every fixture entry point is checked against this profile",
+    )
 }
 
 /// The target the payload fixtures name.

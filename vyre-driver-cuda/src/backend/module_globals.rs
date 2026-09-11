@@ -565,7 +565,11 @@ mod tests {
 
     #[test]
     fn missing_barrier_marker_fails_closed_instead_of_disabling_the_audit() {
-        let error = grid_barrier_arrival_ceiling(grid_barrier_marker_count("bar.sync 0;\n"), [4, 1, 1]).expect_err(
+        let error = grid_barrier_arrival_ceiling(
+            grid_barrier_marker_count("bar.sync 0;\n"),
+            [4, 1, 1],
+        )
+        .expect_err(
             "Fix: PTX with no barrier marker must refuse, because a zero ceiling would silently \
              disable the arrival audit.",
         );

@@ -168,24 +168,22 @@ impl crate::gate::GateBehavior for TestingGuides {
         // Twenty-two domain crates were split out and every one of their guides
         // read as an unclassified page until the rows were typed in by hand.
         if !skipped {
-            match splice_registry_rows(&tree, expected.keys().map(String::as_str))? {
-                Some(spliced) => {
-                    if ctx.write {
-                        fs::write(ctx.root.join(PAGE_REGISTRY), &spliced).map_err(|error| {
-                            GateError::new(
-                                format!("cannot write `{PAGE_REGISTRY}`: {error}"),
-                                "make the documentation registry writable",
-                            )
-                        })?;
-                    } else {
-                        report.find(Finding::in_file(
-                            PAGE_REGISTRY,
-                            "the testing pages it registers are not the guides this gate renders",
-                            FIX,
-                        ));
-                    }
+            if let Some(spliced) = splice_registry_rows(&tree, expected.keys().map(String::as_str))?
+            {
+                if ctx.write {
+                    fs::write(ctx.root.join(PAGE_REGISTRY), &spliced).map_err(|error| {
+                        GateError::new(
+                            format!("cannot write `{PAGE_REGISTRY}`: {error}"),
+                            "make the documentation registry writable",
+                        )
+                    })?;
+                } else {
+                    report.find(Finding::in_file(
+                        PAGE_REGISTRY,
+                        "the testing pages it registers are not the guides this gate renders",
+                        FIX,
+                    ));
                 }
-                None => {}
             }
         }
         report.note(if ctx.write {

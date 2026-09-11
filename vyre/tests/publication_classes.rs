@@ -108,9 +108,7 @@ fn versionless<'a>(
     workspace_deps: &'a toml::value::Table,
 ) -> impl Iterator<Item = String> + 'a {
     deps.iter().filter_map(move |(dep, value)| {
-        let Some(table) = value.as_table() else {
-            return None;
-        };
+        let table = value.as_table()?;
         let declaration = if table.get("workspace").and_then(toml::Value::as_bool) == Some(true) {
             workspace_deps.get(dep)?
         } else {

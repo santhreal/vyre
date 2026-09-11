@@ -78,6 +78,9 @@ pub mod parser_graph_navigation_contracts;
 #[path = "proptest_csr_frontier_queue.rs"]
 pub mod proptest_csr_frontier_queue;
 
+#[path = "proptest_csr_frontier_queue_clear_out.rs"]
+pub mod proptest_csr_frontier_queue_clear_out;
+
 #[path = "proptest_csr_frontier_shard.rs"]
 pub mod proptest_csr_frontier_shard;
 

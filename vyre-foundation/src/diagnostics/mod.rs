@@ -927,9 +927,7 @@ fn absolute_path_tail(token: &str) -> Option<&str> {
     if !unix && !windows {
         return None;
     }
-    trimmed
-        .rsplit(|c| c == '/' || c == '\\')
-        .find(|part| !part.is_empty())
+    trimmed.rsplit(['/', '\\']).find(|part| !part.is_empty())
 }
 
 impl std::fmt::Display for Diagnostic {

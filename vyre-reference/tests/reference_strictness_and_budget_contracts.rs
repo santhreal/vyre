@@ -60,7 +60,7 @@ fn oracle_path_invokes_no_production_transforms() {
 
     // 3. Execute through the strict ReferenceRequest oracle.
     let inputs = vec![vyre_reference::value::Value::from(
-        vec![
+        [
             10u32.to_le_bytes(),
             20u32.to_le_bytes(),
             30u32.to_le_bytes(),
@@ -82,7 +82,7 @@ fn oracle_path_invokes_no_production_transforms() {
 
     // Assert exact correct output was computed directly.
     let out_bytes = result.outputs[0].to_bytes();
-    let expected = vec![
+    let expected = [
         11u32.to_le_bytes(),
         21u32.to_le_bytes(),
         31u32.to_le_bytes(),
@@ -319,8 +319,8 @@ fn single_rank_collectives_interpreted_directly_without_lowering() {
         }],
     );
 
-    let src_bytes = vec![10u32.to_le_bytes(), 20u32.to_le_bytes()].concat();
-    let dst_zeros = vec![0u32.to_le_bytes(), 0u32.to_le_bytes()].concat();
+    let src_bytes = [10u32.to_le_bytes(), 20u32.to_le_bytes()].concat();
+    let dst_zeros = [0u32.to_le_bytes(), 0u32.to_le_bytes()].concat();
 
     let allgather_inputs = vec![
         vyre_reference::value::Value::from(src_bytes.clone()),

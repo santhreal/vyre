@@ -283,7 +283,9 @@ pub fn pure_dataflow_graph() -> ProgramGraph {
     use vyre_foundation::ir::{BufferDecl, Expr, Node};
 
     let count = PURE_DATAFLOW_LANES;
-    let lanes = u32::try_from(count).expect("the lane count fits a dispatch dimension");
+    let lanes = u32::try_from(count).expect(
+        "Fix: keep PURE_DATAFLOW_LANES within u32; a dispatch dimension cannot carry a wider count",
+    );
     let mut graph = ProgramGraph::new();
 
     let in_x = graph
@@ -291,7 +293,7 @@ pub fn pure_dataflow_graph() -> ProgramGraph {
             "in_x",
             dense_u32(BufferAccess::ReadOnly, ValueLifetime::Invocation, count),
         )
-        .expect("the external input value is the first value in an empty graph");
+        .expect("Fix: keep this the first value added to the graph; a duplicate name is what makes the add fail here");
 
     let scale = Program::wrapped(
         vec![
@@ -324,7 +326,7 @@ pub fn pure_dataflow_graph() -> ProgramGraph {
                 retained_successor_of: None,
             }],
         )
-        .expect("the scale node declares one input and one output");
+        .expect("Fix: keep the scale node's declared inputs and outputs matching its program buffers; the graph rejects a node whose contract disagrees");
 
     let sum = Program::wrapped(
         vec![
@@ -363,7 +365,7 @@ pub fn pure_dataflow_graph() -> ProgramGraph {
                 retained_successor_of: None,
             }],
         )
-        .expect("the sum node reads the scale node's output");
+        .expect("Fix: keep the sum node reading the scale node's output value; the graph rejects an input naming a value it does not hold");
 
     let norm = Program::wrapped(
         vec![
@@ -404,7 +406,7 @@ pub fn pure_dataflow_graph() -> ProgramGraph {
                 retained_successor_of: None,
             }],
         )
-        .expect("the norm node joins both intra-graph values");
+        .expect("Fix: keep the norm node reading both earlier values; the graph rejects an input naming a value it does not hold");
 
     graph
 }
