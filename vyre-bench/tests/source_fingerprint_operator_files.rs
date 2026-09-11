@@ -136,11 +136,11 @@ fn operator_like_source_names_and_runtime_changes_still_invalidate_identity() {
 /// A tree the benchmarked runtime never reads does not change benchmark identity.
 ///
 /// WHY: the fingerprint decides whether a recorded measurement still describes
-/// the tree. A generated document, the evidence it lands beside, the assurance
-/// tooling that writes it, and the tests are each produced from the runtime
-/// rather than read by it, so rewriting one invalidated every artifact on disk
-/// and forced a whole re-measurement for a file no kernel reads. Each prefix
-/// gets a case, so dropping one from the predicate turns this red.
+/// the tree. A generated document, the release paperwork it lands beside, the
+/// assurance tooling that writes it, and the tests are each produced from the
+/// runtime rather than read by it, so rewriting one invalidated every artifact
+/// on disk and forced a whole re-measurement for a file no kernel reads. Each
+/// prefix gets a case, so dropping one from the predicate turns this red.
 ///
 /// What this does not catch: a path outside every prefix that the runtime also
 /// never reads. The fingerprint counts it, which is the safe direction.
@@ -149,7 +149,9 @@ fn trees_the_runtime_never_reads_do_not_change_benchmark_identity() {
     let workspace = workspace();
     let base = source_tree_fingerprint_at(workspace.path());
     let excluded = [
+        "CHANGELOG.md",
         "docs/generated/op-inventory.toml",
+        "release/changes/unreleased/a-fix.toml",
         "release/evidence/benchmarks/workload-01.json",
         ".github/workflows/ci.yml",
         "scripts/release.sh",

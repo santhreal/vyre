@@ -176,8 +176,10 @@ fn source_tree_fingerprint_from_paths(workspace_root: &Path, paths: &[u8]) -> St
 fn source_tree_path_is_benchmark_provenance_ignored(path: &[u8]) -> bool {
     path == b"cargo_full"
         || path == b"cargo_full.cmd"
+        || path == b"CHANGELOG.md"
         || path.starts_with(b".github/")
         || path.starts_with(b"docs/generated/")
+        || path.starts_with(b"release/changes/")
         || path.starts_with(b"release/evidence/")
         || path.starts_with(b"scripts/")
         || path.starts_with(b"xtask/")
