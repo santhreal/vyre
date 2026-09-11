@@ -5777,6 +5777,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   which is where the answer belongs because every gate that judges the tree
   reads it through that one walk, and the backend matrix drops its own
   recursive scan for it.
+- The benchmark source-tree fingerprint excludes `docs/generated/`.
+  Regenerating a document the runtime never reads invalidated every recorded
+  measurement and forced a re-measurement of the whole release suite.
 - The command-hygiene scan reads authored documents only. CHANGELOG.md and the
   release notes beside it are generated from release/changes, and a released
   entry records what a version did rather than telling a reader what to run, so
