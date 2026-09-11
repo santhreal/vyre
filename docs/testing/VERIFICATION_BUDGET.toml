@@ -1,7 +1,7 @@
 # What verification costs this workspace, per tier.
 #
-# `cargo xtask verification-budget` derives every number here from the tree: the
-# test targets cargo builds, the binaries they link, the test sources
+# `./cargo_full run --bin xtask -- verification-budget` derives every number here from
+# the tree: the test targets built for it, the binaries they link, the test sources
 # byte-identical to a test source in another package, and the bytes the tier's
 # test sources occupy. A tier with no row fails, and a row for a tier the
 # ownership record no longer declares fails as stale.
@@ -26,7 +26,7 @@ schema = 1
 compile_units = 6
 link_units = 7
 duplicate_source_bytes = 0
-disk_use_bytes = 520622
+disk_use_bytes = 537317
 
 [tier.compiler-boundary]
 compile_units = 1
@@ -56,23 +56,23 @@ disk_use_bytes = 533850
 compile_units = 1
 link_units = 2
 duplicate_source_bytes = 0
-disk_use_bytes = 63795
+disk_use_bytes = 77252
 
 [tier.foundation]
 compile_units = 3
 link_units = 6
 duplicate_source_bytes = 0
-disk_use_bytes = 2697479
+disk_use_bytes = 2724915
 
 [tier.libraries]
 compile_units = 32
 link_units = 55
-duplicate_source_bytes = 22010
-disk_use_bytes = 2960135
+duplicate_source_bytes = 13845
+disk_use_bytes = 2877968
 
 [tier.lowering]
-compile_units = 1
-link_units = 2
+compile_units = 2
+link_units = 3
 duplicate_source_bytes = 0
 disk_use_bytes = 248553
 
@@ -86,7 +86,7 @@ disk_use_bytes = 89377
 compile_units = 3
 link_units = 4
 duplicate_source_bytes = 0
-disk_use_bytes = 77440
+disk_use_bytes = 77902
 
 [tier.primitives]
 compile_units = 2
@@ -104,13 +104,13 @@ disk_use_bytes = 52572
 compile_units = 2
 link_units = 4
 duplicate_source_bytes = 0
-disk_use_bytes = 625007
+disk_use_bytes = 631020
 
 [tier.semantics]
 compile_units = 1
 link_units = 2
 duplicate_source_bytes = 0
-disk_use_bytes = 421265
+disk_use_bytes = 529253
 
 [tier.standalone-tooling]
 compile_units = 2
@@ -122,10 +122,10 @@ disk_use_bytes = 164739
 compile_units = 3
 link_units = 4
 duplicate_source_bytes = 0
-disk_use_bytes = 62306
+disk_use_bytes = 62453
 
 [tier.tooling]
 compile_units = 9
 link_units = 20
 duplicate_source_bytes = 1172
-disk_use_bytes = 1001052
+disk_use_bytes = 1005799

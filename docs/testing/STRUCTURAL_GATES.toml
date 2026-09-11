@@ -999,3 +999,16 @@ Holds the parity row set equal to the FNV-1a64 builders the source publishes. A
 builder with no row is never called by this suite, so no execution witnesses the
 gap; the published family is a declaration and the only complete listing of it.
 """
+
+[[gate]]
+file = "vyre-reference/tests/oracle_transform_independence.rs"
+tests = ["no_reference_path_calls_a_production_transform", "no_reference_path_names_a_transform_module"]
+reason = """
+Hold the oracle clear of every program transform the foundation publishes. The
+property is the absence of a call: a parity oracle that shares a rewrite with
+the compiler computes the same wrong answer on both sides and reports a match.
+Running the oracle witnesses the calls it makes on one program, never the ones
+it does not make on any program, and Rust exposes no call graph at run time.
+The forbidden set is derived from the transform trees at run time, so a pass
+added to any of them joins the scan without an edit here.
+"""
