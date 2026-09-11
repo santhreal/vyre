@@ -1,11 +1,11 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"d2cddddd1fd985cbf7f40e8a754a197bc57cf03d","commit_timestamp":"1789020988","parent_commit":"6c3769b456d609b7b5f5c505a36e60509d1b3822","dirty":true,"source_fingerprint":"git:d2cddddd1fd985cbf7f40e8a754a197bc57cf03d:dirty=true:worktree=ea4595637cc5d0c2f7e60b1ef2cba3982e87899197884846348d10d165fe8a9a"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 5090","driver_version":"580.178.04"}]}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"0f2d01fc9de32d2be802d56414e4ae670fc77faf","commit_timestamp":"1789109897","parent_commit":"45e31c1b75c9ba2d7f29643a82f1f0759ff20d96","dirty":false,"source_fingerprint":"git:0f2d01fc9de32d2be802d56414e4ae670fc77faf:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
   "schema_version": 1,
-  "warm_us_per_file": 3.58,
-  "cold_pipeline_build_ms": 1.093773,
-  "gbs_scan_throughput": 617.142,
+  "warm_us_per_file": 4.587,
+  "cold_pipeline_build_ms": 1.109865,
+  "gbs_scan_throughput": 1117.488,
   "ulp_drift_max": 0,
-  "max_vram_mib": 32607,
+  "max_vram_mib": 24564,
   "source_artifacts": [
     "release/evidence/benchmarks/workload-01-condition-eval.json",
     "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
@@ -25,24 +25,5 @@
     "release/evidence/benchmarks/workload-16-quantized-linear.json",
     "release/evidence/benchmarks/workload-17-egraph-saturation.json"
   ],
-  "blockers": [
-    "CUDA release axis artifact `release/evidence/benchmarks/workload-02-string-bitmap-scatter.json` has nonzero or missing summary.failed",
-    "CUDA release axis artifact `release/evidence/benchmarks/workload-15-adaptive-routing.json` has nonzero or missing summary.failed",
-    "source_artifact `release/evidence/benchmarks/workload-01-condition-eval.json` source_tree_fingerprint `source-tree-v1:6fe360c4d0bdfc311a22405674bda7da7aa443d210d61fb5170263ac3cbe5adf` does not match current workspace source `source-tree-v1:4dd843377040423406eb4677259e61f986d7a901cc8d6dcd92d2269b393b1ec8`",
-    "source_artifact `release/evidence/benchmarks/workload-02-string-bitmap-scatter.json` source_tree_fingerprint `source-tree-v1:76769df45f2d4f3375508af6dc05903e07c7ab3804e1a753fe9885761f7c5580` does not match current workspace source `source-tree-v1:4dd843377040423406eb4677259e61f986d7a901cc8d6dcd92d2269b393b1ec8`",
-    "source_artifact `release/evidence/benchmarks/workload-02-string-bitmap-scatter.json` summary.failed must be 0",
-    "source_artifact `release/evidence/benchmarks/workload-03-offset-count-aggregation.json` source_tree_fingerprint `source-tree-v1:76769df45f2d4f3375508af6dc05903e07c7ab3804e1a753fe9885761f7c5580` does not match current workspace source `source-tree-v1:4dd843377040423406eb4677259e61f986d7a901cc8d6dcd92d2269b393b1ec8`",
-    "source_artifact `release/evidence/benchmarks/workload-04-metadata-conditions.json` source_tree_fingerprint `source-tree-v1:76769df45f2d4f3375508af6dc05903e07c7ab3804e1a753fe9885761f7c5580` does not match current workspace source `source-tree-v1:4dd843377040423406eb4677259e61f986d7a901cc8d6dcd92d2269b393b1ec8`",
-    "source_artifact `release/evidence/benchmarks/workload-05-entropy-window.json` source_tree_fingerprint `source-tree-v1:76769df45f2d4f3375508af6dc05903e07c7ab3804e1a753fe9885761f7c5580` does not match current workspace source `source-tree-v1:4dd843377040423406eb4677259e61f986d7a901cc8d6dcd92d2269b393b1ec8`",
-    "source_artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` source_tree_fingerprint `source-tree-v1:76769df45f2d4f3375508af6dc05903e07c7ab3804e1a753fe9885761f7c5580` does not match current workspace source `source-tree-v1:4dd843377040423406eb4677259e61f986d7a901cc8d6dcd92d2269b393b1ec8`",
-    "source_artifact `release/evidence/benchmarks/workload-07-alias-reaching-def.json` source_tree_fingerprint `source-tree-v1:76769df45f2d4f3375508af6dc05903e07c7ab3804e1a753fe9885761f7c5580` does not match current workspace source `source-tree-v1:4dd843377040423406eb4677259e61f986d7a901cc8d6dcd92d2269b393b1ec8`",
-    "source_artifact `release/evidence/benchmarks/workload-08-ifds-witness.json` source_tree_fingerprint `source-tree-v1:76769df45f2d4f3375508af6dc05903e07c7ab3804e1a753fe9885761f7c5580` does not match current workspace source `source-tree-v1:4dd843377040423406eb4677259e61f986d7a901cc8d6dcd92d2269b393b1ec8`",
-    "source_artifact `release/evidence/benchmarks/workload-09-ast-motif-traversal.json` source_tree_fingerprint `source-tree-v1:76769df45f2d4f3375508af6dc05903e07c7ab3804e1a753fe9885761f7c5580` does not match current workspace source `source-tree-v1:4dd843377040423406eb4677259e61f986d7a901cc8d6dcd92d2269b393b1ec8`",
-    "source_artifact `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json` source_tree_fingerprint `source-tree-v1:5fc119af36c97557fae3ad256df502d1c2b646f69520aefe37b97ec762956ffc` does not match current workspace source `source-tree-v1:4dd843377040423406eb4677259e61f986d7a901cc8d6dcd92d2269b393b1ec8`",
-    "source_artifact `release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json` source_tree_fingerprint `source-tree-v1:298740d7e903c0397aa8f17112c264c6f816f07e1b894ab1c255686f3bd514fa` does not match current workspace source `source-tree-v1:4dd843377040423406eb4677259e61f986d7a901cc8d6dcd92d2269b393b1ec8`",
-    "source_artifact `release/evidence/benchmarks/workload-15-adaptive-routing.json` summary.failed must be 0",
-    "source_artifact `release/evidence/benchmarks/workload-15-adaptive-routing.json` has no positive p50 wall_ns metric for warm_us_per_file",
-    "source_artifact `release/evidence/benchmarks/workload-15-adaptive-routing.json` has no positive p50 cold/compile metric for cold_pipeline_build_ms",
-    "source_artifact `release/evidence/benchmarks/workload-15-adaptive-routing.json` has no positive p50 throughput metric for gbs_scan_throughput"
-  ]
+  "blockers": []
 }
