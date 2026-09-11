@@ -5,23 +5,21 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-use crate::api::case::{
-    BenchContext, Correctness,
-};
+use crate::api::case::{BenchContext, Correctness};
 use crate::api::metric::{digest64_buffers, elapsed_ns};
 use crate::api::suite::SuiteKind;
 use crate::report::json::{benchmark_device_signature, benchmark_held_out_corpus_id, CaseReport};
 
 use super::collect::{collect_samples, derive_roofline_fractions};
-use super::stats::{compute_stats, percentile};
-use super::target_samples;
-use super::RunConfig;
 use super::contract_eval::{evaluate_contract, final_case_status};
 use super::metric_normalize::{
     infer_optimization_passes_applied, normalize_benchmark_evidence_metrics,
     normalize_release_evidence_metrics, single_sample_stats, thermal_status_applies,
     workload_fingerprint,
 };
+use super::stats::{compute_stats, percentile};
+use super::target_samples;
+use super::RunConfig;
 
 pub(super) fn run_case(
     case: &'static dyn crate::api::case::BenchCase,

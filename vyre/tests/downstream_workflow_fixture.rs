@@ -565,8 +565,7 @@ fn no_workspace_member_names_a_downstream_model_family() {
         .map(|variant| variant.to_lowercase())
         .collect();
 
-    let stating_the_ban: BTreeMap<&str, &str> =
-        FILES_THAT_STATE_THE_BAN.iter().copied().collect();
+    let stating_the_ban: BTreeMap<&str, &str> = FILES_THAT_STATE_THE_BAN.iter().copied().collect();
     let rosters = vyre_test_support::monorepo::vyre_workspace_rosters();
 
     let mut sources = Vec::new();

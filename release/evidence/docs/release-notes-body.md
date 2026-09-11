@@ -4040,6 +4040,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   unchanged. Each test module moved next to the code it proves, which is what
   keeps `lock_inner` and `lock_cache` private to the bind-group cache instead
   of widening them for a test in another module.
+- The `apply_scissor_rect`, `composite_blend`, `cull_boxes_2d`,
+  `layout_prefix_scan`, `path_raster`, and `rgba_to_grayscale` operations
+  record no-legal-rewrite instead of uncharacterized, matching the reference
+  oracle's refutation of every law family their shape admits.
 - Duplication pins for three crates now record the measured tree: vyre-macros
   89 to 41, vyre-lints 66 to 0, vyre-debug 54 to 9. Their total line counts are
   corrected to the measured values, which were already stale before these
@@ -6984,6 +6988,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   serialize on the L2 atomic unit.
 - The duplication scan folds a wrapped import back into one line, so
   re-exporting the same names from two facades no longer counts as copied code.
+- The `lint-liveness-evasion` gate counts an inline format capture as a
+  reference, so an item named only inside `format!("{NAME}")` is no longer
+  reported as referenced by tests alone.
 - Every command this workspace tells a reader to run names the wrapper. The
   dispatcher usage text, its rebuild and help messages, the scaffold and audit
   binaries, the structure gate header, the error catalog regeneration note, the

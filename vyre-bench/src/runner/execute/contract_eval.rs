@@ -15,7 +15,10 @@ use crate::api::metric::MetricStats;
 /// WHY: a failed performance contract is a failed case whatever the producing
 /// command asked for, so the status a reader tallies agrees with
 /// `CaseReport::passes_summary_evidence` and with the printed pair.
-pub(super) fn final_case_status(provisional: &str, performance: Option<&PerformanceEvaluation>) -> String {
+pub(super) fn final_case_status(
+    provisional: &str,
+    performance: Option<&PerformanceEvaluation>,
+) -> String {
     if performance.is_some_and(|performance| !performance.contract_passed) {
         "failed".to_string()
     } else {
@@ -380,5 +383,4 @@ mod tests {
         assert_eq!(evaluation.speedup_x, Some(100.0));
         assert!(evaluation.contract_passed, "{:?}", evaluation.violations);
     }
-
 }
