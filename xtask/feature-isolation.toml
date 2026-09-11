@@ -1209,11 +1209,15 @@ feature = "(default)"
 
 [[pair]]
 member = "vyre-test-support"
-feature = "(default),driver-artifact-contracts,ir-fixtures"
+feature = "(default),driver-artifact-contracts,host-input-abi,ir-fixtures,parity-oracles,semantic-requests"
 
 [[pair]]
 member = "vyre-test-support"
-feature = "(default),driver-artifact-contracts,ir-fixtures,parity-oracles,semantic-requests"
+feature = "(default),driver-artifact-contracts,host-input-abi,parity-oracles,semantic-requests"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),driver-artifact-contracts,ir-fixtures"
 
 [[pair]]
 member = "vyre-test-support"
@@ -1221,7 +1225,15 @@ feature = "(default),driver-artifact-contracts,ir-fixtures,semantic-requests"
 
 [[pair]]
 member = "vyre-test-support"
-feature = "(default),driver-artifact-contracts,parity-oracles,semantic-requests"
+feature = "(default),driver-contracts,ir-fixtures,semantic-requests"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),golden-corpus,ir-fixtures,semantic-requests"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),golden-corpus,semantic-parity"
 
 [[pair]]
 member = "vyre-test-support"
@@ -1262,6 +1274,14 @@ feature = "driver-artifact-contracts"
 [[pair]]
 member = "vyre-test-support"
 feature = "driver-contracts"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "golden-corpus"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "host-input-abi"
 
 [[pair]]
 member = "vyre-test-support"
