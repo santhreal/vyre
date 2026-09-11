@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"956e5380ef0567214833a06e21d408b485495f5b","commit_timestamp":"1789106722","parent_commit":"7a6de622ef191cf7a9b79fca5d3d23f5f4ca6d97","dirty":false,"source_fingerprint":"git:956e5380ef0567214833a06e21d408b485495f5b:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"a869ceab416229f0b3f82ef1dc2af773cc16adc6","commit_timestamp":"1789141347","parent_commit":"5778283cd97746c098db2989c87f876f9f5e205e","dirty":false,"source_fingerprint":"git:a869ceab416229f0b3f82ef1dc2af773cc16adc6:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
   "schema_version": 3,
   "cuda_first": true,
   "wgpu_fallback_present": true,
@@ -307,7 +307,7 @@
       "path": "vyre-runtime/src/artifact_admission/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 128182,
+      "source_bytes": 128842,
       "implementation_tokens": [
         "ArtifactSession",
         "materialize"

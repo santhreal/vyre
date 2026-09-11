@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"4a65df6872a1f68dc6c828ed0507d735faeafe08","commit_timestamp":"1789120972","parent_commit":"f52c75222db4f8536ccd540b2cb40ac2efc294f4","dirty":true,"source_fingerprint":"git:4a65df6872a1f68dc6c828ed0507d735faeafe08:dirty=true:worktree=b6d510998f6853cc12d0028c801bc71ed8e648e7e234ed7cddd2fee26abac2d9"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"a869ceab416229f0b3f82ef1dc2af773cc16adc6","commit_timestamp":"1789141347","parent_commit":"5778283cd97746c098db2989c87f876f9f5e205e","dirty":true,"source_fingerprint":"git:a869ceab416229f0b3f82ef1dc2af773cc16adc6:dirty=true:worktree=f9e957c81de181d61a51517eaa09d18496995f343451e917c24aae52aef35c3d"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "tiers": [
     {
@@ -112,7 +112,7 @@
       "compile_units": 32,
       "link_units": 55,
       "duplicate_source_bytes": 13845,
-      "disk_use_bytes": 2885876
+      "disk_use_bytes": 2889512
     },
     {
       "tier": "lowering",
@@ -122,7 +122,7 @@
       "compile_units": 2,
       "link_units": 3,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 245575
+      "disk_use_bytes": 245467
     },
     {
       "tier": "packaging",
@@ -142,7 +142,7 @@
       "compile_units": 3,
       "link_units": 4,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 77902
+      "disk_use_bytes": 82249
     },
     {
       "tier": "primitives",
@@ -173,7 +173,7 @@
       "compile_units": 2,
       "link_units": 4,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 631028
+      "disk_use_bytes": 635953
     },
     {
       "tier": "semantics",
@@ -219,7 +219,7 @@
       "compile_units": 9,
       "link_units": 20,
       "duplicate_source_bytes": 1172,
-      "disk_use_bytes": 1011913
+      "disk_use_bytes": 1014235
     }
   ],
   "shared_contracts": [

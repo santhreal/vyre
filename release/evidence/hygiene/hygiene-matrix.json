@@ -1,10 +1,10 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"4a65df6872a1f68dc6c828ed0507d735faeafe08","commit_timestamp":"1789120972","parent_commit":"f52c75222db4f8536ccd540b2cb40ac2efc294f4","dirty":true,"source_fingerprint":"git:4a65df6872a1f68dc6c828ed0507d735faeafe08:dirty=true:worktree=24f9fae05c76c820e1ad3a2068f1a8c34b9ea7dd5e8cde44ff4c96e37371fb97"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"a869ceab416229f0b3f82ef1dc2af773cc16adc6","commit_timestamp":"1789141347","parent_commit":"5778283cd97746c098db2989c87f876f9f5e205e","dirty":false,"source_fingerprint":"git:a869ceab416229f0b3f82ef1dc2af773cc16adc6:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4825,
+  "scanned_files": 4828,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -5943,7 +5943,7 @@
     },
     {
       "path": "vyre-lower/tests/physical_ir_emitter_exhaustive_decisions.rs",
-      "line": 438,
+      "line": 437,
       "pattern": "source_inspection_test",
       "owner_lane": "lower_emit",
       "surface": "test",
@@ -9845,7 +9845,7 @@
     },
     {
       "path": "vyre-lower/tests/physical_ir_emitter_exhaustive_decisions.rs",
-      "line": 438,
+      "line": 437,
       "pattern": "source_inspection_test",
       "text": "test `emitter_dispatch_names_every_variant_rather_than_falling_through_a_catch_all` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "emitter_dispatch_names_every_variant_rather_than_falling_through_a_catch_all"
