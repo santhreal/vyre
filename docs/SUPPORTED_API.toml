@@ -159585,7 +159585,7 @@ seam = "runtime"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre"
 stability = "internal"
-exported_item_count = 2867
+exported_item_count = 2864
 
   [[package.item]]
   path = "impl bytemuck::pod::Pod for vyre_runtime::resident_work_queue::planner::ResidentWorkItem"
@@ -159967,13 +159967,6 @@ exported_item_count = 2867
 
   [[package.item]]
   path = "impl vyre_foundation::diagnostics::ToDiagnostic for vyre_runtime::PipelineError"
-  kind = "impl"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::ExternalResourceAdmissionManager"
   kind = "impl"
   stability = "internal"
   feature = "unconditional"
@@ -161485,13 +161478,6 @@ exported_item_count = 2867
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_runtime::ExternalResourceAdmissionManager::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_runtime::ExternalResourceAdmissionManager::invalidate_device_loss(&self) -> vyre_driver::semantic_resource_abi::DeviceLossInvalidationReport"
   kind = "fn"
   stability = "internal"
@@ -161514,13 +161500,6 @@ exported_item_count = 2867
 
   [[package.item]]
   path = "vyre_runtime::ExternalResourceAdmissionManager::query_resource(&self, resource_id: u64) -> core::option::Option<vyre_spec::resource_capability::AdmittedResourceRecord>"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::ExternalResourceAdmissionManager::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass"
   kind = "fn"
   stability = "internal"
   feature = "unconditional"

@@ -354,13 +354,3 @@ impl ExternalResourceAdmissionManager {
         self.registry.get_resource(resource_id)
     }
 }
-
-impl crate::StateOwnerRecovery for ExternalResourceAdmissionManager {
-    fn failure_domain(&self) -> crate::FailureDomain {
-        crate::FailureDomain::DeviceContext
-    }
-
-    fn recovery_class(&self) -> crate::RecoveryClass {
-        crate::RecoveryClass::DeviceContextFatal
-    }
-}

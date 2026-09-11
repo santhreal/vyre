@@ -66,7 +66,6 @@ impl core::ops::drop::Drop for vyre_runtime::resource_residency::ResourceResiden
 impl core::ops::drop::Drop for vyre_runtime::structured_concurrency::StructuredWorkerScope
 impl core::ops::drop::Drop for vyre_runtime::uring::ResidentIoLoop
 impl vyre_foundation::diagnostics::ToDiagnostic for vyre_runtime::PipelineError
-impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::ExternalResourceAdmissionManager
 impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::artifact_admission::ArtifactSession
 impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::artifact_admission::InteractiveSessionStateMachine
 impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_runtime::artifact_admission::RetainedArtifactSession
@@ -534,12 +533,10 @@ pub fn vyre_runtime::ExternalAdmissionError::from(err: vyre_spec::resource_capab
 pub fn vyre_runtime::ExternalResourceAdmissionManager::admit_external_resource(&self, record: vyre_spec::resource_capability::AdmittedResourceRecord) -> core::result::Result<vyre_runtime::AdmittedExternalResourceLease, vyre_runtime::ExternalAdmissionError>
 pub fn vyre_runtime::ExternalResourceAdmissionManager::device_id(&self) -> u64
 pub fn vyre_runtime::ExternalResourceAdmissionManager::execute_transition_schedule(&self, schedule: &vyre_driver::semantic_resource_abi::ResourceTransitionSchedule) -> core::result::Result<vyre_driver::semantic_resource_abi::TransitionExecutionReport, vyre_runtime::ExternalAdmissionError>
-pub fn vyre_runtime::ExternalResourceAdmissionManager::failure_domain(&self) -> vyre_foundation::failure_domain::FailureDomain
 pub fn vyre_runtime::ExternalResourceAdmissionManager::invalidate_device_loss(&self) -> vyre_driver::semantic_resource_abi::DeviceLossInvalidationReport
 pub fn vyre_runtime::ExternalResourceAdmissionManager::mutate_resource(&self, resource_id: u64, expected_gen: u64) -> core::result::Result<u64, vyre_runtime::ExternalAdmissionError>
 pub fn vyre_runtime::ExternalResourceAdmissionManager::new(device_id: u64) -> Self
 pub fn vyre_runtime::ExternalResourceAdmissionManager::query_resource(&self, resource_id: u64) -> core::option::Option<vyre_spec::resource_capability::AdmittedResourceRecord>
-pub fn vyre_runtime::ExternalResourceAdmissionManager::recovery_class(&self) -> vyre_foundation::failure_domain::RecoveryClass
 pub fn vyre_runtime::ExternalResourceAdmissionManager::register_dependent_pipeline(&self, resource_id: u64, pipeline_id: u64) -> core::result::Result<(), vyre_runtime::ExternalAdmissionError>
 pub fn vyre_runtime::ExternalResourceAdmissionManager::register_dependent_view(&self, resource_id: u64, view_id: u64) -> core::result::Result<(), vyre_runtime::ExternalAdmissionError>
 pub fn vyre_runtime::ExternalResourceAdmissionManager::registry(&self) -> &vyre_driver::semantic_resource_abi::ExternalResourceRegistry
