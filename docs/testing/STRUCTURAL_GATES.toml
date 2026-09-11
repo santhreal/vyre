@@ -1012,3 +1012,15 @@ it does not make on any program, and Rust exposes no call graph at run time.
 The forbidden set is derived from the transform trees at run time, so a pass
 added to any of them joins the scan without an edit here.
 """
+
+[[gate]]
+file = "xtask/tests/gate_write_ownership.rs"
+tests = ["no_gate_command_runs_another_gates_writer"]
+reason = """
+Holds every gate clear of running another gate's writer as a child process.
+The property is the absence of a spawn: a run witnesses only the commands the
+gate it executed chose to issue, never the ones the other hundred and fifty
+gates do not issue, and executing every writer to find out would rewrite the
+whole evidence tree. The forbidden names are read from the descriptor table at
+run time, so a gate registered tomorrow joins the scan without an edit here.
+"""

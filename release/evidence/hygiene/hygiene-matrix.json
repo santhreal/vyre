@@ -1,10 +1,10 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"956e5380ef0567214833a06e21d408b485495f5b","commit_timestamp":"1789106722","parent_commit":"7a6de622ef191cf7a9b79fca5d3d23f5f4ca6d97","dirty":false,"source_fingerprint":"git:956e5380ef0567214833a06e21d408b485495f5b:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"4a65df6872a1f68dc6c828ed0507d735faeafe08","commit_timestamp":"1789120972","parent_commit":"f52c75222db4f8536ccd540b2cb40ac2efc294f4","dirty":true,"source_fingerprint":"git:4a65df6872a1f68dc6c828ed0507d735faeafe08:dirty=true:worktree=24f9fae05c76c820e1ad3a2068f1a8c34b9ea7dd5e8cde44ff4c96e37371fb97"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4822,
+  "scanned_files": 4825,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -66,7 +66,7 @@
     },
     {
       "pattern": "source_inspection_test",
-      "count": 150
+      "count": 151
     },
     {
       "pattern": "std_thread_sleep",
@@ -308,7 +308,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 44
+      "count": 45
     },
     {
       "owner_lane": "testing_evidence",
@@ -705,7 +705,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 44
+      "count": 45
     },
     {
       "owner_lane": "testing_evidence",
@@ -1682,6 +1682,11 @@
         "file": "vyre-reference/tests/oracle_transform_independence.rs",
         "test": "no_reference_path_names_a_transform_module",
         "reason": "Hold the oracle clear of every program transform the foundation publishes. The\nproperty is the absence of a call: a parity oracle that shares a rewrite with\nthe compiler computes the same wrong answer on both sides and reports a match.\nRunning the oracle witnesses the calls it makes on one program, never the ones\nit does not make on any program, and Rust exposes no call graph at run time.\nThe forbidden set is derived from the transform trees at run time, so a pass\nadded to any of them joins the scan without an edit here."
+      },
+      {
+        "file": "xtask/tests/gate_write_ownership.rs",
+        "test": "no_gate_command_runs_another_gates_writer",
+        "reason": "Holds every gate clear of running another gate's writer as a child process.\nThe property is the absence of a spawn: a run witnesses only the commands the\ngate it executed chose to issue, never the ones the other hundred and fifty\ngates do not issue, and executing every writer to find out would rewrite the\nwhole evidence tree. The forbidden names are read from the descriptor table at\nrun time, so a gate registered tomorrow joins the scan without an edit here."
       }
     ],
     "blockers": []
@@ -3798,7 +3803,7 @@
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 523,
+      "line": 524,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -4098,7 +4103,7 @@
     },
     {
       "path": "vyre-test-support/src/graph_fixtures.rs",
-      "line": 294,
+      "line": 296,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -4108,7 +4113,7 @@
     },
     {
       "path": "vyre-test-support/src/graph_fixtures.rs",
-      "line": 327,
+      "line": 329,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -4118,7 +4123,7 @@
     },
     {
       "path": "vyre-test-support/src/graph_fixtures.rs",
-      "line": 366,
+      "line": 368,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -4128,7 +4133,7 @@
     },
     {
       "path": "vyre-test-support/src/graph_fixtures.rs",
-      "line": 407,
+      "line": 409,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5458,7 +5463,7 @@
     },
     {
       "path": "vyre-bench/tests/evidence_receipt_contracts.rs",
-      "line": 979,
+      "line": 977,
       "pattern": "source_inspection_test",
       "owner_lane": "bench_harness",
       "surface": "test",
@@ -6497,6 +6502,16 @@
       "release_blocker": false
     },
     {
+      "path": "xtask/tests/gate_write_ownership.rs",
+      "line": 85,
+      "pattern": "source_inspection_test",
+      "owner_lane": "testing_evidence",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
       "path": "xtask/tests/lint_policy_mutations.rs",
       "line": 175,
       "pattern": "source_inspection_test",
@@ -7168,7 +7183,7 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 293,
+      "line": 294,
       "pattern": "placeholder_text",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -7178,7 +7193,7 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 296,
+      "line": 297,
       "pattern": "placeholder_text",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -7393,31 +7408,31 @@
       "path": "vyre-driver/src/external_import_contracts.rs",
       "line": 156,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"an admissible descriptor imports\");"
+      "text": ".expect(\"Fix: admit this descriptor in the policy under test; the zero-copy case observes nothing without an imported record\");"
     },
     {
       "path": "vyre-driver/src/external_import_contracts.rs",
       "line": 171,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"an admitted resource executes its schedule\");"
+      "text": ".expect(\"Fix: accept a schedule against an admitted resource in the registry under test; the transition counts are unobservable otherwise\");"
     },
     {
       "path": "vyre-driver/src/external_import_contracts.rs",
       "line": 207,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"an admissible descriptor imports\");"
+      "text": ".expect(\"Fix: admit this descriptor in the policy under test; device loss invalidates nothing without an imported record\");"
     },
     {
       "path": "vyre-driver/src/external_import_contracts.rs",
       "line": 212,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"a dependent view registers against an admitted record\");"
+      "text": ".expect(\"Fix: register a dependent view against an admitted record in the registry under test; view invalidation is unobservable otherwise\");"
     },
     {
       "path": "vyre-driver/src/external_import_contracts.rs",
       "line": 216,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"a dependent artifact registers against an admitted record\");"
+      "text": ".expect(\"Fix: register a dependent artifact against an admitted record in the registry under test; artifact invalidation is unobservable otherwise\");"
     },
     {
       "path": "vyre-driver/src/grid_sync/resident_dispatch.rs",
@@ -8473,13 +8488,13 @@
       "path": "vyre-test-support/src/artifact_fixtures.rs",
       "line": 513,
       "pattern": "expect_call",
-      "text": "TargetPayloadFormat::new(FIXTURE_TARGET, version).expect(\"fixture format must be valid\")"
+      "text": "TargetPayloadFormat::new(FIXTURE_TARGET, version).expect("
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 523,
+      "line": 524,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture profile must be valid\")"
+      "text": "TargetProfile::new(FIXTURE_TARGET, u64::from(version), [64, 1, 1], 64, 1_024, 0).expect("
     },
     {
       "path": "vyre-test-support/src/async_span_parity.rs",
@@ -8653,31 +8668,31 @@
       "path": "vyre-test-support/src/graph_fixtures.rs",
       "line": 286,
       "pattern": "expect_call",
-      "text": "let lanes = u32::try_from(count).expect(\"the lane count fits a dispatch dimension\");"
+      "text": "let lanes = u32::try_from(count).expect("
     },
     {
       "path": "vyre-test-support/src/graph_fixtures.rs",
-      "line": 294,
+      "line": 296,
       "pattern": "expect_call",
-      "text": ".expect(\"the external input value is the first value in an empty graph\");"
+      "text": ".expect(\"Fix: keep this the first value added to the graph; a duplicate name is what makes the add fail here\");"
     },
     {
       "path": "vyre-test-support/src/graph_fixtures.rs",
-      "line": 327,
+      "line": 329,
       "pattern": "expect_call",
-      "text": ".expect(\"the scale node declares one input and one output\");"
+      "text": ".expect(\"Fix: keep the scale node's declared inputs and outputs matching its program buffers; the graph rejects a node whose contract disagrees\");"
     },
     {
       "path": "vyre-test-support/src/graph_fixtures.rs",
-      "line": 366,
+      "line": 368,
       "pattern": "expect_call",
-      "text": ".expect(\"the sum node reads the scale node's output\");"
+      "text": ".expect(\"Fix: keep the sum node reading the scale node's output value; the graph rejects an input naming a value it does not hold\");"
     },
     {
       "path": "vyre-test-support/src/graph_fixtures.rs",
-      "line": 407,
+      "line": 409,
       "pattern": "expect_call",
-      "text": ".expect(\"the norm node joins both intra-graph values\");"
+      "text": ".expect(\"Fix: keep the norm node reading both earlier values; the graph rejects an input naming a value it does not hold\");"
     },
     {
       "path": "vyre-test-support/src/graph_shapes.rs",
@@ -9494,7 +9509,7 @@
     },
     {
       "path": "vyre-bench/tests/evidence_receipt_contracts.rs",
-      "line": 979,
+      "line": 977,
       "pattern": "source_inspection_test",
       "text": "test `compiler_source_crates_name_zero_workload_or_expert_baselines` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "compiler_source_crates_name_zero_workload_or_expert_baselines"
@@ -10221,6 +10236,13 @@
       "test": "every_xtask_crate_carries_the_release_tooling_rules"
     },
     {
+      "path": "xtask/tests/gate_write_ownership.rs",
+      "line": 85,
+      "pattern": "source_inspection_test",
+      "text": "test `no_gate_command_runs_another_gates_writer` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "no_gate_command_runs_another_gates_writer"
+    },
+    {
       "path": "xtask/tests/lint_policy_mutations.rs",
       "line": 175,
       "pattern": "source_inspection_test",
@@ -10639,13 +10661,13 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 293,
+      "line": 294,
       "pattern": "placeholder_text",
       "text": "/// platform is prose and compiles nothing. That also drops the placeholder"
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 296,
+      "line": 297,
       "pattern": "placeholder_text",
       "text": "/// accepts only `[a-z0-9_]` there, so anything else is a placeholder rather than"
     },

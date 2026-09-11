@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"956e5380ef0567214833a06e21d408b485495f5b","commit_timestamp":"1789106722","parent_commit":"7a6de622ef191cf7a9b79fca5d3d23f5f4ca6d97","dirty":false,"source_fingerprint":"git:956e5380ef0567214833a06e21d408b485495f5b:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"4a65df6872a1f68dc6c828ed0507d735faeafe08","commit_timestamp":"1789120972","parent_commit":"f52c75222db4f8536ccd540b2cb40ac2efc294f4","dirty":true,"source_fingerprint":"git:4a65df6872a1f68dc6c828ed0507d735faeafe08:dirty=true:worktree=24f9fae05c76c820e1ad3a2068f1a8c34b9ea7dd5e8cde44ff4c96e37371fb97"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -79,31 +79,31 @@
       "path": "vyre-driver/src/external_import_contracts.rs",
       "line": 156,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"an admissible descriptor imports\");"
+      "text": ".expect(\"Fix: admit this descriptor in the policy under test; the zero-copy case observes nothing without an imported record\");"
     },
     {
       "path": "vyre-driver/src/external_import_contracts.rs",
       "line": 171,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"an admitted resource executes its schedule\");"
+      "text": ".expect(\"Fix: accept a schedule against an admitted resource in the registry under test; the transition counts are unobservable otherwise\");"
     },
     {
       "path": "vyre-driver/src/external_import_contracts.rs",
       "line": 207,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"an admissible descriptor imports\");"
+      "text": ".expect(\"Fix: admit this descriptor in the policy under test; device loss invalidates nothing without an imported record\");"
     },
     {
       "path": "vyre-driver/src/external_import_contracts.rs",
       "line": 212,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"a dependent view registers against an admitted record\");"
+      "text": ".expect(\"Fix: register a dependent view against an admitted record in the registry under test; view invalidation is unobservable otherwise\");"
     },
     {
       "path": "vyre-driver/src/external_import_contracts.rs",
       "line": 216,
       "pattern": "documented_panic_contract",
-      "text": ".expect(\"a dependent artifact registers against an admitted record\");"
+      "text": ".expect(\"Fix: register a dependent artifact against an admitted record in the registry under test; artifact invalidation is unobservable otherwise\");"
     },
     {
       "path": "vyre-driver/src/hostile_input_closure.rs",
@@ -1027,13 +1027,13 @@
       "path": "vyre-test-support/src/artifact_fixtures.rs",
       "line": 513,
       "pattern": "expect_call",
-      "text": "TargetPayloadFormat::new(FIXTURE_TARGET, version).expect(\"fixture format must be valid\")"
+      "text": "TargetPayloadFormat::new(FIXTURE_TARGET, version).expect("
     },
     {
       "path": "vyre-test-support/src/artifact_fixtures.rs",
-      "line": 523,
+      "line": 524,
       "pattern": "expect_call",
-      "text": ".expect(\"fixture profile must be valid\")"
+      "text": "TargetProfile::new(FIXTURE_TARGET, u64::from(version), [64, 1, 1], 64, 1_024, 0).expect("
     },
     {
       "path": "vyre-test-support/src/async_span_parity.rs",
@@ -1207,31 +1207,31 @@
       "path": "vyre-test-support/src/graph_fixtures.rs",
       "line": 286,
       "pattern": "expect_call",
-      "text": "let lanes = u32::try_from(count).expect(\"the lane count fits a dispatch dimension\");"
+      "text": "let lanes = u32::try_from(count).expect("
     },
     {
       "path": "vyre-test-support/src/graph_fixtures.rs",
-      "line": 294,
+      "line": 296,
       "pattern": "expect_call",
-      "text": ".expect(\"the external input value is the first value in an empty graph\");"
+      "text": ".expect(\"Fix: keep this the first value added to the graph; a duplicate name is what makes the add fail here\");"
     },
     {
       "path": "vyre-test-support/src/graph_fixtures.rs",
-      "line": 327,
+      "line": 329,
       "pattern": "expect_call",
-      "text": ".expect(\"the scale node declares one input and one output\");"
+      "text": ".expect(\"Fix: keep the scale node's declared inputs and outputs matching its program buffers; the graph rejects a node whose contract disagrees\");"
     },
     {
       "path": "vyre-test-support/src/graph_fixtures.rs",
-      "line": 366,
+      "line": 368,
       "pattern": "expect_call",
-      "text": ".expect(\"the sum node reads the scale node's output\");"
+      "text": ".expect(\"Fix: keep the sum node reading the scale node's output value; the graph rejects an input naming a value it does not hold\");"
     },
     {
       "path": "vyre-test-support/src/graph_fixtures.rs",
-      "line": 407,
+      "line": 409,
       "pattern": "expect_call",
-      "text": ".expect(\"the norm node joins both intra-graph values\");"
+      "text": ".expect(\"Fix: keep the norm node reading both earlier values; the graph rejects an input naming a value it does not hold\");"
     },
     {
       "path": "vyre-test-support/src/graph_shapes.rs",

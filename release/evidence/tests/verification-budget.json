@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"956e5380ef0567214833a06e21d408b485495f5b","commit_timestamp":"1789106722","parent_commit":"7a6de622ef191cf7a9b79fca5d3d23f5f4ca6d97","dirty":false,"source_fingerprint":"git:956e5380ef0567214833a06e21d408b485495f5b:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"4a65df6872a1f68dc6c828ed0507d735faeafe08","commit_timestamp":"1789120972","parent_commit":"f52c75222db4f8536ccd540b2cb40ac2efc294f4","dirty":true,"source_fingerprint":"git:4a65df6872a1f68dc6c828ed0507d735faeafe08:dirty=true:worktree=b6d510998f6853cc12d0028c801bc71ed8e648e7e234ed7cddd2fee26abac2d9"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "tiers": [
     {
@@ -58,7 +58,7 @@
       "compile_units": 4,
       "link_units": 8,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 541905
+      "disk_use_bytes": 548643
     },
     {
       "tier": "facade",
@@ -68,7 +68,7 @@
       "compile_units": 1,
       "link_units": 2,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 77252
+      "disk_use_bytes": 77197
     },
     {
       "tier": "foundation",
@@ -80,7 +80,7 @@
       "compile_units": 3,
       "link_units": 6,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 2724915
+      "disk_use_bytes": 2725131
     },
     {
       "tier": "libraries",
@@ -112,7 +112,7 @@
       "compile_units": 32,
       "link_units": 55,
       "duplicate_source_bytes": 13845,
-      "disk_use_bytes": 2877968
+      "disk_use_bytes": 2885876
     },
     {
       "tier": "lowering",
@@ -173,7 +173,7 @@
       "compile_units": 2,
       "link_units": 4,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 631020
+      "disk_use_bytes": 631028
     },
     {
       "tier": "semantics",
@@ -183,7 +183,7 @@
       "compile_units": 1,
       "link_units": 2,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 529253
+      "disk_use_bytes": 529237
     },
     {
       "tier": "standalone-tooling",
@@ -219,7 +219,7 @@
       "compile_units": 9,
       "link_units": 20,
       "duplicate_source_bytes": 1172,
-      "disk_use_bytes": 1005799
+      "disk_use_bytes": 1011913
     }
   ],
   "shared_contracts": [
