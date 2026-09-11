@@ -14,6 +14,7 @@ use std::path::Path;
 use walkdir::WalkDir;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
+use crate::gates::scan::Tree;
 
 /// Verbs that say nothing about what an op computes.
 const BANNED_PREFIXES: &[&str] = &["compute_", "do_", "run_", "make_", "create_", "new_"];
@@ -131,55 +132,81 @@ fn is_op_source(path: &Path) -> bool {
         .any(|component| component.as_os_str() == "tests")
 }
 
-/// Holds every public op function in `vyre-libs` to the canonical naming scheme.
+/// Every workspace member of the library family, by directory.
+///
+/// The facade crate's `src` holds one `lib.rs` of re-exports: the operations
+/// moved into the per-domain members beside it. Scanning the facade alone read
+/// an empty universe, and a gate whose universe is empty proves nothing about
+/// the names it exists to judge. Reading the member list means a new domain
+/// crate is covered by the rule the day it is declared.
+fn library_family_roots(tree: &Tree) -> Result<Vec<String>, GateError> {
+    Ok(tree
+        .members()?
+        .into_iter()
+        .filter(|member| member == "vyre-libs" || member.starts_with("vyre-libs-"))
+        .collect())
+}
+
+/// Holds every public op function in the library family to the canonical
+/// naming scheme.
 pub struct OpNames;
 
 impl crate::gate::GateBehavior for OpNames {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        let libs = ctx.root.join("vyre-libs/src");
-        if !structure_gate::source_scan::carries_rust_source(&libs) {
+        let tree = Tree::open(&ctx.root)?;
+        let roots = library_family_roots(&tree)?;
+        if roots.is_empty() {
             return Err(GateError::new(
-                format!("{} holds no Rust source", libs.display()),
-                "run the gate against a checkout that contains vyre-libs",
+                "the workspace declares no member of the library family",
+                "run the gate against a checkout that contains the vyre-libs crates",
             ));
         }
         let mut report = Report::clean();
         let mut scanned = 0usize;
         let mut public_functions = 0usize;
-        for entry in WalkDir::new(&libs) {
-            let entry = entry.map_err(|error| {
-                GateError::new(
-                    format!("cannot walk {}: {error}", libs.display()),
-                    "make every directory under vyre-libs/src readable",
-                )
-            })?;
-            let path = entry.path();
-            if !entry.file_type().is_file() || !is_op_source(path) {
+        for root in &roots {
+            let source = ctx.root.join(root).join("src");
+            if !structure_gate::source_scan::carries_rust_source(&source) {
                 continue;
             }
-            let text = crate::output_arg::read_text_bounded(path, MAX_SOURCE_BYTES, "op-name scan")
-                .map_err(|error| {
+            for entry in WalkDir::new(&source) {
+                let entry = entry.map_err(|error| {
                     GateError::new(
-                        format!("cannot read {}: {error}", path.display()),
-                        "make the file readable, or split it under the scan bound",
+                        format!("cannot walk {}: {error}", source.display()),
+                        "make every directory under a library family member readable",
                     )
                 })?;
-            scanned += 1;
-            let parsed_functions = extract_public_functions(&text);
-            for func in parsed_functions {
-                public_functions += 1;
-                for violation in violations(&func.name) {
-                    report.find(Finding::at(
-                        path.strip_prefix(&ctx.root).unwrap_or(path),
-                        func.line,
-                        violation,
-                        FIX,
-                    ));
+                let path = entry.path();
+                if !entry.file_type().is_file() || !is_op_source(path) {
+                    continue;
+                }
+                let text =
+                    crate::output_arg::read_text_bounded(path, MAX_SOURCE_BYTES, "op-name scan")
+                        .map_err(|error| {
+                            GateError::new(
+                                format!("cannot read {}: {error}", path.display()),
+                                "make the file readable, or split it under the scan bound",
+                            )
+                        })?;
+                scanned += 1;
+                for func in extract_public_functions(&text) {
+                    public_functions += 1;
+                    for violation in violations(&func.name) {
+                        report.find(Finding::at(
+                            path.strip_prefix(&ctx.root).unwrap_or(path),
+                            func.line,
+                            violation,
+                            FIX,
+                        ));
+                    }
                 }
             }
         }
         report.cover_complete("public operation functions", public_functions);
-        report.note(format!("scanned {scanned} op source file(s)"));
+        report.note(format!(
+            "scanned {scanned} op source file(s) across {} library family member(s)",
+            roots.len()
+        ));
         Ok(report)
     }
 }
