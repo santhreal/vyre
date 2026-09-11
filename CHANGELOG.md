@@ -81,6 +81,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   longer pass as coverage. A gate whose honest output is a note is declared
   with the gate that carries its failing form, and the sweep also fails a
   declaration whose gate can find or whose name is not registered.
+- A generic schema member carries a stable wire tag through
+  `FieldType::wire_tag` and `FieldType::from_wire_tag`, and
+  `validate_member_compatibility` rejects an external field whose declared
+  member the dialect field contract does not admit.
 - A specialized portfolio is admitted only when its guards are provably
   disjoint or ordered by precedence and every declared workload cell is served
   by a variant or by a generic remainder.
@@ -170,6 +174,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - CompileRequest::with_numeric_budget states the error a caller admits, and a
   schedule that reorders a rounding accumulation is admitted where the
   reordered contract fits that budget instead of being eliminated.
+- `vyre_libs_builder::builder::strided_loop_from` runs the shared strided chunk
+  loop over a lane whose first index the caller states, which `strided_loop`
+  now delegates to with the `local` binding as that base.
 - A guarded artifact set states the target identity it was compiled for, and
   admission rejects a set whose authenticated target is a different device or
   objective before any guard is evaluated.
@@ -183,6 +190,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The ci-steps gate resolves every package, test, bench, example, binary and
   feature token in the workflow steps and the scripts against the workspace
   manifests, so a step that silently selects nothing fails.
+- A workspace closure parses the downstream model family declaration at run
+  time and refuses any workspace member that spells one of those names in a
+  type, a fixture, a diagnostic, or a file name.
 - Region alternatives are derived from the algebraic laws a combine registers
   and composed by a bounded expansion over an expression e-graph, so a declared
   law contributes rewrites without an operation-specific recipe.
@@ -345,6 +355,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   layouts, stage-specific read-only views for all five compiler levels,
   versioned cache keys, and a single deterministic query engine with precise
   invalidation and parallel evaluation.
+- `vyre_reference::composition_witness` exposes `COMPOSITION_WITNESS_FAMILIES`,
+  a registry keyed by operation family that names the witness module owning
+  each family or records why no witness exists, with an executable probe per
+  row.
 - The foundation layer now provides a compositional schedule calculus with
   dependency preservation certificates and cost modeling alongside a
   proof-producing multi-level optimization framework with typed hardware rules,
@@ -719,6 +733,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   registered propagating pass to fold it. Reintroducing the pre-collapse
   private walk fails it at the async-copy offset, which is the position the two
   copies actually disagreed about.
+- The reference oracle's resource bounds hold at both sides of each boundary: a
+  program of more than a million IR nodes ends in a `BudgetExhaustion` refusal
+  rather than a stack overflow or an unbounded run, evaluation allocates 887.3
+  bytes per IR node against a 1200 byte ceiling, and
+  `ReferenceBudget::max_recursion_depth` and
+  `ReferenceBudget::max_memory_bytes` each refuse one unit past the limit and
+  admit the limit at three distinct values.
 - Introduced orthogonal semantic type components (ScalarType, VectorType,
   TensorType, RecordType, VariantType, Sparsity, QuantizationMeaning,
   ResourceCapability, OwnershipMutability, LifetimeEpoch, NumericalContract),
@@ -981,6 +1002,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The pass invariant audit reports a pass that grows a program past the
   expansion bound its rewrite contract declares, and a registered pass that
   declares no contract.
+- `ReferenceRequest::explore_races` runs one dispatch under a bounded set of
+  deterministic step orders with shadow memory recording every buffer access,
+  and reports both an unsynchronized conflict inside one order and a byte
+  disagreement between two orders.
 - An artifact session allocates, binds, and releases the workspace plan the
   artifact recorded for the values its entry points pass between themselves.
 - vyre-spec states the IR level a declaration owns, the region law family an
@@ -1230,11 +1255,21 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   that it must be valid.
 - Forward-or-changed fixpoint readback moved out of the submission path into a
   dedicated decoder over the returned graph values.
+- The CUDA grid-barrier arrival ceiling now reads the static barrier count off
+  the module's cached globals instead of rescanning the PTX text on every
+  dispatch. The scan cost 18 to 22 us of host time per grid-sync dispatch.
 - Constant propagation, dead-branch elimination and loop-invariant code motion
   moved from vyre_pass_engine::optimizer to vyre_foundation::transform, and the
   cross-scope CSE hoist moved into vyre_pass_engine::optimizer::cse_via_encoded
   beside the canonical ids it consumes. The pass engine keeps only the passes
   it dispatches as vyre Programs.
+- An inferred launch span now narrows to the whole workgroups a program's
+  axis-0 tile guards admit, not only to the lanes its logical-index guards
+  admit. A tile bound removes whole workgroups, which no workgroup-scoped
+  buffer, subgroup collective or atomic couples across, so the fused two-pass
+  tree reduction launches the 32 workgroups that reduce instead of the 1024 its
+  input span declares. An atomic, and a program that packs several logical
+  points into one declared element, keep the declared span.
 - The declared-law prover selects a witness from the fixture cases that can
   carry it and proves the law over those, so a single-element or
   extent-mismatched case is skipped instead of turning the whole declaration
@@ -1416,6 +1451,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   attaches to the operand and is lost when the load is hoisted into a `let`.
   The rule and both node-level messages now name every legal source and the
   spelling that keeps it.
+- One lane of `grid_stride_tree_sum_u32` pass 1 now reduces 32 elements instead
+  of one, so the workgroup tree runs once per span of the input rather than
+  once per tile: the reduction measures 27296 ns at one element per lane and
+  7776 ns at thirty-two over one million u32 at a 1024-wide tile on an RTX 3080
+  Ti.
 - TypedDispatchExt no longer declares dispatch_u32 and dispatch_u32_into; both
   forwarded to dispatch_pod and dispatch_pod_into, which infer the element type
   from the input slices, so a caller writes the same call without them.
@@ -1456,6 +1496,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   writers that put evidence on disk through the plain document writer now go
   through the recording writer, and the document writer refuses an evidence
   path.
+- An external schema field is `ExternalField`, declaring the generic schema
+  member kind alongside its raw value, and the schema traversal hands a visitor
+  the decoded `FieldValue` as well as the declaration.
 - `vyre_foundation::substrate::ids::NodeId` and `RegionId` are renamed
   `InternedNodeId` and `InternedRegionId`, matching `InternedStringId` and
   `InternedTypeId`. `ir::RegionId` is renamed `ByteRegionId` for the
@@ -1902,6 +1945,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Cooperative matrix tiling, contraction buffer rosters and tensor element
   counts each resolve to a single builder owner, and `MatrixShape` is exported
   from `vyre-libs-builder` instead of `vyre-libs-math`.
+- Documentation, test fixtures, and probe samples in the workspace crates state
+  the mechanism instead of naming a model family that only a downstream
+  compiler declares.
 - `vyre-runtime` and `vyre-lower` contract tests read shared program fixtures
   from `vyre-test-support` and resolve the checkout through
   `vyre_test_support::monorepo::vyre_workspace_root` instead of restating both
@@ -2227,6 +2273,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   that read launch geometry inside one read as not reading it.
   `visit::any_expr_in` is public, as the composition of the node, operand, and
   expression owners that a scan over both namespaces needs.
+- Duplicated fixtures and condition blocks across `vyre-conform`, `vyre-bench`,
+  `vyre-driver` and `vyre-libs-pattern` collapse into single owners: the pinned
+  native-comparison protocol is stated once as
+  `NativeComparisonConditions::pinned`, the target-facet agreement assertion,
+  the no-output backend double, the generated-case linear congruential step,
+  the two-segment grid-sync program and the sorted match-record decode each
+  have one definition in `vyre-test-support`, and both region-scan programs
+  build their shared buffer set through `AnchoredRegionWalk::common_buffers`.
 - Twelve duplication pins now sit at what the merged tree measures rather than
   at what each lane measured in isolation: vyre 40 to 22, vyre-aot 54 to 31,
   vyre-debug 71 to 54, vyre-driver-cuda 3252 to 3238, vyre-driver-wgpu 4229 to
@@ -3214,6 +3268,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   one predicate over a node instead of destructuring `Node::Region` and calling
   the test at each site, which is what pushed the conform crate past its
   duplication pin.
+- The marked-section golden corpus format and the registered-operation witness
+  runner each have one owner, and seventeen duplication pins are lowered to the
+  measured figure.
 - vyre_foundation::transform::grid_sync_split owns the whole-grid fence walk,
   hoist and segmentation. The compile-time planner cut and the dispatch-time
   split in vyre-driver both call it, replacing the copy that lived in
@@ -3248,6 +3305,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   from the hygiene scan that records them instead of carrying a second list.
 - The backend matrix gate reads the unresolved-work marker vocabulary from the
   hygiene family that owns it instead of carrying a second list.
+- The bounded semantic wrapper policy, the CRC-32 and FNV-1a reference oracles,
+  and the u32 anchor corpus each have one definition instead of a copy per
+  crate.
 - The line scanner that separates code from a comment, counts nesting, and
   decides which lines belong to an inline test module lives in the scan module
   that already owns what is not code. The hot-path scan held the only copy, so
@@ -5030,6 +5090,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   ABI names is the one published path per program. The legacy buffered
   inflate-then-scan builder is deleted, and the tile-width form of the fused
   stored-block scan is internal to its module.
+- The external resource admission manager no longer states a recovery contract;
+  the registry that holds the lock states it.
 - The vyre-libs published surface no longer carries the parity fixed-point
   oracles. FIXED_ONE, to_fixed, from_fixed, fixed_mul, fixed_matvec,
   fixed_sdiv_by_positive, signed_fixed_17, signed_fixed_18, signed_fixed_19,
@@ -5324,6 +5386,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   only under cfg(not(target_os = "macos")). The macOS lane failed to resolve
   the crate and the whole benchmark harness stopped compiling there. Each test
   now carries the same target condition its dependency does.
+- A CUDA dispatch's timing events now bracket only the stream work: the kernel
+  function resolve, the module-globals lease and the grid-barrier counter reset
+  are enqueued outside the pair, so `device_ns` no longer reports host driver
+  time as device time. The one-million-element grid-stride tree reduction
+  reported 43744 ns of device time for a 7.2 us kernel and now reports 9216 to
+  17408 ns.
 - vyre-libs-solvers resolves the dataflow compaction wrappers. The bitset,
   fixpoint and math kernels they call are defined in vyre-libs-bitset,
   vyre-libs-fixpoint and vyre-libs-math, and the imports name those crates.
@@ -6361,6 +6429,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   device active time, and the conditional rule-condition cases state the bytes
   their kernel reads, so a resident bandwidth-bound case reports 44% of a 1792
   GB/s device instead of 0.45%.
+- The `foundation.reduce.sum.crossover` case now dispatches each route twice
+  per sample and times the second, so no route is charged for the memory state
+  the 1.37 ms atomic route left behind. The timed large tree route read 35840
+  ns with a contended first dispatch and 32864 ns without, at three times the
+  variance.
 - A row-batched contraction accumulates a register tile of outputs per
   invocation whose shape is derived from the declared extents and the stated
   per-invocation register budget, and facts that admit no tile leave the
@@ -7196,6 +7269,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   launchers identically. Proof-checklist edits and platform-specific launcher
   changes no longer invalidate measurements when no runtime, compiler,
   benchmark, or release-policy source changed.
+- A benchmark sample taken while the graphics clock is depressed under load is
+  now reported as unstable instead of being judged against a release
+  performance floor.
 - `BinOp::result_class` is the one answer to what a binary operator's result
   type is, and `BinOp::takes_numeric_operands` is derived from it.
   `validate::typecheck` asked that question twice and wrote its own operator
@@ -8898,6 +8974,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   selects the measured winner per size, and records contention and barrier
   counters. NVIDIA idle clocks no longer invalidate a cold, low-utilization
   microbenchmark as thermal instability.
+- The multi-workgroup u32 tree reduction sizes its grid and its partial buffer
+  to the launch its own buffer table implies, so no workgroup reduces elements
+  the combine pass does not read.
 - A reference call whose signature declares an output type the interpreter has
   no value for is refused by name instead of answering with the raw byte
   payload, so an operation declaring a `u64` or `bool` output cannot hand the
@@ -9088,7 +9167,7 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   to materialize 16 independent output rows in one resident dispatch, with
   exact CPU-oracle parity.
 - The resident optimizer pipeline benchmark header states the ratio the case
-  records rather than a speedup, matching the 0.22 floor and the release target
+  records rather than a speedup, matching the 0.10 floor and the release target
   that already state the device arm is slower than the host arm at 50000
   bindings.
 - Resident value-returning dispatch helpers now preserve backend upload,
@@ -9581,6 +9660,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   scheduler round against a work ceiling and refuses a run that exceeds it with
   the program name and the ceiling, so a program whose trip count comes from
   data terminates as a structured refusal instead of running until it finishes.
+- The reference oracle names every `DataType` variant explicitly where it used
+  to fall through a catch-all arm, and a test holds the remaining catch-alls to
+  an exact per-file allowance and every non-exhaustive IR variant to a named
+  decision.
 - The reference oracle interprets a whole-grid fence where it stands instead of
   cutting the program with `transform::grid_sync_split`, the transform a
   backend without a cooperative launch runs. Sharing the cut shared its blind

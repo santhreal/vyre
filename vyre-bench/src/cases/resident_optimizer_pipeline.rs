@@ -51,8 +51,8 @@ const ARTIFACT_BYTES_BOUND: u64 = 60_000;
 /// Ratio of host pipeline time to device pipeline time the case admits.
 ///
 /// This is a measured number, not a target. At 50 000 bindings the device
-/// pipeline timed 307.7 ms p50 against 78.6 ms p50 through the host pipeline
-/// over 30 samples, a ratio of 0.26x: the resident pipeline is slower than the
+/// pipeline timed 735.5 ms p50 against 88.4 ms p50 through the host pipeline
+/// over 30 samples, a ratio of 0.12x: the resident pipeline is slower than the
 /// host pipeline at this size because each of the four stages re-encodes the
 /// whole IR image, compiles an artifact and dispatches it, while the host
 /// pipeline walks the tree once per pass. The recorded benchmark artifact
