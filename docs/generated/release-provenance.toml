@@ -1,5 +1,5 @@
 schema_version = 2
-bom_timestamp = "2026-09-10T09:49:20Z"
+bom_timestamp = "2026-09-11T06:28:20Z"
 rustc_version = "1.86.0 (05f9846f8 2025-03-31)"
 cargo_version = "1.86.0 (adf9b6ad1 2025-02-28)"
 target_triples = [
@@ -9,9 +9,9 @@ target_triples = [
     "aarch64-apple-darwin",
     "aarch64-unknown-linux-gnu",
 ]
-lockfile_digest = "522c3a52ba1e5396dd4cd442d1635a2519946bf6b6655a7fb5bc962622e90fc9"
+lockfile_digest = "c861f1b93b4721e8da20b7092d9111898c962e5692028948344cfeac3dc2386a"
 is_offline_capable = true
-reproducible_archive_hash = "d98593300f61f2b4556ac7b5aec2420187e0d6b52a021900d147598687316e4b"
+reproducible_archive_hash = "91e0de6eea02141eab98a3c1658f43490f2a0522c0f843c5766af3a0f0f2e30e"
 
 [[dependencies]]
 name = "adler2"
@@ -3889,7 +3889,7 @@ is_system_provided = true
 
 [[code_generators]]
 name = "vyre-macros"
-source_digest = "9d6ea2fff2216a4bd1257dceff4cb96ac6e8e7136623c0633270911a1f467d1f"
+source_digest = "44c5182be3bae9b65800d1c3b4522d872ece7fd76c18d821900bc36c6cd6671a"
 target_outputs = [
     "registration",
     "lowering",
@@ -3898,16 +3898,15 @@ target_outputs = [
 
 [[code_generators]]
 name = "xtask-registry"
-source_digest = "file_missing"
+source_digest = "2139af6aa4947ea508223342c287d556aec668d1c029fe076c68c4c070449934"
 target_outputs = [
     "docs/generated/op-inventory.toml",
     "docs/generated/catalog.toml",
-    "xtask/ci-registry.toml",
 ]
 
 [[code_generators]]
 name = "structure-gate"
-source_digest = "dir_missing"
+source_digest = "c642f2575724fc2602a18d274f108a1535218ed64847cccba9fd53edb73acb83"
 target_outputs = ["structure-assertions"]
 
 [[code_generators]]
@@ -3951,16 +3950,12 @@ path = "release/evidence/benchmarks/megakernel-condition-cuda.json"
 digest = "ca6ec745d56728e04260f7f63c0d41aebc87477d70e4956a4fe3a1b8d09f07f6"
 
 [[benchmark_baselines]]
-path = "release/evidence/benchmarks/megakernel-default-routing.json"
-digest = "2b9102ed825fc6dbb7a7f5d7e42e06388f95cbf2313d2a7f7141c200d24dbc05"
-
-[[benchmark_baselines]]
 path = "release/evidence/benchmarks/megakernel-latency-cuda.json"
 digest = "ca6ec745d56728e04260f7f63c0d41aebc87477d70e4956a4fe3a1b8d09f07f6"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/release-workload-matrix.json"
-digest = "136daf0d089c3cf6eae40b157074cefb5e79874a4c8b4b9b01bbae7d715ca31b"
+digest = "1afaab994ec69e1faa1d1c081eaacaf9e3b9250032ffcb0412af8ea6d5fb3d5e"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/resident-optimizer-pipeline.json"
@@ -4112,7 +4107,7 @@ digest = "13049b5007c09bce589797d59ccf287d96e305824dc3ea0912d8f1a5df289246"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-15-adaptive-routing.json"
-digest = "6de25694bd76c70a2ebd43e4b680828085b287a325e43420364ba3d213226f9e"
+digest = "6fc211a5745d86d3b478dd79d02df14ac726c96e68fe98685f84755898ba2f3b"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-16-quantized-linear.json"
@@ -4132,11 +4127,11 @@ digest = "ab7433710f7119519c205c4179d6a766f0b8361ee6ec65665c9cc513151641bb"
 
 [[schemas]]
 path = "docs/generated/change-closure.toml"
-digest = "538b6577a48bf8e05ca0513f9ae58a59de6fd3de7120d5b1f983f540a6e313f3"
+digest = "751bcaf290c79d14ae3808034b60bf071e949214bf6453f8c996423205efa3f2"
 
 [[schemas]]
 path = "docs/generated/configuration-space.toml"
-digest = "0be56f1d631ed0658b95b2c8505854228c97181a799a8a94e471124c2bf1964e"
+digest = "ae6e88e9fe4d4299a7fad64644723840483d95f87d9442553e9e9777493882c0"
 
 [[schemas]]
 path = "docs/generated/driver-error-codes.toml"
@@ -4144,7 +4139,7 @@ digest = "2fbb1f049e9985434e389a67eedd95c9c20315bab34655ce8ebc1b0f4d2438d6"
 
 [[schemas]]
 path = "docs/generated/engineering-scorecard.toml"
-digest = "7823bc796cb46394cb7aa82c3a66c307f64ba5bff81884c13fdb2f5bfedd05d9"
+digest = "d40aa5c4af59d9e6283964f9e5a56c437cfd02ad3bc1547d83655be6c1ebf92e"
 
 [[schemas]]
 path = "docs/generated/error-codes.toml"

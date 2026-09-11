@@ -1,8 +1,8 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"ec3b8b7f3a7a9e149a3b675e2b12284a007f504f","commit_timestamp":"1789031808","parent_commit":"3a82c9b09452693304802c2fe440594c140b6e0d","dirty":true,"source_fingerprint":"git:ec3b8b7f3a7a9e149a3b675e2b12284a007f504f:dirty=true:worktree=d8a686f54e65749111f644c98ad9a049b0eeb7dce372f5d56fb3af3515f49824"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"997287e7ab44b61927039993d65900f6e2149330","commit_timestamp":"1789108100","parent_commit":"956e5380ef0567214833a06e21d408b485495f5b","dirty":false,"source_fingerprint":"git:997287e7ab44b61927039993d65900f6e2149330:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 1,
-  "unattributed_count": 49,
-  "attributed_count": 35,
+  "unattributed_count": 46,
+  "attributed_count": 43,
   "artifacts": [
     {
       "path": "release/evidence/benchmarks/cuda-ptx-patterns.json",
@@ -23,11 +23,6 @@
       "path": "release/evidence/benchmarks/megakernel-condition-cuda.json",
       "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
       "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/megakernel-condition-cuda.json` with the provenance it wrote"
-    },
-    {
-      "path": "release/evidence/benchmarks/megakernel-default-routing.json",
-      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
-      "recapture": "declare `release/evidence/benchmarks/megakernel-default-routing.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
     },
     {
       "path": "release/evidence/benchmarks/megakernel-latency-cuda.json",
@@ -215,11 +210,6 @@
       "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-13-callgraph-reachability.json` with the provenance it wrote"
     },
     {
-      "path": "release/evidence/benchmarks/workload-15-adaptive-routing.json",
-      "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
-      "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-15-adaptive-routing.json` with the provenance it wrote"
-    },
-    {
       "path": "release/evidence/benchmarks/workload-16-quantized-linear.json",
       "reason": "carries no provenance record, and `release-benchmarks` reproduces it only on a host carrying the device it measured, which this tree cannot identify",
       "recapture": "run `./cargo_full run -p xtask --bin xtask -- release-benchmarks --write` on a host carrying the device the record names, and commit `release/evidence/benchmarks/workload-16-quantized-linear.json` with the provenance it wrote"
@@ -233,11 +223,6 @@
       "path": "release/evidence/conformance/release-all-backends-certificate.json",
       "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
       "recapture": "declare `release/evidence/conformance/release-all-backends-certificate.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
-    },
-    {
-      "path": "release/evidence/docs/vyre-readme-contracts.json",
-      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
-      "recapture": "declare `release/evidence/docs/vyre-readme-contracts.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
     },
     {
       "path": "release/evidence/optimization/optimizer-impact-cuda.json",

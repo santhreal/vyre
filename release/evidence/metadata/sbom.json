@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"integration","commit":"58a981e513fdc27b75eda1afb0559736035ad0ae","commit_timestamp":"1789033760","parent_commit":"1711d15f369f3a89c1caa9eeebbc1aaabf4a28d3","dirty":false,"source_fingerprint":"git:58a981e513fdc27b75eda1afb0559736035ad0ae:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"997287e7ab44b61927039993d65900f6e2149330","commit_timestamp":"1789108100","parent_commit":"956e5380ef0567214833a06e21d408b485495f5b","dirty":false,"source_fingerprint":"git:997287e7ab44b61927039993d65900f6e2149330:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "bomFormat": "CycloneDX",
   "components": [
     {
@@ -9111,7 +9111,7 @@
       "type": "framework",
       "version": "0.8.0"
     },
-    "timestamp": "2026-09-10T09:49:20Z",
+    "timestamp": "2026-09-11T06:28:20Z",
     "tools": [
       {
         "name": "xtask-release-provenance",
@@ -9125,7 +9125,7 @@
       }
     ]
   },
-  "serialNumber": "urn:uuid:vyre-sbom-522c3a52ba1e5396dd4cd442d1635a2519946bf6b6655a7fb5bc962622e90fc9",
+  "serialNumber": "urn:uuid:vyre-sbom-c861f1b93b4721e8da20b7092d9111898c962e5692028948344cfeac3dc2386a",
   "specVersion": "1.5",
   "version": 1
 }
