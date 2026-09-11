@@ -15,8 +15,8 @@ use vyre_foundation::define_dialect;
 use vyre_foundation::dialect::{
     admit_descriptor_versions, admit_program_versions, admit_registered_versions,
     validate_dialect_version, validate_schema_identity, Dialect, DialectRegistry,
-    DialectVersionError, ExternalSchemaNode, FieldContract, FieldType, ResourceAbi,
-    ResourceBinding, SchemaTranslationError, SemanticVersionRejection,
+    DialectVersionError, ExternalField, ExternalSchemaNode, FieldContract, FieldType,
+    ResourceAbi, ResourceBinding, SchemaTranslationError, SemanticVersionRejection,
 };
 use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::{BufferAccess, DataType, Expr};
@@ -335,7 +335,7 @@ fn dialect_external_schema_translation_and_adversarial_rejections() {
     // Valid external node mapping
     let valid_node = ExternalSchemaNode {
         op_name: "vyre-test::demo::blend".to_string(),
-        raw_fields: vec![],
+        fields: vec![],
         bound_resources: vec![
             "input_a".to_string(),
             "input_b".to_string(),
@@ -348,7 +348,7 @@ fn dialect_external_schema_translation_and_adversarial_rejections() {
     // Adversarial Case 1: Incomplete resource roster
     let missing_resource_node = ExternalSchemaNode {
         op_name: "vyre-test::demo::blend".to_string(),
-        raw_fields: vec![],
+        fields: vec![],
         bound_resources: vec!["input_a".to_string(), "input_b".to_string()], // Missing output_c
     };
     let err = validate_external_node(&missing_resource_node)
@@ -362,7 +362,7 @@ fn dialect_external_schema_translation_and_adversarial_rejections() {
     // Adversarial Case 2: Unknown field
     let unknown_field_node = ExternalSchemaNode {
         op_name: "vyre-test::demo::invert".to_string(),
-        raw_fields: vec![("extraneous_field".to_string(), "1".to_string())],
+        fields: vec![ExternalField { name: "extraneous_field".to_string(), declared_member: FieldType::U32, raw_value: "1".to_string() }],
         bound_resources: vec![],
     };
     let err =
@@ -373,9 +373,9 @@ fn dialect_external_schema_translation_and_adversarial_rejections() {
     // Adversarial Case 3: Duplicate field
     let duplicate_field_node = ExternalSchemaNode {
         op_name: "vyre-test::demo::invert".to_string(),
-        raw_fields: vec![
-            ("mask".to_string(), "0xFF".to_string()),
-            ("mask".to_string(), "0x00".to_string()),
+        fields: vec![
+            ExternalField { name: "mask".to_string(), declared_member: FieldType::U32, raw_value: "0xFF".to_string() },
+            ExternalField { name: "mask".to_string(), declared_member: FieldType::U32, raw_value: "0x00".to_string() },
         ],
         bound_resources: vec![],
     };
@@ -387,7 +387,7 @@ fn dialect_external_schema_translation_and_adversarial_rejections() {
     // Adversarial Case 4: Unmapped node (non-exhaustive mapping)
     let unmapped = ExternalSchemaNode {
         op_name: "vyre-test::demo::nonexistent".to_string(),
-        raw_fields: vec![],
+        fields: vec![],
         bound_resources: vec![],
     };
     let err = validate_external_node(&unmapped).expect_err("unmapped node must fail closed");

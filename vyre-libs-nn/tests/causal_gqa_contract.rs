@@ -62,11 +62,11 @@ fn invalid_causal_gqa_contracts_fail_closed() {
     );
 }
 
-/// Proves exact Qwen3.5 head, KV-group, head-width, and decode-cache dimensions materialize.
+/// Proves exact head, KV-group, head-width, and decode-cache dimensions materialize.
 #[test]
-fn qwen35_production_decode_dimensions_build_exact_buffers() {
+fn production_decode_dimensions_build_exact_buffers() {
     let program = gqa_attention_causal("q", "k", "v", "o", 1, 24, 4, 1, 18, 256, 17)
-        .expect("Fix: Qwen production decode dimensions must build");
+        .expect("Fix: production decode dimensions must build");
     assert_eq!(program.buffers()[0].count(), 24 * 256);
     assert_eq!(program.buffers()[1].count(), 4 * 18 * 256);
     assert_eq!(program.buffers()[2].count(), 4 * 18 * 256);

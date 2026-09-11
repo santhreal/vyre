@@ -12,6 +12,7 @@
 //! 9. External schema, field, and resource ABI translation validation.
 
 mod descriptor;
+mod member;
 mod schema;
 mod traits;
 mod version;
@@ -19,11 +20,13 @@ mod version;
 pub use descriptor::{
     DialectDescriptor, DialectDescriptorRegistration, DialectOpDescriptor, DialectRegistry,
 };
+pub use member::{validate_member_compatibility, FieldType, FieldValue};
 pub use schema::{
     validate_external_schema, validate_node_fields, validate_node_resources,
-    validate_schema_identity, ExternalLayoutDeclaration, ExternalResourceDeclaration,
-    ExternalSchema, ExternalSchemaNode, ExternalSchemaVisitor, FieldContract, FieldType,
-    LayoutBinding, LayoutContract, ResourceAbi, ResourceBinding, SchemaTranslationError,
+    validate_schema_identity, ExternalField, ExternalLayoutDeclaration,
+    ExternalResourceDeclaration, ExternalSchema, ExternalSchemaNode, ExternalSchemaVisitor,
+    FieldContract, LayoutBinding, LayoutContract, ResourceAbi, ResourceBinding,
+    SchemaTranslationError,
 };
 pub use traits::{
     Dialect, DialectCodec, DialectMatcher, DialectOp, DialectValidator, DialectVisitor,
@@ -398,7 +401,7 @@ macro_rules! define_dialect {
                 $crate::dialect::validate_node_fields(
                     $dialect_id,
                     &node.op_name,
-                    &node.raw_fields,
+                    &node.fields,
                     op.declared_fields(),
                 )?;
                 $crate::dialect::validate_node_resources(

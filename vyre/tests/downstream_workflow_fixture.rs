@@ -444,3 +444,183 @@ fn vyre_libs_feature_registration_needs_no_workspace_internal_knowledge() {
         assert!(entry.program().is_some());
     }
 }
+
+/// Every model family a downstream schema declares, minus the ones exempted
+/// below because the word also carries an ordinary English or architectural
+/// sense.
+///
+/// Derived from the downstream declaration rather than copied, so a family
+/// added there is scanned for without anyone editing this file.
+fn downstream_model_family_variants(root: &std::path::Path) -> Vec<String> {
+    let declaration = root.join("consumers/vyre-model-compiler/src/config.rs");
+    let text = std::fs::read_to_string(&declaration).unwrap_or_else(|error| {
+        panic!(
+            "Fix: the downstream family declaration at `{}` must be readable, since the banned \
+             roster is derived from it and a hand-written copy goes stale in silence: {error}",
+            declaration.display()
+        )
+    });
+    let file = syn::parse_file(&text).expect("Fix: the downstream family declaration must parse");
+    file.items
+        .iter()
+        .find_map(|item| match item {
+            syn::Item::Enum(declared) if declared.ident == "ModelFamily" => Some(declared),
+            _ => None,
+        })
+        .unwrap_or_else(|| {
+            panic!(
+                "Fix: `{}` must declare `enum ModelFamily`, or point this derivation at the \
+                 declaration that replaced it",
+                declaration.display()
+            )
+        })
+        .variants
+        .iter()
+        .map(|variant| variant.ident.to_string())
+        .collect()
+}
+
+/// A family name that also reads as ordinary English or as an architecture
+/// category, paired with why scanning for it reports noise instead of a
+/// downstream leak.
+const FAMILY_NAMES_THAT_ARE_ALSO_ORDINARY_WORDS: &[(&str, &str)] = &[(
+    "Vision",
+    "names an architecture category rather than a vendor, and appears in unrelated prose across \
+     the workspace",
+)];
+
+/// Files that state the ban, so the terms they contain are the enforcement and
+/// not a leak, paired with the mechanism each one runs.
+const FILES_THAT_STATE_THE_BAN: &[(&str, &str)] = &[
+    (
+        "vyre/tests/downstream_workflow_fixture.rs",
+        "this closure and the facade vocabulary assertion above it",
+    ),
+    (
+        "vyre-runtime/tests/generic_runtime_contracts.rs",
+        "the runtime public-surface absence proof",
+    ),
+    (
+        "xtask-registry/src/gates/application_runnable.rs",
+        "the gate that refuses a downstream concept in a runnable application",
+    ),
+];
+
+fn source_files_under(directory: &std::path::Path, found: &mut Vec<std::path::PathBuf>) {
+    let Ok(entries) = std::fs::read_dir(directory) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if path.is_dir() {
+            if name != "target" && !name.starts_with('.') {
+                source_files_under(&path, found);
+            }
+        } else if path.extension().and_then(|extension| extension.to_str()) == Some("rs") {
+            found.push(path);
+        }
+    }
+}
+
+/// Proves no workspace member names a downstream model family, in a type, a
+/// fixture, a diagnostic, or a file name.
+///
+/// WHY: the families are declared in a crate the workspace excludes, so nothing
+/// a running program observes reports that a core crate spelled one of their
+/// names in a doc comment, a test fixture, or a refusal message. The name only
+/// shows up when a second domain arrives and finds the compiler written for the
+/// first one. Adding a family downstream extends the scan with no edit here,
+/// which is why the roster is parsed from that declaration at run time.
+///
+/// Does not catch a domain concept spelled without the family name, such as a
+/// tensor layout that only one architecture produces.
+#[test]
+fn no_workspace_member_names_a_downstream_model_family() {
+    let root = vyre_test_support::monorepo::vyre_workspace_root();
+    let variants = downstream_model_family_variants(&root);
+    assert!(
+        variants.len() > 1,
+        "Fix: the downstream family declaration yielded {} variants, so the derivation reads the \
+         wrong item and the scan would pass for the wrong reason",
+        variants.len()
+    );
+
+    for (exempt, _) in FAMILY_NAMES_THAT_ARE_ALSO_ORDINARY_WORDS {
+        assert!(
+            variants.iter().any(|variant| variant == exempt),
+            "Fix: `{exempt}` is exempted here but is no longer a declared family; drop the \
+             exemption row"
+        );
+    }
+
+    let banned: Vec<String> = variants
+        .iter()
+        .filter(|variant| {
+            !FAMILY_NAMES_THAT_ARE_ALSO_ORDINARY_WORDS
+                .iter()
+                .any(|(exempt, _)| variant.as_str() == *exempt)
+        })
+        .map(|variant| variant.to_lowercase())
+        .collect();
+
+    let stating_the_ban: BTreeMap<&str, &str> =
+        FILES_THAT_STATE_THE_BAN.iter().copied().collect();
+    let rosters = vyre_test_support::monorepo::vyre_workspace_rosters();
+
+    let mut sources = Vec::new();
+    for member in &rosters.members {
+        source_files_under(&root.join(member), &mut sources);
+    }
+    assert!(
+        sources.len() > 1000,
+        "Fix: the member walk found only {} source files, so the scope resolved to an empty tree \
+         and the scan proves nothing",
+        sources.len()
+    );
+
+    let mut stated = BTreeMap::new();
+    let mut leaks = Vec::new();
+    for path in &sources {
+        let relative = path
+            .strip_prefix(&root)
+            .unwrap_or(path)
+            .to_string_lossy()
+            .replace('\\', "/");
+        let text = std::fs::read_to_string(path).expect("Fix: a workspace source must be readable");
+        let lowered = text.to_lowercase();
+        let file_name = relative.to_lowercase();
+        for term in &banned {
+            if !lowered.contains(term.as_str()) && !file_name.contains(term.as_str()) {
+                continue;
+            }
+            if stating_the_ban.contains_key(relative.as_str()) {
+                stated.insert(relative.clone(), ());
+                continue;
+            }
+            let line = text
+                .lines()
+                .enumerate()
+                .find(|(_, line)| line.to_lowercase().contains(term.as_str()))
+                .map_or(0, |(index, _)| index + 1);
+            leaks.push(format!("{relative}:{line} names `{term}`"));
+        }
+    }
+
+    assert!(
+        leaks.is_empty(),
+        "Fix: a workspace member names a downstream model family. State the mechanism instead of \
+         the family, or add the file to the roster of files that state the ban when it is the \
+         enforcement itself:\n{}",
+        leaks.join("\n")
+    );
+
+    for (relative, mechanism) in FILES_THAT_STATE_THE_BAN {
+        assert!(
+            stated.contains_key(*relative),
+            "Fix: `{relative}` is recorded as stating the ban through {mechanism}, but it names no \
+             family, so the exemption is stale and hides whatever is written there next"
+        );
+    }
+}

@@ -198,9 +198,9 @@ fn graph_stage_order_is_canonical() {
     graph.analyze().expect("Fix: dense MLP graph must analyze");
 }
 
-/// Proves Qwen3.5-27B production dimensions materialize exact checkpoint counts.
+/// Proves production dimensions materialize exact checkpoint counts.
 #[test]
-fn production_qwen35_dimensions_build_exact_weight_contracts() {
+fn production_dimensions_build_exact_weight_contracts() {
     let graph = dense_gated_mlp_graph(&DenseGatedMlpSpec {
         batch: 1,
         sequence: 1,
@@ -209,7 +209,7 @@ fn production_qwen35_dimensions_build_exact_weight_contracts() {
         norm_eps: 1e-6,
         dtype: DataType::BF16,
     })
-    .expect("Fix: production Qwen dense MLP dimensions must build");
+    .expect("Fix: production dense MLP dimensions must build");
     let gate = graph
         .nodes()
         .iter()

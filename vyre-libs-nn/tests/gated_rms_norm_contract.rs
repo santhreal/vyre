@@ -1,4 +1,4 @@
-//! Qwen gated RMSNorm execution and refusal contracts.
+//! Gated RMSNorm execution and refusal contracts.
 
 #![forbid(unsafe_code)]
 
@@ -190,7 +190,7 @@ fn low_precision_programs_execute_with_exact_source_dtype_rounding() {
         assert_eq!(outputs[0].to_bytes(), u16_bytes(&expected));
     }
 }
-/// Locks Qwen's BF16 activation plus F32 learned-scale checkpoint contract to exact output words.
+/// Locks the BF16 activation plus F32 learned-scale checkpoint contract to exact output words.
 #[test]
 fn bf16_activations_with_f32_weights_execute_exactly() {
     let program = gated_rms_norm_with_weight_dtype(

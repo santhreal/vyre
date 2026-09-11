@@ -1,7 +1,6 @@
 //! Multi-head Latent Attention (MLA).
 //!
-//! DeepSeek V4 Flash uses MLA with compressed KV cache. The key insight:
-//! instead of caching full K and V tensors per head, MLA compresses them
+//! Instead of caching full K and V tensors per head, MLA compresses them
 //! into a low-rank latent vector c_t, then projects back at attention time.
 //!
 //! Formulation (simplified for single-token decode):

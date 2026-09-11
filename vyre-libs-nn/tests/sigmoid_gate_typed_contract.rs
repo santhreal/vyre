@@ -37,7 +37,7 @@ fn execute_bf16(gate: &[f32], branch: &[f32]) -> Vec<u16> {
         .collect()
 }
 
-/// Locks the neutral Qwen gate at one half with exact BF16 output conversion.
+/// Locks the neutral gate at one half with exact BF16 output conversion.
 #[test]
 fn bf16_zero_logit_halves_positive_and_negative_branches() {
     assert_eq!(

@@ -29,7 +29,7 @@ fn execute_f32(input: &[f32], rows: u32, width: u32, eps: f32) -> Vec<f32> {
         .collect()
 }
 
-/// Locks row isolation and the Qwen/FLA sum-of-squares plus epsilon formula.
+/// Locks row isolation and the sum-of-squares plus epsilon formula.
 #[test]
 fn two_rows_match_exact_last_dimension_oracle() {
     let actual = execute_f32(&[3.0, 4.0, 5.0, 12.0], 2, 2, 1e-6);
@@ -70,7 +70,7 @@ fn overflowing_sum_of_squares_yields_zero_via_inverse_infinity() {
     assert_eq!(execute_f32(&[3e20, 4e20], 1, 2, 1e-6), vec![0.0, 0.0]);
 }
 
-/// Exercises scalar, grouped-head, and Qwen-size rows without crossing row boundaries.
+/// Exercises scalar, grouped-head, and production-size rows without crossing row boundaries.
 #[test]
 fn representative_head_widths_have_unit_l2_magnitude() {
     for width in [1_u32, 8, 64, 256] {

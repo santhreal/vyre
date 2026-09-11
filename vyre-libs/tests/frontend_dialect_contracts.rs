@@ -7,20 +7,27 @@
 //! domain names.
 
 use vyre_foundation::dialect::{
-    validate_external_schema, ExternalLayoutDeclaration, ExternalResourceDeclaration,
-    ExternalSchema, ExternalSchemaNode, ExternalSchemaVisitor, FieldType,
+    validate_external_schema, ExternalField, ExternalLayoutDeclaration,
+    ExternalResourceDeclaration, ExternalSchema, ExternalSchemaNode, ExternalSchemaVisitor,
+    FieldType, FieldValue, SchemaTranslationError,
 };
 use vyre_foundation::ir::{BufferAccess, DataType};
 
 struct Recorder {
+    /// Node operation names, in traversal order.
     nodes: Vec<String>,
-    fields: Vec<(String, String)>,
+    /// Field name and declared member, in traversal order.
+    fields: Vec<(String, FieldType)>,
+    /// Field name and decoded value, in traversal order.
+    values: Vec<(String, FieldValue)>,
+    /// Resource names, in traversal order.
     resources: Vec<String>,
+    /// Layout resource names, in traversal order.
     layouts: Vec<String>,
 }
 
 impl ExternalSchemaVisitor for Recorder {
-    type Error = ();
+    type Error = SchemaTranslationError;
 
     fn visit_schema(&mut self, _schema_id: &str, _version: u32) -> Result<(), Self::Error> {
         Ok(())
@@ -31,14 +38,19 @@ impl ExternalSchemaVisitor for Recorder {
         Ok(())
     }
 
-    fn visit_field(
+    fn visit_field(&mut self, _node_op: &str, field: &ExternalField) -> Result<(), Self::Error> {
+        self.fields
+            .push((field.name.clone(), field.declared_member));
+        Ok(())
+    }
+
+    fn visit_field_value(
         &mut self,
         _node_op: &str,
         field_name: &str,
-        field_value: &str,
+        value: &FieldValue,
     ) -> Result<(), Self::Error> {
-        self.fields
-            .push((field_name.to_string(), field_value.to_string()));
+        self.values.push((field_name.to_string(), value.clone()));
         Ok(())
     }
 
@@ -76,12 +88,12 @@ fn domain_neutral_schema_contracts_require_versions_and_visitors() {
         nodes: vec![
             ExternalSchemaNode {
                 op_name: "vyre-libs::generic::transform".to_string(),
-                raw_fields: vec![("scale".to_string(), "4".to_string())],
+                fields: vec![ExternalField { name: "scale".to_string(), declared_member: FieldType::U32, raw_value: "4".to_string() }],
                 bound_resources: vec!["input_buf".to_string(), "intermediate_buf".to_string()],
             },
             ExternalSchemaNode {
                 op_name: "vyre-libs::generic::reduce".to_string(),
-                raw_fields: vec![("axis".to_string(), "0".to_string())],
+                fields: vec![ExternalField { name: "axis".to_string(), declared_member: FieldType::U32, raw_value: "0".to_string() }],
                 bound_resources: vec!["intermediate_buf".to_string(), "output_buf".to_string()],
             },
         ],
@@ -136,15 +148,23 @@ fn domain_neutral_schema_contracts_require_versions_and_visitors() {
     let mut recorder = Recorder {
         nodes: Vec::new(),
         fields: Vec::new(),
+        values: Vec::new(),
         resources: Vec::new(),
         layouts: Vec::new(),
     };
 
     schema
-        .accept(&mut recorder)
+        .accept("vyre-libs::generic_pipeline", &mut recorder)
         .expect("visitor must traverse schema");
     assert_eq!(recorder.nodes.len(), 2);
     assert_eq!(recorder.fields.len(), 2);
+    assert_eq!(
+        recorder.values,
+        vec![
+            ("scale".to_string(), FieldValue::U32(4)),
+            ("axis".to_string(), FieldValue::U32(0)),
+        ]
+    );
     assert_eq!(recorder.layouts.len(), 3);
 
     // Canonical identity is reproducible
@@ -161,20 +181,7 @@ fn domain_neutral_schema_contracts_require_versions_and_visitors() {
 
 #[test]
 fn schema_field_type_and_error_exhaustive_closure() {
-    let types = [
-        FieldType::U32,
-        FieldType::I32,
-        FieldType::U64,
-        FieldType::I64,
-        FieldType::F32,
-        FieldType::F64,
-        FieldType::Bool,
-        FieldType::String,
-        FieldType::Bytes,
-        FieldType::Buffer,
-    ];
-
-    for ft in types {
+    for ft in FieldType::ALL {
         match ft {
             FieldType::U32 => assert!(ft.parse_and_validate("42").is_ok()),
             FieldType::I32 => assert!(ft.parse_and_validate("-42").is_ok()),
