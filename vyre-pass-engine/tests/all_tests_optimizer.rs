@@ -5,6 +5,10 @@
 //! binary for the whole set. A test that cannot share a process stays its own
 //! target and states why in `xtask/test-harness-isolation.toml`.
 
+/// Integration tests from `tests/cse_arena_kernel_index_bounds.rs`.
+#[path = "cse_arena_kernel_index_bounds.rs"]
+pub mod cse_arena_kernel_index_bounds;
+
 /// Integration tests from `tests/cross_scope_cse_still_fires.rs`.
 #[path = "cross_scope_cse_still_fires.rs"]
 pub mod cross_scope_cse_still_fires;

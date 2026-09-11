@@ -1,5 +1,6 @@
 //! GPU-native CSE program builders for the encoded arena.
 
+use vyre_foundation::composition::bounded_index;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_libs::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_mix_word_expr};
 
@@ -39,14 +40,31 @@ pub fn build_structural_hash_program(expr_count: u32, max_depth_iter_cap: u32) -
         Node::let_bind("a2", Expr::load("arena_arg2", Expr::var("i"))),
         // Child hashes (the post-order encoding guarantees children's
         // hashes are already written by the time the parent's level
-        // runs). For leaves these reads are harmless (a0/a1/a2 carry
-        // payloads that may index outside the arena, but `hash` was
-        // zero-initialized so out-of-bounds reads return 0 inside the
-        // backend's CSR-bounds clamp; the leaf branch ignores h0/h1/h2
-        // anyway).
-        Node::let_bind("h0", Expr::load("hash", Expr::var("a0"))),
-        Node::let_bind("h1", Expr::load("hash", Expr::var("a1"))),
-        Node::let_bind("h2", Expr::load("hash", Expr::var("a2"))),
+        // runs). A leaf carries a payload in a0/a1/a2 instead of a child
+        // id, and a payload indexes wherever its value happens to land,
+        // so each index is folded inside the arena before the read. The
+        // leaf branch discards h0/h1/h2.
+        Node::let_bind(
+            "h0",
+            Expr::load(
+                "hash",
+                bounded_index(Expr::var("a0"), Expr::buf_len("hash")),
+            ),
+        ),
+        Node::let_bind(
+            "h1",
+            Expr::load(
+                "hash",
+                bounded_index(Expr::var("a1"), Expr::buf_len("hash")),
+            ),
+        ),
+        Node::let_bind(
+            "h2",
+            Expr::load(
+                "hash",
+                bounded_index(Expr::var("a2"), Expr::buf_len("hash")),
+            ),
+        ),
         // Mix kind first (the family discriminator).
         Node::let_bind("h", fnv1a32_initial_expr()),
         Node::assign(
@@ -186,16 +204,29 @@ pub fn build_canonical_id_program(expr_count: u32) -> Program {
                 // which differ between structurally-equal duplicates that sit
                 // at different positions; a raw index comparison would reject
                 // those true duplicates (the hash mixer mixes child hashes for
-                // exactly this reason). For every leaf kind arg1 = arg2 = 0, so
-                // hash[0] == hash[0] holds trivially and leaf identity is
-                // decided by `my_kind` + `my_a0` below.
+                // exactly this reason). A leaf carries a payload in arg1/arg2
+                // instead of a child id, so each index is folded inside the
+                // arena before the read; leaf identity is decided by `my_kind`
+                // and `my_a0` below.
                 Node::let_bind(
                     "my_h1",
-                    Expr::load("hash", Expr::load("arena_arg1", Expr::var("i"))),
+                    Expr::load(
+                        "hash",
+                        bounded_index(
+                            Expr::load("arena_arg1", Expr::var("i")),
+                            Expr::buf_len("hash"),
+                        ),
+                    ),
                 ),
                 Node::let_bind(
                     "my_h2",
-                    Expr::load("hash", Expr::load("arena_arg2", Expr::var("i"))),
+                    Expr::load(
+                        "hash",
+                        bounded_index(
+                            Expr::load("arena_arg2", Expr::var("i")),
+                            Expr::buf_len("hash"),
+                        ),
+                    ),
                 ),
                 Node::let_bind("found_canonical", Expr::var("i")),
                 Node::loop_for(
@@ -239,7 +270,10 @@ pub fn build_canonical_id_program(expr_count: u32) -> Program {
                                         Expr::eq(
                                             Expr::load(
                                                 "hash",
-                                                Expr::load("arena_arg1", Expr::var("j")),
+                                                bounded_index(
+                                                    Expr::load("arena_arg1", Expr::var("j")),
+                                                    Expr::buf_len("hash"),
+                                                ),
                                             ),
                                             Expr::var("my_h1"),
                                         ),
@@ -247,7 +281,10 @@ pub fn build_canonical_id_program(expr_count: u32) -> Program {
                                     Expr::eq(
                                         Expr::load(
                                             "hash",
-                                            Expr::load("arena_arg2", Expr::var("j")),
+                                            bounded_index(
+                                                Expr::load("arena_arg2", Expr::var("j")),
+                                                Expr::buf_len("hash"),
+                                            ),
                                         ),
                                         Expr::var("my_h2"),
                                     ),
@@ -298,11 +335,21 @@ pub fn build_canonical_delta_compact_program(expr_count: u32) -> Program {
                             "base",
                             Expr::add(Expr::u32(1), Expr::mul(Expr::var("slot"), Expr::u32(2))),
                         ),
-                        Node::store("canonical_delta", Expr::var("base"), Expr::var("i")),
-                        Node::store(
-                            "canonical_delta",
-                            Expr::add(Expr::var("base"), Expr::u32(1)),
-                            Expr::var("canonical_id"),
+                        // The buffer holds `2 * expr_count + 1` words, one
+                        // pair per expr plus the counter. A caller that
+                        // supplies a counter word already above zero hands
+                        // out a slot no pair fits in, so the store is gated
+                        // on the slot rather than the wrapping `base + 1`.
+                        Node::if_then(
+                            Expr::lt(Expr::var("slot"), Expr::u32(expr_count)),
+                            vec![
+                                Node::store("canonical_delta", Expr::var("base"), Expr::var("i")),
+                                Node::store(
+                                    "canonical_delta",
+                                    Expr::add(Expr::var("base"), Expr::u32(1)),
+                                    Expr::var("canonical_id"),
+                                ),
+                            ],
                         ),
                     ],
                 ),

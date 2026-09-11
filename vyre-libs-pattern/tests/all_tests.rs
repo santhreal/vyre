@@ -95,5 +95,8 @@ pub mod subgroup_nfa_ir_parity_proptest;
 #[path = "substring_search_boundaries.rs"]
 pub mod substring_search_boundaries;
 
+#[path = "substring_search_match_offsets.rs"]
+pub mod substring_search_match_offsets;
+
 #[path = "wire_cross_crate_compat.rs"]
 pub mod wire_cross_crate_compat;

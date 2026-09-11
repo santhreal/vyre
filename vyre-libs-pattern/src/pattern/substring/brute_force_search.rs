@@ -81,42 +81,30 @@ fn build_substring_program(
         value: Expr::var("ok"),
     });
 
-    // Overflow-safe guard. The straight expression `i + needle_len <= buf_len`
-    // can wrap at i ≈ u32::MAX − needle_len, producing a false positive on the
-    // last few offsets. The correct invariant is `i <= buf_len - needle_len`;
-    // we rewrite it as a subtraction-free chain of comparisons by reasoning
-    // through `buf_len` only:
+    // The guard admits a start offset only when it indexes the match bitmap
+    // and leaves room for the whole needle:
     //
-    //   needle_len <= buf_len  ∧  i + needle_len <= buf_len
+    //   i < haystack_len  ∧  needle_len <= haystack_len
+    //                     ∧  i <= haystack_len - needle_len
     //
-    // Passing both conjuncts also handles the empty-haystack case (buf_len=0,
-    // needle_len=0, i=0 → both true → vacuous check_body).
-    // V7-CORR-006: the original guard `i + needle_len <= haystack_len`
-    // wraps when i is near u32::MAX (Expr::add is Expr::BinOp { Add,
-    // .. } which u32::wrapping_add). We rewrite as two separate
-    // non-wrapping comparisons: (1) needle_len <= haystack_len ensures
-    // the implicit subtraction in (2) is non-underflowing, and (2)
-    // `i <= haystack_len - needle_len` keeps the rhs a constant-folded
-    // expression from the builder so no wrap is possible. Since
-    // needle_len is a compile-time u32 and haystack_len is a runtime
-    // u32, the host-side `saturating_sub` pre-computes the cap value
-    // safely and lets Expr::le do the comparison without Expr::add.
+    // The bitmap holds one slot per haystack byte. An empty needle also
+    // matches at offset `haystack_len`, one past the last slot, so the first
+    // conjunct bounds the store. The second keeps the subtraction in the
+    // third from underflowing when a compile-time needle is longer than the
+    // runtime haystack. `i + needle_len <= haystack_len` is not used: that
+    // add wraps near `u32::MAX` and admits the last few offsets.
     let body = vec![
         Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::let_bind("haystack_len", Expr::buf_len(haystack)),
         Node::if_then(
             Expr::and(
-                Expr::le(Expr::u32(needle_len), Expr::var("haystack_len")),
-                Expr::le(
-                    i.clone(),
-                    // `haystack_len - needle_len` as a runtime Expr sub. If
-                    // the compile-time needle_len exceeds the runtime
-                    // haystack_len the first conjunct already short-
-                    // circuits, so this sub-expression is evaluated only
-                    // on the safe branch (eager vs lazy evaluation is
-                    // the job of the optimizer's short-circuit pass  -
-                    // here the conjunct ordering gives a safe guard).
-                    Expr::sub(Expr::var("haystack_len"), Expr::u32(needle_len)),
+                Expr::lt(i.clone(), Expr::var("haystack_len")),
+                Expr::and(
+                    Expr::le(Expr::u32(needle_len), Expr::var("haystack_len")),
+                    Expr::le(
+                        i,
+                        Expr::sub(Expr::var("haystack_len"), Expr::u32(needle_len)),
+                    ),
                 ),
             ),
             check_body,

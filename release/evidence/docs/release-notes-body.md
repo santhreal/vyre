@@ -1278,6 +1278,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   exchange-graph BFS step and path reconstruction, which vyre-libs-graph
   defines, and vyre-libs-math cannot declare that edge because vyre-libs-graph
   already depends on vyre-libs-math.
+- Ingestion reports a missing resource by the stable graph name the artifact
+  records for it, not by canonical value number alone.
 - Every struct in the runtime and the driver holding a `Mutex`, `RwLock`,
   `DashMap` or `AtomicGuardedState` field implements `StateOwnerRecovery` in
   the same file, the inventory is read out of the syntax tree instead of a
@@ -6405,6 +6407,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   refusing it as an undeclared output value, because the boundary now drains
   the canonical writable set rather than the node output ports a host-fed
   read-write buffer never appears in.
+- A retained successor is placed in the region its predecessor holds, so a
+  graph split at a whole-grid fence reads the values the segment before the cut
+  published instead of a second allocation.
 - A retired release claim is any dotted number that starts with the retired
   train, so a four component version is reported, and the same digits inside
   another train version or inside a hash are not.
@@ -6605,6 +6610,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   that subset and no others. Recording the bare sweep for it gave every
   registered gate a workflow, so a gate no workflow selects could not be
   reported and the rows that were reported named the wrong file.
+- The substring search admits a start offset only when it indexes the match
+  bitmap. An empty needle matched at the offset one past the last byte, and the
+  store went out of bounds.
 - Nine workflows ran without a concurrency group, so a push left the run
   measuring the previous commit alive. Both GPU lanes take one job at a time,
   and the GPU parity workflow serialises eleven jobs on one device host, so an
@@ -7567,6 +7575,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The cross-backend comparison gate now reports ownership of its generated
   table, so both immutable validation and canonical regeneration satisfy the
   gate artifact contract.
+- The CSE structural-hash and canonical-id kernels fold an arena word inside
+  the hash buffer before reading it, and the compaction kernel stores a pair
+  only for a slot the buffer holds. A leaf payload sharing the child-id row
+  indexed past the buffer, and a compaction counter that arrived above zero
+  handed out a slot no pair fits in.
 - `vyre_libs::graph::csr_backward_or_changed` named the per-edge kind array
   `masks` and the scalar edge-kind filter `edge_kind_mask`, inverting the roles
   every sibling CSR module gives those two names. A call repointed from a
