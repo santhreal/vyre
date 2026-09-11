@@ -429,6 +429,28 @@ where
 /// this loop; `strided_writeback_child` and the reduction composers do so from
 /// `LogicalWithinTileId(0)`.
 pub fn strided_loop(tile: u32, chunks: u32, n: u32, guarded_body: Vec<Node>) -> Node {
+    strided_loop_from(Expr::var("local"), tile, chunks, n, guarded_body)
+}
+
+/// Strided chunk loop over a lane whose first index the caller states.
+///
+/// Binds `idx = base + chunk * tile` for each of `chunks` iterations and runs
+/// `guarded_body` only where `idx < n`, which is [`strided_loop`] with the
+/// lane's first index given rather than read from `local`.
+///
+/// A loop whose lane starts inside one workgroup's own span of the input needs
+/// that offset in `base`. Stating it through `local` instead changes what the
+/// shared workgroup tree reduction reads, because that tree indexes its
+/// scratch by `local` and a lane offset by a workgroup span leaves every tree
+/// round guarded out: the reduction then reports the first lane's accumulator
+/// as the whole workgroup's total.
+pub fn strided_loop_from(
+    base: Expr,
+    tile: u32,
+    chunks: u32,
+    n: u32,
+    guarded_body: Vec<Node>,
+) -> Node {
     Node::loop_for(
         "chunk",
         Expr::u32(0),
@@ -436,10 +458,7 @@ pub fn strided_loop(tile: u32, chunks: u32, n: u32, guarded_body: Vec<Node>) -> 
         vec![
             Node::let_bind(
                 "idx",
-                Expr::add(
-                    Expr::mul(Expr::var("chunk"), Expr::u32(tile)),
-                    Expr::var("local"),
-                ),
+                Expr::add(Expr::mul(Expr::var("chunk"), Expr::u32(tile)), base),
             ),
             Node::if_then(Expr::lt(Expr::var("idx"), Expr::u32(n)), guarded_body),
         ],

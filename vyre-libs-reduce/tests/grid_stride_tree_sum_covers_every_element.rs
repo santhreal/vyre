@@ -62,7 +62,12 @@ fn reduced(count: u32, tile: u32) -> u32 {
 fn every_admitted_shape_sums_every_element() {
     let mut covered_multi_pass = 0usize;
     let mut covered_single_block = 0usize;
-    for count in [1u32, 31, 32, 33, 256, 257, 512, 1024] {
+    // 513 and 1025 exceed one reducing workgroup's span at the 16- and
+    // 32-wide tiles without being a multiple of it, which is the only shape
+    // where a span count that truncates instead of rounding up drops the tail
+    // of the input. Every smaller count fits one span, so the whole sweep
+    // agreed with a builder that covered part of its input.
+    for count in [1u32, 31, 32, 33, 256, 257, 512, 513, 1024, 1025] {
         let expected = values(count)
             .into_iter()
             .fold(0u32, |total, value| total.wrapping_add(value));

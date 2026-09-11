@@ -98824,7 +98824,7 @@ seam = "libs-builder"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
 stability = "extension"
-exported_item_count = 611
+exported_item_count = 612
 
   [[package.item]]
   path = "impl core::fmt::Debug for vyre_libs_builder::builder::gemm::ContractionEpilogue"
@@ -101754,6 +101754,13 @@ exported_item_count = 611
 
   [[package.item]]
   path = "vyre_libs_builder::builder::strided_loop(tile: u32, chunks: u32, n: u32, guarded_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> vyre_foundation::ir_inner::model::generated::Node"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_builder::builder::strided_loop_from(base: vyre_foundation::ir_inner::model::generated::Expr, tile: u32, chunks: u32, n: u32, guarded_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> vyre_foundation::ir_inner::model::generated::Node"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
