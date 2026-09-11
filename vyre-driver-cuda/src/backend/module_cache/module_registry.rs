@@ -50,6 +50,16 @@ pub(crate) struct ModuleGlobals {
     /// The trap record and its tag table. `Some` only when the module declares a
     /// trap.
     pub(crate) trap: Option<Arc<TrapSidecar>>,
+    /// Static count of in-kernel grid-sync barriers in this module's PTX, which
+    /// times the grid width bounds one launch's arrival count.
+    ///
+    /// Counted once per module load. The count is a property of the PTX text,
+    /// and the PTX text is what the cache key digests, so re-scanning it per
+    /// dispatch reads the same answer at the cost of a full pass over the
+    /// module source. That pass was 18 to 22 us inside the dispatch's own
+    /// timing window on a one-million-element grid-stride tree reduction whose
+    /// kernel is 7.5 us.
+    pub(crate) grid_barrier_markers: usize,
 }
 
 /// Loaded CUDA module and its `main` entry function.
@@ -378,6 +388,9 @@ fn load_module(ptx_src: &str, ptx_target_sm: u32) -> Result<CachedModule, Backen
         globals: ModuleGlobals {
             grid_barrier: grid_barrier_global,
             trap,
+            grid_barrier_markers: crate::backend::module_globals::grid_barrier_marker_count(
+                ptx_src,
+            ),
         },
         access_count: AtomicU32::new(1),
     })

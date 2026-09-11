@@ -137,20 +137,27 @@ fn the_fused_reduction_carries_a_grid_level_fence() {
 
 /// Every workgroup a launch runs writes a partial the combine reads.
 ///
-/// A dispatch spans the program's widest non-shared binding and runs that span
-/// divided by the declared workgroup width, and a compiled artifact records
-/// that launch, so no grid a caller states reaches the device. The partial
-/// buffer therefore has to hold one slot per launched workgroup. When it held
-/// fewer, the surplus workgroups reduced elements nothing read: at one million
-/// elements the builder sized the grid from a device compute-unit count of 80
-/// while the launch ran 1024 workgroups, each of the 944 surplus workgroups
-/// re-read a clamped tail element thirteen times, and the reduction measured
-/// 0.53x of a multithreaded CPU baseline against a release contract of 1.10x.
+/// A dispatch spans the program's widest non-shared binding, capped by the
+/// domain the program's own guards admit, and runs that span divided by the
+/// declared workgroup width. A compiled artifact records that launch, so no
+/// grid a caller states reaches the device. The partial buffer therefore has to
+/// hold one slot per launched workgroup, and every launched workgroup has to
+/// fill one.
 ///
-/// The launched workgroup count is recomputed from the program's own buffer
-/// table because `vyre-libs-reduce` cannot depend on the driver crate that owns
-/// the rule. The rule is the one `dispatch_element_count_for_program` applies
-/// to a program declaring a shared buffer: the widest non-shared binding.
+/// When the buffer held fewer, the surplus workgroups reduced elements nothing
+/// read: at one million elements the builder sized the grid from a device
+/// compute-unit count of 80 while the launch ran 1024 workgroups, each of the
+/// 944 surplus workgroups re-read a clamped tail element thirteen times, and
+/// the reduction measured 0.53x of a multithreaded CPU baseline against a
+/// release contract of 1.10x. When it held more, 992 of the 1024 launched
+/// workgroups only seeded a slot with the identity, which cost 10 us of block
+/// scheduling in pass 1 and 13 us in the combine and read 0.87x.
+///
+/// The launched workgroup count is read through
+/// `vyre_foundation::admitted_logical_span`, which is the narrowing half of the
+/// rule `dispatch_element_count_for_program` applies; the resource half is the
+/// widest non-shared binding, recomputed here because `vyre-libs-reduce` cannot
+/// depend on the driver crate that joins them.
 #[test]
 fn every_launched_workgroup_writes_a_partial_the_combine_reads() {
     for (count, tile) in [
@@ -183,22 +190,23 @@ fn every_launched_workgroup_writes_a_partial_the_combine_reads() {
             "count={count} tile={tile}: the partial buffer holds a different number of slots than the grid has workgroups"
         );
         assert!(
-            u64::from(blocks) * u64::from(tile) >= u64::from(count),
-            "count={count} tile={tile}: {blocks} tiles of {tile} lanes do not reach every element"
+            u64::from(blocks) * u64::from(tile) * 32 >= u64::from(count),
+            "count={count} tile={tile}: {blocks} tiles of {tile} lanes do not reach every element, even at the widest per-lane span the builder reduces"
         );
     }
 }
 
 /// Workgroups a dispatch of `program` runs, read from the program alone.
 fn launched_workgroups(program: &vyre_foundation::ir::Program) -> u32 {
-    let span = program
+    let resource_span = program
         .buffers()
         .iter()
         .filter(|buffer| !matches!(buffer.kind(), vyre_foundation::ir::MemoryKind::Shared))
         .map(vyre_foundation::ir::BufferDecl::count)
         .max()
         .unwrap_or(1);
-    span.div_ceil(program.workgroup_size()[0].max(1))
+    let admitted = vyre_foundation::admitted_logical_span(program, resource_span);
+    admitted.div_ceil(program.workgroup_size()[0].max(1))
 }
 
 /// Declared slot count of the fused program's partial buffer.

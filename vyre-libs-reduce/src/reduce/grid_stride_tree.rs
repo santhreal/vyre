@@ -5,9 +5,9 @@
 //!    span in coalesced tile-strided rounds, reduces it in workgroup scratch
 //!    via a tree reduction, and writes its span total to `partials[block_id]`
 //!    (independent, contention-free writes). A span is
-//!    `PASS1_ELEMENTS_PER_LANE` tiles wide, so a workgroup the launch runs
-//!    outside the reducing grid seeds its partial with the identity and loads
-//!    nothing.
+//!    `PASS1_ELEMENTS_PER_LANE` tiles wide, so the input is covered by
+//!    [`grid_stride_tree_sum_u32_blocks`] workgroups and every one of them
+//!    reduces a span.
 //! 2. Level 2: single-block reduction summing `partials[0..num_blocks]` into
 //!    `out[0]` with zero atomics, striding the partials when there are more of
 //!    them than one tile holds.
@@ -27,14 +27,14 @@ pub const SUM_U32_OP_ID: &str = "vyre-libs::reduce::grid_stride_tree_sum_u32";
 
 /// Elements one lane loads in pass 1 of the two-pass form.
 ///
-/// A launch spans the widest non-shared binding, so pass 1 runs
-/// [`grid_stride_tree_sum_u32_blocks`] workgroups whatever this builder would
-/// prefer, and the only shape it owns is how much of the input one lane
-/// reduces before the shared-memory tree runs. One element per lane makes that
-/// tree a fixed cost per tile rather than per input: at a 1024-wide tile a
-/// 1024-thread workgroup is the only one an RTX 3080 Ti SM holds resident, so
-/// the memory pipe stalls through all ten tree rounds of every tile and one
-/// load per lane leaves too little in flight to cover DRAM latency in between.
+/// A launch spans the widest non-shared binding, capped by the domain the
+/// program's own guards admit, so the only shape this builder owns is how much
+/// of the input one lane reduces before the shared-memory tree runs. One
+/// element per lane makes that tree a fixed cost per tile rather than per
+/// input: at a 1024-wide tile a 1024-thread workgroup is the only one an
+/// RTX 3080 Ti SM holds resident, so the memory pipe stalls through all ten
+/// tree rounds of every tile and one load per lane leaves too little in flight
+/// to cover DRAM latency in between.
 ///
 /// Loading this many elements per lane amortizes one tree over that many
 /// loads and puts that many loads in flight per lane. Measured on an
@@ -46,44 +46,42 @@ pub const SUM_U32_OP_ID: &str = "vyre-libs::reduce::grid_stride_tree_sum_u32";
 /// standing in for one width.
 const PASS1_ELEMENTS_PER_LANE: u32 = 32;
 
-/// Workgroups of a pass-1 launch that reduce a span of the input.
+/// Workgroups a launch of [`grid_stride_tree_sum_u32`] runs.
 ///
-/// The launch runs [`grid_stride_tree_sum_u32_blocks`] workgroups and each
-/// reducing one covers `tile * PASS1_ELEMENTS_PER_LANE` elements, so this many
-/// cover the input and the rest run no part of the reduction. Both counts are
-/// pure functions of `count` and `tile`, which is what keeps the program and
-/// the launch a dispatch infers from its buffer table in agreement.
-fn pass1_working_blocks(count: u32, tile: u32) -> u32 {
+/// Each one covers `tile * PASS1_ELEMENTS_PER_LANE` elements, so this many
+/// cover the input and every workgroup the launch runs reduces a span and
+/// writes the partial the combine reads. The count is a pure function of
+/// `count` and `tile`, which is what keeps the program and the launch a
+/// dispatch infers from it in agreement: pass 1 guards its reduction on the
+/// block index being below this count, and that guard is the bound the launch
+/// span is narrowed to.
+///
+/// A block count taken from anywhere else leaves workgroups that compute a
+/// total nothing reads. A device hint of one workgroup per compute unit built
+/// an 80-workgroup grid for a launch that ran 1024, and the 944 surplus
+/// workgroups each re-read a clamped tail element thirteen times: 0.53x of a
+/// multithreaded CPU reduction at one million elements. Sizing the partial
+/// buffer to the input span divided by the tile instead ran 1024 workgroups
+/// where 32 reduce, and the 992 that only seeded a partial with the identity
+/// cost 10 us of block scheduling in pass 1 and 13 us in the combine, which is
+/// the launch narrowing this count now states.
+#[must_use]
+pub fn grid_stride_tree_sum_u32_blocks(count: u32, tile: u32) -> u32 {
     count
         .div_ceil(tile.max(1).saturating_mul(PASS1_ELEMENTS_PER_LANE))
         .max(1)
-}
-
-/// Workgroups a launch of [`grid_stride_tree_sum_u32`] runs.
-///
-/// A dispatch spans the program's widest non-shared binding, which is
-/// `values`, so the launch runs this many workgroups at the declared tile
-/// width and no grid a caller states reaches a compiled artifact. Pass 1
-/// therefore gives each launched workgroup one tile and sizes the partial
-/// buffer to them, so every workgroup that runs writes a partial the combine
-/// reads.
-///
-/// A block count taken from anywhere else leaves the surplus workgroups
-/// computing a total nothing reads. A device hint of one workgroup per compute
-/// unit built an 80-workgroup grid for a launch that ran 1024, and the 944
-/// surplus workgroups each re-read a clamped tail element thirteen times: 0.53x
-/// of a multithreaded CPU reduction at one million elements.
-#[must_use]
-pub fn grid_stride_tree_sum_u32_blocks(count: u32, tile: u32) -> u32 {
-    count.div_ceil(tile.max(1)).max(1)
 }
 
 /// Build a multi-workgroup tree reduction program for u32 sum.
 ///
 /// The fused program carries a whole-grid fence between the block pass and the
 /// combine pass. Its grid is [`grid_stride_tree_sum_u32_blocks`], derived from
-/// the same `count` and `tile` the buffer table declares, so the program and
-/// the launch a dispatch infers from that table cannot disagree.
+/// the same `count` and `tile` the buffer table declares and stated in the
+/// program as the block-index guard both passes sit under, so the program and
+/// the launch a dispatch infers from it cannot disagree. That grid is
+/// `PASS1_ELEMENTS_PER_LANE` times narrower than the input span, which is what
+/// keeps the fence inside cooperative residency and the fused program on one
+/// launch instead of a host-orchestrated segment pair.
 ///
 /// # Panics
 ///
@@ -169,6 +167,13 @@ fn single_block_tree_sum_u32(values: &str, out: &str, count: u32, tile: u32) -> 
     )
 }
 
+/// Reduce one span of the input per workgroup into `partials[block_id]`.
+///
+/// Every one of the `blocks` workgroups owns a span and writes its own
+/// partial, so the combine reads a buffer every launched workgroup filled and
+/// no slot needs an identity seed. The reduction is guarded on the block index
+/// being below `blocks`, which is the bound the launch span narrows to and the
+/// reason a launch wider than this grid cannot write past `partials`.
 fn pass1_block_reduction(
     values: &str,
     partials: &str,
@@ -179,7 +184,6 @@ fn pass1_block_reduction(
     let scratch = "__gst_pass1_scratch";
     let lane = Expr::LogicalWithinTileId { axis: 0 };
     let block = Expr::LogicalTileId { axis: 0 };
-    let working = pass1_working_blocks(count, tile);
     let span = tile.saturating_mul(PASS1_ELEMENTS_PER_LANE);
 
     // One reducing workgroup owns one span of the input, so the spans partition
@@ -215,7 +219,7 @@ fn pass1_block_reduction(
             WorkgroupReductionScope::EveryWorkgroup,
         ),
         Node::if_then(
-            Expr::eq(lane.clone(), Expr::u32(0)),
+            Expr::eq(lane, Expr::u32(0)),
             vec![Node::store(
                 partials,
                 block.clone(),
@@ -224,23 +228,10 @@ fn pass1_block_reduction(
         ),
     ];
 
-    let body = vec![
-        // The combine reads one partial per launched workgroup, so a workgroup
-        // outside the reducing grid seeds its slot with the identity and runs
-        // no part of the reduction: it holds the tree rounds and the loads that
-        // amortize them to the workgroups that own a span. The seed is guarded
-        // on the block index, so a launch wider than the grid this program was
-        // built for discards the extra workgroups instead of writing past
-        // `partials`.
-        Node::if_then(
-            Expr::and(
-                Expr::eq(lane, Expr::u32(0)),
-                Expr::lt(block.clone(), Expr::u32(blocks)),
-            ),
-            vec![Node::store(partials, block.clone(), Expr::u32(0))],
-        ),
-        Node::if_then(Expr::lt(block, Expr::u32(working)), reduce_span),
-    ];
+    let body = vec![Node::if_then(
+        Expr::lt(block, Expr::u32(blocks)),
+        reduce_span,
+    )];
 
     Program::wrapped(
         vec![
@@ -353,18 +344,18 @@ mod tests {
         assert!(program.buffers().iter().any(|b| b.name.as_ref() == "out"));
     }
 
-    /// Every element is inside some reducing workgroup's span, and no reducing
-    /// workgroup is outside the launch.
+    /// Every element is inside some reducing workgroup's span, and no workgroup
+    /// is outside the reduction.
     ///
-    /// WHY: pass 1 runs `grid_stride_tree_sum_u32_blocks` workgroups and only
-    /// the first `pass1_working_blocks` of them load anything, so the two
-    /// counts have to bracket the input from both sides. A reducing grid too
-    /// narrow drops the tail of the input and the reduction reports a partial
-    /// sum; one wider than the launch places a span in a workgroup that never
-    /// runs and drops it the same way. What this does not catch is whether the
-    /// spans overlap, which the device sum over a non-uniform input covers.
+    /// WHY: the launch runs `grid_stride_tree_sum_u32_blocks` workgroups and
+    /// every one of them loads a span, so the count has to reach the end of the
+    /// input and stop within one span of it. A grid too narrow drops the tail
+    /// and the reduction reports a partial sum; one wider leaves a workgroup
+    /// that writes a partial from an empty span, which is the 992-workgroup
+    /// surplus this count used to carry. What this does not catch is whether
+    /// the spans overlap, which the device sum over a non-uniform input covers.
     #[test]
-    fn the_reducing_grid_covers_the_input_and_fits_the_launch() {
+    fn the_reducing_grid_covers_the_input_with_no_surplus_workgroup() {
         for (count, tile) in [
             (1_048_576u32, 1024u32),
             (1_048_576, 256),
@@ -375,46 +366,78 @@ mod tests {
             (2048, 1024),
             (1025, 1024),
         ] {
-            let working = pass1_working_blocks(count, tile);
-            let launched = grid_stride_tree_sum_u32_blocks(count, tile);
+            let blocks = grid_stride_tree_sum_u32_blocks(count, tile);
+            let span = u64::from(tile) * u64::from(PASS1_ELEMENTS_PER_LANE);
             assert!(
-                u64::from(working)
-                    * u64::from(tile)
-                    * u64::from(PASS1_ELEMENTS_PER_LANE)
-                    >= u64::from(count),
-                "count={count} tile={tile}: {working} spans of {tile} lanes loading {PASS1_ELEMENTS_PER_LANE} elements each do not reach every element"
+                u64::from(blocks) * span >= u64::from(count),
+                "count={count} tile={tile}: {blocks} spans of {tile} lanes loading {PASS1_ELEMENTS_PER_LANE} elements each do not reach every element"
             );
             assert!(
-                working <= launched,
-                "count={count} tile={tile}: {working} reducing workgroups exceed the {launched} the launch runs, so a span lands in a workgroup that never runs"
+                u64::from(blocks - 1) * span < u64::from(count),
+                "count={count} tile={tile}: {blocks} workgroups cover the input with a whole span to spare, so one of them reduces nothing and writes a partial the combine still reads"
             );
         }
     }
 
-    /// The release shape amortizes one shared-memory tree over many loads.
+    /// The release shape amortizes one shared-memory tree over many loads and
+    /// narrows the launch to the workgroups that run it.
     ///
-    /// WHY: the launch is `count / tile` workgroups whatever this builder
-    /// prefers, so one element per lane paid the tree's ten rounds once per
-    /// 1024 loads and left one load in flight per lane. At one million u32 and
-    /// a 1024-wide tile that measured 27296 ns against 7776 ns for the shape
-    /// this asserts, and the release case `foundation.reduce.sum.crossover`
-    /// read 0.69x of its rayon baseline against a 1.10x contract. Setting the
-    /// factor back to one collapses both counts onto each other and turns this
-    /// red.
+    /// WHY: the grid used to be `count / tile` workgroups, one per tile of the
+    /// input, so one element per lane paid the tree's ten rounds once per 1024
+    /// loads and left one load in flight per lane. At one million u32 and a
+    /// 1024-wide tile that measured 27296 ns against 7776 ns for the shape this
+    /// asserts, and the release case `foundation.reduce.sum.crossover` read
+    /// 0.69x of its rayon baseline against a 1.10x contract. Keeping the factor
+    /// but leaving the grid at one workgroup per tile then launched 1024
+    /// workgroups where 32 reduce, and the 992 that reduced nothing cost 10 us
+    /// of block scheduling in pass 1 plus 13 us in the combine, which read
+    /// 0.87x. Setting the factor back to one returns this count to 1024 and
+    /// turns this red.
     #[test]
-    fn one_reducing_workgroup_covers_many_launched_tiles() {
+    fn the_reducing_grid_is_the_input_span_divided_by_the_span_of_one_workgroup() {
         let count = 1_048_576;
         let tile = 1024;
         assert_eq!(
-            grid_stride_tree_sum_u32_blocks(count, tile),
-            1024,
-            "Fix: the launch spans the widest non-shared binding, so it runs one workgroup per tile of the input"
+            PASS1_ELEMENTS_PER_LANE, 32,
+            "Fix: the measured shape loads 32 elements per lane; a different factor needs its own sweep"
         );
         assert_eq!(
-            pass1_working_blocks(count, tile),
+            grid_stride_tree_sum_u32_blocks(count, tile),
             32,
             "Fix: {PASS1_ELEMENTS_PER_LANE} elements per lane over a {tile}-wide tile is {} elements per reducing workgroup",
             tile * PASS1_ELEMENTS_PER_LANE
+        );
+    }
+
+    /// The launch a dispatch infers for the fused program is the reducing grid.
+    ///
+    /// WHY: no grid a caller states reaches a compiled artifact, so the block
+    /// guard both passes sit under is the only thing that can narrow the launch
+    /// away from the 1,048,576-element span of `values`. Removing the guard, or
+    /// widening it back to one workgroup per tile, launches 32 times the
+    /// workgroups the reduction needs and puts the fused program's grid fence
+    /// past cooperative residency on an 80-SM part, which splits it into two
+    /// host-orchestrated segments that each launch the full span.
+    #[test]
+    fn the_inferred_launch_covers_only_the_reducing_workgroups() {
+        let count = 1_048_576;
+        let tile = 1024;
+        let program = grid_stride_tree_sum_u32("values", "out", count, tile);
+        let resource_span = program
+            .buffers()
+            .iter()
+            .filter(|buffer| !matches!(buffer.kind(), vyre_foundation::ir::MemoryKind::Shared))
+            .map(|buffer| buffer.count())
+            .max()
+            .unwrap_or(1);
+        assert_eq!(
+            resource_span, count,
+            "Fix: the widest non-shared binding of the fused program is its input, so that is the span the launch starts from"
+        );
+        assert_eq!(
+            vyre_foundation::admitted_logical_span(&program, resource_span),
+            grid_stride_tree_sum_u32_blocks(count, tile) * tile,
+            "Fix: the launch must narrow to the workgroups the block guard admits"
         );
     }
 }

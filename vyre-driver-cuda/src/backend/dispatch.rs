@@ -537,7 +537,7 @@ impl CudaBackend {
             });
         }
         let arrival_ceiling = if barrier.is_some() {
-            grid_barrier_arrival_ceiling(ptx_src, prepared.launch.grid)?
+            grid_barrier_arrival_ceiling(globals.grid_barrier_markers, prepared.launch.grid)?
         } else {
             0
         };

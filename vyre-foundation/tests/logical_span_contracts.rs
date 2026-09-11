@@ -615,6 +615,35 @@ fn a_full_span_effect_keeps_the_resource_span_despite_its_guard() {
     assert!(!launch_covers_full_input_span(&unguarded_store()));
 }
 
+/// A body that performs no effect carries no bound from the tile subject.
+///
+/// The tile walk reports zero tiles for such a body. Zero tiles read as one
+/// workgroup would cap the launch at one workgroup of lanes, which is how a
+/// subgroup collective loses the lanes its ballot needs: the whole statement is
+/// a `let` binding, so the walk reaches no store to bound, and the coupling
+/// then has no span left to keep.
+///
+/// Where no coupling holds, the lane bound still reports zero, and one lane is
+/// what a body with no store is worth.
+#[test]
+fn a_body_with_no_effect_carries_no_tile_bound() {
+    let ballot = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(RESOURCE_SPAN)],
+        [256, 1, 1],
+        vec![Node::let_bind("mask", Expr::subgroup_ballot(Expr::bool(true)))],
+    );
+    assert!(launch_covers_full_input_span(&ballot));
+    assert_eq!(guarded_logical_span(&ballot), Some(0));
+    assert_eq!(admitted_logical_span(&ballot, RESOURCE_SPAN), RESOURCE_SPAN);
+
+    let empty = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(RESOURCE_SPAN)],
+        [64, 1, 1],
+        Vec::new(),
+    );
+    assert_eq!(admitted_logical_span(&empty, RESOURCE_SPAN), 1);
+}
+
 /// Buffer the widening tests read.
 fn packed_haystack() -> Vec<BufferDecl> {
     vec![

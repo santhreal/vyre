@@ -116,26 +116,37 @@ impl Phase {
 /// `Phase` is a partition: its leaves are disjoint and sum to the attributed
 /// host time, and adding a nested region to it would double count. These live
 /// in a second array and print with a `sub_` prefix so a reader cannot mistake
-/// one for a sibling of `ptx_ns`. Both current entries sit inside
-/// `Phase::Ptx`, which is where the two whole-program walks on the cache-hit
-/// path are: the normalized digest and the VSA fingerprint. Separating them is
-/// the whole point, because the digest has a memo landing and the fingerprint
-/// does not, so a combined figure cannot say which lane to fix.
+/// one for a sibling of `ptx_ns`. The first two sit inside `Phase::Ptx`, which
+/// is where the two whole-program walks on the cache-hit path are: the
+/// normalized digest and the VSA fingerprint. Separating them is the whole
+/// point, because the digest has a memo landing and the fingerprint does not,
+/// so a combined figure cannot say which lane to fix. The last two sit inside
+/// `Phase::LaunchLoop`, which is the one region a CUDA event pair around the
+/// launch cannot exclude: the barrier reset and the launch call are both host
+/// driver calls the pair reports as device time, and their separation decides
+/// whether a grid-sync dispatch pays for the reset or for the cooperative
+/// launch entry point.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Nested {
     /// `try_normalized_program_cache_digest`: one whole-program walk.
     PtxDigest,
     /// `program_vsa_fingerprint_words`: a second whole-program walk.
     PtxVsa,
+    /// `enqueue_barrier_reset`: the grid-barrier counter memset per launch.
+    BarrierReset,
+    /// `cuLaunchKernel` or `cuLaunchCooperativeKernel`, plus arg validation.
+    LaunchCall,
 }
 
 impl Nested {
-    const COUNT: usize = 2;
+    const COUNT: usize = 4;
 
     const fn index(self) -> usize {
         match self {
             Self::PtxDigest => 0,
             Self::PtxVsa => 1,
+            Self::BarrierReset => 2,
+            Self::LaunchCall => 3,
         }
     }
 
@@ -143,6 +154,8 @@ impl Nested {
         match self {
             Self::PtxDigest => "sub_ptx_digest_ns",
             Self::PtxVsa => "sub_ptx_vsa_ns",
+            Self::BarrierReset => "sub_barrier_reset_ns",
+            Self::LaunchCall => "sub_launch_call_ns",
         }
     }
 }
@@ -575,7 +588,12 @@ pub(crate) fn emit(
     ] {
         push_field(&mut line, phase.label(), phases.host_ns[phase.index()]);
     }
-    for nested in [Nested::PtxDigest, Nested::PtxVsa] {
+    for nested in [
+        Nested::PtxDigest,
+        Nested::PtxVsa,
+        Nested::BarrierReset,
+        Nested::LaunchCall,
+    ] {
         push_field(&mut line, nested.label(), phases.nested_ns[nested.index()]);
     }
     push_field(&mut line, "named_host_ns", phases.named_host_ns());

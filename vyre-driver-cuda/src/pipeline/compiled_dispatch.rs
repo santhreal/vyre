@@ -397,6 +397,19 @@ impl CompiledPipeline for CudaCompiledPipeline {
         let started = std::time::Instant::now();
         let enqueue_started = std::time::Instant::now();
         let bindings = self.backend.resident_bindings_from_resources(inputs)?;
+        crate::backend::dispatch_phase_probe::record_counts(
+            &self.program,
+            self.ptx_src.len(),
+            bindings.len(),
+            self.prepared.fixpoint_iterations as usize,
+            self.prepared.launch.grid,
+        );
+        // Held for the rest of this dispatch: the launch loop records the inner
+        // pair into it, and the guard clears it here rather than leaving it
+        // armed for the next dispatch on this thread.
+        let _kernel_window = crate::backend::dispatch_phase_probe::arm_kernel_window(
+            &self.backend.launch_resources,
+        );
         let dispatch = self.backend.dispatch_resident_async_concrete_with_ptx_key(
             &self.program,
             &bindings,
@@ -422,6 +435,19 @@ impl CompiledPipeline for CudaCompiledPipeline {
             Some(enqueue_ns),
             Some(wait_ns),
         );
+        if crate::backend::dispatch_phase_probe::enabled() {
+            crate::backend::dispatch_phase_probe::charge_kernel_window();
+            let ptx_cache = self.backend.ptx_source_cache_snapshot();
+            crate::backend::dispatch_phase_probe::emit(
+                self.backend.telemetry.snapshot().timed_dispatches,
+                wall_ns,
+                enqueue_ns,
+                wait_ns,
+                device_ns,
+                ptx_cache.hits,
+                ptx_cache.misses,
+            );
+        }
         Ok(vyre_driver::TimedDispatchResult::split_timed(
             outputs, wall_ns, device_ns, enqueue_ns, wait_ns,
         ))
