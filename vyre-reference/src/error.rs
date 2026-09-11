@@ -20,7 +20,8 @@ pub enum ReferenceErrorClass {
     IncompleteDispatchSemantics,
     /// Infinite loop or non-terminating program execution.
     Nontermination,
-    /// Work step ceiling, memory limit, or recursion depth budget exhausted.
+    /// Work step ceiling, memory limit, recursion depth budget, or a program
+    /// size ceiling exhausted.
     BudgetExhaustion,
 }
 
@@ -420,11 +421,26 @@ impl ReferenceError {
     }
 
     /// Preserve a foundation validation issue as owner-local context.
+    ///
+    /// A `Limits`-phase rejection states that a resource ceiling was crossed:
+    /// the program node count, the block nesting depth, or the expression
+    /// nesting depth. That is the fact [`ReferenceErrorClass::BudgetExhaustion`]
+    /// carries, so the phase decides the class for those rules. Reading the
+    /// phase reads the rule's own identity; classifying the rendered message
+    /// instead put a program refused for its size under
+    /// [`ReferenceErrorClass::IncompleteDispatchSemantics`], which tells a
+    /// caller the dispatch semantics are unsupported rather than that a
+    /// ceiling was crossed.
     #[must_use]
     pub fn validation(source: vyre_foundation::validate::ValidationError) -> Self {
         let message = source.to_string();
+        let kind = if source.phase() == vyre_foundation::validate::ValidationPhase::Limits {
+            ReferenceErrorKind::BudgetExhaustion { detail: message }
+        } else {
+            classify_message(&message)
+        };
         Self {
-            kind: classify_message(&message),
+            kind,
             validation: Some(source),
             step_ceiling: None,
         }

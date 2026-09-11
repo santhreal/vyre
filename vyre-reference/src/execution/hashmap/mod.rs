@@ -251,7 +251,7 @@ pub(crate) fn run_hashmap_reference(
     // Every public entry point reaches this function, so the termination
     // contract is armed once here. A caller that already armed a budget, or an
     // enclosing evaluation, keeps its own ceiling and this guard is inert.
-    let _budget = crate::execution::step_budget::arm(program);
+    let _budget = crate::execution::step_budget::arm(program)?;
     let mut storage = FxHashMap::default();
     // The interpreter's ABI is exactly the artifact ABI: one Value per
     // `is_reference_input` buffer. It used to also accept a vector sized to

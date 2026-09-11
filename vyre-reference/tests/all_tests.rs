@@ -110,6 +110,10 @@ pub mod logical_execution_markers;
 #[path = "oracle_foundation_dependencies.rs"]
 pub mod oracle_foundation_dependencies;
 
+/// Integration tests from `tests/oracle_bounds.rs`.
+#[path = "oracle_bounds.rs"]
+pub mod oracle_bounds;
+
 /// Integration tests from `tests/oracle_is_not_a_production_route.rs`.
 #[path = "oracle_is_not_a_production_route.rs"]
 pub mod oracle_is_not_a_production_route;

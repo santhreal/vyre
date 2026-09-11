@@ -220,7 +220,7 @@ pub(crate) fn run_with_request(
     crate::oob::reset_oob_report();
     let _strictness = crate::oob::enter_strictness(true);
     let runnable = program_for_interpreter(request.program)?;
-    let budget = step_budget::arm_with_budget(&runnable, request.budget);
+    let budget = step_budget::arm_with_budget(&runnable, request.budget)?;
     let orders = explored_step_orders(request.schedule_policy, &runnable);
     let outputs = run_explored_orders(&runnable, request, &orders)?;
     let steps = step_budget::charged();
@@ -234,7 +234,7 @@ pub(crate) fn run_permissive_with_request(
     crate::oob::reset_oob_report();
     let _strictness = crate::oob::enter_strictness(false);
     let runnable = program_for_interpreter(request.program)?;
-    let budget = step_budget::arm_with_budget(&runnable, request.budget);
+    let budget = step_budget::arm_with_budget(&runnable, request.budget)?;
     let orders = explored_step_orders(request.schedule_policy, &runnable);
     let outputs = run_explored_orders(&runnable, request, &orders)?;
     let steps = step_budget::charged();
@@ -261,7 +261,7 @@ pub(crate) fn explore_races_with_request(
     crate::oob::reset_oob_report();
     let _strictness = crate::oob::enter_strictness(true);
     let runnable = program_for_interpreter(request.program)?;
-    let budget = step_budget::arm_with_budget(&runnable, request.budget);
+    let budget = step_budget::arm_with_budget(&runnable, request.budget)?;
     let _tracking = crate::interleaving::enter_race_tracking();
     let orders = race_exploration_orders(&runnable);
     let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);

@@ -125,16 +125,28 @@ impl Drop for BudgetGuard {
 ///
 /// The evaluator calls this so a program reached through a nested path is
 /// bounded by the same contract as one submitted through a request.
-pub(crate) fn arm(program: &Program) -> BudgetGuard {
+///
+/// # Errors
+/// Refuses with `BudgetExhaustion` when the program's static body nesting
+/// already stands past the standard frame ceiling.
+pub(crate) fn arm(program: &Program) -> Result<BudgetGuard, ReferenceError> {
     arm_with_budget(program, crate::ReferenceBudget::standard())
 }
 
 /// Arm one evaluation's work, memory, and frame-depth budget, or join the
 /// enclosing one.
-pub(crate) fn arm_with_budget(program: &Program, budget: crate::ReferenceBudget) -> BudgetGuard {
+///
+/// # Errors
+/// Refuses with `BudgetExhaustion` when the program's static body nesting
+/// already stands past the armed frame ceiling.
+pub(crate) fn arm_with_budget(
+    program: &Program,
+    budget: crate::ReferenceBudget,
+) -> Result<BudgetGuard, ReferenceError> {
     if BUDGET.with(Cell::get).is_some() {
-        return BudgetGuard { outermost: false };
+        return Ok(BudgetGuard { outermost: false });
     }
+    check_static_frame_depth(program, budget.max_recursion_depth)?;
     let label = program_label(program);
     PROGRAM.with_borrow_mut(|armed| *armed = label);
     BUDGET.with(|cell| {
@@ -147,7 +159,58 @@ pub(crate) fn arm_with_budget(program: &Program, budget: crate::ReferenceBudget)
             max_recursion_depth: budget.max_recursion_depth,
         });
     });
-    BudgetGuard { outermost: true }
+    Ok(BudgetGuard { outermost: true })
+}
+
+/// Refuse a program whose static body nesting already stands past `max` before
+/// anything walks it.
+///
+/// The frame ceiling used to be read only while a lane executed, so a program
+/// whose nesting was thousands of bodies deep reached the shared validator
+/// first and exhausted the host stack there. That ends the process, which is
+/// neither a wrong answer nor a refusal a caller can route on. The nesting is
+/// visible before any walk, so it is refused before one.
+///
+/// # Errors
+/// Refuses with `BudgetExhaustion` when the nesting passes `max`.
+fn check_static_frame_depth(program: &Program, max: usize) -> Result<(), ReferenceError> {
+    let depth = static_frame_depth(program.entry());
+    if depth <= max {
+        return Ok(());
+    }
+    Err(ReferenceError::budget_exhaustion(format!(
+        "the program's static body nesting reaches frame depth {depth}, past the {max} frame \
+         ceiling this request armed. Fix: raise `ReferenceBudget::max_recursion_depth`, or submit \
+         a program whose block nesting fits the bound."
+    )))
+}
+
+/// Frame depth a lane reaches at the deepest point of `entry`'s body nesting.
+///
+/// Counts what [`crate::execution::hashmap::HashmapInvocation::push_frame`]
+/// counts: the entry node list is frame one, and each nested body a lane
+/// enters adds one. A loop pushes a second frame for its own iteration state,
+/// so this is a lower bound on the depth a lane reaches and the per-frame check
+/// is what refuses the rest.
+///
+/// Iterative over an explicit worklist, because the program whose nesting this
+/// bounds is exactly the program a recursive walk cannot survive.
+fn static_frame_depth(entry: &[Node]) -> usize {
+    let mut deepest = 1usize;
+    let mut pending: Vec<(&[Node], usize)> = vec![(entry, 1)];
+    while let Some((body, depth)) = pending.pop() {
+        if depth > deepest {
+            deepest = depth;
+        }
+        for node in body {
+            for child in child_bodies(node) {
+                if !child.is_empty() {
+                    pending.push((child, depth + 1));
+                }
+            }
+        }
+    }
+    deepest
 }
 
 /// Charge `bytes` of buffer allocation against the armed memory ceiling.
