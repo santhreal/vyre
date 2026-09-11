@@ -1,10 +1,13 @@
-//! Execute one or more bench cases. Audit-fix A29 split this module by
-//! concern: stats helpers in `stats.rs`, the per-case driver in `run_case.rs`,
-//! sample collection in `collect.rs`, metric-key plumbing in `metric_keys.rs`,
-//! and report formatting in `report.rs`.
+//! Execute one or more bench cases, split by concern: stats helpers in
+//! `stats.rs`, the per-case driver in `run_case.rs`, sample collection in
+//! `collect.rs`, metric-key plumbing in `metric_keys.rs`, metric
+//! normalization in `metric_normalize.rs`, contract evaluation in
+//! `contract_eval.rs`, and report formatting in `report.rs`.
 
 mod collect;
+mod contract_eval;
 mod metric_keys;
+mod metric_normalize;
 mod report;
 mod run_case;
 mod stats;
@@ -13,7 +16,7 @@ pub use report::print_report;
 
 use crate::api::metric::elapsed_ns;
 #[cfg(test)]
-pub(crate) use run_case::evaluate_contract;
+pub(crate) use contract_eval::evaluate_contract;
 use run_case::run_case;
 
 use crate::api::case::{BenchContext, BenchError, Correctness, PerformanceContract};
