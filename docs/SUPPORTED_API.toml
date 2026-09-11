@@ -1223,7 +1223,7 @@ seam = "backend-contract"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 2750
+exported_item_count = 2748
 
   [[package.item]]
   path = "T::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>"
@@ -2549,7 +2549,7 @@ exported_item_count = 2750
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "impl<'name> vyre_driver::read_only_alias::ReadOnlyAliasCheck<'name>"
+  path = "impl<'name> vyre_driver::ReadOnlyAliasCheck<'name>"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -7549,6 +7549,20 @@ exported_item_count = 2750
   [[package.item]]
   path = "vyre_driver::ReadOnlyAliasCheck<'name>"
   kind = "struct"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::ReadOnlyAliasCheck<'name>::new() -> Self"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::ReadOnlyAliasCheck<'name>::observe(&mut self, name: &'name str, access: vyre_spec::buffer_access::BufferAccess, handle: core::option::Option<vyre_driver::ResidentHandle>) -> core::result::Result<(), vyre_driver::BackendError>"
+  kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -18300,34 +18314,6 @@ exported_item_count = 2750
 
   [[package.item]]
   path = "vyre_driver::push_lower_hex(bytes: &[u8], out: &mut alloc::string::String)"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::read_only_alias"
-  kind = "mod"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::read_only_alias::ReadOnlyAliasCheck<'name>"
-  kind = "struct"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::read_only_alias::ReadOnlyAliasCheck<'name>::new() -> Self"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::read_only_alias::ReadOnlyAliasCheck<'name>::observe(&mut self, name: &'name str, access: vyre_spec::buffer_access::BufferAccess, handle: core::option::Option<vyre_driver::ResidentHandle>) -> core::result::Result<(), vyre_driver::BackendError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"

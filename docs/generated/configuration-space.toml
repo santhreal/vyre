@@ -5,7 +5,7 @@ feature_ownership_findings = []
 forward_findings = []
 facade_findings = []
 unreachable_cfg_findings = []
-scheduled_cells = 299
+scheduled_cells = 301
 
 [[crates]]
 name = "structure-gate"
@@ -819,6 +819,8 @@ features = [
     "default",
     "driver-artifact-contracts",
     "driver-contracts",
+    "golden-corpus",
+    "host-input-abi",
     "ir-fixtures",
     "parity-oracles",
     "semantic-parity",
@@ -832,6 +834,7 @@ optional_deps = [
     "smallvec",
     "vyre-driver",
     "vyre-foundation",
+    "vyre-lower",
     "vyre-megakernel",
     "vyre-primitives",
     "vyre-reference",
@@ -2592,6 +2595,8 @@ package = "vyre-test-support"
 enabled_features = [
     "driver-artifact-contracts",
     "driver-contracts",
+    "golden-corpus",
+    "host-input-abi",
     "ir-fixtures",
     "parity-oracles",
     "semantic-parity",
@@ -2612,6 +2617,18 @@ package = "vyre-test-support"
 enabled_features = ["driver-contracts"]
 target_cell = "isolated_driver-contracts"
 isolated_build_command = "./cargo_full check -p vyre-test-support --no-default-features --features driver-contracts"
+
+[[covering_sets]]
+package = "vyre-test-support"
+enabled_features = ["golden-corpus"]
+target_cell = "isolated_golden-corpus"
+isolated_build_command = "./cargo_full check -p vyre-test-support --no-default-features --features golden-corpus"
+
+[[covering_sets]]
+package = "vyre-test-support"
+enabled_features = ["host-input-abi"]
+target_cell = "isolated_host-input-abi"
+isolated_build_command = "./cargo_full check -p vyre-test-support --no-default-features --features host-input-abi"
 
 [[covering_sets]]
 package = "vyre-test-support"
@@ -2848,6 +2865,7 @@ activated = [
     "regex-syntax",
     "structure-gate",
     "vyre",
+    "vyre-alloc-probe",
     "vyre-driver",
     "vyre-driver-reference",
     "vyre-emit-naga",

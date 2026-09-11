@@ -16,7 +16,7 @@ each other; a layer that admits none states `None`.
 | --- | --- | --- | --- |
 | `0` | `foundation` | `backend-neutral`, `compiler-boundary`, `concrete-backend`, `conformance`, `emitter`, `facade`, `foundation`, `libraries`, `lowering`, `packaging`, `pass-engine`, `primitives`, `registry-link`, `runtime`, `semantics`, `test-tooling`, `tooling` | Typed IR, logical domains, specification records, diagnostics, and the derive macros that generate them. |
 | `0` | `standalone-tooling` | `test-tooling`, `tooling` | Source-structure gates that read the tree and depend on no compiler crate. |
-| `1` | `lowering` | `compiler-boundary`, `concrete-backend`, `emitter`, `registry-link`, `tooling` | One verified selected-module representation between semantic IR and target emission. |
+| `1` | `lowering` | `compiler-boundary`, `concrete-backend`, `emitter`, `registry-link`, `test-tooling`, `tooling` | One verified selected-module representation between semantic IR and target emission. |
 | `1` | `primitives` | `conformance`, `libraries`, `pass-engine`, `registry-link`, `semantics`, `test-tooling`, `tooling` | Intrinsic operations, each with its own emitter arm in every backend and its own reference arm. |
 | `2` | `compiler-boundary` | `backend-neutral`, `concrete-backend`, `conformance`, `facade`, `libraries`, `packaging`, `pass-engine`, `registry-link`, `runtime`, `test-tooling`, `tooling` | Schedule search, artifact identity, and authenticated target-payload construction. |
 | `2` | `emitter` | `concrete-backend`, `emitter`, `tooling` | Target text and binary emission for one dialect each. |
@@ -35,7 +35,7 @@ each other; a layer that admits none states `None`.
 
 ## Workspace dependency graph
 
-The workspace contains 57 crates and 289 internal production edges, resolved
+The workspace contains 57 crates and 290 internal production edges, resolved
 under the union of every feature. An arrow points from a crate to an internal
 normal or build dependency. Development dependencies are excluded.
 
@@ -366,6 +366,7 @@ graph TD
   C53 --> C0
   C53 --> C8
   C53 --> C18
+  C53 --> C43
   C53 --> C45
   C53 --> C47
   C53 --> C48
@@ -411,7 +412,7 @@ graph TD
 | `vyre-bench` | `vyre-emit-ptx` | `primary-binary-emitter` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-bench` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-bench` | `vyre-libs` | `semantic-library` | `normal` | `always` | `bitset`, `graph`, `math-scan`, `nn-linear-4bit`, `predicate` | `false` | `true` | None |
-| `vyre-bench` | `vyre-lower` | `lowering` | `normal` | `always` | None | `false` | `true` | None |
+| `vyre-bench` | `vyre-lower` | `lowering` | `normal` | `always` | `test-fixtures` | `false` | `true` | None |
 | `vyre-bench` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-bench` | `vyre-pass-engine` | `pass-engine` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-bench` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `hardware` | `false` | `false` | None |
@@ -659,11 +660,12 @@ graph TD
 | `vyre-runtime` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-runtime` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-test-support` | `structure-gate` | `source-structure` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-test-support` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `driver-contracts` |
-| `vyre-test-support` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests` |
+| `vyre-test-support` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `driver-contracts`, `host-input-abi` |
+| `vyre-test-support` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `golden-corpus`, `host-input-abi`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests` |
+| `vyre-test-support` | `vyre-lower` | `lowering` | `normal` | `always` | `test-fixtures` | `true` | `true` | `golden-corpus` |
 | `vyre-test-support` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `semantic-parity`, `semantic-requests` |
 | `vyre-test-support` | `vyre-primitives` | `primitive-library` | `normal` | `always` | None | `true` | `false` | `semantic-parity` |
-| `vyre-test-support` | `vyre-reference` | `reference-semantics` | `normal` | `always` | None | `true` | `true` | `parity-oracles`, `semantic-parity` |
+| `vyre-test-support` | `vyre-reference` | `reference-semantics` | `normal` | `always` | None | `true` | `true` | `host-input-abi`, `parity-oracles`, `semantic-parity` |
 | `vyre-test-support` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `xtask` | `structure-gate` | `source-structure` | `normal` | `always` | None | `false` | `true` | None |
 | `xtask-evidence` | `vyre-bench` | `workload-benchmarks` | `normal` | `always` | None | `false` | `true` | None |
