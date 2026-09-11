@@ -132,3 +132,60 @@ fn operator_like_source_names_and_runtime_changes_still_invalidate_identity() {
         "Fix: a nested exact operator basename must remain excluded after runtime changes."
     );
 }
+
+/// A tree the benchmarked runtime never reads does not change benchmark identity.
+///
+/// WHY: the fingerprint decides whether a recorded measurement still describes
+/// the tree. A generated document, the evidence it lands beside, the assurance
+/// tooling that writes it, and the tests are each produced from the runtime
+/// rather than read by it, so rewriting one invalidated every artifact on disk
+/// and forced a whole re-measurement for a file no kernel reads. Each prefix
+/// gets a case, so dropping one from the predicate turns this red.
+///
+/// What this does not catch: a path outside every prefix that the runtime also
+/// never reads. The fingerprint counts it, which is the safe direction.
+#[test]
+fn trees_the_runtime_never_reads_do_not_change_benchmark_identity() {
+    let workspace = workspace();
+    let base = source_tree_fingerprint_at(workspace.path());
+    let excluded = [
+        "docs/generated/op-inventory.toml",
+        "release/evidence/benchmarks/workload-01.json",
+        ".github/workflows/ci.yml",
+        "scripts/release.sh",
+        "xtask/src/main.rs",
+        "xtask-evidence/src/lib.rs",
+        "vyre-crate/tests/all_tests.rs",
+        "vyre-crate/src/feature_tests.rs",
+    ];
+
+    for relative_path in excluded {
+        write_fixture(workspace.path(), relative_path, b"generated content\n");
+        assert_eq!(
+            source_tree_fingerprint_at(workspace.path()),
+            base,
+            "Fix: `{relative_path}` must not alter runtime source identity."
+        );
+    }
+}
+
+/// A hand-authored document under `docs/` is still runtime source identity.
+///
+/// WHY: the generated tree is excluded by prefix, and the prefix one directory
+/// up would drop every reference and architecture document with it.
+#[test]
+fn a_hand_authored_document_still_changes_benchmark_identity() {
+    let workspace = workspace();
+    let base = source_tree_fingerprint_at(workspace.path());
+
+    write_fixture(
+        workspace.path(),
+        "docs/reference/values.md",
+        b"the contract a caller reads\n",
+    );
+    assert_ne!(
+        source_tree_fingerprint_at(workspace.path()),
+        base,
+        "Fix: a hand-authored document must remain part of runtime source identity."
+    );
+}

@@ -121,8 +121,9 @@ pub fn source_tree_fingerprint() -> String {
 
 /// Capture the runtime source-tree fingerprint for `workspace_root`.
 ///
-/// Generated evidence, release tooling, tests, and operator-internal files are
-/// excluded because they do not change the benchmarked runtime.
+/// Generated evidence, generated documents, release tooling, tests, and
+/// operator-internal files are excluded because they do not change the
+/// benchmarked runtime.
 #[must_use]
 pub fn source_tree_fingerprint_at(workspace_root: &Path) -> String {
     match shell_bytes(
@@ -176,6 +177,7 @@ fn source_tree_path_is_benchmark_provenance_ignored(path: &[u8]) -> bool {
     path == b"cargo_full"
         || path == b"cargo_full.cmd"
         || path.starts_with(b".github/")
+        || path.starts_with(b"docs/generated/")
         || path.starts_with(b"release/evidence/")
         || path.starts_with(b"scripts/")
         || path.starts_with(b"xtask/")

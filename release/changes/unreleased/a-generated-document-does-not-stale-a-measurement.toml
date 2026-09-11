@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The benchmark source-tree fingerprint excludes `docs/generated/`. Regenerating a document the runtime never reads invalidated every recorded measurement and forced a re-measurement of the whole release suite."
