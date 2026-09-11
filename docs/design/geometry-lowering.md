@@ -148,6 +148,23 @@ elements each one touched. The last is the shared-memory reduction: every lane o
 a group contributes a partial, so a launch narrowed to a one-element output
 leaves the rest of the input unreduced.
 
+The bound is read twice, once per index subject. The lane subject reads
+`LogicalIndex` and `InvocationId`, the tile subject reads `LogicalTileId` and
+`WorkgroupId`. A tile bound caps the launch at whole workgroups, so the three
+couplings above do not block it: none of them crosses a workgroup boundary, and
+a workgroup either runs whole or not at all. An atomic still keeps the declared
+span, because the walk reads an atomic out of the operand positions of a
+statement rather than out of the program's own atomic count. A program packing
+more than one logical point per declared element keeps it too, since a tile
+bound counts workgroups of launch index while a resource span counts declared
+elements. A tile span of zero states that the walk reached no tile-guarded
+effect, which is no bound, and leaves the decision to the lane bound.
+
+The fused grid-stride tree reduction is the shape this admits: pass 1 guards its
+partial store on the reducing block count, so a one-million-element sum launches
+32 workgroups instead of 1024, and the 992 near-empty workgroups that a
+resource-derived span launches disappear.
+
 ### Search
 
 Geometry is a ranked dimension in `vyre-megakernel`. Candidates are built from

@@ -538,9 +538,6 @@ impl CudaBackend {
             }
 
             probe::charge_since(probe::Phase::Stage, start);
-            if let Some((start_event, _)) = guards.timing_events()? {
-                start_event.record(stream_raw)?;
-            }
             // Fixpoint loop  -  see dispatch_borrowed_async_with_ptx_concrete
             // for the contract. Resolve the CUDA function and argument vector
             // once; fixpoint iterations are kernel replays, not relowering or
@@ -579,12 +576,25 @@ impl CudaBackend {
             // Everything that must still be enqueued under the lease goes INSIDE
             // the closure. A failure there releases at enqueue, with the
             // synchronize, because no pending handle will exist to await it.
+            // The timing window opens inside the launch loop, after the
+            // grid-barrier counter reset and before the first launch, not here
+            // and not before the resolve and the lease above. Everything the
+            // window spans is enqueued on the stream; everything outside it is
+            // host-only work that touches no stream, or a setup memset ordered
+            // ahead of the kernel either way. A CUDA event pair reports a
+            // difference of two DEVICE timestamps, so an event recorded on an
+            // idle stream retires at once and every host nanosecond spent
+            // before the next enqueue lands inside the difference. Opening it
+            // above the resolve charged `cuModuleGetFunction` and the
+            // module-globals lease to device time: on a one-million-element
+            // grid-stride tree reduction that was 24 us of host work against a
+            // 7.2 us kernel, so the reported device time was three quarters
+            // host.
             let launch_and_release_started = probe::mark();
             let (_, deferred_module_globals) = module_globals.launch_then_defer_release(
                 stream_raw,
                 "resident async dispatch launch",
                 |module_globals| {
-                    probe::open_kernel_window(stream_raw);
                     probe::measure(probe::Phase::LaunchLoop, || {
                         self.replay_fixpoint_launches(
                             module_globals,
@@ -592,6 +602,13 @@ impl CudaBackend {
                             &mut kernel_args,
                             prepared,
                             stream_raw,
+                            || {
+                                if let Some((start_event, _)) = guards.timing_events()? {
+                                    start_event.record(stream_raw)?;
+                                }
+                                probe::open_kernel_window(stream_raw);
+                                Ok(())
+                            },
                         )
                     })?;
                     probe::close_kernel_window(stream_raw);

@@ -332,15 +332,23 @@ impl CudaBackend {
                     for (batch_index, launch_ptrs) in launch_ptrs_by_batch.iter_mut().enumerate() {
                         let mut params_ref = params_ptr;
                         Self::kernel_args_into(launch_ptrs, &mut params_ref, &mut kernel_args)?;
-                        if let Some((start, _)) = item_timing.get(batch_index) {
-                            start.record(stream_raw)?;
-                        }
+                        // Each item's window opens inside its launch loop,
+                        // after the grid-barrier counter reset and before the
+                        // launch. The reset is a host driver call ordered ahead
+                        // of the kernel either way, and an event recorded
+                        // before it charges its host time to device time.
                         self.replay_fixpoint_launches(
                             module_globals,
                             func,
                             &mut kernel_args,
                             prepared,
                             stream_raw,
+                            || {
+                                if let Some((start, _)) = item_timing.get(batch_index) {
+                                    start.record(stream_raw)?;
+                                }
+                                Ok(())
+                            },
                         )?;
                         if let Some((_, end)) = item_timing.get(batch_index) {
                             end.record(stream_raw)?;

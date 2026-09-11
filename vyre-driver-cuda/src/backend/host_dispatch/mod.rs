@@ -651,9 +651,6 @@ impl CudaBackend {
                 );
             }
 
-            if let Some((start_event, _)) = launch_resources_ref.timing_events()? {
-                start_event.record(stream_raw)?;
-            }
             // Fixpoint loop: launch the kernel `fixpoint_iterations` times
             // on the same stream. CUDA serialises kernels within a single
             // stream so each iteration observes the previous iteration's
@@ -723,6 +720,15 @@ impl CudaBackend {
             // The enqueue is split at the launch rather than continuing under the
             // lease so that a failure in the readback enqueue below cannot drop the
             // lease ahead of the cleanup synchronize.
+            // The timing window opens inside the launch loop, after the
+            // grid-barrier counter reset and before the first launch, not here
+            // and not above the resolve and the lease. Everything the window
+            // spans is enqueued on the stream; everything outside it is
+            // host-only work that touches no stream, or a setup memset ordered
+            // ahead of the kernel either way. A CUDA event pair is a difference
+            // of two DEVICE timestamps, so an event recorded on an idle stream
+            // retires at once and every host nanosecond before the next enqueue
+            // lands inside the difference.
             let (_, deferred_module_globals) = module_globals.launch_then_defer_release(
                 stream_raw,
                 "host dispatch launch",
@@ -733,6 +739,12 @@ impl CudaBackend {
                         &mut kernel_args,
                         prepared,
                         stream_raw,
+                        || {
+                            if let Some((start_event, _)) = launch_resources_ref.timing_events()? {
+                                start_event.record(stream_raw)?;
+                            }
+                            Ok(())
+                        },
                     )
                 },
             )?;

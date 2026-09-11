@@ -332,11 +332,26 @@ pub(crate) fn audit_arrivals(
     verify_arrival_count(observed, arrival_ceiling)
 }
 
+/// Static count of in-kernel grid-sync barriers in `ptx_src`.
+///
+/// ONE PLACE for the scan. It runs once per module load, and the count it
+/// returns rides on the module's cached globals for every later dispatch of
+/// that module.
+pub(crate) fn grid_barrier_marker_count(ptx_src: &str) -> usize {
+    ptx_src.matches(GRID_BARRIER_PTX_MARKER).count()
+}
+
+/// Bound on the arrival count one launch of this kernel can leave behind.
+///
+/// `barriers` is the static in-kernel grid-sync barrier count, carried on the
+/// module's cached globals rather than rescanned from the PTX text per
+/// dispatch: the count is a property of the module, the scan is a full pass
+/// over the module source, and the pass ran inside the dispatch's own timing
+/// window.
 pub(crate) fn grid_barrier_arrival_ceiling(
-    ptx_src: &str,
+    barriers: usize,
     grid: [u32; 3],
 ) -> Result<u64, BackendError> {
-    let barriers = ptx_src.matches(GRID_BARRIER_PTX_MARKER).count();
     if barriers == 0 {
         return Err(BackendError::InvalidProgram {
             fix: format!(
@@ -491,7 +506,7 @@ mod tests {
         let ptx = crate::codegen::program_to_ptx_for_sm(&scheduled, &config, 90)
             .expect("Fix: the four-wave persistent fixpoint program must emit PTX.");
 
-        let barriers = ptx.matches(GRID_BARRIER_PTX_MARKER).count();
+        let barriers = grid_barrier_marker_count(&ptx);
         assert_eq!(
             barriers, 8,
             "Fix: four waves emit two grid barriers each, so eight barrier markers must appear. \
@@ -500,7 +515,7 @@ mod tests {
              stops detecting a missed reset."
         );
 
-        let ceiling = grid_barrier_arrival_ceiling(&ptx, [1020, 1, 1])
+        let ceiling = grid_barrier_arrival_ceiling(barriers, [1020, 1, 1])
             .expect("Fix: a program with barrier markers must yield a ceiling.");
         assert_eq!(
             ceiling, 8160,
@@ -509,7 +524,8 @@ mod tests {
              every healthy launch; one that over-counted would never fire at all."
         );
         assert_eq!(
-            grid_barrier_arrival_ceiling(&ptx, [4, 1, 1]).expect("a 4-block grid yields a ceiling"),
+            grid_barrier_arrival_ceiling(barriers, [4, 1, 1])
+                .expect("a 4-block grid yields a ceiling"),
             32,
             "Fix: the ceiling must scale with the launch grid; eight barriers over 4 blocks admit \
              32 arrivals."
@@ -518,14 +534,16 @@ mod tests {
 
     #[test]
     fn arrival_ceiling_is_barrier_count_times_block_count() {
-        let one = "// grid.sync barrier #0 target\nbar.sync 0;\n";
+        let one = grid_barrier_marker_count("// grid.sync barrier #0 target\nbar.sync 0;\n");
         assert_eq!(
             grid_barrier_arrival_ceiling(one, [4, 1, 1])
                 .expect("one barrier over 4 blocks is representable"),
             4,
             "Fix: one barrier over 4 blocks admits exactly 4 arrivals."
         );
-        let three = "// grid.sync barrier #0\n// grid.sync barrier #1\n// grid.sync barrier #2\n";
+        let three = grid_barrier_marker_count(
+            "// grid.sync barrier #0\n// grid.sync barrier #1\n// grid.sync barrier #2\n",
+        );
         assert_eq!(
             grid_barrier_arrival_ceiling(three, [4, 1, 1])
                 .expect("three barriers over 4 blocks is representable"),
@@ -547,7 +565,7 @@ mod tests {
 
     #[test]
     fn missing_barrier_marker_fails_closed_instead_of_disabling_the_audit() {
-        let error = grid_barrier_arrival_ceiling("bar.sync 0;\n", [4, 1, 1]).expect_err(
+        let error = grid_barrier_arrival_ceiling(grid_barrier_marker_count("bar.sync 0;\n"), [4, 1, 1]).expect_err(
             "Fix: PTX with no barrier marker must refuse, because a zero ceiling would silently \
              disable the arrival audit.",
         );
@@ -567,7 +585,7 @@ mod tests {
         }
         let grid = [u32::MAX, u32::MAX, u32::MAX];
         assert!(
-            grid_barrier_arrival_ceiling(&ptx, grid).is_err(),
+            grid_barrier_arrival_ceiling(grid_barrier_marker_count(&ptx), grid).is_err(),
             "Fix: an overflowing ceiling must refuse; a wrapped ceiling would either refuse \
              healthy launches or accept a stale counter."
         );

@@ -438,6 +438,9 @@ impl CudaBackend {
                             &mut kernel_args,
                             &step.prepared,
                             stream.raw(),
+                            // The window spans the whole sequence and opens
+                            // before the first step, above.
+                            || Ok(()),
                         )
                     },
                 )?;

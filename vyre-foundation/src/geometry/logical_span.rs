@@ -52,11 +52,40 @@ use crate::visit::{any_subexpr, child_bodies, node_operands, node_variadic_opera
 /// launch minimum belongs to whoever sizes the launch, not to this analysis.
 #[must_use]
 pub fn guarded_logical_span(program: &Program) -> Option<u32> {
+    bounded_effect_span(program, Facts::default())
+}
+
+/// Axis-0 tiles a program can affect, when every effect it performs is
+/// dominated by a constant bound on the axis-0 tile index.
+///
+/// This is the same walk [`guarded_logical_span`] runs, reading the guards
+/// against the tile index instead of the lane index, and it admits a narrowing
+/// the lane answer cannot. Capping a launch at a lane bound can cut a workgroup
+/// in half, so a program whose lanes cooperate through workgroup scratch, a
+/// subgroup collective or an atomic keeps the span it declares. A tile bound
+/// removes whole workgroups and never part of one: every lane below the bound
+/// still launches, and a workgroup entirely above it performs no effect at all.
+/// None of the three couplings crosses a workgroup boundary, so a removed
+/// workgroup shares no scratch and no subgroup with a remaining one.
+///
+/// Returns `None` when an effect no tile guard dominates leaves high workgroups
+/// observable, and `Some(0)` for a program that performs no effect.
+fn guarded_logical_tile_span(program: &Program) -> Option<u32> {
+    bounded_effect_span(
+        program,
+        Facts {
+            subject: IndexSubject::Tile,
+            ..Facts::default()
+        },
+    )
+}
+
+/// Run the effect walk over `program` with `facts` as its initial state.
+fn bounded_effect_span(program: &Program, mut facts: Facts) -> Option<u32> {
     let mut walk = Walk {
         span: None,
         bounded: true,
     };
-    let mut facts = Facts::default();
     walk.nodes(&program.entry, None, &mut facts);
     if walk.bounded {
         Some(walk.span.unwrap_or(0))
@@ -73,6 +102,10 @@ pub fn guarded_logical_span(program: &Program) -> Option<u32> {
 /// and a workgroup-scoped buffer. The last one is the shared-memory reduction:
 /// every lane of a group contributes a partial, and a launch narrowed to the
 /// one-element output leaves the rest of the input unreduced.
+///
+/// This states when a LANE bound may not cap the launch. A tile bound removes
+/// whole workgroups, which none of the three couplings crosses, and
+/// [`guarded_logical_tile_span`] states that narrowing separately.
 #[must_use]
 pub fn launch_covers_full_input_span(program: &Program) -> bool {
     program.stats().atomic_op_count > 0
@@ -86,20 +119,70 @@ pub fn launch_covers_full_input_span(program: &Program) -> bool {
 /// Narrow a resource-derived launch span to the domain the program admits.
 ///
 /// A resource-derived span takes the widest declared buffer, which a scatter
-/// makes far larger than the domain its guard admits. Where every effect is
-/// dominated by a constant bound on axis-0 logical index, that bound is the
-/// authoritative domain and caps the launch. A full-span program keeps the
-/// resource span. The result is at least one, because a launch of zero
-/// workgroups records no work at all.
+/// makes far larger than the domain its guard admits, and which a fused
+/// multi-pass program makes far larger than the grid either pass reduces over.
+/// Two bounds cap it, and the tighter one wins. Where every effect is dominated
+/// by a constant bound on the axis-0 tile index, the launch covers that many
+/// whole workgroups. Where every effect is dominated by a constant bound on
+/// axis-0 logical index and no lane of the program cooperates with another,
+/// that bound caps the launch too. The result is at least one, because a launch
+/// of zero workgroups records no work at all.
 #[must_use]
 pub fn admitted_logical_span(program: &Program, resource_span: u32) -> u32 {
+    let span = admitted_tile_span(program, resource_span);
     if launch_covers_full_input_span(program) {
-        return resource_span.max(1);
+        return span;
     }
     match guarded_logical_span(program) {
-        Some(guarded) => resource_span.min(guarded).max(1),
-        None => resource_span.max(1),
+        Some(guarded) => span.min(guarded).max(1),
+        None => span,
     }
+}
+
+/// Cap `resource_span` at the whole workgroups the program's tile guards admit.
+///
+/// An atomic keeps the declared span. Its contribution is counted once per
+/// invocation that performs it, and the walk reads an atomic out of the operand
+/// positions of a statement rather than out of the program's own atomic count,
+/// so an atomic it does not reach would be narrowed away silently. That is the
+/// same position [`launch_covers_full_input_span`] states for the lane bound.
+///
+/// A packed program keeps the declared span too. A tile bound counts
+/// workgroups of launch index, and `resource_span` counts declared elements,
+/// and the two are the same unit only where one logical point is one element.
+/// The byte scan declares a `U32` haystack and gives one lane one byte, so its
+/// launch domain is four times the count a caller derives from the
+/// declaration, and a tile bound compared against that count caps the launch
+/// at a quarter of its input. [`logical_points_per_element`] reads the factor,
+/// and any factor above one leaves the comparison without a common unit.
+///
+/// A tile span of zero keeps the declared span. Zero states that the walk
+/// reached no tile-guarded effect, which carries no bound, and a program whose
+/// body performs no store at all reads that way. The lane bound and
+/// [`launch_covers_full_input_span`] decide such a program, as they do for a
+/// subgroup collective whose only statement is a ballot.
+fn admitted_tile_span(program: &Program, resource_span: u32) -> u32 {
+    if program.stats().atomic_op_count > 0 || packs_many_points_per_element(program) {
+        return resource_span.max(1);
+    }
+    let Some(tiles) = guarded_logical_tile_span(program).filter(|tiles| *tiles > 0) else {
+        return resource_span.max(1);
+    };
+    let width = u64::from(program.workgroup_size[0].max(1));
+    let span = u64::from(tiles).saturating_mul(width);
+    u32::try_from(span)
+        .unwrap_or(u32::MAX)
+        .min(resource_span)
+        .max(1)
+}
+
+/// Whether any buffer of `program` carries more than one logical point per
+/// declared element.
+fn packs_many_points_per_element(program: &Program) -> bool {
+    program
+        .buffers()
+        .iter()
+        .any(|buffer| logical_points_per_element(program, buffer.name()) > 1)
 }
 
 /// Logical points axis-0 index spans per element of `buffer`.
@@ -224,7 +307,7 @@ fn index_divisor(index: &Expr, facts: &Facts) -> u32 {
     let Expr::BinOp { op, left, right } = index else {
         return 1;
     };
-    if !is_axis_zero_index(left, &facts.index) {
+    if !is_axis_zero_index(left, facts) {
         return 1;
     }
     match op {
@@ -238,18 +321,32 @@ fn index_divisor(index: &Expr, facts: &Facts) -> u32 {
     }
 }
 
+/// Which axis-0 index the walk reads its guards against.
+///
+/// A guard states a bound on one of two indices, and the launch narrowing each
+/// one admits is different. `Lane` is the logical index a launch covers point
+/// by point. `Tile` is the workgroup index, so a bound on it removes whole
+/// workgroups.
+#[derive(Clone, Copy, Default, Eq, PartialEq)]
+enum IndexSubject {
+    #[default]
+    Lane,
+    Tile,
+}
+
 /// Facts the walk proves about locals in scope.
 ///
 /// A guard is not always written against the index expression. The production
 /// form binds the predicate to a local, selects a value that is zero outside
 /// it, and branches on that value being nonzero, so the bound reaches the
 /// effect through two locals rather than through the branch condition. Four
-/// sets carry that chain: locals equal to axis-0 logical index, locals holding
+/// sets carry that chain: locals equal to the subject index, locals holding
 /// a predicate that bounds the index, locals whose value is zero once the index
 /// passes a bound, and locals holding a sum with the index as an addend, which
 /// is the cell a chunked walk owns.
 #[derive(Clone, Default)]
 struct Facts {
+    subject: IndexSubject,
     index: HashSet<Ident>,
     guards: HashMap<Ident, u32>,
     zeroed: HashMap<Ident, u32>,
@@ -267,7 +364,7 @@ impl Facts {
 
     /// Record what `value` proves about the local it is bound to.
     fn learn(&mut self, name: &Ident, value: &Expr) {
-        let index = is_axis_zero_index(value, &self.index);
+        let index = is_axis_zero_index(value, self);
         let guard = axis_zero_upper_bound(value, self);
         let zeroed = zero_outside_bound(value, self);
         let index_sum = sum_contains_axis_zero_index(value, self);
@@ -444,11 +541,21 @@ fn rebound_names(nodes: &[Node], out: &mut HashSet<Ident>) {
     }
 }
 
-/// Whether `expr` is axis-0 logical index, directly or through a proven local.
-fn is_axis_zero_index(expr: &Expr, names: &HashSet<Ident>) -> bool {
+/// Whether `expr` is the walk's subject index, directly or through a proven
+/// local.
+///
+/// The lane subject is the axis-0 logical index a launch covers point by point.
+/// The tile subject is the axis-0 workgroup index, which schedule lowering
+/// rewrites `LogicalTileId` into, so both spellings read the same index.
+fn is_axis_zero_index(expr: &Expr, facts: &Facts) -> bool {
     match expr {
-        Expr::LogicalIndex { axis } | Expr::InvocationId { axis } => *axis == 0,
-        Expr::Var(name) => names.contains(name),
+        Expr::LogicalIndex { axis } | Expr::InvocationId { axis } => {
+            facts.subject == IndexSubject::Lane && *axis == 0
+        }
+        Expr::LogicalTileId { axis } | Expr::WorkgroupId { axis } => {
+            facts.subject == IndexSubject::Tile && *axis == 0
+        }
+        Expr::Var(name) => facts.index.contains(name),
         _ => false,
     }
 }
@@ -463,7 +570,7 @@ fn is_axis_zero_index(expr: &Expr, names: &HashSet<Ident>) -> bool {
 /// and no admitted launch geometry reaches that, since the widest span this
 /// analysis returns is the resource span of a declared buffer.
 fn sum_contains_axis_zero_index(expr: &Expr, facts: &Facts) -> bool {
-    if is_axis_zero_index(expr, &facts.index) {
+    if is_axis_zero_index(expr, facts) {
         return true;
     }
     match expr {
@@ -541,14 +648,13 @@ fn axis_zero_upper_bound(cond: &Expr, facts: &Facts) -> Option<u32> {
     let Expr::BinOp { op, left, right } = cond else {
         return None;
     };
-    let names = &facts.index;
     match op {
-        BinOp::Lt if is_axis_zero_index(left, names) => literal_u32(right),
-        BinOp::Le if is_axis_zero_index(left, names) => literal_u32(right)?.checked_add(1),
-        BinOp::Gt if is_axis_zero_index(right, names) => literal_u32(left),
-        BinOp::Ge if is_axis_zero_index(right, names) => literal_u32(left)?.checked_add(1),
-        BinOp::Eq if is_axis_zero_index(left, names) => literal_u32(right)?.checked_add(1),
-        BinOp::Eq if is_axis_zero_index(right, names) => literal_u32(left)?.checked_add(1),
+        BinOp::Lt if is_axis_zero_index(left, facts) => literal_u32(right),
+        BinOp::Le if is_axis_zero_index(left, facts) => literal_u32(right)?.checked_add(1),
+        BinOp::Gt if is_axis_zero_index(right, facts) => literal_u32(left),
+        BinOp::Ge if is_axis_zero_index(right, facts) => literal_u32(left)?.checked_add(1),
+        BinOp::Eq if is_axis_zero_index(left, facts) => literal_u32(right)?.checked_add(1),
+        BinOp::Eq if is_axis_zero_index(right, facts) => literal_u32(left)?.checked_add(1),
         BinOp::Lt if sum_contains_axis_zero_index(left, facts) => literal_u32(right),
         BinOp::Le if sum_contains_axis_zero_index(left, facts) => {
             literal_u32(right)?.checked_add(1)

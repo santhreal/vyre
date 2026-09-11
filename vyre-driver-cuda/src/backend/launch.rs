@@ -489,14 +489,19 @@ impl CudaBackend {
         } else {
             "cuLaunchKernel"
         };
-        launch_cuda_function(
-            func,
-            kernel_args.as_mut_slice(),
-            launch,
-            stream,
-            cooperative,
-            self.ptx_target_sm(),
-            label,
+        crate::backend::dispatch_phase_probe::measure_nested(
+            crate::backend::dispatch_phase_probe::Nested::LaunchCall,
+            || {
+                launch_cuda_function(
+                    func,
+                    kernel_args.as_mut_slice(),
+                    launch,
+                    stream,
+                    cooperative,
+                    self.ptx_target_sm(),
+                    label,
+                )
+            },
         )?;
         if synchronize {
             crate::stream::synchronize_raw_stream(stream, "cuStreamSynchronize")?;
@@ -517,6 +522,16 @@ impl CudaBackend {
     /// the kernel returns success, the driver reports no error, and the only
     /// symptom is wrong data.
     ///
+    /// `open_timing_window` runs once, between the first reset and the first
+    /// launch. The reset is a `cuMemsetD8Async` of the 4-byte counter, and it
+    /// is enqueued on this stream ahead of the kernel either way, so ordering
+    /// does not depend on which side of the window it lands. Its host driver
+    /// call cost 3.2 us against a 7.2 us kernel on the one-million-element
+    /// grid-stride tree reduction, and a CUDA event recorded before it charges
+    /// that host time to device time. Later iterations reset inside the window,
+    /// which is where they belong: they sit between two kernels of one measured
+    /// sequence.
+    ///
     /// The trap record is per-SEQUENCE, not per launch, and is zeroed by
     /// [`ModuleGlobalsLease::launch_then_release`] before this runs. Zeroing it
     /// here would erase an earlier iteration's trap.
@@ -536,14 +551,20 @@ impl CudaBackend {
         kernel_args: &mut SmallVec<[*mut std::ffi::c_void; 8]>,
         prepared: &CudaDispatchPlan,
         stream: CUstream,
+        open_timing_window: impl FnOnce() -> Result<(), BackendError>,
     ) -> Result<(), BackendError> {
+        let mut open_timing_window = Some(open_timing_window);
         for _ in 0..prepared.fixpoint_iterations {
             // SAFETY: `stream` is owned by this dispatch's launch lease for the
             // whole replay, so it outlives the memset; the memset is enqueued on
             // the same stream as the launch below and is therefore ordered ahead
             // of the kernel that waits on the counter.
-            unsafe {
-                module_globals.enqueue_barrier_reset(stream)?;
+            crate::backend::dispatch_phase_probe::measure_nested(
+                crate::backend::dispatch_phase_probe::Nested::BarrierReset,
+                || unsafe { module_globals.enqueue_barrier_reset(stream) },
+            )?;
+            if let Some(open) = open_timing_window.take() {
+                open()?;
             }
             self.launch_prevalidated_function(
                 func,
@@ -553,6 +574,13 @@ impl CudaBackend {
                 false,
                 prepared.cooperative,
             )?;
+        }
+        // A plan with no iterations enqueues nothing, and the caller still
+        // records its end event. Opening the window here keeps the pair
+        // well-formed instead of leaving the end event to elapse against
+        // whatever the start event last held.
+        if let Some(open) = open_timing_window.take() {
+            open()?;
         }
         Ok(())
     }

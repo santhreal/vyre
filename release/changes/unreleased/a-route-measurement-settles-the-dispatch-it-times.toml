@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The `foundation.reduce.sum.crossover` case now dispatches each route twice per sample and times the second, so no route is charged for the memory state the 1.37 ms atomic route left behind. The timed large tree route read 35840 ns with a contended first dispatch and 32864 ns without, at three times the variance."

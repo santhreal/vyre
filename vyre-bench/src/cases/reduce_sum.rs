@@ -432,13 +432,35 @@ fn measure_size(
     })
 }
 
-/// Dispatch one route against its resident resources.
+/// Dispatch one route against its resident resources and time it.
 ///
-/// The accumulator seed is restored before the dispatch and is four bytes
+/// The accumulator seed is restored before every dispatch and is four bytes
 /// wide; every other binding is already on the device and moves nothing. A
 /// backend without residency dispatches the host bundle instead, which is the
 /// only shape the comparison can take when the device cannot hold an input.
+///
+/// The route is dispatched twice and the second dispatch is the timed one. A
+/// device timing is the elapsed time between two events recorded around the
+/// launch, so whatever the previously dispatched route left the memory system
+/// doing is inside that window. The 1,048,576-update atomic route is 1.37 ms
+/// of contended accumulation and leaves a tail: the tree route timed directly
+/// after it reads 35840 ns against 32864 ns timed before it, with the sample
+/// spread three times wider, and at 32 elements whichever route ran first read
+/// 3500 ns slower than the same route running second, which moved the reported
+/// winner. The first of the two dispatches absorbs that tail, so a route is
+/// timed from the device state its own previous launch left rather than from
+/// whichever route the measurement loop happened to run before it.
 fn dispatch_route(
+    ctx: &BenchContext,
+    route: &ReductionRoute,
+    size_name: &str,
+    expected: &[u8],
+) -> Result<TimedDispatchResult, BenchError> {
+    dispatch_route_once(ctx, route, size_name, expected)?;
+    dispatch_route_once(ctx, route, size_name, expected)
+}
+
+fn dispatch_route_once(
     ctx: &BenchContext,
     route: &ReductionRoute,
     size_name: &str,
@@ -533,9 +555,10 @@ mod tests {
 
     /// Workgroups a dispatch of `program` runs, read from the program alone.
     ///
-    /// A launch spans the widest non-shared binding, and a compiled artifact
-    /// records that span, so this is the grid the tree route runs at whatever
-    /// the case or the device profile would prefer.
+    /// A launch spans the widest non-shared binding narrowed to the workgroups
+    /// the program's tile guards admit, and a compiled artifact records that
+    /// span, so this is the grid the tree route runs at whatever the case or
+    /// the device profile would prefer.
     fn launched_workgroups(program: &Program) -> u32 {
         let span = program
             .buffers()
@@ -544,7 +567,8 @@ mod tests {
             .map(|buffer| buffer.count())
             .max()
             .unwrap_or(1);
-        span.div_ceil(program.workgroup_size()[0].max(1))
+        vyre_foundation::admitted_logical_span(program, span)
+            .div_ceil(program.workgroup_size()[0].max(1))
     }
 
     /// The tree route sizes its partial buffer to the grid its launch runs.
@@ -590,27 +614,32 @@ mod tests {
             );
             assert_eq!(
                 partial_slots(large.tree()),
-                Some(LARGE_COUNT / tile_ceiling),
-                "Fix: one workgroup per tile of the input is the whole grid"
+                Some(grid_stride_tree::grid_stride_tree_sum_u32_blocks(
+                    LARGE_COUNT,
+                    tile_ceiling
+                )),
+                "Fix: one workgroup per span of the input is the whole grid"
             );
         }
     }
 
     /// WHY: the combine pass used to read the partials from one tile-wide
     /// workgroup, which capped the block count at one tile. At a 256-lane tile
-    /// a one-million-element input needs 4096 blocks, and the cap handed the
-    /// surplus 3840 tiles back to pass one as strided rereads under a launch
+    /// a four-million-element input needs 512 blocks, and the cap handed the
+    /// surplus 256 spans back to pass one as strided rereads under a launch
     /// that ran them anyway. The combine now strides the partials, so the
     /// block count follows the input at every tile.
     #[test]
     fn a_block_count_past_one_tile_still_gets_one_slot_each() {
-        let prepared = prepare_size(LARGE_COUNT, 256).expect("reduction size prepares");
+        const PAST_ONE_TILE: u32 = 4 << 20;
+        let prepared = prepare_size(PAST_ONE_TILE, 256).expect("reduction size prepares");
         assert_eq!(prepared.tree_tile, 256);
+        let blocks = grid_stride_tree::grid_stride_tree_sum_u32_blocks(PAST_ONE_TILE, 256);
         assert!(
-            LARGE_COUNT / 256 > prepared.tree_tile,
+            blocks > prepared.tree_tile,
             "Fix: this case only means something while the block count exceeds one tile"
         );
-        assert_eq!(partial_slots(prepared.tree()), Some(LARGE_COUNT / 256));
+        assert_eq!(partial_slots(prepared.tree()), Some(blocks));
     }
 
     #[test]
