@@ -4208,6 +4208,7 @@ dependencies = [
  "regex",
  "rustc-hash 2.1.3",
  "smallvec",
+ "vyre-alloc-probe",
  "vyre-foundation",
  "vyre-lower",
  "vyre-primitives",

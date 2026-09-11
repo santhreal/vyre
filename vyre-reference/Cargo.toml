@@ -36,6 +36,10 @@ vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 # artifacts are instead of growing a second comparison spelling.
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
 proptest.workspace = true
+# Per-thread heap counters behind a `GlobalAlloc` wrapper, so the oracle's
+# per-node allocation is measured on the measuring thread rather than across
+# whatever else the test binary runs beside it.
+vyre-alloc-probe = { workspace = true }
 
 [package.metadata.docs.rs]
 all-features = true
