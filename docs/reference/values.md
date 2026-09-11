@@ -44,6 +44,9 @@ overflow-checked positive point bound.
 `BufferAccess::ALL` is the whole set as a fixed-length array, so a caller
 outside `vyre-spec` walks every mode without matching exhaustively.
 
+A `Workgroup` buffer holds zero when a dispatch starts. Every element the
+program does not write reads back as zero on every backend.
+
 ## Lifetime
 
 | Variant | Meaning |

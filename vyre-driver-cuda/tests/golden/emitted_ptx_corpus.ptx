@@ -3130,8 +3130,8 @@ module group FusionGroupId(0)
     .param .u64 params_buf
 ) {
     // register declarations
-    .reg .pred  %p<6>;
-    .reg .u32   %r<52>;
+    .reg .pred  %p<7>;
+    .reg .u32   %r<61>;
     .reg .u64   %rd<9>;
 
     // global_invocation_id
@@ -3157,51 +3157,70 @@ module group FusionGroupId(0)
     ld.param.u64    %rd0, [params_buf];
     ld.global.ca.u32    %r27, [%rd0 + 4];
     ld.global.ca.u32    %r28, [%rd0 + 8];
+    // Workgroup memory holds zero at entry.
+    mad.lo.u32    %r29, %r5, %r24, %r6;
+    mad.lo.u32    %r30, %r1, %r29, %r2;
+    mul.lo.u32    %r31, %r1, %r5;
+    mul.lo.u32    %r32, %r31, %r9;
+    mov.u32    %r33, 0;
+    mov.u32    %r34, %r30;
+    mov.u32    %r35, shared_buf_16777216;
+$L_zero_shared_0:
+    setp.ge.u32     %p1, %r34, 32;
+    @%p1 bra $L_zero_shared_done_1;
+    mul.lo.u32    %r36, %r34, 4;
+    add.u32    %r37, %r35, %r36;
+    st.shared.u32    [%r37], %r33;
+    add.u32    %r34, %r34, %r32;
+    bra $L_zero_shared_0;
+$L_zero_shared_done_1:
+    bar.sync 0;
+
     // Full-workgroup entry: keep every lane live before barriers/shared memory.
 
     // region: anonymous::vyre.program.root
-    mov.u32    %r29, 64;
-    setp.lt.u32    %p1, %r3, %r29;
-    @!%p1 bra $L_if_end_0;
-    mov.u32    %r31, 0;
-    setp.lt.u32    %p2, %r3, %r27;
-    selp.u32    %r30, %r3, %r31, %p2;
-    mul.wide.u32    %rd5, %r30, 4;
+    mov.u32    %r38, 64;
+    setp.lt.u32    %p2, %r3, %r38;
+    @!%p2 bra $L_if_end_2;
+    mov.u32    %r40, 0;
+    setp.lt.u32    %p3, %r3, %r27;
+    selp.u32    %r39, %r3, %r40, %p3;
+    mul.wide.u32    %rd5, %r39, 4;
     add.u64    %rd6, %rd2, %rd5;
-    ld.global.nc.u32    %r32, [%rd6];
-    mul.lo.u32    %r33, %r2, 4;
-    mov.u32    %r34, shared_buf_16777216;
-    add.u32    %r35, %r34, %r33;
-    st.shared.u32    [%r35], %r32;
-$L_if_end_0:
+    ld.global.nc.u32    %r41, [%rd6];
+    mul.lo.u32    %r42, %r2, 4;
+    mov.u32    %r43, shared_buf_16777216;
+    add.u32    %r44, %r43, %r42;
+    st.shared.u32    [%r44], %r41;
+$L_if_end_2:
     bar.sync 0;
-    mov.u32    %r36, 64;
-    setp.lt.u32    %p3, %r3, %r36;
-    @!%p3 bra $L_if_end_1;
-    mul.lo.u32    %r37, %r2, 4;
-    mov.u32    %r38, shared_buf_16777216;
-    add.u32    %r39, %r38, %r37;
-    ld.shared.u32    %r40, [%r39];
+    mov.u32    %r45, 64;
+    setp.lt.u32    %p4, %r3, %r45;
+    @!%p4 bra $L_if_end_3;
+    mul.lo.u32    %r46, %r2, 4;
+    mov.u32    %r47, shared_buf_16777216;
+    add.u32    %r48, %r47, %r46;
+    ld.shared.u32    %r49, [%r48];
     // schedule: hoist independent op#3 into load-use gap after op#2
     // schedule: hoist independent op#4 into load-use gap after op#2
-    mov.u32    %r41, 1;
+    mov.u32    %r50, 1;
     // schedule: hoist independent op#5 into load-use gap after op#2
-    add.u32    %r42, %r2, %r41;
-    mov.u32    %r43, 31;
-    and.b32    %r44, %r42, %r43;
-    mul.lo.u32    %r45, %r44, 4;
-    mov.u32    %r46, shared_buf_16777216;
-    add.u32    %r47, %r46, %r45;
-    ld.shared.u32    %r48, [%r47];
-    add.u32    %r49, %r40, %r48;
-    mov.u32    %r51, 0;
-    setp.lt.u32    %p4, %r3, %r28;
-    selp.u32    %r50, %r3, %r51, %p4;
-    mul.wide.u32    %rd7, %r50, 4;
-    add.u64    %rd8, %rd4, %rd7;
+    add.u32    %r51, %r2, %r50;
+    mov.u32    %r52, 31;
+    and.b32    %r53, %r51, %r52;
+    mul.lo.u32    %r54, %r53, 4;
+    mov.u32    %r55, shared_buf_16777216;
+    add.u32    %r56, %r55, %r54;
+    ld.shared.u32    %r57, [%r56];
+    add.u32    %r58, %r49, %r57;
+    mov.u32    %r60, 0;
     setp.lt.u32    %p5, %r3, %r28;
-    @%p5 st.global.u32    [%rd8], %r49;
-$L_if_end_1:
+    selp.u32    %r59, %r3, %r60, %p5;
+    mul.wide.u32    %rd7, %r59, 4;
+    add.u64    %rd8, %rd4, %rd7;
+    setp.lt.u32    %p6, %r3, %r28;
+    @%p6 st.global.u32    [%rd8], %r58;
+$L_if_end_3:
 $L_exit:
     ret;
 }

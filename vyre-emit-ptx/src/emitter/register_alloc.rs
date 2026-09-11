@@ -149,6 +149,7 @@ impl<'a> BodyCtx<'a> {
 
     pub(super) fn preload_bindings(&mut self, desc: &KernelDescriptor) -> Result<(), EmitError> {
         self.plan_shared_permutations(desc);
+        let mut shared_symbols: Vec<(String, u32)> = Vec::new();
         for binding in &desc.bindings.slots {
             if matches!(binding.memory_class, MemoryClass::Shared) {
                 let element_count =
@@ -170,6 +171,7 @@ impl<'a> BodyCtx<'a> {
                 let byte_len = element_count
                     .checked_mul(binding.element_type.size_bytes().unwrap_or(0) as u32)
                     .filter(|bytes| *bytes > 0)
+                    .and_then(|bytes| bytes.checked_next_multiple_of(4))
                     .ok_or_else(|| EmitError::InvalidBinding {
                         slot: binding.slot,
                         reason: "shared binding byte length overflowed or used an unsized type"
@@ -177,6 +179,7 @@ impl<'a> BodyCtx<'a> {
                     })?;
                 let symbol = format!("shared_buf_{}", binding.slot);
                 let _ = writeln!(self.text, "    .shared .align 4 .b8 {symbol}[{byte_len}];");
+                shared_symbols.push((symbol.clone(), byte_len));
                 self.slot_to_shared_symbol.insert(binding.slot, symbol);
                 continue;
             }
@@ -232,6 +235,7 @@ impl<'a> BodyCtx<'a> {
             );
             self.slot_to_length_reg.insert(binding.slot, len_reg);
         }
+        self.emit_workgroup_zero_init(&shared_symbols);
         if self.full_workgroup_entry {
             self.text.push_str(
                 "    // Full-workgroup entry: keep every lane live before barriers/shared memory.\n\n",
@@ -245,6 +249,63 @@ impl<'a> BodyCtx<'a> {
             self.text.push_str("    @%p0 bra $L_exit;\n\n");
         }
         Ok(())
+    }
+
+    /// Zero every declared shared buffer before the body runs.
+    ///
+    /// A workgroup buffer holds zero at entry. The reference evaluator
+    /// allocates one zeroed, and the SPIR-V writer requests
+    /// `ZeroInitializeWorkgroupMemoryMode::Polyfill`, so a program that reads
+    /// an element it has not written reads zero on those paths. PTX
+    /// `.shared` storage keeps whatever the previous CTA on that SM left,
+    /// which made such a read return a value that depends on scheduling.
+    ///
+    /// Every lane of the CTA is live here: a Shared binding forces
+    /// [`requires_full_workgroup_entry`], so the entry-wide exit predicate is
+    /// not emitted and the closing `bar.sync` is reached by the whole block.
+    /// Each declaration is padded to a whole word by `preload_bindings`, so
+    /// the store loop covers the buffer with `st.shared.u32` alone.
+    fn emit_workgroup_zero_init(&mut self, shared_symbols: &[(String, u32)]) {
+        if shared_symbols.is_empty() {
+            return;
+        }
+        self.text
+            .push_str("    // Workgroup memory holds zero at entry.\n");
+        let plane = self.alloc(PtxType::U32);
+        let flat = self.alloc(PtxType::U32);
+        let lanes_xy = self.alloc(PtxType::U32);
+        let lanes = self.alloc(PtxType::U32);
+        let zero = self.alloc(PtxType::U32);
+        let _ = writeln!(self.text, "    mad.lo.u32    {plane}, %r5, %r24, %r6;");
+        let _ = writeln!(self.text, "    mad.lo.u32    {flat}, %r1, {plane}, %r2;");
+        let _ = writeln!(self.text, "    mul.lo.u32    {lanes_xy}, %r1, %r5;");
+        let _ = writeln!(self.text, "    mul.lo.u32    {lanes}, {lanes_xy}, %r9;");
+        let _ = writeln!(self.text, "    mov.u32    {zero}, 0;");
+        for (symbol, byte_len) in shared_symbols {
+            let words = byte_len / 4;
+            let cursor = self.alloc(PtxType::U32);
+            let base = self.alloc(PtxType::U32);
+            let offset = self.alloc(PtxType::U32);
+            let addr = self.alloc(PtxType::U32);
+            let done_pred = self.alloc(PtxType::Bool);
+            let head = self.alloc_label("zero_shared");
+            let done = self.alloc_label("zero_shared_done");
+            let _ = writeln!(self.text, "    mov.u32    {cursor}, {flat};");
+            let _ = writeln!(self.text, "    mov.u32    {base}, {symbol};");
+            let _ = writeln!(self.text, "{head}:");
+            let _ = writeln!(
+                self.text,
+                "    setp.ge.u32     {done_pred}, {cursor}, {words};"
+            );
+            let _ = writeln!(self.text, "    @{done_pred} bra {done};");
+            let _ = writeln!(self.text, "    mul.lo.u32    {offset}, {cursor}, 4;");
+            let _ = writeln!(self.text, "    add.u32    {addr}, {base}, {offset};");
+            let _ = writeln!(self.text, "    st.shared.u32    [{addr}], {zero};");
+            let _ = writeln!(self.text, "    add.u32    {cursor}, {cursor}, {lanes};");
+            let _ = writeln!(self.text, "    bra {head};");
+            let _ = writeln!(self.text, "{done}:");
+        }
+        self.text.push_str("    bar.sync 0;\n\n");
     }
 
     pub(super) fn binding_for_slot(&self, slot: u32) -> Result<&BindingSlot, EmitError> {

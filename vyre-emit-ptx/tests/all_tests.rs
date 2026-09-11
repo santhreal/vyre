@@ -72,3 +72,7 @@ pub mod ulp_budget_is_not_an_admission_gate;
 /// Integration tests from `tests/physical_ir_variant_exhaustiveness.rs`.
 #[path = "physical_ir_variant_exhaustiveness.rs"]
 pub mod physical_ir_variant_exhaustiveness;
+
+/// Integration tests from `tests/workgroup_zero_init.rs`.
+#[path = "workgroup_zero_init.rs"]
+pub mod workgroup_zero_init;
