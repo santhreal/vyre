@@ -613,6 +613,11 @@ subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "readme-contract"
+subsets = ["docs", "release-evidence"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
 name = "release-benchmarks"
 subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "gpu-parity.yml", "release-evidence.yml"]
