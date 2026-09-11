@@ -123,22 +123,19 @@ fn count_nodes(nodes: &[Node]) -> usize {
 /// budget's static pre-check reads and a lower bound on the depth a lane
 /// reaches while running.
 ///
-/// Iterative over an explicit worklist, because the nesting this measures is
-/// exactly the nesting a recursive walk cannot survive.
+/// Descends recursively where the pre-check walks an explicit worklist. A
+/// second copy of that worklist would agree with it even when both are wrong,
+/// which is the one case this measurement exists to catch. Recursion is safe
+/// on the shapes here, tens of frames deep; the pre-check cannot use it
+/// because the programs it bounds are not.
 fn static_frame_depth(nodes: &[Node]) -> usize {
-    let mut deepest = 1usize;
-    let mut pending: Vec<(&[Node], usize)> = vec![(nodes, 1)];
-    while let Some((body, depth)) = pending.pop() {
-        deepest = deepest.max(depth);
-        for node in body {
-            for child in child_bodies(node) {
-                if !child.is_empty() {
-                    pending.push((child, depth + 1));
-                }
-            }
-        }
-    }
-    deepest
+    1 + nodes
+        .iter()
+        .flat_map(child_bodies)
+        .filter(|child| !child.is_empty())
+        .map(static_frame_depth)
+        .max()
+        .unwrap_or(0)
 }
 
 /// A program whose entry body is `statements` unnested stores.

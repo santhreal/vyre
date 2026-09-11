@@ -566,7 +566,7 @@ impl crate::gate::GateBehavior for FrozenContracts {
             ),
             (
                 "AlgebraicLaw",
-                "vyre-spec/src/algebraic_law.rs",
+                "vyre-spec/src/algebraic_law/mod.rs",
                 "pub enum AlgebraicLaw",
             ),
             (

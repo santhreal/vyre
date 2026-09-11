@@ -128,8 +128,8 @@ total_lines = 1171
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 1700
-total_lines = 147699
+duplicate_lines = 1692
+total_lines = 147858
 
 [[crate]]
 name = "vyre-libs"
@@ -213,8 +213,8 @@ total_lines = 7195
 
 [[crate]]
 name = "vyre-libs-rule"
-duplicate_lines = 59
-total_lines = 1424
+duplicate_lines = 37
+total_lines = 1417
 
 [[crate]]
 name = "vyre-libs-scheduling"
@@ -268,8 +268,8 @@ total_lines = 3838
 
 [[crate]]
 name = "vyre-reference"
-duplicate_lines = 297
-total_lines = 28578
+duplicate_lines = 295
+total_lines = 30831
 
 [[crate]]
 name = "vyre-registry-link"

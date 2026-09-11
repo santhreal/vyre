@@ -18,9 +18,13 @@ use std::cell::RefCell;
 
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::{
-    AsyncTransactionLifecycle, AtomicOrdering, BarrierParticipation, CollectiveGroup,
-    ExecutionScope, FailureCancellationBehavior, FenceSemantics, MemoryScope, Node, Program,
-    StorageDomain,
+    exhaustiveness_check_async_transaction_lifecycle, exhaustiveness_check_atomic_ordering,
+    exhaustiveness_check_barrier_participation, exhaustiveness_check_collective_group,
+    exhaustiveness_check_execution_scope, exhaustiveness_check_failure_cancellation_behavior,
+    exhaustiveness_check_fence_semantics, exhaustiveness_check_memory_scope,
+    exhaustiveness_check_storage_domain, AsyncTransactionLifecycle, AtomicOrdering,
+    BarrierParticipation, CollectiveGroup, ExecutionScope, FailureCancellationBehavior,
+    FenceSemantics, MemoryScope, Node, Program, StorageDomain,
 };
 use vyre_foundation::visit::child_bodies;
 
@@ -594,115 +598,41 @@ fn walk_and_check_nodes(
     Ok(())
 }
 
-/// Exhaustive verification that every closed memory model type is handled
-/// in the reference interleaving oracle.
+/// Whether every closed memory model type resolves through the exhaustiveness
+/// check its declaring module owns.
+///
+/// Each `ALL` roster is walked and every member handed to the owner's check,
+/// so adding a variant breaks the owner's match and this crate's use of it in
+/// the same build. The nine matches this used to restate were copies of those
+/// checks and proved nothing the owners did not already prove.
 #[must_use]
 pub fn verify_closed_type_coverage_in_oracle() -> bool {
-    // 1. AtomicOrdering
     for ordering in AtomicOrdering::ALL {
-        let _ = match ordering {
-            AtomicOrdering::Relaxed => "Relaxed",
-            AtomicOrdering::Acquire => "Acquire",
-            AtomicOrdering::Release => "Release",
-            AtomicOrdering::AcqRel => "AcqRel",
-            AtomicOrdering::SeqCst => "SeqCst",
-        };
+        let _ = exhaustiveness_check_atomic_ordering(ordering);
     }
-
-    // 2. MemoryScope
     for scope in MemoryScope::ALL {
-        let _ = match scope {
-            MemoryScope::Thread => "Thread",
-            MemoryScope::Subgroup => "Subgroup",
-            MemoryScope::Workgroup => "Workgroup",
-            MemoryScope::Cluster => "Cluster",
-            MemoryScope::Device => "Device",
-            MemoryScope::System => "System",
-        };
+        let _ = exhaustiveness_check_memory_scope(scope);
     }
-
-    // 3. ExecutionScope
     for scope in ExecutionScope::ALL {
-        let _ = match scope {
-            ExecutionScope::Thread => "Thread",
-            ExecutionScope::Subgroup => "Subgroup",
-            ExecutionScope::Workgroup => "Workgroup",
-            ExecutionScope::Cluster => "Cluster",
-            ExecutionScope::Grid => "Grid",
-            ExecutionScope::DeviceMesh => "DeviceMesh",
-        };
+        let _ = exhaustiveness_check_execution_scope(scope);
     }
-
-    // 4. StorageDomain
     for domain in StorageDomain::ALL {
-        let _ = match domain {
-            StorageDomain::Register => "Register",
-            StorageDomain::Scratchpad => "Scratchpad",
-            StorageDomain::WorkgroupLocal => "WorkgroupLocal",
-            StorageDomain::DeviceGlobal => "DeviceGlobal",
-            StorageDomain::HostPinned => "HostPinned",
-            StorageDomain::HostPaged => "HostPaged",
-            StorageDomain::Constant => "Constant",
-            StorageDomain::Texture => "Texture",
-        };
+        let _ = exhaustiveness_check_storage_domain(domain);
     }
-
-    // 5. FenceSemantics
     for fence in FenceSemantics::ALL {
-        let _ = match fence {
-            FenceSemantics::Acquire => "Acquire",
-            FenceSemantics::Release => "Release",
-            FenceSemantics::AcqRel => "AcqRel",
-            FenceSemantics::SequentiallyConsistent => "SequentiallyConsistent",
-        };
+        let _ = exhaustiveness_check_fence_semantics(fence);
     }
-
-    // 6. BarrierParticipation
     for part in BarrierParticipation::ALL {
-        let _ = match part {
-            BarrierParticipation::Uniform => "Uniform",
-            BarrierParticipation::Converged => "Converged",
-            BarrierParticipation::ElectOne => "ElectOne",
-            BarrierParticipation::DynamicMask => "DynamicMask",
-            BarrierParticipation::SubgroupOnly => "SubgroupOnly",
-            BarrierParticipation::WorkgroupOnly => "WorkgroupOnly",
-        };
+        let _ = exhaustiveness_check_barrier_participation(part);
     }
-
-    // 7. AsyncTransactionLifecycle
     for lifecycle in AsyncTransactionLifecycle::ALL {
-        let _ = match lifecycle {
-            AsyncTransactionLifecycle::Submitted => "Submitted",
-            AsyncTransactionLifecycle::InFlight => "InFlight",
-            AsyncTransactionLifecycle::Arrived => "Arrived",
-            AsyncTransactionLifecycle::Committed => "Committed",
-            AsyncTransactionLifecycle::Failed => "Failed",
-            AsyncTransactionLifecycle::Aborted => "Aborted",
-        };
+        let _ = exhaustiveness_check_async_transaction_lifecycle(lifecycle);
     }
-
-    // 8. CollectiveGroup
     for group in CollectiveGroup::ALL {
-        let _ = match group {
-            CollectiveGroup::Subgroup => "Subgroup",
-            CollectiveGroup::Workgroup => "Workgroup",
-            CollectiveGroup::Cluster => "Cluster",
-            CollectiveGroup::DeviceMesh => "DeviceMesh",
-            CollectiveGroup::CrossDeviceRing => "CrossDeviceRing",
-            CollectiveGroup::CustomTopology => "CustomTopology",
-        };
+        let _ = exhaustiveness_check_collective_group(group);
     }
-
-    // 9. FailureCancellationBehavior
     for failure in FailureCancellationBehavior::ALL {
-        let _ = match failure {
-            FailureCancellationBehavior::Trap => "Trap",
-            FailureCancellationBehavior::Poison => "Poison",
-            FailureCancellationBehavior::Propagate => "Propagate",
-            FailureCancellationBehavior::AbortKernel => "AbortKernel",
-            FailureCancellationBehavior::Ignore => "Ignore",
-        };
+        let _ = exhaustiveness_check_failure_cancellation_behavior(failure);
     }
-
     true
 }
