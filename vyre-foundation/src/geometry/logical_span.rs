@@ -104,8 +104,8 @@ fn bounded_effect_span(program: &Program, mut facts: Facts) -> Option<u32> {
 /// one-element output leaves the rest of the input unreduced.
 ///
 /// This states when a LANE bound may not cap the launch. A tile bound removes
-/// whole workgroups, which none of the three couplings crosses, and
-/// [`guarded_logical_tile_span`] states that narrowing separately.
+/// whole workgroups, which none of the three couplings crosses, and the
+/// guarded tile span states that narrowing separately.
 #[must_use]
 pub fn launch_covers_full_input_span(program: &Program) -> bool {
     program.stats().atomic_op_count > 0

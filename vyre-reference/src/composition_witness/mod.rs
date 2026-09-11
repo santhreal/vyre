@@ -5,7 +5,8 @@
 //! Composed Programs continue to run through the generic reference interpreter, with independent
 //! known-answer cases where interpreter parity alone would compare an implementation with itself.
 //!
-//! [`COMPOSITION_WITNESS_FAMILIES`] is the registry: one row per composition
+//! [`COMPOSITION_WITNESS_FAMILIES`](composition_witness::COMPOSITION_WITNESS_FAMILIES)
+//! is the registry: one row per composition
 //! family, naming the module that owns that family's witnesses or the reason
 //! the family has none. The re-exports below are the witness entry points
 //! themselves, which every consumer calls by name; the registry is what states

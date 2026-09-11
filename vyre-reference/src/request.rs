@@ -456,7 +456,7 @@ impl<'a> ReferenceRequest<'a> {
     ///
     /// Derived from the workgroup extent the program declares, so a caller
     /// states the exploration's exact width before running it and never
-    /// exceeds [`MAX_RACE_EXPLORATION_ORDERS`].
+    /// exceeds [`MAX_RACE_EXPLORATION_ORDERS`](crate::MAX_RACE_EXPLORATION_ORDERS).
     #[must_use]
     pub fn declared_race_exploration_orders(&self) -> usize {
         crate::execution::race_exploration_orders(self.program).len()
