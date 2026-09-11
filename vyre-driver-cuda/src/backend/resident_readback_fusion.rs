@@ -8,7 +8,9 @@ use vyre_driver::resident_transfer_fusion::{
     fuse_resident_transfer_intervals, FusedResidentTransfers, ResidentTransferInterval,
     ResidentTransferView,
 };
-use vyre_driver::BackendError;
+use vyre_driver::{BackendError, ResidentHandle};
+
+use super::resident::ResidentBufferView;
 
 /// One validated device-to-host readback request.
 pub(crate) type ResidentReadbackCopy = ResidentTransferInterval;
@@ -24,6 +26,78 @@ pub(crate) fn fuse_resident_readback_copies(
     requested: &[ResidentReadbackCopy],
 ) -> Result<FusedResidentReadbacks, BackendError> {
     fuse_resident_transfer_intervals(requested)
+}
+
+/// Validate one requested readback against its resident view and produce the
+/// copy the fusion plan consumes.
+///
+/// Four resident readback paths (compact, batched, ranged download, fused
+/// sequence) each proved the same two facts about the same descriptor:
+/// `byte_offset..byte_offset + byte_len` lies inside the resident allocation,
+/// and `view.ptr + byte_offset` stays inside `CUdeviceptr` arithmetic. `role`
+/// was the only difference between them and it only ever reached the error
+/// text. A bounds check spelled four times is a bounds check that gets
+/// corrected in one place and left wrong in three, so the check lives here and
+/// the caller supplies the phrase that names its path.
+///
+/// An empty range yields a null source pointer without pointer arithmetic:
+/// `view.ptr + byte_offset` is not required to be a valid address when no
+/// bytes are copied, and a zero-length allocation has no valid address to
+/// offset from.
+pub(crate) fn resident_readback_copy(
+    role: &str,
+    handle: ResidentHandle,
+    view: ResidentBufferView,
+    byte_offset: usize,
+    byte_len: usize,
+) -> Result<ResidentReadbackCopy, BackendError> {
+    vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+        byte_offset,
+        byte_len,
+        view.byte_len,
+        || {
+            BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA {role} for handle {handle} overflows usize at offset {byte_offset} len {byte_len}."
+            ),
+        }
+        },
+        |end| {
+            BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA {role} for handle {handle} requested bytes [{byte_offset}..{end}) but buffer has {} bytes.",
+                view.byte_len
+            ),
+        }
+        },
+    )?;
+    let src = if byte_len == 0 {
+        0
+    } else {
+        vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
+            view.ptr,
+            byte_offset,
+            || {
+                BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA {role} device offset {byte_offset} does not fit CUdeviceptr arithmetic for handle {handle}."
+                ),
+            }
+            },
+            || {
+                BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA {role} pointer arithmetic overflowed for handle {handle} at offset {byte_offset}."
+                ),
+            }
+            },
+        )?
+    };
+    Ok(ResidentReadbackCopy {
+        handle_id: handle.id(),
+        src,
+        byte_len,
+    })
 }
 
 pub(crate) fn validate_fused_resident_readbacks(
@@ -110,21 +184,29 @@ pub(crate) fn validate_fused_resident_readbacks(
     Ok(())
 }
 
+// Inline: covers `FusedResidentReadbacks`, `ResidentReadbackCopy`, `ResidentReadbackView`,
+// `fuse_resident_readback_copies` and 1 more item this module keeps private, which no integration
+// test can name.
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use smallvec::smallvec;
+    use vyre_driver::resident_transfer_fixtures::{
+        assert_fused_transfers_preserve_requests, generated_transfer_requests,
+    };
 
     use super::{
         fuse_resident_readback_copies, validate_fused_resident_readbacks, FusedResidentReadbacks,
         ResidentReadbackCopy, ResidentReadbackView,
     };
 
+    /// Grades this crate's adapter against the neutral fusion model, including
+    /// the validator this crate adds on top of it. A copy of the corpus or of
+    /// the materialization property here would let the adapter drift from the
+    /// algorithm it delegates to and still pass.
     #[test]
     fn generated_fusion_preserves_every_requested_output_and_accounts_union_bytes() {
         for seed in 0..8192_u64 {
-            let requested = generated_requests(seed);
+            let requested = generated_transfer_requests(seed);
             let fused = fuse_resident_readback_copies(&requested)
                 .expect("Fix: generated resident readback requests must fuse without overflow");
             validate_fused_resident_readbacks(&fused, requested.len(), "generated readback")
@@ -132,65 +214,7 @@ mod tests {
                     "Fix: generated resident readback fusion must produce a materializable plan",
                 );
 
-            assert_eq!(
-                fused.views.len(),
-                requested.len(),
-                "Fix: fused views must preserve request cardinality for seed {seed}."
-            );
-            assert_eq!(
-                fused.non_empty_copy_count,
-                fused.copies.len(),
-                "Fix: fused copy count must match non-empty copy slots for seed {seed}."
-            );
-            assert_eq!(
-                fused.bytes,
-                expected_union_bytes(&requested),
-                "Fix: fused byte accounting must equal the handle-scoped interval union for seed {seed}."
-            );
-
-            for pair in fused.copies.windows(2) {
-                let left = pair[0];
-                let right = pair[1];
-                let left_end = left.src + left.byte_len as u64;
-                assert!(
-                    left.handle_id != right.handle_id || right.src > left_end,
-                    "Fix: fused copies must not leave mergeable same-handle intervals for seed {seed}."
-                );
-            }
-
-            for (index, request) in requested.iter().enumerate() {
-                let view = fused.views[index];
-                assert_eq!(
-                    view.byte_len, request.byte_len,
-                    "Fix: fused view length must preserve request {index} for seed {seed}."
-                );
-                if request.byte_len == 0 {
-                    assert_eq!(
-                        materialize_view(&fused.copies, view.copy_slot, view.byte_offset, view.byte_len),
-                        Vec::<u8>::new(),
-                        "Fix: zero-byte request {index} must materialize empty output for seed {seed}."
-                    );
-                } else {
-                    assert!(
-                        view.copy_slot < fused.copies.len(),
-                        "Fix: non-empty request {index} must map to a real fused copy for seed {seed}."
-                    );
-                    assert_eq!(
-                        fused.copies[view.copy_slot].handle_id, request.handle_id,
-                        "Fix: request {index} must not read bytes from a different resident handle for seed {seed}."
-                    );
-                    assert_eq!(
-                        materialize_view(
-                            &fused.copies,
-                            view.copy_slot,
-                            view.byte_offset,
-                            view.byte_len
-                        ),
-                        materialize_request(*request),
-                        "Fix: fused view must reproduce request {index} byte-for-byte for seed {seed}."
-                    );
-                }
-            }
+            assert_fused_transfers_preserve_requests(seed, &requested, &fused);
         }
     }
 
@@ -344,69 +368,5 @@ mod tests {
             "Fix: adjacent raw pointers from distinct resident allocations must not coalesce."
         );
         assert_eq!(fused.bytes, 16);
-    }
-
-    fn generated_requests(seed: u64) -> Vec<ResidentReadbackCopy> {
-        let mut state = seed ^ 0xC0DA_CAFE_51DE_D2D2;
-        let count = 1 + (next_u64(&mut state) as usize % 16);
-        let mut requests = Vec::with_capacity(count);
-        for _ in 0..count {
-            let handle_id = next_u64(&mut state) % 4;
-            let src = next_u64(&mut state) % 64;
-            let byte_len = next_u64(&mut state) as usize % 17;
-            requests.push(ResidentReadbackCopy {
-                handle_id,
-                src,
-                byte_len,
-            });
-        }
-        requests
-    }
-
-    fn expected_union_bytes(requests: &[ResidentReadbackCopy]) -> u64 {
-        let mut bytes = HashSet::<(u64, u64)>::new();
-        for request in requests {
-            for offset in 0..request.byte_len as u64 {
-                bytes.insert((request.handle_id, request.src + offset));
-            }
-        }
-        bytes.len() as u64
-    }
-
-    fn materialize_view(
-        copies: &[ResidentReadbackCopy],
-        copy_slot: usize,
-        byte_offset: usize,
-        byte_len: usize,
-    ) -> Vec<u8> {
-        if byte_len == 0 {
-            return Vec::new();
-        }
-        let copy = copies[copy_slot];
-        (0..byte_len)
-            .map(|offset| synthetic_byte(copy.handle_id, copy.src + (byte_offset + offset) as u64))
-            .collect()
-    }
-
-    fn materialize_request(request: ResidentReadbackCopy) -> Vec<u8> {
-        (0..request.byte_len)
-            .map(|offset| synthetic_byte(request.handle_id, request.src + offset as u64))
-            .collect()
-    }
-
-    fn synthetic_byte(handle_id: u64, src: u64) -> u8 {
-        handle_id
-            .wrapping_mul(131)
-            .wrapping_add(src.wrapping_mul(17))
-            .wrapping_add(29) as u8
-    }
-
-    fn next_u64(state: &mut u64) -> u64 {
-        let mut x = *state;
-        x ^= x << 13;
-        x ^= x >> 7;
-        x ^= x << 17;
-        *state = x;
-        x
     }
 }

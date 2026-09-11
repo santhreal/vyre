@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
-use vyre_lower::verify::{classify_operand, OperandClass};
+use vyre_lower::operand_class::{classify_operand, OperandClass};
 use vyre_lower::{KernelBody, KernelDescriptor};
 
 /// A descriptor operand that references a result outside its valid body scope.

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-driver-spirv` builds its `DeviceProfile` from `DeviceProfile::conservative` plus the four limits it probes, instead of restating all thirty-two fields. The driver already owned the unprobed-capability defaults and nothing used them; a new capability field had to be answered by hand in `vyre-driver-spirv/src/lib.rs` and the answer was always the conservative one."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The reference interpreter is decoupled from the production backend registry: CPU_REF_BACKEND_ID and CPU_REF_TARGET_ID are removed, physical launch grid parameters are ignored during reference evaluation, and missing input resources are refused by name rather than zero-filled."

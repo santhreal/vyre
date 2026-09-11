@@ -238,3 +238,149 @@ fn unterminated_leb128_node_count_is_rejected() {
         "unterminated LEB128 error must name the encoding and include Fix:, got: {err}"
     );
 }
+
+/// A dense memory region refuses every element type whose own payload
+/// describes further structure.
+///
+/// WHY: the region format writes one element tag plus a count, and the
+/// element's payload is written by a per-variant arm beside it. Four arms
+/// exist. Six variants need one. The two the list omitted, `Vec` and
+/// `TensorShaped`, encoded to a bare tag whose element and count never
+/// reached the blob, and the decoder refused the result: a Program that
+/// encoded without error and could not be read back.
+///
+/// What this does not catch: a variant added to `DataType` after this test
+/// was written. That is closed by `dense_element_tag`, whose match is
+/// exhaustive with no catch-all, so a new variant stops the crate compiling.
+#[test]
+fn a_structured_element_is_refused_by_the_dense_region_encoder() {
+    let structured = [
+        (
+            "Vec",
+            DataType::Vec {
+                element: Box::new(DataType::F32),
+                count: 4,
+            },
+        ),
+        (
+            "TensorShaped",
+            DataType::TensorShaped {
+                element: Box::new(DataType::F32),
+                shape: [2u32, 3].into_iter().collect(),
+            },
+        ),
+        (
+            "SparseCsr",
+            DataType::SparseCsr {
+                element: Box::new(DataType::F32),
+            },
+        ),
+        (
+            "SparseCoo",
+            DataType::SparseCoo {
+                element: Box::new(DataType::F32),
+            },
+        ),
+        (
+            "SparseBsr",
+            DataType::SparseBsr {
+                element: Box::new(DataType::F32),
+                block_rows: 2,
+                block_cols: 2,
+            },
+        ),
+        (
+            "DeviceMesh",
+            DataType::DeviceMesh {
+                axes: [2u32, 2].into_iter().collect(),
+            },
+        ),
+    ];
+
+    for (name, element) in structured {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::read("input", 0, element).with_count(4),
+                BufferDecl::output("out", 1, DataType::U32).with_count(4),
+            ],
+            [1, 1, 1],
+            vec![Node::Store {
+                buffer: "out".into(),
+                index: Expr::u32(0),
+                value: Expr::u32(1),
+            }],
+        );
+        let error = program.to_wire().expect_err(&format!(
+            "{name} is not a dense region element and must be refused at encode"
+        ));
+        let rendered = error.to_string();
+        assert!(
+            rendered.contains("not valid buffer elements"),
+            "{name}: the refusal must name the domain it enforces, got: {rendered}"
+        );
+    }
+}
+
+/// Every flat element type a dense region accepts survives a wire roundtrip.
+///
+/// WHY: refusing the structured types is only half the contract. Without
+/// this, tightening the refusal to reject everything would pass the test
+/// above.
+#[test]
+fn a_flat_element_survives_the_dense_region_roundtrip() {
+    let flat = [
+        DataType::U32,
+        DataType::I32,
+        DataType::U64,
+        DataType::I64,
+        DataType::U8,
+        DataType::U16,
+        DataType::I8,
+        DataType::I16,
+        DataType::I4,
+        DataType::Bool,
+        DataType::Bytes,
+        DataType::F16,
+        DataType::BF16,
+        DataType::F32,
+        DataType::F64,
+        DataType::F8E4M3,
+        DataType::F8E5M2,
+        DataType::FP4,
+        DataType::NF4,
+        DataType::Vec2U32,
+        DataType::Vec4U32,
+        DataType::Tensor,
+        DataType::Array { element_size: 12 },
+    ];
+
+    for element in flat {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::read("input", 0, element.clone()).with_count(4),
+                BufferDecl::output("out", 1, DataType::U32).with_count(4),
+            ],
+            [1, 1, 1],
+            vec![Node::Store {
+                buffer: "out".into(),
+                index: Expr::u32(0),
+                value: Expr::u32(1),
+            }],
+        );
+        let encoded = program.to_wire().unwrap_or_else(|error| {
+            panic!("{element} is a dense element and must encode: {error}")
+        });
+        let decoded = Program::from_wire(&encoded)
+            .unwrap_or_else(|error| panic!("{element} must decode back: {error}"));
+        let read_back = decoded
+            .buffers()
+            .iter()
+            .find(|buffer| buffer.name() == "input")
+            .expect("input buffer survives the roundtrip")
+            .element();
+        assert_eq!(
+            read_back, element,
+            "{element} must decode to the element it was declared with"
+        );
+    }
+}

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The op matrix reads each operation owner directory relative to the checkout root and resolves each namespace and domain once, so the generated rows no longer depend on the directory the run started in."

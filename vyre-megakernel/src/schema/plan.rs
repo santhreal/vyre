@@ -1,0 +1,442 @@
+//! The selected whole-program plan and the consistency rule its records are
+//! decoded under.
+
+use serde::{Deserialize, Serialize};
+use vyre_foundation::numeric::{NumericContract, NUMERIC_CONTRACT_VERSION};
+use vyre_foundation::schedule::SelectedSchedule;
+
+use crate::certificate::{LawCitation, SearchCertificate};
+use crate::cost;
+use crate::error::{failure, CompileError, CompilerFailureKind};
+use crate::grammar::{DerivationStep, ScheduleProduction, SCHEDULE_GRAMMAR_VERSION};
+use crate::measure::{MeasurementRecord, MEASUREMENT_PROTOCOL_VERSION};
+use crate::request::{SearchBudget, SearchWork};
+
+use super::records::{BarrierRecord, FusionRecord, FusionRejection, MaterializationRecord};
+pub use crate::candidate::FrontierTopology;
+
+/// How the runtime executes one compiled artifact.
+///
+/// The compiler decides this, not the dispatcher: the decision needs the launch
+/// count the caller declared and the device launch costs, both of which are
+/// compile-time facts recorded in the request. A consumer executes the mode the
+/// artifact names.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExecutionMode {
+    /// One kernel launch per stage per submission.
+    Static,
+    /// One resident kernel that polls a device-side work queue for the whole
+    /// launch batch, paying one setup cost instead of one launch per item.
+    Persistent {
+        /// Launch overhead this mode removes, less the setup it pays, in
+        /// nanoseconds. Computed from the device launch costs and the declared
+        /// launch batch, and always positive: a non-positive figure is recorded
+        /// as [`Self::Static`].
+        saved_ns: u64,
+    },
+}
+
+/// Whether a device measurement selected the plan, and what it measured.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PlanMeasurement {
+    /// The search budget allowed no measurement, so the plan is the analytic
+    /// winner and carries no measured device time.
+    Unbudgeted,
+    /// The device reports no launch timestamp, so nothing measured on it would
+    /// be a device time.
+    UntimedDevice,
+    /// Selected by the lowest measured device-time estimate across the
+    /// finalists, under the versioned measurement protocol whose evidence this
+    /// carries.
+    Measured(MeasurementRecord),
+}
+
+/// What one plan states about the numbers it computes.
+///
+/// Every field is a compile-time statement, not a measurement: the formats each
+/// region holds, computes and accumulates in, the approximations it admits, the
+/// conversions it performs, and the budget the whole graph composes to. A
+/// consumer reads this to know what the artifact promises without re-deriving it
+/// from the programs, and a conformance run compares its measured error against
+/// the composed contract recorded here.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct NumericRecord {
+    /// Version of the contract shape these records are stated in.
+    pub version: u32,
+    /// Budget the caller stated, when it stated one.
+    pub declared: Option<NumericContract>,
+    /// Contract the graph's regions compose to along its outputs.
+    pub proven: NumericContract,
+    /// Contract each region states, in graph-node order.
+    pub regions: Vec<NumericContract>,
+    /// Regions whose combine order this plan changed.
+    ///
+    /// A region here computes its result in an order the program did not state,
+    /// which is legal because the declared budget covers the difference. An
+    /// empty list over a rounding graph means every combine kept its stated
+    /// order.
+    pub reordered: Vec<u32>,
+}
+
+impl NumericRecord {
+    /// The record of a plan that reorders nothing and states no budget.
+    #[must_use]
+    pub fn exact() -> Self {
+        Self {
+            version: NUMERIC_CONTRACT_VERSION,
+            declared: None,
+            proven: NumericContract::EXACT,
+            regions: Vec::new(),
+            reordered: Vec::new(),
+        }
+    }
+}
+
+/// Immutable compiler-selected whole-program plan.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SelectedPlan {
+    /// Executable queue or resident-partition topology selected by search.
+    pub topology: crate::candidate::ExecutionTopology,
+    /// Frontier-density traversal topology selected by search.
+    pub frontier_topology: crate::candidate::FrontierTopology,
+    /// Versioned backend-neutral phase and transform schedule selected by search.
+    pub schedule: SelectedSchedule,
+    /// Grammar productions the search applied to the unfused baseline, in order.
+    pub derivation: Vec<DerivationStep>,
+    /// Declared laws this plan's node programs were derived through.
+    ///
+    /// Empty means the plan states the programs as written. A non-empty record
+    /// is the evidence a law-derived plan carries: the laws it was derived
+    /// through are named here, and the search that admitted it cited the same
+    /// chains.
+    ///
+    /// Defaulted on read so a plan recorded before law derivation existed
+    /// decodes as one derived through no law, which is what it was.
+    #[serde(default)]
+    pub law_derivation: Vec<LawCitation>,
+    /// Reproducible record of the bounded search that selected this plan.
+    pub certificate: SearchCertificate,
+    /// Selected fusion groups.
+    pub fusion: Vec<FusionRecord>,
+    /// Required dependency-completion boundaries.
+    pub barriers: Vec<BarrierRecord>,
+    /// Required cross-stage value materializations.
+    pub materializations: Vec<MaterializationRecord>,
+    /// Number of legal candidates examined.
+    pub candidates_explored: u32,
+    /// Legal candidates no other candidate dominated on the metrics the stated
+    /// objective orders by.
+    ///
+    /// One means the legal set had a single non-dominated plan and the ordering
+    /// only confirmed it. More than one means every candidate on the frontier
+    /// traded one metric for another, and the objective's tie breakers and
+    /// bounds are what selected between them.
+    pub pareto_frontier: u32,
+    /// Search bounds under which this plan was selected.
+    pub search_budget: SearchBudget,
+    /// Exact work charged against the bounded search.
+    pub search_work: SearchWork,
+    /// Open-model cost of the selected plan.
+    pub selection_cost: cost::CostBreakdown,
+    /// Illegal producer-consumer fusions pruned with stable reasons.
+    pub pruned_fusions: Vec<FusionRejection>,
+    /// How the runtime executes this artifact.
+    pub execution: ExecutionMode,
+    /// Whether a device measurement chose this plan over its finalists.
+    pub measurement: PlanMeasurement,
+    /// What this plan states about the numbers it computes.
+    pub numeric_budget: NumericRecord,
+}
+
+impl SelectedPlan {
+    /// Validate the immutable selected-schedule stage and its bounded search
+    /// provenance.
+    ///
+    /// # Errors
+    ///
+    /// Returns a malformed-artifact diagnostic when topology cardinalities,
+    /// search accounting, or measurement provenance are inconsistent.
+    pub fn validate(&self) -> Result<(), CompileError> {
+        let invalid = |path: &str, message: String, fix: &str| {
+            failure(
+                CompilerFailureKind::MalformedArtifact,
+                format!("artifact.body.selected_plan.{path}"),
+                message,
+                fix,
+            )
+        };
+        self.schedule.validate().map_err(|error| {
+            invalid(
+                "schedule",
+                error.to_string(),
+                "re-run bounded schedule search and persist only a validated neutral schedule",
+            )
+        })?;
+        if self.certificate.grammar_version != SCHEDULE_GRAMMAR_VERSION {
+            return Err(invalid(
+                "certificate.grammar_version",
+                format!(
+                    "plan was derived by grammar {} but this compiler derives grammar {}",
+                    self.certificate.grammar_version, SCHEDULE_GRAMMAR_VERSION
+                ),
+                "re-compile the graph so the plan carries a derivation of the current grammar",
+            ));
+        }
+        for step in &self.derivation {
+            for transform in &step.transforms {
+                if ScheduleProduction::deriving(transform) != step.production {
+                    return Err(invalid(
+                        "derivation.production",
+                        format!(
+                            "step {} records a transform production {} derives",
+                            step.production.code(),
+                            ScheduleProduction::deriving(transform).code()
+                        ),
+                        "record each step under the production that derives its transform",
+                    ));
+                }
+                if !self
+                    .schedule
+                    .transforms
+                    .iter()
+                    .any(|record| record.transform == *transform)
+                {
+                    return Err(invalid(
+                        "derivation.transforms",
+                        format!(
+                            "step {} names a transform the selected schedule never applied",
+                            step.production.code()
+                        ),
+                        "record only the derivation the persisted schedule replays",
+                    ));
+                }
+            }
+        }
+        for citation in &self.law_derivation {
+            if !self.certificate.law_derived.contains(citation) {
+                return Err(invalid(
+                    "law_derivation",
+                    format!(
+                        "the plan names a law chain for node {} the search never cited",
+                        citation.node
+                    ),
+                    "record only the law chains the search certificate admitted",
+                ));
+            }
+        }
+        for family in &self.certificate.derived {
+            if family.derived == 0 || family.admitted > family.derived {
+                return Err(invalid(
+                    "certificate.derived",
+                    format!(
+                        "family {} records {} admitted of {} derived candidates",
+                        family.production.code(),
+                        family.admitted,
+                        family.derived
+                    ),
+                    "record one derived family per production that proposed a candidate",
+                ));
+            }
+        }
+        for family in &self.certificate.pruned {
+            if family.count == 0 {
+                return Err(invalid(
+                    "certificate.pruned",
+                    format!(
+                        "family {} records reason {} without an eliminated candidate",
+                        family.production.code(),
+                        family.reason.code()
+                    ),
+                    "record an eliminated family only when a candidate was eliminated",
+                ));
+            }
+        }
+        match self.topology {
+            crate::candidate::ExecutionTopology::Sequential => {}
+            crate::candidate::ExecutionTopology::ConcurrentQueue { queues } if queues > 0 => {}
+            crate::candidate::ExecutionTopology::ResidentPartition { partitions, .. }
+                if partitions > 0 => {}
+            crate::candidate::ExecutionTopology::ConcurrentQueue { .. } => {
+                return Err(invalid(
+                    "topology.queues",
+                    "concurrent queue topology contains zero queues".to_string(),
+                    "select at least one executable queue",
+                ));
+            }
+            crate::candidate::ExecutionTopology::ResidentPartition { .. } => {
+                return Err(invalid(
+                    "topology.partitions",
+                    "resident topology contains zero partitions".to_string(),
+                    "select at least one resident partition",
+                ));
+            }
+        }
+        if self.frontier_topology == crate::candidate::FrontierTopology::FusedWave
+            && self.fusion.is_empty()
+        {
+            return Err(invalid(
+                "frontier_topology",
+                "fused wave frontier topology selected without any fusion group".to_string(),
+                "select a fused wave topology only when search derived at least one fusion group",
+            ));
+        }
+        if self.candidates_explored == 0 {
+            return Err(invalid(
+                "candidates_explored",
+                "selected schedule records no explored legal candidate".to_string(),
+                "record the executable unfused baseline candidate",
+            ));
+        }
+        if self.pareto_frontier == 0 {
+            return Err(invalid(
+                "pareto_frontier",
+                "selected schedule records no non-dominated legal candidate".to_string(),
+                "record the frontier the ranking preserved, which always holds the selected plan",
+            ));
+        }
+        if self.pareto_frontier > self.candidates_explored {
+            return Err(invalid(
+                "pareto_frontier",
+                format!(
+                    "selected plan records {} non-dominated candidates out of {} explored",
+                    self.pareto_frontier, self.candidates_explored
+                ),
+                "derive the frontier from the same ranked candidate set",
+            ));
+        }
+        if self.candidates_explored != self.search_work.candidates_explored {
+            return Err(invalid(
+                "search_work.candidates_explored",
+                format!(
+                    "selected plan records {} explored candidates but search work records {}",
+                    self.candidates_explored, self.search_work.candidates_explored
+                ),
+                "derive both fields from the same bounded search result",
+            ));
+        }
+        for (path, actual, limit) in [
+            (
+                "search_work.candidates_explored",
+                u64::from(self.search_work.candidates_explored),
+                u64::from(self.search_budget.max_candidates),
+            ),
+            (
+                "search_work.cpu_work",
+                self.search_work.cpu_work,
+                self.search_budget.max_cpu_work,
+            ),
+            (
+                "search_work.target_compilations",
+                u64::from(self.search_work.target_compilations),
+                u64::from(self.search_budget.max_target_compilations),
+            ),
+            (
+                "search_work.measurements",
+                u64::from(self.search_work.measurements),
+                u64::from(self.search_budget.max_measurements)
+                    .saturating_mul(u64::from(self.search_work.target_compilations)),
+            ),
+        ] {
+            if actual > limit {
+                return Err(invalid(
+                    path,
+                    format!("search charged {actual} units against a limit of {limit}"),
+                    "record a schedule selected within its authenticated search budget",
+                ));
+            }
+        }
+        match &self.measurement {
+            PlanMeasurement::Measured(evidence) => {
+                evidence.validate()?;
+                // `MeasurementRecord::validate` already refused a winner with no
+                // kept sample or a zero estimate, so what is left here is the
+                // cross-record agreement it cannot see: the plan's own sample
+                // accounting and the protocol this compiler measures under.
+                let launches = evidence.winning_launches();
+                if launches > self.search_work.measurements {
+                    return Err(invalid(
+                        "measurement.launches",
+                        format!(
+                            "winning finalist records {launches} launches but the search records only {} measurements",
+                            self.search_work.measurements
+                        ),
+                        "derive winning launch count from the recorded search samples",
+                    ));
+                }
+                if evidence.protocol.version != MEASUREMENT_PROTOCOL_VERSION {
+                    return Err(invalid(
+                        "measurement.protocol.version",
+                        format!(
+                            "samples were measured under protocol {} but this compiler measures under {MEASUREMENT_PROTOCOL_VERSION}",
+                            evidence.protocol.version
+                        ),
+                        "re-measure the finalists under the current protocol",
+                    ));
+                }
+            }
+            PlanMeasurement::Unbudgeted | PlanMeasurement::UntimedDevice
+                if self.search_work.measurements != 0 =>
+            {
+                return Err(invalid(
+                    "measurement",
+                    format!(
+                        "unmeasured selection records {} on-device measurements",
+                        self.search_work.measurements
+                    ),
+                    "record measured evidence when samples selected the plan, or record zero samples",
+                ));
+            }
+            PlanMeasurement::Unbudgeted | PlanMeasurement::UntimedDevice => {}
+        }
+        // A reordered region is one whose combines this plan performs in an
+        // order the program did not state, admitted because the region's own
+        // contract prices the difference. The list is derived from a set of
+        // indices into the region contracts beside it, so a decoded list that
+        // repeats an index, states one out of order, points past the contracts,
+        // or points at a region whose storage rounds nothing, is a reordering no
+        // contract on this plan authorized.
+        if self.numeric_budget.version != NUMERIC_CONTRACT_VERSION {
+            return Err(invalid(
+                "numeric_budget.version",
+                format!(
+                    "numeric contracts are stated in shape {} and this compiler states shape {NUMERIC_CONTRACT_VERSION}",
+                    self.numeric_budget.version
+                ),
+                "re-compile the graph so its contracts are stated in the current shape",
+            ));
+        }
+        let mut previous: Option<u32> = None;
+        for region in &self.numeric_budget.reordered {
+            if let Some(earlier) = previous.filter(|earlier| *earlier >= *region) {
+                return Err(invalid(
+                    "numeric_budget.reordered",
+                    format!("region {region} is recorded after region {earlier}"),
+                    "record each reordered region once, in ascending region order",
+                ));
+            }
+            previous = Some(*region);
+            let Some(contract) = self.numeric_budget.regions.get(*region as usize) else {
+                return Err(invalid(
+                    "numeric_budget.reordered",
+                    format!(
+                        "region {region} is reordered and the plan states {} region contracts",
+                        self.numeric_budget.regions.len()
+                    ),
+                    "state one contract per region the plan carries",
+                ));
+            };
+            if contract.storage.is_exact() {
+                return Err(invalid(
+                    "numeric_budget.reordered",
+                    format!(
+                        "region {region} combines in an order the program did not state and holds an exact format"
+                    ),
+                    "record a reordering only for a region whose format rounds",
+                ));
+            }
+        }
+        Ok(())
+    }
+}

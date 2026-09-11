@@ -1,0 +1,43 @@
+[package]
+name = "vyre-libs-reduce"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Workgroup reduction trees, atomic scalar reductions, and prefix scans"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-reduce"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "closure:vyre-libs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["reduce"]
+reduce = []
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-megakernel.workspace = true
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+inventory.workspace = true
+vyre-libs-builder = { workspace = true }
+
+[dev-dependencies]
+proptest.workspace = true
+vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-test-support = { workspace = true, features = ["semantic-parity"] }
+vyre-reference = { workspace = true }
+vyre-driver-reference = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A row-batched contraction accumulates a register tile of outputs per invocation whose shape is derived from the declared extents and the stated per-invocation register budget, and facts that admit no tile leave the untiled candidate selected."

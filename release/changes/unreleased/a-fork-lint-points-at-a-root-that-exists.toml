@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "check-module-forks declared vyre-primitives/src/graph as an authority root. That directory went away when the graph composition moved wholly into vyre-libs, so the lint scanned a root that was not there and reported success over a tree it never opened. It now compares vyre-primitives/src/hardware against vyre-libs/src/device, which is the same ownership boundary between intrinsic operations and composed helpers and is a pair that still exists."

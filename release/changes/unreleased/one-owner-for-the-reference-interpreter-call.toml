@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every contract test in vyre-libs reaches the reference interpreter through the helpers in fixture_bytes rather than calling reference_eval directly. Ninety-six modules stopped building their own Value vectors, sizing their own output buffers, and decoding to_bytes by hand. A trap contract now goes through try_eval_bytes, which shares its body with eval_bytes, so the interpreter is still reached from one place whether the program is expected to run or to refuse."

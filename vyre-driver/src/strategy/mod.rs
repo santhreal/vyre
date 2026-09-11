@@ -7,15 +7,16 @@
 //!
 //! ## Layer 1  -  IR-Level Passes (`vyre-foundation/src/optimizer/passes/`)
 //!
-//! Pure mathematical rewrites that transform `Expr → Expr` in the IR.
-//! Backend-agnostic  -  every backend benefits equally.
+//! Pure mathematical rewrites that transform `Expr → Expr` in the IR. Every
+//! backend benefits equally, and no rewrite here changes what the program
+//! computes: contracting `a * b + c` into one rounding does, so it is a Layer 2
+//! decision and appears in the table below.
 //!
 //! | Pass | Example | Lives In |
 //! |------|---------|----------|
 //! | Strength reduce | `x / 7` → `mulhi(x, M) >> s` | `strength_reduce/` |
 //! | Const fold | `3 + 4` → `7` | `const_fold/` |
 //! | Shift-add decomp | `x * 5` → `(x<<2) + x` | `strength_reduce/` |
-//! | FMA synthesis | `a*b + c` → `fma(a,b,c)` | `strength_reduce/` |
 //! | Exact division | `(x*6)/3` → `x * inv(3)` | `strength_reduce/` |
 //! | Lemire remainder | `x % 7` → `lowbits(x*M)*7>>32` | `strength_reduce/` |
 //!
@@ -28,6 +29,7 @@
 //! |----------|---------|--------|
 //! | primary-binary native multiply-high | backend | `MulHigh` → 1 instruction |
 //! | secondary-text native multiply-high | backend | `MulHigh` → 1 instruction |
+//! | Multiply-add contraction | target permitting it | `a*b + c` → one rounding, denied under `FloatLoweringMode::StrictIeee` |
 //! | 16-bit half-word decomp | target-text fallback | `MulHigh` → 14 ALU ops |
 //! | Dual-issue FP32/INT32 | capable device | Division via FP pipeline |
 //! | Matrix-core batching | capable device | Batched int8 multiply |
@@ -184,160 +186,5 @@ fn polynomial_degree_for(op: TranscendentalOp, argument_bound: f32) -> u8 {
             }
         }
         TranscendentalOp::Exp | TranscendentalOp::Ln => 5,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[derive(Debug)]
-    struct MockNativeStrategy;
-
-    impl LoweringStrategy for MockNativeStrategy {
-        fn name(&self) -> &str {
-            "mock-native"
-        }
-        fn can_apply(&self, caps: &BackendCapabilities, op: &BinOp) -> bool {
-            caps.has_mul_high && matches!(op, BinOp::MulHigh)
-        }
-        fn priority(&self) -> u32 {
-            100
-        }
-        fn lower(&self, _op: &BinOp, left: &Expr, right: &Expr) -> LoweredExpr {
-            // In real impl: emit OpUMulExtended
-            LoweredExpr::Expr(Expr::mulhi(left.clone(), right.clone()))
-        }
-    }
-
-    #[derive(Debug)]
-    struct MockFallbackStrategy;
-
-    impl LoweringStrategy for MockFallbackStrategy {
-        fn name(&self) -> &str {
-            "mock-fallback"
-        }
-        fn can_apply(&self, _caps: &BackendCapabilities, op: &BinOp) -> bool {
-            matches!(op, BinOp::MulHigh)
-        }
-        fn priority(&self) -> u32 {
-            10
-        }
-        fn lower(&self, _op: &BinOp, left: &Expr, right: &Expr) -> LoweredExpr {
-            // In real impl: 16-bit decomposition
-            LoweredExpr::Expr(Expr::mul(left.clone(), right.clone()))
-        }
-    }
-
-    #[test]
-    fn selects_highest_priority() {
-        let strategies: Vec<Box<dyn LoweringStrategy>> =
-            vec![Box::new(MockFallbackStrategy), Box::new(MockNativeStrategy)];
-        let caps = BackendCapabilities {
-            has_mul_high: true,
-            ..Default::default()
-        };
-        let selected = select_strategy(&strategies, &caps, &BinOp::MulHigh);
-        assert_eq!(selected.unwrap().name(), "mock-native");
-    }
-
-    #[test]
-    fn falls_back_when_native_unavailable() {
-        let strategies: Vec<Box<dyn LoweringStrategy>> =
-            vec![Box::new(MockFallbackStrategy), Box::new(MockNativeStrategy)];
-        let caps = BackendCapabilities {
-            has_mul_high: false,
-            ..Default::default()
-        };
-        let selected = select_strategy(&strategies, &caps, &BinOp::MulHigh);
-        assert_eq!(selected.unwrap().name(), "mock-fallback");
-    }
-
-    #[test]
-    fn returns_none_for_unsupported_op() {
-        let strategies: Vec<Box<dyn LoweringStrategy>> = vec![Box::new(MockNativeStrategy)];
-        let caps = BackendCapabilities {
-            has_mul_high: true,
-            ..Default::default()
-        };
-        let selected = select_strategy(&strategies, &caps, &BinOp::Add);
-        assert!(selected.is_none());
-    }
-
-    #[test]
-    fn precision_hint_selects_native_f16_when_supported() {
-        let caps = BackendCapabilities {
-            has_native_f16: true,
-            ..Default::default()
-        };
-        let plan = select_precision_lowering(
-            &caps,
-            &PrecisionHint::F16Eligible {
-                max_abs_operand: 4.0,
-            },
-        );
-        assert_eq!(
-            plan,
-            PrecisionLoweringPlan::NativeF16 {
-                max_abs_operand: 4.0
-            }
-        );
-    }
-
-    #[test]
-    fn precision_hint_keeps_f32_without_native_f16() {
-        let plan = select_precision_lowering(
-            &BackendCapabilities::default(),
-            &PrecisionHint::F16Eligible {
-                max_abs_operand: 4.0,
-            },
-        );
-        assert_eq!(plan, PrecisionLoweringPlan::DefaultF32);
-    }
-
-    #[test]
-    fn transcendental_hint_selects_polynomial_when_supported() {
-        let caps = BackendCapabilities {
-            has_transcendental_polynomial_emit: true,
-            ..Default::default()
-        };
-        let plan = select_precision_lowering(
-            &caps,
-            &PrecisionHint::TranscendentalPolynomial {
-                op: TranscendentalOp::Sin,
-                argument_bound: 0.2,
-            },
-        );
-        assert_eq!(
-            plan,
-            PrecisionLoweringPlan::PolynomialTranscendental {
-                op: TranscendentalOp::Sin,
-                argument_bound: 0.2,
-                degree: 3,
-            }
-        );
-    }
-
-    #[test]
-    fn transcendental_hint_uses_higher_degree_for_wider_sin_range() {
-        let caps = BackendCapabilities {
-            has_transcendental_polynomial_emit: true,
-            ..Default::default()
-        };
-        let plan = select_precision_lowering(
-            &caps,
-            &PrecisionHint::TranscendentalPolynomial {
-                op: TranscendentalOp::Sin,
-                argument_bound: 0.75,
-            },
-        );
-        assert_eq!(
-            plan,
-            PrecisionLoweringPlan::PolynomialTranscendental {
-                op: TranscendentalOp::Sin,
-                argument_bound: 0.75,
-                degree: 5,
-            }
-        );
     }
 }

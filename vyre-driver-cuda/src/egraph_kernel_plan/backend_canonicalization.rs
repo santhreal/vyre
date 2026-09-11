@@ -9,7 +9,7 @@ use vyre_driver::BackendError;
 use vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImage;
 
 use super::{
-    helpers::usize_to_u64, pack_cuda_egraph_canonical_rewrite_device_image,
+    launch_waves::usize_to_u64, pack_cuda_egraph_canonical_rewrite_device_image,
     plan_cuda_egraph_signature_buckets, plan_cuda_egraph_signature_buckets_from_resident_snapshot,
     plan_cuda_egraph_signature_buckets_from_signature_snapshot,
     plan_cuda_egraph_structural_equivalence_launch_artifact_from_plan,

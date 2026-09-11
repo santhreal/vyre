@@ -1,0 +1,5 @@
+name = "vyre-test-support"
+concern = "Provide shared deterministic fixtures and assertions for workspace tests."
+pages = { spec = "vyre-test-support/SPEC.md", readme = "vyre-test-support/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["structure-gate", "vyre-foundation", "vyre-spec"]

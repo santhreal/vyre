@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The duplication scanner lists source files through the shared tree scanner instead of invoking git itself, so one rule decides what counts as a source file in the tree."

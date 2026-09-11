@@ -1,17 +1,18 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRequirements, BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
 use std::collections::HashMap;
 use std::time::Instant;
 use vyre_emit_ptx::{patterns, ComputeCapability};
 use vyre_foundation::ir::{BinOp, DataType};
+use vyre_lower::descriptor_builder::{effect, op};
 use vyre_lower::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-    KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape,
-    MemoryClass,
+    BindingLayout, BindingSlot, BindingVisibility, Dispatch, FragmentValue, KernelBody,
+    KernelDescriptor, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec,
+    MatrixTileShape, MemoryClass,
 };
 
 /// Release benchmark case for CUDA/PTX fast-path pattern coverage.
@@ -95,146 +96,10 @@ impl BenchCase for CudaPtxPatterns {
         _ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let corpus = prepared
-            .downcast_ref::<Vec<KernelDescriptor>>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "CUDA PTX pattern prepared payload type mismatch".to_string(),
-                )
-            })?;
+        let corpus = prepared_as::<Vec<KernelDescriptor>>(prepared, "CUDA PTX pattern")?;
         let started = Instant::now();
         let totals = measure_corpus(corpus)?;
-        let elapsed = started.elapsed().as_nanos() as u64;
-
-        let mut output = Vec::with_capacity(22 * std::mem::size_of::<u64>());
-        for value in [
-            totals.corpus_kernels,
-            totals.predication_candidates,
-            totals.safe_predication_candidates,
-            totals.vec_load_candidates,
-            totals.vec_store_candidates,
-            totals.async_copy_candidates,
-            totals.tensor_core_candidates,
-            totals.ldmatrix_capable_targets,
-            totals.scheduled_fillers,
-            totals.predicated_stores,
-            totals.branch_labels,
-            totals.cp_async_emitted,
-            totals.mma_sync_emitted,
-            totals.vectorized_loads_emitted,
-            totals.vectorized_stores_emitted,
-            totals.vector_kernel_scalar_loads,
-            totals.vector_kernel_scalar_stores,
-            totals.vector_kernel_scalar_index_adds,
-            totals.source_cache_entries,
-            totals.source_cache_hits,
-            totals.source_cache_misses,
-            totals.ptx_bytes_emitted,
-        ] {
-            output.extend_from_slice(&value.to_le_bytes());
-        }
-
-        Ok(BenchRun {
-            metrics: BenchMetrics {
-                wall_ns: Some(elapsed),
-                lower_ns: Some(elapsed),
-                output_bytes: Some(totals.ptx_bytes_emitted),
-                custom: vec![
-                    MetricPoint {
-                        name: "ptx_corpus_kernels".to_string(),
-                        value: totals.corpus_kernels,
-                    },
-                    MetricPoint {
-                        name: "ptx_predication_candidates".to_string(),
-                        value: totals.predication_candidates,
-                    },
-                    MetricPoint {
-                        name: "ptx_safe_predication_candidates".to_string(),
-                        value: totals.safe_predication_candidates,
-                    },
-                    MetricPoint {
-                        name: "ptx_vec_load_candidates".to_string(),
-                        value: totals.vec_load_candidates,
-                    },
-                    MetricPoint {
-                        name: "ptx_vec_store_candidates".to_string(),
-                        value: totals.vec_store_candidates,
-                    },
-                    MetricPoint {
-                        name: "ptx_async_copy_candidates".to_string(),
-                        value: totals.async_copy_candidates,
-                    },
-                    MetricPoint {
-                        name: "ptx_tensor_core_candidates".to_string(),
-                        value: totals.tensor_core_candidates,
-                    },
-                    MetricPoint {
-                        name: "ptx_ldmatrix_capable_targets".to_string(),
-                        value: totals.ldmatrix_capable_targets,
-                    },
-                    MetricPoint {
-                        name: "ptx_scheduled_fillers".to_string(),
-                        value: totals.scheduled_fillers,
-                    },
-                    MetricPoint {
-                        name: "ptx_predicated_stores".to_string(),
-                        value: totals.predicated_stores,
-                    },
-                    MetricPoint {
-                        name: "ptx_branch_labels".to_string(),
-                        value: totals.branch_labels,
-                    },
-                    MetricPoint {
-                        name: "ptx_cp_async_emitted".to_string(),
-                        value: totals.cp_async_emitted,
-                    },
-                    MetricPoint {
-                        name: "ptx_mma_sync_emitted".to_string(),
-                        value: totals.mma_sync_emitted,
-                    },
-                    MetricPoint {
-                        name: "ptx_vectorized_loads_emitted".to_string(),
-                        value: totals.vectorized_loads_emitted,
-                    },
-                    MetricPoint {
-                        name: "ptx_vectorized_stores_emitted".to_string(),
-                        value: totals.vectorized_stores_emitted,
-                    },
-                    MetricPoint {
-                        name: "ptx_vector_kernel_scalar_loads".to_string(),
-                        value: totals.vector_kernel_scalar_loads,
-                    },
-                    MetricPoint {
-                        name: "ptx_vector_kernel_scalar_stores".to_string(),
-                        value: totals.vector_kernel_scalar_stores,
-                    },
-                    MetricPoint {
-                        name: "ptx_vector_kernel_scalar_index_adds".to_string(),
-                        value: totals.vector_kernel_scalar_index_adds,
-                    },
-                    MetricPoint {
-                        name: "cuda_ptx_source_cache_entries".to_string(),
-                        value: totals.source_cache_entries,
-                    },
-                    MetricPoint {
-                        name: "cuda_ptx_source_cache_hits".to_string(),
-                        value: totals.source_cache_hits,
-                    },
-                    MetricPoint {
-                        name: "cuda_ptx_source_cache_misses".to_string(),
-                        value: totals.source_cache_misses,
-                    },
-                    MetricPoint {
-                        name: "ptx_bytes_emitted".to_string(),
-                        value: totals.ptx_bytes_emitted,
-                    },
-                ],
-                ..Default::default()
-            },
-            baseline_metrics: None,
-            outputs: vec![output],
-            baseline_outputs: None,
-        })
+        Ok(ptx_pattern_bench_run(&totals, elapsed_ns(started)))
     }
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
@@ -277,6 +142,109 @@ impl BenchCase for CudaPtxPatterns {
             });
         }
         Ok(Correctness::Exact)
+    }
+}
+
+/// The metric roster and payload the case reports for one corpus measurement.
+///
+/// `kernel_launches` is stated as zero here because the corpus is a compiler
+/// proof: it emits PTX and dispatches nothing. Assembly is a function so the
+/// launch-count contract has one definition instead of one per caller.
+fn ptx_pattern_bench_run(totals: &PtxPatternTotals, elapsed: u64) -> BenchRun {
+    let words = [
+        totals.corpus_kernels,
+        totals.predication_candidates,
+        totals.safe_predication_candidates,
+        totals.vec_load_candidates,
+        totals.vec_store_candidates,
+        totals.async_copy_candidates,
+        totals.tensor_core_candidates,
+        totals.ldmatrix_capable_targets,
+        totals.scheduled_fillers,
+        totals.predicated_stores,
+        totals.branch_labels,
+        totals.cp_async_emitted,
+        totals.mma_sync_emitted,
+        totals.vectorized_loads_emitted,
+        totals.vectorized_stores_emitted,
+        totals.vector_kernel_scalar_loads,
+        totals.vector_kernel_scalar_stores,
+        totals.vector_kernel_scalar_index_adds,
+        totals.source_cache_entries,
+        totals.source_cache_hits,
+        totals.source_cache_misses,
+        totals.ptx_bytes_emitted,
+    ];
+    let mut output = Vec::with_capacity(words.len() * std::mem::size_of::<u64>());
+    for value in words {
+        output.extend_from_slice(&value.to_le_bytes());
+    }
+
+    let custom = [
+        ("ptx_corpus_kernels", totals.corpus_kernels),
+        ("ptx_predication_candidates", totals.predication_candidates),
+        (
+            "ptx_safe_predication_candidates",
+            totals.safe_predication_candidates,
+        ),
+        ("ptx_vec_load_candidates", totals.vec_load_candidates),
+        ("ptx_vec_store_candidates", totals.vec_store_candidates),
+        ("ptx_async_copy_candidates", totals.async_copy_candidates),
+        ("ptx_tensor_core_candidates", totals.tensor_core_candidates),
+        (
+            "ptx_ldmatrix_capable_targets",
+            totals.ldmatrix_capable_targets,
+        ),
+        ("ptx_scheduled_fillers", totals.scheduled_fillers),
+        ("ptx_predicated_stores", totals.predicated_stores),
+        ("ptx_branch_labels", totals.branch_labels),
+        ("ptx_cp_async_emitted", totals.cp_async_emitted),
+        ("ptx_mma_sync_emitted", totals.mma_sync_emitted),
+        (
+            "ptx_vectorized_loads_emitted",
+            totals.vectorized_loads_emitted,
+        ),
+        (
+            "ptx_vectorized_stores_emitted",
+            totals.vectorized_stores_emitted,
+        ),
+        (
+            "ptx_vector_kernel_scalar_loads",
+            totals.vector_kernel_scalar_loads,
+        ),
+        (
+            "ptx_vector_kernel_scalar_stores",
+            totals.vector_kernel_scalar_stores,
+        ),
+        (
+            "ptx_vector_kernel_scalar_index_adds",
+            totals.vector_kernel_scalar_index_adds,
+        ),
+        ("cuda_ptx_source_cache_entries", totals.source_cache_entries),
+        ("cuda_ptx_source_cache_hits", totals.source_cache_hits),
+        ("cuda_ptx_source_cache_misses", totals.source_cache_misses),
+        ("kernel_launches", 0),
+        ("cuda_kernel_launches", 0),
+        ("ptx_bytes_emitted", totals.ptx_bytes_emitted),
+    ];
+
+    BenchRun {
+        metrics: BenchMetrics {
+            wall_ns: Some(elapsed),
+            lower_ns: Some(elapsed),
+            output_bytes: Some(totals.ptx_bytes_emitted),
+            custom: custom
+                .into_iter()
+                .map(|(name, value)| MetricPoint {
+                    name: name.to_string(),
+                    value,
+                })
+                .collect(),
+            ..Default::default()
+        },
+        baseline_metrics: None,
+        outputs: vec![output],
+        baseline_outputs: None,
     }
 }
 
@@ -424,14 +392,14 @@ fn predicated_literal_store_kernel() -> KernelDescriptor {
         dispatch: Dispatch::new(64, 1, 1),
         body: KernelBody {
             ops: vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::Literal, vec![1], Some(1)),
-                op(KernelOpKind::StructuredIfThen, vec![0, 0], None),
+                op(KernelOpKind::Literal, vec![0], 0),
+                op(KernelOpKind::Literal, vec![1], 1),
+                effect(KernelOpKind::StructuredIfThen, vec![0, 0]),
             ],
             child_bodies: vec![KernelBody {
                 ops: vec![
-                    op(KernelOpKind::Literal, vec![0], Some(20)),
-                    op(KernelOpKind::StoreGlobal, vec![0, 1, 20], None),
+                    op(KernelOpKind::Literal, vec![0], 20),
+                    effect(KernelOpKind::StoreGlobal, vec![0, 1, 20]),
                 ],
                 child_bodies: vec![],
                 literals: vec![LiteralValue::U32(13)],
@@ -450,9 +418,9 @@ fn predicated_else_store_kernel() -> KernelDescriptor {
         dispatch: Dispatch::new(64, 1, 1),
         body: KernelBody {
             ops: vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::Literal, vec![1], Some(1)),
-                op(KernelOpKind::StructuredIfThenElse, vec![0, 0, 1], None),
+                op(KernelOpKind::Literal, vec![0], 0),
+                op(KernelOpKind::Literal, vec![1], 1),
+                effect(KernelOpKind::StructuredIfThenElse, vec![0, 0, 1]),
             ],
             child_bodies: vec![store_child(20, 21), store_child(21, 34)],
             literals: vec![LiteralValue::Bool(true), LiteralValue::U32(0)],
@@ -463,8 +431,8 @@ fn predicated_else_store_kernel() -> KernelDescriptor {
 fn store_child(result_id: u32, value: u32) -> KernelBody {
     KernelBody {
         ops: vec![
-            op(KernelOpKind::Literal, vec![0], Some(result_id)),
-            op(KernelOpKind::StoreGlobal, vec![0, 1, result_id], None),
+            op(KernelOpKind::Literal, vec![0], result_id),
+            effect(KernelOpKind::StoreGlobal, vec![0, 1, result_id]),
         ],
         child_bodies: vec![],
         literals: vec![LiteralValue::U32(value)],
@@ -480,22 +448,22 @@ fn vector_load_store_kernel() -> KernelDescriptor {
         dispatch: Dispatch::new(64, 1, 1),
         body: KernelBody {
             ops: vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::Literal, vec![1], Some(1)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(10)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 1], Some(2)),
-                op(KernelOpKind::LoadGlobal, vec![0, 2], Some(11)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![2, 1], Some(3)),
-                op(KernelOpKind::LoadGlobal, vec![0, 3], Some(12)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![3, 1], Some(4)),
-                op(KernelOpKind::LoadGlobal, vec![0, 4], Some(13)),
-                op(KernelOpKind::StoreGlobal, vec![1, 0, 10], None),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 1], Some(5)),
-                op(KernelOpKind::StoreGlobal, vec![1, 5, 11], None),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![5, 1], Some(6)),
-                op(KernelOpKind::StoreGlobal, vec![1, 6, 12], None),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![6, 1], Some(7)),
-                op(KernelOpKind::StoreGlobal, vec![1, 7, 13], None),
+                op(KernelOpKind::Literal, vec![0], 0),
+                op(KernelOpKind::Literal, vec![1], 1),
+                op(KernelOpKind::LoadGlobal, vec![0, 0], 10),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 1], 2),
+                op(KernelOpKind::LoadGlobal, vec![0, 2], 11),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![2, 1], 3),
+                op(KernelOpKind::LoadGlobal, vec![0, 3], 12),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![3, 1], 4),
+                op(KernelOpKind::LoadGlobal, vec![0, 4], 13),
+                effect(KernelOpKind::StoreGlobal, vec![1, 0, 10]),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 1], 5),
+                effect(KernelOpKind::StoreGlobal, vec![1, 5, 11]),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![5, 1], 6),
+                effect(KernelOpKind::StoreGlobal, vec![1, 6, 12]),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![6, 1], 7),
+                effect(KernelOpKind::StoreGlobal, vec![1, 7, 13]),
             ],
             child_bodies: vec![],
             literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
@@ -512,13 +480,13 @@ fn scheduled_load_gap_kernel() -> KernelDescriptor {
         dispatch: Dispatch::new(64, 1, 1),
         body: KernelBody {
             ops: vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::Literal, vec![1], Some(1)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(2)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![2, 1], Some(3)),
-                op(KernelOpKind::Literal, vec![2], Some(4)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![4, 1], Some(5)),
-                op(KernelOpKind::StoreGlobal, vec![1, 0, 3], None),
+                op(KernelOpKind::Literal, vec![0], 0),
+                op(KernelOpKind::Literal, vec![1], 1),
+                op(KernelOpKind::LoadGlobal, vec![0, 0], 2),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![2, 1], 3),
+                op(KernelOpKind::Literal, vec![2], 4),
+                op(KernelOpKind::BinOpKind(BinOp::Add), vec![4, 1], 5),
+                effect(KernelOpKind::StoreGlobal, vec![1, 0, 3]),
             ],
             child_bodies: vec![],
             literals: vec![
@@ -556,9 +524,9 @@ fn cp_async_candidate_kernel() -> KernelDescriptor {
         dispatch: Dispatch::new(64, 1, 1),
         body: KernelBody {
             ops: vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::LoadGlobal, vec![0, 0], Some(1)),
-                op(KernelOpKind::StoreShared, vec![1, 0, 1], None),
+                op(KernelOpKind::Literal, vec![0], 0),
+                op(KernelOpKind::LoadGlobal, vec![0, 0], 1),
+                effect(KernelOpKind::StoreShared, vec![1, 0, 1]),
             ],
             child_bodies: vec![],
             literals: vec![LiteralValue::U32(0)],
@@ -592,14 +560,10 @@ fn async_copy_emit_kernel() -> KernelDescriptor {
         dispatch: Dispatch::new(64, 1, 1),
         body: KernelBody {
             ops: vec![
-                op(KernelOpKind::Literal, vec![0], Some(0)),
-                op(KernelOpKind::Literal, vec![1], Some(1)),
-                op(
-                    KernelOpKind::AsyncLoad { tag: "tile".into() },
-                    vec![0, 1, 0, 1],
-                    None,
-                ),
-                op(KernelOpKind::AsyncWait { tag: "tile".into() }, vec![], None),
+                op(KernelOpKind::Literal, vec![0], 0),
+                op(KernelOpKind::Literal, vec![1], 1),
+                effect(KernelOpKind::async_load("tile".into()), vec![0, 1, 0, 1]),
+                effect(KernelOpKind::async_wait("tile".into()), vec![]),
             ],
             child_bodies: vec![],
             literals: vec![LiteralValue::U32(0), LiteralValue::U32(256)],
@@ -612,10 +576,10 @@ fn tensor_core_candidate_kernel() -> KernelDescriptor {
     let mut literals = Vec::new();
     for id in 0..3 {
         literals.push(LiteralValue::F32(id as f32));
-        ops.push(op(KernelOpKind::Literal, vec![id], Some(id)));
+        ops.push(op(KernelOpKind::Literal, vec![id], id));
     }
     for result in 3..11 {
-        ops.push(op(KernelOpKind::Fma, vec![0, 1, 2], Some(result)));
+        ops.push(op(KernelOpKind::Fma, vec![0, 1, 2], result));
     }
     KernelDescriptor {
         id: "ptx_tensor_core_candidate".to_string(),
@@ -634,23 +598,29 @@ fn matrix_mma_emit_kernel() -> KernelDescriptor {
     let mut literals = Vec::new();
     for id in 0..6 {
         literals.push(LiteralValue::U32(id));
-        ops.push(op(KernelOpKind::Literal, vec![id], Some(id)));
+        ops.push(op(KernelOpKind::Literal, vec![id], id));
     }
     for id in 6..10 {
         literals.push(LiteralValue::F32(0.0));
-        ops.push(op(KernelOpKind::Literal, vec![id], Some(id)));
+        ops.push(op(KernelOpKind::Literal, vec![id], id));
     }
     ops.push(op(
-        KernelOpKind::MatrixMma {
-            shape: MatrixMmaShape::M16N8K16,
-            a_layout: MatrixMmaLayout::RowMajor,
-            b_layout: MatrixMmaLayout::ColMajor,
-            a_type: MatrixMmaElement::F16,
-            b_type: MatrixMmaElement::F16,
-            accum_type: MatrixMmaElement::F32,
-        },
-        (0..10).collect(),
-        Some(10),
+        KernelOpKind::MatrixMma(Box::new(MatrixMmaSpec {
+            tile: MatrixTileShape { m: 16, n: 8, k: 16 },
+            left: FragmentValue::in_registers(MatrixMmaElement::F16, MatrixMmaLayout::RowMajor, 32),
+            right: FragmentValue::in_registers(
+                MatrixMmaElement::F16,
+                MatrixMmaLayout::ColMajor,
+                32,
+            ),
+            accumulator: FragmentValue::in_registers(
+                MatrixMmaElement::F32,
+                MatrixMmaLayout::RowMajor,
+                32,
+            ),
+        })),
+        (0..10).collect::<Vec<u32>>(),
+        10,
     ));
     KernelDescriptor {
         id: "ptx_matrix_mma_emit".to_string(),
@@ -661,14 +631,6 @@ fn matrix_mma_emit_kernel() -> KernelDescriptor {
             child_bodies: vec![],
             literals,
         },
-    }
-}
-
-fn op(kind: KernelOpKind, operands: Vec<u32>, result: Option<u32>) -> KernelOp {
-    KernelOp {
-        kind,
-        operands,
-        result,
     }
 }
 
@@ -695,4 +657,69 @@ fn decode_words(run: &BenchRun) -> Result<Vec<u64>, BenchError> {
 
 inventory::submit! {
     &CudaPtxPatterns as &dyn BenchCase
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ptx_patterns_case_registered_identity_and_requirements() {
+        let case = CudaPtxPatterns;
+        assert_eq!(case.id().0, "cuda.ptx.patterns.release.corpus");
+        let metadata = case.metadata();
+        assert_eq!(metadata.owner_crate, "vyre-emit-ptx");
+        assert_eq!(metadata.name, "CUDA PTX Pattern Release Corpus");
+        let requirements = case.requirements();
+        assert!(
+            !requirements.needs_gpu,
+            "Fix: PTX pattern corpus is a non-dispatch compiler proof workload"
+        );
+    }
+
+    /// WHY: the corpus dispatches nothing, so a consumer reading launch counts
+    /// must see an explicit zero rather than a missing metric. The run the case
+    /// reports is assembled here, from the same function `run` returns, so the
+    /// assertion fails if that roster drops either launch metric or states a
+    /// nonzero count. It does not cover `run` itself, which needs a device
+    /// context: what it covers is the roster and the payload width `verify`
+    /// decodes.
+    #[test]
+    fn ptx_patterns_run_emits_explicit_zero_kernel_launches() {
+        let prepared: PreparedCase = Box::new(corpus());
+        let totals = measure_corpus(
+            prepared_as::<Vec<KernelDescriptor>>(&prepared, "CUDA PTX pattern")
+                .expect("prepared case must downcast"),
+        )
+        .expect("measure_corpus must succeed");
+
+        assert!(totals.corpus_kernels >= 4);
+        assert!(totals.ptx_bytes_emitted > 0);
+
+        let run = ptx_pattern_bench_run(&totals, 1);
+
+        for name in ["kernel_launches", "cuda_kernel_launches"] {
+            let metric = run
+                .metrics
+                .custom
+                .iter()
+                .find(|point| point.name == name)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Fix: non-dispatch PTX pattern benchmark must emit an explicit `{name}` metric"
+                    )
+                });
+            assert_eq!(
+                metric.value, 0,
+                "Fix: non-dispatch PTX pattern benchmark must report 0 for `{name}`"
+            );
+        }
+
+        let words = decode_words(&run).expect("decode_words must succeed");
+        assert_eq!(
+            words.len(),
+            22,
+            "Fix: the payload width must match the 22 words `verify` destructures"
+        );
+    }
 }

@@ -10,20 +10,18 @@
     feature = "math-broadcast",
     feature = "nn-activation",
     feature = "nn-linear",
-    feature = "matching-substring",
-    feature = "crypto-fnv",
+    feature = "pattern-substring",
 ))]
 
 use vyre::ir::{BufferAccess, MemoryKind, Program};
-use vyre_libs::scan::substring_search;
-use vyre_libs::hash::fnv1a32;
 use vyre_libs::math::broadcast::broadcast;
 use vyre_libs::math::linalg::{dot, matmul};
 use vyre_libs::math::scan::scan_prefix_sum;
 use vyre_libs::nn::{activation::relu, linear::linear};
+use vyre_libs::pattern::substring_search;
 
 fn assert_valid(p: &Program) {
-    let errors = vyre::ir::validate(p);
+    let errors = vyre::validate(p);
     assert!(
         errors.is_empty(),
         "Program failed validation: {:?}",
@@ -118,15 +116,7 @@ fn nn_relu_produces_valid_program() {
 fn matching_substring_produces_valid_program() {
     let p = substring_search("haystack", "needle", "matches", 16, 5);
     assert_valid(&p);
-    assert_wrapped_in_region(&p, "vyre-libs::scan::substring_search");
-}
-
-#[test]
-fn crypto_fnv1a32_produces_valid_program() {
-    let p = fnv1a32("data", "hash");
-    assert_valid(&p);
-    assert_wrapped_in_region(&p, "vyre-libs::hash::fnv1a32");
-    assert_eq!(p.workgroup_size(), [1, 1, 1]);
+    assert_wrapped_in_region(&p, "vyre-libs::pattern::substring_search");
 }
 
 #[test]
@@ -141,7 +131,6 @@ fn every_public_fn_returns_program_with_buffers() {
     assert!(linear("x", "w", "b", "o", 2, 2).unwrap().buffers().len() >= 4);
     assert!(relu("i", "o", 8).buffers().len() >= 2);
     assert!(substring_search("h", "n", "m", 8, 1).buffers().len() >= 3);
-    assert!(fnv1a32("d", "h").buffers().len() >= 2);
 }
 
 #[test]

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Release benchmark commands now run 300 warmup samples before measurement so accelerator clock preconditioning is explicit and reproducible."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Artifact completion resource projection includes all declared Output lifetime resources regardless of retained predecessors, resolving graph output omission on backends requiring whole-grid synchronization cuts."

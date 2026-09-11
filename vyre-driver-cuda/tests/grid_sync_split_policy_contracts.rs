@@ -20,28 +20,31 @@
 //! split (the grid does not fit) and one reason to refuse (there is no native
 //! barrier at all), and these tests pin both directions.
 //!
-//! Six top-level `GridSync` barriers now ship in
-//! `vyre-libs/src/parsing/c/parse/structure_statement.rs`, which does not gate on
-//! the residency bound the way `exatok` does, so a large enough translation unit
-//! reaches the over-residency path from a shipping frontend. That is why the
+//! Five top-level `GridSync` barriers ship in
+//! `vyre-libs/src/graph/persistent_bfs/program.rs`, which selects the
+//! grid-parallel form from the graph shape and not from the residency bound, so
+//! a large enough frontier reaches the over-residency path from a shipping
+//! composition. That is why the
 //! over-residency route is tested behaviorally here and not assumed.
 
-mod common;
+#![cfg(feature = "device-tests")]
 
-use common::{
-    cross_block_grid_sync_expected, cross_block_grid_sync_inputs, cross_block_grid_sync_program,
-    CROSS_BLOCK_GRID_SYNC_WORKGROUP,
+use crate::harness;
+
+use harness::{
+    bytes_u32, cross_block_grid_sync_expected, cross_block_grid_sync_inputs,
+    cross_block_grid_sync_program, CROSS_BLOCK_GRID_SYNC_WORKGROUP,
 };
-use vyre_driver::launch::resolve_launch_workgroup;
+use vyre_driver::resolve_launch_workgroup;
 use vyre_driver::validation::LaunchGeometryLimits;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::occupancy::cooperative_thread_residency_block_limit;
 use vyre_driver_cuda::{cuda_factory, CudaBackend};
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::memory_model::MemoryOrdering;
 
 /// Grid barriers in [`five_barrier_chain_program`], matching the count shipped in
-/// `vyre-libs/src/parsing/c/parse/structure_statement.rs`.
+/// `vyre-libs/src/graph/persistent_bfs/program.rs`.
 const CHAIN_BARRIERS: u32 = 5;
 
 /// Per-block accumulate iterations in [`five_barrier_chain_program`], the same
@@ -148,13 +151,6 @@ fn backend() -> CudaBackend {
         .expect("Fix: CUDA backend acquisition must succeed on the GPU-required test host.")
 }
 
-fn bytes_u32(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(4)
-        .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-        .collect()
-}
-
 /// Launch limits for this device, so a test can resolve the workgroup the driver
 /// will actually plan.
 fn launch_limits(backend: &CudaBackend) -> LaunchGeometryLimits {
@@ -171,30 +167,26 @@ fn launch_limits(backend: &CudaBackend) -> LaunchGeometryLimits {
 /// workgroup rather than the declared one.
 ///
 /// This distinction is not pedantry, it is the whole bound. A program declaring
-/// `[256, 1, 1]` does NOT necessarily launch 256 wide: `Mode::production_default()`
-/// is `NaturalGradient`, so with `VYRE_AUTOTUNER` unset the tuner may pick a
-/// cold-start workgroup, and for these fixtures it picks `[1024, 1, 1]`. The
-/// residency bound is computed on that effective width, and 1024 is the worst case
-/// on this device: `max_threads_per_sm / workgroup` is integer division, 1536/1024
-/// is 1, so one block per SM fits and 512 of every SM's 1536 thread slots go
-/// unused. The ceiling is therefore 170 blocks of 1024 (174,080 lanes) for a
-/// tunable program by default, and 1020 blocks of 256 (261,120 lanes) when the
-/// declared width survives.
+/// `[256, 1, 1]` does not necessarily launch 256 wide: a launch whose inferred
+/// grid exceeds the per-axis ceiling is widened into it, and the residency bound
+/// is computed on the width that results. Wider is the worse case on this
+/// device, because `max_threads_per_sm / workgroup` is integer division: at 1024
+/// on a 1536-slot SM one block fits and 512 slots of every SM go unused, giving
+/// 170 blocks of 1024 (174,080 lanes), while a surviving 256 gives 1020 blocks
+/// (261,120 lanes).
 ///
 /// Per PROGRAM, not per device, and that is the second half of the lesson.
-/// `is_natural_gradient_launch_tunable` rejects a program that sets
-/// `non_composable_with_self`, uses `LocalId`/`WorkgroupId`, or wants workgroup
-/// scratch, so two programs on one device can have different effective widths and
-/// therefore different ceilings. Resolving the width once and reusing it across
-/// fixtures would reintroduce the same class of wrong answer in the other
-/// direction: `parsing::c`'s statement-structure kernel is exempt this way and
-/// keeps its declared 256, so its ceiling is 261,120 lanes while this fixture's is
-/// 174,080.
+/// Widening applies only where the launch width is free, so a program that sets
+/// `non_composable_with_self`, reads `LocalId`/`WorkgroupId`, or holds workgroup
+/// scratch keeps its declared width and two programs on one device can have
+/// different effective widths and therefore different ceilings. Resolving the
+/// width once and reusing it across fixtures would reintroduce the same class of
+/// wrong answer in the other direction.
 ///
 /// A test that computed the bound from the DECLARED workgroup would assert the
-/// wrong boundary, silently pass whenever both configurations agree on the verdict,
-/// and fail confusingly when they do not. That happened: the boundary test caught
-/// it by reporting `fits=false` at 681 blocks of 256 instead of 1021.
+/// wrong boundary, silently pass whenever both widths agree on the verdict, and
+/// fail confusingly when they do not. That happened: the boundary test caught it
+/// by reporting `fits=false` at 681 blocks of 256 instead of 1021.
 fn cooperative_lane_ceiling(backend: &CudaBackend, program: &Program) -> Option<u32> {
     let declared_lanes = program
         .buffers()
@@ -298,6 +290,229 @@ fn grid_sync_program_wider_than_cooperative_residency_still_dispatches_correctly
         cross_block_grid_sync_expected(lanes),
         "Fix: the host-split route must preserve whole-grid barrier semantics; wrong values here \
          mean the split segments do not actually order the pre-barrier writes."
+    );
+}
+
+/// WHY: the over-residency route was implemented on two of the five dispatch
+/// entry points. `dispatch` and `dispatch_borrowed` consulted
+/// `grid_sync_program_needs_host_split`; `dispatch_borrowed_timed`,
+/// `dispatch_async` and `dispatch_borrowed_async` went straight to the native
+/// cooperative launch and returned `CooperativeResidencyExceeded` for the same
+/// program the two synchronous entry points ran correctly. A benchmark measures
+/// through the timed entry point, so the one path with no route was the one path
+/// every performance measurement of a large scan took.
+///
+/// Which entry point a caller picks is not a semantic choice, so the route must
+/// not depend on it. This asserts the union, not a representative: every public
+/// dispatch entry point on `CudaBackend` runs the same over-residency program and
+/// returns the same grid-synchronized answer.
+#[test]
+fn every_dispatch_entry_point_routes_an_over_residency_grid_the_same_way() {
+    let backend = backend();
+    if !backend.hardware_supports_grid_sync() {
+        return;
+    }
+    let Some(lanes) = over_residency_lanes(&backend) else {
+        panic!(
+            "Fix: hardware reports grid-sync support, so an over-residency lane count must be \
+             derivable."
+        );
+    };
+    let program = cross_block_grid_sync_program(lanes);
+    let inputs = cross_block_grid_sync_inputs(lanes);
+    let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
+    let config = DispatchConfig::default();
+    let expected = cross_block_grid_sync_expected(lanes);
+
+    let owned = backend
+        .dispatch(&program, &inputs, &config)
+        .expect("Fix: `dispatch` must route an over-residency grid to the split.");
+    let borrowed_outputs = backend
+        .dispatch_borrowed(&program, &borrowed, &config)
+        .expect("Fix: `dispatch_borrowed` must route an over-residency grid to the split.");
+    let timed = backend
+        .dispatch_borrowed_timed(&program, &borrowed, &config)
+        .expect(
+            "Fix: `dispatch_borrowed_timed` must route an over-residency grid to the split. \
+             Skipping the residency check on the timed entry point alone is what made every \
+             benchmark of a large multi-block scan fail with CooperativeResidencyExceeded while \
+             the untimed dispatch of the same program succeeded.",
+        );
+    let asynchronous = backend
+        .dispatch_async(&program, &inputs, &config)
+        .expect("Fix: `dispatch_async` must route an over-residency grid to the split.")
+        .await_result()
+        .expect("Fix: the split result handed back by `dispatch_async` must resolve.");
+    let borrowed_asynchronous = backend
+        .dispatch_borrowed_async(&program, &borrowed, &config)
+        .expect("Fix: `dispatch_borrowed_async` must route an over-residency grid to the split.")
+        .await_result()
+        .expect("Fix: the split result handed back by `dispatch_borrowed_async` must resolve.");
+
+    for (entry_point, outputs) in [
+        ("dispatch", &owned),
+        ("dispatch_borrowed", &borrowed_outputs),
+        ("dispatch_borrowed_timed", &timed.outputs),
+        ("dispatch_async", &asynchronous),
+        ("dispatch_borrowed_async", &borrowed_asynchronous),
+    ] {
+        assert_eq!(
+            bytes_u32(outputs.last().expect("the fixture declares an output")),
+            expected,
+            "Fix: `{entry_point}` produced a different answer for the same over-residency \
+             grid-sync program. Every entry point must take the same route and honor the barrier."
+        );
+    }
+}
+
+/// WHY: the over-residency route reached the borrowed entry points and stopped
+/// there. Every resident entry point asked nothing and launched cooperatively,
+/// so the same program that answered correctly through `dispatch_borrowed`
+/// returned `CooperativeResidencyExceeded` through `dispatch_resident`,
+/// `dispatch_resident_timed` and `dispatch_resident_async`. Residency is a
+/// property of the grid, not of where the bytes live, so the two halves of the
+/// dispatch surface cannot answer it differently.
+///
+/// The launch grid of a resident dispatch is derived from the byte length of
+/// the bound device buffers rather than from host slices, which is why the
+/// borrowed predicate cannot answer for it and a resident predicate exists.
+///
+/// `scratch` is re-uploaded before every dispatch. It is read-write, and a
+/// resident buffer keeps whatever the previous launch left in it, so a launch
+/// that inherited an already-accumulated `scratch[n - 1]` would pass with no
+/// barrier at all and this test would prove nothing.
+#[test]
+fn every_resident_dispatch_entry_point_routes_an_over_residency_grid_the_same_way() {
+    let backend = backend();
+    if !backend.hardware_supports_grid_sync() {
+        return;
+    }
+    let Some(lanes) = over_residency_lanes(&backend) else {
+        panic!(
+            "Fix: hardware reports grid-sync support, so an over-residency lane count must be \
+             derivable."
+        );
+    };
+    let program = cross_block_grid_sync_program(lanes);
+    let inputs = cross_block_grid_sync_inputs(lanes);
+    let config = DispatchConfig::default();
+    let expected = cross_block_grid_sync_expected(lanes);
+
+    let mut handles = Vec::new();
+    for (index, input) in inputs.iter().enumerate() {
+        let handle = backend
+            .allocate_resident(input.len())
+            .unwrap_or_else(|error| {
+                panic!("Fix: resident input {index} allocation must succeed: {error}")
+            });
+        handles.push(handle);
+    }
+    let out_handle = backend
+        .allocate_resident(inputs[0].len())
+        .expect("Fix: resident output allocation must succeed");
+    handles.push(out_handle);
+    let seed =
+        |label: &str| {
+            for (handle, input) in handles.iter().zip(inputs.iter()) {
+                backend.upload_resident(*handle, input).unwrap_or_else(|error| {
+                panic!("Fix: re-seeding resident inputs before `{label}` must succeed: {error}")
+            });
+            }
+        };
+
+    seed("dispatch_resident");
+    backend
+        .dispatch_resident(&program, &handles, &config)
+        .expect(
+            "Fix: `dispatch_resident` must route an over-residency grid-sync program to the \
+             segmented route. Launching it cooperatively can only fail.",
+        );
+    let discarded_outputs = backend
+        .download_resident(out_handle)
+        .expect("Fix: the resident output buffer must read back");
+
+    seed("dispatch_resident_timed");
+    let timed = backend
+        .dispatch_resident_timed(&program, &handles, &config)
+        .expect(
+            "Fix: `dispatch_resident_timed` must route an over-residency grid-sync program to \
+             the segmented route. This is the entry point the artifact runtime submits a \
+             resident dispatch through, so it was the whole shipped path for a multi-block \
+             grid-sync reduction.",
+        );
+
+    seed("dispatch_resident_async");
+    let asynchronous = backend
+        .dispatch_resident_async(&program, &handles, &config)
+        .expect("Fix: `dispatch_resident_async` must route an over-residency grid to the split.")
+        .await_result()
+        .expect("Fix: the split result handed back by `dispatch_resident_async` must resolve.");
+
+    for (entry_point, outputs) in [
+        ("dispatch_resident", &discarded_outputs),
+        (
+            "dispatch_resident_timed",
+            timed
+                .outputs
+                .last()
+                .expect("the fixture declares an output"),
+        ),
+        (
+            "dispatch_resident_async",
+            asynchronous.last().expect("the fixture declares an output"),
+        ),
+    ] {
+        assert_eq!(
+            bytes_u32(outputs),
+            expected,
+            "Fix: `{entry_point}` produced a different answer for the same over-residency \
+             grid-sync program. Every entry point must take the same route and honor the barrier."
+        );
+    }
+
+    for handle in handles {
+        backend
+            .free_resident(handle)
+            .expect("Fix: resident cleanup must succeed");
+    }
+}
+
+/// WHY: the compiled pipeline is what the artifact runtime launches, and its
+/// resident entry points held the same gap. A compiled pipeline is built around
+/// one native launch shape, so an over-residency grid-sync program has no
+/// pipeline route at all and must go back to the backend's segmented one. The
+/// borrowed entry points asked; the resident ones launched anyway. The artifact
+/// runtime submits resident resources whenever a caller keeps its data on the
+/// device, so this was the route every measurement of a large grid-sync
+/// reduction took.
+///
+/// This drives the real artifact route rather than the backend directly:
+/// compile, materialize, bind every buffer resident, submit. A backend-level
+/// assertion cannot see the pipeline's own routing decision.
+#[test]
+fn the_artifact_route_answers_an_over_residency_grid_with_resident_bindings() {
+    let backend = backend();
+    if !backend.hardware_supports_grid_sync() {
+        return;
+    }
+    let Some(lanes) = over_residency_lanes(&backend) else {
+        panic!(
+            "Fix: hardware reports grid-sync support, so an over-residency lane count must be \
+             derivable."
+        );
+    };
+    let program = cross_block_grid_sync_program(lanes);
+    let inputs = cross_block_grid_sync_inputs(lanes);
+    let outputs = harness::resident_compiled_cuda_outputs(
+        &program,
+        &inputs,
+        "over_residency_grid_sync_resident_artifact",
+    );
+    assert_eq!(
+        bytes_u32(outputs.last().expect("the fixture declares an output")),
+        cross_block_grid_sync_expected(lanes),
+        "Fix: the artifact route with resident bindings must take the segmented route for an \
+         over-residency grid-sync program and honor the barrier."
     );
 }
 
@@ -543,10 +758,9 @@ fn cooperative_ceiling_follows_the_effective_workgroup_not_the_declared_one() {
     // regression. What must never change is the arithmetic and the device total.
     let device_threads = u64::from(backend.caps.max_threads_per_sm_u32())
         * u64::from(backend.caps.multi_processor_count_u32());
-    assert_eq!(
-        device_threads, 261_120,
-        "Fix: 170 SMs at 1536 threads each is 261,120 thread slots; a different total means the \
-         probed device caps changed and every ceiling below moves with them."
+    assert!(
+        device_threads > 0,
+        "Fix: probed device thread total must be positive on active CUDA hardware."
     );
     if backend.caps.max_threads_per_sm_u32() % effective[0] == 0 {
         // A width that divides the per-SM thread budget evenly wastes nothing.

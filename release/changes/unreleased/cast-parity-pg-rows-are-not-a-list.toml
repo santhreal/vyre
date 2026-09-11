@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`c_frontend::parity_matrix::assert_pg_mirrors_every_vast_row` checks the property graph against the typed VAST at every row a fixture produces, and asserts the row count equals the token count so the span columns cannot compare unrelated rows. The lowerer emits one graph row per VAST row, so that is its whole contract; each family previously pinned a hand-written index list for a few of its cases, which is a member set that goes stale in silence, and the rows those lists left out were the ones nothing covered."

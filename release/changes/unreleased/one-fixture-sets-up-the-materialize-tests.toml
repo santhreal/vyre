@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The materialize test modules share one fixture module. The compile request, payload format, target profile, launch geometry, resource binding and instance core are constructed in one place, so a change to the fixture device or search budget reaches both modules."

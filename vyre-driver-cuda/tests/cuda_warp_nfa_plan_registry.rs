@@ -1,5 +1,7 @@
 //! Cuda warp nfa plan registry test suite.
 
+#![cfg(feature = "device-tests")]
+
 const PLANS: &str = include_str!("../../docs/optimization/CUDA_WARP_NFA_PLANS.toml");
 
 #[test]

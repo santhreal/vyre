@@ -1,0 +1,2 @@
+category = "Added"
+text = "The `variant-list-closure` gate compares every `const ALL` roster against the variants of the enum it belongs to, so an enum that gains a variant without extending its list fails a gate instead of leaving every sweep driven by that list one variant short."

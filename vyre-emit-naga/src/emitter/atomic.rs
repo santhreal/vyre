@@ -90,7 +90,7 @@ impl BodyBuilder<'_> {
     pub(super) fn emit_trap(
         &mut self,
         op: &KernelOp,
-        tag: &vyre_lower::descriptor::Name,
+        tag: &vyre_lower::Name,
     ) -> Result<(), EmitError> {
         let tag_code = *self.trap_tag_codes.get(tag).ok_or_else(|| {
             EmitError::InvalidDescriptor(format!(
@@ -135,7 +135,7 @@ impl BodyBuilder<'_> {
         self.trap_sidecar_atomic_exchange(1, address_value)?;
         let tag_value = self.literal_u32(tag_code);
         self.trap_sidecar_atomic_exchange(2, tag_value)?;
-        let lane = self.global_invocation_axis(0);
+        let lane = self.global_invocation_axis(0)?;
         self.trap_sidecar_atomic_exchange(3, lane)?;
         let accept = std::mem::replace(&mut self.function.body, outer);
         self.function.body.push(

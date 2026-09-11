@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every `vyre-spec` item that the crate root re-exports is published at that root path alone. The 38 submodules that exist because a file was split are private again, so `vyre_spec::DataType` is the only path to `DataType` rather than one of two. Items in the namespace modules the crate publishes deliberately, such as `analysis`, `extension`, and the C11 token tables, keep their module path."

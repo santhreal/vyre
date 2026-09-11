@@ -104,8 +104,27 @@ pub(super) fn collect_buffer_targets(
         Node::Trap { address, .. } => {
             collect_buffer_targets_from_expr(address, loads, atomics);
         }
+        Node::TileLoad { buffer, origin, .. } => {
+            loads.insert(buffer.clone());
+            for expr in origin {
+                collect_buffer_targets_from_expr(expr, loads, atomics);
+            }
+        }
+        Node::TileStore { buffer, origin, .. } => {
+            stores.insert(buffer.clone());
+            for expr in origin {
+                collect_buffer_targets_from_expr(expr, loads, atomics);
+            }
+        }
+        Node::TileElementwise { body, .. } => {
+            for n in body {
+                collect_buffer_targets(n, loads, stores, atomics);
+            }
+        }
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {}
         Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::AsyncWait { .. }
         | Node::Resume { .. }
         | Node::Opaque(_) => {}

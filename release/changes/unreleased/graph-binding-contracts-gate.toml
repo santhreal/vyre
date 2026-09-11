@@ -1,0 +1,2 @@
+category = "Added"
+text = "`graph_primitive_binding_contracts` reads the operation registry at run time and asserts that every registered graph primitive declares bindings that are the contiguous range from zero, and that a `changed` convergence flag sits read-write directly above the read-write frontier it reports on. A count of zero is deliberately not a signal: it is the documented sentinel for a runtime-sized storage buffer."

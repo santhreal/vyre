@@ -1,38 +1,8 @@
 {
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"4a65df6872a1f68dc6c828ed0507d735faeafe08","commit_timestamp":"1789120972","parent_commit":"f52c75222db4f8536ccd540b2cb40ac2efc294f4","dirty":true,"source_fingerprint":"git:4a65df6872a1f68dc6c828ed0507d735faeafe08:dirty=true:worktree=24f9fae05c76c820e1ad3a2068f1a8c34b9ea7dd5e8cde44ff4c96e37371fb97"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "scan": "cargo-wrapper",
-  "findings": [
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 4,
-      "pattern": "raw_workspace_cargo",
-      "text": "//! Run it with `cargo run -p structure-gate`. It reads source text and depends"
-    },
-    {
-      "path": "vyre-driver-cuda/src/backend/host_dispatch/host_cost_attribution.rs",
-      "line": 77,
-      "pattern": "raw_workspace_cargo",
-      "text": "//! These are `#[ignore]`d so `cargo test -p vyre-driver-cuda --lib` stays fast."
-    },
-    {
-      "path": "vyre-driver-cuda/src/backend/host_dispatch/host_cost_attribution.rs",
-      "line": 80,
-      "pattern": "raw_workspace_cargo",
-      "text": "//! cargo test -p vyre-driver-cuda --lib -- --ignored --nocapture host_cost"
-    },
-    {
-      "path": "vyre-foundation/src/fp_parity.rs",
-      "line": 32,
-      "pattern": "raw_workspace_cargo",
-      "text": "/// that contracts, so `cargo test --workspace --all-features`, which the release"
-    },
-    {
-      "path": "conform/vyre-conform/src/lens.rs",
-      "line": 169,
-      "pattern": "raw_workspace_cargo",
-      "text": "Fix: regenerate the witness via `cargo xtask trace-f32 {}` or repair the reference.\","
-    }
-  ],
+  "findings": [],
   "release_blocking_findings": [],
   "blockers": []
 }

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The Granlund-Montgomery magic-number helper checked its domain with a debug assertion, so a release build handed 0, 1, or a power of two computed a magic number that emits a division returning wrong results. The check now holds in every build. The panic contracts of the two lowering-digest build scripts and of the dense matroid frontier expansion are recorded in `# Panics` sections, and the infallible CHD builder documents the empty table it returns instead of claiming a panic it never raises."

@@ -1,0 +1,4 @@
+path = "scripts/lib/repo_boundary.sh"
+state = "holds_logic"
+destination = "repo-boundary"
+reason = "loads the public and private repository names for the launch script"

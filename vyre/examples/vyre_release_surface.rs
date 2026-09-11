@@ -3,7 +3,7 @@
 fn main() {
     println!(
         "vyre public API: {}",
-        std::any::type_name::<vyre_foundation::MemoryOrdering>()
+        std::any::type_name::<vyre_foundation::ir::MemoryOrdering>()
     );
     println!("enable the CUDA release path with: cargo add vyre --features cuda");
     println!("enable the WGPU portable GPU path with: cargo add vyre --features wgpu");

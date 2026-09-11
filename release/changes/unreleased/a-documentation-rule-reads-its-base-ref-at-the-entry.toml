@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The documentation-coupling gate resolves its base ref at the entry, so asking it for the worktree diff no longer returns a pull-request diff against a ref the checkout does not carry."

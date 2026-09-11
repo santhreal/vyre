@@ -1,0 +1,2 @@
+category = "Added"
+text = "plan_adaptive_traversal_step and plan_adaptive_dense_step return the traversal step selected for measured graph statistics, together with the byte-tile table the Four-Russians kernel binds."

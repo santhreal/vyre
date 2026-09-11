@@ -6,7 +6,7 @@
 use vyre_spec::{
     by_category, by_id, BackendAvailabilityPredicate, BackendId, Category, DataType,
     EngineInvariant, IntrinsicLowering, IntrinsicTable, InvariantCategory, OpSignature, PgNodeKind,
-    Verification,
+    ProofMethod,
 };
 
 // ------------------------------------------------------------------
@@ -161,16 +161,20 @@ fn op_signature_min_input_bytes_with_tensor_output_is_finite() {
 }
 
 // ------------------------------------------------------------------
-// Verification  -  zero witness count is still Some
+// ProofMethod  -  zero witness count is still Some
 // ------------------------------------------------------------------
 
 #[test]
-fn verification_witnessed_u32_zero_count_is_some() {
-    let v = Verification::WitnessedU32 { seed: 1, count: 0 };
+fn proof_method_witnessed_u32_zero_count_is_some() {
+    let method = ProofMethod::WitnessedU32 { seed: 1, count: 0 };
     assert_eq!(
-        v.witness_count(),
+        method.witness_count(),
         Some(0),
         "zero count must still be Some(0)"
+    );
+    assert!(
+        !method.has_executable_proof(),
+        "a zero-witness run proves nothing"
     );
 }
 

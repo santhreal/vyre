@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Runtime state machine enforces mandatory finite session quotas across all subsystems, structured concurrency with worker quarantine on driver fault, and crate-level unsafe code restrictions."

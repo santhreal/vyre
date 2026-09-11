@@ -17,11 +17,12 @@
 //! Trading an invisible slowdown for an invisible hang would not be a fix, so
 //! the emitter proves grid uniformity or refuses.
 
-use std::sync::Arc;
-
 use vyre_emit_ptx::PtxEmitOptions;
-use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+
+#[path = "emit_probe/probe.rs"]
+mod emit_probe;
+use emit_probe::{lower_and_emit, region_program};
 
 /// Wrap `body` in the same shape every test here uses, so an emit difference is
 /// attributable to `body` alone.
@@ -30,26 +31,18 @@ use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 /// element 0, so the loaded value is the same everywhere) and `state` is the
 /// per-invocation output.
 fn program(body: Vec<Node>) -> Program {
-    Program::wrapped(
+    region_program(
+        "nested-return-branch-probe",
         vec![
             BufferDecl::read_write("state", 0, DataType::U32).with_count(256),
             BufferDecl::read_write("flag", 1, DataType::U32).with_count(1),
         ],
-        [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from("nested-return-branch-probe"),
-            source_region: None,
-            body: Arc::new(body),
-        }],
+        body,
     )
 }
 
 fn emit(program: &Program) -> Result<String, String> {
-    let descriptor = vyre_lower::lower_verified(program)
-        .map(|lowered| lowered.descriptor)
-        .map_err(|error| format!("lower: {error:?}"))?;
-    vyre_emit_ptx::emit_with_options(&descriptor, PtxEmitOptions::default())
-        .map_err(|error| format!("{error:?}"))
+    lower_and_emit(program, PtxEmitOptions::default())
 }
 
 /// Byte offsets of the UNCONDITIONAL branches to the kernel exit.

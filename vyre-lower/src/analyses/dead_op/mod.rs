@@ -11,8 +11,8 @@
 //! dead. Phase 2: a real DCE rewrite that strips them from the
 //! descriptor (defers to vyre-opt's optimizer pipeline).
 
-use crate::op_properties::kernel_op_kind_is_dce_pure as is_pure;
-use crate::operand_semantics::operand_is_result_reference;
+use crate::op_facts::kernel_op_kind_is_dce_pure as is_pure;
+use crate::operand_class::operand_is_result_reference;
 use crate::{KernelBody, KernelDescriptor};
 use rustc_hash::FxHashSet;
 use serde::{Deserialize, Serialize};
@@ -136,27 +136,19 @@ fn walk_find_dead(
     }
 }
 
+// Inline: covers the crate-private `analyze` and `dead_count`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, KernelOpKind, LiteralValue, MemoryClass,
+    use crate::descriptor_builder::{
+        binop, body, descriptor, effect, global_wo, lit, op, store_global,
     };
+    use crate::{KernelOpKind, LiteralValue};
     use vyre_foundation::ir::{BinOp, DataType};
 
     #[test]
     fn empty_kernel_has_no_dead_ops() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("k").build();
         let r = analyze(&desc);
         assert!(r.dead_op_indices.is_empty());
         assert_eq!(r.total_op_count, 0);
@@ -165,51 +157,22 @@ mod tests {
 
     #[test]
     fn unused_literal_is_dead() {
-        // Two literals; one is used in a store, the other is dead.
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::WriteOnly,
-                    name: "out".into(),
-                }],
-            },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![2],
-                        result: Some(2),
-                    }, // dead
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![
-                    LiteralValue::U32(0),
-                    LiteralValue::U32(7),
-                    LiteralValue::U32(99),
-                ],
-            },
-        };
+        // Three literals; one feeds a store, the third is dead.
+        let desc = descriptor("k")
+            .slot(global_wo(0, DataType::U32, "out"))
+            .body(
+                body()
+                    .literals([
+                        LiteralValue::U32(0),
+                        LiteralValue::U32(7),
+                        LiteralValue::U32(99),
+                    ])
+                    .op(lit(0, 0))
+                    .op(lit(1, 1))
+                    .op(lit(2, 2))
+                    .op(store_global(0, 0, 1)),
+            )
+            .build();
         let r = analyze(&desc);
         assert_eq!(r.dead_op_indices.len(), 1);
         assert_eq!(r.dead_op_indices[0], 2); // the third op
@@ -219,89 +182,44 @@ mod tests {
     #[test]
     fn store_is_never_dead_even_with_no_result() {
         // Store has no result by definition; should NOT be flagged as dead.
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::WriteOnly,
-                    name: "out".into(),
-                }],
-            },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(7)],
-            },
-        };
+        let desc = descriptor("k")
+            .slot(global_wo(0, DataType::U32, "out"))
+            .body(
+                body()
+                    .literals([LiteralValue::U32(0), LiteralValue::U32(7)])
+                    .op(lit(0, 0))
+                    .op(lit(1, 1))
+                    .op(store_global(0, 0, 1)),
+            )
+            .build();
         let r = analyze(&desc);
         assert!(r.dead_op_indices.is_empty());
     }
 
     #[test]
     fn unused_arithmetic_op_is_dead() {
-        // tid; lit; add(tid, lit) → never used.
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::LocalInvocationId,
-                        operands: vec![],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![0, 1],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(5)],
-            },
-        };
+        // tid; lit; add(tid, lit) whose result is never used.
+        let desc = descriptor("k")
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .literals([LiteralValue::U32(5)])
+                    .op(op(KernelOpKind::LocalInvocationId, [], 0))
+                    .op(lit(0, 1))
+                    .op(binop(BinOp::Add, 0, 1, 2)),
+            )
+            .build();
         let r = analyze(&desc);
-        // op at index 2 (the Add) is dead  -  its result 2 is never used
-        // (and operands 0 and 1 ARE used by it, so they're alive).
-        // op at index 0 (tid) is dead too  -  result 0 is only used by
-        // the dead Add, so transitively dead.
-        // op at index 1 (lit) is dead too  -  same reason.
-        // Phase-1 conservative: only flag direct deads (an op whose
-        // result is unreferenced)  -  the chain-DCE is phase 2.
+        // Only the Add is flagged: its result is unreferenced. The tid and the
+        // literal are referenced by it, so this phase leaves them alive; the
+        // transitive chain is phase two.
         assert_eq!(r.dead_op_indices.len(), 1);
         assert_eq!(r.dead_op_indices[0], 2);
     }
 
     #[test]
     fn dead_ratio_computed_correctly() {
-        // 4 ops, 1 dead → ratio 0.25.
+        // 4 ops, 1 dead, ratio 0.25.
         let r = DeadOpReport {
             kernel_id: "k".into(),
             dead_op_indices: vec![2],
@@ -312,42 +230,24 @@ mod tests {
 
     #[test]
     fn return_is_never_dead() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::Return,
-                    operands: vec![],
-                    result: None,
-                }],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("k")
+            .body(body().op(effect(KernelOpKind::Return, [])))
+            .build();
         let r = analyze(&desc);
         assert!(r.dead_op_indices.is_empty());
     }
 
     #[test]
     fn barrier_is_never_dead() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::Barrier {
-                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-                    },
-                    operands: vec![],
-                    result: None,
-                }],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("k")
+            .dispatch(64, 1, 1)
+            .body(body().op(effect(
+                KernelOpKind::Barrier {
+                    ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
+                },
+                [],
+            )))
+            .build();
         let r = analyze(&desc);
         assert!(r.dead_op_indices.is_empty());
     }

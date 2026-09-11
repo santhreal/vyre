@@ -1,0 +1,171 @@
+#[non_exhaustive] pub enum vyre_libs_bitset::bitset::frontier::FrontierError
+#[repr(u32)] pub enum vyre_libs_bitset::logical::dialect::Op
+impl core::error::Error for vyre_libs_bitset::bitset::frontier::FrontierError
+impl core::fmt::Display for vyre_libs_bitset::bitset::frontier::FrontierError
+impl vyre_foundation::dialect::traits::Dialect for vyre_libs_bitset::logical::dialect::DialectMarker
+impl vyre_foundation::dialect::traits::DialectOp for vyre_libs_bitset::logical::dialect::Op
+impl vyre_libs_bitset::logical::dialect::Op
+pub const fn vyre_libs_bitset::bitset::bitset_words(n: u32) -> u32
+pub const fn vyre_libs_bitset::bitset::four_russians::frontier_words_for_byte_tiles(tile_count: u32) -> u32
+pub const fn vyre_libs_bitset::bitset::frontier::frontier_tail_mask(node_count: u32) -> u32
+pub const fn vyre_libs_bitset::bitset::frontier::frontier_words(node_count: u32) -> usize
+pub const fn vyre_libs_bitset::logical::dialect::Op::discriminant(self) -> u32
+pub const fn vyre_libs_bitset::logical::dialect::Op::from_discriminant(tag: u32) -> core::option::Option<Self>
+pub const fn vyre_libs_bitset::logical::dialect::Op::introduced_version(self) -> u32
+pub const fn vyre_libs_bitset::logical::dialect::Op::is_composable(self) -> bool
+pub const fn vyre_libs_bitset::logical::dialect::Op::op_id(self) -> &'static str
+pub const fn vyre_libs_bitset::logical::dialect::Op::op_name(self) -> &'static str
+pub const vyre_libs_bitset::bitset::and::OP_ID: &str
+pub const vyre_libs_bitset::bitset::and_into::OP_ID: &str
+pub const vyre_libs_bitset::bitset::and_not::OP_ID: &str
+pub const vyre_libs_bitset::bitset::and_not_into::OP_ID: &str
+pub const vyre_libs_bitset::bitset::any::OP_ID: &str
+pub const vyre_libs_bitset::bitset::clear_bit::OP_ID: &str
+pub const vyre_libs_bitset::bitset::contains::OP_ID: &str
+pub const vyre_libs_bitset::bitset::copy::OP_ID: &str
+pub const vyre_libs_bitset::bitset::equal::OP_ID: &str
+pub const vyre_libs_bitset::bitset::four_russians::BYTE_TILE_STATES: u32
+pub const vyre_libs_bitset::bitset::four_russians::BYTE_TILE_WIDTH: u32
+pub const vyre_libs_bitset::bitset::four_russians::DENSE_MATVEC_OP_ID: &str
+pub const vyre_libs_bitset::bitset::four_russians::OP_ID: &str
+pub const vyre_libs_bitset::bitset::frontier::ABSORB_NEW_BITS_NO_COUNTS_OP_ID: &str
+pub const vyre_libs_bitset::bitset::frontier::ABSORB_NEW_BITS_OP_ID: &str
+pub const vyre_libs_bitset::bitset::not::OP_ID: &str
+pub const vyre_libs_bitset::bitset::or::OP_ID: &str
+pub const vyre_libs_bitset::bitset::or_into::OP_ID: &str
+pub const vyre_libs_bitset::bitset::popcount::OP_ID: &str
+pub const vyre_libs_bitset::bitset::select::OP_ID: &str
+pub const vyre_libs_bitset::bitset::set_bit::OP_ID: &str
+pub const vyre_libs_bitset::bitset::stochastic_compute::OP_ID: &str
+pub const vyre_libs_bitset::bitset::subset_of::OP_ID: &str
+pub const vyre_libs_bitset::bitset::test_bit::OP_ID: &str
+pub const vyre_libs_bitset::bitset::xor::OP_ID: &str
+pub const vyre_libs_bitset::bitset::xor_into::OP_ID: &str
+pub const vyre_libs_bitset::bitset::zero::OP_ID: &str
+pub const vyre_libs_bitset::logical::dialect::CATEGORY: &str
+pub const vyre_libs_bitset::logical::dialect::DIALECT_ID: &str
+pub const vyre_libs_bitset::logical::dialect::MIN_SUPPORTED_VERSION: u32
+pub const vyre_libs_bitset::logical::dialect::SCHEMA_VERSION: u32
+pub const vyre_libs_bitset::logical::dialect::SUMMARY: &str
+pub enum vyre_libs_bitset::bitset::four_russians::BooleanTileOp
+pub fn vyre_libs_bitset::bitset::and::bitset_and(lhs: &str, rhs: &str, out: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::and_into::bitset_and_into(target: &str, operand: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::and_not::bitset_and_not(lhs: &str, rhs: &str, out: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::and_not_into::bitset_and_not_into(target: &str, operand: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::any::bitset_any(input: &str, out: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::clear_bit::bitset_clear_bit(target: &str, bit_idx: u32, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::contains::bitset_contains(input: &str, index_buffer: &str, out: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::copy::bitset_copy(target: &str, source: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::equal::bitset_equal(lhs: &str, rhs: &str, out_scalar: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::equal::is_bitset_equal_program(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> bool
+pub fn vyre_libs_bitset::bitset::four_russians::binary_byte_lut(op: vyre_libs_bitset::bitset::four_russians::BooleanTileOp) -> alloc::vec::Vec<u32>
+pub fn vyre_libs_bitset::bitset::four_russians::cached_binary_byte_lut(op: vyre_libs_bitset::bitset::four_russians::BooleanTileOp) -> &'static [u32]
+pub fn vyre_libs_bitset::bitset::four_russians::dense_matvec_byte_lut(columns: &[u32], tile_count: u32, dst_words: u32) -> alloc::vec::Vec<u32>
+pub fn vyre_libs_bitset::bitset::four_russians::dense_matvec_byte_lut_into(columns: &[u32], tile_count: u32, dst_words: u32, lut: &mut alloc::vec::Vec<u32>)
+pub fn vyre_libs_bitset::bitset::four_russians::dense_matvec_byte_lut_words(tile_count: u32, dst_words: u32) -> u32
+pub fn vyre_libs_bitset::bitset::four_russians::four_russians_apply_byte_lut(lhs: &str, rhs: &str, lut: &str, out: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::four_russians::four_russians_dense_matvec_byte_lut(frontier: &str, tile_lut: &str, out: &str, tile_count: u32, dst_words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::four_russians::try_dense_matvec_byte_lut_into(columns: &[u32], tile_count: u32, dst_words: u32, lut: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_libs_bitset::bitset::frontier::FrontierError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_bitset::bitset::frontier::frontier_absorb_new_bits_body_prefixed_with_flag(visited: &str, neighbors: &str, next_wave: &str, added_counts: core::option::Option<&str>, added_any_flag: core::option::Option<(&str, vyre_foundation::ir_inner::model::generated::Expr)>, words: u32, final_word_mask: u32, local_prefix: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_bitset::bitset::frontier::frontier_absorb_new_bits_for_node_count_program(visited: &str, neighbors: &str, next_wave: &str, added_counts: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::frontier::frontier_absorb_new_bits_no_counts_for_node_count_program(visited: &str, neighbors: &str, next_wave: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::frontier::frontier_absorb_new_bits_no_counts_program(visited: &str, neighbors: &str, next_wave: &str, words: u32, final_word_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::frontier::frontier_absorb_new_bits_program(visited: &str, neighbors: &str, next_wave: &str, added_counts: &str, words: u32, final_word_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::not::bitset_not(input: &str, out: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::or::bitset_or(lhs: &str, rhs: &str, out: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::or_into::bitset_or_into(target: &str, operand: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::popcount::bitset_popcount(input: &str, count_words: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::select::select1_query(bits: &str, k_indices: &str, out: &str, word_count: u32, query_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::set_bit::bitset_set_bit(target: &str, bit_idx: u32, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::stochastic_compute::stochastic_and_mul(a: &str, b: &str, out: &str, n_words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::subset_of::bitset_subset_of(lhs: &str, rhs: &str, out_scalar: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::test_bit::bitset_test_bit(buf: &str, bit_idx: u32, out_scalar: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::xor::bitset_xor(lhs: &str, rhs: &str, out: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::xor_into::bitset_xor_into(target: &str, operand: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::bitset::zero::bitset_zero(target: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::link_anchor()
+pub fn vyre_libs_bitset::logical::dialect::DialectMarker::descriptor() -> &'static vyre_foundation::dialect::descriptor::DialectDescriptor
+pub fn vyre_libs_bitset::logical::dialect::DialectMarker::match_op_id(op_id: &str) -> core::option::Option<Self::Op>
+pub fn vyre_libs_bitset::logical::dialect::LogicalVisitor::Nand(&mut self, args: &[vyre_foundation::ir_inner::model::generated::Expr]) -> Self::Output
+pub fn vyre_libs_bitset::logical::dialect::LogicalVisitor::Nor(&mut self, args: &[vyre_foundation::ir_inner::model::generated::Expr]) -> Self::Output
+pub fn vyre_libs_bitset::logical::dialect::Op::declared_fields(self) -> &'static [vyre_foundation::dialect::schema::FieldContract]
+pub fn vyre_libs_bitset::logical::dialect::Op::descriptor(self) -> &'static vyre_foundation::dialect::descriptor::DialectOpDescriptor
+pub fn vyre_libs_bitset::logical::dialect::Op::introduced_version(self) -> u32
+pub fn vyre_libs_bitset::logical::dialect::Op::is_composable(self) -> bool
+pub fn vyre_libs_bitset::logical::dialect::Op::op_id(self) -> &'static str
+pub fn vyre_libs_bitset::logical::dialect::Op::op_name(self) -> &'static str
+pub fn vyre_libs_bitset::logical::dialect::Op::resource_abi(self) -> &'static vyre_foundation::dialect::schema::ResourceAbi
+pub fn vyre_libs_bitset::logical::dialect::call_nand(args: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Expr>) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_bitset::logical::dialect::call_nor(args: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Expr>) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_bitset::logical::dialect::decode_op<R: alloc::io::read::Read>(reader: &mut R) -> core::io::error::Result<core::option::Option<vyre_libs_bitset::logical::dialect::Op>>
+pub fn vyre_libs_bitset::logical::dialect::dispatch_visitor<V: vyre_libs_bitset::logical::dialect::LogicalVisitor>(op: vyre_libs_bitset::logical::dialect::Op, args: &[vyre_foundation::ir_inner::model::generated::Expr], visitor: &mut V) -> <V as vyre_libs_bitset::logical::dialect::LogicalVisitor>::Output
+pub fn vyre_libs_bitset::logical::dialect::encode_op<W: core::io::write::Write>(op: vyre_libs_bitset::logical::dialect::Op, writer: &mut W) -> core::io::error::Result<()>
+pub fn vyre_libs_bitset::logical::dialect::match_call<'a>(expr: &'a vyre_foundation::ir_inner::model::generated::Expr) -> core::option::Option<(vyre_libs_bitset::logical::dialect::Op, &'a [vyre_foundation::ir_inner::model::generated::Expr])>
+pub fn vyre_libs_bitset::logical::dialect::match_op_id(op_id: &str) -> core::option::Option<vyre_libs_bitset::logical::dialect::Op>
+pub fn vyre_libs_bitset::logical::dialect::validate_call(op: vyre_libs_bitset::logical::dialect::Op, args: &[vyre_foundation::ir_inner::model::generated::Expr], target_version: u32, errors: &mut alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>)
+pub fn vyre_libs_bitset::logical::dialect::validate_external_node(node: &vyre_foundation::dialect::schema::ExternalSchemaNode) -> core::result::Result<vyre_libs_bitset::logical::dialect::Op, vyre_foundation::dialect::schema::SchemaTranslationError>
+pub fn vyre_libs_bitset::logical::nand(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_bitset::logical::nor(a: &str, b: &str, out: &str, size: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub mod vyre_libs_bitset
+pub mod vyre_libs_bitset::bitset
+pub mod vyre_libs_bitset::bitset::and
+pub mod vyre_libs_bitset::bitset::and_into
+pub mod vyre_libs_bitset::bitset::and_not
+pub mod vyre_libs_bitset::bitset::and_not_into
+pub mod vyre_libs_bitset::bitset::any
+pub mod vyre_libs_bitset::bitset::clear_bit
+pub mod vyre_libs_bitset::bitset::contains
+pub mod vyre_libs_bitset::bitset::copy
+pub mod vyre_libs_bitset::bitset::equal
+pub mod vyre_libs_bitset::bitset::four_russians
+pub mod vyre_libs_bitset::bitset::frontier
+pub mod vyre_libs_bitset::bitset::not
+pub mod vyre_libs_bitset::bitset::or
+pub mod vyre_libs_bitset::bitset::or_into
+pub mod vyre_libs_bitset::bitset::popcount
+pub mod vyre_libs_bitset::bitset::select
+pub mod vyre_libs_bitset::bitset::set_bit
+pub mod vyre_libs_bitset::bitset::stochastic_compute
+pub mod vyre_libs_bitset::bitset::subset_of
+pub mod vyre_libs_bitset::bitset::test_bit
+pub mod vyre_libs_bitset::bitset::xor
+pub mod vyre_libs_bitset::bitset::xor_into
+pub mod vyre_libs_bitset::bitset::zero
+pub mod vyre_libs_bitset::logical
+pub mod vyre_libs_bitset::logical::dialect
+pub static vyre_libs_bitset::logical::dialect::ALL_OP_IDS: &[&str]
+pub static vyre_libs_bitset::logical::dialect::DESCRIPTOR: vyre_foundation::dialect::descriptor::DialectDescriptor
+pub static vyre_libs_bitset::logical::dialect::OPERATIONS: &[vyre_foundation::dialect::descriptor::DialectOpDescriptor]
+pub struct vyre_libs_bitset::bitset::frontier::FrontierAbsorbSummary
+pub struct vyre_libs_bitset::logical::dialect::DialectMarker
+pub trait vyre_libs_bitset::logical::dialect::LogicalVisitor
+pub type vyre_libs_bitset::logical::dialect::DialectMarker::Op = vyre_libs_bitset::logical::dialect::Op
+pub type vyre_libs_bitset::logical::dialect::LogicalVisitor::Output
+pub vyre_libs_bitset::bitset::four_russians::BooleanTileOp::And
+pub vyre_libs_bitset::bitset::four_russians::BooleanTileOp::AndNot
+pub vyre_libs_bitset::bitset::four_russians::BooleanTileOp::Or
+pub vyre_libs_bitset::bitset::four_russians::BooleanTileOp::Xor
+pub vyre_libs_bitset::bitset::frontier::FrontierAbsorbSummary::added_any: bool
+pub vyre_libs_bitset::bitset::frontier::FrontierAbsorbSummary::added_popcount: u32
+pub vyre_libs_bitset::bitset::frontier::FrontierError::Allocation
+pub vyre_libs_bitset::bitset::frontier::FrontierError::Allocation::name: &'static str
+pub vyre_libs_bitset::bitset::frontier::FrontierError::Allocation::requested_words: usize
+pub vyre_libs_bitset::bitset::frontier::FrontierError::Allocation::source: alloc::string::String
+pub vyre_libs_bitset::bitset::frontier::FrontierError::BadShape
+pub vyre_libs_bitset::bitset::frontier::FrontierError::BadShape::actual_words: usize
+pub vyre_libs_bitset::bitset::frontier::FrontierError::BadShape::expected_words: usize
+pub vyre_libs_bitset::bitset::frontier::FrontierError::BadShape::name: &'static str
+pub vyre_libs_bitset::bitset::frontier::FrontierError::BadShape::node_count: u32
+pub vyre_libs_bitset::bitset::frontier::FrontierError::PopcountOverflow
+pub vyre_libs_bitset::bitset::frontier::FrontierError::PopcountOverflow::frontier_words: usize
+pub vyre_libs_bitset::bitset::frontier::FrontierError::QueueCapacity
+pub vyre_libs_bitset::bitset::frontier::FrontierError::QueueCapacity::capacity: usize
+pub vyre_libs_bitset::bitset::frontier::FrontierError::QueueCapacity::node_count: u32
+pub vyre_libs_bitset::bitset::frontier::FrontierError::QueueCapacity::required: u32
+pub vyre_libs_bitset::bitset::frontier::FrontierError::QueueCountMismatch
+pub vyre_libs_bitset::bitset::frontier::FrontierError::QueueCountMismatch::expected: u32
+pub vyre_libs_bitset::bitset::frontier::FrontierError::QueueCountMismatch::node_count: u32
+pub vyre_libs_bitset::bitset::frontier::FrontierError::QueueCountMismatch::observed: u32
+pub vyre_libs_bitset::logical::dialect::Op::Nand = 0
+pub vyre_libs_bitset::logical::dialect::Op::Nor = 1

@@ -1,26 +1,38 @@
-//! Generic reference interpreter entry points.
+//! The canonical reference evaluator and its entry points.
 //!
-//! The stable statement-IR [`reference_eval`] entry point remains delegated to
-//! the existing invocation simulator until `Program` stores graph nodes
-//! directly.
+//! Every entry point here resolves the same way: normalize the submitted
+//! program to the top-level `Region` model, arm the work budget, and interpret
+//! the program through [`hashmap::run_hashmap_reference`]. There is one
+//! evaluator, so a node has one meaning for the whole crate.
 
+pub(crate) mod async_transfer;
 pub(crate) mod call;
-pub mod expr;
 pub(crate) mod expr_cast;
 pub(crate) mod hashmap;
-pub mod node;
 pub(crate) mod node_tree;
 /// Thread-local arithmetic-IR-op counting for roofline / complexity analysis.
 pub mod op_count;
-pub mod sequential;
+/// One-expression entry point into the canonical evaluator.
+pub(crate) mod single_expr;
+/// Work ceiling that gives the interpreter a termination contract.
+pub mod step_budget;
+pub(crate) mod tile;
 pub(crate) mod typed_ops;
 
 use std::borrow::Cow;
-
-use rustc_hash::FxHashMap;
-use vyre_foundation::ir::{InterpCtx, Node, NodeId, NodeStorage, Program, Value as IrValue};
+use vyre_foundation::ir::{Node, Program};
 
 use crate::value::Value;
+
+pub(crate) fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, crate::ReferenceError> {
+    (axis < 3)
+        .then(|| Value::U32(values[axis as usize]))
+        .ok_or_else(|| {
+            crate::ReferenceError::incomplete_dispatch_semantics(format!(
+                "invocation/workgroup ID axis {axis} out of range. Fix: use 0, 1, or 2."
+            ))
+        })
+}
 
 /// If the program satisfies the public top-level-Region model, return a
 /// byte-identical clone. If not, the usual case is
@@ -47,278 +59,375 @@ pub(crate) fn program_for_interpreter(
     } else {
         Cow::Borrowed(program)
     };
-    let collectives_lowered =
-        match vyre_foundation::transform::collectives::lower_single_rank_collectives(
-            normalized.as_ref(),
-        ) {
-            Ok(Some(lowered)) => Cow::Owned(lowered),
-            Ok(None) => normalized,
-            Err(error) => return Err(crate::ReferenceError::new(error.to_string())),
-        };
-    // A composite op IS its IR body, so run the body. Only intrinsics reach
-    // `eval_call`, and those are the only ops that register a CPU function.
-    // Skipping this made every composite call fall through to the empty
-    // lowering table's placeholder, which cleared the output buffer instead
-    // of computing anything.
-    let inlined = vyre_foundation::ir::inline_composite_calls(collectives_lowered.as_ref())
-        .map_err(|error| crate::ReferenceError::new(error.to_string()))?;
-    Ok(Cow::Owned(inlined))
+    Ok(normalized)
+}
+
+/// Deterministic step orders one schedule policy explores, in the order it
+/// explores them.
+///
+/// The match has no catch-all arm, so a new policy states its own exploration
+/// rather than borrowing the previous variant's. `BoundedInterleaving` used to
+/// borrow `Forward` here, which made every parity result under that policy a
+/// claim about a schedule the oracle never ran.
+fn explored_step_orders(
+    policy: crate::request::DeterministicSchedulePolicy,
+    program: &Program,
+) -> Vec<hashmap::LaneOrder> {
+    match policy {
+        crate::request::DeterministicSchedulePolicy::Forward => vec![hashmap::LaneOrder::Forward],
+        crate::request::DeterministicSchedulePolicy::LaneReversed => {
+            vec![hashmap::LaneOrder::Reversed]
+        }
+        crate::request::DeterministicSchedulePolicy::LaneRotated(by) => {
+            vec![hashmap::LaneOrder::Rotated(by)]
+        }
+        crate::request::DeterministicSchedulePolicy::BoundedInterleaving => {
+            bounded_interleaving_orders(program)
+        }
+    }
+}
+
+/// Step orders a bounded interleaving exploration covers.
+///
+/// Forward, reversed, and the rotations that move at least one lane without
+/// repeating the forward order, capped at
+/// [`MAX_BOUNDED_INTERLEAVINGS`]. The rotation count comes from the workgroup
+/// extent the program declares, so a one-lane workgroup explores one schedule
+/// and a wide one explores the cap rather than a number chosen here.
+fn bounded_interleaving_orders(program: &Program) -> Vec<hashmap::LaneOrder> {
+    let [sx, sy, sz] = program.workgroup_size();
+    let lanes = [sx, sy, sz].iter().copied().fold(1u32, u32::saturating_mul);
+    let mut orders = vec![hashmap::LaneOrder::Forward];
+    if lanes <= 1 {
+        return orders;
+    }
+    orders.push(hashmap::LaneOrder::Reversed);
+    for by in 1..lanes {
+        if orders.len() >= MAX_BOUNDED_INTERLEAVINGS {
+            break;
+        }
+        orders.push(hashmap::LaneOrder::Rotated(by));
+    }
+    orders
+}
+
+/// Schedules one bounded interleaving exploration runs at most.
+///
+/// The exploration is bounded so the oracle keeps a termination contract: the
+/// work budget covers every schedule together, and a wide workgroup would
+/// otherwise multiply one evaluation by its lane count.
+const MAX_BOUNDED_INTERLEAVINGS: usize = 4;
+
+/// Step orders a bounded race exploration covers, in the order it runs them.
+///
+/// Forward is the baseline every other order is compared against.
+/// `WorkgroupReversed` moves the workgroup axis alone, which is the only order
+/// in the set that separates a cross-workgroup conflict from an intra-workgroup
+/// one: every other order permutes both axes together, so a conflict whose two
+/// writers sit in different workgroups keeps the same last writer once the two
+/// permutations cancel. Reversed and the rotations then move the lane axis, the
+/// rotations asymmetrically so a defect that maps lane identity onto step
+/// position cannot survive by symmetry.
+///
+/// The count is a function of the workgroup extent the program declares, so a
+/// caller can state the exact number of orders an exploration will run before
+/// it runs, and a one-lane workgroup does not pay for rotations that permute
+/// nothing.
+pub(crate) fn race_exploration_orders(program: &Program) -> Vec<hashmap::LaneOrder> {
+    let [sx, sy, sz] = program.workgroup_size();
+    let lanes = [sx, sy, sz].iter().copied().fold(1u32, u32::saturating_mul);
+    let mut orders = vec![
+        hashmap::LaneOrder::Forward,
+        hashmap::LaneOrder::WorkgroupReversed,
+    ];
+    if lanes <= 1 {
+        return orders;
+    }
+    orders.push(hashmap::LaneOrder::Reversed);
+    for by in 1..lanes {
+        if orders.len() >= MAX_RACE_EXPLORATION_ORDERS {
+            break;
+        }
+        orders.push(hashmap::LaneOrder::Rotated(by));
+    }
+    orders
+}
+
+/// Step orders one bounded race exploration runs at most.
+///
+/// The exploration is bounded so the oracle keeps a termination contract: one
+/// work budget covers every order together, and a wide workgroup would
+/// otherwise multiply one evaluation by its lane count.
+pub(crate) const MAX_RACE_EXPLORATION_ORDERS: usize = 6;
+
+/// Run `runnable` once per explored step order and return the outputs every
+/// order agreed on.
+///
+/// Two orders that disagree mean the program's result depends on the order the
+/// lanes were stepped in, which a device leaves driver-defined. The oracle has
+/// no single answer to certify in that case, so it names both schedules and the
+/// output that differs.
+fn run_explored_orders(
+    runnable: &Program,
+    request: &crate::request::ReferenceRequest<'_>,
+    orders: &[hashmap::LaneOrder],
+) -> Result<Vec<Value>, crate::ReferenceError> {
+    let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);
+    let mut agreed: Option<(hashmap::LaneOrder, Vec<Value>)> = None;
+    for &order in orders {
+        let outputs = hashmap::run_hashmap_reference(
+            runnable,
+            &request.resource_abi.inputs,
+            min_dispatch,
+            order,
+            request.workload_envelope.workgroup_grid,
+        )?;
+        match &agreed {
+            None => agreed = Some((order, outputs)),
+            Some((first_order, first_outputs)) => {
+                if let Some(index) = first_difference(first_outputs, &outputs) {
+                    return Err(crate::ReferenceError::incomplete_dispatch_semantics(format!(
+                        "schedule exploration disagreed: output {index} differs between step order \
+                         {first_order:?} and {order:?}. Fix: give every shared output slot a single \
+                         writer, or write it through a commutative atomic, so the program's result \
+                         does not depend on the order the lanes were stepped in."
+                    )));
+                }
+            }
+        }
+    }
+    agreed.map(|(_, outputs)| outputs).ok_or_else(|| {
+        crate::ReferenceError::incomplete_dispatch_semantics(
+            "the schedule policy explored no step order. Fix: state a policy that names at least \
+             one deterministic step order.",
+        )
+    })
+}
+
+/// Index of the first output two schedules disagree on.
+fn first_difference(left: &[Value], right: &[Value]) -> Option<usize> {
+    if left.len() != right.len() {
+        return Some(left.len().min(right.len()));
+    }
+    left.iter()
+        .zip(right)
+        .position(|(left, right)| left.to_bytes() != right.to_bytes())
+}
+
+pub(crate) fn run_with_request(
+    request: &crate::request::ReferenceRequest<'_>,
+) -> Result<(Vec<Value>, u64), crate::ReferenceError> {
+    crate::oob::reset_oob_report();
+    let _strictness = crate::oob::enter_strictness(true);
+    let runnable = program_for_interpreter(request.program)?;
+    let budget = step_budget::arm_with_budget(&runnable, request.budget)?;
+    let orders = explored_step_orders(request.schedule_policy, &runnable);
+    let outputs = run_explored_orders(&runnable, request, &orders)?;
+    let steps = step_budget::charged();
+    drop(budget);
+    Ok((outputs, steps))
+}
+
+pub(crate) fn run_permissive_with_request(
+    request: &crate::request::ReferenceRequest<'_>,
+) -> Result<(Vec<Value>, u64, crate::oob::OobReport), crate::ReferenceError> {
+    crate::oob::reset_oob_report();
+    let _strictness = crate::oob::enter_strictness(false);
+    let runnable = program_for_interpreter(request.program)?;
+    let budget = step_budget::arm_with_budget(&runnable, request.budget)?;
+    let orders = explored_step_orders(request.schedule_policy, &runnable);
+    let outputs = run_explored_orders(&runnable, request, &orders)?;
+    let steps = step_budget::charged();
+    let oob = crate::oob::oob_report();
+    drop(budget);
+    Ok((outputs, steps, oob))
+}
+
+/// Execute one request once per explored step order with race tracking on, and
+/// report every hazard the exploration found.
+///
+/// The exploration reports rather than refuses: a racing program yields a
+/// report naming each conflict, so a caller sees every hazard in the dispatch
+/// instead of the first one. A fault the interpreter cannot continue past
+/// (out-of-bounds access under strict mode, budget exhaustion, a malformed
+/// program) still ends the exploration with that error.
+///
+/// One budget covers the whole exploration, armed once before the first order
+/// and read after the last, so N orders cannot spend N times the declared work
+/// ceiling.
+pub(crate) fn explore_races_with_request(
+    request: &crate::request::ReferenceRequest<'_>,
+) -> Result<crate::interleaving::RaceExplorationReport, crate::ReferenceError> {
+    crate::oob::reset_oob_report();
+    let _strictness = crate::oob::enter_strictness(true);
+    let runnable = program_for_interpreter(request.program)?;
+    let budget = step_budget::arm_with_budget(&runnable, request.budget)?;
+    let _tracking = crate::interleaving::enter_race_tracking();
+    let orders = race_exploration_orders(&runnable);
+    let min_dispatch = request.workload_envelope.min_dispatch_elements.unwrap_or(0);
+    let mut findings: Vec<crate::interleaving::RaceFinding> = Vec::new();
+    let mut baseline: Option<(hashmap::LaneOrder, Vec<Value>)> = None;
+    let mut orders_explored = 0usize;
+    for &order in &orders {
+        crate::interleaving::begin_explored_order();
+        let outputs = hashmap::run_hashmap_reference(
+            &runnable,
+            &request.resource_abi.inputs,
+            min_dispatch,
+            order,
+            request.workload_envelope.workgroup_grid,
+        )?;
+        orders_explored += 1;
+        for finding in crate::interleaving::take_race_findings() {
+            if !findings.contains(&finding) {
+                findings.push(finding);
+            }
+        }
+        match &baseline {
+            None => baseline = Some((order, outputs)),
+            Some((first_order, first_outputs)) => {
+                if let Some(output_index) = first_difference(first_outputs, &outputs) {
+                    let finding = crate::interleaving::RaceFinding::ScheduleDisagreement {
+                        first_order: format!("{first_order:?}"),
+                        second_order: format!("{order:?}"),
+                        output_index,
+                    };
+                    if !findings.contains(&finding) {
+                        findings.push(finding);
+                    }
+                }
+            }
+        }
+    }
+    let steps_executed = step_budget::charged();
+    drop(budget);
+    Ok(crate::interleaving::RaceExplorationReport {
+        orders_explored,
+        findings,
+        steps_executed,
+    })
 }
 
 /// The interpreter's output ABI, single-homed: [`is_reference_output`] is the exact
-/// predicate `reference_eval` uses to collect the buffers it returns, and
+/// predicate the evaluator uses to collect the buffers it returns, and
 /// [`output_index`] locates a named output by that predicate. Re-exported so test
 /// harnesses never hand-roll (and drift from) the selection.
 pub use hashmap::{is_reference_input, is_reference_output, output_index};
 
-/// Execute a vyre IR program on the pure Rust reference interpreter.
+/// Project a declaration-order buffer list onto the interpreter's input ABI.
 ///
-/// The current public [`Program`] model is statement-oriented, so this stable
-/// entry point delegates to the statement evaluator. Graph-shaped extension
-/// nodes use [`run_storage_graph`].
-pub fn reference_eval(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    run_arena_reference(program, inputs)
-}
-
-/// [`reference_eval`] plus an [`OobReport`](crate::oob::OobReport) of every
-/// out-of-bounds access the interpreter silently absorbed during the run.
+/// A request takes one `Value` per [`is_reference_input`] buffer and
+/// nothing for a backend-allocated output, which is what a device artifact
+/// enforces. A harness that walks `Program::buffers()` naturally produces the
+/// longer declaration-order list instead, with a zeroed stand-in per output.
+/// This is the one translation between the two, so a harness never re-derives
+/// it and drifts.
 ///
-/// The interpreter DEFINES OOB loads as zero-fill and OOB stores as a no-op so
-/// its output stays deterministic, but that silent absorption is exactly what
-/// masks a GPU/CPU parity hazard: an IR program with an ungated data-derived index
-/// "works" here yet a real GPU (CUDA does no bounds-checking) reads garbage or
-/// corrupts memory. Use this to assert a program NEVER relies on that masking: a
-/// correctly bounds-gated program handles an out-of-contract index with explicit
-/// control flow, so it records `OobReport::total() == 0` even on hostile input. A
-/// nonzero total means the IR indexed past a buffer end and needs an explicit gate
-/// (the class of fix applied to ziftsieve/base64/sketch/simplicial).
-///
-/// The tally is per-thread and reset at the start of this call, so it measures
-/// exactly this run.
-///
-/// # Errors
-/// Same as [`reference_eval`].
-pub fn reference_eval_oob_report(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<(Vec<Value>, crate::oob::OobReport), crate::ReferenceError> {
-    crate::oob::reset_oob_report();
-    let outputs = reference_eval(program, inputs)?;
-    Ok((outputs, crate::oob::oob_report()))
-}
-
-/// [`reference_eval_with_dispatch`] plus an [`OobReport`](crate::oob::OobReport).
-///
-/// The grid floor lets a caller deliberately OVER-FIRE the dispatch (more lanes
-/// than the buffer-inferred grid) to probe whether a primitive's per-lane guard
-/// actually protects the extra lanes. A guard written as `Expr::and(t < n, load(buf,
-/// t))` does NOT, the data-flow AND evaluates the load for `t >= n`, an OOB read
-/// (the ssa_dominance_scan bug). Running a valid fixture at an inflated grid and
-/// asserting `OobReport::total() == 0` catches that whole class registry-wide.
-///
-/// # Errors
-/// Same as [`reference_eval_with_dispatch`].
-pub fn reference_eval_with_dispatch_oob_report(
-    program: &Program,
-    inputs: &[Value],
-    min_dispatch_elements: u32,
-) -> Result<(Vec<Value>, crate::oob::OobReport), crate::ReferenceError> {
-    crate::oob::reset_oob_report();
-    let outputs = reference_eval_with_dispatch(program, inputs, min_dispatch_elements)?;
-    Ok((outputs, crate::oob::oob_report()))
-}
-
-/// [`reference_eval`] with an explicit grid floor.
-///
-/// The reference interpreter infers its dispatch grid from buffer SHAPES, which
-/// cannot express the per-invocation count of a byte-scan program (the haystack
-/// is packed 4 bytes/u32 and the scan length is a runtime value). Pass the true
-/// grid, e.g. `haystack_len` for a one-lane-per-byte scan, so the interpreter
-/// covers exactly what the real dispatch config would; otherwise high positions
-/// are silently skipped (the CPU-ref oracle under-fires while the GPU is correct).
-/// `min_dispatch_elements` is a FLOOR: the interpreter still runs at least the
-/// buffer-inferred grid, so passing `0` is identical to [`reference_eval`].
-///
-/// # Errors
-/// Same as [`reference_eval`].
-pub fn reference_eval_with_dispatch(
-    program: &Program,
-    inputs: &[Value],
-    min_dispatch_elements: u32,
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    run_arena_reference_with_dispatch(program, inputs, min_dispatch_elements)
-}
-
-/// Execute using the statement-IR reference evaluator.
-pub fn run_arena_reference(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    run_arena_reference_with_dispatch(program, inputs, 0)
-}
-
-/// [`run_arena_reference`] with an explicit grid floor (see
-/// [`reference_eval_with_dispatch`]).
-///
-/// # Errors
-/// Same as [`run_arena_reference`].
-pub fn run_arena_reference_with_dispatch(
-    program: &Program,
-    inputs: &[Value],
-    min_dispatch_elements: u32,
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(
-        &program,
-        inputs,
-        min_dispatch_elements,
-        hashmap::LaneOrder::Forward,
-        None,
-    )
-}
-
-/// [`reference_eval`] with an explicit workgroup grid `[x, y, z]`.
-///
-/// Buffer-shape inference distributes the dispatch only across workgroup axes
-/// whose size is greater than one, so a program that fans a `[256, 1, 1]`
-/// workgroup across `grid.y` (batched persistent-BFS runs one query per
-/// `grid.y` block) would collapse to `grid.y == 1` and silently compute only the
-/// first query. A caller that knows the real dispatch grid, e.g.
-/// `persistent_bfs_batch_dispatch_grid(node_count, query_count)`, passes it here
-/// so the interpreter covers every workgroup the GPU would, per axis. This is the
-/// N-dimensional counterpart of [`reference_eval_with_dispatch`]'s 1-D floor.
-///
-/// # Errors
-/// Same as [`reference_eval`].
-pub fn reference_eval_with_grid(
-    program: &Program,
-    inputs: &[Value],
-    grid: [u32; 3],
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Forward, Some(grid))
-}
-
-/// Execute a program with the workgroup/invocation STEP ORDER reversed.
-///
-/// The result is identical to [`reference_eval`] for any RACE-FREE program (every
-/// output slot is written by exactly one lane, or shared slots are touched only by
-/// commutative atomics). It DIFFERS only when a non-atomic cross-lane write-write
-/// race exists, two lanes plain-`store` the same slot, because the GPU leaves the
-/// winner driver-defined while the single-threaded reference otherwise resolves it
-/// deterministically (last stepped lane wins). Comparing this against
-/// [`reference_eval`] therefore surfaces a hidden race the same way a real GPU would
-/// nondeterministically diverge.
-///
-/// # Errors
-/// Same as [`reference_eval`].
-pub fn reference_eval_lane_reversed(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    let program = program_for_interpreter(program)?;
-    hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Reversed, None)
-}
-
-/// Differential oracle retained for tests during the generic interpreter transition.
-#[cfg(test)]
-pub fn eval_hashmap_reference(
-    program: &Program,
-    inputs: &[Value],
-) -> Result<Vec<Value>, crate::ReferenceError> {
-    run_arena_reference(program, inputs)
-}
-
-/// Interpret a compact [`NodeStorage`] graph and return output node values.
-pub fn run_storage_graph(
-    nodes: &[(NodeId, NodeStorage)],
-    outputs: &[NodeId],
-) -> Result<Vec<IrValue>, crate::ReferenceError> {
-    let mut graph = FxHashMap::with_capacity_and_hasher(nodes.len(), Default::default());
-    for (id, node) in nodes {
-        if graph.insert(*id, node).is_some() {
-            return Err(duplicate_node_error(*id));
-        }
-    }
-    let mut ctx = InterpCtx::default();
-    let mut states = FxHashMap::with_capacity_and_hasher(graph.len(), Default::default());
-
-    for output in outputs {
-        eval_storage_node(*output, &graph, &mut ctx, &mut states)?;
-    }
-
-    outputs
+/// A list already sized to the reference inputs passes through. Anything that
+/// is neither shape is handed over unchanged: the interpreter names the buffer
+/// it is missing a `Value` for, which is a better diagnostic than a count, and
+/// leaving the refusal with the ABI's owner keeps this a translation rather
+/// than a second validator with its own opinion.
+#[must_use]
+pub fn reference_inputs(program: &Program, buffers: Vec<Vec<u8>>) -> Vec<Value> {
+    let declared = program
+        .buffers()
         .iter()
-        .map(|id| ctx.get(*id).map_err(interp_error))
+        .filter(|decl| decl.access() != vyre_foundation::ir::BufferAccess::Workgroup)
+        .count();
+    let logical = program
+        .buffers()
+        .iter()
+        .filter(|decl| is_reference_input(decl))
+        .count();
+    if buffers.len() != declared || declared == logical {
+        return buffers.into_iter().map(Value::from).collect();
+    }
+    program
+        .buffers()
+        .iter()
+        .filter(|decl| decl.access() != vyre_foundation::ir::BufferAccess::Workgroup)
+        .zip(buffers)
+        .filter(|(decl, _)| is_reference_input(decl))
+        .map(|(_, bytes)| Value::from(bytes))
         .collect()
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum VisitState {
-    Visiting,
-    Done,
+/// The reference input list does not match what the program declares.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReferenceInputMismatch {
+    /// Reference inputs the program declares.
+    pub expected: usize,
+    /// Buffers the caller supplied.
+    pub received: usize,
+    /// First declared reference input with no supplied buffer, when the caller
+    /// supplied too few.
+    pub missing: Option<String>,
 }
 
-fn eval_storage_node(
-    id: NodeId,
-    graph: &FxHashMap<NodeId, &NodeStorage>,
-    ctx: &mut InterpCtx,
-    states: &mut FxHashMap<NodeId, VisitState>,
-) -> Result<(), crate::ReferenceError> {
-    match states.get(&id).copied() {
-        Some(VisitState::Done) => return Ok(()),
-        Some(VisitState::Visiting) => return Err(cycle_error(id)),
-        None => {}
+impl std::fmt::Display for ReferenceInputMismatch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.missing {
+            Some(name) => write!(
+                f,
+                "missing an input buffer for `{name}`: the program declares {} reference input(s) and the caller supplied {}",
+                self.expected, self.received
+            ),
+            None => write!(
+                f,
+                "{} extra input buffer(s): the program declares {} reference input(s) and the caller supplied {}",
+                self.received.saturating_sub(self.expected),
+                self.expected,
+                self.received
+            ),
+        }
     }
+}
 
-    let node = *graph.get(&id).ok_or_else(|| missing_node_error(id))?;
-    states.insert(id, VisitState::Visiting);
-    let inputs = node.input_ids();
-    for input in &inputs {
-        eval_storage_node(*input, graph, ctx, states)?;
+/// One `Value` per [`is_reference_input`] buffer, taken from `inputs` in
+/// declaration order.
+///
+/// A caller holding borrowed bytes reads this rather than walking
+/// `Program::buffers()` itself. Two callers walked it, each spelling the
+/// selection out as `access() != Workgroup && !is_backend_allocated_output()`,
+/// which is the drifted form [`is_reference_input`] documents: it admits a
+/// `Shared` buffer, a `Persistent` buffer, and a non-read-write
+/// `pipeline_live_out`, none of which a device stages from the host. A program
+/// declaring one of those consumed an input the device never asks for, so every
+/// later buffer read the value before it.
+pub fn reference_input_values(
+    program: &Program,
+    inputs: &[&[u8]],
+) -> Result<Vec<Value>, ReferenceInputMismatch> {
+    let expected = program
+        .buffers()
+        .iter()
+        .filter(|decl| is_reference_input(decl))
+        .count();
+    if expected != inputs.len() {
+        let missing = program
+            .buffers()
+            .iter()
+            .filter(|decl| is_reference_input(decl))
+            .nth(inputs.len())
+            .map(|decl| decl.name().to_string());
+        return Err(ReferenceInputMismatch {
+            expected,
+            received: inputs.len(),
+            missing,
+        });
     }
-    ctx.set_operands(inputs);
-    let value = node.interpret(ctx).map_err(interp_error)?;
-    ctx.set(id, value);
-    states.insert(id, VisitState::Done);
-    Ok(())
+    Ok(inputs.iter().copied().map(Value::from).collect())
 }
 
-fn interp_error(error: vyre_foundation::ir::EvalError) -> crate::ReferenceError {
-    crate::ReferenceError::new(error.to_string())
-}
-
-fn missing_node_error(id: NodeId) -> crate::ReferenceError {
-    crate::ReferenceError::new(format!(
-        "graph references missing node {}. Fix: include every dependency in the interpreter input graph.",
-        id.0
-    ))
-}
-
-fn cycle_error(id: NodeId) -> crate::ReferenceError {
-    crate::ReferenceError::new(format!(
-        "graph contains a dependency cycle at node {}. Fix: submit an acyclic dataflow graph.",
-        id.0
-    ))
-}
-
-fn duplicate_node_error(id: NodeId) -> crate::ReferenceError {
-    crate::ReferenceError::new(format!(
-        "graph contains duplicate node {}. Fix: submit exactly one storage record for each NodeId before reference execution.",
-        id.0
-    ))
-}
-
+// Inline: reaches the crate-private normalization the public entry points share.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, NodeStorage};
+    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
 
     #[test]
-    fn reference_eval_dispatches_singleton_atomic_flags_across_dynamic_byte_input() {
+    fn the_oracle_dispatches_singleton_atomic_flags_across_dynamic_byte_input() {
         let program = Program::wrapped(
             vec![
                 BufferDecl::storage("bytes_in", 0, BufferAccess::ReadOnly, DataType::U8)
@@ -347,7 +456,9 @@ mod tests {
         let mut bytes = vec![0u8; 4097];
         bytes[4096] = 1;
 
-        let outputs = reference_eval(&program, &[Value::from(bytes), Value::from(vec![0u8; 4])])
+        let inputs = [Value::from(bytes), Value::from(vec![0u8; 4])];
+        let outputs = crate::ReferenceRequest::standard(&program, &inputs)
+            .outputs()
             .expect("Fix: reference interpreter should execute singleton atomic flag scans.");
         let flag = outputs[0].to_bytes();
 
@@ -358,7 +469,7 @@ mod tests {
     /// elements than the invocations it needs, one per byte. Buffer-shape grid
     /// inference therefore UNDER-covers it, silently skipping high positions. This
     /// is exactly the region-presence CPU-ref under-fire that the GPU did not have.
-    /// `reference_eval_with_dispatch` lets the caller pass the true byte grid so
+    /// A dispatch element floor lets the caller pass the true byte grid so
     /// the interpreter covers what the real dispatch would, no silent
     /// under-coverage (Law 10). This locks both halves: the default under-covers,
     /// the floor covers.
@@ -421,7 +532,9 @@ mod tests {
         // Default grid: buffer-shape inference caps at the packed buffer's 1024
         // elements, so byte 4095 is never visited, the flag stays clear. This is
         // the SILENT under-coverage the region-presence gate hit.
-        let under = reference_eval(&program, &make_inputs())
+        let default_inputs = make_inputs();
+        let under = crate::ReferenceRequest::standard(&program, &default_inputs)
+            .outputs()
             .expect("Fix: interpreter runs the packed byte-scan");
         assert_eq!(
             read_flag(&under),
@@ -431,94 +544,15 @@ mod tests {
 
         // Floor = true byte length: the interpreter now covers byte 4095 and the
         // marker is found (parity with what the real dispatch config produces).
-        let covered = reference_eval_with_dispatch(&program, &make_inputs(), BYTE_LEN)
+        let floored_inputs = make_inputs();
+        let covered = crate::ReferenceRequest::standard(&program, &floored_inputs)
+            .with_min_dispatch_elements(BYTE_LEN)
+            .outputs()
             .expect("Fix: interpreter runs the packed byte-scan with an explicit grid floor");
         assert_eq!(
             read_flag(&covered),
             1,
             "an explicit grid floor of haystack_len must cover every byte position"
         );
-    }
-
-    #[test]
-    fn generic_storage_graph_matches_recursive_oracle_for_10k_programs() {
-        let mut rng = 0x9e37_79b9_u64;
-        for case in 0..10_000 {
-            let graph = random_graph(&mut rng, case);
-            let output = graph.last().expect("Fix: generated graph is non-empty").0;
-            let expected =
-                recursive_value(output, &graph).expect("Fix: recursive oracle evaluates");
-            let actual = run_storage_graph(&graph, &[output])
-                .expect("Fix: generic graph interpreter evaluates")[0];
-            assert_eq!(actual, expected, "case {case}");
-        }
-    }
-
-    fn random_graph(rng: &mut u64, case: u32) -> Vec<(NodeId, NodeStorage)> {
-        let len = 2 + (next(rng) as usize % 31);
-        let mut graph = Vec::with_capacity(len);
-        graph.push((NodeId(0), NodeStorage::LitU32(case)));
-        graph.push((NodeId(1), NodeStorage::LitU32(next(rng))));
-        for index in 2..len {
-            let left = NodeId(next(rng) % index as u32);
-            let right = NodeId(next(rng) % index as u32);
-            let op = match next(rng) % 5 {
-                0 => BinOp::Add,
-                1 => BinOp::Sub,
-                2 => BinOp::Mul,
-                3 => BinOp::BitXor,
-                _ => BinOp::BitAnd,
-            };
-            graph.push((NodeId(index as u32), NodeStorage::BinOp { op, left, right }));
-        }
-        graph
-    }
-
-    fn recursive_value(
-        id: NodeId,
-        graph: &[(NodeId, NodeStorage)],
-    ) -> Result<IrValue, crate::ReferenceError> {
-        let node = graph
-            .iter()
-            .find(|(node_id, _)| *node_id == id)
-            .map(|(_, node)| node)
-            .ok_or_else(|| missing_node_error(id))?;
-        match node {
-            NodeStorage::LitU32(value) => Ok(IrValue::U32(*value)),
-            NodeStorage::BinOp { op, left, right } => {
-                let left = expect_u32(recursive_value(*left, graph)?)?;
-                let right = expect_u32(recursive_value(*right, graph)?)?;
-                let value = match op {
-                    BinOp::Add => left.wrapping_add(right),
-                    BinOp::Sub => left.wrapping_sub(right),
-                    BinOp::Mul => left.wrapping_mul(right),
-                    BinOp::BitXor => left ^ right,
-                    BinOp::BitAnd => left & right,
-                    _ => {
-                        return Err(crate::ReferenceError::new(
-                            "recursive parity oracle received unsupported op. Fix: keep test generation within the oracle domain.",
-                        ));
-                    }
-                };
-                Ok(IrValue::U32(value))
-            }
-            _ => Err(crate::ReferenceError::new(
-                "recursive parity oracle received unsupported node. Fix: keep test generation within the oracle domain.",
-            )),
-        }
-    }
-
-    fn expect_u32(value: IrValue) -> Result<u32, crate::ReferenceError> {
-        match value {
-            IrValue::U32(value) => Ok(value),
-            other => Err(crate::ReferenceError::new(format!(
-                "recursive parity oracle expected u32, got {other:?}. Fix: keep generated graphs scalar-u32 only."
-            ))),
-        }
-    }
-
-    fn next(rng: &mut u64) -> u32 {
-        *rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1);
-        (*rng >> 32) as u32
     }
 }

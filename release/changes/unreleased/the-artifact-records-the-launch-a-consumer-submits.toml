@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Artifact schema 10 records the selected launch of every entry point, including the entry dependency order, logical coverage, grid, workgroup, vector width, pipeline roles, ring slots, barrier phases, dynamic shared bytes, launch resource intent, persistence, and the workspace plan a runtime allocates."

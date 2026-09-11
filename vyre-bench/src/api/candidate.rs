@@ -16,6 +16,7 @@ pub enum CandidateKind {
 pub struct CandidateManifest {
     pub name: String,
     pub description: String,
+    /// Opaque serialized candidate configuration payload (unknown-field-preserving).
     pub payload: serde_json::Value,
 }
 

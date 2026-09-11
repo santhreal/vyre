@@ -1,0 +1,2 @@
+category = "Removed"
+text = "Retired `GOAL.md`. Its roadmap and compiler boundary rules are canonically owned by `docs/ARCHITECTURE.md`, `docs/CRATE_OWNERSHIP.toml`, and crate architecture documentation."

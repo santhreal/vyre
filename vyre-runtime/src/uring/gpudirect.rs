@@ -20,7 +20,7 @@ use std::fs;
 use std::io::{ErrorKind, Read as _};
 
 #[cfg(all(target_os = "linux", feature = "uring-cmd-nvme"))]
-const MAX_NVIDIA_FS_STATS_BYTES: u64 = 1024 * 1024;
+const MAX_GPUDIRECT_STATS_BYTES: u64 = 1024 * 1024;
 
 /// Result of probing the host for GPUDirect Storage support.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,7 +62,7 @@ impl GpuDirectCapability {
         }
 
         #[cfg(all(target_os = "linux", feature = "uring-cmd-nvme"))]
-        match read_nvidia_fs_stats() {
+        match read_gpudirect_stats() {
             Ok(stats) if !stats.trim().is_empty() => {
                 GpuDirectCapability::Available { stats }
             }
@@ -90,11 +90,11 @@ impl GpuDirectCapability {
 }
 
 #[cfg(all(target_os = "linux", feature = "uring-cmd-nvme"))]
-fn read_nvidia_fs_stats() -> std::io::Result<String> {
+fn read_gpudirect_stats() -> std::io::Result<String> {
     let mut file = fs::File::open("/proc/driver/nvidia-fs/stats")?;
     let mut stats = String::new();
     file.by_ref()
-        .take(MAX_NVIDIA_FS_STATS_BYTES + 1)
+        .take(MAX_GPUDIRECT_STATS_BYTES + 1)
         .read_to_string(&mut stats)?;
     let stats_len = u64::try_from(stats.len()).map_err(|error| {
         std::io::Error::new(
@@ -102,7 +102,7 @@ fn read_nvidia_fs_stats() -> std::io::Result<String> {
             format!("nvidia-fs stats length cannot fit u64: {error}"),
         )
     })?;
-    if stats_len > MAX_NVIDIA_FS_STATS_BYTES {
+    if stats_len > MAX_GPUDIRECT_STATS_BYTES {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
             "nvidia-fs stats exceeded bounded read limit",
@@ -160,6 +160,8 @@ pub fn encode_nvme_read_sqe(
     buf
 }
 
+// Inline: `vyre_runtime::uring::gpudirect` is `private`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

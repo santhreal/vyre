@@ -1,18 +1,19 @@
 //! Execution-planning contract tests.
 
 use vyre_foundation::execution_plan::{
-    plan, plan_with_options, AccuracyStrategy, AutotuneStrategy, DispatchStrategy, FusionStrategy,
-    InnovationTrack, LayoutStrategy, PlanError, PolicyRoute, ProvenanceStrategy, ReadbackStrategy,
-    SchedulingPolicy,
+    plan, plan_for_adapter, plan_with_options, AutotuneStrategy, ConformanceStrength,
+    DispatchStrategy, FusionStrategy, InnovationTrack, LayoutStrategy, PlanError,
+    ProvenanceStrategy, ReadbackStrategy, SchedulingPolicy,
 };
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::optimizer::AdapterCaps;
 use vyre_foundation::validate::{BackendCapabilities, ValidationOptions};
 
 fn ranged_output_program() -> Program {
     Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(1024)
-            .with_output_byte_range(4..12)],
+            .with_output_byte_range(4u64..12)],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
     )
@@ -69,7 +70,7 @@ fn strategy_encodes_all_seven_tracks_for_small_trimmed_program() {
     let plan = plan(&ranged_output_program()).expect("canonical ranged output program must plan");
     assert_eq!(plan.strategy.fusion, FusionStrategy::Candidate);
     assert_eq!(plan.strategy.dispatch, DispatchStrategy::PersistentRuntime);
-    assert_eq!(plan.strategy.accuracy, AccuracyStrategy::Direct);
+    assert_eq!(plan.strategy.conformance, ConformanceStrength::Standard);
     assert_eq!(plan.strategy.autotune, AutotuneStrategy::DeclaredShape);
     assert_eq!(plan.strategy.provenance, ProvenanceStrategy::GpuTrace);
     assert_eq!(plan.strategy.layout, LayoutStrategy::Static);
@@ -82,37 +83,69 @@ fn strategy_encodes_all_seven_tracks_for_small_trimmed_program() {
     );
 }
 
+/// WHY: measuring variants is a fact about the target, not about program size.
+/// The plan used to report `MeasureVariants` once a program passed a node count
+/// nobody measured, which is a threshold masquerading as a fact.
 #[test]
-fn strategy_marks_large_program_for_persistent_runtime_and_autotune() {
-    let body: Vec<Node> = (0..65)
+fn measuring_variants_is_a_target_fact_and_not_a_node_count() {
+    let large_body: Vec<Node> = (0..65)
         .map(|idx| Node::store("out", Expr::u32(idx), Expr::u32(idx)))
         .collect();
-    let program = Program::wrapped(
+    let large = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(128)],
         [128, 1, 1],
-        body,
+        large_body,
     );
-    let plan = plan(&program).expect("large static program must plan");
-    assert_eq!(plan.strategy.dispatch, DispatchStrategy::PersistentRuntime);
-    assert_eq!(plan.strategy.autotune, AutotuneStrategy::MeasureVariants);
+    let small = ranged_output_program();
+
+    let bare = AdapterCaps {
+        ideal_unroll_depth: 0,
+        ideal_vector_pack_bits: 0,
+        ideal_workgroup_tile: [0, 0, 0],
+        ..AdapterCaps::conservative()
+    };
+    let declares_shapes = AdapterCaps {
+        ideal_unroll_depth: 4,
+        ideal_vector_pack_bits: 128,
+        ideal_workgroup_tile: [16, 16, 1],
+        ..AdapterCaps::conservative()
+    };
+
+    for program in [&large, &small] {
+        let bare_plan = plan_for_adapter(program, &bare).expect("static program must plan");
+        assert_eq!(
+            bare_plan.strategy.autotune,
+            AutotuneStrategy::DeclaredShape,
+            "a target that declares no shape has nothing to measure, whatever the node count"
+        );
+        assert_eq!(
+            bare_plan.strategy.dispatch,
+            DispatchStrategy::PersistentRuntime
+        );
+
+        let measured =
+            plan_for_adapter(program, &declares_shapes).expect("static program must plan");
+        assert_eq!(
+            measured.strategy.autotune,
+            AutotuneStrategy::MeasureVariants,
+            "a target that declares shapes states there is something to measure"
+        );
+    }
 }
 
+/// WHY: the shared policy answers legality and ring arithmetic, and nothing
+/// it answers depends on a node count. It used to route on one: three
+/// predicates ignored their argument and answered the same value for every
+/// program, which read as a decision and was a constant. Selecting a schedule
+/// is `vyre-megakernel`'s.
 #[test]
-fn shared_policy_owns_strategy_and_route_boundaries() {
+fn the_shared_policy_answers_legality_and_ring_arithmetic() {
     let policy = SchedulingPolicy::standard();
-    assert!(policy.use_persistent_runtime(64));
-    assert!(policy.use_persistent_runtime(65));
-    assert!(!policy.recommend_autotune(64));
-    assert!(policy.recommend_autotune(65));
-    assert_eq!(
-        policy.route(64, (1 << 16) - 1),
-        PolicyRoute::PersistentMegakernel
-    );
-    assert_eq!(policy.route(64, 1 << 16), PolicyRoute::PersistentMegakernel);
-    assert_eq!(
-        policy.route(1025, 1 << 16),
-        PolicyRoute::PersistentMegakernel
-    );
+    let multiplier = policy.fused_over_dispatch_multiplier();
+    assert!(policy.allow_fused_threads(100 * multiplier, 100));
+    assert!(!policy.allow_fused_threads(100 * multiplier + 1, 100));
+    assert_eq!(policy.worker_workgroup_size(512, 256), 256);
+    assert_eq!(policy.padded_slot_count(65, 64), 128);
 }
 
 #[test]
@@ -153,7 +186,10 @@ fn zero_count_output_is_rejected_before_strategy() {
 
 #[test]
 fn inverted_output_byte_range_is_rejected_with_named_error() {
-    let inverted = std::ops::Range { start: 12, end: 4 };
+    let inverted = std::ops::Range {
+        start: 12u64,
+        end: 4u64,
+    };
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(1024)
@@ -177,7 +213,7 @@ fn output_byte_range_past_end_is_rejected_with_named_error() {
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(4)
-            .with_output_byte_range(0..64)],
+            .with_output_byte_range(0u64..64)],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
     );

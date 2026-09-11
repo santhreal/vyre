@@ -24,19 +24,28 @@ pub fn probe(adapter: &wgpu::Adapter) -> AdapterCaps {
 }
 
 /// Probe a live adapter and return the neutral driver profile.
+///
+/// Device timestamps are reported as absent here whatever the adapter
+/// advertises. Admitting them takes a resolve on a created device, which this
+/// function does not have: an adapter can advertise both timestamp features and
+/// still resolve a zero end-of-pass tick. [`from_backend_profile`] reports the
+/// capability that device acquisition proved.
 #[must_use]
 pub fn probe_profile(adapter: &wgpu::Adapter) -> DeviceProfile {
     let features = adapter.features();
     let limits = adapter.limits();
     let info = adapter.get_info();
 
-    let max_workgroup_size = [
+    // What the adapter allows, narrowed to what WGSL emission admits. The
+    // megakernel envelope validates every payload against the dialect profile,
+    // so an adapter extent the dialect refuses is not a capability of this
+    // backend and reporting it makes a composition build a payload that cannot
+    // be constructed.
+    let max_workgroup_size = crate::target_compiler::admissible_workgroup_size([
         limits.max_compute_workgroup_size_x,
         limits.max_compute_workgroup_size_y,
         limits.max_compute_workgroup_size_z,
-    ];
-    let timestamp_queries = features.contains(wgpu::Features::TIMESTAMP_QUERY)
-        && features.contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS);
+    ]);
     let subgroup_caps = crate::capabilities::subgroup_caps_for_adapter(features, &limits);
     let profile = DeviceProfile {
         backend: backend_id_for(info.backend),
@@ -47,6 +56,9 @@ pub fn probe_profile(adapter: &wgpu::Adapter) -> DeviceProfile {
             max_workgroup_size,
         ),
         supports_distributed_collectives: false,
+        supports_cooperative_launch: false,
+        per_launch_overhead_ns: 0,
+        persistent_setup_overhead_ns: 0,
         supports_specialization_constants: true,
         supports_f16: false,
         supports_bf16: false,
@@ -58,21 +70,23 @@ pub fn probe_profile(adapter: &wgpu::Adapter) -> DeviceProfile {
         has_shared_memory: limits.max_compute_workgroup_storage_size > 0,
         max_native_int_width: 32,
         max_workgroup_size,
-        max_invocations_per_workgroup: limits.max_compute_invocations_per_workgroup,
+        max_invocations_per_workgroup: crate::target_compiler::admissible_invocations_per_workgroup(
+            limits.max_compute_invocations_per_workgroup,
+        ),
         max_shared_memory_bytes: limits.max_compute_workgroup_storage_size,
         max_storage_buffer_binding_size: u64::from(limits.max_storage_buffer_binding_size),
         subgroup_size: subgroup_caps.subgroup_size,
         compute_units: 0,
         regs_per_thread_max: 0,
+        max_registers_per_compute_unit: 0,
+        max_invocations_per_compute_unit: 0,
         l1_cache_bytes: 0,
         l2_cache_bytes: 0,
         mem_bw_gbps: 0,
-        timing_quality: if timestamp_queries {
-            DeviceTimingQuality::DeviceTimestamps
-        } else {
-            DeviceTimingQuality::HostEnqueueWait
-        },
-        supports_device_timestamps: timestamp_queries,
+        // An adapter's timestamp features are not a proof that its resolve
+        // works, and this projection has no device to resolve on.
+        timing_quality: DeviceTimingQuality::HostEnqueueWait,
+        supports_device_timestamps: false,
         supports_hardware_counters: false,
         ideal_unroll_depth: 0,
         ideal_vector_pack_bits: 0,
@@ -116,6 +130,9 @@ pub fn from_backend_profile(
             enabled,
         ),
         supports_distributed_collectives: false,
+        supports_cooperative_launch: false,
+        per_launch_overhead_ns: 0,
+        persistent_setup_overhead_ns: 0,
         supports_specialization_constants: true,
         supports_f16: false,
         supports_bf16: false,
@@ -126,13 +143,19 @@ pub fn from_backend_profile(
         has_subgroup_shuffle: subgroup_caps.supports_subgroup,
         has_shared_memory: device_limits.max_compute_workgroup_storage_size > 0,
         max_native_int_width: 32,
-        max_workgroup_size: enabled.max_workgroup_size,
-        max_invocations_per_workgroup: device_limits.max_compute_invocations_per_workgroup,
+        max_workgroup_size: crate::target_compiler::admissible_workgroup_size(
+            enabled.max_workgroup_size,
+        ),
+        max_invocations_per_workgroup: crate::target_compiler::admissible_invocations_per_workgroup(
+            device_limits.max_compute_invocations_per_workgroup,
+        ),
         max_shared_memory_bytes: device_limits.max_compute_workgroup_storage_size,
         max_storage_buffer_binding_size: enabled.max_storage_buffer_binding_size,
         subgroup_size: subgroup_caps.subgroup_size,
         compute_units: 0,
         regs_per_thread_max: 0,
+        max_registers_per_compute_unit: 0,
+        max_invocations_per_compute_unit: 0,
         l1_cache_bytes: 0,
         l2_cache_bytes: 0,
         mem_bw_gbps: 0,
@@ -165,9 +188,55 @@ fn backend_id_for(backend: wgpu::Backend) -> &'static str {
     }
 }
 
+// Inline: covers `backend_id_for`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn unit_adapter_info() -> wgpu::AdapterInfo {
+        wgpu::AdapterInfo {
+            name: "Unit Test Adapter".to_string(),
+            vendor: 0,
+            device: 0,
+            device_type: wgpu::DeviceType::DiscreteGpu,
+            driver: "unit".to_string(),
+            driver_info: "unit".to_string(),
+            backend: wgpu::Backend::Vulkan,
+        }
+    }
+
+    /// Both timestamp features, and only both, admit device timing. The pair is
+    /// driven over every combination so a projection that reads one bit alone
+    /// turns this red.
+    #[test]
+    fn device_timing_is_admitted_only_when_both_timestamp_features_survived_acquisition() {
+        let adapter_info = unit_adapter_info();
+        let limits = wgpu::Limits::default();
+        for query in [false, true] {
+            for inside_encoders in [false, true] {
+                let enabled = EnabledFeatures {
+                    timestamp_query: query,
+                    timestamp_query_inside_encoders: inside_encoders,
+                    ..EnabledFeatures::default()
+                };
+                let profile = from_backend_profile(&adapter_info, &limits, &enabled);
+                let expected = query && inside_encoders;
+                assert_eq!(
+                    profile.supports_device_timestamps, expected,
+                    "Fix: timestamp_query={query} inside_encoders={inside_encoders} must report device timestamps as {expected}"
+                );
+                assert_eq!(
+                    profile.timing_quality,
+                    if expected {
+                        DeviceTimingQuality::DeviceTimestamps
+                    } else {
+                        DeviceTimingQuality::HostEnqueueWait
+                    },
+                    "Fix: timing quality and the timestamp capability must not disagree"
+                );
+            }
+        }
+    }
 
     #[test]
     fn backend_id_maps_every_wgpu_backend() {
@@ -225,7 +294,7 @@ mod tests {
     }
 
     #[test]
-    fn backend_profile_uses_created_device_limits_and_enabled_features() {
+    fn backend_profile_reports_what_the_created_device_and_the_dialect_both_admit() {
         let adapter_info = wgpu::AdapterInfo {
             name: "Unit Test Adapter".to_string(),
             vendor: 0,
@@ -251,18 +320,27 @@ mod tests {
 
         let profile = from_backend_profile(&adapter_info, &limits, &enabled);
         let caps = from_backend(&adapter_info, &limits, &enabled);
+        let admitted =
+            crate::target_compiler::admissible_workgroup_size(enabled.max_workgroup_size);
 
         assert_eq!(
-            profile.max_workgroup_size, enabled.max_workgroup_size,
-            "profile must use the workgroup limits actually enabled on the created device"
+            profile.max_workgroup_size, admitted,
+            "Fix: an extent the WGSL dialect refuses is not a capability of this backend"
         );
         assert_eq!(
-            caps.max_workgroup_size, enabled.max_workgroup_size,
-            "optimizer caps must inherit live enabled workgroup limits"
+            profile.max_workgroup_size[2], enabled.max_workgroup_size[2],
+            "Fix: an axis the dialect allows must still report the device limit"
+        );
+        assert_eq!(
+            caps.max_workgroup_size, admitted,
+            "Fix: optimizer caps and the driver profile must not disagree about one device"
         );
         assert_eq!(
             profile.max_invocations_per_workgroup,
-            limits.max_compute_invocations_per_workgroup
+            crate::target_compiler::admissible_invocations_per_workgroup(
+                limits.max_compute_invocations_per_workgroup
+            ),
+            "Fix: the envelope checks the invocation total against the dialect, not the device"
         );
         assert_eq!(
             profile.max_shared_memory_bytes,
@@ -272,5 +350,60 @@ mod tests {
             profile.max_storage_buffer_binding_size,
             enabled.max_storage_buffer_binding_size
         );
+    }
+
+    #[test]
+    fn every_probed_profile_extent_is_one_the_registered_target_profile_admits() {
+        let adapter_info = wgpu::AdapterInfo {
+            name: "Unit Test Adapter".to_string(),
+            vendor: 0,
+            device: 0,
+            device_type: wgpu::DeviceType::DiscreteGpu,
+            driver: "unit".to_string(),
+            driver_info: "unit".to_string(),
+            backend: wgpu::Backend::Vulkan,
+        };
+        let target = crate::target_compiler::target_profile()
+            .expect("Fix: the WGSL dialect registers a valid target profile");
+
+        for (workgroup, invocations) in [
+            ([1024u32, 1024, 64], 1024u32),
+            ([256, 256, 64], 256),
+            ([64, 4, 1], 256),
+            ([u32::MAX, u32::MAX, u32::MAX], u32::MAX),
+        ] {
+            let limits = wgpu::Limits {
+                max_compute_workgroup_size_x: workgroup[0],
+                max_compute_workgroup_size_y: workgroup[1],
+                max_compute_workgroup_size_z: workgroup[2],
+                max_compute_invocations_per_workgroup: invocations,
+                max_compute_workgroup_storage_size: 32 * 1024,
+                ..wgpu::Limits::default()
+            };
+            let enabled = EnabledFeatures {
+                max_workgroup_size: workgroup,
+                max_storage_buffer_binding_size: 1 << 28,
+                ..EnabledFeatures::default()
+            };
+            let profile = from_backend_profile(&adapter_info, &limits, &enabled);
+
+            for (axis, (extent, limit)) in profile
+                .max_workgroup_size
+                .iter()
+                .zip(target.max_workgroup_size())
+                .enumerate()
+            {
+                assert!(
+                    *extent <= limit,
+                    "Fix: axis {axis} reports {extent}, which the target profile limit {limit} rejects at payload construction"
+                );
+            }
+            assert!(
+                profile.max_invocations_per_workgroup <= target.max_invocations_per_workgroup(),
+                "Fix: the profile promises {} invocations, more than the {} the target admits",
+                profile.max_invocations_per_workgroup,
+                target.max_invocations_per_workgroup()
+            );
+        }
     }
 }

@@ -1,13 +1,14 @@
 //! Test crate.
 
+#![cfg(feature = "device-tests")]
 #![allow(deprecated)]
 use proptest::prelude::*;
 use std::collections::BTreeSet;
-use vyre_primitives::wire::pack_u32_slice as pack_words;
 use vyre_driver::DispatchConfig;
 use vyre_driver::VyreBackend;
 use vyre_foundation::optimizer::optimize;
-use vyre_libs::scan::{compact_hits_with_layout, emit_hit_with_layout};
+use vyre_libs::pattern::{compact_hits_with_layout, emit_hit_with_layout};
+use vyre_primitives::wire::pack_u32_slice as pack_words;
 use vyre_reference::value::Value;
 
 fn unpack_words(bytes: &[u8]) -> Vec<u32> {
@@ -34,16 +35,19 @@ fn run_emit_reference(
         rule_ids.len() as u32,
         max_hits,
     );
+    // One Value per buffer the reference accepts as an input. `out_hits` is
+    // backend-allocated, so it takes none: a placeholder for it is the extra
+    // Value the artifact ABI rejects on a device.
     let inputs = vec![
         Value::Bytes(pack_words(rule_ids).into()),
         Value::Bytes(pack_words(file_ids).into()),
         Value::Bytes(pack_words(span_starts).into()),
         Value::Bytes(pack_words(span_lens).into()),
-        Value::Bytes(vec![0u8; (max_hits * 4 * 4) as usize].into()),
         Value::Bytes(pack_words(&[0]).into()),
         Value::Bytes(pack_words(&[0]).into()),
     ];
-    vyre_reference::reference_eval(&program, &inputs)
+    vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("Fix: hit-buffer reference run must succeed")
         .into_iter()
         .map(|value| value.to_bytes())
@@ -230,21 +234,50 @@ fn host_readback_prefix_matches_cursor() {
         4,
     ))
     .expect("registered optimizer must converge");
+    // Six inputs for six host-consuming bindings. `out_hits` is binding 4 and a
+    // `BufferDecl::output`, so the backend allocates it and it takes no slot;
+    // `out_cursor` and the overflow counter are read-write, so their host bytes
+    // are uploaded and read back. This call used to pass a seventh value, a
+    // zeroed placeholder for `out_hits`, which only the wgpu path accepted.
+    let wgpu_inputs = vec![
+        pack_words(&[7, 9, 11]),
+        pack_words(&[101, 103, 107]),
+        pack_words(&[5, 9, 13]),
+        pack_words(&[2, 4, 6]),
+        pack_words(&[0]),
+        pack_words(&[0]),
+    ];
     let wgpu_hits = backend
+        .dispatch(&emit_program, &wgpu_inputs, &DispatchConfig::default())
+        .expect("Fix: wgpu emit_hit dispatch must succeed");
+
+    // One shape is admitted, so both neighbours are refused by name rather than
+    // one being reinterpreted as a second ABI and the other silently ignored.
+    let mut with_placeholder = wgpu_inputs.clone();
+    with_placeholder.insert(4, vec![0u8; 16 * 4]);
+    let too_long = backend
+        .dispatch(&emit_program, &with_placeholder, &DispatchConfig::default())
+        .expect_err("a placeholder for a backend-allocated output must be refused");
+    assert!(
+        too_long
+            .to_string()
+            .contains("expected 6 input buffer(s) from Program declarations but received 7"),
+        "unexpected rejection: {too_long}"
+    );
+
+    let too_short = backend
         .dispatch(
             &emit_program,
-            &[
-                pack_words(&[7, 9, 11]),
-                pack_words(&[101, 103, 107]),
-                pack_words(&[5, 9, 13]),
-                pack_words(&[2, 4, 6]),
-                vec![0u8; 16 * 4],
-                pack_words(&[0]),
-                pack_words(&[0]),
-            ],
+            &wgpu_inputs[..wgpu_inputs.len() - 1],
             &DispatchConfig::default(),
         )
-        .expect("Fix: wgpu emit_hit dispatch must succeed");
+        .expect_err("a short input list must be refused, not padded");
+    assert!(
+        too_short
+            .to_string()
+            .contains("expected 6 input buffer(s) from Program declarations but received 5"),
+        "unexpected rejection: {too_short}"
+    );
     let reference_outputs =
         run_emit_reference(&[7, 9, 11], &[101, 103, 107], &[5, 9, 13], &[2, 4, 6], 4);
     let cursor = unpack_words(&reference_outputs[1])[0];
@@ -257,11 +290,9 @@ fn host_readback_prefix_matches_cursor() {
     let compact_outputs = backend
         .dispatch(
             &compact_program,
-            &[
-                reference_outputs[0].clone(),
-                reference_outputs[1].clone(),
-                pack_words(&[0]),
-            ],
+            // `HIT_BUFFER_LIVE_LENGTH` is binding 2 and backend-allocated, so
+            // the two read-only inputs are the whole list.
+            &[reference_outputs[0].clone(), reference_outputs[1].clone()],
             &DispatchConfig::default(),
         )
         .expect("Fix: wgpu compact_hits dispatch must succeed");

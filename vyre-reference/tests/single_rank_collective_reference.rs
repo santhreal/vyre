@@ -1,20 +1,17 @@
 //! Reference-oracle coverage for substrate-neutral single-rank collectives.
 
-mod common;
-use common::{bytes_to_u32, u32_bytes};
+use crate::wire_words;
 use proptest::prelude::*;
 use vyre_foundation::ir::{BufferDecl, CollectiveOp, CommGroup, DataType, Expr, Node, Program};
-use vyre_reference::{reference_eval, value::Value};
+use vyre_reference::value::Value;
+use wire_words::{bytes_to_u32, u32_bytes};
 
 fn copy_program(node: Node, count: u32) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(count),
-            BufferDecl::output("out", 1, DataType::U32).with_count(count),
-        ],
-        [64, 1, 1],
-        vec![node],
-    )
+    let buffers = vec![
+        BufferDecl::read("input", 0, DataType::U32).with_count(count),
+        BufferDecl::output("out", 1, DataType::U32).with_count(count),
+    ];
+    Program::wrapped(buffers, [64, 1, 1], vec![node])
 }
 
 fn identity_program(node: Node, count: u32) -> Program {
@@ -91,8 +88,12 @@ fn subgroup_shuffle_observes_branch_assigned_source_lane_after_empty_peer_branch
         ],
     );
 
-    let outputs = reference_eval(&program, &[Value::from(u32_bytes(&[0xfeed_cafe]))])
-        .expect("Fix: reference oracle must execute branch-fed subgroup shuffle.");
+    let outputs = vyre_reference::ReferenceRequest::standard(
+        &program,
+        &[Value::from(u32_bytes(&[0xfeed_cafe]))],
+    )
+    .outputs()
+    .expect("Fix: reference oracle must execute branch-fed subgroup shuffle.");
 
     assert_eq!(bytes_to_u32(&outputs[0]), vec![0xfeed_cafe; 32]);
 }
@@ -103,22 +104,12 @@ proptest! {
     #[test]
     fn reference_executes_world_copy_collectives(values in proptest::collection::vec(any::<u32>(), 1..256), reduce in any::<bool>()) {
         let count = values.len() as u32;
-        let node = if reduce {
-            Node::ReduceScatter {
-                input: "input".into(),
-                output: "out".into(),
-                op: CollectiveOp::Sum,
-                group: CommGroup::WORLD,
-            }
-        } else {
-            Node::AllGather {
-                input: "input".into(),
-                output: "out".into(),
-                group: CommGroup::WORLD,
-            }
+        let node = match reduce {
+            true => Node::ReduceScatter { input: "input".into(), output: "out".into(), op: CollectiveOp::Sum, group: CommGroup::WORLD },
+            false => Node::AllGather { input: "input".into(), output: "out".into(), group: CommGroup::WORLD },
         };
         let program = copy_program(node, count);
-        let outputs = reference_eval(&program, &[Value::from(u32_bytes(&values))])
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &[Value::from(u32_bytes(&values))]).outputs()
             .expect("Fix: reference oracle must execute substrate-neutral single-rank collectives.");
 
         prop_assert_eq!(outputs.len(), 1);
@@ -142,7 +133,7 @@ proptest! {
             }
         };
         let program = identity_program(node, count);
-        let outputs = reference_eval(&program, &[Value::from(u32_bytes(&values))])
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &[Value::from(u32_bytes(&values))]).outputs()
             .expect("Fix: reference oracle must execute WORLD identity collectives by lowering them locally.");
 
         prop_assert_eq!(outputs.len(), 1);
@@ -153,9 +144,9 @@ proptest! {
     fn reference_rejects_non_world_collectives(group in 1u32..4096, kind in 0u32..4) {
         let program = copy_program(collective_shape(kind, CommGroup(group), 0), 4);
 
-        let error = reference_eval(&program, &[Value::from(u32_bytes(&[1, 2, 3, 4]))])
+        let error = vyre_reference::ReferenceRequest::standard(&program, &[Value::from(u32_bytes(&[1, 2, 3, 4]))]).outputs()
             .expect_err("Fix: reference oracle must not silently emulate multi-rank collectives.");
-        prop_assert!(error.to_string().contains("Multi-rank collective transport"));
+        prop_assert!(error.to_string().contains("single-rank reference interpreter"));
     }
 
     #[test]
@@ -169,8 +160,8 @@ proptest! {
             4,
         );
 
-        let error = reference_eval(&program, &[Value::from(u32_bytes(&[1, 2, 3, 4]))])
+        let error = vyre_reference::ReferenceRequest::standard(&program, &[Value::from(u32_bytes(&[1, 2, 3, 4]))]).outputs()
             .expect_err("Fix: reference oracle must not silently emulate single-rank broadcast from a nonzero root.");
-        prop_assert!(error.to_string().contains("Broadcast can only use root 0"));
+        prop_assert!(error.to_string().contains("single-rank reference interpreter requires Broadcast root 0"));
     }
 }

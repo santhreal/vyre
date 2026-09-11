@@ -30,7 +30,7 @@ fn async_extension_tags_remain_structural() {
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [128, 1, 1],
         vec![
-            Node::async_load_ext("ssd", "vram", Expr::u32(0), Expr::u32(4096), "load.tag"),
+            Node::async_load_gpu_driven("ssd", "vram", Expr::u32(0), Expr::u32(4096), "load.tag"),
             Node::async_wait("load.tag"),
             Node::async_store("vram", "ssd", Expr::u32(0), Expr::u32(4096), "store.tag"),
             Node::async_wait("store.tag"),

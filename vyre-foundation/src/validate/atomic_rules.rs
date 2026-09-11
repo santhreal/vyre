@@ -8,10 +8,10 @@
 //! races on the GPU.
 
 use crate::ir_inner::model::expr::Expr;
+use crate::ir_inner::model::op_signature::{AtomicOp, BufferAccess, DataType};
 use crate::ir_inner::model::program::BufferDecl;
-use crate::ir_inner::model::types::{AtomicOp, BufferAccess, DataType};
 use crate::memory_model::MemoryOrdering;
-use crate::validate::typecheck::expr_type;
+use crate::validate::typecheck::{expr_type, ScopeTypes};
 use crate::validate::{err, Binding, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;
@@ -32,7 +32,7 @@ use rustc_hash::FxHashMap;
 /// # Examples
 ///
 /// `validate_atomic` is `pub(crate)`; it runs as part of
-/// [`crate::validate::validate::validate`] whenever a program contains an
+/// [`crate::validate::rule_pipeline::validate`] whenever a program contains an
 /// `Expr::Atomic`. See the unit tests on that function for a runnable
 /// example covering the U32 / U64 atomic surface and the invalid-op
 /// rejection paths.
@@ -61,27 +61,25 @@ pub(crate) fn validate_atomic(
     format!(
             "atomic `{op:?}` on buffer `{buffer}` uses invalid memory ordering `{ordering:?}`"
         ),
-    format!(
-            "use Relaxed, Acquire, Release, AcqRel, or SeqCst for atomic read-modify-write operations."
-        )
+    "use Relaxed, Acquire, Release, AcqRel, or SeqCst for atomic read-modify-write operations.".to_string()
 ));
     }
     // VAL-001: the atomic index must be u32. target-text `atomicLoad`/`atomicStore`
     // and friends are indexed by `u32`; an f32 or i32 index slips past
     // validation today and then crashes the backend at dispatch time.
-    if let Some(index_ty) = expr_type(index, buffers, scope) {
+    if let Some(index_ty) = expr_type(index, &mut ScopeTypes::new(buffers, scope)) {
         if index_ty != DataType::U32 {
             errors.push(err(
                 "V027",
                 ValidationPhase::Memory,
                 ValidationLocation::Program,
                 format!("atomic index on buffer `{buffer}` has type `{index_ty}`, must be `u32`"),
-                format!("cast the index to U32 before the atomic operation."),
+                "cast the index to U32 before the atomic operation.".to_string(),
             ));
         }
     }
     if let Some(buf) = buffers.get(buffer) {
-        // L.1.36 / audit finding #5: split the "non-writable" check so
+        // split the "non-writable" check so
         // Workgroup buffers get their own V025 code. The vyre atomic
         // memory model is defined for `ReadWrite` storage buffers;
         // Workgroup atomics require additional OOB and ordering
@@ -97,9 +95,7 @@ pub(crate) fn validate_atomic(
     format!(
                     "atomic `{op:?}` on workgroup buffer `{buffer}` is rejected by the current memory model"
                 ),
-    format!(
-                    "use a storage ReadWrite buffer for atomics."
-                )
+    "use a storage ReadWrite buffer for atomics.".to_string()
 ));
             }
             BufferAccess::ReadOnly => {
@@ -130,7 +126,7 @@ pub(crate) fn validate_atomic(
                     format!(
                     "atomic `{op:?}` targets unsupported buffer access `{other:?}` on `{buffer}`"
                 ),
-                    format!("use BufferAccess::ReadWrite storage buffers for atomics."),
+                    "use BufferAccess::ReadWrite storage buffers for atomics.".to_string(),
                 ));
             }
         }
@@ -142,7 +138,7 @@ pub(crate) fn validate_atomic(
                 format!(
                     "operation on buffer `{buffer}` with element type `bytes` is not supported"
                 ),
-                format!("use a typed buffer."),
+                "use a typed buffer.".to_string(),
             ));
         }
         if buf.element != DataType::U32 {
@@ -157,20 +153,22 @@ pub(crate) fn validate_atomic(
                 "atomics only support U32 elements",
             ));
         }
-        if let Some(val_ty) = expr_type(value, buffers, scope) {
+        if let Some(val_ty) = expr_type(value, &mut ScopeTypes::new(buffers, scope)) {
             if val_ty != DataType::U32 {
                 errors.push(err(
                     "V057",
                     ValidationPhase::Memory,
                     ValidationLocation::Program,
                     format!("atomic value type `{val_ty}` does not match required `u32`"),
-                    format!("ensure the atomic operand is U32."),
+                    "ensure the atomic operand is U32.".to_string(),
                 ));
             }
         }
         match (op, expected) {
             (AtomicOp::CompareExchange, Some(expected_expr)) => {
-                if let Some(expected_ty) = expr_type(expected_expr, buffers, scope) {
+                if let Some(expected_ty) =
+                    expr_type(expected_expr, &mut ScopeTypes::new(buffers, scope))
+                {
                     if expected_ty != DataType::U32 {
                         errors.push(err(
     "V058",
@@ -179,9 +177,7 @@ pub(crate) fn validate_atomic(
     format!(
                             "compare-exchange expected type `{expected_ty}` does not match required `u32`"
                         ),
-    format!(
-                            "ensure Expr::Atomic.expected is U32."
-                        )
+    "ensure Expr::Atomic.expected is U32.".to_string()
 ));
                     }
                 }
@@ -208,7 +204,7 @@ pub(crate) fn validate_atomic(
             ValidationPhase::Memory,
             ValidationLocation::Program,
             format!("atomic on unknown buffer `{buffer}`"),
-            format!("declare it in Program::buffers."),
+            "declare it in Program::buffers.".to_string(),
         ));
     }
 }

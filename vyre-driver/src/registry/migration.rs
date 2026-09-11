@@ -32,44 +32,21 @@ use std::sync::OnceLock;
 use crate::diagnostics::{Diagnostic, OpLocation};
 use rustc_hash::FxHashMap;
 
-/// Semantic version triple used for op versioning.
-///
-/// The registry's current `Dialect::version` is still a single `u32`;
-/// the triple form is the canonical representation for per-op
-/// evolution: minor bumps are backward-compatible additions and patch
-/// bumps are bug fixes. The `Ord` impl is lexicographic major→minor→
-/// patch so ordinary comparison works for chain resolution.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Semver {
-    /// Breaking-change counter.
-    pub major: u32,
-    /// Backwards-compatible-feature counter.
-    pub minor: u32,
-    /// Patch counter.
-    pub patch: u32,
-}
-
-impl Semver {
-    /// Construct a new semver triple.
-    #[must_use]
-    pub const fn new(major: u32, minor: u32, patch: u32) -> Self {
-        Self {
-            major,
-            minor,
-            patch,
-        }
-    }
-}
-
-impl std::fmt::Display for Semver {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
-    }
+vyre_spec::semver_triple! {
+    /// Semantic version triple used for op versioning.
+    ///
+    /// The registry's current `Dialect::version` is still a single `u32`; the
+    /// triple form is the canonical representation for per-op evolution: minor
+    /// bumps are backward-compatible additions and patch bumps are bug fixes.
+    /// The derived `Ord` is lexicographic major to minor to patch, so ordinary
+    /// comparison works for chain resolution.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct Semver;
 }
 
 /// Typed attribute value carried in an [`AttrMap`].
 ///
-/// The tags match [`vyre_foundation::AttrType`] one-to-one so
+/// The tags match [`vyre_foundation::dialect_lookup::AttrType`] one-to-one so
 /// a migration can round-trip an attribute through the op's schema
 /// without losing type information.
 #[derive(Debug, Clone, PartialEq)]
@@ -212,7 +189,7 @@ impl std::error::Error for MigrationError {}
 /// Dialect crates register migrations via:
 ///
 /// ```
-/// use vyre_driver::registry::{AttrMap, Migration, MigrationError, Semver};
+/// use vyre_driver::{AttrMap, Migration, MigrationError, Semver};
 ///
 /// fn rename_mode(attrs: &mut AttrMap) -> Result<(), MigrationError> {
 ///     attrs.rename("mode", "overflow_behavior");
@@ -374,16 +351,21 @@ impl MigrationRegistry {
     }
 }
 
+/// Diagnostic code for an op resolved through a deprecation marker.
+///
+/// The catalog renderer reads this constant, so the string has one owner.
+pub const DEPRECATED_OP_CODE: &str = "W-OP-DEPRECATED";
+
 /// Build a `Severity::Warning` diagnostic for a deprecated op.
 ///
 /// The decoder calls this after resolving a deprecated op and pushes
 /// the result onto its diagnostic buffer. The caller sees a
-/// machine-readable `W-OP-DEPRECATED` warning with the op location
+/// machine-readable [`DEPRECATED_OP_CODE`] warning with the op location
 /// and migration note attached as the suggested fix.
 #[must_use]
 pub fn deprecation_diagnostic(dep: &Deprecation) -> Diagnostic {
     Diagnostic::warning(
-        "W-OP-DEPRECATED",
+        DEPRECATED_OP_CODE,
         format!(
             "op `{}` is deprecated since version {}",
             dep.op_id, dep.deprecated_since
@@ -393,6 +375,8 @@ pub fn deprecation_diagnostic(dep: &Deprecation) -> Diagnostic {
     .with_fix(dep.note)
 }
 
+// Inline: `vyre_driver::registry` is `pub(crate)`, so no integration test can reach what this suite
+// exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

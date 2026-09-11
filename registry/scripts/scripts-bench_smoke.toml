@@ -1,0 +1,4 @@
+path = "scripts/bench_smoke.sh"
+state = "retired"
+gate = "bench-smoke-runtime"
+reason = "it wrapped the smoke suite the gate runs under a budget"

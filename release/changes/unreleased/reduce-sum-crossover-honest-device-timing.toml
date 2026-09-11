@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Bypass materialized output cache lookup on timed CUDA dispatches so device timing events are always recorded. Require distinct, non-zero device timings before reduction route selection on large workloads, and measure a Rayon CPU baseline for reduction crossover benchmarks."

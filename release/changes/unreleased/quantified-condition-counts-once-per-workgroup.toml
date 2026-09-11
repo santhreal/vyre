@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The quantified-condition release kernel now ballots matches per subgroup and performs one global atomic count per workgroup. On the RTX 5090 release host this restored the required 100x CPU-baseline margin after the per-subgroup counter failed at 93.0x for `release.quantified_condition_loops.1m`."

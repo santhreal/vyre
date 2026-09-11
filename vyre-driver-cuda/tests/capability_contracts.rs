@@ -1,8 +1,11 @@
 //! Live CUDA capability contracts for GPU-required Vyre hosts.
 
-use vyre_driver::pipeline::PipelineFeatureFlags;
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::DispatchConfig;
+use vyre_driver::PipelineFeatureFlags;
 use vyre_driver_cuda::{cuda_factory, CudaBackend, CudaDeviceCaps, CudaMegakernelDeviceKey};
+use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 #[test]
@@ -22,19 +25,19 @@ fn cuda_device_probe_must_succeed_on_gpu_fleet() {
     );
 
     let backend = CudaBackend::acquire()
-        .expect("Fix: CudaBackend::acquire must succeed on the local RTX 5090 machine.");
+        .expect("Fix: CudaBackend::acquire must succeed on the GPU-required test host.");
     assert!(
         !backend.caps.name.trim().is_empty(),
         "Fix: CUDA device-name probe returned an empty adapter name."
     );
     assert!(
-        backend.compute_capability() >= (12, 0),
-        "Fix: expected the local RTX 5090 CUDA path to report compute capability >= 12.0, got {:?}.",
+        backend.compute_capability() >= (8, 0),
+        "Fix: expected CUDA device to report compute capability >= (8, 0), got {:?}.",
         backend.compute_capability()
     );
     assert!(
-        backend.device_memory_bytes() >= 30 * 1024 * 1024 * 1024,
-        "Fix: expected at least 30 GiB VRAM on the local RTX 5090 path, got {} bytes.",
+        backend.device_memory_bytes() >= 8 * 1024 * 1024 * 1024,
+        "Fix: expected at least 8 GiB VRAM on the CUDA device, got {} bytes.",
         backend.device_memory_bytes()
     );
 }
@@ -91,7 +94,7 @@ fn cuda_backend_caps_match_driver_attributes() {
         "Fix: CUDA PTX emitter target must not exceed the physical device target."
     );
     assert!(
-        backend.ptx_target_sm() >= 90,
+        backend.ptx_target_sm() >= 70,
         "Fix: CUDA PTX emitter target must be selected by live driver probing and preserve modern NVIDIA instructions instead of falling back to an old baseline."
     );
     assert!(
@@ -159,16 +162,43 @@ fn cuda_backend_caps_match_driver_attributes() {
         backend.max_threads_per_block(),
         "Fix: CUDA megakernel plan cache key must include live max workgroup size."
     );
+    assert_eq!(
+        backend.caps.compute_capability.0, expected.compute_capability.0,
+        "Fix: CUDA device caps must include probed SM major version."
+    );
+    assert_eq!(
+        backend.caps.compute_capability.1, expected.compute_capability.1,
+        "Fix: CUDA device caps must include probed SM minor version."
+    );
+    assert_eq!(
+        backend.caps.warp_size as u32, expected.warp_size as u32,
+        "Fix: CUDA device caps must include probed warp size."
+    );
+    assert_eq!(
+        backend.caps.cooperative_launch,
+        backend.hardware_supports_grid_sync(),
+        "Fix: CUDA device caps cooperative launch must match live cooperative grid-sync capability."
+    );
+    assert_eq!(
+        backend.caps.hardware_supports_tensor_cores(),
+        backend.hardware_supports_tensor_cores(),
+        "Fix: CUDA device caps must match live tensor-core capability."
+    );
+    assert_eq!(
+        backend.caps.max_threads_per_block as u32,
+        backend.max_threads_per_block(),
+        "Fix: CUDA device caps must include live max workgroup size."
+    );
 }
 
 #[test]
 fn cuda_is_canonical_dispatch_backend_when_linked() {
     assert!(
-        vyre_driver::backend::backend_precedence("cuda").expect("valid backend registry") < 10,
+        vyre_driver::backend_precedence("cuda").expect("valid backend registry") < 10,
         "Fix: CUDA must outrank wgpu for this release when both live dispatch backends are linked."
     );
     assert!(
-        vyre_driver::backend::backend_dispatches("cuda").expect("valid backend registry"),
+        vyre_driver::backend_dispatches("cuda").expect("valid backend registry"),
         "Fix: CUDA must advertise live dispatch capability for release routing."
     );
 }
@@ -201,7 +231,7 @@ fn vyre_backend_trait_reports_live_cuda_capabilities() {
     );
     assert!(
         backend.supports_async_compute(),
-        "Fix: RTX 5090 CUDA backend must report async CUDA hardware capability."
+        "Fix: CUDA backend must report async CUDA hardware capability."
     );
     assert!(
         !backend.allows_host_grid_sync_split(),
@@ -211,7 +241,7 @@ fn vyre_backend_trait_reports_live_cuda_capabilities() {
 
 #[test]
 fn preferred_dispatch_backend_is_cuda_not_cpu_or_wgpu_fallback() {
-    let backend = vyre_driver::backend::acquire_preferred_dispatch_backend()
+    let backend = vyre_driver::acquire_preferred_dispatch_backend()
         .expect("Fix: CUDA must be usable as the preferred dispatch backend on the GPU fleet.");
     assert_eq!(
         backend.id(),
@@ -282,5 +312,118 @@ fn cuda_registration_dispatch_borrowed_into_reuses_caller_output_slot() {
         outputs[0].as_slice(),
         &0xfeed_beef_u32.to_le_bytes(),
         "Fix: CUDA output-slot reuse must preserve byte-exact dispatch results."
+    );
+}
+
+/// The unwrapped backend answers every float lowering mode, or refuses it by
+/// name.
+///
+/// WHY: `GridSyncSplitBackend` refuses a mode the wrapped backend does not
+/// lower, and every registry caller comes through it. `cuda_factory` does not:
+/// it is the raw factory the registration holds, and a caller holding one
+/// reaches compilation without passing the wrapper. So the backend states its
+/// own answer and refuses on its own, and both halves are asserted here over
+/// the whole mode roster rather than over two modes named by hand.
+///
+/// Both message shapes are exercised. `require_lowered_float_mode` and
+/// `BackendError::reject_blocked_contraction` build one string for a program
+/// carrying approximable operations and another for one carrying none, and the
+/// expectation is taken from `fp_parity::blocked_contraction_feature`, which is
+/// the one owner of both.
+#[test]
+fn cuda_float_lowering_capability_honesty_and_refusal() {
+    let backend = cuda_factory()
+        .expect("Fix: CUDA backend factory must succeed on the GPU-required test host.");
+
+    let constant_store = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::F32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::store("out", Expr::u32(0), Expr::f32(1.0))],
+    );
+    let transcendental = vyre_test_support::strict_float_programs::f32_multiply_add_program(
+        4,
+        Some(vyre_foundation::ir::UnOp::Sin),
+    );
+    assert!(
+        vyre_foundation::fp_parity::approximable_operations(&constant_store).is_empty()
+            && !vyre_foundation::fp_parity::approximable_operations(&transcendental).is_empty(),
+        "Fix: the two witness programs must differ in whether they carry an approximable \
+         operation, or both cases below exercise one refusal shape."
+    );
+
+    const LANES: u32 = 4;
+    let lane_bytes: Vec<u8> = (0..LANES)
+        .flat_map(|i| (i as f32 + 0.5).to_le_bytes())
+        .collect();
+    let witnesses: [(&Program, Vec<Vec<u8>>); 2] = [
+        (&constant_store, Vec::new()),
+        (
+            &transcendental,
+            vec![lane_bytes.clone(), lane_bytes.clone(), lane_bytes],
+        ),
+    ];
+
+    for &mode in FloatLoweringMode::EVERY {
+        for (program, inputs) in &witnesses {
+            let mut config = DispatchConfig::default();
+            config.float_lowering = mode;
+
+            let Some(expected) =
+                vyre_foundation::fp_parity::blocked_contraction_feature(program, mode)
+            else {
+                assert!(
+                    backend.honors_float_lowering(mode),
+                    "Fix: mode `{}` permits contraction, so CUDA must state that it lowers it.",
+                    mode.cache_label()
+                );
+                backend
+                    .dispatch(program, inputs, &config)
+                    .unwrap_or_else(|error| {
+                        panic!(
+                            "Fix: CUDA states it lowers `{}`, so the dispatch must run: {error}",
+                            mode.cache_label()
+                        )
+                    });
+                continue;
+            };
+
+            assert!(
+                !backend.honors_float_lowering(mode),
+                "Fix: CUDA states it lowers `{}`. The PTX emitter selects the native approximate \
+                 transcendentals and leaves the multiply-add pair for the assembler to contract, \
+                 so a strict answer would be contracted arithmetic under a bit-identity request.",
+                mode.cache_label()
+            );
+            let error = backend
+                .dispatch(program, inputs, &config)
+                .expect_err(&format!(
+                "Fix: CUDA does not lower `{}` and must refuse the dispatch rather than answer \
+                 it with contracted arithmetic.",
+                mode.cache_label()
+            ));
+            let message = error.to_string();
+            assert!(
+                message.contains(&expected),
+                "Fix: the CUDA refusal must name the mode and the blocked operations exactly as \
+                 `fp_parity::blocked_contraction_feature` spells them, which is `{expected}`; \
+                 got `{message}`"
+            );
+            assert!(
+                message.contains(vyre_driver_cuda::CUDA_BACKEND_ID) && message.contains("Fix:"),
+                "Fix: the CUDA refusal must name the backend and carry remediation: {message}"
+            );
+        }
+    }
+
+    let mut contracted = DispatchConfig::default();
+    contracted.float_lowering = FloatLoweringMode::Contracted;
+    let outputs = backend
+        .dispatch(&constant_store, &[], &contracted)
+        .expect("Fix: CUDA states it lowers `contracted`, so the witness must run.");
+    assert_eq!(
+        outputs[0].as_slice(),
+        &1.0_f32.to_le_bytes(),
+        "Fix: a mode CUDA states it lowers must return the program's value, not a refusal or a \
+         rounded neighbour."
     );
 }

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The structural-gate registry now declares every post-dispatch oracle mutation and decoder-boundary test added to the host-oracle elimination gate."

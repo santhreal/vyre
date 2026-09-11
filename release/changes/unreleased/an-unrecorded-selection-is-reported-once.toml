@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The feature-isolation sweep no longer reports a selection that the record does not mention as a blocked row that has started compiling. A missing row is the agreement half's finding and carries the fix that closes it, so counting the same omission twice sent a reader to a row that does not exist."

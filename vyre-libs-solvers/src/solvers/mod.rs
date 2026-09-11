@@ -1,0 +1,51 @@
+//! Numerical solver, autotuning, and spectral compositions.
+
+pub mod amg_pass_solver;
+pub mod bellman_tn_order;
+pub mod conv1d_latency_smoothing;
+pub mod dataflow_compaction_pipeline;
+pub mod differentiable_autotune;
+pub mod fmm_polyhedral_compress;
+pub mod kfac_autotune_step;
+pub mod mori_zwanzig_region_coarsen;
+pub mod multigrid_matroid_solver;
+pub mod natural_gradient_autotuner;
+pub mod numerical_kernel_pipeline;
+pub mod persistent_homology_loop_signature;
+pub mod qsvt_matrix_function_fusion;
+pub mod quantized_dispatch;
+pub mod scientific_kernel_pipeline;
+pub mod sheaf_heterophilic_dispatch;
+pub mod sheaf_spectral_clustering;
+pub mod sinkhorn_dispatch_clustering;
+pub mod sinkhorn_full_clustering;
+pub mod tensor_network_fusion_order;
+pub mod tensor_train_chain_fusion;
+pub mod tensor_train_compression;
+#[cfg(test)]
+pub(crate) mod test_helpers {
+    use vyre_foundation::ir::{Node, Program};
+
+    pub(crate) fn assert_input_pointers_preserved(before: &[*const u8], after: &[Vec<u8>]) {
+        for (b, a) in before.iter().zip(after.iter().map(Vec::as_ptr)) {
+            assert_eq!(*b, a);
+        }
+    }
+
+    pub(crate) fn assert_scratch_capacities_preserved(
+        scratch_inputs: &[Vec<u8>],
+        expected: &[usize],
+    ) {
+        let caps: Vec<usize> = scratch_inputs.iter().map(Vec::capacity).collect();
+        assert_eq!(caps, expected);
+    }
+
+    pub(crate) fn assert_min_region_count(program: &Program, min_count: usize) {
+        let region_count = program
+            .entry()
+            .iter()
+            .filter(|n| matches!(n, Node::Region { .. }))
+            .count();
+        assert!(region_count >= min_count);
+    }
+}

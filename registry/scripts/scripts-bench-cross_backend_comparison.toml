@@ -1,0 +1,4 @@
+path = "scripts/bench/cross_backend_comparison.sh"
+state = "retired"
+gate = "bench-crossback"
+reason = "the cross-backend comparison is derived from the committed release benchmark evidence"

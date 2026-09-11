@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`vyre_reference::flat_cpu::run_flat` builds its input vector from `is_reference_input` instead of pushing a zero Value for every read-write buffer, so a flat conformance payload describes the same argument list a device dispatch takes. Every declared buffer is still width-checked, so a variable-width output is still refused by name."

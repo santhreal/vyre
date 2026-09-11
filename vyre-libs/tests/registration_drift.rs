@@ -12,26 +12,6 @@ use vyre_foundation::operation::{OperationRegistry, OperationTier};
 /// subsystem-specific test instead of the fixture harness.
 /// Every entry must carry a concrete reason.
 const EXEMPT_OP_IDS: &[(&str, &str)] = &[
-    (
-        "core.indirect_dispatch",
-        "Runtime-only op  -  exercised end-to-end by runtime dispatch tests, not a fixture harness.",
-    ),
-    (
-        "io.dma_from_nvme",
-        "IO op  -  requires NVMe block device; covered by runtime IO tests, not the fixture harness.",
-    ),
-    (
-        "io.write_back_to_nvme",
-        "IO op  -  requires NVMe block device; covered by runtime IO tests, not the fixture harness.",
-    ),
-    (
-        "mem.unmap",
-        "Memory lifecycle op  -  covered by runtime memory tests, not the fixture harness.",
-    ),
-    (
-        "mem.zerocopy_map",
-        "Memory lifecycle op  -  covered by runtime memory tests, not the fixture harness.",
-    ),
     // The five per-row phases of typedef annotation. Each is a composite CALLEE:
     // it takes the VAST node table and the source haystack as buffer-reference
     // arguments and the row index as a scalar, so it has no standalone dispatch
@@ -78,12 +58,10 @@ fn every_library_operation_has_fixture_coverage() {
         .collect();
 
     let mut drift: Vec<String> = Vec::new();
-    for operation in registry.iter().filter(|operation| {
-        matches!(
-            operation.tier,
-            OperationTier::Library | OperationTier::Runtime
-        )
-    }) {
+    for operation in registry
+        .iter()
+        .filter(|operation| operation.tier == OperationTier::Library)
+    {
         if tested.contains(operation.id) {
             continue;
         }

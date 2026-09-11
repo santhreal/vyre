@@ -1,36 +1,54 @@
 //! PassScheduler fusion-query methods + remaining constructor helpers.
 //! Audit cleanup A21 (2026-04-30): split from monolithic scheduler.rs.
 
-#![allow(unused_imports)]
-
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
-use std::collections::VecDeque;
-use std::sync::OnceLock;
 
 use super::topo::{
     reserve_hash_map_capacity, reserve_vec_capacity, schedule_pass_metadata_indices,
-    schedule_passes,
 };
-use super::{PassResearchTrace, PassScheduler, PassSchedulingError, DEFAULT_MAX_ITERATIONS};
-use crate::optimizer::{
-    registered_passes, requirements_satisfied, OptimizerError, PassMetadata, ProgramPassKind,
-    ProgramPassRegistration,
-};
+use super::{PassResearchTrace, PassScheduler, PassSchedulingError};
+use crate::optimizer::{AdapterCaps, ProgramPassKind, ProgramPassRegistration};
 
 impl PassScheduler {
     /// Create a new `PassScheduler` from an explicit list of passes.
+    ///
+    /// # Panics
+    ///
+    /// Panics when constructor scratch cannot be reserved. The scheduler this
+    /// builds is the only thing that runs a pass, so an empty one compiles the
+    /// program with no optimization at all and returns it under an `Ok`. That
+    /// answer is indistinguishable from a program the pipeline decided not to
+    /// change, which is why allocation failure ends the compile instead of
+    /// quietly emptying it. Callers that can report the failure themselves use
+    /// [`Self::try_with_passes`].
+    #[must_use]
     pub fn with_passes(passes: Vec<ProgramPassKind>) -> Self {
         match Self::try_with_passes(passes) {
             Ok(scheduler) => scheduler,
-            Err(error) => {
-                tracing::error!(
-                    error = %error,
-                    "PassScheduler::with_passes could not reserve constructor scratch; continuing with an empty scheduler"
-                );
-                Self::empty_fallback()
-            }
+            Err(error) => panic!(
+                "PassScheduler could not reserve constructor scratch: {error}. Fix: lower the pass count for this compile, or call try_with_passes and report the failure."
+            ),
         }
+    }
+
+    /// Create a scheduler that compiles every program for `adapter`.
+    ///
+    /// This is the entry a backend uses once it has probed a device. Without
+    /// it the scheduler falls back to [`AdapterCaps::conservative`], and an
+    /// adapter-dependent pass then produces the program a device with no
+    /// optional feature would want.
+    #[must_use]
+    pub fn for_adapter(passes: Vec<ProgramPassKind>, adapter: AdapterCaps) -> Self {
+        let mut scheduler = Self::with_passes(passes);
+        scheduler.adapter = adapter;
+        scheduler
+    }
+
+    /// Device facts this scheduler compiles against.
+    #[must_use]
+    pub fn adapter(&self) -> &AdapterCaps {
+        &self.adapter
     }
 
     /// Create a new `PassScheduler` from an explicit list of passes, surfacing
@@ -72,41 +90,12 @@ impl PassScheduler {
                 .enumerate()
                 .map(|(i, pass)| (pass.metadata().name, i)),
         );
-        Ok(Self {
+        Ok(Self::over(
             passes,
             pass_index,
-            research_traces: FxHashMap::default(),
             execution_order,
             requirements_prevalidated,
-            max_iterations: DEFAULT_MAX_ITERATIONS,
-            invalidation_adjacency_cache: OnceLock::new(),
-            invalidation_closure_cache: OnceLock::new(),
-            dirty_trigger_index_cache: OnceLock::new(),
-            initial_dirty_flags_cache: OnceLock::new(),
-            enforce_cost_monotone: false,
-            enforce_effect_handlers: false,
-            enforce_linear_types: false,
-            enforce_shape_predicates: false,
-        })
-    }
-
-    fn empty_fallback() -> Self {
-        Self {
-            passes: Vec::new(),
-            pass_index: FxHashMap::default(),
-            research_traces: FxHashMap::default(),
-            execution_order: Vec::new(),
-            requirements_prevalidated: true,
-            max_iterations: DEFAULT_MAX_ITERATIONS,
-            invalidation_adjacency_cache: OnceLock::new(),
-            invalidation_closure_cache: OnceLock::new(),
-            dirty_trigger_index_cache: OnceLock::new(),
-            initial_dirty_flags_cache: OnceLock::new(),
-            enforce_cost_monotone: false,
-            enforce_effect_handlers: false,
-            enforce_linear_types: false,
-            enforce_shape_predicates: false,
-        }
+        ))
     }
 
     /// Set the maximum number of iterations the scheduler will allow before giving up.
@@ -114,6 +103,12 @@ impl PassScheduler {
     pub fn with_max_iterations(mut self, max_iterations: usize) -> Self {
         self.max_iterations = max_iterations;
         self
+    }
+
+    /// Returns the configured maximum iteration budget for fixpoint execution.
+    #[must_use]
+    pub fn max_iterations(&self) -> usize {
+        self.max_iterations
     }
 
     /// Attach reproducibility metadata to pass metrics for one optimizer pass.
@@ -168,7 +163,7 @@ impl PassScheduler {
         let adj = self.invalidation_adjacency();
         let n_u32 = u32::try_from(n).unwrap_or(u32::MAX);
         let descendants =
-            crate::pass_substrate::adjustment_set_pass_dependency::pass_descendants(adj, n_u32);
+            crate::pass_math::adjustment_set_pass_dependency::pass_descendants(adj, n_u32);
         let row = &descendants[treatment_idx];
         row.iter()
             .filter_map(|&j| self.passes.get(j as usize).map(|pass| pass.metadata().name))
@@ -177,7 +172,7 @@ impl PassScheduler {
 
     /// Reachability check: returns true if pass `from` can transitively
     /// invalidate any capability `to` requires. Computed via the
-    /// substrate `dataflow_fixpoint::reachability_closure` with the
+    /// substrate `semiring_closure::reachability_closure` with the
     /// `BoolOr` semiring over the same invalidation adjacency built by
     /// [`Self::transitive_dependents`].
     ///
@@ -253,11 +248,11 @@ impl PassScheduler {
             return Some(true);
         }
         let n_u32 = u32::try_from(n_caps).unwrap_or(u32::MAX);
-        let f = crate::pass_substrate::string_diagram_ir_rewrite::identity_arrow(n_u32);
+        let f = crate::pass_math::string_diagram_ir_rewrite::identity_arrow(n_u32);
         let g = f.clone();
         let h = f.clone();
         Some(
-            crate::pass_substrate::string_diagram_ir_rewrite::composition_associates(
+            crate::pass_math::string_diagram_ir_rewrite::composition_associates(
                 &f, &g, &h, n_u32, n_u32, n_u32, n_u32,
             ),
         )
@@ -282,7 +277,7 @@ impl PassScheduler {
     /// tensor-network ordering  -  this minimizes the size of
     /// intermediate "stale capability" sets the optimizer must track.
     ///
-    /// Routes through `pass_substrate::tensor_network_fusion_order::`
+    /// Routes through `pass_math::tensor_network_fusion_order::`
     /// `optimal_fusion_order`. Returns indices into the input slice
     /// in recommended run order.
     #[must_use]
@@ -295,11 +290,11 @@ impl PassScheduler {
                 u32::try_from(n).unwrap_or(u32::MAX)
             })
             .collect();
-        crate::pass_substrate::tensor_network_fusion_order::optimal_fusion_order(&dimensions)
+        crate::pass_math::tensor_network_fusion_order::optimal_fusion_order(&dimensions)
     }
 
     /// Estimate the contraction cost of running a candidate pass
-    /// ordering. Routes through `pass_substrate::`
+    /// ordering. Routes through `pass_math::`
     /// `tensor_network_fusion_order::fusion_order_cost`. Lower is
     /// better; callers can use this to compare two orderings (e.g.
     /// the topological order from `schedule_passes` vs the
@@ -314,13 +309,13 @@ impl PassScheduler {
                 u32::try_from(n).unwrap_or(u32::MAX)
             })
             .collect();
-        crate::pass_substrate::tensor_network_fusion_order::fusion_order_cost(&dimensions, order)
+        crate::pass_math::tensor_network_fusion_order::fusion_order_cost(&dimensions, order)
     }
 
     /// Pairs of registered passes that are independent (neither
     /// reaches the other in the transitive invalidation closure)
     /// and therefore safe to fuse / parallelize. Computed via
-    /// `pass_substrate::polyhedral_fusion::fusable_pairs` over the
+    /// `pass_math::polyhedral_fusion::fusable_pairs` over the
     /// scheduler's invalidation adjacency.
     ///
     /// Returns a flat `Vec<(name_a, name_b)>` of fusable name pairs;
@@ -334,7 +329,7 @@ impl PassScheduler {
         }
         let adj = self.cached_adjacency_or_init();
         let n_u32 = u32::try_from(n).unwrap_or(u32::MAX);
-        let mask = crate::pass_substrate::polyhedral_fusion::fusable_pairs(adj, n_u32, n_u32);
+        let mask = crate::pass_math::polyhedral_fusion::fusable_pairs(adj, n_u32, n_u32);
 
         let mut out = Vec::with_capacity(n);
         for i in 0..n {
@@ -395,7 +390,7 @@ impl PassScheduler {
 
     /// Multigrid Jacobi smoothing step on the pass-influence linear
     /// system. Routes through
-    /// `pass_substrate::multigrid_matroid_solver::matroid_solve_step`.
+    /// `pass_math::multigrid_matroid_solver::matroid_solve_step`.
     /// Lets analyses (cost-prediction, scheduling-bound estimation)
     /// solve `A·x ≈ b` over the n-dimensional pass space using the
     /// substrate's relaxed solver.
@@ -408,7 +403,7 @@ impl PassScheduler {
         let adjacency_words = self.invalidation_adjacency();
         let adjacency_weights: Vec<f64> = adjacency_words.iter().map(|&v| f64::from(v)).collect();
         let n_u32 = u32::try_from(n).unwrap_or(u32::MAX);
-        crate::pass_substrate::multigrid_matroid_solver::matroid_solve_step(
+        crate::pass_math::multigrid_matroid_solver::matroid_solve_step(
             &adjacency_weights,
             b,
             x_in,
@@ -527,9 +522,4 @@ impl PassScheduler {
             closure
         })
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
 }

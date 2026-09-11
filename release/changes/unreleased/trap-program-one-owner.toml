@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre_foundation::algebra::composition::trap_program` builds the program a builder returns when its inputs cannot produce a valid one. `vyre-primitives` and `vyre-libs` each had their own copy, differing only in whether one output buffer of count 1 is declared, and a trap program is IR composed out of IR, so neither crate is its home. The declared output is an `Option` argument because that is the whole difference between the two former copies."

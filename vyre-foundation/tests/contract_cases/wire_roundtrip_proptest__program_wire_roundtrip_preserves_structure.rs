@@ -1,4 +1,4 @@
-// (use super::* removed  -  flat-included into wire_roundtrip_proptest_suite scope)
+use super::*;
 
 proptest! {
     #![proptest_config(ProptestConfig {
@@ -68,11 +68,14 @@ proptest! {
             other => panic!("Fix: expected second let f32 literal, got {other:?}"),
         };
 
-        // Wire roundtrip canonicalises via canonical_f32: subnormals
-        // flush to signed zero. Compare against the canonical form,
-        // not the input bits.
-        prop_assert_eq!(positive_bits, canonicalize_f32(positive).to_bits());
-        prop_assert_eq!(negative_bits, canonicalize_f32(negative).to_bits());
+        // Stated as the bits rather than as `canonicalize_f32` of the input:
+        // the encoder applies that function, so comparing against it again
+        // asserts the round trip against the rule it just used and passes for
+        // any rule at all. Every input here is a subnormal, so the answer is a
+        // zero carrying the input's sign, and a rule that stopped preserving
+        // the sign fails on the second line.
+        prop_assert_eq!(positive_bits, 0x0000_0000);
+        prop_assert_eq!(negative_bits, 0x8000_0000);
     }
 }
 
@@ -98,11 +101,13 @@ fn signaling_nan_payload_roundtrips_bit_exactly() {
     )
     .expect("Fix: NaN payload program must decode");
 
-    // Wire roundtrip canonicalises NaN payloads via canonical_f32 →
-    // single qNaN bit pattern. Compare against the canonical form.
+    // The one quiet NaN, written out: the encoder reaches this pattern through
+    // `canonicalize_f32`, so asserting that function's answer would hold for
+    // whatever the function returned and would not notice a payload surviving
+    // the round trip.
     match first_let_expr(&decoded) {
         Expr::LitF32(value) => {
-            assert_eq!(value.to_bits(), canonicalize_f32(payload).to_bits())
+            assert_eq!(value.to_bits(), 0x7FC0_0000);
         }
         other => panic!("Fix: expected NaN literal after roundtrip, got {other:?}"),
     }
@@ -138,47 +143,82 @@ fn decode_rejects_missing_opaque_endian_fixed_flag() {
     );
 }
 
+/// The sign of a zero literal survives the canonical wire form.
+///
+/// It is observable: `1.0 / -0.0` is negative infinity and `1.0 / 0.0` is
+/// positive, and the reference interpreter reads the literal as written. The
+/// canonical encoding is what a compiled artifact is cached under, so an
+/// encoding that collapsed the two served one program the other one's device
+/// code and disagreed with the oracle it is checked against.
 #[test]
-fn minus_zero_f32_canonicalizes_to_positive_zero_in_wire_and_hash() {
-    let positive = Program::wrapped(
-        vec![],
-        [1, 1, 1],
-        vec![
-            Node::Let {
-                name: "zero".into(),
-                value: Expr::LitF32(0.0),
-            },
-            Node::Return,
-        ],
-    );
-    let negative = Program::wrapped(
-        vec![],
-        [1, 1, 1],
-        vec![
-            Node::Let {
-                name: "zero".into(),
-                value: Expr::LitF32(-0.0),
-            },
-            Node::Return,
-        ],
-    );
+fn minus_zero_f32_is_a_different_literal_in_wire_and_hash() {
+    let zero = |value: f32| {
+        Program::wrapped(
+            vec![],
+            [1, 1, 1],
+            vec![
+                Node::Let {
+                    name: "zero".into(),
+                    value: Expr::LitF32(value),
+                },
+                Node::Return,
+            ],
+        )
+    };
+    let (positive, negative) = (zero(0.0), zero(-0.0));
 
-    let positive_wire = positive
-        .to_wire()
-        .expect("Fix: +0.0 canonical fixture must encode");
-    let negative_wire = negative
-        .to_wire()
-        .expect("Fix: -0.0 canonical fixture must encode");
+    let positive_wire = positive.to_wire().expect("Fix: +0.0 fixture must encode");
+    let negative_wire = negative.to_wire().expect("Fix: -0.0 fixture must encode");
 
-    assert_eq!(positive_wire, negative_wire);
-    assert_eq!(positive.fingerprint(), negative.fingerprint());
+    assert_ne!(positive_wire, negative_wire);
+    assert_ne!(positive.fingerprint(), negative.fingerprint());
 
-    let decoded =
-        Program::from_wire(&negative_wire).expect("Fix: canonicalized -0.0 wire bytes must decode");
+    let decoded = Program::from_wire(&negative_wire).expect("Fix: -0.0 wire bytes must decode");
     match first_let_expr(&decoded) {
-        Expr::LitF32(value) => assert_eq!(value.to_bits(), 0.0f32.to_bits()),
-        other => panic!("Fix: decoded canonical zero must stay a f32 literal, got {other:?}"),
+        Expr::LitF32(value) => assert_eq!(value.to_bits(), (-0.0f32).to_bits()),
+        other => panic!("Fix: decoded zero must stay a f32 literal, got {other:?}"),
     }
+}
+
+/// A subnormal literal flushes to a zero of its own sign, and the two signs stay
+/// two literals.
+///
+/// The flush itself is the parity contract's: a device that flushes and a
+/// reference that does not cannot agree bit for bit on a subnormal. Which zero
+/// it flushes to is the same signed-zero observation as above.
+#[test]
+fn a_subnormal_literal_flushes_to_a_zero_of_its_own_sign() {
+    let literal = |value: f32| {
+        Program::wrapped(
+            vec![],
+            [1, 1, 1],
+            vec![
+                Node::Let {
+                    name: "tiny".into(),
+                    value: Expr::LitF32(value),
+                },
+                Node::Return,
+            ],
+        )
+    };
+    let positive = f32::from_bits(1);
+    let negative = f32::from_bits(0x8000_0001);
+
+    assert_eq!(
+        literal(positive).fingerprint(),
+        literal(0.0).fingerprint(),
+        "Fix: a positive subnormal must flush to +0.0"
+    );
+    assert_eq!(
+        literal(negative).fingerprint(),
+        literal(-0.0).fingerprint(),
+        "Fix: a negative subnormal must flush to -0.0"
+    );
+    assert_ne!(
+        literal(positive).fingerprint(),
+        literal(negative).fingerprint(),
+        "Fix: the flush must keep the sign it was given"
+    );
 }
 
 #[test]
@@ -295,25 +335,12 @@ fn reserved_opaque_datatype_id_is_rejected_at_decode_time() {
 
 #[test]
 fn datatype_strategy_enumerates_every_wire_supported_terminal_variant() {
-    let sample = vec![
-        DataType::U8,
-        DataType::U16,
-        DataType::U32,
-        DataType::I8,
-        DataType::I16,
-        DataType::I32,
-        DataType::I64,
-        DataType::U64,
-        DataType::Vec2U32,
-        DataType::Vec4U32,
-        DataType::Bool,
-        DataType::Bytes,
-        DataType::Array { element_size: 8 },
-        DataType::F16,
-        DataType::BF16,
-        DataType::F32,
-        DataType::F64,
-        DataType::Tensor,
+    // The flat leaves are the shared table. This test's set is wider than a
+    // buffer element set: a cast target may also be a `Handle`, a nested `Vec`
+    // or `TensorShaped`, or an `Opaque` extension type, and those four are the
+    // reason this list exists at all.
+    let mut sample = flat_buffer_element_types(8);
+    sample.extend([
         DataType::Handle(TypeId(7)),
         DataType::Vec {
             element: Box::new(DataType::U32),
@@ -324,7 +351,7 @@ fn datatype_strategy_enumerates_every_wire_supported_terminal_variant() {
             shape: smallvec![2, 3],
         },
         DataType::Opaque(ExtensionDataTypeId(0x8000_0001)),
-    ];
+    ]);
 
     for target in sample {
         let program = Program::wrapped(
@@ -351,4 +378,3 @@ fn datatype_strategy_enumerates_every_wire_supported_terminal_variant() {
         assert_eq!(decoded, program);
     }
 }
-

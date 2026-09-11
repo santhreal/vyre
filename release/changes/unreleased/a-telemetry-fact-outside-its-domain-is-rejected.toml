@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Megakernel execution planning rejects a telemetry fact outside its declared domain through `MegakernelMemoryError::InvalidSample` instead of ranking a non-finite or out-of-range measurement as a measured extreme."

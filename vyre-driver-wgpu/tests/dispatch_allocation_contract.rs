@@ -1,4 +1,4 @@
-//! P0 inventory #10  -  allocation-count contracts for steady-state GPU dispatch.
+//! Allocation-count contracts for steady-state GPU dispatch.
 //!
 //! After caches are warm, CPU-side heap traffic must stay bounded. Budgets are
 //! documented here; tighten them as zero-copy and caller-owned output buffers
@@ -8,59 +8,28 @@
 //! `SmallVec` (inline capacity 8) and passes those borrows through to GPU staging. Caller-owned
 //! `Vec` buffers must stay alive until `PendingDispatch` resolves (same aliasing contract as
 //! `dispatch_borrowed_async`).
+
+#![cfg(feature = "device-tests")]
 #![allow(missing_docs)]
 
-mod common;
-use common::acquire_live_backend as live_backend;
+use crate::harness;
+use harness::{acquire_live_backend as live_backend, add_one_program};
 
-use std::alloc::System;
-use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
-use stats_alloc::{Region, StatsAlloc, INSTRUMENTED_SYSTEM};
+// The counting allocator is thread-local and shared: a process-wide counter
+// charges this budget for every other test case running beside it.
+use vyre_alloc_probe::{Region, ThreadAlloc};
+
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::{CompiledPipeline, DispatchConfig, VyreBackend};
 
 #[global_allocator]
-static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
-static ALLOCATION_CONTRACT_LOCK: Mutex<()> = Mutex::new(());
-
-fn allocation_contract_guard() -> MutexGuard<'static, ()> {
-    ALLOCATION_CONTRACT_LOCK.lock().unwrap_or_else(|error| {
-        panic!(
-            "allocation contract mutex was poisoned: {error}. Fix: resolve the earlier allocation-contract panic before trusting global allocator measurements."
-        )
-    })
-}
-
-fn add_one_program(words: u32) -> Program {
-    let idx = Expr::gid_x();
-    let in_bounds = Expr::lt(idx.clone(), Expr::u32(words));
-    Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(words),
-            BufferDecl::output("out", 1, DataType::U32)
-                .with_count(words)
-                .with_output_byte_range(0..(words as usize * 4)),
-        ],
-        [64, 1, 1],
-        vec![
-            Node::if_then(
-                in_bounds,
-                vec![Node::store(
-                    "out",
-                    idx.clone(),
-                    Expr::add(Expr::load("input", idx), Expr::u32(1)),
-                )],
-            ),
-            Node::return_(),
-        ],
-    )
-}
+static GLOBAL: ThreadAlloc = ThreadAlloc;
 
 /// Build a Program with `inputs` separate read buffers and one output. The
 /// summed program exceeds the dispatch-local `SmallVec` inline cap of 8 used
-/// by `clear_requests`, exercising the spill path covered by audit P0 #9.
+/// by `clear_requests`, exercising the spill path.
 fn many_input_sum_program(inputs: u32, words: u32) -> Program {
     let mut bindings: Vec<BufferDecl> = (0..inputs)
         .map(|i| BufferDecl::read(&format!("input_{i}"), i, DataType::U32).with_count(words))
@@ -89,19 +58,17 @@ fn many_input_sum_program(inputs: u32, words: u32) -> Program {
 /// (max heap allocations, max heap bytes) for one hot `dispatch_borrowed` after warm-up.
 ///
 /// Ratchet: actual measured 2026-05 steady-state on the live wgpu/Vulkan
-/// path is dramatically higher than the original Inventory P0 #10
-/// aspiration (~200). The current budget reflects what the path
-/// actually does; lowering it requires the readback-mutex, zero-copy
-/// outputs, and dispatch-arena work that's still upstream of this
-/// layer. Tighten as each dispatch-path improvement merges.
+/// path is higher than the original Inventory P0 #10 aspiration (~200).
+/// The current budget reflects what the path actually does; lowering it
+/// requires the readback-mutex, zero-copy outputs, and dispatch-arena work.
 fn budget_borrowed_hot() -> (usize, usize) {
     (3072, 4 * 1024 * 1024)
 }
 
 /// Wide-program ratchet: a Program whose buffer count exceeds the dispatch
 /// `SmallVec` inline cap (8 for `clear_requests`) must stay within this budget
-/// after warm-up. Inventory P0 #9  -  per-thread scratch arenas eliminate the
-/// per-dispatch heap allocations that the spill path used to pay.
+/// after warm-up. Per-thread scratch arenas eliminate the per-dispatch heap
+/// allocations that the spill path used to pay.
 fn budget_borrowed_wide_hot() -> (usize, usize) {
     (4096, 6 * 1024 * 1024)
 }
@@ -111,24 +78,23 @@ fn budget_async_hot() -> (usize, usize) {
     (4096, 6 * 1024 * 1024)
 }
 
-/// Compiled-pipeline hot path  -  same ratchet policy as `budget_borrowed_hot`.
+/// Compiled-pipeline hot path ratchet: same budget as `budget_borrowed_hot`.
 fn budget_compiled_hot() -> (usize, usize) {
     (3072, 4 * 1024 * 1024)
 }
 
 #[test]
 fn direct_dispatch_borrowed_steady_state_alloc_bounded() {
-    let _guard = allocation_contract_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
     let borrowed = [input.as_slice()];
 
     let _ = backend
         .dispatch_borrowed(&program, &borrowed, &DispatchConfig::default())
         .expect("Fix: warm-up dispatch_borrowed must succeed");
 
-    let region = Region::new(GLOBAL);
+    let region = Region::new();
     let _ = backend
         .dispatch_borrowed(&program, &borrowed, &DispatchConfig::default())
         .expect("Fix: hot dispatch_borrowed must succeed");
@@ -138,28 +104,27 @@ fn direct_dispatch_borrowed_steady_state_alloc_bounded() {
     assert!(
         change.allocations <= max_allocs,
         "Fix: hot dispatch_borrowed must not exceed {max_allocs} heap allocations (got {}). \
-         Inventory P0 #10  -  reduce per-dispatch host allocations.",
+         Inventory P0 #10: reduce per-dispatch host allocations.",
         change.allocations
     );
     assert!(
         change.bytes_allocated <= max_bytes,
         "Fix: hot dispatch_borrowed must not exceed {max_bytes} heap bytes (got {}). \
-         Inventory P0 #10  -  reduce per-dispatch host bytes.",
+         Inventory P0 #10: reduce per-dispatch host bytes.",
         change.bytes_allocated
     );
 }
 
 #[test]
 fn wide_program_dispatch_borrowed_steady_state_alloc_bounded() {
-    let _guard = allocation_contract_guard();
     let backend = live_backend();
     // 12 inputs > clear_requests inline cap (8): the dispatch hot path's
     // SmallVec spill must come from per-thread scratch capacity, not a fresh
-    // heap allocation per dispatch. Audit P0 #9.
+    // heap allocation per dispatch.
     let inputs_count: u32 = 12;
     let words: u32 = 256;
     let program = many_input_sum_program(inputs_count, words);
-    let one_input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..words);
+    let one_input: Vec<u8> = (0..words).flat_map(u32::to_le_bytes).collect();
     let owned: Vec<Vec<u8>> = (0..inputs_count).map(|_| one_input.clone()).collect();
     let borrowed: Vec<&[u8]> = owned.iter().map(Vec::as_slice).collect();
 
@@ -172,7 +137,7 @@ fn wide_program_dispatch_borrowed_steady_state_alloc_bounded() {
         .dispatch_borrowed(&program, &borrowed, &DispatchConfig::default())
         .expect("Fix: second warm-up wide dispatch_borrowed must succeed");
 
-    let region = Region::new(GLOBAL);
+    let region = Region::new();
     let _ = backend
         .dispatch_borrowed(&program, &borrowed, &DispatchConfig::default())
         .expect("Fix: hot wide dispatch_borrowed must succeed");
@@ -182,7 +147,7 @@ fn wide_program_dispatch_borrowed_steady_state_alloc_bounded() {
     assert!(
         change.allocations <= max_allocs,
         "Fix: hot wide dispatch_borrowed must not exceed {max_allocs} heap allocations (got {}). \
-         Inventory P0 #9  -  per-thread scratch arenas should absorb SmallVec spills.",
+         Inventory P0 #9: per-thread scratch arenas should absorb SmallVec spills.",
         change.allocations
     );
     assert!(
@@ -195,10 +160,9 @@ fn wide_program_dispatch_borrowed_steady_state_alloc_bounded() {
 
 #[test]
 fn compiled_pipeline_dispatch_steady_state_alloc_bounded() {
-    let _guard = allocation_contract_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
 
     let pipeline = backend
         .compile_pipeline_for_oracle(&program, &DispatchConfig::default())
@@ -208,7 +172,7 @@ fn compiled_pipeline_dispatch_steady_state_alloc_bounded() {
         .dispatch(&[input.clone()], &DispatchConfig::default())
         .expect("Fix: warm-up compiled dispatch must succeed");
 
-    let region = Region::new(GLOBAL);
+    let region = Region::new();
     let _ = pipeline
         .dispatch(&[input], &DispatchConfig::default())
         .expect("Fix: hot compiled dispatch must succeed");
@@ -233,10 +197,9 @@ fn compiled_pipeline_dispatch_steady_state_alloc_bounded() {
 /// borrowed, not copied (see module docs).
 #[test]
 fn async_dispatch_steady_state_alloc_bounded() {
-    let _guard = allocation_contract_guard();
     let backend = live_backend();
     let program = add_one_program(1024);
-    let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
+    let input: Vec<u8> = (0..1024u32).flat_map(u32::to_le_bytes).collect();
 
     let pending0 = backend
         .dispatch_async(&program, &[input.clone()], &DispatchConfig::default())
@@ -245,7 +208,7 @@ fn async_dispatch_steady_state_alloc_bounded() {
         .await_result()
         .expect("Fix: warm-up async dispatch must complete");
 
-    let region = Region::new(GLOBAL);
+    let region = Region::new();
     let async_start = Instant::now();
     let pending = backend
         .dispatch_async(&program, &[input], &DispatchConfig::default())
@@ -266,7 +229,7 @@ fn async_dispatch_steady_state_alloc_bounded() {
     assert!(
         change.allocations <= max_allocs,
         "Fix: hot dispatch_async+await must not exceed {max_allocs} heap allocations in measured region (got {}). \
-         Inventory P0 #10  -  async path should not allocate unboundedly per job.",
+         Inventory P0 #10: async path should not allocate unboundedly per job.",
         change.allocations
     );
     assert!(
@@ -281,12 +244,11 @@ fn async_dispatch_steady_state_alloc_bounded() {
 /// multiple buffers without cloning payload bytes; allocation budget matches the ratcheted async path.
 #[test]
 fn async_dispatch_multi_input_borrowed_smallvec_inline_alloc_bounded() {
-    let _guard = allocation_contract_guard();
     let backend = live_backend();
     let inputs_count: u32 = 3;
     let words: u32 = 256;
     let program = many_input_sum_program(inputs_count, words);
-    let one_input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..words);
+    let one_input: Vec<u8> = (0..words).flat_map(u32::to_le_bytes).collect();
     let owned: Vec<Vec<u8>> = (0..inputs_count).map(|_| one_input.clone()).collect();
 
     let pending0 = backend
@@ -296,7 +258,7 @@ fn async_dispatch_multi_input_borrowed_smallvec_inline_alloc_bounded() {
         .await_result()
         .expect("Fix: warm-up multi-input async dispatch must complete");
 
-    let region = Region::new(GLOBAL);
+    let region = Region::new();
     let async_start = Instant::now();
     let pending = backend
         .dispatch_async(&program, &owned, &DispatchConfig::default())
@@ -322,5 +284,64 @@ fn async_dispatch_multi_input_borrowed_smallvec_inline_alloc_bounded() {
         change.bytes_allocated <= max_bytes,
         "Fix: hot multi-input dispatch_async+await must not exceed {max_bytes} heap bytes in measured region (got {}).",
         change.bytes_allocated
+    );
+}
+
+#[test]
+fn allocation_measurement_isolates_concurrent_threads() {
+    let region = Region::new();
+
+    let background = std::thread::spawn(|| {
+        let mut noise: Vec<Vec<u8>> = Vec::new();
+        for _ in 0..100 {
+            noise.push(vec![0xAA; 64 * 1024]);
+        }
+        noise
+    });
+
+    let noise = background
+        .join()
+        .expect("Fix: background thread must finish cleanly");
+    assert_eq!(noise.len(), 100);
+
+    let change = region.change();
+    assert_eq!(
+        change.allocations, 0,
+        "Fix: background thread allocations leaked into measuring thread. Expected 0 allocations, got {}.",
+        change.allocations
+    );
+    assert_eq!(
+        change.bytes_allocated, 0,
+        "Fix: background thread allocated bytes leaked into measuring thread. Expected 0 bytes, got {}.",
+        change.bytes_allocated
+    );
+}
+
+#[test]
+fn allocation_measurement_tracks_local_thread_traffic() {
+    let region = Region::new();
+    let buffer: Vec<u8> = vec![42; 2048];
+    let change = region.change();
+    assert!(
+        change.allocations >= 1,
+        "Fix: local thread allocations must be counted. Got {}.",
+        change.allocations
+    );
+    assert!(
+        change.bytes_allocated >= 2048,
+        "Fix: local thread bytes allocated must be counted. Got {}.",
+        change.bytes_allocated
+    );
+    drop(buffer);
+    let change_after_drop = region.change();
+    assert!(
+        change_after_drop.deallocations >= 1,
+        "Fix: local thread deallocations must be counted. Got {}.",
+        change_after_drop.deallocations
+    );
+    assert!(
+        change_after_drop.bytes_deallocated >= 2048,
+        "Fix: local thread bytes deallocated must be counted. Got {}.",
+        change_after_drop.bytes_deallocated
     );
 }

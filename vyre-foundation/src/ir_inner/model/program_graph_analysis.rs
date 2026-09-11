@@ -208,9 +208,29 @@ fn validate_graph(graph: &ProgramGraph) -> Result<(), ProgramGraphAnalysisError>
                     value: value.id,
                     prior: prior_id,
                 })?;
-            if prior.contract != value.contract
-                || value.contract.lifetime != ValueLifetime::Retained
-                || !prior.consumers.contains(&producer)
+            let same_retained = prior.contract == value.contract
+                && value.contract.lifetime == ValueLifetime::Retained;
+            let caller_output_transition = prior.contract.lifetime == ValueLifetime::Retained
+                && value.contract.lifetime == ValueLifetime::Output
+                && prior.contract.dtype == value.contract.dtype
+                && prior.contract.shape == value.contract.shape
+                && prior.contract.access == value.contract.access
+                && graph
+                    .nodes()
+                    .get(producer.0 as usize)
+                    .and_then(|node| {
+                        node.output_ports
+                            .iter()
+                            .find(|port| port.name == value.name)
+                            .and_then(|port| {
+                                node.program
+                                    .buffers()
+                                    .iter()
+                                    .find(|buffer| buffer.name() == port.buffer)
+                            })
+                    })
+                    .is_some_and(|buffer| buffer.is_output());
+            if (!same_retained && !caller_output_transition) || !prior.consumers.contains(&producer)
             {
                 return Err(ProgramGraphAnalysisError::StateTransition {
                     value: value.id,

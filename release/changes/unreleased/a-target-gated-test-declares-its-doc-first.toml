@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The NVMe ingest telemetry test declares its crate documentation before its `#![cfg(target_os = \"linux\")]`, so the crate still carries a doc on a target the cfg strips. Written the other way round it compiled on Linux and failed the workspace `missing_docs` deny on macOS and Windows."

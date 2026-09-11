@@ -15,9 +15,7 @@ pub(crate) fn validate_self_composition(nodes: &[Node], errors: &mut Vec<Validat
     for generator in duplicate_self_exclusive_regions(nodes) {
         errors.push(err("V115", ValidationPhase::Composition, ValidationLocation::Program, format!(
             "region `{generator}` is marked non-composable with itself but appears multiple times in one fused program"
-        ), format!(
-            "split the parser into separate dispatches, or give each instance distinct scratch storage before fusion."
-        )));
+        ), "split the parser into separate dispatches, or give each instance distinct scratch storage before fusion.".to_string()));
     }
 }
 

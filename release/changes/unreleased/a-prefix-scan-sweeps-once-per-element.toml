@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The single-workgroup prefix scan sweeps each element a bounded number of times instead of writing every lane on every round. The workgroup is capped at 256 lanes and a longer input gives each lane a run of elements, so the scratch traffic no longer carries a log2 factor: at 1024 elements the dispatch executes 1544 workgroup-scratch stores where the previous form executed 31745. Sizes above the single-block limit are the multi-block chain, and vyre-libs scan_prefix_sum is the one builder that picks between the two."

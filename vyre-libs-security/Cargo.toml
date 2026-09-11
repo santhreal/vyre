@@ -1,0 +1,51 @@
+[package]
+name = "vyre-libs-security"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Security taint analysis compositions, predicate evaluators, and label resolvers"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-security"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "closure:vyre-libs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["security"]
+security = ["predicate", "label"]
+predicate = []
+label = []
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-spec.workspace = true
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+inventory.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+blake3.workspace = true
+vyre-libs-builder = { workspace = true }
+vyre-libs-bitset = { workspace = true }
+vyre-libs-reduce = { workspace = true }
+vyre-libs-graph = { workspace = true }
+
+[dev-dependencies]
+vyre-test-support = { workspace = true, features = ["semantic-parity"] }
+vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-reference = { workspace = true }
+proptest.workspace = true
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

@@ -1,0 +1,5 @@
+name = "vyre-foundation"
+concern = "Own typed IR and ProgramGraph contracts, validation, diagnostics, serialization, semantic operation registration, and backend-neutral optimization."
+pages = { spec = "vyre-foundation/SPEC.md", readme = "vyre-foundation/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-macros", "vyre-spec"]

@@ -1,6 +1,5 @@
 //! Workgroup-uniform branch detection.
 //!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section B.3 item B15.
 //!
 //! On every modern GPU, when all threads in a workgroup take the same
 //! branch (the "uniform" path), hardware can use a more efficient
@@ -19,8 +18,9 @@
 //! `SubgroupLocalId`, the branch is uniform. Emitters consume the
 //! report for backend-native annotations.
 
-pub mod analysis;
-pub mod report;
+pub(crate) mod analysis;
+pub(crate) mod report;
 
 pub use analysis::analyze;
+pub use report::{BranchEmitHint, BranchHint};
 pub use report::{BranchSite, BranchUniformity, WorkgroupUniformReport};

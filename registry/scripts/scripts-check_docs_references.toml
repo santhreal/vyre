@@ -1,0 +1,4 @@
+path = "scripts/check_docs_references.py"
+state = "retired"
+gate = "docs-references"
+reason = "the gate reads the same documents and resolves every reference in them"

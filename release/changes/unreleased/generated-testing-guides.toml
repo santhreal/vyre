@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Testing guides are now generated for all 36 workspace members from Cargo features and targets plus maintained hardware, evidence, skip, and failure metadata. The documentation gate rejects missing, orphaned, or stale guides."

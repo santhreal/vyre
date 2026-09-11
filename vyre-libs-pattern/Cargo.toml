@@ -1,0 +1,50 @@
+[package]
+name = "vyre-libs-pattern"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Substring matching, DFA, NFA, regex scanning pipelines, and bracket matching"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-pattern"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "closure:vyre-libs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["pattern"]
+pattern = ["pattern-substring", "pattern-dfa"]
+"pattern-kernels" = []
+"pattern-substring" = ["pattern-dfa", "pattern-kernels"]
+"pattern-dfa" = ["pattern-kernels"]
+"pattern-nfa" = ["pattern-dfa", "nfa"]
+"pattern-regex" = ["pattern-nfa", "dep:regex-syntax"]
+nfa = ["pattern-kernels"]
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+inventory.workspace = true
+vyre-libs-builder = { workspace = true }
+vyre-libs-math = { workspace = true }
+vyre-libs-hash = { workspace = true }
+regex-syntax = { workspace = true, optional = true }
+
+[dev-dependencies]
+proptest.workspace = true
+vyre-test-support = { workspace = true, features = ["semantic-parity"] }
+vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-reference = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

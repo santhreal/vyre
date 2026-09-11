@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The Windows CI lane deletes the coreutils `link.exe` that Git for Windows places ahead of the MSVC toolchain on PATH, so rustc reaches the real linker instead of a program that rejects an object list with `extra operand`. The step asserts which linker `link` resolves to, so an image that moves the shadow fails on the assertion rather than on the first C dependency."

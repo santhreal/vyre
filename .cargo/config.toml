@@ -1,8 +1,34 @@
 [build]
-jobs = 16
+# Parallelism is deliberately unset. Cargo's default is the host's logical CPU
+# count, which is right on a 32-thread workstation and on a 4-vCPU hosted
+# runner alike. A fixed 16 under-uses the first and starves the second: it put
+# sixteen concurrent linkers against 16 GiB of hosted-runner memory.
 
 [env]
 PROPTEST_DISABLE_FAILURE_PERSISTENCE = "1"
+
+# The target directory is host configuration. Keeping it outside this tracked
+# file lets each checkout and CI runner choose an isolated writable directory
+# without exporting a build override from this wrapper.
+
+# Host-portability cells. The canonical identity bytes are proven on a 32-bit
+# host and on a big-endian host by building and executing those cells rather
+# than asserting them. Each entry names the cross linker the target needs
+# and, where the host cannot execute the binary directly, the user-mode
+# emulator that runs it. Emulation proves host arithmetic, byte order and
+# decoding only; device support and performance are never claimed from an
+# emulated run.
+#
+# 32-bit PowerPC is not a cell. It has no native 64-bit atomic, and
+# `vyre-foundation` states that requirement as a compile error rather than
+# claiming a host it cannot build for. s390x carries the big-endian cell and
+# has one.
+[target.i686-unknown-linux-gnu]
+linker = "gcc"
+
+[target.s390x-unknown-linux-gnu]
+linker = "s390x-linux-gnu-gcc"
+runner = ["qemu-s390x-static", "-L", "/usr/s390x-linux-gnu"]
 
 [alias]
 xtask = "run -p xtask --bin xtask --"

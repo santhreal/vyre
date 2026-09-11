@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The CPU reference backend synthesized a zeroed value for every backend-allocated output and passed it to the interpreter, so its dispatch argument list was one entry longer than the artifact ABI a device enforces. It now emits one value per reference input, which is the same projection the interpreter and every other backend use."

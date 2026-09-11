@@ -1,4 +1,5 @@
 target
-corpus
+corpus/*
+!corpus/program_wire/
 artifacts
 coverage

@@ -9,8 +9,8 @@
 use vyre_foundation::execution_plan::fusion::{
     fuse_programs, FusionError, FusionSelfAliasingError,
 };
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
 
 fn entry_body(program: &Program) -> &[Node] {
     match program.entry() {
@@ -53,7 +53,7 @@ fn barrier_inserted_when_read_arm_precedes_atomic_arm() {
     let barrier_positions: Vec<usize> = body
         .iter()
         .enumerate()
-        .filter(|(_, n)| matches!(n, Node::Barrier { .. }))
+        .filter(|(_, n)| matches!(n, Node::LogicalBarrier { .. }))
         .map(|(i, _)| i)
         .collect();
 
@@ -84,8 +84,9 @@ fn barrier_inserted_when_read_arm_precedes_readwrite_store_arm() {
     let body = entry_body(&fused);
 
     assert!(
-        body.iter().any(|n| matches!(n, Node::Barrier { .. })),
-        "Fix: RO-then-RW on the same buffer must insert a Barrier"
+        body.iter()
+            .any(|n| matches!(n, Node::LogicalBarrier { .. })),
+        "Fix: RO-then-RW on the same buffer must insert a logical barrier"
     );
 }
 
@@ -105,7 +106,9 @@ fn no_barrier_when_arms_are_independent() {
     let fused = fuse_programs(&[a, b]).unwrap();
     let body = entry_body(&fused);
     assert!(
-        !body.iter().any(|n| matches!(n, Node::Barrier { .. })),
+        !body
+            .iter()
+            .any(|n| matches!(n, Node::LogicalBarrier { .. })),
         "Fix: independent arms must not get a spurious barrier"
     );
 }
@@ -128,7 +131,9 @@ fn no_barrier_when_both_arms_are_readonly_on_same_buffer() {
     let fused = fuse_programs(&[a, b]).unwrap();
     let body = entry_body(&fused);
     assert!(
-        !body.iter().any(|n| matches!(n, Node::Barrier { .. })),
+        !body
+            .iter()
+            .any(|n| matches!(n, Node::LogicalBarrier { .. })),
         "Fix: RO-RO on the same buffer must NOT insert a barrier"
     );
 }

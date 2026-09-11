@@ -1,0 +1,44 @@
+[package]
+name = "vyre-libs-scheduling"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Compiler-internal scheduling, fusion, batching, and dispatch strategy compositions"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-scheduling"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.vyre]
+publication_class = "internal-engine"
+publication_contract = "closure:vyre-libs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["scheduling"]
+scheduling = []
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-megakernel.workspace = true
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+vyre-libs-builder = { workspace = true }
+vyre-libs-math = { workspace = true }
+vyre-libs-graph = { workspace = true }
+vyre-libs-parsing = { workspace = true }
+
+[dev-dependencies]
+vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-test-support = { workspace = true, features = ["semantic-parity"] }
+vyre-reference = { workspace = true }
+vyre-driver-reference = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

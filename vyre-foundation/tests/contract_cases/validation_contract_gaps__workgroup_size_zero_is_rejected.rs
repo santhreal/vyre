@@ -256,8 +256,7 @@ fn barrier_in_divergent_if_is_rejected() {
     let errors = validate(&program);
     assert!(
         errors.iter().any(|e| e.code().as_str() == "V010"
-            && e
-                .message()
+            && e.message()
                 .contains("barrier may be reached by only part of a workgroup")),
         "barrier inside divergent If must be rejected, got {:?}",
         errors
@@ -299,7 +298,7 @@ fn async_load_with_empty_tag_is_rejected() {
     let program = Program::wrapped(
         vec![BufferDecl::read_write("a", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
-        vec![Node::async_load_ext(
+        vec![Node::async_load_gpu_driven(
             "a",
             "a",
             Expr::u32(0),
@@ -417,4 +416,3 @@ fn binop_mixed_numeric_types_is_rejected() {
         errors
     );
 }
-

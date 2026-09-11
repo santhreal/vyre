@@ -1,0 +1,4 @@
+path = "scripts/check_bench_baselines.sh"
+state = "retired"
+gate = "bench-baselines"
+reason = "the gate reads each member manifest for a bench target and holds benches/RESULTS.md to it"

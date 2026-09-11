@@ -1,0 +1,2 @@
+category = "Added"
+text = "The pass invariant audit reports a pass that grows a program past the expansion bound its rewrite contract declares, and a registered pass that declares no contract."

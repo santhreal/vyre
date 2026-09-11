@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The security package ships the predicate rules file its catalog reads, so a packaged build resolves it instead of pointing outside the crate."

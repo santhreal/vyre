@@ -1,8 +1,8 @@
 //! Stress tests for the fusion pass on buffer-write-heavy programs.
 //!
-//! Background: `audits/VYRE_OPTIMIZER.md` documents an O(n²) hazard when
-//! frequent `flush_for_buffer` calls interact with a large pending-replacement
-//! set. `FactSubstrate` fixed use-count recomputation, but the replacement
+//! Background: an O(n²) hazard when frequent `flush_for_buffer` calls interact
+//! with a large pending-replacement set. `FactCache` fixed use-count
+//! recomputation, but the replacement
 //! flush path may still be quadratic. These tests exercise the pass on shapes
 //! that historically triggered the slowdown.
 
@@ -78,10 +78,12 @@ fn many_sequential_buffer_writes_completes_fast() {
 
     // Semantic equivalence via the reference interpreter.
     let inputs: Vec<Value> = (0..N).map(|_| Value::U32(0)).collect();
-    let original_out =
-        vyre_reference::reference_eval(&program, &inputs).expect("original must run");
-    let optimized_out =
-        vyre_reference::reference_eval(&optimized, &inputs).expect("optimized must run");
+    let original_out = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
+        .expect("original must run");
+    let optimized_out = vyre_reference::ReferenceRequest::standard(&optimized, &inputs)
+        .outputs()
+        .expect("optimized must run");
     assert_eq!(
         original_out, optimized_out,
         "fusion must preserve semantics"
@@ -139,10 +141,12 @@ fn alternating_read_write_flushes_replacements_before_store() {
     );
 
     let inputs = [Value::U32(1)];
-    let original_out =
-        vyre_reference::reference_eval(&program, &inputs).expect("original must run");
-    let optimized_out =
-        vyre_reference::reference_eval(&optimized, &inputs).expect("optimized must run");
+    let original_out = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
+        .expect("original must run");
+    let optimized_out = vyre_reference::ReferenceRequest::standard(&optimized, &inputs)
+        .outputs()
+        .expect("optimized must run");
     assert_eq!(
         original_out, optimized_out,
         "fusion must preserve semantics"
@@ -193,10 +197,12 @@ fn single_use_chain_inlines_without_exponential_blowup() {
     );
 
     let inputs = [Value::U32(0)];
-    let original_out =
-        vyre_reference::reference_eval(&program, &inputs).expect("original must run");
-    let optimized_out =
-        vyre_reference::reference_eval(&optimized, &inputs).expect("optimized must run");
+    let original_out = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
+        .expect("original must run");
+    let optimized_out = vyre_reference::ReferenceRequest::standard(&optimized, &inputs)
+        .outputs()
+        .expect("optimized must run");
     assert_eq!(
         original_out, optimized_out,
         "fusion must preserve semantics"
@@ -244,10 +250,12 @@ fn deeply_nested_select_in_store_no_stack_overflow() {
     );
 
     let inputs = [Value::U32(0)];
-    let original_out =
-        vyre_reference::reference_eval(&program, &inputs).expect("original must run");
-    let optimized_out =
-        vyre_reference::reference_eval(&optimized, &inputs).expect("optimized must run");
+    let original_out = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
+        .expect("original must run");
+    let optimized_out = vyre_reference::ReferenceRequest::standard(&optimized, &inputs)
+        .outputs()
+        .expect("optimized must run");
     assert_eq!(
         original_out, optimized_out,
         "fusion must preserve semantics"
@@ -317,10 +325,12 @@ fn many_independent_pure_bindings_inlined_without_duplication() {
     );
 
     let inputs = [Value::Array(vec![Value::U32(0); N])];
-    let original_out =
-        vyre_reference::reference_eval(&program, &inputs).expect("original must run");
-    let optimized_out =
-        vyre_reference::reference_eval(&optimized, &inputs).expect("optimized must run");
+    let original_out = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
+        .expect("original must run");
+    let optimized_out = vyre_reference::ReferenceRequest::standard(&optimized, &inputs)
+        .outputs()
+        .expect("optimized must run");
     assert_eq!(
         original_out, optimized_out,
         "fusion must preserve semantics"

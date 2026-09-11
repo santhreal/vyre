@@ -1,0 +1,32 @@
+[package]
+name = "vyre-alloc-probe"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Per-thread heap traffic counters behind a GlobalAlloc wrapper. Measures allocation budgets in a harness binary or a test binary."
+readme = "README.md"
+# Internal measurement harness, never published.
+publish = false
+
+# This crate depends on no vyre crate. It wraps `std::alloc::System`, so any
+# binary that installs a global allocator can link it: the benchmark harness at
+# run time, a driver dispatch budget under `cargo test`.
+[dependencies]
+
+[package.metadata.vyre]
+publication_class = "conformance-tooling"
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

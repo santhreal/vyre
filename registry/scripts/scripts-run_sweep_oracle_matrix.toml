@@ -1,0 +1,4 @@
+path = "scripts/run_sweep_oracle_matrix.sh"
+state = "holds_logic"
+destination = "the sweep runner that owns sharding"
+reason = "runs every tracked non-volume sweep_* target with the features its manifest entry declares"

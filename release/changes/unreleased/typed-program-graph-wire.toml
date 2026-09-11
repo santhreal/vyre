@@ -1,0 +1,2 @@
+category = "Added"
+text = "ProgramGraph now composes reusable Programs through canonical typed value identities, explicit consumer and output ports, symbolic or concrete shapes, access and lifetime contracts, and validated state transitions. Its bounded VGR0 wire format embeds existing VIR0 Programs and rejects implicit casts, rank drift, alias conflicts, dangling state, malformed framing, and hostile counts before mutation."

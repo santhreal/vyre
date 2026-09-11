@@ -16,7 +16,7 @@ post-processing pass.
 - `find_uncarriered_assigns` / `FindUncarriered`  -  Assigns inside loops not tagged
 - `carrier_summary` / `CarrierSummary`  -  vyre-IR carrier analysis
 - `diff_descriptors` / `DiffDescriptors`  -  diff two descriptors
-- `get_program`  -  hard-coded synthetic Programs (c11_lexer + a few others)
+- `get_program`  -  hard-coded synthetic Programs (python312_lexer + a few others)
 
 Everything above is **vyre-IR-side**. Naga-side and runtime-failure-side coverage is missing.
 
@@ -137,7 +137,7 @@ the manual `eprintln!("[publish]…")` step I'm doing now.
 
 ### 5. Capture-on-failure for vyrec
 
-`vyrec` (or `vyre-frontend-c::api::compile`) honors
+The C compile path honors
 `VYRE_CAPTURE_FAILED_DESCRIPTOR=/path/dir`. On dispatch failure of
 any kernel, serialize the in-flight `KernelDescriptor` (or `Program`
 + `descriptor_for`) to `<dir>/<kernel-name>.kdesc.bin` and the
@@ -153,12 +153,12 @@ deep-frontend run that takes ~10 s for trivial inputs.
 Top-level CLI:
 
 ```
-vyre_dbg failure-trace --kdesc /tmp/c11_annotate.kdesc.bin
+vyre_dbg failure-trace --kdesc out/annotate.kdesc.bin
 ```
 
 Loads the descriptor, runs `emit_optimized`, validates, and on
 failure prints the full failure-trace report. With
-`--bind-result-log /tmp/bind_log.bin` the report includes vyre-op-id
+`--bind-result-log out/bind_log.bin` the report includes vyre-op-id
 correlation. Default output is human-readable; `--json` for
 machine-readable.
 
@@ -238,8 +238,8 @@ serves stale WGSL across vyrec rebuilds and made me chase phantom
   bind-result log. Suggest `OnceCell<Mutex<Vec<BindResultEntry>>>`
   guarded by `cfg(feature = "bind-result-log")` or env var
   `VYRE_BIND_RESULT_LOG=/path/file` activated at module init.
-- Capture-on-failure: vyrec invocation path runs through
-  `vyre_frontend_c::api::compile`. Easiest hook is
+- Capture-on-failure: the C compile path runs through
+  `vyre_libs::parsing::c`. Easiest hook is
   `vyre-driver-wgpu`'s `compile_compute_pipeline_with_layout`
   (already has `dump_wgsl_if_requested`); add a
   `dump_kdesc_if_requested` sibling driven by

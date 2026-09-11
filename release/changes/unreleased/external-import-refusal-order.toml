@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "An external import with both an unsupported memory-kind combination and an unaligned pitch is refused for the combination, on every driver."

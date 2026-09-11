@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Target payload admission rejects an entry point whose workgroup, grid, or dynamic shared bytes differ from the geometry the artifact recorded for that node."

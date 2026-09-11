@@ -1,9 +1,9 @@
-// (use super::* removed  -  flat-included into wire_roundtrip_proptest_suite scope)
+use super::*;
 
 #[test]
 fn every_expression_variant_roundtrips_in_one_program() {
     let opaque_expr = || {
-        Expr::Opaque(Arc::new(TestOpaqueExpr {
+        Expr::Opaque(Arc::new(EchoExpr {
             payload: vec![0xde, 0xad, 0xbe, 0xef],
         }))
     };
@@ -95,10 +95,7 @@ fn every_expression_variant_roundtrips_in_one_program() {
                     lane: Box::new(Expr::u32(1)),
                 },
             ),
-            Node::let_bind(
-                "subgroup_add",
-                Expr::subgroup_add(Expr::u32(6)),
-            ),
+            Node::let_bind("subgroup_add", Expr::subgroup_add(Expr::u32(6))),
             Node::let_bind("opaque", opaque_expr()),
             Node::Return,
         ],
@@ -119,7 +116,7 @@ fn every_statement_variant_roundtrips_in_one_program() {
     let expr = || Expr::BinOp {
         op: BinOp::Add,
         left: Box::new(Expr::LitU32(1)),
-        right: Box::new(Expr::Opaque(Arc::new(TestOpaqueExpr {
+        right: Box::new(Expr::Opaque(Arc::new(EchoExpr {
             payload: vec![0x00, 0xff, 0xc0, 0xaf],
         }))),
     };
@@ -222,12 +219,10 @@ fn every_statement_variant_roundtrips_in_one_program() {
             },
             Node::Region {
                 generator: "gen".into(),
-                source_region: Some(vyre_foundation::ir::model::expr::GeneratorRef {
-                    name: "src".to_string(),
-                }),
+                source_region: Some(vyre_foundation::ir::Ident::from("src")),
                 body: region_body,
             },
-            Node::Opaque(Arc::new(TestOpaqueNode {
+            Node::Opaque(Arc::new(EchoNode {
                 payload: vec![0x00, 0xff, 0xc0, 0xaf, 0x80],
             })),
             Node::Return,

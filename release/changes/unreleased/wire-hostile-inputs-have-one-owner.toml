@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The adversarial wire-decoder inputs four `vyre-foundation` test targets shared through a `#[path]`-included file are one `vyre_test_support::wire_hostile_inputs` module, so a helper live in one target and unused in another is no longer dead code in the target that uses the smaller subset."

@@ -8,7 +8,7 @@
 //!
 //! ```rust,ignore
 //! use crate::ir::{BinOp, Expr};
-//! use crate::optimizer::dsl::rewrite_rules;
+//! use vyre_foundation::rewrite_rules;
 //!
 //! let mut rules = rewrite_rules! {
 //!     // Eliminate `X + 0`

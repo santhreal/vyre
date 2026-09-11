@@ -14,7 +14,7 @@ Format:
 
 ```toml
 schema_version = "1"
-op = "vyre-libs::matching::aho_corasick"
+op = "vyre-libs::pattern::aho_corasick"
 source = "Aho-Corasick 1975 paper + aho-corasick crate regression corpus"
 
 [[witness]]
@@ -31,7 +31,7 @@ directory following the same schema.
 ## Current fixture files
 
 - `aho_corasick.toml`: 20 regression vectors from
-  `tests/aho_corasick_kat.rs`.
+  `../../vyre-libs-pattern/tests/aho_corasick_kat.rs`.
 - `blake3.toml`: 3 KAT vectors from `tests/blake3_kat.rs`.
 
 ## Why TOML

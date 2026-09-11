@@ -1,0 +1,10 @@
+lane = "loom-loom"
+workflow = ".github/workflows/loom.yml"
+job = "loom"
+state = "live"
+required_status = "loom / loom"
+triggers = ["push", "pull_request"]
+steps = [
+  { command = '''# Only run tests named loom_* under cfg loom. If a crate has none, it is a no-op.
+./cargo_full test --workspace --release -- --test-threads=1 loom_''' },
+]

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The in-place, atomic and chained graph fixtures are built once in `vyre-test-support::graph_shapes` and used by both the foundation logical tests and the workspace artifact fixtures."

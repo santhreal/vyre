@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The `types` feature of `vyre-primitives` now depends on `vyre-foundation`, which its shape-predicate evaluator has always aliased. Enabling only that feature against the published crate failed to compile; in-workspace builds hid it because another member always enabled a feature that pulled the foundation in."

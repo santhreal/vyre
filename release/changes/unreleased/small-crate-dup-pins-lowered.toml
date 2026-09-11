@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Duplication pins for three crates now record the measured tree: vyre-macros 89 to 41, vyre-lints 66 to 0, vyre-debug 54 to 9. Their total line counts are corrected to the measured values, which were already stale before these changes. A no-op test whose body was a comment claiming to pin a test count is deleted, and the two `raw_ir_in_libs` case files, named for a helper and for one of their own tests, are now named for what they hold."

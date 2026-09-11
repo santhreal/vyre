@@ -6,7 +6,7 @@
 //! and fixtures are intentionally exempt because they may preserve migration
 //! context or consumer integration examples.
 
-use crate::{paths::workspace_relative, Violation, ViolationKind};
+use crate::{scan, Violation, ViolationKind};
 use anyhow::Result;
 use std::path::Path;
 
@@ -41,11 +41,13 @@ const EXEMPT_PATH_FRAGMENTS: &[&str] = &[
 /// records what the API used to be called, which is history rather than coupling.
 /// The exemption list, as shipped.
 ///
-/// It lives in a data file rather than in this array so that
-/// `scripts/check_platform_consumer_docs.sh` can read the same list. The two
-/// guards previously carried separate copies and disagreed: `docs/RELEASE.md`
-/// was exempt here and scanned there, so the same line passed one gate and
-/// failed the other.
+/// It lives in a data file rather than in this array so that the shell guard
+/// reads the same list. The two guards previously carried separate copies and
+/// disagreed, so one release-coordination document was exempt in one and
+/// scanned in the other: the same line passed one gate and failed the other.
+/// Which documents are exempt is the data file's answer, never a name repeated
+/// here. A release runbook is exempt because coordinating a release is its
+/// subject; an ordinary guide is not.
 const RELEASE_COORDINATION_DOCS_FILE: &str = include_str!("../rules/release_coordination_docs.txt");
 
 /// Parses [`RELEASE_COORDINATION_DOCS_FILE`] into its path entries.
@@ -60,37 +62,24 @@ fn release_coordination_docs() -> impl Iterator<Item = &'static str> {
 
 /// Scan a source tree for downstream-consumer coupling.
 pub fn scan_tree(root: &Path) -> Result<Vec<Violation>> {
-    let mut all = Vec::new();
-    for entry in walkdir::WalkDir::new(root)
-        .into_iter()
-        .filter_map(|entry| entry.ok())
-    {
-        let path = entry.path();
-        if !path.is_file() || !is_scanned_extension(path) {
-            continue;
-        }
-        let workspace_rel = workspace_relative(path);
-        if is_exempt_path(&workspace_rel) {
-            continue;
-        }
-        if let Some((column, name)) = find_consumer_name_in_path(&workspace_rel) {
-            all.push(Violation {
-                file: workspace_rel.clone(),
-                line: 1,
-                column: column as u32,
-                kind: ViolationKind::ConsumerCoupling,
-                message: consumer_coupling_message(name, "path"),
-            });
-        }
-        all.extend(scan_file(path, &workspace_rel)?);
-    }
-    Ok(all)
-}
-
-fn is_scanned_extension(path: &Path) -> bool {
-    matches!(
-        path.extension().and_then(|ext| ext.to_str()),
-        Some("rs" | "md")
+    scan::collect_violations(
+        root,
+        scan::RUST_AND_MARKDOWN,
+        |workspace_rel| !is_exempt_path(workspace_rel),
+        |path, workspace_rel| {
+            let mut violations = Vec::new();
+            if let Some((column, name)) = find_consumer_name_in_path(workspace_rel) {
+                violations.push(Violation {
+                    file: workspace_rel.to_string(),
+                    line: 1,
+                    column: column as u32,
+                    kind: ViolationKind::ConsumerCoupling,
+                    message: consumer_coupling_message(name, "path"),
+                });
+            }
+            violations.extend(scan_file(path, workspace_rel)?);
+            Ok(violations)
+        },
     )
 }
 

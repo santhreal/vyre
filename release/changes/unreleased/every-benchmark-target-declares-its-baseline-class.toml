@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every benchmark target declares the baseline class it compares against, and the target keys no longer assume a host baseline."

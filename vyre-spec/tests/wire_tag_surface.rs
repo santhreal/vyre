@@ -5,15 +5,17 @@
 //! the frozen builtin tag for each core enum and excludes extension ids from
 //! that builtin space.
 
+use vyre_test_support::spec_variant_tables;
+
 use std::collections::BTreeSet;
 
-use vyre_spec::extension::{
-    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
-    ExtensionUnOpId,
-};
 use vyre_spec::{
     AtomicOp, BinOp, CollectiveOp, DataType, QuantizationScale, QuantizationZeroPoint, TernaryOp,
     TypeId, UnOp,
+};
+use vyre_spec::{
+    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
+    ExtensionUnOpId,
 };
 
 #[test]
@@ -176,6 +178,8 @@ fn un_op_builtin_wire_tags_are_exact_and_unique() {
         (UnOp::Unpack8Low, 0x22),
         (UnOp::Unpack8High, 0x23),
         (UnOp::Reciprocal, 0x24),
+        (UnOp::BitcastF32ToU32, 0x25),
+        (UnOp::BitcastU32ToF32, 0x26),
     ];
 
     assert_exact_unique_tags(cases.map(|(kind, tag)| (kind.builtin_wire_tag(), tag)));
@@ -209,14 +213,7 @@ fn ternary_op_builtin_wire_tags_are_exact_and_unique() {
 
 #[test]
 fn collective_op_builtin_wire_tags_are_exact_unique_and_decodable() {
-    let cases = [
-        (CollectiveOp::Sum, 0x01),
-        (CollectiveOp::Min, 0x02),
-        (CollectiveOp::Max, 0x03),
-        (CollectiveOp::BitAnd, 0x04),
-        (CollectiveOp::BitOr, 0x05),
-        (CollectiveOp::BitXor, 0x06),
-    ];
+    let cases = spec_variant_tables::builtin_collective_ops();
     let mut seen = BTreeSet::new();
 
     for (op, tag) in cases {

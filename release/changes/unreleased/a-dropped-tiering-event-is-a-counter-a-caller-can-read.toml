@@ -1,0 +1,2 @@
+category = "Added"
+text = "`BufferPoolStats::dropped_tiering_events` reports how many WGPU buffer-pool tiering metadata events were discarded because the event queue was full or its worker was gone, so reuse accounting that falls behind is visible outside a device test."

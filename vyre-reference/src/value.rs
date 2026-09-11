@@ -31,8 +31,16 @@ impl PartialEq for Value {
             (Self::Bool(a), Self::Bool(b)) => a == b,
             (Self::Bytes(a), Self::Bytes(b)) => a == b,
             (Self::Float(a), Self::Float(b)) => a.to_bits() == b.to_bits(),
-            (Self::Array(a), Self::Array(b)) => a == b,
-            _ => false,
+            (
+                Self::U32(_)
+                | Self::I32(_)
+                | Self::U64(_)
+                | Self::Bool(_)
+                | Self::Bytes(_)
+                | Self::Float(_)
+                | Self::Array(_),
+                _,
+            ) => false,
         }
     }
 }
@@ -46,7 +54,9 @@ impl Value {
         match self {
             Self::Array(values) => !values.is_empty(),
             Self::Float(value) => *value != 0.0,
-            _ => self.try_as_u32().unwrap_or(1) != 0,
+            Self::U32(_) | Self::I32(_) | Self::U64(_) | Self::Bool(_) | Self::Bytes(_) => {
+                self.try_as_u32().unwrap_or(1) != 0
+            }
         }
     }
 
@@ -202,7 +212,19 @@ impl Value {
         match self {
             Self::Float(value) => Some(*value as f32),
             Self::U32(value) => Some(f32::from_bits(*value)),
-            _ => None,
+            Self::I32(_) | Self::U64(_) | Self::Bool(_) | Self::Bytes(_) | Self::Array(_) => None,
+        }
+    }
+    /// Try to interpret the value as an `f64`.
+    #[must_use]
+    pub fn try_as_f64(&self) -> Option<f64> {
+        match self {
+            Self::Float(value) => Some(*value),
+            Self::U32(value) => Some(f64::from(f32::from_bits(*value))),
+            Self::I32(value) => Some(f64::from(*value)),
+            Self::U64(value) => Some(f64::from_bits(*value)),
+            Self::Bool(value) => Some(if *value { 1.0 } else { 0.0 }),
+            Self::Bytes(_) | Self::Array(_) => None,
         }
     }
 
@@ -210,12 +232,6 @@ impl Value {
     #[must_use]
     pub fn wide_bytes(&self) -> Vec<u8> {
         self.to_bytes()
-    }
-
-    /// Create a zero value for the given data type.
-    #[must_use]
-    pub fn zero_for(ty: vyre_foundation::ir::DataType) -> Self {
-        Self::try_zero_for(ty).unwrap_or_else(|| Self::Bytes(Arc::from([])))
     }
 
     /// Try to create a zero value for the given data type.
@@ -231,9 +247,33 @@ impl Value {
             vyre_foundation::ir::DataType::F64 => Some(Self::Float(0.0)),
             vyre_foundation::ir::DataType::Vec2U32 => Some(Self::Bytes(Arc::from(vec![0; 8]))),
             vyre_foundation::ir::DataType::Vec4U32 => Some(Self::Bytes(Arc::from(vec![0; 16]))),
-            _ => {
-                fixed_scalar_storage_width(&ty).map(|width| Self::Bytes(Arc::from(vec![0; width])))
-            }
+            // Every remaining declared `DataType` is named rather than
+            // absorbed, so adding a variant to the spec fails to compile here
+            // instead of silently taking the storage-width fallback.
+            other @ (vyre_foundation::ir::DataType::U8
+            | vyre_foundation::ir::DataType::U16
+            | vyre_foundation::ir::DataType::I8
+            | vyre_foundation::ir::DataType::I16
+            | vyre_foundation::ir::DataType::I64
+            | vyre_foundation::ir::DataType::F16
+            | vyre_foundation::ir::DataType::BF16
+            | vyre_foundation::ir::DataType::F8E4M3
+            | vyre_foundation::ir::DataType::F8E5M2
+            | vyre_foundation::ir::DataType::I4
+            | vyre_foundation::ir::DataType::FP4
+            | vyre_foundation::ir::DataType::NF4
+            | vyre_foundation::ir::DataType::Tensor
+            | vyre_foundation::ir::DataType::Handle(_)
+            | vyre_foundation::ir::DataType::Array { .. }
+            | vyre_foundation::ir::DataType::Vec { .. }
+            | vyre_foundation::ir::DataType::TensorShaped { .. }
+            | vyre_foundation::ir::DataType::SparseCsr { .. }
+            | vyre_foundation::ir::DataType::SparseCoo { .. }
+            | vyre_foundation::ir::DataType::SparseBsr { .. }
+            | vyre_foundation::ir::DataType::DeviceMesh { .. }
+            | vyre_foundation::ir::DataType::Quantized { .. }
+            | vyre_foundation::ir::DataType::Opaque(_)) => fixed_scalar_storage_width(&other)
+                .map(|width| Self::Bytes(Arc::from(vec![0; width]))),
         }
     }
 
@@ -309,15 +349,42 @@ impl Value {
                 ])))
             }
             vyre_foundation::ir::DataType::Bytes => Ok(Self::Bytes(Arc::from(bytes))),
-            _ => match fixed_scalar_storage_width(&ty) {
-                Some(width) => {
-                    if bytes.len() < width {
-                        return Err(format!("{ty} requires {width} bytes"));
+            // Every remaining declared `DataType` is named rather than
+            // absorbed, so adding a variant to the spec fails to compile here
+            // instead of silently decoding as opaque storage bytes.
+            other @ (vyre_foundation::ir::DataType::U8
+            | vyre_foundation::ir::DataType::U16
+            | vyre_foundation::ir::DataType::I8
+            | vyre_foundation::ir::DataType::I16
+            | vyre_foundation::ir::DataType::I64
+            | vyre_foundation::ir::DataType::F16
+            | vyre_foundation::ir::DataType::BF16
+            | vyre_foundation::ir::DataType::F8E4M3
+            | vyre_foundation::ir::DataType::F8E5M2
+            | vyre_foundation::ir::DataType::I4
+            | vyre_foundation::ir::DataType::FP4
+            | vyre_foundation::ir::DataType::NF4
+            | vyre_foundation::ir::DataType::Tensor
+            | vyre_foundation::ir::DataType::Handle(_)
+            | vyre_foundation::ir::DataType::Array { .. }
+            | vyre_foundation::ir::DataType::Vec { .. }
+            | vyre_foundation::ir::DataType::TensorShaped { .. }
+            | vyre_foundation::ir::DataType::SparseCsr { .. }
+            | vyre_foundation::ir::DataType::SparseCoo { .. }
+            | vyre_foundation::ir::DataType::SparseBsr { .. }
+            | vyre_foundation::ir::DataType::DeviceMesh { .. }
+            | vyre_foundation::ir::DataType::Quantized { .. }
+            | vyre_foundation::ir::DataType::Opaque(_)) => {
+                match fixed_scalar_storage_width(&other) {
+                    Some(width) => {
+                        if bytes.len() < width {
+                            return Err(format!("{other} requires {width} bytes"));
+                        }
+                        Ok(Self::Bytes(Arc::from(&bytes[..width])))
                     }
-                    Ok(Self::Bytes(Arc::from(&bytes[..width])))
+                    None => Ok(Self::Bytes(Arc::from(bytes))),
                 }
-                None => Ok(Self::Bytes(Arc::from(bytes))),
-            },
+            }
         }
     }
 }
@@ -338,7 +405,7 @@ fn fixed_scalar_storage_width(ty: &vyre_foundation::ir::DataType) -> Option<usiz
         vyre_foundation::ir::DataType::Handle(_)
         | vyre_foundation::ir::DataType::DeviceMesh { .. } => Some(4),
         vyre_foundation::ir::DataType::I64 => Some(8),
-        vyre_foundation::ir::DataType::Array { element_size } => Some(*element_size),
+        vyre_foundation::ir::DataType::Array { element_size } => Some(*element_size as usize),
         vyre_foundation::ir::DataType::Vec { element, count } => {
             fixed_scalar_storage_width(element)
                 .and_then(|width| width.checked_mul(usize::from(*count)))
@@ -352,7 +419,23 @@ fn fixed_scalar_storage_width(ty: &vyre_foundation::ir::DataType) -> Option<usiz
         vyre_foundation::ir::DataType::Quantized { storage, .. } => {
             fixed_scalar_storage_width(storage)
         }
-        _ => None,
+        // Every remaining declared `DataType` is named rather than absorbed,
+        // so adding a variant to the spec fails to compile here instead of
+        // silently reporting no fixed storage width.
+        vyre_foundation::ir::DataType::U32
+        | vyre_foundation::ir::DataType::I32
+        | vyre_foundation::ir::DataType::U64
+        | vyre_foundation::ir::DataType::Vec2U32
+        | vyre_foundation::ir::DataType::Vec4U32
+        | vyre_foundation::ir::DataType::Bool
+        | vyre_foundation::ir::DataType::Bytes
+        | vyre_foundation::ir::DataType::F32
+        | vyre_foundation::ir::DataType::F64
+        | vyre_foundation::ir::DataType::Tensor
+        | vyre_foundation::ir::DataType::SparseCsr { .. }
+        | vyre_foundation::ir::DataType::SparseCoo { .. }
+        | vyre_foundation::ir::DataType::SparseBsr { .. }
+        | vyre_foundation::ir::DataType::Opaque(_) => None,
     }
 }
 
@@ -408,63 +491,4 @@ fn read_u64_prefix(bytes: &[u8]) -> u64 {
     let len = bytes.len().min(8);
     padded[..len].copy_from_slice(&bytes[..len]);
     u64::from_le_bytes(padded)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use proptest::prelude::*;
-
-    #[test]
-    fn neg_zero_truthiness_is_false() {
-        assert!(!Value::Float(-0.0).truthy());
-    }
-
-    #[test]
-    fn pos_zero_truthiness_is_false() {
-        assert!(!Value::Float(0.0).truthy());
-    }
-
-    #[test]
-    fn nonzero_float_truthiness_is_true() {
-        assert!(Value::Float(1.0).truthy());
-        assert!(Value::Float(-1.0).truthy());
-        assert!(Value::Float(f64::INFINITY).truthy());
-        assert!(Value::Float(f64::NEG_INFINITY).truthy());
-    }
-
-    #[test]
-    fn f32_element_decode_canonicalizes_subnormal_and_nan_payload_bits() {
-        let positive_subnormal =
-            Value::from_element_bytes(vyre_foundation::ir::DataType::F32, &1u32.to_le_bytes())
-                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - f32 positive subnormal decode must succeed");
-        assert_eq!(
-            positive_subnormal.try_as_f32().unwrap().to_bits(),
-            0x0000_0000
-        );
-
-        let negative_subnormal =
-            Value::from_element_bytes(vyre_foundation::ir::DataType::F32, &0x8000_0001u32.to_le_bytes())
-                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - f32 negative subnormal decode must succeed");
-        assert_eq!(
-            negative_subnormal.try_as_f32().unwrap().to_bits(),
-            0x8000_0000
-        );
-
-        let payload_nan =
-            Value::from_element_bytes(vyre_foundation::ir::DataType::F32, &0x7fa0_0001u32.to_le_bytes())
-                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - f32 payload NaN decode must succeed");
-        assert_eq!(payload_nan.try_as_f32().unwrap().to_bits(), 0x7fc0_0000);
-    }
-
-    proptest! {
-        #[test]
-        fn neg_zero_select_branches_to_false(
-            positive_sign in proptest::bool::ANY,
-        ) {
-            let zero = if positive_sign { 0.0_f64 } else { -0.0_f64 };
-            prop_assert!(!Value::Float(zero).truthy(),
-                "Value::Float({zero}).truthy() must be false to match backend bool(0.0)/bool(-0.0) semantics");
-        }
-    }
 }

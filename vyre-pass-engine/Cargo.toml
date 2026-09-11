@@ -1,0 +1,84 @@
+[package]
+name = "vyre-pass-engine"
+version = "0.8.0"
+publish = false
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Vyre pass engine: executes optimizer analysis Programs through compiler-owned semantic execution."
+readme = "README.md"
+keywords = ["compiler", "optimizer", "dispatch", "vyre"]
+categories = ["compilers", "algorithms"]
+documentation = "https://docs.rs/vyre-pass-engine"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[package.metadata.vyre]
+publication_class = "internal-engine"
+
+[lints]
+workspace = true
+
+[features]
+default = ["optimizer"]
+optimizer = ["vyre-libs/graph"]
+all-solvers = [
+    "vyre-libs/analysis",
+    "vyre-libs/encoding",
+    "vyre-libs/graph-dispatch",
+    "vyre-libs/reasoning",
+    "vyre-libs/solvers",
+    "vyre-libs/scheduling",
+    "vyre-libs/telemetry",
+]
+
+[dependencies]
+vyre-foundation.workspace = true
+# Host-side dispatch byte marshalling (`vyre_libs::dispatch_buffers`). The
+# target DAG puts the composition library below the pass engine.
+# `default-features = false`: the pass engine uses only `dispatch_buffers` and
+# `graph`, both ungated. Taking the default set would resolve the math/nn/matching
+# primitive domains into every optimizer-only consumer. Declared explicitly rather
+# than through `workspace = true`, which silently ignores `default-features = false`
+# unless the workspace entry states a `default-features` value of its own.
+vyre-libs = { version = "0.8.0", path = "../vyre-libs", default-features = false }
+vyre-megakernel.workspace = true
+vyre-primitives = { workspace = true }
+rustc-hash.workspace = true
+
+[dev-dependencies]
+vyre-test-support = { workspace = true, features = ["semantic-requests"] }
+# Dev-dep only -> gated out of production builds of dependents.
+vyre-primitives = { path = "../vyre-primitives", default-features = false }
+# The one crate allowed to execute a Program on the host. Parity tests use its
+# semantic executor, which compiles the same validated graphs as device targets
+# before running them on the reference interpreter.
+vyre-driver-reference = { path = "../vyre-driver-reference" }
+# The parity oracle itself: the reference interpreter the semantic executor runs
+# on, used directly for the lane-reversed differential that proves a program's
+# result does not depend on invocation order.
+vyre-reference = { workspace = true }
+# `vyre_libs::test_support` program-sequence helper and the `graph::dispatch`
+# composition surface the parity suites build programs from. Dev builds only,
+# the same way as the primitives oracles above.
+vyre-libs = { workspace = true, features = ["graph-dispatch"] }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"
+
+[[test]]
+name = "all_tests_all_solvers"
+path = "tests/all_tests_all_solvers.rs"
+required-features = ["all-solvers"]
+
+[[test]]
+name = "all_tests_optimizer"
+path = "tests/all_tests_optimizer.rs"
+required-features = ["optimizer"]

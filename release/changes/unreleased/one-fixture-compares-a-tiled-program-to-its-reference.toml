@@ -1,0 +1,2 @@
+category = "Changed"
+text = "One fixture compares a tiled f32 program against its scalar reference. fixture_bytes::assert_tiled_matches_reference evaluates both programs and compares them lane by lane, and asserts the lane counts match first: zipping two sequences stops at the shorter one, so a program that wrote fewer lanes than its reference previously passed."

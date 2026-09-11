@@ -1,0 +1,60 @@
+{
+  "schema_version": "vyre.whole-application-record.v2",
+  "workload_id": "workload.whole_app.dense_numerical_pipeline",
+  "workload_name": "Dense Numerical Tensor Contraction & Normalization Pipeline",
+  "domain": "DenseNumerical",
+  "graph_node_count": 3,
+  "graph_edge_count": 2,
+  "compile_request_validated": true,
+  "production_route": {
+    "backend_id": "cuda",
+    "device_id": "NVIDIA GeForce RTX 3080 Ti",
+    "device_generation": 2,
+    "artifact_digest": "b3017ad81186acf2295000fa9ee9e07e9338cc5df52c280b6fe96c3169c8d323",
+    "target_payload_digest": "4d6df431cda8d9370aaa71c1b19095ad7d3360a3b115d76e3043d946eb1726cf",
+    "bound_resource_count": 7,
+    "completed_submissions": 31
+  },
+  "parity_result": {
+    "compared_values": 1,
+    "is_exact_match": true,
+    "max_ulp_distance": 0,
+    "reference_digest": "d304e2d6380eab46aae93d2bf6c42612fed16c6371ab0c080c80d60d65c3425f",
+    "candidate_digest": "d304e2d6380eab46aae93d2bf6c42612fed16c6371ab0c080c80d60d65c3425f",
+    "parity_status": "matched_exact_bytes"
+  },
+  "compile_time_ns": 1015262,
+  "load_time_ns": 14755149,
+  "measured_samples": 30,
+  "p50_latency_ns": 50070,
+  "p99_latency_ns": 58061,
+  "device_p50_latency_ns": 11008,
+  "throughput": {
+    "gflops": null,
+    "gb_per_sec": 0.5726383063710805,
+    "items_per_sec": 20451368.084681448
+  },
+  "peak_bytes": 24576,
+  "resident_bytes": 8192,
+  "cold_state": {
+    "latency_ns": 134332,
+    "memory_bytes": null,
+    "is_cold_start": true,
+    "warmup_ratio": 2.6828839624525664
+  },
+  "warm_state": {
+    "latency_ns": 50070,
+    "memory_bytes": null,
+    "is_cold_start": false,
+    "warmup_ratio": 2.6828839624525664
+  },
+  "selected_schedule_id": "schedule.78c4cda327393710f77fcf6644ffc1c90dbaf01f3b36fd5986c211dedc0b29f8",
+  "input_digest": "c6881785ac48221a06d37de95ac5c9bb4b3fda514590e9798b189e76e3a2997d",
+  "native_baseline_unmeasured": {
+    "baseline_id": "native.cutlass.gemm_norm_residual_v3_5_0",
+    "baseline_name": "NVIDIA CUTLASS 3.5.0 / cuBLAS 12.4 Contraction Pipeline",
+    "reason": "no version-pinned native baseline `native.cutlass.gemm_norm_residual_v3_5_0` is vendored. Fix: vendor the pinned native kernel and register it before claiming a comparison against it."
+  },
+  "host_environment": "x86_64-linux / cuda / NVIDIA GeForce RTX 3080 Ti",
+  "recorded_at_utc": "2026-09-10T09:07:29Z"
+}

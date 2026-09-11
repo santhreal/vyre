@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The structural scan reads the member source corpus, the source-file corpus, the crate-root roster, and the source-file roster once per process instead of once per contract, so a test binary that runs dozens of tree contracts walks and reads the checkout once and every later contract is served from memory."

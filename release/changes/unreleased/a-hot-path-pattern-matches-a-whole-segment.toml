@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "hot-path-scan matches a pattern at a path boundary, so SmallVec::new is no longer counted as Vec::new and one FxHashMap::new is one finding."

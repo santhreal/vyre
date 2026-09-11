@@ -1,0 +1,15 @@
+category = "Fixed"
+text = """
+A backend that lowers a whole-grid barrier is no longer routed through the host \
+split. `VyreBackend::supports_grid_sync` and \
+`VyreBackend::cooperative_grid_sync_fits` are two halves of one answer, and \
+their defaults disagreed: the fit query returned a bare `Ok(false)`, so a \
+backend that reported native support and left the residency check on its \
+default was read as "the cooperative launch does not fit" and had every \
+grid-sync dispatch emulated by multiple host launches. Only the CUDA driver \
+overrides both, so the contradiction was reachable by any backend that \
+overrode one. The default now answers `supports_grid_sync()`, which is \
+unchanged for a backend that lowers no barrier and correct for one that does, \
+and a regression test asserts the two defaults agree rather than observing the \
+split reject an input shape downstream.
+"""

@@ -6,7 +6,7 @@
 //   binop_identities  -  binary operator algebraic identities (Add/Sub/Mul/…)
 //   unary_rules       -  unary operator simplifications (involutions, idempotent)
 //   select_rules      -  Select node optimizations (branch flip, cast canon.)
-//   fma_rules         -  FMA synthesis and simplification
+//   fma_rules         -  simplification of an author-written FMA
 //   cast_rules        -  compile-time literal Cast folding
 //
 // To add a new rule:
@@ -18,15 +18,13 @@
 pub(crate) mod binop_identities;
 mod cast_rules;
 mod fma_rules;
-/// ROADMAP A11  -  cross-control-flow literal Let propagation built on
+/// cross-control-flow literal Let propagation built on
 /// the A2 `ProgramFacts` substrate. Propagates literal-valued Lets
 /// whose name is unique program-wide to every Var read site, even
 /// across sibling control-flow branches.
 pub mod reaching_def_propagate;
 mod select_rules;
 mod unary_rules;
-
-pub(crate) use binop_identities::is_float_expr;
 
 use crate::ir::eval::{fold_binary_literal, fold_literal_tree, fold_unary_literal};
 use crate::ir::{Expr, Program};
@@ -116,4 +114,5 @@ pub(crate) fn fold_expr(expr: &Expr) -> Option<Expr> {
 }
 
 #[cfg(test)]
+#[path = "../../../../../tests/internal/optimizer/passes/algebraic/const_fold/mod.rs"]
 mod tests;

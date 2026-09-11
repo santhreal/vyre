@@ -1,0 +1,11 @@
+lane = "test-random-order-random-order"
+workflow = ".github/workflows-paused/test-random-order.yml"
+job = "random-order"
+state = "paused"
+reason = "the nightly toolchain it needs for randomized test order fails to install on the hosted runner"
+returns_when = "randomized order lands on the stable toolchain, or the nightly install is fixed"
+required_status = "Random-Order Tests / random-order"
+triggers = ["pull_request"]
+steps = [
+  { command = "cargo test --workspace --all-targets -- -Z unstable-options --shuffle --test-threads=${{ matrix.threads }}" },
+]

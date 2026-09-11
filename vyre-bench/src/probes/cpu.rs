@@ -20,6 +20,8 @@ pub fn rdtsc() -> u64 {
     }
     #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
     {
-        0
+        compile_error!(
+            "unsupported target_arch for rdtsc cycle counter; expected x86_64 or aarch64"
+        );
     }
 }

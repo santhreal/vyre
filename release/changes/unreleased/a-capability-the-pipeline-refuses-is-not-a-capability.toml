@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The wgpu backend reported the adapter's workgroup limits while its WGSL dialect admits only the WebGPU spec baseline of 256 invocations, so any composition sized from the device profile built a target payload the megakernel envelope rejected with MKC017_MALFORMED_TARGET_PAYLOAD. Every wgpu capability path now reports the intersection of the adapter limit and the registered target profile, and the reduction crossover benchmark reads its tile ceiling from that profile instead of a baked-in 1024."

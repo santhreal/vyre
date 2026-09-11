@@ -1,12 +1,13 @@
 #![allow(missing_docs)]
 
-extern crate self as vyre;
+use crate::expansion_fixtures;
 
-mod support;
+#[path = "expansion_fixtures/default_metadata.rs"]
+mod default_metadata;
 
-pub use support::{ir, optimizer};
+pub use expansion_fixtures::{geometry, ir, numeric, operation, optimizer};
 
-use vyre_macros::{vyre_ast_registry, vyre_pass};
+use vyre_macros::{vyre_ast_registry, vyre_operation, vyre_pass};
 
 #[vyre_pass(
     name = "macro_compile_backed_pass",
@@ -20,41 +21,17 @@ use vyre_macros::{vyre_ast_registry, vyre_pass};
 )]
 pub struct CompileBackedPass;
 
-impl CompileBackedPass {
-    fn analyze_impl(program: &ir::Program) -> optimizer::PassAnalysis {
-        if program.id == 0 {
-            optimizer::PassAnalysis::SKIP
-        } else {
-            optimizer::PassAnalysis::RUN
-        }
-    }
-
-    fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::pass_result(program, true)
-    }
-}
+crate::define_id_gated_pass_body!(CompileBackedPass);
 
 #[vyre_pass(name = "macro_analyze_always", requires = [], invalidates = [], analyze = "always")]
 pub struct AnalyzeAlwaysPass;
 
-impl AnalyzeAlwaysPass {
-    fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::unchanged(program)
-    }
-}
+crate::define_unchanged_pass_body!(AnalyzeAlwaysPass);
 
 #[vyre_pass(name = "macro_defaulted_pass", requires = [], invalidates = [])]
 pub struct DefaultedPass;
 
-impl DefaultedPass {
-    fn analyze_impl(_program: &ir::Program) -> optimizer::PassAnalysis {
-        optimizer::PassAnalysis::RUN
-    }
-
-    fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::unchanged(program)
-    }
-}
+crate::define_always_run_pass_body!(DefaultedPass);
 
 vyre_ast_registry! {
     TestExpr {
@@ -65,6 +42,19 @@ vyre_ast_registry! {
 }
 
 vyre_ast_registry! {}
+
+vyre_operation! {
+    id: "macro_test::operation::custom_op",
+    semantic_version: 1,
+    tier: operation::OperationTier::Library,
+    category: Some("macro_test"),
+    laws: &["commutativity"],
+    numeric: numeric::NumericContract::EXACT,
+    geometry: geometry::GeometryRequirements::agnostic(),
+    build: None,
+    test_inputs: None,
+    expected_output: None,
+}
 
 #[test]
 fn vyre_pass_expands_to_metadata_analysis_transform_and_inventory_entry() {
@@ -115,23 +105,8 @@ fn vyre_pass_analyze_always_skips_missing_analyze_impl_requirement() {
 
 #[test]
 fn vyre_pass_defaults_are_abi_preserving_unknown_metadata() {
-    let pass = DefaultedPass;
-    let metadata = optimizer::ProgramPass::metadata(&pass);
-
-    assert_eq!(metadata.name, "macro_defaulted_pass");
-    assert_eq!(metadata.requires, &[] as &[&str]);
-    assert_eq!(metadata.invalidates, &[] as &[&str]);
-    assert_eq!(metadata.phase, optimizer::PassPhase::Unclassified);
-    assert_eq!(
-        metadata.boundary_class,
-        optimizer::PassBoundaryClass::Unknown
-    );
-    assert_eq!(metadata.requires_caps, &[] as &[&str]);
-    assert!(metadata.preserves_abi);
-    assert_eq!(
-        metadata.cost_model_family,
-        optimizer::CostModelFamily::Unknown
-    );
+    let metadata = optimizer::ProgramPass::metadata(&DefaultedPass);
+    default_metadata::assert_default_metadata(&metadata, "macro_defaulted_pass");
 }
 
 #[test]
@@ -162,4 +137,30 @@ fn ast_registry_accepts_empty_manifest_as_noop() {
         optimizer::ProgramPass::metadata(&pass).name,
         "macro_defaulted_pass"
     );
+}
+#[test]
+fn vyre_operation_submits_three_identity_joined_records() {
+    let desc = inventory::iter::<operation::SemanticDescriptor>
+        .into_iter()
+        .find(|d| d.id == "macro_test::operation::custom_op")
+        .expect("SemanticDescriptor should be submitted");
+    assert_eq!(desc.id, "macro_test::operation::custom_op");
+    assert_eq!(desc.semantic_version, 1);
+    assert_eq!(desc.tier, operation::OperationTier::Library);
+    assert_eq!(desc.category, Some("macro_test"));
+    assert_eq!(desc.laws, &["commutativity"]);
+
+    let lowering = inventory::iter::<operation::LoweringProvider>
+        .into_iter()
+        .find(|l| l.id == "macro_test::operation::custom_op")
+        .expect("LoweringProvider should be submitted");
+    assert_eq!(lowering.id, "macro_test::operation::custom_op");
+    assert!(lowering.build.is_none());
+
+    let conformance = inventory::iter::<operation::ConformanceProvider>
+        .into_iter()
+        .find(|c| c.id == "macro_test::operation::custom_op")
+        .expect("ConformanceProvider should be submitted");
+    assert_eq!(conformance.id, "macro_test::operation::custom_op");
+    assert!(conformance.test_inputs.is_none());
 }

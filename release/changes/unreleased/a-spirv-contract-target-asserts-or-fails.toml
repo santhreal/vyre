@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "vyre-driver-spirv's adversarial closure contract no longer passes when no Vulkan device is present. It printed a line and returned, so on every CPU runner it reported success having asserted nothing, which is the shape of a gate that certifies what it never checked. The target is now declared under the device-tests feature in both the manifest and the file, and a failed acquisition is a configuration failure rather than a skip. tests/dispatch.rs gained the matching file-level cfg its manifest row already required."

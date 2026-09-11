@@ -1,0 +1,8 @@
+lane = "book"
+workflow = ".github/workflows-paused/book.yml"
+state = "superseded"
+file = "deleted"
+reason = "the mdbook it built and deployed was deleted, and the documentation tree that replaced it is held by docs-check"
+superseded_by = ".github/workflows/gates.yml"
+gate = "docs-check"
+steps = []

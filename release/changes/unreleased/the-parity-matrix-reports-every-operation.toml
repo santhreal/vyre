@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The cross-backend parity matrix measures every registered operation on the reference backend and on every linked backend in one run, and reports each operation it could not measure with its stage, its backend and its detail. It aborted on the first missing fixture or refused dispatch, so the summary counters described a sweep that had stopped early."

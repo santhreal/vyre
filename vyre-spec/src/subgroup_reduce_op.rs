@@ -1,102 +1,78 @@
-//! Frozen subgroup (warp) reduction-operation contracts.
+//! Frozen subgroup reduction-operation contracts.
 //!
-//! Warp-scoped collective reductions across the active subgroup lanes. Distinct
+//! Subgroup-scoped collective reductions across the active lanes. Distinct
 //! from [`crate::collective_op::CollectiveOp`], which is distributed-scoped
-//! (NCCL/MPI) and lacks the multiplicative reduction the warp ISA exposes.
-//! This is the complete set the hardware/`naga::SubgroupOperation` surface
+//! (NCCL/MPI) and lacks the multiplicative reduction the subgroup ISA exposes.
+//! This is the complete set the hardware and the emitter subgroup surface
 //! supports.
 // TAG RESERVATIONS: Add=0x01, Mul=0x02, Min=0x03, Max=0x04, And=0x05,
 // Or=0x06, Xor=0x07, 0x08..=0x7F reserved.
 
-/// Reduction operator applied across the active subgroup lanes.
-///
-/// Stability: matches must include a fallback arm so the contract can grow
-/// without breaking `SemVer`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
-#[non_exhaustive]
-pub enum SubgroupReduceOp {
-    /// Sum across the subgroup.
-    Add,
-    /// Product across the subgroup.
-    Mul,
-    /// Minimum across the subgroup.
-    Min,
-    /// Maximum across the subgroup.
-    Max,
-    /// Bitwise AND across the subgroup.
-    And,
-    /// Bitwise OR across the subgroup.
-    Or,
-    /// Bitwise XOR across the subgroup.
-    Xor,
+use crate::combine::for_each_combine;
+
+// The table's bitwise column is answered through `CombineKind`, which owns that
+// predicate for all three vocabularies, so this expansion ignores it.
+macro_rules! define_subgroup_reduce_op {
+    ($($variant:ident $spelling:literal $tag:literal $bitwise:literal,)+) => {
+        /// Reduction operator applied across the active subgroup lanes.
+        ///
+        /// Stability: matches must include a fallback arm so the contract can
+        /// grow without breaking `SemVer`.
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
+        #[non_exhaustive]
+        pub enum SubgroupReduceOp {
+            $(
+                #[doc = concat!("`", $spelling, "` across the active subgroup lanes.")]
+                $variant,
+            )+
+        }
+
+        impl SubgroupReduceOp {
+            /// Every builtin reduction operator, in wire-tag order.
+            pub const ALL: [Self; [$(Self::$variant),+].len()] = [$(Self::$variant),+];
+
+            /// Frozen builtin wire tag for this reduction operator.
+            #[must_use]
+            pub const fn builtin_wire_tag(self) -> u8 {
+                match self {
+                    $(Self::$variant => $tag,)+
+                }
+            }
+
+            /// Decode a frozen builtin wire tag.
+            ///
+            /// # Errors
+            ///
+            /// Returns an actionable diagnostic when `tag` is not assigned.
+            pub fn from_wire_tag(tag: u8) -> Result<Self, String> {
+                match tag {
+                    $($tag => Ok(Self::$variant),)+
+                    value => Err(format!(
+                        "Fix: unknown SubgroupReduceOp tag {value}; use a Program serializer compatible with this vyre version."
+                    )),
+                }
+            }
+
+            /// Lower-case spelling used in op-id strings and diagnostics.
+            #[must_use]
+            pub const fn as_str(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $spelling,)+
+                }
+            }
+        }
+    };
 }
 
+for_each_combine!(define_subgroup_reduce_op);
+
 impl SubgroupReduceOp {
-    /// Every builtin reduction operator, in wire-tag order.
-    pub const ALL: [Self; 7] = [
-        Self::Add,
-        Self::Mul,
-        Self::Min,
-        Self::Max,
-        Self::And,
-        Self::Or,
-        Self::Xor,
-    ];
-
-    /// Frozen builtin wire tag for this reduction operator.
-    #[must_use]
-    pub const fn builtin_wire_tag(self) -> u8 {
-        match self {
-            Self::Add => 0x01,
-            Self::Mul => 0x02,
-            Self::Min => 0x03,
-            Self::Max => 0x04,
-            Self::And => 0x05,
-            Self::Or => 0x06,
-            Self::Xor => 0x07,
-        }
-    }
-
-    /// Decode a frozen builtin wire tag.
-    ///
-    /// # Errors
-    ///
-    /// Returns an actionable diagnostic when `tag` is not assigned.
-    pub fn from_wire_tag(tag: u8) -> Result<Self, String> {
-        match tag {
-            0x01 => Ok(Self::Add),
-            0x02 => Ok(Self::Mul),
-            0x03 => Ok(Self::Min),
-            0x04 => Ok(Self::Max),
-            0x05 => Ok(Self::And),
-            0x06 => Ok(Self::Or),
-            0x07 => Ok(Self::Xor),
-            value => Err(format!(
-                "Fix: unknown SubgroupReduceOp tag {value}; use a Program serializer compatible with this vyre version."
-            )),
-        }
-    }
-
-    /// Lower-case spelling used in op-id strings and diagnostics.
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Add => "add",
-            Self::Mul => "mul",
-            Self::Min => "min",
-            Self::Max => "max",
-            Self::And => "and",
-            Self::Or => "or",
-            Self::Xor => "xor",
-        }
-    }
-
     /// True when this operator is bitwise (integer-only): `And`/`Or`/`Xor`.
     ///
     /// Bitwise reductions reject floating-point operands during type checking.
     #[must_use]
     pub const fn is_bitwise(self) -> bool {
-        matches!(self, Self::And | Self::Or | Self::Xor)
+        self.combine().is_bitwise()
     }
 
     /// Canonical integer reduction of `lanes` under this operator.

@@ -1,0 +1,2 @@
+category = "Added"
+text = "A versioned specialization contract states which typed facts a compile may specialize on, and rejects a variant guard that reads an undeclared axis or states values the axis domain does not admit."

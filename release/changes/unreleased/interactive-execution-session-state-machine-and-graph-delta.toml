@@ -1,0 +1,2 @@
+category = "Added"
+text = "Interactive low-latency execution is reinforced with a canonical bounded `GraphDelta` transactional contract in `vyre-foundation` that derives dirty logical closures while preserving unchanged nodes and values, and a structured `InteractiveSessionStateMachine` in `vyre-runtime` with typed deadline classes, priority inheritance, generation-based supersession, cooperative cancellation points, and measured dispatch ceilings."

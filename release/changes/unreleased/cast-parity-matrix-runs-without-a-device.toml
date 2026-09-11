@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre_libs` runs every C-AST parity case on the reference interpreter through `vyre_driver_reference::CpuRefBackend`, dispatching the same programs the driver arms dispatch. A parity failure used to be observable only on a machine with a working adapter, so a case no arm named looked exactly like a case that passed. Splitting the arms separates a kernel that disagrees with its oracle, which fails here, from a device that disagrees with the kernel, which fails only there."

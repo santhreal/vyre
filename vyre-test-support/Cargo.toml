@@ -1,6 +1,7 @@
 [package]
 name = "vyre-test-support"
-version = "0.7.2"
+version = "0.8.0"
+autotests = false
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -13,8 +14,127 @@ keywords = ["vyre", "testing", "harness", "coverage", "registry"]
 categories = ["development-tools::testing"]
 publish = false
 
+[features]
+# Empty by default: every feature here is opt-in, so a consumer that names none
+# never pulls a compiler crate into its dev graph.
+default = []
+# Fixtures over the IR statement enum. Opt-in because it pulls vyre-foundation
+# into the dev graph of whichever crate enables it, and most consumers of this
+# crate only want the source-text closure enumerator or the flat element list.
+# The fixtures build inline shapes with smallvec, so it joins the graph too, and
+# the synthetic schedule fixture hashes its own identity bytes with blake3.
+#
+# It stops here. A fixture states what IR exists; it never evaluates one, so the
+# reference interpreter and the intrinsic op crate are named by the contracts
+# that evaluate against them and by nothing else. Folding either in here put a
+# reference interpreter and an op library into the dev graph of vyre-spec, a leaf
+# crate that wanted a list of DataType discriminants, and into vyre-foundation's
+# own dev graph through two crates that depend on vyre-foundation.
+ir-fixtures = ["dep:vyre-foundation", "dep:smallvec", "dep:blake3"]
+# The reference-oracle bridge: the differential matrix, the hardware oracle, the
+# async span parity property, and the registry net cases. Every one of them
+# evaluates a program on the parity oracle, so this is where vyre-reference is
+# declared. A crate that only builds IR shapes never links an interpreter.
+parity-oracles = ["ir-fixtures", "dep:vyre-reference"]
+# The semantic execution seam: the graph, bindings, and request every backend
+# contract shares, plus the canonical compiler artifact fixtures every crate
+# downstream of vyre-megakernel admits, packages or reports on. Separate from
+# `ir-fixtures` because it needs the compiler boundary crate, which the IR
+# fixtures do not.
+semantic-requests = ["ir-fixtures", "dep:vyre-megakernel"]
+# The structural-IR golden harness. The corpus format it writes, a header plus
+# one marked section per entry point, is owned by `vyre_lower::artifact_golden`,
+# so this names the lowering crate. `vyre-megakernel` already depends on
+# vyre-lower, which puts it in the dev graph of every consumer that enables
+# `semantic-requests`, so the two crates that enable this add nothing new. It is
+# separate from `ir-fixtures` so a crate that only builds IR shapes stays clear
+# of the lowering boundary.
+golden-corpus = ["ir-fixtures", "dep:vyre-lower", "vyre-lower/test-fixtures"]
+# The parity oracle stated over the semantic seam: `test_parity_oracles` compares
+# a request result against the reference interpreter and reads operand bytes
+# through vyre-primitives, so it needs the oracle, the seam, and the op crate at
+# once. Named separately so the seam alone stays interpreter-free.
+semantic-parity = ["semantic-requests", "parity-oracles", "dep:vyre-primitives"]
+# The backend-neutral driver registry contract. `vyre-driver` is the driver
+# boundary crate, not a concrete backend, so a driver crate enabling this joins
+# no sibling backend to its dev graph. Nothing else here needs it, so it is not
+# folded into `ir-fixtures`.
+driver-contracts = ["dep:vyre-driver"]
+# The driver contracts that also compile an artifact: the fixture instance, the
+# resident overlap property, and the registered-target-compiler contract. Adds
+# the artifact fixtures to `driver-contracts`, because a payload contract is
+# stated against a compiled artifact.
+driver-artifact-contracts = ["driver-contracts", "semantic-requests"]
+# The host input ABI contract stated against a live backend: the program set,
+# the canonical input builder, and the agreement between a device dispatch and
+# the reference interpreter on which input counts are accepted. It needs the
+# driver boundary for `VyreBackend` and the oracle for the comparison, so it
+# composes both rather than declaring either again.
+host-input-abi = ["driver-contracts", "parity-oracles"]
+# Proptest strategies over the frozen operator tables. The tables themselves are
+# unconditional; only the draw needs proptest, so a consumer that iterates a
+# table never builds a property-testing framework.
+spec-strategies = ["dep:proptest"]
+
+[dependencies]
+# The one owner of "which checkout am I reporting on". Resolved from the working
+# directory at run time, never compiled in, so `monorepo` delegates to
+# `structure_gate::workspace_root` rather than resolving a second time.
+structure-gate = { path = "../structure-gate" }
+vyre-foundation = { workspace = true, optional = true }
+vyre-megakernel = { workspace = true, optional = true }
+vyre-lower = { workspace = true, optional = true }
+vyre-driver = { workspace = true, optional = true }
+proptest = { workspace = true, optional = true }
+# Not optional, and not behind `ir-fixtures`: `data_type_elements` states which
+# flat DataType forms exist, and `vyre-spec` declares DataType. Gating it forced
+# every consumer of that one list to enable `ir-fixtures`, which drags
+# vyre-foundation into the dev graph of a leaf spec crate to read a list of
+# discriminants. vyre-spec itself depends on serde and smallvec and nothing
+# else, so the cost of carrying it unconditionally is nil.
+vyre-spec = { workspace = true }
+# The synthetic schedule fixture keeps the identity bytes the compiler hashes,
+# so a fixture and a compiled schedule of the same size stay one value.
+blake3 = { workspace = true, optional = true }
+smallvec = { workspace = true, optional = true }
+vyre-reference = { workspace = true, optional = true }
+vyre-primitives = { workspace = true, optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+inventory = { workspace = true }
+
 [dev-dependencies]
 tempfile.workspace = true
+# The `#[path]` closure gate reads the root workspace manifest's `members` list,
+# so the owner set it pins is the declared one rather than a copy here.
+toml = { workspace = true }
+
+[package.metadata.vyre]
+publication_class = "private-test-support"
 
 [lints]
 workspace = true
+
+# The binop and cast parity tables live behind `ir-fixtures`, because both name
+# IR data types, so their well-formedness gates compile only when that feature
+# selects them.
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"
+
+[[test]]
+name = "all_tests_ir_fixtures"
+path = "tests/all_tests_ir_fixtures.rs"
+# The differential matrix and the registry nets in this binary evaluate on the
+# parity oracle, so the target declares that feature alongside the fixtures.
+required-features = ["ir-fixtures", "parity-oracles"]
+
+# Isolated: the body calls `set_current_dir`, and a process has one working
+# directory. The contract is that `vyre_workspace_root` answers for the
+# checkout the command ran in, which can only be observed by changing that
+# directory, so any test sharing the binary would resolve its own paths
+# against whichever directory this one had set at that moment.
+[[test]]
+name = "workspace_root_follows_the_working_directory"
+path = "tests/workspace_root_follows_the_working_directory.rs"

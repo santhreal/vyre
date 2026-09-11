@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The wgpu runtime cache publishes AccessTracker and the tiered cache types; IntrusiveLru, AccessMeta and DEFAULT_INTRUSIVE_LRU_CAPACITY are crate-internal because no consumer outside the crate could reach them."

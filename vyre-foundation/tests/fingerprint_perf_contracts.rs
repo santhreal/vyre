@@ -11,12 +11,19 @@
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::optimizer::optimize;
 use vyre_foundation::optimizer::{fingerprint_program, pipeline_fingerprint_bytes};
+use vyre_test_support::pass_programs::sum_of_two_loads;
 
 // ── Determinism ──────────────────────────────────────────────────────
+//
+// Every case below fingerprints two separately built copies of one program.
+// Asking one `Program` twice proves nothing: `Program::fingerprint` memoizes
+// into a `OnceLock`, so the second call reads the first call's answer and the
+// comparison holds however the hash was computed. Two values each compute
+// once, so a hash that reached a map iteration order, a pointer address, or
+// uninitialized padding in the wire encoding separates them.
 
-#[test]
-fn fingerprint_is_deterministic() {
-    let program = Program::wrapped(
+fn constant_folded_store() -> Program {
+    Program::wrapped(
         vec![BufferDecl::read_write("out", 0, DataType::U32)],
         [64, 1, 1],
         vec![Node::store(
@@ -24,25 +31,46 @@ fn fingerprint_is_deterministic() {
             Expr::u32(0),
             Expr::add(Expr::u32(1), Expr::u32(2)),
         )],
-    );
-    let a = fingerprint_program(&program);
-    let b = fingerprint_program(&program);
+    )
+}
+
+fn literal_store() -> Program {
+    Program::wrapped(
+        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        [64, 1, 1],
+        vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
+    )
+}
+
+#[test]
+fn fingerprint_is_deterministic() {
+    let a = fingerprint_program(&constant_folded_store());
+    let b = fingerprint_program(&constant_folded_store());
     assert_eq!(a, b, "Fix: fingerprint_program must be deterministic.");
 }
 
 #[test]
 fn pipeline_fingerprint_bytes_is_deterministic() {
-    let program = Program::wrapped(
-        vec![BufferDecl::read_write("out", 0, DataType::U32)],
-        [64, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
-    );
-    let a = pipeline_fingerprint_bytes(&program);
-    let b = pipeline_fingerprint_bytes(&program);
+    let a = pipeline_fingerprint_bytes(&literal_store());
+    let b = pipeline_fingerprint_bytes(&literal_store());
     assert_eq!(
         a, b,
         "Fix: pipeline_fingerprint_bytes must be deterministic."
     );
+}
+
+/// The memoized answer is the answer a fresh computation gives.
+///
+/// A `OnceLock` filled from somewhere other than the canonical wire hash, or
+/// filled before a mutation the program later applies, would serve a
+/// fingerprint no rebuild reproduces, and every content-addressed cache keyed
+/// on it would hand back another program's artifact.
+#[test]
+fn a_memoized_fingerprint_matches_a_fresh_one() {
+    let warmed = literal_store();
+    let memoized = pipeline_fingerprint_bytes(&warmed);
+    assert_eq!(memoized, pipeline_fingerprint_bytes(&warmed));
+    assert_eq!(memoized, pipeline_fingerprint_bytes(&literal_store()));
 }
 
 // ── Sensitivity ──────────────────────────────────────────────────────
@@ -90,32 +118,16 @@ fn different_workgroup_sizes_produce_different_fingerprints() {
 #[test]
 fn buffer_declaration_order_does_not_affect_pipeline_fingerprint() {
     // Same program, different buffer declaration order.
-    let p1 = Program::wrapped(
-        vec![
-            BufferDecl::read("a", 0, DataType::U32),
-            BufferDecl::read("b", 1, DataType::U32),
-            BufferDecl::read_write("out", 2, DataType::U32),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::add(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
-        )],
-    );
-    let p2 = Program::wrapped(
-        vec![
-            BufferDecl::read_write("out", 2, DataType::U32),
-            BufferDecl::read("b", 1, DataType::U32),
-            BufferDecl::read("a", 0, DataType::U32),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::add(Expr::load("a", Expr::u32(0)), Expr::load("b", Expr::u32(0))),
-        )],
-    );
+    let p1 = sum_of_two_loads(vec![
+        BufferDecl::read("a", 0, DataType::U32),
+        BufferDecl::read("b", 1, DataType::U32),
+        BufferDecl::read_write("out", 2, DataType::U32),
+    ]);
+    let p2 = sum_of_two_loads(vec![
+        BufferDecl::read_write("out", 2, DataType::U32),
+        BufferDecl::read("b", 1, DataType::U32),
+        BufferDecl::read("a", 0, DataType::U32),
+    ]);
     assert_eq!(
         pipeline_fingerprint_bytes(&p1),
         pipeline_fingerprint_bytes(&p2),

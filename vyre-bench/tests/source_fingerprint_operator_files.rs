@@ -1,4 +1,4 @@
-//! Release source fingerprints exclude private operator files while retaining runtime source identity.
+//! Release source fingerprints exclude operator control files while retaining runtime source identity.
 
 use std::{fs, path::Path, process::Command};
 
@@ -35,7 +35,7 @@ fn write_fixture(workspace: &Path, relative_path: &str, contents: &[u8]) {
     fs::write(path, contents).expect("Fix: write operator-file fingerprint fixture.");
 }
 
-/// Operator guidance and private backlog files must not make release evidence depend on files absent from a public checkout.
+/// Operator guidance, plans, and backlog files do not change executable benchmark identity.
 #[test]
 fn exact_operator_internal_file_names_do_not_change_runtime_source_identity() {
     let workspace = workspace();
@@ -43,6 +43,7 @@ fn exact_operator_internal_file_names_do_not_change_runtime_source_identity() {
     let operator_files = [
         "AGENTS.md",
         "BACKLOG.md",
+        "DEDUP_PLAN.md",
         "policy/CLAUDE.md",
         "nested/review/GEMINI.md",
         "skills/release/SKILL.md",
@@ -68,6 +69,26 @@ fn exact_operator_internal_file_names_do_not_change_runtime_source_identity() {
             source_tree_fingerprint_at(workspace.path()),
             base,
             "Fix: operator-internal file content `{relative_path}` must remain outside runtime source identity."
+        );
+    }
+}
+
+/// Platform-specific workspace launchers select the build but do not change runtime code.
+#[test]
+fn cargo_wrappers_do_not_change_runtime_source_identity() {
+    let workspace = workspace();
+    let base = source_tree_fingerprint_at(workspace.path());
+
+    for relative_path in ["cargo_full", "cargo_full.cmd"] {
+        write_fixture(
+            workspace.path(),
+            relative_path,
+            b"workspace cargo launcher\n",
+        );
+        assert_eq!(
+            source_tree_fingerprint_at(workspace.path()),
+            base,
+            "Fix: workspace wrapper `{relative_path}` must not alter runtime source identity."
         );
     }
 }

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-lints --print-default-roots` prints member paths with forward slashes on every host."

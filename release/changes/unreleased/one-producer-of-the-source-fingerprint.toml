@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The benchmark harness delegates the source fingerprint and the dirty worktree digest to xtask::source_provenance, the one producer. Two implementations kept in agreement by a test were one duplication; the test now proves the delegation and goes red if a second implementation returns."

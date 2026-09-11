@@ -1,0 +1,11 @@
+lane = "semver-checks-check"
+workflow = ".github/workflows/semver-checks.yml"
+job = "check"
+state = "live"
+required_status = "semver-checks / check"
+triggers = ["push", "pull_request"]
+steps = [
+  { command = '''packages="$(./cargo_full run -q -p xtask --bin publishable_packages | cut -d: -f2 | paste -sd,)"
+test -n "$packages" || { echo "Fix: no publishable workspace members found." >&2; exit 2; }
+echo "packages=$packages" >> "$GITHUB_OUTPUT"''' },
+]

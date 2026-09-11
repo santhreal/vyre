@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Loop fusion rewrites the retired induction variable inside async copy offsets and sizes and inside trap addresses, so a fused body no longer reads a variable that no scope binds."

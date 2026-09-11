@@ -1,0 +1,9 @@
+lane = "gpu-parity-mandatory-gpu-enforcer"
+workflow = ".github/workflows/gpu-parity.yml"
+job = "mandatory-gpu-enforcer"
+state = "live"
+required_status = "GPU Parity + Determinism / Mandatory GPU enforcement"
+triggers = ["pull_request", "push", "workflow_dispatch"]
+steps = [
+  { command = "./cargo_full test -p vyre-conform --release --features gpu --test parity_matrix --test ulp_audit -- --nocapture" },
+]

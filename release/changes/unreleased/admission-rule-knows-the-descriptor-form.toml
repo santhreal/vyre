@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The one-implementation rule for target-payload admission recognizes the descriptor form. Every concrete backend now routes through `TargetDescriptor::admit_modules`, which calls the shared `admit` and decodes each admitted module in the backend's own dialect, but the rule still looked for a literal `materialize::admit(` call and so reported all four backends as hand-rolling admission. It now accepts either spelling and additionally rejects a backend that defines `admit` or `admit_modules` itself."

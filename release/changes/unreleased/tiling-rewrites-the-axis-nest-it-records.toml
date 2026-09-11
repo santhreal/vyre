@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Schedule IR 2 rewrites the axis nest for tiling and splitting, replacing the source axis with an outer axis of the quotient extent and an inner axis of the factor, so a tiled phase differs from an untiled one by schedule identity; artifact schema 11 records the grammar derivation and search certificate alongside the selected launch, and a schema 10 artifact is rejected."

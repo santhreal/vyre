@@ -1,0 +1,2 @@
+category = "Added"
+text = "`repo-hygiene` reports a worktree whose branch has already merged into `integration` or `main`. Worktrees share one cargo target directory, so a stale checkout keeps a second source of the same package versions against those artifacts, and every grep, gate and duplication scan walks it for nothing. The bound was written in `CONTRIBUTING.md` and enforced by nobody."

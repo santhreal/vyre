@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A per-backend conformance artifact recorded under an older shape is now reported as stale, naming both the version it carries and the version the reader holds, instead of as unparseable JSON. Three committed artifacts carried a row-count field under its former name and read as corrupt files. The shape version is raised, and a test pins the recorded field set to it so a rename turns the suite red until the version records that the shape changed."

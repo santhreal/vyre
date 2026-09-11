@@ -422,6 +422,8 @@ fn checked_dim_product_u32(
     })
 }
 
+// Inline: `vyre_driver_cuda::kernel_failure_diagnostics` is `pub(crate)`, so no integration test
+// can reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

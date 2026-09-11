@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`crate-ownership` rejects an optional internal dependency that no feature names, which the rule could not observe while it credited the feature cargo derives from the dependency key as a named activation."

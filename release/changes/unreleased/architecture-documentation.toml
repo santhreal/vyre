@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Architecture guides now use the generated 36-crate dependency graph, joined operation registries, CUDA-first backend evidence, typed cross-program composition, and explicit runtime/compiler/driver megakernel boundaries. The earlier device-bytecode-interpreter RFC is retained as superseded rationale."

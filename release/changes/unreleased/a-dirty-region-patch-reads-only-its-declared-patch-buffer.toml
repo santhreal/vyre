@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "dirty_region_patch bounds the patch index in the discarded arm of its region select, so a pixel outside the destination rectangle no longer loads past the end of the declared patch buffer."

@@ -1,0 +1,33 @@
+{
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"4a65df6872a1f68dc6c828ed0507d735faeafe08","commit_timestamp":"1789120972","parent_commit":"f52c75222db4f8536ccd540b2cb40ac2efc294f4","dirty":false,"source_fingerprint":"git:4a65df6872a1f68dc6c828ed0507d735faeafe08:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "schema_version": 1,
+  "runs": [
+    {
+      "os": "linux",
+      "arch": "x86_64",
+      "target_triple": "x86_64-unknown-linux-gnu",
+      "evidence": "executed-native",
+      "emulator": "",
+      "canonical_identity": "26c194baded92c255b685f4a9d06694d8c84644c9fe64e61def661404ffa0918",
+      "fallback_identity": "a4421238708c3f9e9f98eaca283f113edc30f6e09829c6fd92cd17ee013bfa7a"
+    },
+    {
+      "os": "linux",
+      "arch": "x86",
+      "target_triple": "i686-unknown-linux-gnu",
+      "evidence": "executed-native",
+      "emulator": "",
+      "canonical_identity": "26c194baded92c255b685f4a9d06694d8c84644c9fe64e61def661404ffa0918",
+      "fallback_identity": "a4421238708c3f9e9f98eaca283f113edc30f6e09829c6fd92cd17ee013bfa7a"
+    },
+    {
+      "os": "linux",
+      "arch": "s390x",
+      "target_triple": "s390x-unknown-linux-gnu",
+      "evidence": "executed-emulated",
+      "emulator": "qemu-s390x-static",
+      "canonical_identity": "26c194baded92c255b685f4a9d06694d8c84644c9fe64e61def661404ffa0918",
+      "fallback_identity": "a4421238708c3f9e9f98eaca283f113edc30f6e09829c6fd92cd17ee013bfa7a"
+    }
+  ]
+}

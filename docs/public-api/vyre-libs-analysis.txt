@@ -1,0 +1,111 @@
+impl core::error::Error for vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationError
+impl core::error::Error for vyre_libs_analysis::analysis::incremental_invalidation::IncrementalInvalidationError
+impl core::fmt::Display for vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationError
+impl core::fmt::Display for vyre_libs_analysis::analysis::incremental_invalidation::IncrementalInvalidationError
+pub const fn vyre_libs_analysis::analysis::effect_signature::check_signature(signature: vyre_foundation::lower::effects::ProgramEffects, observed: vyre_foundation::lower::effects::ProgramEffects) -> core::result::Result<(), vyre_libs_analysis::analysis::effect_signature::EffectTypeError>
+pub const fn vyre_libs_analysis::analysis::effect_signature::residual_effects(produced: vyre_foundation::lower::effects::ProgramEffects, discharged: vyre_foundation::lower::effects::ProgramEffects) -> vyre_foundation::lower::effects::ProgramEffects
+pub const vyre_libs_analysis::analysis::diagnostic_aggregation::COMPACT_DIAGNOSTIC_RECORD_BYTES: usize
+pub const vyre_libs_analysis::analysis::diagnostic_aggregation::OP_ID: &str
+pub const vyre_libs_analysis::analysis::incremental_invalidation::OP_ID: &str
+pub enum vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationError
+pub enum vyre_libs_analysis::analysis::incremental_invalidation::IncrementalInvalidationError
+pub enum vyre_libs_analysis::analysis::incremental_invalidation::InvalidationRegionKind
+pub fn vyre_libs_analysis::analysis::cost_model::predict_runtime_fixed_via(dispatcher: &impl vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, feature_circuit_kinds: &[u32], feature_circuit_offsets: &[u32], feature_circuit_counts: &[u32], feature_circuit_children: &[u32], feature_circuit_weights_fixed: &[u32], feature_values_fixed: &[u32], historical_residuals_sorted: &[u32], alpha: f64) -> core::result::Result<(u32, u32), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::cost_model::predict_runtime_fixed_via_with_scratch(dispatcher: &impl vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, feature_circuit_kinds: &[u32], feature_circuit_offsets: &[u32], feature_circuit_counts: &[u32], feature_circuit_children: &[u32], feature_circuit_weights_fixed: &[u32], feature_values_fixed: &[u32], historical_residuals_sorted: &[u32], alpha: f64, scratch: &mut vyre_libs_analysis::analysis::cost_model::CostModelGpuScratch) -> core::result::Result<(u32, u32), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::forward_backward_bitsets_for_pivot_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, adj: &[u32], pivot: u32, n: u32) -> core::result::Result<(alloc::vec::Vec<u32>, alloc::vec::Vec<u32>), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::lineage_closure_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, adj: &[u32], n: u32, max_iters: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::reachability_closure_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, adj: &[u32], n: u32, max_iters: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::reachability_closure_via_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, adj: &[u32], n: u32, _max_iters: u32, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::reachability_closure_via_with_scratch_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, adj: &[u32], n: u32, _max_iters: u32, scratch: &mut vyre_libs_analysis::analysis::dataflow_fixpoint::SemiringGemmGpuScratch, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::scc_components_via_substrate_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, adj: &[u32], n: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::scc_components_via_substrate_with_scratch_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, adj: &[u32], n: u32, scratch: &mut vyre_libs_analysis::analysis::dataflow_fixpoint::SccComponentsGpuScratch, components: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::scc_components_via_substrate_with_scratch_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, adj: &[u32], n: u32, scratch: &mut vyre_libs_analysis::analysis::dataflow_fixpoint::SccComponentsGpuScratch) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::semiring_gemm_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, a: &[u32], b: &[u32], m: u32, n: u32, k: u32, semiring: vyre_spec::semiring::Semiring) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::semiring_gemm_via_bool_or(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, a: &[u32], b: &[u32], m: u32, n: u32, k: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::semiring_gemm_via_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, a: &[u32], b: &[u32], m: u32, n: u32, k: u32, semiring: vyre_spec::semiring::Semiring, c: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::semiring_gemm_via_lineage(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, a: &[u32], b: &[u32], m: u32, n: u32, k: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::semiring_gemm_via_min_plus(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, a: &[u32], b: &[u32], m: u32, n: u32, k: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::semiring_gemm_via_with_scratch_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, a: &[u32], b: &[u32], m: u32, n: u32, k: u32, semiring: vyre_spec::semiring::Semiring, scratch: &mut vyre_libs_analysis::analysis::dataflow_fixpoint::SemiringGemmGpuScratch, c: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::dataflow_fixpoint::shortest_path_closure_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, adj: &[u32], n: u32, max_iters: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::decision_telemetry::record_autotune(relative_delta: f64)
+pub fn vyre_libs_analysis::analysis::decision_telemetry::record_eviction(dropped_fraction: f64)
+pub fn vyre_libs_analysis::analysis::decision_telemetry::record_fusion(selected_count: u32, total: u32)
+pub fn vyre_libs_analysis::analysis::decision_telemetry::record_fusion_rate(rate: f64)
+pub fn vyre_libs_analysis::analysis::decision_telemetry::record_provenance(nonempty_fraction: f64)
+pub fn vyre_libs_analysis::analysis::decision_telemetry::snapshot_decisions() -> alloc::vec::Vec<(&'static str, u64)>
+pub fn vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_analysis::analysis::diagnostic_aggregation::compact_diagnostic_aggregation_program(diagnostics_in: &str, compact_out: &str, input_items: u32, max_records: u32, raw_record_bytes_per_item: usize) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationError>
+pub fn vyre_libs_analysis::analysis::diagnostic_aggregation::plan_compact_diagnostic_readback(input_items: u32, diagnostic_records: u32, max_records: u32, raw_record_bytes_per_item: usize) -> core::result::Result<vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationPlan, vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationError>
+pub fn vyre_libs_analysis::analysis::incremental_invalidation::IncrementalInvalidationError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_analysis::analysis::incremental_invalidation::incremental_invalidation_program(changed_spans: &[vyre_libs_analysis::analysis::incremental_invalidation::SourceSpan], dependency_regions: &[vyre_libs_analysis::analysis::incremental_invalidation::InvalidationRegion], region_states: &str, wave_out: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_analysis::analysis::incremental_invalidation::IncrementalInvalidationError>
+pub fn vyre_libs_analysis::analysis::incremental_invalidation::plan_incremental_invalidation(changed_spans: &[vyre_libs_analysis::analysis::incremental_invalidation::SourceSpan], dependency_regions: &[vyre_libs_analysis::analysis::incremental_invalidation::InvalidationRegion]) -> core::result::Result<vyre_libs_analysis::analysis::incremental_invalidation::IncrementalInvalidationPlan, vyre_libs_analysis::analysis::incremental_invalidation::IncrementalInvalidationError>
+pub fn vyre_libs_analysis::analysis::knowledge_compile_pass_precondition::pass_applies_via(dispatcher: &impl vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, nodes: &[(u32, u32, u32)], node_var: &[u32], children: &[u32], var_assignments: &[u32], waves: &[alloc::vec::Vec<u32>]) -> core::result::Result<u32, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::knowledge_compile_pass_precondition::pass_applies_via_into(dispatcher: &impl vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, nodes: &[(u32, u32, u32)], node_var: &[u32], children: &[u32], var_assignments: &[u32], waves: &[alloc::vec::Vec<u32>], evals_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::knowledge_compile_pass_precondition::pass_applies_via_with_scratch_into(dispatcher: &impl vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, nodes: &[(u32, u32, u32)], node_var: &[u32], children: &[u32], var_assignments: &[u32], waves: &[alloc::vec::Vec<u32>], scratch: &mut vyre_libs_analysis::analysis::knowledge_compile_pass_precondition::KnowledgeCompilePassScratch, evals_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::knowledge_compile_pass_precondition::pass_conflicts_via(dispatcher: &impl vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, nodes: &[(u32, u32, u32)], node_var: &[u32], children: &[u32], var_assignments: &[u32], waves: &[alloc::vec::Vec<u32>]) -> core::result::Result<bool, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_analysis::analysis::persistent_fixpoint_program::persistent_fixpoint_program(transfer_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, current: &str, next: &str, changed: &str, words: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_analysis::analysis::persistent_fixpoint_program::persistent_fixpoint_program_route(words: u32, max_iterations: u32) -> vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointRoute
+pub fn vyre_libs_analysis::link_anchor()
+pub mod vyre_libs_analysis
+pub mod vyre_libs_analysis::analysis
+pub mod vyre_libs_analysis::analysis::cost_model
+pub mod vyre_libs_analysis::analysis::dataflow_fixpoint
+pub mod vyre_libs_analysis::analysis::decision_telemetry
+pub mod vyre_libs_analysis::analysis::diagnostic_aggregation
+pub mod vyre_libs_analysis::analysis::effect_signature
+pub mod vyre_libs_analysis::analysis::incremental_invalidation
+pub mod vyre_libs_analysis::analysis::knowledge_compile_pass_precondition
+pub mod vyre_libs_analysis::analysis::persistent_fixpoint_program
+pub static vyre_libs_analysis::analysis::decision_telemetry::AUTOTUNE_DELTA_LARGE: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::AUTOTUNE_DELTA_NONE: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::AUTOTUNE_DELTA_SMALL: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::EVICTION_DROPPED_GT_HALF: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::EVICTION_DROPPED_LE_HALF: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::EVICTION_DROPPED_LE_QUARTER: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::EVICTION_KEPT_ALL: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::FUSION_RATE_BELOW_QUARTER: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::FUSION_RATE_FULL_OPTIMAL: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::FUSION_RATE_LE_HALF: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::FUSION_SELECTED_FIVE_TO_SIXTEEN: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::FUSION_SELECTED_ONE_TO_FOUR: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::FUSION_SELECTED_SEVENTEEN_PLUS: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::FUSION_SELECTED_ZERO: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::PROVENANCE_EMPTY: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::PROVENANCE_FULL: core::sync::atomic::AtomicU64
+pub static vyre_libs_analysis::analysis::decision_telemetry::PROVENANCE_PARTIAL: core::sync::atomic::AtomicU64
+pub struct vyre_libs_analysis::analysis::cost_model::CostModelGpuScratch
+pub struct vyre_libs_analysis::analysis::dataflow_fixpoint::SccComponentsGpuScratch
+pub struct vyre_libs_analysis::analysis::dataflow_fixpoint::SemiringGemmGpuScratch
+pub struct vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationPlan
+pub struct vyre_libs_analysis::analysis::effect_signature::EffectTypeError
+pub struct vyre_libs_analysis::analysis::incremental_invalidation::IncrementalInvalidationPlan
+pub struct vyre_libs_analysis::analysis::incremental_invalidation::InvalidationRegion
+pub struct vyre_libs_analysis::analysis::incremental_invalidation::InvalidationWave
+pub struct vyre_libs_analysis::analysis::incremental_invalidation::SourceSpan
+pub struct vyre_libs_analysis::analysis::knowledge_compile_pass_precondition::KnowledgeCompilePassScratch
+pub vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationError::ByteCountOverflow
+pub vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationError::RecordBudgetExceeded
+pub vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationError::RecordBudgetExceeded::diagnostic_records: u32
+pub vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationError::RecordBudgetExceeded::max_records: u32
+pub vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationError::ZeroRecordBudget
+pub vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationPlan::avoided_raw_readback_bytes: usize
+pub vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationPlan::compact_readback_bytes: usize
+pub vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationPlan::diagnostic_records: u32
+pub vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationPlan::input_items: u32
+pub vyre_libs_analysis::analysis::diagnostic_aggregation::DiagnosticAggregationPlan::max_records: u32
+pub vyre_libs_analysis::analysis::effect_signature::EffectTypeError::unpermitted: vyre_foundation::lower::effects::ProgramEffects
+pub vyre_libs_analysis::analysis::incremental_invalidation::IncrementalInvalidationError::InvalidSpan
+pub vyre_libs_analysis::analysis::incremental_invalidation::IncrementalInvalidationError::InvalidSpan::span: vyre_libs_analysis::analysis::incremental_invalidation::SourceSpan
+pub vyre_libs_analysis::analysis::incremental_invalidation::IncrementalInvalidationPlan::changed_spans: alloc::vec::Vec<vyre_libs_analysis::analysis::incremental_invalidation::SourceSpan>
+pub vyre_libs_analysis::analysis::incremental_invalidation::IncrementalInvalidationPlan::waves: alloc::vec::Vec<vyre_libs_analysis::analysis::incremental_invalidation::InvalidationWave>
+pub vyre_libs_analysis::analysis::incremental_invalidation::InvalidationRegion::id: u32
+pub vyre_libs_analysis::analysis::incremental_invalidation::InvalidationRegion::kind: vyre_libs_analysis::analysis::incremental_invalidation::InvalidationRegionKind
+pub vyre_libs_analysis::analysis::incremental_invalidation::InvalidationRegion::span: vyre_libs_analysis::analysis::incremental_invalidation::SourceSpan
+pub vyre_libs_analysis::analysis::incremental_invalidation::InvalidationRegionKind::Fact
+pub vyre_libs_analysis::analysis::incremental_invalidation::InvalidationRegionKind::Macro
+pub vyre_libs_analysis::analysis::incremental_invalidation::InvalidationRegionKind::SemanticScope
+pub vyre_libs_analysis::analysis::incremental_invalidation::InvalidationRegionKind::Token
+pub vyre_libs_analysis::analysis::incremental_invalidation::InvalidationWave::kind: vyre_libs_analysis::analysis::incremental_invalidation::InvalidationRegionKind
+pub vyre_libs_analysis::analysis::incremental_invalidation::InvalidationWave::region_ids: alloc::vec::Vec<u32>
+pub vyre_libs_analysis::analysis::incremental_invalidation::SourceSpan::end: u32
+pub vyre_libs_analysis::analysis::incremental_invalidation::SourceSpan::start: u32

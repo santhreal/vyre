@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The release-benchmarks gate returns a report for every invocation, including --help, and captures the output of the commands it spawns, so a delegated run no longer fails to parse a formatted table as a report."

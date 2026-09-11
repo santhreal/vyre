@@ -52,7 +52,8 @@ fn region_inline_preserves_nested_binder_scope() {
 
     // The original program is well-scoped: the Region scopes its `x`, so the
     // nested `let x = 2` rebinds a freed slot. It must run cleanly.
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original program is well-scoped and must run");
 
     let inlined = region_inline_engine::run(program);
@@ -61,10 +62,12 @@ fn region_inline_preserves_nested_binder_scope() {
     // Pre-fix this FAILS: region_inline flattened the Region, leaking
     // `let x = 1` into the parent scope where it collides with the nested
     // `let x = 2` (duplicate local binding), so reference_eval errors.
-    let transformed = vyre_reference::reference_eval(&inlined, &inputs).expect(
-        "region_inline must not leak a Region-scoped `let x` into the parent \
+    let transformed = vyre_reference::ReferenceRequest::standard(&inlined, &inputs)
+        .outputs()
+        .expect(
+            "region_inline must not leak a Region-scoped `let x` into the parent \
          scope where it collides with a nested sibling binding of `x`",
-    );
+        );
 
     assert_eq!(
         transformed, original,

@@ -1,0 +1,5 @@
+name = "vyre-libs"
+concern = "Own every composition in the workspace: consumer dialects and compiler-internal solvers, encoding, analysis, scheduling, and reasoning. Returns Programs. No backend, no emitter, no host rewrite of IR."
+pages = { spec = "vyre-libs/SPEC.md", readme = "vyre-libs/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-foundation", "vyre-primitives", "vyre-spec"]

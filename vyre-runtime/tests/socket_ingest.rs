@@ -17,24 +17,15 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use vyre_runtime::uring::{AsyncUringStream, GpuMappedBuffer, IoUringState, Iovec};
-use vyre_runtime::PipelineError;
 
 #[test]
 fn reads_from_tcp_socket_into_host_buffer() {
     const PAYLOAD: &[u8] = b"vyre-pipeline socket-ingest smoke payload 0123456789";
     const CHUNK: usize = 128;
 
-    let ring = match IoUringState::new(8) {
-        Ok(r) => r,
-        Err(PipelineError::IoUringSyscall { errno, .. })
-            if errno == libc::EPERM || errno == libc::ENOSYS =>
-        {
-            panic!(
-                "io_uring unavailable (errno {errno}). Fix: enable io_uring for this host or mark the runtime feature unavailable loudly before running this test."
-            );
-        }
-        Err(e) => panic!("unexpected io_uring setup failure: {e}"),
-    };
+    let ring = IoUringState::new(8).unwrap_or_else(|err| {
+        panic!("socket ingest io_uring initialization failed: {err}");
+    });
 
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind ephemeral port");
     let addr = listener.local_addr().unwrap();
@@ -49,7 +40,7 @@ fn reads_from_tcp_socket_into_host_buffer() {
     let fd = client.as_raw_fd();
 
     let mut target = vec![0xAAu8; CHUNK];
-    let gpu_buffer = unsafe { GpuMappedBuffer::from_host_visible_slice(&mut target) };
+    let gpu_buffer = GpuMappedBuffer::from_host_visible_slice(&mut target);
     let tail = AtomicU32::new(0);
     let mut stream = AsyncUringStream::new(ring, gpu_buffer, &tail);
 
@@ -60,11 +51,9 @@ fn reads_from_tcp_socket_into_host_buffer() {
 
     // SAFETY: iovs + target outlive the completion thanks to the
     // poll loop below. fd is live until end-of-test.
-    unsafe {
-        stream
-            .submit_read_to_gpu(fd, 0, CHUNK as u32, 0, &mut iovs)
-            .expect("submit socket read");
-    }
+    stream
+        .submit_read_to_gpu(fd, 0, CHUNK as u32, 0, &mut iovs)
+        .expect("submit socket read");
 
     let deadline = Instant::now() + Duration::from_secs(5);
     while stream.inflight() > 0 {

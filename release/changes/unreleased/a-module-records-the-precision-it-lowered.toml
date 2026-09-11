@@ -1,0 +1,2 @@
+category = "Added"
+text = "Every emitted target module records the storage formats, conversions, approximable operations, and chunk width it was lowered under."

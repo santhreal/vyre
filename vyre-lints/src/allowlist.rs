@@ -1,30 +1,61 @@
-//! Allowlist for the `raw_ir_in_libs` lint during migration.
+//! Configuration for the `raw_ir_in_libs` lint.
 //!
-//! Each entry exempts one file path (relative to the workspace root)
-//! from the lint. Removed when the file's lego-migration ticket lands.
+//! `measured_roots` names the source trees the rule applies to, and
+//! `exempt_files` exempts one file path (relative to the workspace root)
+//! from it. An exemption is removed when the file's migration lands.
+//!
+//! The roots are data rather than a hardcoded crate name because the count
+//! is pinned as a ratchet. Relocating a composition domain between crates
+//! would otherwise move thousands of construction sites into or out of the
+//! measured set in one commit, for no semantic change, and the pin would
+//! stop meaning anything. Moving a domain edits this list in the same
+//! commit as the move, so the number stays comparable across it.
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::path::Path;
 
+const DEFAULT_MEASURED_ROOTS: &[&str] = &["vyre-libs/src"];
+
 #[derive(Debug, Deserialize)]
 struct AllowlistFile {
+    /// Workspace-root-relative source trees the rule applies to.
+    #[serde(default)]
+    measured_roots: Vec<String>,
     /// Workspace-root-relative paths to exempt.
     #[serde(default)]
     exempt_files: Vec<String>,
 }
 
-/// Workspace-relative source paths exempt from raw IR construction checks.
-#[derive(Debug, Default)]
+/// Where the raw IR construction rule applies and what it exempts.
+#[derive(Debug)]
 pub struct Allowlist {
+    roots: Vec<String>,
     paths: HashSet<String>,
+}
+
+impl Default for Allowlist {
+    fn default() -> Self {
+        Self {
+            roots: DEFAULT_MEASURED_ROOTS
+                .iter()
+                .map(|r| r.to_string())
+                .collect(),
+            paths: HashSet::new(),
+        }
+    }
 }
 
 impl Allowlist {
     /// Construct an allowlist with no exemptions.
     pub fn empty() -> Self {
         Self::default()
+    }
+
+    /// Workspace-relative source trees the rule applies to.
+    pub fn measured_roots(&self) -> &[String] {
+        &self.roots
     }
 
     /// Return whether a workspace-relative path is exempt.
@@ -50,6 +81,14 @@ pub fn load(path: &Path) -> Result<Allowlist> {
     let parsed: AllowlistFile =
         toml::from_str(&bytes).with_context(|| format!("parse allowlist {}", path.display()))?;
     Ok(Allowlist {
+        roots: if parsed.measured_roots.is_empty() {
+            DEFAULT_MEASURED_ROOTS
+                .iter()
+                .map(|r| r.to_string())
+                .collect()
+        } else {
+            parsed.measured_roots
+        },
         paths: parsed.exempt_files.into_iter().collect(),
     })
 }
@@ -57,6 +96,7 @@ pub fn load(path: &Path) -> Result<Allowlist> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeSet;
 
     #[test]
     fn empty_allowlist_contains_nothing() {
@@ -80,6 +120,121 @@ mod tests {
         assert!(a.contains("vyre-libs/src/visual/shadow/mod.rs"));
         assert!(!a.contains("vyre-libs/src/nn/other.rs"));
         assert_eq!(a.len(), 2);
+    }
+
+    /// A configured root list is what the rule applies to. This is the whole
+    /// point of the field: a caller that ignored it and hardcoded a crate name
+    /// would keep working, and the pinned finding count would then jump the
+    /// next time a composition domain moved between crates.
+    #[test]
+    fn configured_measured_roots_replace_the_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("allowlist.toml");
+        std::fs::write(
+            &path,
+            "measured_roots = [\n  \"vyre-libs/src\",\n  \"vyre-primitives/src/math\",\n]\nexempt_files = []\n",
+        )
+        .unwrap();
+
+        let a = load(&path).unwrap();
+
+        assert_eq!(
+            a.measured_roots(),
+            ["vyre-libs/src", "vyre-primitives/src/math"]
+        );
+    }
+
+    /// An omitted list falls back to the compositions crate rather than to
+    /// nothing, so a config that predates the field does not silently turn the
+    /// rule into a no-op that reports zero findings.
+    #[test]
+    fn omitted_measured_roots_fall_back_rather_than_measuring_nothing() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("allowlist.toml");
+        std::fs::write(&path, "exempt_files = []\n").unwrap();
+
+        let a = load(&path).unwrap();
+
+        assert_eq!(a.measured_roots(), ["vyre-libs/src"]);
+        assert_eq!(Allowlist::empty().measured_roots(), ["vyre-libs/src"]);
+    }
+
+    /// WHY: the rule applies only inside a measured root, so a composition
+    /// crate this tree ships and the shipped config omits is scanned by
+    /// nothing, and the lint reports zero over it forever. The split of the
+    /// `vyre-libs` facade into one crate per domain is exactly that event: it
+    /// moved every construction site out of the single root the config named.
+    ///
+    /// The expected set is walked out of the workspace rather than restated
+    /// here, so a twenty-fourth composition crate turns this red until the
+    /// config records it.
+    #[test]
+    fn the_shipped_configuration_measures_every_composition_crate() {
+        let root = vyre_test_support::monorepo::vyre_workspace_root();
+        let shipped = root.join("vyre-lints/allowlist.toml");
+
+        let declared: BTreeSet<String> = load(&shipped)
+            .expect("shipped allowlist loads")
+            .measured_roots()
+            .iter()
+            .cloned()
+            .collect();
+        let present: BTreeSet<String> = composition_crate_roots(&root);
+
+        assert!(
+            !present.is_empty(),
+            "the walk found no composition crate, so this test judges nothing"
+        );
+        let unmeasured: Vec<&String> = present.difference(&declared).collect();
+        let absent: Vec<&String> = declared.difference(&present).collect();
+        assert!(
+            unmeasured.is_empty() && absent.is_empty(),
+            "Fix: measured_roots must name every composition source tree this \
+             workspace ships. Unmeasured: {unmeasured:?}. Named but not in the \
+             tree: {absent:?}."
+        );
+    }
+
+    /// Every `vyre-libs*` crate directory that ships a `src` tree, as
+    /// `<crate>/src`.
+    fn composition_crate_roots(root: &Path) -> BTreeSet<String> {
+        std::fs::read_dir(root)
+            .expect("workspace root reads")
+            .filter_map(|entry| entry.ok())
+            .filter_map(|entry| {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                let is_composition = name == "vyre-libs"
+                    || name
+                        .strip_prefix("vyre-libs-")
+                        .is_some_and(|domain| !domain.is_empty());
+                (is_composition && entry.path().join("src").is_dir()).then(|| format!("{name}/src"))
+            })
+            .collect()
+    }
+
+    /// WHY: an exemption is keyed on a path, so a rename or a file split leaves
+    /// a row that exempts nothing while still reading as coverage of the file it
+    /// names. 59 of 203 shipped rows named a path that no longer existed, and
+    /// every construction site in the files that moved silently entered the
+    /// measured set.
+    #[test]
+    fn every_shipped_exemption_names_a_file_that_exists() {
+        let root = vyre_test_support::monorepo::vyre_workspace_root();
+        let shipped = root.join("vyre-lints/allowlist.toml");
+        let text = crate::read_source_bounded(&shipped).expect("shipped allowlist reads");
+        let parsed: AllowlistFile = toml::from_str(&text).expect("shipped allowlist parses");
+
+        let missing: Vec<&String> = parsed
+            .exempt_files
+            .iter()
+            .filter(|relative| !root.join(relative).exists())
+            .collect();
+
+        assert!(
+            missing.is_empty(),
+            "Fix: these exemption rows name no file: {missing:?}. Point each row at the path the \
+             file moved to, or delete it: a row that names nothing exempts nothing."
+        );
     }
 
     #[test]

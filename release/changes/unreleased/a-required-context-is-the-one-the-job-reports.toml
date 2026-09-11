@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The required-context gate accepts only the status context a job reports, which is its display name when it declares one, so a required check named by job id is a finding."

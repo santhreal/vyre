@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A single-invocation operation guards its serial body on `workgroup_id.x == 0 && local_id.x == 0`, so a fusion that widens the arm still admits one invocation instead of repeating the same read-modify-write from every invocation of workgroup 0."

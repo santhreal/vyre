@@ -1,0 +1,5 @@
+name = "vyre"
+concern = "Public facade. Re-export IR, driver, runtime, and the artifact compiler. Own no logic."
+pages = { spec = "vyre/SPEC.md", readme = "vyre/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-driver", "vyre-driver-cuda", "vyre-driver-wgpu", "vyre-foundation", "vyre-megakernel", "vyre-runtime", "vyre-spec"]

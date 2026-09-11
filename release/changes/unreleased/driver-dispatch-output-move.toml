@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`InstanceCore::absorb_outputs` and `InstanceCore::resident_completion` take the dispatch result by value and move each output buffer into the value map instead of cloning it. Callers owned the result and dropped it, so the copy protected nothing and cost one full pass over every output byte on every dispatch of every module. Output slots are assigned per buffer index in `binding.rs`, so a repeated slot is a plan defect: the move refuses it through the omitted-output rejection rather than serving the previous buffer's bytes a second time."

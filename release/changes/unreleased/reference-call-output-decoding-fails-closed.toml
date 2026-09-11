@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A reference call whose signature declares an output type the interpreter has no value for is refused by name instead of answering with the raw byte payload, so an operation declaring a `u64` or `bool` output cannot hand the conformance gate bytes where it expects a scalar."

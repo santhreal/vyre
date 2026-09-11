@@ -164,22 +164,32 @@ fn is_explicit_noop_false_for_store() {
 
 #[test]
 fn fingerprint_is_deterministic() {
-    let prog = Program::wrapped(
+    let prog1 = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
         vec![Node::Return],
     );
-    assert_eq!(prog.fingerprint(), prog.fingerprint());
+    let prog2 = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::Return],
+    );
+    assert_eq!(prog1.fingerprint(), prog2.fingerprint());
 }
 
 #[test]
 fn vsa_fingerprint_is_deterministic() {
-    let prog = Program::wrapped(
+    let prog1 = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
         vec![Node::Return],
     );
-    assert_eq!(prog.vsa_fingerprint(), prog.vsa_fingerprint());
+    let prog2 = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::Return],
+    );
+    assert_eq!(prog1.vsa_fingerprint(), prog2.vsa_fingerprint());
 }
 
 #[test]

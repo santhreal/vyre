@@ -1,0 +1,41 @@
+# Files permitted to contain unsafe code.
+#
+# [workspace.lints.rust] sets unsafe_code = "deny", which every member
+# inherits. A file therefore cannot contain unsafe without an explicit
+# allow(unsafe_code) override, so this list IS the complete unsafe surface
+# of the workspace, enforced by rustc rather than approximated by grep.
+#
+# Adding an entry is a security review: the site needs a SAFETY comment
+# naming the invariant its caller relies on. Removing unsafe from a file
+# means deleting its line here in the same change.
+#
+# Reviewed against the tree by the lint-unsafe-budget gate, which reads the
+# attribute out of code: a mention in a comment or a string is not a surface.
+#   ./cargo_full run -q -p xtask --bin xtask -- lint-unsafe-budget
+
+vyre-alloc-probe/src/lib.rs
+vyre-alloc-probe/tests/all_tests.rs
+vyre-bench/src/lib.rs
+vyre-bench/src/probes/cpu.rs
+vyre-bench/tests/min_samples_gate.rs
+vyre-driver-cuda/src/backend/cuda_graph.rs
+vyre-driver-cuda/src/lib.rs
+vyre-driver-metal/src/lib.rs
+vyre-driver-spirv/examples/vulkan_probe.rs
+vyre-driver-spirv/src/lib.rs
+vyre-driver-wgpu/src/pipeline/disk_cache/mod.rs
+vyre-driver-wgpu/src/runtime/shader/compile_compute_pipeline.rs
+vyre-emit-ptx/tests/nvrtc_compile_gate/cuda.rs
+vyre-primitives/src/wire.rs
+# The io_uring surface. `vyre-runtime/src/lib.rs` denies the lint and names
+# these four files as the only permitted grants; raw_platform.rs is the single
+# file-level allowance, the other three carry one item each. The mapped ring,
+# the raw syscall wrappers and the host-visible buffer pointers are the whole
+# reason the crate needs unsafe at all, and every site states the invariant its
+# caller upholds.
+vyre-runtime/src/uring/buffer.rs
+vyre-runtime/src/uring/raw_platform.rs
+vyre-runtime/src/uring/ring.rs
+vyre-runtime/src/uring_completion_pump.rs
+vyre-runtime/tests/socket_ingest.rs
+vyre-runtime/tests/uring_smoke.rs

@@ -5,7 +5,7 @@
 //! consumers. These tests assert that every variant maps to its expected
 //! stable id and that new variants are append-only.
 
-use vyre_driver::backend::{BackendError, ErrorCode};
+use vyre_driver::{BackendError, ErrorCode};
 
 #[test]
 fn device_out_of_memory_is_1001() {

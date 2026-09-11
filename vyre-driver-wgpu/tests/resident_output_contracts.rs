@@ -1,5 +1,7 @@
 //! Live WGPU resident-output parity contracts.
 
+#![cfg(feature = "device-tests")]
+
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::Resource;
 use vyre_driver::{DispatchConfig, VyreBackend};

@@ -1,0 +1,2 @@
+category = "Added"
+text = "The platform-support-matrix xtask gate publishes docs/generated/platform-support-matrix.toml from workspace manifests, workflow axes, and driver capabilities, while unsupported host cells fail with actionable typed diagnostics rather than degrading."

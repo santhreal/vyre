@@ -1,0 +1,83 @@
+[package]
+name = "xtask-registry"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "xtask subcommands that read the live vyre operation registry."
+# Internal build-task crate, never published.
+publish = false
+# Integration tests are declared, never discovered, so a file added under
+# `tests/` is wired into a target by hand and cannot start linking a binary of
+# its own.
+autotests = false
+
+[package.metadata.vyre]
+publication_class = "conformance-tooling"
+
+[lints]
+workspace = true
+
+# Every dependency here exists because a subcommand in this crate has to look at
+# the registry that these crates submit into, or at a linked backend driver.
+# A subcommand that only reads source text belongs in `xtask`, which links none
+# of this. The concrete driver crates are linked through `vyre-registry-link`,
+# which owns every registry link anchor and asserts the floor per source, so no
+# manifest here repeats that list.
+[dependencies]
+xtask = { path = "../xtask" }
+blake3.workspace = true
+vyre.workspace = true
+vyre-foundation.workspace = true
+vyre-megakernel.workspace = true
+vyre-driver.workspace = true
+vyre-registry-link = { workspace = true, features = [
+    "operations",
+    "cuda",
+    "spirv",
+    "wgpu",
+] }
+vyre-spec.workspace = true
+# The parity oracle, linked as a library. This is not the deleted `cpu-ref`
+# backend registration: the generated operation schema is assembled from the
+# reference facets, and `trace_f32` diffs a device result against them.
+vyre-reference.workspace = true
+# `lego-audit` is the release catalog gate. It must link every shipped Tier-3
+# consumer so primitive coverage is measured against the real composition
+# surface, not a feature-narrow slice. Each edge names that crate's own
+# aggregate rather than a list kept by hand here: a hand-kept list is what let
+# `geom`, `opt`, `decode` and `visual` fall out of the primitives edge while
+# every generated document still agreed with the narrowed registry.
+# `pattern-regex` is named on top of `full` because the release conformance
+# gate judges the scan matrix against the regex compiler's own construct->code
+# mapping, and `full` deliberately leaves the regex frontend and its
+# regex-syntax dependency out of what a library consumer gets.
+vyre-libs = { workspace = true, features = ["full", "pattern-regex"] }
+vyre-primitives = { workspace = true, features = ["hardware"] }
+inventory.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+syn = { workspace = true, features = ["full", "visit"] }
+toml.workspace = true
+walkdir.workspace = true
+# The tree reads a placement answer has to make: the workspace-member roster,
+# the checkout root, and whether a directory carries Rust source. One owner, in
+# the crate that depends on no vyre crate. publish = false on both sides.
+structure-gate = { path = "../structure-gate" }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+# The oracle's own id, for the contract that holds it equal to the label a
+# release reads. This crate links both sides, which is the only place the two
+# can be compared; the library itself derives its roster from the backend
+# registry and needs no reference driver.
+vyre-driver-reference.workspace = true
+
+# A `tests/<name>/main.rs` target is already one binary for its whole module
+# tree, so it stays a target of its own.
+[[test]]
+name = "registry_contracts"
+path = "tests/registry_contracts/main.rs"

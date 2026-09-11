@@ -1,0 +1,5 @@
+name = "vyre-runtime"
+concern = "Execute the artifact's selected persistence: sessions, recovery, residency, scheduling, caches, telemetry, readback, and IO. Does not decide whether to be persistent."
+pages = { spec = "vyre-runtime/SPEC.md", readme = "vyre-runtime/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-driver", "vyre-foundation", "vyre-libs", "vyre-megakernel", "vyre-primitives"]

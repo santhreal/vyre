@@ -234,6 +234,7 @@ fn measure_backend(
     Ok(samples[samples.len() / 2])
 }
 
+// Inline: covers `PGO_TIMED_ITERS`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -245,17 +246,17 @@ mod tests {
         spin: u32,
     }
 
-    impl crate::backend::private::Sealed for TimedBackend {}
+    impl crate::backend::sealed::Sealed for TimedBackend {}
 
     impl VyreBackend for TimedBackend {
         fn id(&self) -> &'static str {
             self.id
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             let mut value = 0u32;
@@ -296,7 +297,7 @@ mod tests {
         owned_calls: AtomicUsize,
     }
 
-    impl crate::backend::private::Sealed for BorrowCountingBackend {}
+    impl crate::backend::sealed::Sealed for BorrowCountingBackend {}
 
     impl VyreBackend for BorrowCountingBackend {
         fn id(&self) -> &'static str {

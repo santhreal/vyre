@@ -16,6 +16,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: dependency-audit-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   machete:
     name: cargo_full machete (unused deps)
@@ -35,7 +39,7 @@ jobs:
           key: cargo-machete-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install cargo-machete
-        run: cargo install --locked cargo-machete
+        run: cargo +stable install --locked cargo-machete
 
       - name: Run cargo-machete on workspace
         # --with-metadata is slower but catches dev-only / build-only deps

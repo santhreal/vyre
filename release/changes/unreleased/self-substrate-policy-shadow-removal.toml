@@ -1,0 +1,2 @@
+category = "Removed"
+text = "Self-substrate no longer publishes source-text validators for deleted C-frontend test files or parser release artifacts. Diagnostic and preprocessing conformance now belongs to the live frontend and conformance paths."

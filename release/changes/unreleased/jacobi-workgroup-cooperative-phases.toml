@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The Jacobi eigensolver (`symmetric_eigen_jacobi`) distributes independent identity seeding (`matrix_identity_fill`), eigenvector sign canonicalization (`eigenvector_column_sign`), and diagonal extraction (`matrix_diagonal_extract`) across declared workgroup lanes (`LANES = 64`), preserving sequential Givens rotation on lane 0 behind workgroup barriers."

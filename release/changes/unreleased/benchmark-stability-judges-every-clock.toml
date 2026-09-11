@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A benchmark sample taken while the graphics clock is depressed under load is now reported as unstable instead of being judged against a release performance floor."

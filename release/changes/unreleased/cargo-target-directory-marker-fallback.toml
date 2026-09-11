@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Test fixtures now resolve host-owned Cargo target directories from either Cargo cache marker. Older shared target roots that lack `CACHEDIR.TAG` but contain Cargo's `.rustc_info.json` no longer fail before feature-boundary builds can run."

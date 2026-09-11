@@ -1,14 +1,14 @@
 {
-  "schema_version": 2,
-  "command_count": 15,
-  "artifact_count": 34,
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"997287e7ab44b61927039993d65900f6e2149330","commit_timestamp":"1789108100","parent_commit":"956e5380ef0567214833a06e21d408b485495f5b","dirty":false,"source_fingerprint":"git:997287e7ab44b61927039993d65900f6e2149330:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "schema_version": 3,
+  "command_count": 16,
+  "artifact_count": 75,
   "commands": [
     {
       "generator_command": "xtask docs-check",
       "command_mode": "spawned",
       "required": true,
       "expected_artifacts": [
-        "docs/DOCS.toml",
         "docs/SUMMARY.md",
         "docs/INDEX.md"
       ],
@@ -52,20 +52,44 @@
       "artifact_contracts": []
     },
     {
-      "generator_command": "xtask release-benchmarks --backend cuda",
+      "generator_command": "xtask release-benchmarks --backend cuda --measured-samples 30 --write",
       "command_mode": "external-artifacts-only",
       "required": true,
       "expected_artifacts": [
-        "release/evidence/benchmarks/cuda-release-suite.json",
         "release/evidence/benchmarks/bench-release-axes.json",
         "release/evidence/benchmarks/cpu-only-100x-proof.json",
+        "release/evidence/benchmarks/cuda-ptx-patterns.json",
+        "release/evidence/benchmarks/cuda-release-suite.json",
+        "release/evidence/benchmarks/dataflow-analysis-release.json",
         "release/evidence/benchmarks/frontier-leaderboard.json",
+        "release/evidence/benchmarks/megakernel-condition-100x-proof.json",
+        "release/evidence/benchmarks/megakernel-condition-cuda.json",
+        "release/evidence/benchmarks/megakernel-latency-cuda.json",
+        "release/evidence/benchmarks/resident-optimizer-pipeline.json",
+        "release/evidence/benchmarks/workload-01-condition-eval.json",
+        "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
+        "release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
+        "release/evidence/benchmarks/workload-04-metadata-conditions.json",
+        "release/evidence/benchmarks/workload-05-entropy-window.json",
+        "release/evidence/benchmarks/workload-06-quantified-condition-loops.json",
+        "release/evidence/benchmarks/workload-07-alias-reaching-def.json",
+        "release/evidence/benchmarks/workload-08-ifds-witness.json",
+        "release/evidence/benchmarks/workload-09-ast-motif-traversal.json",
+        "release/evidence/benchmarks/workload-10-megakernel-queued-batches.json",
+        "release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
+        "release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
+        "release/evidence/benchmarks/workload-13-callgraph-reachability.json",
+        "release/evidence/benchmarks/workload-14-compound-fused-filter.json",
+        "release/evidence/benchmarks/workload-15-adaptive-routing.json",
+        "release/evidence/benchmarks/workload-16-quantized-linear.json",
+        "release/evidence/benchmarks/workload-17-egraph-saturation.json",
+        "release/evidence/optimization/optimizer-impact-cuda.json",
         "release/evidence/optimization/pass-family-benchmark-manifest.json"
       ],
       "artifact_contracts": [
         {
           "artifact": "release/evidence/benchmarks/frontier-leaderboard.json",
-          "generator_command": "xtask release-benchmarks --backend cuda",
+          "generator_command": "xtask release-benchmarks --backend cuda --measured-samples 30 --write",
           "command_mode": "external-artifacts-only",
           "command_required": true,
           "schema_version": 1,
@@ -88,6 +112,32 @@
           ]
         }
       ]
+    },
+    {
+      "generator_command": "xtask release-benchmarks --backend wgpu --measured-samples 30 --write",
+      "command_mode": "external-artifacts-only",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/benchmarks/wgpu-fallback-suite.json",
+        "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json",
+        "release/evidence/benchmarks/wgpu-workload-02-string-bitmap-scatter.json",
+        "release/evidence/benchmarks/wgpu-workload-03-offset-count-aggregation.json",
+        "release/evidence/benchmarks/wgpu-workload-04-metadata-conditions.json",
+        "release/evidence/benchmarks/wgpu-workload-05-entropy-window.json",
+        "release/evidence/benchmarks/wgpu-workload-06-quantified-condition-loops.json",
+        "release/evidence/benchmarks/wgpu-workload-07-alias-reaching-def.json",
+        "release/evidence/benchmarks/wgpu-workload-08-ifds-witness.json",
+        "release/evidence/benchmarks/wgpu-workload-09-ast-motif-traversal.json",
+        "release/evidence/benchmarks/wgpu-workload-10-megakernel-queued-batches.json",
+        "release/evidence/benchmarks/wgpu-workload-11-semantic-optimizer-impact.json",
+        "release/evidence/benchmarks/wgpu-workload-12-sparse-output-compaction.json",
+        "release/evidence/benchmarks/wgpu-workload-13-callgraph-reachability.json",
+        "release/evidence/benchmarks/wgpu-workload-14-compound-fused-filter.json",
+        "release/evidence/benchmarks/wgpu-workload-15-adaptive-routing.json",
+        "release/evidence/benchmarks/wgpu-workload-16-quantized-linear.json",
+        "release/evidence/benchmarks/wgpu-workload-17-egraph-saturation.json"
+      ],
+      "artifact_contracts": []
     },
     {
       "generator_command": "xtask hygiene-matrix",
@@ -164,7 +214,7 @@
       "artifact_contracts": []
     },
     {
-      "generator_command": "xtask lego-audit --report-only --duplicate-report-json release/evidence/dedup/lego-audit-duplicates.json",
+      "generator_command": "xtask lego-duplicate-report --write",
       "command_mode": "spawned",
       "required": true,
       "expected_artifacts": [

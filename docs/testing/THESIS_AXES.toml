@@ -1,0 +1,81 @@
+# What the release benchmark suite has to prove.
+#
+# This file is a contract, not a measurement. It states which compound
+# compiler and security workloads the release suite must carry, and
+# `vyre-bench/tests/release_matrix_contracts/thesis_axes.rs` reads it and
+# fails when the registry no longer satisfies one of them.
+#
+# It is hand-authored on purpose. Deriving the axes from the registry would
+# make the test compare the registry with itself and pass for every registry,
+# including one with the compound workloads removed.
+
+schema_version = 1
+title = "Compiler-grade GPU thesis workload contract"
+contract = "The release benchmark suite must prove compound compiler and security workloads, not only primitive element-wise throughput."
+required_suite = "release"
+required_backend = "cuda"
+required_workload_class = "macro"
+required_baseline_class = "cpu-sota"
+required_correctness = "exact-or-certificate"
+minimum_axes = 7
+
+[[axis]]
+id = "parsing-throughput"
+title = "AST motif traversal throughput"
+terms = ["release.ast_motif_traversal", "parser", "ast"]
+minimum_matching_cases = 1
+minimum_input_bytes = 1048576
+evidence_artifact = "release/evidence/benchmarks/workload-09-ast-motif-traversal.json"
+
+[[axis]]
+id = "dataflow-convergence"
+title = "Dataflow convergence over reaching definitions and IFDS facts"
+terms = ["release.alias_reaching_def", "release.ifds_witness", "alias", "ifds"]
+minimum_matching_cases = 2
+minimum_input_bytes = 1048576
+evidence_artifact = "release/evidence/benchmarks/workload-07-alias-reaching-def.json"
+
+[[axis]]
+id = "graph-traversal"
+title = "Graph traversal over callgraph-scale CSR inputs"
+terms = ["callgraph.reachability", "graph", "reachability"]
+minimum_matching_cases = 1
+minimum_input_bytes = 1048576
+evidence_artifact = "release/evidence/benchmarks/workload-13-callgraph-reachability.json"
+
+[[axis]]
+id = "pattern-matching"
+title = "Pattern bitmap materialization against CPU scanner baselines"
+terms = ["release.string_bitmap_scatter", "string", "bitmap"]
+minimum_matching_cases = 1
+minimum_input_bytes = 1048576
+evidence_artifact = "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json"
+
+[[axis]]
+id = "fixpoint-witness"
+title = "Fixpoint-style witness extraction and propagation"
+terms = ["release.ifds_witness", "witness", "fixpoint"]
+minimum_matching_cases = 1
+minimum_input_bytes = 1048576
+evidence_artifact = "release/evidence/benchmarks/workload-08-ifds-witness.json"
+
+[[axis]]
+id = "persistent-megakernel"
+title = "Persistent megakernel queued batches"
+terms = [
+    "release.megakernel_queue",
+    "runtime.megakernel.condition",
+    "megakernel",
+    "queue",
+]
+minimum_matching_cases = 1
+minimum_input_bytes = 1048576
+evidence_artifact = "release/evidence/benchmarks/workload-10-megakernel-queued-batches.json"
+
+[[axis]]
+id = "optimizer-saturation"
+title = "E-graph rewrite saturation and optimization impact"
+terms = ["release.egraph_saturation", "egraph", "saturation"]
+minimum_matching_cases = 1
+minimum_input_bytes = 1048576
+evidence_artifact = "release/evidence/benchmarks/workload-17-egraph-saturation.json"

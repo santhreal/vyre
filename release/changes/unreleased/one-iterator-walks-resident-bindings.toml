@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The Metal backend walks resident bindings once. runtime::resident::resident_bindings skips shared bindings, refuses persistent ones and supplies the resource index, so resource-table resolution and buffer planning no longer keep separate copies of that walk and separate index bumps."

@@ -5,15 +5,13 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_driver::binding::{
-    binding_plans_share_layout, BindingPlan, BindingRole, BindingSetFingerprint,
-};
-use vyre_driver::dispatch_shape::{
+use vyre_driver::resolve_fixpoint_iterations;
+use vyre_driver::DispatchConfig;
+use vyre_driver::{binding_plans_share_layout, BindingPlan, BindingRole, BindingSetFingerprint};
+use vyre_driver::{
     borrowed_input_batch_shapes_match, borrowed_input_shapes_match,
     dispatch_configs_share_launch_shape,
 };
-use vyre_driver::fixpoint_iterations::resolve_fixpoint_iterations;
-use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
 const SHAPE_CASES: usize = 256;

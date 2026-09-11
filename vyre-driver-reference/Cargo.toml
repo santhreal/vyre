@@ -1,6 +1,7 @@
 [package]
 name = "vyre-driver-reference"
-version = "0.7.2"
+version = "0.8.0"
+autotests = false
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -8,7 +9,7 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/vyre-driver-reference"
-description = "cpu-ref VyreBackend adapter over the pure Rust vyre-reference interpreter."
+description = "Reference target dialect and semantic parity executor over the pure Rust vyre-reference interpreter. Registers no backend."
 readme = "README.md"
 keywords = ["cpu", "reference", "backend", "vyre"]
 categories = ["algorithms", "api-bindings"]
@@ -17,14 +18,40 @@ categories = ["algorithms", "api-bindings"]
 vyre-driver.workspace = true
 vyre-foundation.workspace = true
 vyre-reference.workspace = true
-inventory.workspace = true
-
-[dev-dependencies]
-vyre-frontend-c = { path = "../vyre-frontend-c" }
+vyre-megakernel.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[package.metadata.vyre]
+publication_class = "conformance-tooling"
+publication_contract = "consumer-seam:vyre-graphics-app"
+
 [lints]
 workspace = true
+
+[dev-dependencies]
+vyre-driver = { workspace = true, features = ["test-fixtures"] }
+# The shared semantic-execution graph, bindings, and request every backend
+# contract proves the seam with, plus the strict-float witness program the
+# strict-lowering contract runs, which `ir-fixtures` carries.
+vyre-test-support = { workspace = true, features = [
+    "ir-fixtures",
+    "semantic-requests",
+] }
+# The linkage owner, so the registry closure reads the registry the declared
+# drivers actually submit into. Without it this crate's test binary links no
+# driver and enumerates an empty registry, which makes the closure vacuous.
+# `operations` is off: the closure reads the backend registry, and the
+# per-source floor for that registry does not need the operation sources.
+vyre-registry-link = { workspace = true, features = [
+    "cuda",
+    "metal",
+    "spirv",
+    "wgpu",
+] }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

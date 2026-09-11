@@ -1,7 +1,7 @@
-//! P1 inventory #89  -  property tests for buffer layout invariants.
+//! Property tests for buffer layout invariants.
 //!
 //! Buffer declarations on a `Program` carry strict structural rules:
-//! every binding slot is unique, every name is unique, every read-only
+//! Every binding slot is unique, every name is unique, every read-only
 //! buffer's bytes-required <= total-bytes, and the sorted-by-binding
 //! view is canonical.
 //!

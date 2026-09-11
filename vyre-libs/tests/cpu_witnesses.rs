@@ -4,79 +4,41 @@
 #![cfg(all(
     feature = "nn-attention",
     feature = "nn-norm",
-    feature = "matching-dfa",
+    feature = "pattern-dfa",
     feature = "crypto-blake3"
 ))]
 
-use vyre_libs::operation_catalog::all_entries;
-use vyre_reference::value::Value;
+use vyre_libs::operation_catalog::library_entries;
 
 fn entry(id: &'static str) -> vyre_foundation::operation::SemanticOperation {
-    all_entries()
+    library_entries()
         .find(|entry| entry.id == id)
         .unwrap_or_else(|| panic!("Fix: missing canonical operation registration for {id}"))
 }
 
 fn assert_entry_matches_declared_witness(id: &'static str) {
     let entry = entry(id);
-    let inputs = (entry.test_inputs.expect("Fix: test_inputs required"))();
     let expected = (entry
         .expected_output
         .expect("Fix: expected_output required"))();
-    assert_entry_matches_cases(
-        id,
-        entry
-            .build
-            .expect("Fix: registered library operation must provide a neutral builder"),
-        inputs,
-        expected,
-    );
+    assert_entry_matches_cases(id, &entry, expected);
 }
 
 fn assert_entry_matches_cases(
     id: &'static str,
-    build: fn() -> vyre::Program,
-    inputs: Vec<Vec<Vec<u8>>>,
+    entry: &vyre_foundation::operation::SemanticOperation,
     expected: Vec<Vec<Vec<u8>>>,
 ) {
     assert_eq!(
-        inputs.len(),
-        expected.len(),
-        "Fix: witness vector count mismatch for {id}"
+        vyre_test_support::registry_nets::declared_witness_bytes(id, entry).collect::<Vec<_>>(),
+        expected,
+        "CPU witness drift for {id}"
     );
-    for (case_index, (input_set, expected_outputs)) in
-        inputs.iter().zip(expected.iter()).enumerate()
-    {
-        let outputs = vyre_reference::reference_eval(
-            &build(),
-            &input_set
-                .iter()
-                .cloned()
-                .map(Value::from)
-                .collect::<Vec<_>>(),
-        )
-        .unwrap_or_else(|error| panic!("Fix: reference run failed for {id}: {error}"))
-        .into_iter()
-        .map(|value| value.to_bytes())
-        .collect::<Vec<_>>();
-        assert_eq!(
-            outputs, *expected_outputs,
-            "CPU witness drift for {id} case {case_index}"
-        );
-    }
 }
 
 fn assert_entry_matches_pinned_witness(id: &'static str, expected: Vec<Vec<Vec<u8>>>) {
     let entry = entry(id);
-    let inputs = (entry.test_inputs.expect("Fix: test_inputs required"))();
-    assert_entry_matches_cases(
-        id,
-        entry
-            .build
-            .expect("Fix: registered library operation must provide a neutral builder"),
-        inputs,
-        expected,
-    );
+    assert_entry_matches_cases(id, &entry, expected);
 }
 
 #[test]
@@ -115,42 +77,13 @@ fn linear_cpu_witness_is_pinned() {
 }
 
 #[test]
-fn fnv1a32_cpu_witness_is_pinned() {
-    assert_entry_matches_declared_witness("vyre-libs::hash::fnv1a32");
-}
-
-#[test]
 fn blake3_cpu_witness_is_pinned() {
     assert_entry_matches_declared_witness("vyre-libs::hash::blake3_compress");
 }
 
 #[test]
 fn aho_corasick_cpu_witness_is_pinned() {
-    assert_entry_matches_declared_witness("vyre-libs::matching::aho_corasick");
-}
-
-#[test]
-fn adler32_cpu_witness_is_pinned() {
-    assert_entry_matches_pinned_witness(
-        "vyre-libs::hash::adler32",
-        vec![vec![vec![0x27, 0x01, 0x4d, 0x02]]],
-    );
-}
-
-#[test]
-fn crc32_cpu_witness_is_pinned() {
-    assert_entry_matches_pinned_witness(
-        "vyre-libs::hash::crc32",
-        vec![vec![vec![0xc2, 0x41, 0x24, 0x35]]],
-    );
-}
-
-#[test]
-fn fnv1a64_cpu_witness_is_pinned() {
-    assert_entry_matches_pinned_witness(
-        "vyre-libs::hash::fnv1a64",
-        vec![vec![vec![0x4b, 0x57, 0x41, 0x05, 0x19, 0xa2, 0x1f, 0xe7]]],
-    );
+    assert_entry_matches_declared_witness("vyre-libs::pattern::aho_corasick");
 }
 
 #[test]
@@ -181,7 +114,7 @@ fn silu_cpu_witness_is_pinned() {
 #[test]
 fn substring_cpu_witness_is_pinned() {
     assert_entry_matches_pinned_witness(
-        "vyre-libs::scan::substring_search",
+        "vyre-libs::pattern::substring_search",
         vec![
             vec![vec![
                 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,

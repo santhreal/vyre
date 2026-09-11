@@ -1,0 +1,2 @@
+category = "Changed"
+text = "An artifact framed under an earlier schema is refused with a version-skew diagnostic before its body is read."

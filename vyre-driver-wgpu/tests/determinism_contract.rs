@@ -1,12 +1,14 @@
 //! Determinism contract.
 //!
-//! See `contracts/release.md`. Vyre's thesis is "same Program +
-//! same inputs → byte-identical outputs." This test proves the
-//! contract holds across repeated dispatches on the same backend for
-//! every proptest-generated program.
+//! The shipped contract is: same Program plus same inputs produce
+//! byte-identical outputs. This test proves the contract holds across
+//! repeated dispatches on the same backend for every proptest-generated
+//! program.
 //!
 //! The generator intentionally includes unused and conditionally-used buffers
 //! so bind-group reflection stays honest across lowered shader variants.
+
+#![cfg(feature = "device-tests")]
 
 use proptest::prelude::*;
 use std::sync::OnceLock;
@@ -122,7 +124,7 @@ fn inputs_strategy(program: &vyre::Program) -> BoxedStrategy<Vec<Vec<u8>>> {
     let input_lengths: Vec<usize> = program
         .buffers()
         .iter()
-        .filter(|buffer| !buffer.is_output())
+        .filter(|buffer| vyre_reference::is_reference_input(buffer))
         .map(|buffer| {
             let element_size = match buffer.element() {
                 DataType::U32 | DataType::I32 | DataType::F32 | DataType::Bool => 4,

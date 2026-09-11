@@ -7,8 +7,10 @@
 //!   before any GPU work is submitted
 //! - The error message contains "workgroup_size" so callers know what to fix
 
-mod common;
-use common::acquire_live_backend as live_backend;
+#![cfg(feature = "device-tests")]
+
+use crate::harness;
+use harness::acquire_live_backend as live_backend;
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
@@ -17,7 +19,7 @@ fn dummy_program(workgroup_size: [u32; 3]) -> Program {
     Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32)
             .with_count(1)
-            .with_output_byte_range(0..4)],
+            .with_output_byte_range(0_usize..4)],
         workgroup_size,
         vec![
             Node::store("out", Expr::u32(0), Expr::u32(42)),

@@ -1,6 +1,7 @@
 [package]
 name = "vyre-driver"
-version = "0.7.2"
+version = "0.8.0"
+autotests = false
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -18,38 +19,30 @@ exclude = ["**/SKILL.md"]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
-[[test]]
-name = "cache_invalidation_default"
-path = "tests/cache_invalidation_default.rs"
-required-features = ["self-substrate-adapters"]
-
-[[test]]
-name = "sweep_dispatch_shape_oracle_matrix"
-path = "tests/sweep_dispatch_shape_oracle_matrix.rs"
-
-[[test]]
-name = "sweep_numeric_oracle_matrix"
-path = "tests/sweep_numeric_oracle_matrix.rs"
-
-[[test]]
-name = "driver_lifecycle_e2e"
-path = "tests/driver_lifecycle_e2e.rs"
-
 [features]
 default = []
-self-substrate-adapters = [
-    "dep:vyre-self-substrate",
-    "vyre-self-substrate/data",
-    "vyre-self-substrate/logic",
-    "vyre-self-substrate/telemetry",
+# Cache invalidation and substrate telemetry, implemented as vyre-libs
+# compositions. Without it those two entry points fail closed rather than fall
+# back to a reference path. Named `self-substrate-adapters` until the crate it
+# was named for, vyre-self-substrate, became vyre-pass-engine; the feature
+# never depended on that crate, so the name described nothing.
+libs-compositions = [
+    "dep:vyre-libs",
+    "vyre-libs/encoding",
+    "vyre-libs/reasoning",
+    "vyre-libs/telemetry",
+    "vyre-libs/analysis",
 ]
+
+# Elementwise parity-gate scaffolding, used only by the concrete driver crates'
+# tests. Off by default so a published build does not carry test scaffolding.
+test-fixtures = []
 
 [dependencies]
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
-vyre-self-substrate = { workspace = true, optional = true }
+vyre-libs = { workspace = true, optional = true }
 vyre-spec.workspace = true
-vyre-macros.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -63,14 +56,56 @@ toml.workspace = true
 dashmap.workspace = true
 fs2.workspace = true
 
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "extension-point:external_ir_extension"
+
 [lints]
 workspace = true
 
 [dev-dependencies]
-vyre-test-support.workspace = true
+vyre-test-support = { workspace = true, features = [
+    "ir-fixtures",
+    "semantic-requests",
+    "driver-contracts",
+] }
 # integration tests/benches assert against these crates' public APIs
-vyre = { path = "../vyre", default-features = false }
-vyre-driver-reference = { path = "../vyre-driver-reference" }
-vyre-reference = { path = "../vyre-reference" }
-vyre-intrinsics = { path = "../vyre-intrinsics" }
+vyre = { workspace = true, default-features = false }
+vyre-driver-reference = { workspace = true }
+vyre-reference = { workspace = true }
+vyre-primitives = { workspace = true, features = ["hardware"] }
 tempfile.workspace = true
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"
+
+# Isolated: each submits a deliberate duplicate into the link-time operation
+# and backend registries, which are process-global and populated before `main`.
+# The duplicate is the subject of the assertion, so a binary carrying either
+# one starts with a registry every other test in it would read as corrupt.
+[[test]]
+name = "backend_registry_duplicate_provider"
+path = "tests/backend_registry_duplicate_provider.rs"
+
+[[test]]
+name = "gap_duplicate_op_id"
+path = "tests/gap_duplicate_op_id.rs"
+
+# Isolated: each asserts what the registry reports when this binary links no
+# concrete driver. `backend_registry` reads it as empty and
+# `reference_oracle_is_never_implicit` requires that no implicit choice returns
+# a host oracle. One test registering a backend to exercise its own contract
+# would make both observations describe a different registry.
+[[test]]
+name = "backend_registry"
+path = "tests/backend_registry.rs"
+
+[[test]]
+name = "reference_oracle_is_never_implicit"
+path = "tests/reference_oracle_is_never_implicit.rs"
+
+[[test]]
+name = "all_tests_libs_compositions"
+path = "tests/all_tests_libs_compositions.rs"
+required-features = ["libs-compositions"]

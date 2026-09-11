@@ -1,0 +1,23 @@
+lane = "bench-criterion-regression"
+workflow = ".github/workflows/bench.yml"
+job = "criterion-regression"
+state = "live"
+required_status = "Bench / criterion-regression"
+triggers = ["pull_request", "push"]
+steps = [
+  { command = '''git fetch origin main
+git checkout origin/main
+./cargo_full bench -p vyre-libs -- --save-baseline main
+git checkout -''' },
+  { command = "./cargo_full bench -p vyre-libs -- --baseline main --save-baseline pr 2>&1 | tee bench.log" },
+  { command = '''set -euo pipefail
+if ! grep -q 'change: \[' bench.log; then
+  echo "FAIL: no Criterion comparison lines found; benchmark target is not exercising Criterion"
+  exit 1
+fi
+worst="$(grep -oE 'change: \[[^]]+\]' bench.log \
+  | awk -F'[][% ]+' '{print $4}' \
+  | sort -g | tail -1)"
+echo "Worst median change: ${worst}%"
+awk -v w="$worst" 'BEGIN { if (w+0 > 5) { print "FAIL: criterion regression > 5% (worst " w "%)"; exit 1 } print "PASS: no criterion regressions > 5%" }'''' },
+]

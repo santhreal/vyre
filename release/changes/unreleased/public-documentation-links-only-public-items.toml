@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The documentation for `ReferenceErrorClass::ALL` linked `Self::successor` and `Self::COUNT`, which are private, so `cargo doc` reported two broken intra-doc links on a public item. The text states the successor chain and the declared count without linking either."

@@ -1,6 +1,7 @@
 [package]
 name = "vyre-driver-spirv"
-version = "0.7.2"
+version = "0.8.0"
+autotests = false
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -18,21 +19,55 @@ exclude = ["**/SKILL.md"]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[package.metadata.vyre]
+publication_class = "concrete-backend"
+publication_contract = "target-support:spirv"
+
 [lints]
 workspace = true
+
+[features]
+default = []
+
+# The spirv_parity suite validates every blob it emits with spirv-val, and a
+# machine without that binary must skip the target rather than compile it and
+# pass without validating anything, which is what it used to do. Registering the
+# target behind a feature is the same remedy the oracle-matrix suite uses: a
+# default run cleanly skips it, and the gate that enables it fails
+# closed when the validator is missing.
+spirv-val = []
+
+# `tests/dispatch.rs` acquires a live Vulkan compute device and fails loudly
+# when there is none, which is right on a runner that has one and turns every
+# hosted CPU leg red on a runner that does not. `gpu-parity.yml` turns this on
+# for the machine with the device.
+device-tests = []
 
 [dependencies]
 vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
-vyre-spec = { workspace = true }
 vyre-lower = { workspace = true }
 vyre-emit-spirv = { workspace = true }
-inventory.workspace = true
 ash.workspace = true
-smallvec = { workspace = true }
 
 [dev-dependencies]
+vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # integration tests/benches assert against these crates' public APIs
-vyre-reference = { path = "../vyre-reference" }
+vyre-reference = { workspace = true }
 tempfile.workspace = true
+vyre-test-support = { workspace = true, features = ["ir-fixtures", "driver-artifact-contracts"] }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"
+
+[[test]]
+name = "all_tests_device_tests"
+path = "tests/all_tests_device_tests.rs"
+required-features = ["device-tests"]
+
+[[test]]
+name = "all_tests_spirv_val"
+path = "tests/all_tests_spirv_val.rs"
+required-features = ["spirv-val"]

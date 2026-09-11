@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A TOML equivalence rule file declares schema 2 and names the law family that authorizes each pair, and an unregistered law name is rejected at load."

@@ -48,7 +48,7 @@ mod tests {
         assert_eq!(canonical_f32_zero(-1.0).to_bits(), (-1.0f32).to_bits());
     }
 
-    // CRITIQUE_FIX_REVIEW_2026-04-23 Finding #11 regressions.
+    // Regression pins.
 
     #[test]
     fn f64_negative_zero_canonicalises_to_positive_zero() {

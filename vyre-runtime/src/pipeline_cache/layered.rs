@@ -148,16 +148,17 @@ impl PipelineCacheStore for LayeredPipelineCache {
         self.layers
             .iter()
             .fold(PipelineCacheMetrics::default(), |acc, layer| {
-                acc.checked_add(layer.metrics())
+                acc.saturating_add(layer.metrics())
             })
     }
 }
 
+// Inline: covers `metrics`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_helpers::tiny_artifact;
     use crate::pipeline_cache::InMemoryPipelineCache;
+    use vyre_test_support::artifact_fixtures::tiny_artifact;
 
     #[test]
     fn layered_cache_prefers_first_hit() {

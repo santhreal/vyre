@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The decode-scan fusion pass takes its workgroup promotion budget from the caller's capability record instead of a fixed constant. `run`, `count_opportunities` and `candidate_handoffs` take an `AdapterCaps`, and `DecodeScanFuse::transform_for_adapter` promotes against a named target while `DecodeScanFuse::transform` keeps the conservative profile, so the default path is byte-identical. Previously every target was capped at the lowest reported shared-memory figure, which refused a handoff a reported budget allows."

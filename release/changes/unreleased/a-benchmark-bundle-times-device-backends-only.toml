@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The Mac benchmark bundle no longer carries a `cpu-ref` backend report or a `cpu-ref-vs-metal` comparison. A bundle records one timed report per backend and one comparison per pair, so listing the host evaluator measured interpretation against a device and reported the ratio as a benchmark result. The bundle now requires four artifacts: a `wgpu` report, a `metal` report, and the JSON and text sides of the `wgpu-vs-metal` comparison."

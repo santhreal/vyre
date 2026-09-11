@@ -9,7 +9,7 @@ use vyre_driver::BackendError;
 use vyre_lower::TRAP_SIDECAR_WORDS;
 
 use crate::numeric::WGPU_NUMERIC;
-use crate::pipeline::binding::{usage_for_binding, validate_handle};
+use crate::pipeline::binding::{consumes_host_input, usage_for_binding, validate_handle};
 use crate::pipeline::{BufferBindingInfo, WgpuPipeline};
 
 pub(crate) struct ResolvedPersistentResources {
@@ -163,7 +163,7 @@ impl WgpuPipeline {
                 let handle = self
                     .persistent_pool
                     .acquire(byte_len_u64, usage_for_binding(info)?)?;
-                if !info.is_output || info.preserve_input_contents {
+                if consumes_host_input(info) {
                     crate::buffer::write_padded(
                         queue,
                         handle.buffer(),

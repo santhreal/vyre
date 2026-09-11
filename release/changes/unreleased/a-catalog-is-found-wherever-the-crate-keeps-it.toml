@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The registry-link ownership rule looked for src/operation_catalog.rs at the crate root only. vyre-libs keeps its catalog in src/plumbing/registration/, so the rule read that crate as owning no operations and disagreed with the counted sources. The module is now found at any depth, as a file or a directory, so relocating a catalog cannot drop its crate from the ownership set in silence."

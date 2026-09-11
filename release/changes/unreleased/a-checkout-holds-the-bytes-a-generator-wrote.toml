@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The tree declares LF line endings, so a checkout on any platform holds the bytes the artifact generators write and a recorded artifact still parses its provenance head."

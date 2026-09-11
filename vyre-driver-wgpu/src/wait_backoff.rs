@@ -74,6 +74,7 @@ fn checked_park_duration(min_park: Duration, multiplier: u32, max_park: Duration
     }
 }
 
+// Inline: covers `AdaptiveWaitBackoff`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

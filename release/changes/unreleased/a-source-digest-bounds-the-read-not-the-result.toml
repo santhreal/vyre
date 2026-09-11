@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The source-tree digest read each file whole and compared the running total with its 64 MiB cap afterwards, so the cap bounded the answer and not the read. A source path naming a stream with no end was read until memory ran out and the build hung instead of refusing. The read now takes one byte more than the remaining budget allows, so an endless input crosses the cap and the walk reports the file that crossed it."

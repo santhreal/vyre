@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Optimizer passes that become ready together are ordered by the IR level their rewrite contract declares, so a schedule-level rewrite no longer runs before the logical rewrites whose preconditions assume no physical constructs."

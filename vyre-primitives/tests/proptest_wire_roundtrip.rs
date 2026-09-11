@@ -21,8 +21,8 @@ use proptest::prelude::*;
 use vyre_primitives::wire::{
     append_u32_slice_le_bytes, decode_i32_le_bytes_all, decode_u16_le_bytes_all,
     decode_u64_le_bytes_all, pack_bytes_as_u32_slice_min_words, pack_f32_slice, pack_i32_slice,
-    pack_u16_slice, pack_u32_slice, pack_u32_slice_into, pack_u64_slice, unpack_f32_slice,
-    unpack_u32_slice_into,
+    pack_u16_slice_into, pack_u32_slice, pack_u32_slice_into, pack_u64_slice_into,
+    unpack_f32_slice, unpack_u32_slice_into,
 };
 
 proptest! {
@@ -93,17 +93,20 @@ proptest! {
 
     #[test]
     fn pack_u64_round_trip(values in proptest::collection::vec(any::<u64>(), 0..256)) {
-        let bytes = pack_u64_slice(&values);
+        let mut bytes = Vec::new();
+        pack_u64_slice_into(&values, &mut bytes);
         let decoded = decode_u64_le_bytes_all(&bytes);
         prop_assert_eq!(decoded, values);
     }
 
     #[test]
     fn pack_u16_round_trip(values in proptest::collection::vec(any::<u16>(), 0..512)) {
-        let bytes = pack_u16_slice(&values);
+        let mut bytes = Vec::new();
+        pack_u16_slice_into(&values, &mut bytes);
         let decoded = decode_u16_le_bytes_all(&bytes);
         prop_assert_eq!(decoded, values);
     }
+
 
     #[test]
     fn pack_i32_round_trip(values in proptest::collection::vec(any::<i32>(), 0..512)) {

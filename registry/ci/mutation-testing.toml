@@ -1,0 +1,7 @@
+lane = "mutation-testing"
+workflow = ".github/workflows-paused/mutation-testing.yml"
+state = "unprotected"
+file = "deleted"
+reason = "the four-hour mutation budget it needed was never validated against the runner time limit"
+unprotected_class = "mutation coverage of the conformance verifier, its algebra and the bitset primitives"
+steps = []

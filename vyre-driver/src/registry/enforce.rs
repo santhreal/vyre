@@ -13,7 +13,7 @@
 
 use vyre_foundation::ir::Program;
 
-pub(crate) mod private {
+pub(crate) mod sealed {
     pub trait Sealed {}
 }
 
@@ -33,7 +33,7 @@ pub enum EnforceVerdict {
         /// Stable identifier for the gate that produced the veto.
         policy: &'static str,
         /// Human-readable reason; the prose MUST start with `Fix:` so the
-        /// `check_expect_has_fix.sh` gate accepts it.
+        /// `lint-expect-fix` gate accepts it.
         detail: String,
     },
 }
@@ -41,7 +41,7 @@ pub enum EnforceVerdict {
 /// Frozen contract: a conformance gate that inspects a `Program` and returns
 /// a structured verdict. Implementations are composed into a pipeline via
 /// [`Chain`]; the full gate returns `Allow` only when every stage allows.
-pub trait EnforceGate: private::Sealed + Send + Sync {
+pub trait EnforceGate: sealed::Sealed + Send + Sync {
     /// Name of this gate  -  appears in verdicts and logs.
     fn name(&self) -> &'static str;
 
@@ -55,7 +55,7 @@ pub struct Chain<A, B> {
     second: B,
 }
 
-impl<A: EnforceGate, B: EnforceGate> private::Sealed for Chain<A, B> {}
+impl<A: EnforceGate, B: EnforceGate> sealed::Sealed for Chain<A, B> {}
 
 impl<A: EnforceGate, B: EnforceGate> Chain<A, B> {
     /// Pair two gates  -  `self` runs first, `other` runs only on Allow.

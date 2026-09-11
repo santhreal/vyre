@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Artifact decode refuses a resource and entry mapping whose positional and named bindings disagree, whose slot projection is not dense, or which leaves a node without exactly one executable entry."

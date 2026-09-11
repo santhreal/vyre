@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The workspace-wrapper hygiene rule reads a diagnostic that names a cargo command as a sentence rather than an invocation, so a gate spawning through the one cargo resolver is no longer release-blocking, while a spawn naming its program and a message printed for a reader to type stay findings."

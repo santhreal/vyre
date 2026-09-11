@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`EmittedTargetModule` and `EmittedDialectModule` no longer carry workgroup, grid, or dynamic shared byte fields, so an emitter reports target bytes and the artifact record states the launch."

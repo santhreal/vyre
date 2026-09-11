@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`scripts/check_layering.sh` discarded `cargo tree` stderr, so a cargo that could not resolve the workspace printed a green result and exited 0. It now derives every workspace member, requires a `docs/CRATE_OWNERSHIP.toml` decision for each, and holds every transitive internal edge to the declared closure."

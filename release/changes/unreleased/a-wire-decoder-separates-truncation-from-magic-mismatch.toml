@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Wire-format decoding reports a blob too short to hold the magic as truncation and a full-length blob carrying other bytes as a magic mismatch, instead of answering both with one invalid-header message that named neither repair."

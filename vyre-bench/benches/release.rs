@@ -27,8 +27,10 @@ fn bitset_and_cpu_ref_scale(criterion: &mut Criterion) {
             &(lhs.clone(), rhs.clone()),
             |bencher, (lhs, rhs)| {
                 bencher.iter(|| {
-                    let output =
-                        vyre_primitives::bitset::and::cpu_ref(black_box(lhs), black_box(rhs));
+                    let output = vyre_reference::composition_witness::bitset_and_witness(
+                        black_box(lhs),
+                        black_box(rhs),
+                    );
                     black_box(output);
                 });
             },
@@ -50,7 +52,7 @@ fn bitset_and_cpu_ref_into_scale(criterion: &mut Criterion) {
             |bencher, (lhs, rhs)| {
                 bencher.iter(|| {
                     output.clear();
-                    vyre_primitives::bitset::and::cpu_ref_into(
+                    vyre_reference::composition_witness::bitset_and_witness_into(
                         black_box(lhs),
                         black_box(rhs),
                         black_box(&mut output),
@@ -114,7 +116,7 @@ fn dominator_tree_cpu_oracle_scale(criterion: &mut Criterion) {
                 &(nodes, edges),
                 |bencher, (nodes, edges)| {
                     bencher.iter(|| {
-                        let output = vyre_primitives::graph::dominator_tree::cpu_ref(
+                        let output = vyre_reference::composition_witness::dominator_tree_witness(
                             black_box(*nodes),
                             0,
                             black_box(edges),
@@ -139,14 +141,13 @@ fn dominator_tree_program_build_scale(criterion: &mut Criterion) {
             &nodes,
             |bencher, nodes| {
                 bencher.iter(|| {
-                    let program =
-                        vyre_primitives::graph::dominator_tree::try_dominator_tree_program(
-                            black_box(*nodes),
-                            black_box(edge_count),
-                            black_box(edge_count),
-                            "idom",
-                        )
-                        .expect("Fix: benchmark dominator-tree sizes must stay buildable.");
+                    let program = vyre_libs::graph::dominator_tree::try_dominator_tree_program(
+                        black_box(*nodes),
+                        black_box(edge_count),
+                        black_box(edge_count),
+                        "idom",
+                    )
+                    .expect("Fix: benchmark dominator-tree sizes must stay buildable.");
                     black_box(program);
                 });
             },
@@ -204,6 +205,9 @@ fn compiler_grade_release_program_build_scale(criterion: &mut Criterion) {
     group.finish();
 }
 
+// The ingest case reads Linux zero-copy telemetry, so its module is declared for
+// that host only and this projection follows it.
+#[cfg(target_os = "linux")]
 fn nvme_gpu_ingest_telemetry_projection_scale(criterion: &mut Criterion) {
     let mut group = criterion.benchmark_group("runtime_io/nvme_gpu_ingest_telemetry");
     for spec in vyre_bench::cases::nvme_gpu_ingest::nvme_gpu_ingest_specs() {
@@ -238,6 +242,7 @@ fn nvme_gpu_ingest_telemetry_projection_scale(criterion: &mut Criterion) {
     group.finish();
 }
 
+#[cfg(target_os = "linux")]
 criterion_group!(
     release,
     registry_inventory_collection,
@@ -247,5 +252,15 @@ criterion_group!(
     dominator_tree_program_build_scale,
     compiler_grade_release_program_build_scale,
     nvme_gpu_ingest_telemetry_projection_scale
+);
+#[cfg(not(target_os = "linux"))]
+criterion_group!(
+    release,
+    registry_inventory_collection,
+    bitset_and_cpu_ref_scale,
+    bitset_and_cpu_ref_into_scale,
+    dominator_tree_cpu_oracle_scale,
+    dominator_tree_program_build_scale,
+    compiler_grade_release_program_build_scale
 );
 criterion_main!(release);

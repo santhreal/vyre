@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The AES-CTR benchmark case vendors openssl on every host instead of resolving whichever build the host installed, so two recorded results compare the same library. Declaring the same dependency in two target-conditional tables also left windows-msvc on the system probe rather than the vendored feature, and that probe has no answer there: the harness failed to build before taking a measurement."

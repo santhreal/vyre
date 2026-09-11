@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Operation documentation now has one generated JSON authority covering every linked library, primitive, intrinsic, and runtime dialect operation. Schema-derived inventories and subsystem catalogs expose exact tiers, categories, program or dialect signatures, Cargo feature routes, oracles, backend support evidence, algebraic laws, composition chains, and counts."

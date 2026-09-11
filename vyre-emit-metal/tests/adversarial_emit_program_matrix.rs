@@ -5,9 +5,7 @@
 //! emitter error with fix text.
 
 use vyre_emit_metal::{EmitError, METAL_ARTIFACT_SCHEMA};
-use vyre_lower::emit_adversarial_corpus::{
-    self, EmitAdversarialBackend, EmitAdversarialCase, EmitAdversarialFamily,
-};
+use vyre_lower::emit_adversarial_corpus::{self, EmitAdversarialCase, EmitAdversarialFamily};
 
 fn assert_metal_artifact_structure(
     case: &EmitAdversarialCase,
@@ -88,8 +86,14 @@ fn assert_metal_artifact_structure(
 
 fn assert_structured_metal_error(case: &EmitAdversarialCase, error: EmitError) {
     match error {
-        EmitError::NagaEmit(message)
-        | EmitError::NagaValidation(message)
+        EmitError::NagaEmit(err) => {
+            assert!(
+                !err.to_string().is_empty(),
+                "Fix: `{}` Metal rejection must carry diagnostic text.",
+                case.id
+            );
+        }
+        EmitError::NagaValidation(message)
         | EmitError::MslWriter(message)
         | EmitError::DescriptorHash(message)
         | EmitError::ArtifactSerialization(message)
@@ -126,11 +130,6 @@ fn assert_structured_metal_error(case: &EmitAdversarialCase, error: EmitError) {
 
 #[test]
 fn hostile_success_corpus_emits_structured_metal_artifacts() {
-    assert!(
-        emit_adversarial_corpus::required_backends().contains(&EmitAdversarialBackend::Metal),
-        "Fix: shared emit adversarial corpus must register Metal as a required consumer."
-    );
-
     for case in emit_adversarial_corpus::success_cases() {
         let artifact = vyre_emit_metal::emit_artifact(&case.descriptor).unwrap_or_else(|err| {
             panic!(

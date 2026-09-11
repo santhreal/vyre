@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The host-oracle gate walked parsed sources in two places: the gate over the tree, and a copy in its fixtures. A rule could pass its fixture and never fire on the tree, because the copy is what the fixture proved and nothing proved the copy still matched. Both now call one function, so a fixture exercises the walk the gate runs."

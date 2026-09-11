@@ -1,0 +1,23 @@
+# A consumer package is deliberately outside the compiler workspace, so cargo
+# must stop looking for one here. Without this table it walks up past the
+# checkout and adopts whatever workspace contains the directory the tree was
+# placed in, which fails the build in any nested checkout.
+[workspace]
+
+[package]
+name = "vyre-graphics-app"
+version = "0.1.0"
+edition = "2021"
+description = "Independent downstream interactive graphical application consumer using neutral Vyre IR compositions"
+publish = false
+
+[dependencies]
+vyre = { path = "../../vyre", default-features = false, features = ["wgpu"] }
+vyre-libs = { path = "../../vyre-libs", default-features = false, features = ["visual", "interactive-graphics", "math-scan", "reduce", "graph"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+vyre-driver-reference = { path = "../../vyre-driver-reference" }
+vyre-reference = { path = "../../vyre-reference" }
+vyre-primitives = { path = "../../vyre-primitives" }

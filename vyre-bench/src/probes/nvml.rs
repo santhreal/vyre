@@ -129,57 +129,48 @@ fn thermal_or_clock_unstable(counters: &[GpuCounter]) -> bool {
         .into_iter()
         .chain(counter_value(counters, "utilization_mem_pct"))
         .any(|utilization| utilization >= ACTIVE_UTILIZATION_PCT);
-    let mem_clock_low = under_active_load
-        && match (
-            counter_value(counters, "clock_mem_current_mhz"),
-            counter_value(counters, "clock_mem_max_mhz"),
-        ) {
-            (Some(current), Some(max)) if max > 0 => current.saturating_mul(100) < max * 90,
-            _ => false,
-        };
-    throttled || hot || mem_clock_low
+    let mem_clock_low = under_active_load && clock_below_ratio(counters, "mem", 90);
+    let graphics_clock_low = under_active_load && clock_below_ratio(counters, "graphics", 90);
+    throttled || hot || mem_clock_low || graphics_clock_low
+}
+
+/// Whether a clock domain runs below `percent` of the maximum it reports.
+///
+/// A domain missing either reading answers false: an absent counter is not
+/// evidence of a depressed clock.
+fn clock_below_ratio(counters: &[GpuCounter], domain: &str, percent: u64) -> bool {
+    match (
+        counter_value(counters, &format!("clock_{domain}_current_mhz")),
+        counter_value(counters, &format!("clock_{domain}_max_mhz")),
+    ) {
+        (Some(current), Some(max)) if max > 0 => current.saturating_mul(100) < max * percent,
+        _ => false,
+    }
 }
 
 pub fn query_peak_memory_bandwidth(adapter_name: &str) -> anyhow::Result<f64> {
-    if adapter_name.contains("RTX 5090") {
-        return Ok(1792.0);
-    }
-    if adapter_name.contains("RTX 4090") {
-        return Ok(1008.0);
-    }
-    if adapter_name.contains("A100") {
-        return Ok(2039.0);
-    }
-    if adapter_name.contains("H100") {
-        return Ok(3350.0);
-    }
-    if adapter_name.contains("MI300X") {
-        return Ok(5300.0);
-    }
-
-    let output = std::process::Command::new("nvidia-smi")
-        .args([
-            "--query-gpu=clocks.max.memory",
-            "--format=csv,noheader,nounits",
-        ])
-        .output()?;
-
-    let stdout = String::from_utf8(output.stdout)?;
-    let line = stdout
-        .lines()
-        .next()
-        .ok_or_else(|| anyhow::anyhow!("No NVML output"))?;
-    let clock_mhz = line.trim().parse::<f64>()?;
-
-    let bus_bits = if adapter_name.contains("RTX 4080") || adapter_name.contains("RTX 5080") {
-        256.0
-    } else {
-        384.0
+    let model = adapter_name
+        .trim()
+        .strip_prefix("NVIDIA ")
+        .unwrap_or(adapter_name.trim());
+    let bandwidth_gb_s = match model {
+        "GeForce RTX 5090" => 1792.0,
+        "GeForce RTX 5080" => 1024.0,
+        "GeForce RTX 5070 Ti" => 896.0,
+        "GeForce RTX 5070" => 672.0,
+        "GeForce RTX 4090" => 1008.0,
+        "GeForce RTX 4080" => 717.0,
+        "GeForce RTX 3090" => 936.0,
+        "A100" => 2039.0,
+        "H100 80GB HBM3" => 3350.0,
+        "H200" => 4800.0,
+        "B100" | "B200" => 8000.0,
+        "AMD Instinct MI300X" | "MI300X" => 5300.0,
+        _ => anyhow::bail!(
+            "unknown GPU model `{adapter_name}`: peak memory bandwidth requires an exact telemetry-table entry"
+        ),
     };
-
-    // clock_mhz is data-rate for GDDR in NVML
-    // bandwidth GB/s = clock_mhz * bus_bits / 8 / 1000
-    Ok(clock_mhz * bus_bits / 8.0 / 1000.0)
+    Ok(bandwidth_gb_s)
 }
 
 #[cfg(test)]
@@ -261,6 +252,86 @@ mod tests {
         assert_eq!(counter_value(&counters, "thermal_unstable"), Some(1));
     }
 
+    /// WHY: the probe collects two clock domains and judged one. On a device
+    /// whose memory clock pins at maximum while the SM clock ramps from idle,
+    /// a run measured at a tenth of the graphics clock was recorded as stable
+    /// and its speedup judged against a release floor. Every domain the parser
+    /// records is swept here, so a third domain added to the query without a
+    /// rule turns this red.
+    ///
+    /// Does not catch a clock that is depressed for the whole run and reported
+    /// at maximum in the single post-run snapshot the probe takes.
+    #[test]
+    fn a_depressed_clock_in_any_collected_domain_is_unstable() {
+        let domains: Vec<String> = parse_nvml_telemetry_row(
+            "NVIDIA GeForce RTX 5090, 14001, 14001, 2500, 2400, P0, 0x0, 420.0, 600.0, 72, 32768, 8192, 24576, 97, 88",
+        )
+        .expect("Fix: valid loaded telemetry must parse")
+        .iter()
+        .filter_map(|counter| {
+            counter
+                .name
+                .strip_prefix("clock_")
+                .and_then(|rest| rest.strip_suffix("_current_mhz"))
+                .map(str::to_string)
+        })
+        .collect();
+        assert_eq!(
+            domains,
+            vec!["mem".to_string(), "graphics".to_string()],
+            "Fix: give every collected clock domain a stability rule"
+        );
+
+        for domain in &domains {
+            let counters = vec![
+                GpuCounter {
+                    name: format!("clock_{domain}_current_mhz"),
+                    value: 100,
+                },
+                GpuCounter {
+                    name: format!("clock_{domain}_max_mhz"),
+                    value: 1_000,
+                },
+                GpuCounter {
+                    name: "utilization_gpu_pct".to_string(),
+                    value: 97,
+                },
+            ];
+            assert!(
+                thermal_or_clock_unstable(&counters),
+                "Fix: a {domain} clock at a tenth of its maximum under load must invalidate the sample"
+            );
+        }
+    }
+
+    /// A depressed graphics clock while the device is idle stays stable.
+    ///
+    /// The post-run snapshot of a short kernel reports idle clocks, and that is
+    /// the normal state rather than a throttled measurement.
+    #[test]
+    fn low_graphics_clock_while_idle_is_stable() {
+        let counters = parse_nvml_telemetry_row(
+            "NVIDIA GeForce RTX 5090, 14001, 14001, 2500, 210, P8, 0x1, 30.0, 600.0, 39, 32768, 1024, 31744, 4, 8",
+        )
+        .expect("Fix: valid idle telemetry must parse");
+
+        assert_eq!(counter_value(&counters, "thermal_unstable"), Some(0));
+    }
+
+    /// A graphics clock at speed under load stays stable.
+    ///
+    /// The negative twin of the sweep above: the new rule must not report every
+    /// loaded sample as throttled.
+    #[test]
+    fn graphics_clock_at_speed_under_load_is_stable() {
+        let counters = parse_nvml_telemetry_row(
+            "NVIDIA GeForce RTX 5090, 14001, 14001, 2500, 2400, P0, 0x0, 420.0, 600.0, 72, 32768, 8192, 24576, 97, 88",
+        )
+        .expect("Fix: valid loaded telemetry must parse");
+
+        assert_eq!(counter_value(&counters, "thermal_unstable"), Some(0));
+    }
+
     /// Thermal limits must invalidate evidence even when utilization has already fallen.
     ///
     /// The temperature threshold is independent of the post-run utilization snapshot.
@@ -272,5 +343,50 @@ mod tests {
         .expect("Fix: valid hot telemetry must parse");
 
         assert_eq!(counter_value(&counters, "thermal_unstable"), Some(1));
+    }
+
+    #[test]
+    fn known_model_peak_bandwidth_lookup() {
+        assert_eq!(
+            query_peak_memory_bandwidth("NVIDIA GeForce RTX 5090").unwrap(),
+            1792.0
+        );
+        assert_eq!(
+            query_peak_memory_bandwidth("NVIDIA GeForce RTX 4090").unwrap(),
+            1008.0
+        );
+        assert_eq!(
+            query_peak_memory_bandwidth("NVIDIA GeForce RTX 5070 Ti").unwrap(),
+            896.0
+        );
+        assert_eq!(
+            query_peak_memory_bandwidth("NVIDIA GeForce RTX 5070").unwrap(),
+            672.0
+        );
+        assert_eq!(
+            query_peak_memory_bandwidth("NVIDIA H100 80GB HBM3").unwrap(),
+            3350.0
+        );
+    }
+
+    /// A known model name embedded in a different SKU must not borrow its bandwidth.
+    ///
+    /// Memory width and data rate change across suffix variants, so approximate
+    /// matching can certify impossible utilization for unrecorded hardware.
+    #[test]
+    fn unknown_model_peak_bandwidth_fails_cleanly() {
+        for model in [
+            "Unknown Future Accelerator 9999",
+            "NVIDIA GeForce RTX 4080 SUPER",
+            "NVIDIA GeForce RTX 3090 Ti",
+            "NVIDIA H100 NVL",
+        ] {
+            let error = query_peak_memory_bandwidth(model)
+                .expect_err("unregistered model variants must fail closed");
+            assert!(
+                error.to_string().contains("exact telemetry-table entry"),
+                "unexpected error for {model}: {error}"
+            );
+        }
     }
 }

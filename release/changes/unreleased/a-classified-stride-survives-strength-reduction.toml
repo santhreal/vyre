@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The bank-conflict classifier states a stride for a constant left shift, so an access that strength reduction already rewrote out of its multiply form is classified rather than left unknown."

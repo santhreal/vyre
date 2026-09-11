@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The seven `foundation.*` micro benchmark cases are rows on one owner, `vyre-bench/src/cases/micro.rs`, which states the program, fixture, reference and work accounting each case differs in and nothing else. `gpu_case.rs` is absorbed into it, and its metric sweep now covers both work-accounting arms across every lane rather than one."

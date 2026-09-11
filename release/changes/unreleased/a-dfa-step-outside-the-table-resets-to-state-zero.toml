@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The cooperative DFA scan resets to state zero and emits no match for a symbol at or past the alphabet or a state at or past the state count, matching its sequential reference, instead of reading the transition table and accept mask past their declared extents. `cooperative_dfa_scan_body_with_store` takes the state count as a parameter."

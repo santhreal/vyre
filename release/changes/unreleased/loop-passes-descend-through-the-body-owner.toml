@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Loop guard elision, range folding, software pipelining and unrolling rewrite every nested body the IR node declares, taking the slots from the shared owner instead of a per-pass list."

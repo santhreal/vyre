@@ -1,0 +1,53 @@
+impl core::error::Error for vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierTypedPlanError
+impl core::fmt::Display for vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierTypedPlanError
+pub enum vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierDomain
+pub enum vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierTypedPlanError
+pub fn vyre_libs_scheduling::link_anchor()
+pub fn vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierTypedPlanError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_scheduling::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, candidates: &[u32], h: u32, w: u32, k: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_scheduling::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via_into(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, candidates: &[u32], h: u32, w: u32, k: u32, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_scheduling::scheduling::planar_rewrite_pass_scheduler::schedule_disjoint_rewrites_via_with_scratch_into(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, candidates: &[u32], h: u32, w: u32, k: u32, scratch: &mut vyre_libs_scheduling::scheduling::planar_rewrite_pass_scheduler::PlanarRewriteScheduleGpuScratch, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_scheduling::scheduling::spectral_schedule::fusion_scores_fixed_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, laplacian_fixed: &[u32], signal_fixed: &[u32], coeffs_fixed: &[u32], n: u32, k_steps: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_scheduling::scheduling::spectral_schedule::fusion_scores_fixed_via_into(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, laplacian_fixed: &[u32], signal_fixed: &[u32], coeffs_fixed: &[u32], n: u32, k_steps: u32, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_scheduling::scheduling::spectral_schedule::fusion_scores_fixed_via_with_scratch_into(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, laplacian_fixed: &[u32], signal_fixed: &[u32], coeffs_fixed: &[u32], n: u32, k_steps: u32, scratch: &mut vyre_libs_scheduling::scheduling::spectral_schedule::SpectralScheduleGpuScratch, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_scheduling::scheduling::spectral_schedule::shape_spectrum_fixed_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, eigenvalues_fixed: &[u32], mp_edge_fixed: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_scheduling::scheduling::spectral_schedule::shape_spectrum_fixed_via_into(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, eigenvalues_fixed: &[u32], mp_edge_fixed: u32, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_scheduling::scheduling::spectral_schedule::shape_spectrum_fixed_via_with_scratch_into(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, eigenvalues_fixed: &[u32], mp_edge_fixed: u32, scratch: &mut vyre_libs_scheduling::scheduling::spectral_schedule::SpectralScheduleGpuScratch, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_scheduling::scheduling::submodular_cache_eviction::select_retention_set_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, gains: &mut [u32], n: u32, k: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_scheduling::scheduling::submodular_cache_eviction::select_retention_set_via_into(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, gains: &mut [u32], n: u32, k: u32, picked: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_scheduling::scheduling::submodular_cache_eviction::select_retention_set_via_with_scratch_into(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, gains: &mut [u32], n: u32, k: u32, scratch: &mut vyre_libs_scheduling::scheduling::submodular_cache_eviction::SubmodularEvictionGpuScratch, picked: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub mod vyre_libs_scheduling
+pub mod vyre_libs_scheduling::scheduling
+pub mod vyre_libs_scheduling::scheduling::frontier_typed_ir
+pub mod vyre_libs_scheduling::scheduling::planar_rewrite_pass_scheduler
+pub mod vyre_libs_scheduling::scheduling::spectral_schedule
+pub mod vyre_libs_scheduling::scheduling::submodular_cache_eviction
+pub struct vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierDependency
+pub struct vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierNode
+pub struct vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierTypedPlan
+pub struct vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierWave
+pub struct vyre_libs_scheduling::scheduling::planar_rewrite_pass_scheduler::PlanarRewriteScheduleGpuScratch
+pub struct vyre_libs_scheduling::scheduling::spectral_schedule::SpectralScheduleGpuScratch
+pub struct vyre_libs_scheduling::scheduling::submodular_cache_eviction::SubmodularEvictionGpuScratch
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierDependency::after: u32
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierDependency::before: u32
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierDomain::Dataflow
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierDomain::Diagnostic
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierDomain::Parser
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierDomain::Semantic
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierNode::active_items: u32
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierNode::domain: vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierDomain
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierNode::id: u32
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierTypedPlan::waves: alloc::vec::Vec<vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierWave>
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierTypedPlanError::Cycle
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierTypedPlanError::Cycle::unscheduled_nodes: usize
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierTypedPlanError::DuplicateNode
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierTypedPlanError::DuplicateNode::id: u32
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierTypedPlanError::PlanTooLarge
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierTypedPlanError::PlanTooLarge::field: &'static str
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierTypedPlanError::UnknownDependencyNode
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierTypedPlanError::UnknownDependencyNode::id: u32
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierWave::active_items: u64
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierWave::domains: alloc::vec::Vec<vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierDomain>
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierWave::index: u32
+pub vyre_libs_scheduling::scheduling::frontier_typed_ir::FrontierWave::node_ids: alloc::vec::Vec<u32>

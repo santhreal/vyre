@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre_lower::analyses::CANDIDATE_MITIGATIONS` is the single definition of the bank-conflict strategies the selector ranks, and the PTX emitter's bijection proof reads that set, so a strategy added to it is proven one-to-one inside the extent it declares before it can reach an emitted kernel."

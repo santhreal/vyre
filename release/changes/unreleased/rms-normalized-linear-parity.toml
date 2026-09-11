@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "RMS-normalized linear contractions now scale each input before accumulation, add bias after the contraction, and use local invocation identity for every workgroup's shared inverse-RMS initialization. Multi-workgroup output shapes and adversarial magnitudes now match the reference witness within the registered two-ULP contract."

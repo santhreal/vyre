@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A pass analysis states its condition through PassAnalysis::run_if instead of branching around two constants, removing sixty duplicated lines from vyre-foundation."

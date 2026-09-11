@@ -1,0 +1,2 @@
+category = "Removed"
+text = "Backend registration is now consumed from `vyre-driver`, the `ReferenceKind` alias is gone in favor of `vyre-spec::CpuFn`, and `gpu_int_literal_scan()` no longer accepts an ignored source-length parameter."

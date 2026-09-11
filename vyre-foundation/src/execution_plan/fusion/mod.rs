@@ -6,13 +6,12 @@
 //! kernel body.  It is **not** the expression-level fusion pass
 //! (`optimizer::passes::fusion`)  -  that pass lives inside one Program.
 //!
-//! Audit-fix A31 split this module into:
+//! The module splits into:
 //!  - `mod.rs`: crate-level attribute + error types + module decls/re-exports
 //!  - `fuse.rs`: `fuse_programs` family + multi-program implementation
 //!  - `collectors.rs`: `collect_*_targets_*` walkers
 //!  - `divergence.rs`: divergence + invocation-gate analysis
-//!  - `helpers.rs`: misc small helpers
-//!  - `tests.rs`: full proptest + unit-test suite
+//!  - `tests/`: full proptest + unit-test suite
 //!
 //! # Safety invariants
 //!
@@ -20,21 +19,43 @@
 //!   *same* physical GPU buffer. The caller must ensure this is intentional.
 //! * Access-mode upgrades are applied automatically (`ReadOnly` -> `ReadWrite`)
 //!   when any arm needs to write.
-//! * A `Node::Barrier` is inserted between arms when a later arm writes a
-//!   buffer that an earlier arm reads, preventing write-after-read corruption.
+//! * A `Node::LogicalBarrier` is inserted between arms when a later arm writes
+//!   a buffer that an earlier arm reads, preventing write-after-read corruption.
 //! * Programs marked `non_composable_with_self` cannot be fused with another
 //!   copy of the same `entry_op_id`.
 
 mod alpha_rename;
+mod candidate;
 mod collectors;
+mod dependence;
 mod divergence;
 mod fuse;
-mod helpers;
+mod legality;
+mod lowering;
+mod region;
+mod rename;
+mod tile;
 
 #[cfg(test)]
+#[path = "../../../tests/internal/execution_plan/fusion/mod.rs"]
 mod tests;
 
-pub use fuse::{fuse_programs, fuse_programs_vec, merge_programs_shared};
+pub use candidate::{FusionCandidate, FusionCandidateKind, FusionCandidateSet};
+pub use dependence::{
+    classify_program_handoff, earliest_region_handoff, HandoffLocation, RegionDependence,
+    RegionDependenceGraph,
+};
+pub use fuse::{
+    fuse_programs, fuse_programs_vec, merge_programs_shared, relies_on_single_invocation_workgroup,
+};
+pub use legality::{
+    analyze_program_fusion_legality, analyze_region_fusion_legality, FusionLegalityVerdict,
+    FusionRejectionReason,
+};
+pub use lowering::lower_fusion_candidate;
+pub use region::{IterationSpace, RegionFusionPlanner, RegionRelation};
+pub use rename::rename_buffer;
+pub use tile::{ScheduleTile, TilePipeliningPlan, TileResidency};
 
 /// Error returned when a fusion batch cannot be combined safely.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,6 +74,8 @@ pub enum FusionError {
     /// An arm whose correctness depends on its own workgroup geometry was
     /// asked to run under the widened fused geometry.
     WorkgroupGeometry(FusionWorkgroupGeometryError),
+    /// A buffer rename asked for by fusion could not be applied completely.
+    BufferRename(FusionBufferRenameError),
 }
 
 impl std::fmt::Display for FusionError {
@@ -62,6 +85,7 @@ impl std::fmt::Display for FusionError {
             FusionError::Aliasing(e) => write!(f, "{e}"),
             FusionError::OverDispatch(e) => write!(f, "{e}"),
             FusionError::WorkgroupGeometry(e) => write!(f, "{e}"),
+            FusionError::BufferRename(e) => write!(f, "{e}"),
         }
     }
 }
@@ -164,6 +188,27 @@ impl std::fmt::Display for FusionAliasingError {
             f,
             "fusion aliasing on buffer `{}`: arm {} reads and arm {} writes without a barrier. Fix: {}",
             self.buffer_name, self.read_arm, self.write_arm, self.fix_hint
+        )
+    }
+}
+
+/// A buffer rename fusion asked for could not be applied completely.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FusionBufferRenameError {
+    /// Buffer name the rename was asked to retire.
+    pub from: String,
+    /// Buffer name the rename was asked to install.
+    pub to: String,
+    /// Actionable fix hint.
+    pub fix: &'static str,
+}
+
+impl std::fmt::Display for FusionBufferRenameError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "buffer rename `{}` to `{}` cannot be applied completely. Fix: {}",
+            self.from, self.to, self.fix
         )
     }
 }

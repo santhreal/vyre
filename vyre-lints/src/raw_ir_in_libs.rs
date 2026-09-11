@@ -5,7 +5,7 @@
 //! construct). Only explicitly test-gated items are allowed (`#[cfg(test)]`).
 
 use crate::allowlist::Allowlist;
-use crate::{Violation, ViolationKind};
+use crate::{scan, Violation, ViolationKind};
 use anyhow::{Context, Result};
 use proc_macro2::TokenTree;
 use std::collections::HashMap;
@@ -19,36 +19,12 @@ const FORBIDDEN_TYPES: &[&str] = &["Node", "Expr"];
 
 /// Scan a library source tree for disallowed direct IR construction.
 pub fn scan_tree(root: &Path, allow: &Allowlist) -> Result<Vec<Violation>> {
-    let mut all = Vec::new();
-    for entry in walkdir::WalkDir::new(root)
-        .into_iter()
-        .filter_map(|e| e.ok())
-    {
-        let path = entry.path();
-        if !path.is_file() {
-            continue;
-        }
-        if path.extension().and_then(|e| e.to_str()) != Some("rs") {
-            continue;
-        }
-        let workspace_rel = workspace_relative(path);
-        if allow.contains(&workspace_rel) {
-            continue;
-        }
-        all.extend(scan_file(path, &workspace_rel)?);
-    }
-    Ok(all)
-}
-
-fn workspace_relative(path: &Path) -> String {
-    // Drop everything up to and including "vyre-libs/" so the path is
-    // workspace-relative regardless of CWD.
-    let s = path.to_string_lossy();
-    if let Some(idx) = s.find("vyre-libs/") {
-        s[idx..].to_string()
-    } else {
-        path.to_string_lossy().to_string()
-    }
+    scan::collect_violations(
+        root,
+        scan::RUST_SOURCE,
+        |workspace_rel| !allow.contains(workspace_rel),
+        scan_file,
+    )
 }
 
 fn scan_file(path: &Path, workspace_rel: &str) -> Result<Vec<Violation>> {

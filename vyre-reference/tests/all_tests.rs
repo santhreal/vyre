@@ -1,0 +1,260 @@
+//! One binary for every default-feature integration test in this crate.
+//!
+//! Cargo links one executable per integration-test target. Each file below ran
+//! as its own target and now runs as a module of this one, which links one
+//! binary for the whole set. A test that cannot share a process stays its own
+//! target and states why in `xtask/test-harness-isolation.toml`.
+
+/// Shared fixture module from `tests/flat_expr_eval/mod.rs`.
+#[allow(missing_docs)]
+#[path = "flat_expr_eval/mod.rs"]
+pub mod flat_expr_eval;
+
+/// Shared fixture module from `tests/wire_words/mod.rs`.
+#[allow(missing_docs)]
+#[path = "wire_words/mod.rs"]
+pub mod wire_words;
+
+/// Integration tests from `tests/adversarial_empty.rs`.
+#[path = "adversarial_empty.rs"]
+pub mod adversarial_empty;
+
+/// Integration tests from `tests/adversarial_gaps.rs`.
+#[path = "adversarial_gaps.rs"]
+pub mod adversarial_gaps;
+
+/// Integration tests from `tests/assign_semantics.rs`.
+#[path = "assign_semantics.rs"]
+pub mod assign_semantics;
+
+/// Integration tests from `tests/atomic_law_property_contracts.rs`.
+#[path = "atomic_law_property_contracts.rs"]
+pub mod atomic_law_property_contracts;
+
+/// Integration tests from `tests/atomic_oracle_contract.rs`.
+#[path = "atomic_oracle_contract.rs"]
+pub mod atomic_oracle_contract;
+
+/// Integration tests from `tests/atomic_property_contracts.rs`.
+#[path = "atomic_property_contracts.rs"]
+pub mod atomic_property_contracts;
+
+/// Integration tests from `tests/byte_prefix_property_contracts.rs`.
+#[path = "byte_prefix_property_contracts.rs"]
+pub mod byte_prefix_property_contracts;
+
+/// Integration tests from `tests/composition_witness_contracts.rs`.
+#[path = "composition_witness_contracts.rs"]
+pub mod composition_witness_contracts;
+
+/// Integration tests from `tests/composition_witness_geometry_contracts.rs`.
+#[path = "composition_witness_geometry_contracts.rs"]
+pub mod composition_witness_geometry_contracts;
+
+/// Integration tests from `tests/composition_witness_parsing_contracts.rs`.
+#[path = "composition_witness_parsing_contracts.rs"]
+pub mod composition_witness_parsing_contracts;
+
+/// Integration tests from `tests/composition_witness_reasoning_contracts.rs`.
+#[path = "composition_witness_reasoning_contracts.rs"]
+pub mod composition_witness_reasoning_contracts;
+
+/// Integration tests from `tests/composition_witness_scheduling_contracts.rs`.
+#[path = "composition_witness_scheduling_contracts.rs"]
+pub mod composition_witness_scheduling_contracts;
+
+/// Integration tests from `tests/core_contracts/mod.rs`.
+#[path = "core_contracts/mod.rs"]
+pub mod core_contracts;
+
+/// Integration tests from `tests/expr_adversarial_proptest.rs`.
+#[path = "expr_adversarial_proptest.rs"]
+pub mod expr_adversarial_proptest;
+
+/// Integration tests from `tests/f32_comparison_property_contracts.rs`.
+#[path = "f32_comparison_property_contracts.rs"]
+pub mod f32_comparison_property_contracts;
+
+/// Integration tests from `tests/fixed_width_value_property_contracts.rs`.
+#[path = "fixed_width_value_property_contracts.rs"]
+pub mod fixed_width_value_property_contracts;
+
+/// Integration tests from `tests/gap_transcendentals_parity.rs`.
+#[path = "gap_transcendentals_parity.rs"]
+pub mod gap_transcendentals_parity;
+
+/// Integration tests from `tests/grid_fence_oracle_contracts.rs`.
+#[path = "grid_fence_oracle_contracts.rs"]
+pub mod grid_fence_oracle_contracts;
+/// Integration tests from `tests/interleaving_race_freedom_contracts.rs`.
+#[path = "interleaving_race_freedom_contracts.rs"]
+pub mod interleaving_race_freedom_contracts;
+
+/// Integration tests from `tests/hashmap_async_and_indirect_contracts.rs`.
+#[path = "hashmap_async_and_indirect_contracts.rs"]
+pub mod hashmap_async_and_indirect_contracts;
+
+/// Integration tests from `tests/hashmap_buffer_size_contracts.rs`.
+#[path = "hashmap_buffer_size_contracts.rs"]
+pub mod hashmap_buffer_size_contracts;
+
+/// Integration tests from `tests/hashmap_invocation_size_contracts.rs`.
+#[path = "hashmap_invocation_size_contracts.rs"]
+pub mod hashmap_invocation_size_contracts;
+
+/// Integration tests from `tests/logical_execution_markers.rs`.
+#[path = "logical_execution_markers.rs"]
+pub mod logical_execution_markers;
+
+/// Integration tests from `tests/oracle_foundation_dependencies.rs`.
+#[path = "oracle_foundation_dependencies.rs"]
+pub mod oracle_foundation_dependencies;
+
+/// Integration tests from `tests/oracle_bounds.rs`.
+#[path = "oracle_bounds.rs"]
+pub mod oracle_bounds;
+
+/// Integration tests from `tests/oracle_is_not_a_production_route.rs`.
+#[path = "oracle_is_not_a_production_route.rs"]
+pub mod oracle_is_not_a_production_route;
+
+/// Integration tests from `tests/oracle_matches_are_exhaustive.rs`.
+#[path = "oracle_matches_are_exhaustive.rs"]
+pub mod oracle_matches_are_exhaustive;
+
+/// Integration tests from `tests/oracle_transform_independence.rs`.
+#[path = "oracle_transform_independence.rs"]
+pub mod oracle_transform_independence;
+
+/// Integration tests from `tests/oracle_witness_registry_is_derived.rs`.
+#[path = "oracle_witness_registry_is_derived.rs"]
+pub mod oracle_witness_registry_is_derived;
+
+/// Integration tests from `tests/oracle_program_edges.rs`.
+#[path = "oracle_program_edges.rs"]
+pub mod oracle_program_edges;
+
+/// Integration tests from `tests/oracle_race_exploration.rs`.
+#[path = "oracle_race_exploration.rs"]
+pub mod oracle_race_exploration;
+
+/// Integration tests from `tests/quantized_buffer_contract.rs`.
+#[path = "quantized_buffer_contract.rs"]
+pub mod quantized_buffer_contract;
+
+/// Integration tests from `tests/reference_abi_predicates.rs`.
+#[path = "reference_abi_predicates.rs"]
+pub mod reference_abi_predicates;
+
+/// Integration tests from `tests/reference_error_contract.rs`.
+#[path = "reference_error_contract.rs"]
+pub mod reference_error_contract;
+
+/// Integration tests from `tests/reference_eval_fma_select_generated.rs`.
+#[path = "reference_eval_fma_select_generated.rs"]
+pub mod reference_eval_fma_select_generated;
+
+/// Integration tests from `tests/reference_expression_compositionality_property_contracts.rs`.
+#[path = "reference_expression_compositionality_property_contracts.rs"]
+pub mod reference_expression_compositionality_property_contracts;
+
+/// Integration tests from `tests/reference_output_byte_stability.rs`.
+#[path = "reference_output_byte_stability.rs"]
+pub mod reference_output_byte_stability;
+/// Integration tests from `tests/reference_strictness_and_budget_contracts.rs`.
+#[path = "reference_strictness_and_budget_contracts.rs"]
+pub mod reference_strictness_and_budget_contracts;
+
+/// Integration tests from `tests/region_frame_lifetime.rs`.
+#[path = "region_frame_lifetime.rs"]
+pub mod region_frame_lifetime;
+
+/// Integration tests from `tests/region_gate.rs`.
+#[path = "region_gate.rs"]
+pub mod region_gate;
+
+/// Integration tests from `tests/saturating_binops_contract.rs`.
+#[path = "saturating_binops_contract.rs"]
+pub mod saturating_binops_contract;
+
+/// Integration tests from `tests/single_rank_collective_reference.rs`.
+#[path = "single_rank_collective_reference.rs"]
+pub mod single_rank_collective_reference;
+
+/// Integration tests from `tests/step_ceiling_contract.rs` (work ceiling contract).
+#[path = "step_ceiling_contract.rs"]
+pub mod step_ceiling_contract;
+
+/// Integration tests from `tests/strict_transcendental_accuracy.rs`.
+#[path = "strict_transcendental_accuracy.rs"]
+pub mod strict_transcendental_accuracy;
+
+/// Integration tests from `tests/subgroup_collectives_are_lane_identified.rs`.
+#[cfg(feature = "subgroup-ops")]
+#[path = "subgroup_collectives_are_lane_identified.rs"]
+pub mod subgroup_collectives_are_lane_identified;
+
+/// Integration tests from `tests/subgroup_shuffle_survives_lane_divergence.rs`.
+#[cfg(feature = "subgroup-ops")]
+#[path = "subgroup_shuffle_survives_lane_divergence.rs"]
+pub mod subgroup_shuffle_survives_lane_divergence;
+
+/// Integration tests from `tests/subgroup_edge_contract.rs`.
+#[path = "subgroup_edge_contract.rs"]
+pub mod subgroup_edge_contract;
+
+/// Integration tests from `tests/subnormal_contract.rs`.
+#[path = "subnormal_contract.rs"]
+pub mod subnormal_contract;
+
+/// Integration tests from `tests/tile_reference_contracts.rs`.
+#[path = "tile_reference_contracts.rs"]
+pub mod tile_reference_contracts;
+
+/// Integration tests from `tests/typed_validation_source.rs`.
+#[path = "typed_validation_source.rs"]
+pub mod typed_validation_source;
+
+/// Integration tests from `tests/value_array_property_contracts.rs`.
+#[path = "value_array_property_contracts.rs"]
+pub mod value_array_property_contracts;
+
+/// Integration tests from `tests/value_byte_property_contracts.rs`.
+#[path = "value_byte_property_contracts.rs"]
+pub mod value_byte_property_contracts;
+
+/// Integration tests from `tests/value_datatype_generated_matrix.rs`.
+#[path = "value_datatype_generated_matrix.rs"]
+pub mod value_datatype_generated_matrix;
+
+/// Integration tests from `tests/value_encoding_contract.rs`.
+#[path = "value_encoding_contract.rs"]
+pub mod value_encoding_contract;
+
+/// Integration tests from `tests/value_extend_bytes_width_generated.rs`.
+#[path = "value_extend_bytes_width_generated.rs"]
+pub mod value_extend_bytes_width_generated;
+
+/// Integration tests from `tests/value_float_property_contracts.rs`.
+#[path = "value_float_property_contracts.rs"]
+pub mod value_float_property_contracts;
+
+/// Integration tests from `tests/value_narrowing_property_contracts.rs`.
+#[path = "value_narrowing_property_contracts.rs"]
+pub mod value_narrowing_property_contracts;
+
+/// Integration tests from `tests/value_signed_narrowing_property_contracts.rs`.
+#[path = "value_signed_narrowing_property_contracts.rs"]
+pub mod value_signed_narrowing_property_contracts;
+
+/// Integration tests from `tests/value_truthiness_property_contracts.rs`.
+#[path = "value_truthiness_property_contracts.rs"]
+pub mod value_truthiness_property_contracts;
+
+/// Integration tests from `tests/value_write_bytes_width_generated.rs`.
+#[path = "value_write_bytes_width_generated.rs"]
+pub mod value_write_bytes_width_generated;
+
+/// Integration tests from `tests/vector_cast_generated_matrix.rs`.
+#[path = "vector_cast_generated_matrix.rs"]
+pub mod vector_cast_generated_matrix;

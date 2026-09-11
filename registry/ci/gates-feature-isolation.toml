@@ -1,0 +1,9 @@
+lane = "gates-feature-isolation"
+workflow = ".github/workflows/gates.yml"
+job = "feature-isolation"
+state = "live"
+required_status = "gates / Every feature compiles alone or records why it cannot"
+triggers = ["pull_request", "push"]
+steps = [
+  { gate = "feature-isolation", args = ["--sweep"] },
+]

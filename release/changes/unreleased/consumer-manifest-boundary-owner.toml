@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The rule that a consumer workspace declares no production dependency on an internal crate is checked against every consumer manifest and derives the forbidden set from each member's declared publication class, instead of reading a field that moved out of the ownership manifest."

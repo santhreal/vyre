@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The macro crate now exports only the production-used AST registry and semantic pass registration generators. Test-only operation registration, algebraic-law derive, no-op builder marker, and generated decoder stubs are gone."

@@ -1,308 +1,144 @@
-//! # vyre-libs  -  Category A composition ecosystem
+//! # vyre-libs: curated consumer facade for the composition library family
 //!
-//! `vyre-libs` composes foundation IR and primitive-owned kernels into reusable programs.
-//!
-//! Almost every function is a **pure Category A composition**: it returns a
-//! [`vyre_foundation::ir::Program`] built entirely from existing vyre IR primitives. The
-//! sole exception is the `math::atomic` family, which are **Category B**
-//! (`Category::Intrinsic`) because they require the backend to own the
-//! `Expr::Atomic` target builder emitter arm (F-IR-35).
-//!
-//! This is the ML/DSP/cryptographic ecosystem layer. Examples:
-//!
-//! ```ignore
-//! use vyre_libs::nn::linear::linear;
-//! let program = linear(/* input_buf */ "x", /* weights */ "w", /* bias */ "b");
-//! // `program` is a standard vyre_foundation::ir::Program you dispatch against any backend.
-//! ```
-//!
-//! ## Domain ownership
-//!
-//! Each public domain module owns its product-level compositions. A domain may
-//! move to a dedicated crate only through a clean public cutover that migrates
-//! every caller and removes the old path. This crate does not promise
-//! compatibility reexports or parallel old/new routes.
-//!
-//! `vyre-graph-stitch` was deliberately omitted  -  "logical linker for
-//! emitted graphs" is a `vyre-foundation` concern (IR composition),
-//! not a library crate.
-//!
-//! ## Region wrapping
-//!
-//! Every public composition wraps its body in a
-//! [`vyre_foundation::ir::Node::Region`] with a stable generator name. The
-//! optimizer treats Regions as atomic by default (preserves
-//! debuggability + source-mapping); explicit inline passes can unroll
-//! them. This is LLVM's function-vs-always-inline split at IR level.
-//!
-//! ## Feature flags
-//!
-//! Each domain lives behind a feature flag so minimal consumers pay
-//! for only what they use:
-//!
-//! - `math` (default)  -  linear algebra, scans, broadcasts
-//! - `nn` (default, implies `math`)  -  neural-net primitives
-//! - `matching` (default)  -  regex, DFA, substring, multi-pattern
-//! - `crypto` (default)  -  hashing, MAC, checksums
-//!
-//! Turn defaults off with `default-features = false` and cherry-pick
-//! what you need.
+//! Each public function returns a [`vyre_foundation::ir::Program`] built from
+//! existing IR. Compositions are partitioned into substantive domain packages
+//! under the `vyre-libs` ownership family.
 
-// Semantic catalog entries are immutable values over static identifiers and
-// function pointers, so the standard auto-traits provide Send + Sync without
-// unsafe code.
-#![forbid(unsafe_code)]
-#![deny(missing_docs)]
-#![allow(
-    clippy::too_many_arguments,
-    clippy::needless_range_loop,
-    clippy::double_must_use,
-    clippy::items_after_test_module,
-    clippy::assertions_on_constants,
-    clippy::overly_complex_bool_expr,
-    clippy::filter_map_bool_then
-)]
-// P3.3 nested-dialect reshape: each sub-dialect's single op file
-// shares the sub-dialect's module name (e.g. `math/broadcast/broadcast.rs`).
-// That's the intended shape for community packs that add second/
-// third ops to the same sub-dialect later; the lint would fight
-// the architectural decision.
-#![allow(clippy::module_inception)]
+pub use vyre_libs_builder::builder;
+pub use vyre_libs_builder::plumbing;
+pub use vyre_libs_builder::plumbing::host::dispatch_buffers;
+pub use vyre_libs_builder::plumbing::operand::buffer_names;
+pub use vyre_libs_builder::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
+pub use vyre_libs_builder::prelude;
 
-/// Build a trap-only program for registry fixtures or infallible composition wrappers.
-#[allow(dead_code)]
-pub(crate) fn invalid_program(
-    op_id: &'static str,
-    message: impl Into<String>,
-) -> vyre_foundation::ir::Program {
-    let message = message.into();
-    vyre_foundation::ir::Program::wrapped(
-        Vec::new(),
-        [1, 1, 1],
-        vec![region::wrap_anonymous(
-            op_id,
-            vec![vyre_foundation::ir::Node::trap(
-                vyre_foundation::ir::Expr::u32(0),
-                message,
-            )],
-        )],
-    )
-}
+pub use vyre_libs_builder::builder::*;
+#[cfg(feature = "telemetry")]
+pub use vyre_libs_builder::plumbing::host::telemetry;
+pub use vyre_libs_builder::plumbing::registration::signatures::*;
+pub use vyre_libs_builder::plumbing::registration::{contracts, operation_catalog};
 
-/// Region builder  -  the shared helper every composition routes through.
-pub mod region;
-
-/// Domain-neutral byte-range ordering predicates.
-pub mod range_ordering;
-
-/// `TensorRef`  -  typed buffer-argument wrapper used by every Cat-A
-/// composition for dtype + shape + name-uniqueness validation.
-pub mod tensor_ref;
-
-pub use tensor_ref::{check_dtype, check_shape, check_unique_names, TensorRef, TensorRefError};
-
-/// Shared builder helpers every Cat-A composition reuses.
-pub mod builder;
-#[cfg(feature = "math-linalg")]
-pub(crate) mod linear_algebra_substrate;
-mod substrate_catalog;
-
-pub use builder::{check_tensors, BuildOptions};
-
-pub mod buffer_names;
-
-/// `ProgramDescriptor`  -  introspection surface for Cat-A Programs.
-pub mod descriptor;
-
-pub use descriptor::{BufferDescriptor, ProgramDescriptor};
-
-/// Derived view over canonical library operation registrations.
-pub mod operation_catalog;
-
-/// Math dialect  -  linear algebra, scans, broadcasting.
-#[cfg(any(
-    feature = "math-linalg",
-    feature = "math-scan",
-    feature = "math-broadcast",
-    feature = "math-algebra",
-    feature = "math-succinct"
-))]
-pub mod math;
-
-/// Logical dialect  -  element-wise boolean composition.
-#[cfg(feature = "logical")]
-pub mod logical;
-
-/// Neural-network dialect  -  activation, normalization, attention, linear.
-#[cfg(any(
-    feature = "nn-activation",
-    feature = "nn-linear",
-    feature = "nn-norm",
-    feature = "nn-attention"
-))]
-pub mod nn;
-
-/// Pattern-scanning dialect: neutral substring, DFA, NFA, and regex
-/// program builders plus immutable compilation artifacts.
-#[cfg(any(
-    feature = "matching-substring",
-    feature = "matching-dfa",
-    feature = "matching-nfa"
-))]
-pub mod scan;
-
-/// Decode / decompression compositions  -  base64, hex, DEFLATE (stored),
-/// more coming. Pairs with `vyre-libs::matching::dfa` in the fused
-/// decode→scan pipeline (Innovation I.1).
-#[cfg(feature = "decode")]
-pub mod decode;
-
-/// Hash / checksum dialect  -  FNV-1a-32, FNV-1a-64, CRC-32, Adler-32,
-/// BLAKE3 compression. Consolidated from the former `vyre-libs::crypto`
-/// module per Migration 3. Every op lives here as a pure Cat-A
-/// composition over existing IR primitives (no dedicated target builder emitter
-/// arm required, per the intrinsic-vs-library rule).
-#[cfg(feature = "hash")]
-pub mod hash;
-
-/// Text-processing compositions for the GPU C parser pipeline
-/// (Phase L1+): byte classification, UTF-8 validation, line index.
-pub mod text;
-
-/// Representation sub-dialect: bit-packing and unpacking.
-pub mod representation;
-
-/// GPU parser infrastructure (Phase L3+): bracket matching, DFA
-/// lexer driver, LR(1) table walker. Grammar tables are generated
-/// host-side by `downstream analyzer-grammar-gen` and loaded as ReadOnly buffers.
-pub mod parsing;
-
-/// Packed AST walks (`ast_walk_*` catalog ops).
-pub mod graph;
-
-/// Security / taint compositions for static program analysis.
-/// Every op registers via `inventory::submit!` and lives under a
-/// stable op id. The implementations compose graph and dataflow
-/// primitives so downstream analyzers lower to one production GPU-facing
-/// surface.
-#[cfg(feature = "security")]
-pub mod security;
-
-/// GPU-accelerated visual effects  -  blur, shadow, filter chain,
-/// gradient, compositing, and glass material. Tier 3 compositions
-/// over `math::conv1d` (Tier 2.5) and bare IR expressions. The
-/// Molten web engine's visual effect substrate.
-#[cfg(feature = "visual")]
-pub mod visual;
-
-#[cfg(any(
-    feature = "math-linalg",
-    feature = "math-scan",
-    feature = "math-broadcast"
-))]
-pub(crate) use math::elementwise::{f32_elementwise_mul, F32MulRhs};
-#[cfg(feature = "nn-linear-4bit")]
-pub(crate) use math::linalg::{
-    plan_matmul_kernel, F32MatmulMode, MatmulFallbackReason, MatmulKernelCapabilities,
-    MatmulKernelPath, MatmulKernelPlan, MatrixShape,
-};
-
-// vyre-libs::hardware removed (audit 2026-04-21 BLOCKER-1/6).
-// Canonical Cat-C intrinsics live exclusively in the `vyre-intrinsics`
-// crate; library compositions of atomic / clamp / lzcnt / tzcnt ops
-// live in `vyre-libs::math::*` (which uses `Expr::Atomic`, `Expr::min`,
-// `Expr::max`, `Expr::popcount` directly per docs/ARCHITECTURE.md).
-//
-// vyre-libs::crypto removed (audit 2026-04-21 BLOCKER-3). Deprecated
-// shim deleted in favor of the canonical path at `vyre-libs::hash`.
-//
-// vyre-libs::composite removed (audit 2026-04-21 BLOCKER-3). The three
-// hash ops that lived there (adler32, crc32, fnv1a64) are canonical at
-// `vyre-libs::hash::*`.
-
-/// Rule-engine dialect  -  typed conditions, formulas, and program builder used
-/// by detection rule compilers.
-#[cfg(feature = "rule")]
-pub mod rule;
-
-/// Vector-widened string interning. CHD perfect hash
-/// over Tier-B label families  -  60k+ function-name strings reduce
-/// to one subgroup-shuffle + one DRAM load on the GPU.
-#[cfg(feature = "intern")]
-pub mod intern;
-
-/// Operation contract presets used by catalog entries.
-pub mod contracts;
-/// Type-signature constants shared across op definitions.
-pub mod signatures;
-/// Re-exports every type-signature constant at the crate root for convenient access.
-pub use signatures::{
-    BOOL_OUTPUTS, BYTES_TO_BYTES_INPUTS, BYTES_TO_BYTES_OUTPUTS, BYTES_TO_U32_OUTPUTS,
-    F32_F32_F32_INPUTS, F32_F32_INPUTS, F32_INPUTS, F32_OUTPUTS, I32_OUTPUTS, U32_INPUTS,
-    U32_OUTPUTS, U32_U32_INPUTS,
-};
-/// Owner-local byte fixtures for semantic operation registrations and tests.
-pub(crate) mod fixture_bytes;
-/// Pre-sweep shader snapshot migration entries, collected via inventory.
-/// `pub(crate)` because the registry is an internal pre-sweep tool  -
-/// downstream dialects do not submit through this path.
-pub(crate) mod test_migration;
-
-/// Re-export the small set of vyre types every composition function
-/// returns. Consumers can `use vyre_libs::prelude::*` and get the API
-/// plus the types it returns.
-pub mod prelude {
-    pub use vyre_foundation::ir::model::expr::GeneratorRef;
-    pub use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    // P2.1 / P2.2: the typed-tensor API + shared builder primitives.
-    // Every Cat-A op ships with a TensorRef-accepting builder; the
-    // prelude exposes the full construction surface so `use
-    // vyre_libs::prelude::*;` is enough to author a new Cat-A op.
-    pub use crate::builder::{check_tensors, BuildOptions};
-    pub use crate::tensor_ref::{
-        check_dtype, check_shape, check_unique_names, TensorRef, TensorRefError,
-    };
-
-    // Region wrapper  -  every composition emits its body through this.
-    pub use crate::region::{wrap, wrap_anonymous, wrap_child};
-
-    // Built-in Cat-A builders (gated on the relevant feature flags so
-    // minimum-footprint consumers don't pay for the ones they skip).
+/// Reference every feature-selected domain crate so the linker retains its
+/// operation registrations, and report how many library operations the active
+/// feature set registers.
+///
+/// A domain crate's anchor returns nothing. Registrations are link-time records
+/// in one process-wide registry, so the count is read from that registry once.
+#[must_use]
+pub fn link_anchor() -> usize {
+    vyre_libs_builder::link_anchor();
+    #[cfg(feature = "bitset")]
+    vyre_libs_bitset::link_anchor();
+    #[cfg(feature = "reduce")]
+    vyre_libs_reduce::link_anchor();
+    #[cfg(feature = "fixpoint")]
+    vyre_libs_fixpoint::link_anchor();
+    #[cfg(any(feature = "math", feature = "math-kernels", feature = "math-dialect"))]
+    vyre_libs_math::link_anchor();
+    #[cfg(any(feature = "nn", feature = "nn-kernels"))]
+    vyre_libs_nn::link_anchor();
+    #[cfg(feature = "graph")]
+    vyre_libs_graph::link_anchor();
+    #[cfg(any(feature = "pattern", feature = "pattern-kernels"))]
+    vyre_libs_pattern::link_anchor();
+    #[cfg(feature = "hash")]
+    vyre_libs_hash::link_anchor();
+    #[cfg(feature = "text")]
+    vyre_libs_text::link_anchor();
     #[cfg(feature = "decode")]
-    pub use crate::decode::{base64_decode, hex_decode, inflate, ziftsieve_gpu};
-    #[cfg(feature = "crypto-blake3")]
-    pub use crate::hash::blake3_compress;
-    #[cfg(feature = "crypto-fnv")]
-    pub use crate::hash::fnv1a32;
-    #[cfg(feature = "logical")]
-    pub use crate::logical::{and, nand, nor, or, xor};
-    #[cfg(feature = "math-algebra")]
-    pub use crate::math::algebra::{
-        bool_semiring_matmul, lattice_join, lattice_meet, semiring_min_plus_mul, sketch_mix,
-        try_bool_semiring_matmul, try_lattice_join, try_lattice_meet, try_semiring_min_plus_mul,
-        try_sketch_mix,
-    };
-    #[cfg(feature = "math-broadcast")]
-    pub use crate::math::broadcast::broadcast;
-    #[cfg(feature = "math-linalg")]
-    pub use crate::math::linalg::{dot, matmul, matmul_tiled, Matmul, MatmulTiled};
-    #[cfg(feature = "math-scan")]
-    pub use crate::math::scan::scan_prefix_sum;
-    #[cfg(feature = "math-succinct")]
-    pub use crate::math::succinct::{
-        rank1_query, rank1_superblocks, try_rank1_query, try_rank1_superblocks,
-    };
-    #[cfg(feature = "nn-activation")]
-    pub use crate::nn::activation::relu;
-    #[cfg(feature = "nn-attention")]
-    pub use crate::nn::attention::{attention, softmax, Attention, Softmax};
-    #[cfg(feature = "nn-linear")]
-    pub use crate::nn::linear::linear;
-    #[cfg(feature = "nn-norm")]
-    pub use crate::nn::norm::{layer_norm, LayerNorm};
-    #[cfg(feature = "matching-dfa")]
-    pub use crate::scan::aho_corasick;
-    #[cfg(feature = "matching-substring")]
-    pub use crate::scan::substring_search;
+    vyre_libs_decode::link_anchor();
+    #[cfg(any(feature = "parsing", feature = "parsing-kernels"))]
+    vyre_libs_parsing::link_anchor();
+    #[cfg(feature = "security")]
+    vyre_libs_security::link_anchor();
+    #[cfg(feature = "visual")]
+    vyre_libs_visual::link_anchor();
+    #[cfg(feature = "rule")]
+    vyre_libs_rule::link_anchor();
+    #[cfg(feature = "vfs")]
+    vyre_libs_vfs::link_anchor();
+    #[cfg(feature = "device")]
+    vyre_libs_device::link_anchor();
+    #[cfg(feature = "solvers")]
+    vyre_libs_solvers::link_anchor();
+    #[cfg(feature = "encoding")]
+    vyre_libs_encoding::link_anchor();
+    #[cfg(feature = "analysis")]
+    vyre_libs_analysis::link_anchor();
+    #[cfg(feature = "reasoning")]
+    vyre_libs_reasoning::link_anchor();
+    #[cfg(feature = "scheduling")]
+    vyre_libs_scheduling::link_anchor();
+    operation_catalog::library_entries().count()
 }
+
+#[cfg(feature = "geom")]
+pub use vyre_libs_math::geom;
+#[cfg(any(feature = "math", feature = "math-kernels", feature = "math-dialect"))]
+pub use vyre_libs_math::math;
+#[cfg(feature = "opt")]
+pub use vyre_libs_math::opt;
+#[cfg(feature = "representation")]
+pub use vyre_libs_math::representation;
+
+#[cfg(feature = "llm")]
+pub use vyre_libs_nn::llm;
+#[cfg(any(feature = "nn", feature = "nn-kernels"))]
+pub use vyre_libs_nn::nn;
+
+#[cfg(feature = "graph")]
+pub use vyre_libs_graph::graph;
+#[cfg(feature = "graph")]
+pub use vyre_libs_graph::graph_compositions;
+#[cfg(feature = "topology")]
+pub use vyre_libs_graph::topology;
+
+#[cfg(feature = "nfa")]
+pub use vyre_libs_pattern::nfa;
+#[cfg(any(feature = "pattern", feature = "pattern-kernels"))]
+pub use vyre_libs_pattern::pattern;
+
+#[cfg(feature = "decode")]
+pub use vyre_libs_decode::decode;
+#[cfg(feature = "hash")]
+pub use vyre_libs_hash::hash;
+#[cfg(feature = "text")]
+pub use vyre_libs_text::text;
+
+#[cfg(any(feature = "parsing", feature = "parsing-kernels"))]
+pub use vyre_libs_parsing::parsing;
+
+#[cfg(feature = "label")]
+pub use vyre_libs_security::label;
+#[cfg(feature = "predicate")]
+pub use vyre_libs_security::predicate;
+#[cfg(feature = "security")]
+pub use vyre_libs_security::security;
+
+#[cfg(feature = "rule")]
+pub use vyre_libs_rule::rule;
+#[cfg(feature = "vfs")]
+pub use vyre_libs_vfs::vfs;
+#[cfg(feature = "visual")]
+pub use vyre_libs_visual::visual;
+
+#[cfg(feature = "bitset")]
+pub use vyre_libs_bitset::bitset;
+#[cfg(feature = "logical")]
+pub use vyre_libs_bitset::logical;
+#[cfg(feature = "fixpoint")]
+pub use vyre_libs_fixpoint::fixpoint;
+#[cfg(feature = "reduce")]
+pub use vyre_libs_reduce::reduce;
+
+#[cfg(feature = "analysis")]
+pub use vyre_libs_analysis::analysis;
+#[cfg(feature = "device")]
+pub use vyre_libs_device::device;
+#[cfg(feature = "encoding")]
+pub use vyre_libs_encoding::encoding;
+#[cfg(feature = "reasoning")]
+pub use vyre_libs_reasoning::reasoning;
+#[cfg(feature = "scheduling")]
+pub use vyre_libs_scheduling::scheduling;
+#[cfg(feature = "solvers")]
+pub use vyre_libs_solvers::solvers;

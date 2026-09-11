@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`xtask heuristic-audit` now resolves both standalone Vyre checkouts and the enclosing Santh workspace without duplicating the Vyre path."

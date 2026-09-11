@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The shared module walk reads a cfg(not(test)) declaration as production source rather than as test source, so a module carrying it stays on every feature route it belongs to."

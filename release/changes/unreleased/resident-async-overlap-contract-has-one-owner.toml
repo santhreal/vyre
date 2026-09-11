@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The resident asynchronous overlap contract has one owner, `tests/support/resident_async_overlap_contract.rs`. Two backends had carried it verbatim apart from acquisition, message text and one assertion. Device-measured time is now a parameter rather than a shared assumption, so a backend without a device timer on that path is still held to exact per-slot outputs and to enqueue and wait time being separated."

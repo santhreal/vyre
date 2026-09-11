@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "feature-isolation compiles the library and binaries only, so a dev-dependency edge can no longer hand the feature resolution the union the gate exists to see past."

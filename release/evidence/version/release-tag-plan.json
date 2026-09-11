@@ -1,13 +1,14 @@
 {
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"997287e7ab44b61927039993d65900f6e2149330","commit_timestamp":"1789108100","parent_commit":"956e5380ef0567214833a06e21d408b485495f5b","dirty":false,"source_fingerprint":"git:997287e7ab44b61927039993d65900f6e2149330:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 2,
-  "vyre_rc_tag": "vyre-v0.7.2-rc.1",
-  "vyre_tag": "vyre-v0.7.2",
+  "vyre_rc_tag": "vyre-v0.8.0-rc.1",
+  "vyre_tag": "vyre-v0.8.0",
   "tag_creation_order": [
-    "vyre-v0.7.2-rc.1",
-    "vyre-v0.7.2"
+    "vyre-v0.8.0-rc.1",
+    "vyre-v0.8.0"
   ],
-  "required_gate_before_rc_tag": "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
-  "required_gate_before_tag": "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
+  "required_gate_before_rc_tag": "cargo_full run --bin xtask -- version-matrix && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
+  "required_gate_before_tag": "cargo_full run --bin xtask -- version-matrix && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
   "version_matrix_blocker_count": 0,
   "blockers": []
 }

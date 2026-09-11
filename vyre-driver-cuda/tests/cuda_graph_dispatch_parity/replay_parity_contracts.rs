@@ -123,7 +123,7 @@ fn cuda_graph_honors_output_byte_ranges_like_direct_dispatch() {
         vec![
             BufferDecl::storage("state", 0, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(4)
-                .with_output_byte_range(4..12),
+                .with_output_byte_range(4u64..12),
         ],
         [1, 1, 1],
         vec![Node::store("state", Expr::u32(3), Expr::u32(99))],

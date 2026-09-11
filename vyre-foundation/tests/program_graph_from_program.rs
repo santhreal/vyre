@@ -1,6 +1,8 @@
 //! Single-program graph adaptation contracts.
 
-use vyre_foundation::ir::{BufferDecl, DataType, Program, ProgramGraph, ValueLifetime};
+use std::collections::BTreeMap;
+
+use vyre_foundation::ir::{BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueLifetime};
 
 /// WHY: `BufferDecl::output` is read-write for backend allocation but remains a caller-visible
 /// output, while an ordinary read-write buffer carries retained state into the next invocation.
@@ -27,6 +29,49 @@ fn output_marker_takes_precedence_over_read_write_access_for_graph_lifetime() {
 
     assert_eq!(state.contract.lifetime, ValueLifetime::Retained);
     assert_eq!(result.contract.lifetime, ValueLifetime::Output);
+}
+
+/// WHY: a read-write pipeline live-out is allocated by every backend and must
+/// not become a retained host input when a Program is lifted into an artifact.
+#[test]
+fn pipeline_live_out_read_write_buffer_is_a_graph_output() {
+    let program = Program::from_raw_parts(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(4),
+            BufferDecl::read_write("intermediate", 1, DataType::U32)
+                .with_count(4)
+                .with_pipeline_live_out(true),
+        ],
+        [4, 1, 1],
+        Vec::new(),
+    );
+
+    let graph = ProgramGraph::from_program("main", program).expect("program graph must validate");
+    let node = &graph.nodes()[0];
+    assert_eq!(
+        node.inputs
+            .iter()
+            .map(|input| input.buffer.as_str())
+            .collect::<Vec<_>>(),
+        ["input"]
+    );
+    assert_eq!(
+        node.output_ports
+            .iter()
+            .map(|output| output.buffer.as_str())
+            .collect::<Vec<_>>(),
+        ["intermediate"]
+    );
+    assert_eq!(
+        graph
+            .values()
+            .iter()
+            .find(|value| value.name == "intermediate")
+            .expect("pipeline output graph value")
+            .contract
+            .lifetime,
+        ValueLifetime::Output
+    );
 }
 
 /// WHY: workgroup scratch is node-local storage. Projecting it as an external value makes the
@@ -89,4 +134,61 @@ fn single_program_graph_connects_every_host_visible_buffer_to_the_node_abi() {
         ["result"]
     );
     assert_eq!(node.outputs.len(), 1);
+}
+
+/// WHY: a runtime-sized Program buffer remains dynamic in executable IR while
+/// its artifact graph records the exact caller-provided resource extent.
+#[test]
+fn runtime_counts_specialize_graph_resources_without_rewriting_program_ir() {
+    let program = Program::from_raw_parts(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32),
+            BufferDecl::output("result", 1, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        Vec::new(),
+    );
+    let graph = ProgramGraph::from_program_with_runtime_counts(
+        "main",
+        program,
+        &BTreeMap::from([("input".to_string(), 6)]),
+    )
+    .expect("runtime count must specialize the graph resource");
+
+    let input = graph
+        .values()
+        .iter()
+        .find(|value| value.name == "input")
+        .expect("input graph value");
+    assert_eq!(input.contract.shape, [ShapeDim::Known(6)]);
+    assert_eq!(graph.nodes()[0].program.buffers()[0].count(), 0);
+}
+
+/// WHY: runtime extent evidence belongs only to an existing dynamic host
+/// buffer; stale or static overrides must not silently alter graph identity.
+#[test]
+fn runtime_count_overrides_fail_closed_on_unknown_and_static_buffers() {
+    let program = Program::from_raw_parts(
+        vec![BufferDecl::read("static", 0, DataType::U32).with_count(4)],
+        [1, 1, 1],
+        Vec::new(),
+    );
+    for (name, expected) in [
+        ("missing", "has no buffer `missing`"),
+        (
+            "static",
+            "requires a host-visible declaration with count == 0",
+        ),
+    ] {
+        let error = ProgramGraph::from_program_with_runtime_counts(
+            "main",
+            program.clone(),
+            &BTreeMap::from([(name.to_string(), 4)]),
+        )
+        .expect_err("invalid runtime count override must fail");
+        assert!(
+            error.to_string().contains(expected),
+            "unexpected runtime-count diagnostic: {error}"
+        );
+    }
 }

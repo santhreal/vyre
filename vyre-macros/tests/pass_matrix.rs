@@ -1,170 +1,137 @@
 #![allow(missing_docs)]
 
-extern crate self as vyre;
+use crate::expansion_fixtures;
 
-mod support;
-
-pub use support::{ir, optimizer};
+pub use expansion_fixtures::{ir, optimizer};
 
 use vyre_macros::vyre_pass;
 
-macro_rules! define_phase_pass {
-    ($ty:ident, $name:literal, $phase:literal) => {
-        #[vyre_pass(name = $name, requires = [], invalidates = [], phase = $phase, analyze = "always")]
-        pub struct $ty;
+/// Declares one always-running fixture pass per accepted string on an axis,
+/// and asserts every row's string reaches its own variant.
+///
+/// The `#[vyre_pass]` attribute stays at the row, because its expansion is
+/// what this target tests. A row added to `pass_axis_rows!` declares its own
+/// pass and joins the assertion, so there is no second list to update.
+macro_rules! declare_pass_axis_coverage {
+    (
+        $enum_name:ident, $argument:ident,
+        $($accepted:literal => $variant:ident as $fixture:ident named $pass_name:literal,)+
+    ) => {
+        $(
+            #[vyre_pass(
+                name = $pass_name,
+                requires = [],
+                invalidates = [],
+                $argument = $accepted,
+                analyze = "always"
+            )]
+            pub struct $fixture;
 
-        impl $ty {
-            fn transform(program: crate::ir::Program) -> crate::optimizer::PassResult {
-                crate::optimizer::unchanged(program)
+            crate::define_unchanged_pass_body!($fixture);
+        )+
+
+        #[test]
+        fn every_accepted_value_reaches_its_own_variant() {
+            use optimizer::{$enum_name, ProgramPass};
+            let cases: &[(&dyn ProgramPass, $enum_name)] =
+                &[$((&$fixture, $enum_name::$variant),)+];
+            for (pass, expected) in cases {
+                let metadata = pass.metadata();
+                assert_eq!(metadata.$argument, *expected, "{}", metadata.name);
+                assert_eq!(
+                    pass.analyze(&ir::Program { id: 0 }),
+                    optimizer::PassAnalysis::RUN
+                );
             }
         }
     };
 }
 
-macro_rules! define_boundary_pass {
-    ($ty:ident, $name:literal, $boundary:literal) => {
-        #[vyre_pass(name = $name, requires = [], invalidates = [], boundary_class = $boundary, analyze = "always")]
-        pub struct $ty;
+pub mod phase_axis {
+    use super::{ir, optimizer};
+    use vyre_macros::vyre_pass;
 
-        impl $ty {
-            fn transform(program: crate::ir::Program) -> crate::optimizer::PassResult {
-                crate::optimizer::unchanged(program)
-            }
-        }
-    };
+    crate::pass_axis_rows!(phase, declare_pass_axis_coverage);
 }
 
-macro_rules! define_cost_pass {
-    ($ty:ident, $name:literal, $cost:literal) => {
-        #[vyre_pass(name = $name, requires = [], invalidates = [], cost_model_family = $cost, analyze = "always")]
-        pub struct $ty;
+pub mod boundary_class_axis {
+    use super::{ir, optimizer};
+    use vyre_macros::vyre_pass;
 
-        impl $ty {
-            fn transform(program: crate::ir::Program) -> crate::optimizer::PassResult {
-                crate::optimizer::unchanged(program)
-            }
-        }
-    };
+    crate::pass_axis_rows!(boundary_class, declare_pass_axis_coverage);
 }
 
-define_phase_pass!(PhaseUnclassified, "phase.unclassified", "unclassified");
-define_phase_pass!(
-    PhaseCanonicalization,
-    "phase.canonicalization",
-    "canonicalization"
-);
-define_phase_pass!(PhaseScalarAlgebra, "phase.scalar_algebra", "scalar_algebra");
-define_phase_pass!(PhaseLoop, "phase.loop", "loop");
-define_phase_pass!(PhaseMemory, "phase.memory", "memory");
-define_phase_pass!(PhaseFusionCse, "phase.fusion_cse", "fusion_cse");
-define_phase_pass!(PhaseSync, "phase.sync", "sync");
-define_phase_pass!(
-    PhaseSpecialization,
-    "phase.specialization",
-    "specialization"
-);
-define_phase_pass!(PhaseCleanup, "phase.cleanup", "cleanup");
-define_phase_pass!(PhaseDataflow, "phase.dataflow", "dataflow");
-define_phase_pass!(PhaseMegakernel, "phase.megakernel", "megakernel");
+pub mod cost_model_family_axis {
+    use super::{ir, optimizer};
+    use vyre_macros::vyre_pass;
 
-define_boundary_pass!(BoundaryUnknown, "boundary.unknown", "unknown");
-define_boundary_pass!(
-    BoundaryAbiPreserving,
-    "boundary.abi_preserving",
-    "abi_preserving"
-);
-define_boundary_pass!(BoundaryAbiChanging, "boundary.abi_changing", "abi_changing");
-define_boundary_pass!(
-    BoundaryBackendAware,
-    "boundary.backend_aware",
-    "backend_aware"
-);
-define_boundary_pass!(
-    BoundaryRuntimeAware,
-    "boundary.runtime_aware",
-    "runtime_aware"
-);
-define_boundary_pass!(
-    BoundaryDomainSpecific,
-    "boundary.domain_specific",
-    "domain_specific"
-);
+    crate::pass_axis_rows!(cost_model_family, declare_pass_axis_coverage);
+}
 
-define_cost_pass!(CostUnknown, "cost.unknown", "unknown");
-define_cost_pass!(CostScalar, "cost.scalar", "scalar");
-define_cost_pass!(CostLoop, "cost.loop", "loop");
-define_cost_pass!(CostMemory, "cost.memory", "memory");
-define_cost_pass!(CostFusion, "cost.fusion", "fusion");
-define_cost_pass!(CostSync, "cost.sync", "sync");
-define_cost_pass!(CostDataflow, "cost.dataflow", "dataflow");
-define_cost_pass!(CostMegakernel, "cost.megakernel", "megakernel");
+/// A pass that reads device facts. Its inherent `transform_for_adapter` reports
+/// a change only when the adapter offers subgroup operations, so the assertion
+/// below can tell which record the expansion forwarded.
+#[vyre_pass(
+    name = "adapter.subgroup_dependent",
+    requires = [],
+    invalidates = [],
+    adapter_dependent = true,
+    analyze = "always"
+)]
+pub struct AdapterDependent;
 
-#[test]
-fn vyre_pass_phase_matrix_emits_expected_metadata() {
-    use optimizer::{PassPhase, ProgramPass};
-    let cases: &[(&dyn ProgramPass, PassPhase)] = &[
-        (&PhaseUnclassified, PassPhase::Unclassified),
-        (&PhaseCanonicalization, PassPhase::Canonicalization),
-        (&PhaseScalarAlgebra, PassPhase::ScalarAlgebra),
-        (&PhaseLoop, PassPhase::Loop),
-        (&PhaseMemory, PassPhase::Memory),
-        (&PhaseFusionCse, PassPhase::FusionCse),
-        (&PhaseSync, PassPhase::Sync),
-        (&PhaseSpecialization, PassPhase::Specialization),
-        (&PhaseCleanup, PassPhase::Cleanup),
-        (&PhaseDataflow, PassPhase::Dataflow),
-        (&PhaseMegakernel, PassPhase::Megakernel),
-    ];
-    for (pass, phase) in cases {
-        let metadata = pass.metadata();
-        assert_eq!(metadata.phase, *phase, "{}", metadata.name);
-        assert_eq!(
-            pass.analyze(&ir::Program { id: 0 }),
-            optimizer::PassAnalysis::RUN
-        );
+impl AdapterDependent {
+    fn transform(program: ir::Program) -> optimizer::PassResult {
+        optimizer::unchanged(program)
+    }
+
+    fn transform_for_adapter(
+        program: ir::Program,
+        caps: &optimizer::AdapterCaps,
+    ) -> optimizer::PassResult {
+        optimizer::pass_result(program, caps.supports_subgroup_ops)
     }
 }
 
-#[test]
-fn vyre_pass_boundary_matrix_emits_expected_metadata() {
-    use optimizer::{PassBoundaryClass, ProgramPass};
-    let cases: &[(&dyn ProgramPass, PassBoundaryClass)] = &[
-        (&BoundaryUnknown, PassBoundaryClass::Unknown),
-        (&BoundaryAbiPreserving, PassBoundaryClass::AbiPreserving),
-        (&BoundaryAbiChanging, PassBoundaryClass::AbiChanging),
-        (&BoundaryBackendAware, PassBoundaryClass::BackendAware),
-        (&BoundaryRuntimeAware, PassBoundaryClass::RuntimeAware),
-        (&BoundaryDomainSpecific, PassBoundaryClass::DomainSpecific),
-    ];
-    for (pass, boundary_class) in cases {
-        let metadata = pass.metadata();
-        assert_eq!(
-            metadata.boundary_class, *boundary_class,
-            "{}",
-            metadata.name
-        );
-    }
-}
+/// A pass that never declares `adapter_dependent`, whose expansion must discard
+/// the record rather than reach for an inherent method it does not have.
+#[vyre_pass(
+    name = "adapter.independent",
+    requires = [],
+    invalidates = [],
+    analyze = "always"
+)]
+pub struct AdapterIndependent;
+
+crate::define_unchanged_pass_body!(AdapterIndependent);
 
 #[test]
-fn vyre_pass_cost_model_matrix_emits_expected_metadata() {
-    use optimizer::{CostModelFamily, ProgramPass};
-    let cases: &[(&dyn ProgramPass, CostModelFamily)] = &[
-        (&CostUnknown, CostModelFamily::Unknown),
-        (&CostScalar, CostModelFamily::Scalar),
-        (&CostLoop, CostModelFamily::Loop),
-        (&CostMemory, CostModelFamily::Memory),
-        (&CostFusion, CostModelFamily::Fusion),
-        (&CostSync, CostModelFamily::Sync),
-        (&CostDataflow, CostModelFamily::Dataflow),
-        (&CostMegakernel, CostModelFamily::Megakernel),
-    ];
-    for (pass, cost_model_family) in cases {
-        let metadata = pass.metadata();
+fn an_adapter_dependent_pass_receives_the_record_and_an_independent_one_ignores_it() {
+    use optimizer::{AdapterCaps, ProgramPass};
+    let program = ir::Program { id: 7 };
+    let with_subgroups = AdapterCaps {
+        supports_subgroup_ops: true,
+        ..AdapterCaps::conservative()
+    };
+    let without_subgroups = AdapterCaps::conservative();
+
+    assert!(
+        AdapterDependent
+            .transform_for_adapter(program.clone(), &with_subgroups)
+            .changed,
+        "a device-dependent pass must see the capability it branches on"
+    );
+    assert!(
+        !AdapterDependent
+            .transform_for_adapter(program.clone(), &without_subgroups)
+            .changed
+    );
+
+    for caps in [with_subgroups, without_subgroups] {
         assert_eq!(
-            metadata.cost_model_family, *cost_model_family,
-            "{}",
-            metadata.name
+            AdapterIndependent.transform_for_adapter(program.clone(), &caps),
+            AdapterIndependent.transform(program.clone()),
+            "a pass that reads no device facts must answer the same on every device"
         );
     }
 }

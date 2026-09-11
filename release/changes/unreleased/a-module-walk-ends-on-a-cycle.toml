@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The shared module walk records each file it has read, so a symlinked cycle in a crate source tree ends the walk instead of running forever."

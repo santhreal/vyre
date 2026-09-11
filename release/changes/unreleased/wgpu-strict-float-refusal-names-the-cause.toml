@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A wgpu strict-float refusal now states why the adapter was refused. The verdict was a boolean, so an adapter that executed a fused multiply-add and an adapter whose probe never dispatched produced the same message and a caller could not tell a hardware fact from a configuration failure. The verdict carries the measured outcome, and the refusal names it."

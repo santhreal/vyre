@@ -1,0 +1,10 @@
+lane = "udeps-udeps"
+workflow = ".github/workflows/udeps.yml"
+job = "udeps"
+state = "live"
+required_status = "cargo_full-udeps / udeps"
+triggers = ["push", "pull_request", "schedule"]
+steps = [
+  { command = "cargo +nightly install cargo-udeps --locked" },
+  { command = "./cargo_full +nightly udeps --workspace --all-targets --all-features" },
+]

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A dispatch that wrote its outputs into caller-owned slots was invisible to dispatch telemetry. Both borrowed-input `dispatch_borrowed_into` defaults recorded output-slot pressure and skipped `record_dispatch_io`, so `vyre_driver_dispatch_launches_total`, the input byte count and the output byte count only ever advanced on the resident path. Every backend that does not override the method went uncounted."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The crate ownership gate enforces a closed layer DAG and circular dependency detection across workspace member internal production dependencies joined against Cargo metadata."

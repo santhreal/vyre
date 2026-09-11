@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The visual filter chain computes each channel distance from the contrast midpoint and from luma as a single non-negative magnitude, so neither the contrast nor the saturate stage evaluates a wrapping subtraction as the unused arm of a select."

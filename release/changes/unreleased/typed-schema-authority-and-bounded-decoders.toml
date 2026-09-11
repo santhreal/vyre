@@ -1,0 +1,2 @@
+category = "Added"
+text = "A canonical schema authority states every persisted schema version, its decoders are bounded, its digests are platform-independent, and it exports a JSON schema."

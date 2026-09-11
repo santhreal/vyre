@@ -1,0 +1,43 @@
+[package]
+name = "vyre-libs-builder"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Shared IR composition infrastructure, child region skeletons, operands, and link anchors"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-builder"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "closure:vyre-libs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["builder", "builder-ops", "cat-a-builder-options", "telemetry"]
+builder = []
+"builder-ops" = ["builder"]
+"cat-a-builder-options" = ["builder"]
+telemetry = []
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-megakernel.workspace = true
+vyre-spec.workspace = true
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+inventory.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+vyre-primitives = { workspace = true, features = ["hardware"] }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

@@ -1,0 +1,19 @@
+category = "Fixed"
+text = """
+A lego tier is derived from placement, never declared in a comment. `tier_of` \
+reads it from the registered op id alone: `vyre-primitives::hardware::*` is 2, \
+every other `vyre-primitives::*` is 2.5, `vyre-libs::*` is 3. Thirty-odd \
+`vyre-libs` files declared 2.5 in prose anyway, which the composability check \
+reads as must-not-compose on operations that are compositions by construction, \
+and no live document defined the numbers at all. `docs/lego-block-rule.md` now \
+owns the mapping and the new `lego-tier-claims` gate reads the tier from the op \
+id and the claims from the file, so moving an operation between crates \
+re-derives its tier and turns every stale claim in its file red. The same sweep \
+removed dead review bookkeeping from tracked source: the `CRITIQUE_*` stamps, \
+the `Innovation I.N` register, the audit history block in the `vyre-libs` crate \
+documentation, and the `Parked composition` prefix on seven modules already in \
+`vyre-libs`. Where a stamp carried a reason, the reason stayed. Three crate \
+documentation claims were false and are corrected: `math::atomic` is not a \
+Category B exception because `Expr::Atomic` is an existing IR variant, `hash` \
+did not replace the still-live `crypto` feature, and `default` includes `hash`.
+"""

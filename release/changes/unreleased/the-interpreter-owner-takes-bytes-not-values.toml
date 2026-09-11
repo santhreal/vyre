@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Buffers handed to the fixture_bytes eval helpers are byte vectors throughout. Several modules still wrapped them in Value::Bytes or built a parallel Vec<Value> beside the byte vector they already had, and a few decoded a result with to_bytes that the helper had already decoded. Three calls to reference_eval_oob_report, which is not one of the owned entry points, kept their Value arguments."

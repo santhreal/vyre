@@ -2,10 +2,10 @@
 
 use vyre_driver::{validate_intrinsic_lowering, IntrinsicRegistrationError};
 use vyre_foundation::operation::OperationRegistry;
-use vyre_intrinsics::operation_catalog::all_entries;
+use vyre_primitives::hardware::all_entries;
 use vyre_reference::value::Value;
 
-const INTRINSIC_ID: &str = "vyre-intrinsics::hardware::bit_reverse_u32";
+const INTRINSIC_ID: &str = "vyre-primitives::hardware::bit_reverse_u32";
 
 fn canonical_entry() -> vyre_foundation::operation::SemanticOperation {
     all_entries()
@@ -30,7 +30,8 @@ fn canonical_identity_signature_and_fixture_reach_reference_interpreter() {
             .into_iter()
             .map(|bytes| Value::Bytes(bytes.into()))
             .collect::<Vec<_>>();
-        let actual = vyre_reference::reference_eval(&program, &values)
+        let actual = vyre_reference::ReferenceRequest::standard(&program, &values)
+            .outputs()
             .expect("reference interpreter executes canonical intrinsic")
             .into_iter()
             .map(|value| value.to_bytes())

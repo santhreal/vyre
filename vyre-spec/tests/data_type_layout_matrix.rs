@@ -4,7 +4,7 @@
 //! `vyre-spec` alone, so byte width, bit width, display spelling, and
 //! conservative bounds must move only through explicit spec updates.
 
-use vyre_spec::extension::ExtensionDataTypeId;
+use vyre_spec::ExtensionDataTypeId;
 use vyre_spec::{DataType, TypeId};
 
 #[derive(Clone)]

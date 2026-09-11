@@ -5,9 +5,9 @@ edition = "2021"
 
 [dependencies]
 inventory = "=0.3.24"
-vyre = "0.7.2"
-vyre-driver = "0.7.2"
-vyre-foundation = "0.7.2"
+vyre = "0.8.0"
+vyre-driver = "0.8.0"
+vyre-foundation = "0.8.0"
 
 [workspace]
 

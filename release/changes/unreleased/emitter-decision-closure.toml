@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The per-target emitter decision contract compares its representative variant set against the declared enum instead of asserting that a decision is one of the three decisions."

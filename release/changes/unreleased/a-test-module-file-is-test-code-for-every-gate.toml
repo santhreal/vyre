@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "One owner now answers which files a cfg(test) module declaration reaches, honoring an explicit path attribute, and both the host oracle elimination gate and the expect-states-a-fix gate read it. The panic-message rule treated a file that is the test module as shipped source, so fixture panics in five test-module files under src/ were reported as production panics owing corrective guidance."

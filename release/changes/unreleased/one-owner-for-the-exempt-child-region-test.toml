@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The composition-discipline cases read the exempt-child-region rule through one predicate over a node instead of destructuring `Node::Region` and calling the test at each site, which is what pushed the conform crate past its duplication pin."

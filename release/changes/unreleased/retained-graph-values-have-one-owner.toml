@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`vyre_megakernel::returned_graph_values` is the single derivation of the values an artifact returns, so a retained read-write value the artifact wrote is no longer dropped from a registered executor's result list."

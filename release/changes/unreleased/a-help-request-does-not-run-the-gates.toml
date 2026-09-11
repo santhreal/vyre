@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "xtask gates --help ran every registered gate instead of printing usage, and so did lego-audit --help and gates --subset <name> --help. The runner now answers a help request anywhere on its command line, except as the value of the subset flag, and prints the options with the subset roster it would run."

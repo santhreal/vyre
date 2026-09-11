@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The registered Python 3.12 lexer now records the current keyword, identifier, delimiter, newline, and comment token identifiers for its canonical source fixture."

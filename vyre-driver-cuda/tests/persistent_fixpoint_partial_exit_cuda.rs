@@ -19,7 +19,7 @@
 //! immediately, whatever the state ends up being.
 //!
 //! That is the whole reason this file exists next to the structural tests in
-//! `vyre-primitives/tests/persistent_fixpoint_loop_contracts.rs`. Those prove the
+//! `vyre-libs/tests/persistent_fixpoint_loop_contracts.rs`. Those prove the
 //! barrier is in the IR. This one proves the barrier is doing something real on
 //! the device, so the structural tests cannot degrade into pinning a node nobody
 //! needs.
@@ -33,15 +33,15 @@
 //! enough that the back edge is crossed many times per dispatch, since each
 //! crossing is an independent chance for the race.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+use crate::harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
+use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
-use vyre_primitives::fixpoint::persistent_fixpoint::{
+use vyre_libs::fixpoint::persistent_fixpoint::{
     persistent_fixpoint, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
 };
 

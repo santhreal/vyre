@@ -1,4 +1,9 @@
 //! Tests for release-scale NVMe to GPU ingest telemetry benchmark surfaces.
+//!
+//! `cases::nvme_gpu_ingest` is `#[cfg(target_os = "linux")]` because the
+//! zero-copy read path is io_uring, so on any other target the module this
+//! file drives does not exist and the crate fails to compile its tests.
+#![cfg(target_os = "linux")]
 
 use std::collections::BTreeSet;
 
@@ -32,7 +37,7 @@ fn nvme_gpu_ingest_specs_are_release_scale_and_gpu_resident() {
         );
         assert!(
             resident_bytes <= 2 * 1024 * 1024 * 1024,
-            "Fix: spec `{}` staging footprint must fit the RTX 5090 release host with margin.",
+            "Fix: spec `{}` staging footprint must fit the target GPU VRAM budget with margin.",
             spec.id
         );
         assert!(

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Every `vyre-primitives` feature compiles alone. The operand-shape guards `matrix_cells` and `square_matrix_cells` lived behind the `math` feature while `graph` used them, and `math` already enables `graph`, so the missing edge could not be added without a feature cycle, and every selection naming a domain failed to build. The guards now live in `vyre_primitives::operand_shape`, compiled unconditionally because a shape check is not a domain."

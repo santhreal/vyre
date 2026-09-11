@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The `IntrinsicTable` missing-backend contract in `vyre-spec` has one owner, `vyre-spec/tests/spec_contract_errors.rs`, which holds the fuller family. The two duplicated cases and the `required_backends()` helper they shared are gone, and the remaining file is renamed to `data_type_width_contracts.rs` after the backend half left it."

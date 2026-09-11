@@ -13,12 +13,12 @@
 //! exposes `requires` and `invalidates` capability tags, not a full pass→pass influence graph
 //! or `produces` facts, so **extra causal pairs are not derivable** from metadata alone.
 //! When `adj` is supplied (substrate analysis, TOML rules, etc.), use
-//! [`crate::pass_substrate::adjustment_set_pass_dependency::pass_descendants`] for transitive
-//! downstream passes and [`crate::pass_substrate::adjustment_set_pass_dependency::ordering_is_safe`]
+//! [`crate::pass_math::adjustment_set_pass_dependency::pass_descendants`] for transitive
+//! downstream passes and [`crate::pass_math::adjustment_set_pass_dependency::ordering_is_safe`]
 //! to validate a proposed “run treatment before outcome” ordering.
 use crate::ir::{BufferDecl, Expr, Node};
 use crate::ir_inner::model::program::Program;
-use crate::optimizer::{registered_passes, OptimizerError, ProgramPassKind};
+use crate::optimizer::{registered_passes, AdapterCaps, OptimizerError, ProgramPassKind};
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::OnceLock;
 
@@ -37,14 +37,17 @@ pub struct PassScheduler {
     /// so tests and diagnostics still surface `UnsatisfiedRequirement`.
     requirements_prevalidated: bool,
     max_iterations: usize,
+    /// Device facts every pass in this scheduler compiles against.
+    ///
+    /// A scheduler built without one carries [`AdapterCaps::conservative`],
+    /// which states "no adapter was supplied" at the place that decided it.
+    /// The passes themselves must not choose: a pass that picks a profile
+    /// inside its own `transform` compiles for a device nobody named, which
+    /// is what `decode_scan_fuse` did for every program that ever went through
+    /// the standard pipeline.
+    adapter: AdapterCaps,
     invalidation_adjacency_cache: OnceLock<Vec<u32>>,
     invalidation_closure_cache: OnceLock<FxHashMap<&'static str, FxHashSet<&'static str>>>,
-    /// Tag → pass indices that should be re-marked dirty when the tag is
-    /// invalidated. A tag matches a pass if it equals the pass's `name`
-    /// OR appears in its `requires` list. Replaces the per-iteration
-    /// O(passes × invalidates × requires) scan inside
-    /// `mark_invalidated_passes` with O(invalidates × dependents).
-    dirty_trigger_index_cache: OnceLock<FxHashMap<&'static str, Vec<usize>>>,
     /// Indexed variant of `initial_dirty_cache` used by the hot `run()` path.
     /// This avoids rebuilding/cloning a string hash set and turns dirty checks
     /// into direct indexed loads.
@@ -86,6 +89,8 @@ pub struct PassScheduler {
     ///
     /// This is the production hook for P-1.0-V3 liquid BufferDecl shapes.
     enforce_shape_predicates: bool,
+    /// Deterministic compile budget limits if configured.
+    pub(crate) budget: Option<crate::optimizer::compile_budget::CompileBudget>,
 }
 
 pub(crate) const PASS_RESEARCH_TRACE_SCHEMA_VERSION: u32 = 1;
@@ -212,15 +217,6 @@ pub struct PassRunMetric {
     /// Analyses/capability tags this pass declares invalid when it lands a
     /// rewrite.
     pub declared_invalidations: &'static [&'static str],
-    /// Whether the scheduler-owned fact substrate was reused for this dirty
-    /// pass analysis.
-    pub fact_substrate_reused: bool,
-    /// Whether the scheduler-owned fact substrate was recomputed for this
-    /// dirty pass analysis.
-    pub fact_substrate_recomputed: bool,
-    /// Whether this pass landed a rewrite and invalidated the scheduler-owned
-    /// fact substrate.
-    pub fact_substrate_invalidated: bool,
     /// Program effect-row bits before the pass when effect-handler
     /// enforcement is enabled; otherwise zero.
     pub effect_bits_before: u32,
@@ -400,7 +396,19 @@ fn estimate_node_allocations(node: &Node, estimate: &mut IrAllocationEstimate) {
         | Node::AsyncWait { .. }
         | Node::Resume { .. }
         | Node::Return
-        | Node::Barrier { .. } => {}
+        | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. } => {}
+        Node::TileElementwise { body, .. } => {
+            estimate.add_container::<Node>(body.len());
+            for node in body {
+                estimate_node_allocations(node, estimate);
+            }
+        }
     }
 }
 
@@ -481,6 +489,9 @@ fn estimate_expr_allocations(expr: &Expr, estimate: &mut IrAllocationEstimate) {
         | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
         | Expr::InvocationId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
         | Expr::SubgroupLocalId
@@ -503,22 +514,39 @@ impl PassScheduler {
             .map(|(i, pass)| (pass.metadata().name, i))
             .collect();
         let execution_order = (0..passes.len()).collect();
-        Ok(Self {
+        Ok(Self::over(passes, pass_index, execution_order, true))
+    }
+
+    /// A scheduler over `passes` with every enforcement gate off, every cache
+    /// cold, no research trace, the default iteration budget and no adapter.
+    ///
+    /// The one place the field set is spelled out. Two constructors listed all
+    /// fourteen fields each, so a field that arrived with a non-default
+    /// starting value in one of them was a scheduler that behaved differently
+    /// depending on which entry point built it.
+    fn over(
+        passes: Vec<ProgramPassKind>,
+        pass_index: FxHashMap<&'static str, usize>,
+        execution_order: Vec<usize>,
+        requirements_prevalidated: bool,
+    ) -> Self {
+        Self {
             passes,
             pass_index,
             research_traces: FxHashMap::default(),
             execution_order,
-            requirements_prevalidated: true,
+            requirements_prevalidated,
             max_iterations: DEFAULT_MAX_ITERATIONS,
+            adapter: AdapterCaps::conservative(),
             invalidation_adjacency_cache: OnceLock::new(),
             invalidation_closure_cache: OnceLock::new(),
-            dirty_trigger_index_cache: OnceLock::new(),
             initial_dirty_flags_cache: OnceLock::new(),
             enforce_cost_monotone: false,
             enforce_effect_handlers: false,
             enforce_linear_types: false,
             enforce_shape_predicates: false,
-        })
+            budget: None,
+        }
     }
 
     /// Toggle the cost-monotone-down post-condition gate. See the field docs on
@@ -574,6 +602,19 @@ impl PassScheduler {
     pub fn shape_predicate_enforcement(&self) -> bool {
         self.enforce_shape_predicates
     }
+
+    /// Set a deterministic compilation budget for this scheduler.
+    #[must_use]
+    pub fn with_budget(mut self, budget: crate::optimizer::compile_budget::CompileBudget) -> Self {
+        self.budget = Some(budget);
+        self
+    }
+
+    /// The active compilation budget if set.
+    #[must_use]
+    pub fn budget(&self) -> Option<&crate::optimizer::compile_budget::CompileBudget> {
+        self.budget.as_ref()
+    }
 }
 
 impl Default for PassScheduler {
@@ -605,7 +646,7 @@ mod topo;
 mod queries;
 
 /// Run methods on PassScheduler: run, run_with_metrics, run_once,
-/// run_once_with_metrics, mark_invalidated_passes.
+/// run_once_with_metrics.
 mod run;
 
 pub(crate) use topo::schedule_pass_metadata_indices;
@@ -636,4 +677,5 @@ mod research_trace_contract_tests {
 }
 
 #[cfg(test)]
+#[path = "../../../tests/internal/optimizer/scheduler/mod.rs"]
 mod tests;

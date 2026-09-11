@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The backend error-code catalog is generated from the enum that emits it. `ErrorCode` owns `ALL` and `summary`, and a const assertion makes a variant missing from the catalog a compile error. The previous markdown table, and the seven-variant list that checked it against a nine-variant enum, are gone."

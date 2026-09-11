@@ -1,8 +1,9 @@
-use std::sync::Arc;
+use std::borrow::Cow;
 
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::node::Node;
-use crate::ir_inner::model::types::BinOp;
+use crate::ir_inner::model::op_signature::BinOp;
+use crate::transform::rewrite_walk::{self, NodeRewrite};
 
 use super::{meta::buffer_decl_canonical_key, BufferDecl, Program};
 
@@ -15,11 +16,29 @@ impl Program {
     /// wrappers that do not own local bindings are flattened.
     #[must_use]
     pub fn canonicalized(&self) -> Self {
-        let mut buffers = self.buffers().to_vec();
-        sort_buffers(&mut buffers);
+        self.canonical_form().into_owned()
+    }
+
+    /// Canonical shape of this program, borrowed when it is already canonical.
+    ///
+    /// Fingerprints are taken after every optimizer pass, and by then the
+    /// program is normally canonical already, so the walk reports what it
+    /// changed rather than rebuilding the whole tree to discover it changed
+    /// nothing.
+    fn canonical_form(&self) -> Cow<'_, Self> {
         let mut ctx = CanonicalCtx::default();
-        self.with_rewritten_entry(ctx.canonicalize_nodes(self.entry()))
-            .with_rewritten_buffers(buffers)
+        match (
+            ctx.canonicalize_nodes(self.entry()),
+            canonical_buffers(self.buffers()),
+        ) {
+            (None, None) => Cow::Borrowed(self),
+            (None, Some(buffers)) => Cow::Owned(self.with_rewritten_buffers(buffers)),
+            (Some(entry), None) => Cow::Owned(self.with_rewritten_entry(entry)),
+            (Some(entry), Some(buffers)) => Cow::Owned(
+                self.with_rewritten_entry(entry)
+                    .with_rewritten_buffers(buffers),
+            ),
+        }
     }
 
     /// Serialize the canonical IR shape into stable VIR0 wire bytes.
@@ -30,7 +49,7 @@ impl Program {
     /// but after canonical normalization has been applied.
     #[must_use]
     pub fn canonical_wire_bytes(&self) -> Result<Vec<u8>, crate::error::IrError> {
-        let canonical = self.canonicalized();
+        let canonical = self.canonical_form();
         // Pre-size: VIR0 wire encoding lands in the ballpark of ~32
         // bytes per IR node + a fixed program header. Over-sizing is
         // free at this stage and avoids the typical 4-7 reallocations
@@ -58,8 +77,20 @@ impl Program {
     }
 }
 
-fn sort_buffers(buffers: &mut [BufferDecl]) {
-    buffers.sort_by_cached_key(buffer_decl_canonical_key);
+/// Canonically ordered buffer table, or `None` when it is already ordered.
+fn canonical_buffers(buffers: &[BufferDecl]) -> Option<Vec<BufferDecl>> {
+    let keys: Vec<Vec<u8>> = buffers.iter().map(buffer_decl_canonical_key).collect();
+    if keys.windows(2).all(|pair| pair[0] <= pair[1]) {
+        return None;
+    }
+    let mut order: Vec<usize> = (0..buffers.len()).collect();
+    order.sort_by(|&left, &right| keys[left].cmp(&keys[right]));
+    Some(
+        order
+            .into_iter()
+            .map(|index| buffers[index].clone())
+            .collect(),
+    )
 }
 
 #[derive(Default)]
@@ -69,144 +100,35 @@ struct CanonicalCtx {
 }
 
 impl CanonicalCtx {
-    fn canonicalize_nodes(&mut self, nodes: &[Node]) -> Vec<Node> {
-        let mut out = Vec::with_capacity(nodes.len());
-        for node in nodes {
-            push_canonical_node(&mut out, self.canonicalize_node(node));
+    /// Canonicalize every node of `nodes`, splicing out `Block` wrappers that
+    /// own no local binding. `None` when the body was already canonical.
+    ///
+    /// This is also the [`NodeRewrite::body`] hook, so the splice applies at
+    /// every depth rather than only at the entry.
+    fn canonicalize_nodes(&mut self, nodes: &[Node]) -> Option<Vec<Node>> {
+        let mut out: Option<Vec<Node>> = None;
+        for (index, node) in nodes.iter().enumerate() {
+            let rewritten = rewrite_walk::rewrite_node(node, self);
+            let splices = matches!(
+                rewritten.as_ref().unwrap_or(node),
+                Node::Block(children) if can_splice_block(children)
+            );
+            if out.is_none() && rewritten.is_none() && !splices {
+                continue;
+            }
+            let sink = out.get_or_insert_with(|| nodes[..index].to_vec());
+            push_canonical_node(sink, rewritten.unwrap_or_else(|| node.clone()));
         }
         out
     }
+}
 
-    fn canonicalize_node(&mut self, node: &Node) -> Node {
-        match node {
-            Node::Let { name, value } => Node::Let {
-                name: name.clone(),
-                value: self.canonicalize_expr(value),
-            },
-            Node::Assign { name, value } => Node::Assign {
-                name: name.clone(),
-                value: self.canonicalize_expr(value),
-            },
-            Node::Store {
-                buffer,
-                index,
-                value,
-            } => Node::Store {
-                buffer: buffer.clone(),
-                index: self.canonicalize_expr(index),
-                value: self.canonicalize_expr(value),
-            },
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => Node::If {
-                cond: self.canonicalize_expr(cond),
-                then: self.canonicalize_nodes(then),
-                otherwise: self.canonicalize_nodes(otherwise),
-            },
-            Node::Loop {
-                var,
-                from,
-                to,
-                body,
-            } => Node::Loop {
-                var: var.clone(),
-                from: self.canonicalize_expr(from),
-                to: self.canonicalize_expr(to),
-                body: self.canonicalize_nodes(body),
-            },
-            Node::Block(children) => Node::Block(self.canonicalize_nodes(children)),
-            Node::Region {
-                generator,
-                source_region,
-                body,
-            } => Node::Region {
-                generator: generator.clone(),
-                source_region: source_region.clone(),
-                body: Arc::new(self.canonicalize_nodes(body)),
-            },
-            Node::AsyncLoad {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => Node::AsyncLoad {
-                source: source.clone(),
-                destination: destination.clone(),
-                offset: Box::new(self.canonicalize_expr(offset)),
-                size: Box::new(self.canonicalize_expr(size)),
-                tag: tag.clone(),
-            },
-            Node::AsyncStore {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => Node::AsyncStore {
-                source: source.clone(),
-                destination: destination.clone(),
-                offset: Box::new(self.canonicalize_expr(offset)),
-                size: Box::new(self.canonicalize_expr(size)),
-                tag: tag.clone(),
-            },
-            Node::Trap { address, tag } => Node::Trap {
-                address: Box::new(self.canonicalize_expr(address)),
-                tag: tag.clone(),
-            },
-            Node::IndirectDispatch {
-                count_buffer,
-                count_offset,
-            } => Node::IndirectDispatch {
-                count_buffer: count_buffer.clone(),
-                count_offset: *count_offset,
-            },
-            Node::AllReduce { buffer, op, group } => Node::AllReduce {
-                buffer: buffer.clone(),
-                op: *op,
-                group: *group,
-            },
-            Node::AllGather {
-                input,
-                output,
-                group,
-            } => Node::AllGather {
-                input: input.clone(),
-                output: output.clone(),
-                group: *group,
-            },
-            Node::ReduceScatter {
-                input,
-                output,
-                op,
-                group,
-            } => Node::ReduceScatter {
-                input: input.clone(),
-                output: output.clone(),
-                op: *op,
-                group: *group,
-            },
-            Node::Broadcast {
-                buffer,
-                root,
-                group,
-            } => Node::Broadcast {
-                buffer: buffer.clone(),
-                root: *root,
-                group: *group,
-            },
-            Node::AsyncWait { tag } => Node::AsyncWait { tag: tag.clone() },
-            Node::Resume { tag } => Node::Resume { tag: tag.clone() },
-            Node::Return => Node::Return,
-            Node::Barrier { ordering } => Node::barrier_with_ordering(*ordering),
-            Node::Opaque(extension) => Node::Opaque(Arc::clone(extension)),
-        }
-    }
-
-    fn canonicalize_expr(&mut self, expr: &Expr) -> Expr {
-        crate::optimizer::rewrite::rewrite_expr(expr, &mut |candidate| {
+impl NodeRewrite for CanonicalCtx {
+    /// Normalize commutative operand order. The expression rewrite reports no
+    /// change when nothing swapped, so an already-canonical operand is neither
+    /// rebuilt nor re-encoded.
+    fn operand(&mut self, expr: &Expr) -> Option<Expr> {
+        match crate::optimizer::rewrite::rewrite_expr(expr, &mut |candidate| {
             let Expr::BinOp { op, left, right } = candidate else {
                 return None;
             };
@@ -218,8 +140,14 @@ impl CanonicalCtx {
                 left: Box::new((**right).clone()),
                 right: Box::new((**left).clone()),
             })
-        })
-        .into_owned()
+        }) {
+            Cow::Borrowed(_) => None,
+            Cow::Owned(rewritten) => Some(rewritten),
+        }
+    }
+
+    fn body(&mut self, _parent: &Node, body: &[Node]) -> Option<Vec<Node>> {
+        self.canonicalize_nodes(body)
     }
 }
 
@@ -234,6 +162,29 @@ fn can_splice_block(nodes: &[Node]) -> bool {
     nodes.iter().all(|node| !matches!(node, Node::Let { .. }))
 }
 
+/// Whether a commutative operator's operands are in the wrong canonical order.
+///
+/// The canonical wire form defines the operand order every consumer must land
+/// in, so the decision lives here and the canonicalize pass reads it. The
+/// optimizer used to answer the same question with a hash-derived sort key,
+/// which disagreed with the wire-byte order it was supposed to reproduce: the
+/// pass reported a canonical program that `canonicalized` still rewrote.
+///
+/// The key buffers are reused per thread. Each call encodes both operands, and
+/// the canonicalize pass asks once per binary expression, so a fresh
+/// allocation per question would be two allocations per operator.
+pub(crate) fn commutative_operands_out_of_order(op: BinOp, left: &Expr, right: &Expr) -> bool {
+    thread_local! {
+        static KEYS: std::cell::RefCell<(Vec<u8>, Vec<u8>)> =
+            const { std::cell::RefCell::new((Vec::new(), Vec::new())) };
+    }
+    KEYS.with(|cell| {
+        let mut keys = cell.borrow_mut();
+        let (left_key, right_key) = &mut *keys;
+        should_swap_operands(op, left, right, left_key, right_key)
+    })
+}
+
 fn should_swap_operands(
     op: BinOp,
     left: &Expr,
@@ -241,7 +192,7 @@ fn should_swap_operands(
     left_key: &mut Vec<u8>,
     right_key: &mut Vec<u8>,
 ) -> bool {
-    if !is_commutative_binop(op) {
+    if !op.commutes() {
         return false;
     }
     match (is_literal(left), is_literal(right)) {
@@ -256,7 +207,7 @@ fn should_swap_operands(
             expr_wire_key_cmp(left, right, left_key, right_key).is_gt()
         }
         (false, false) => {
-            can_sort_all_operands(op) && expr_wire_key_cmp(left, right, left_key, right_key).is_gt()
+            op.commutes_bit_exactly() && expr_wire_key_cmp(left, right, left_key, right_key).is_gt()
         }
     }
 }
@@ -280,50 +231,6 @@ fn append_expr_wire_key(key: &mut Vec<u8>, expr: &Expr) {
         key.extend_from_slice(b"VYRE-CANONICAL-EXPR-WIRE-ERROR\0");
         key.extend_from_slice(error.as_bytes());
     }
-}
-
-fn is_commutative_binop(op: BinOp) -> bool {
-    matches!(
-        op,
-        BinOp::Add
-            | BinOp::WrappingAdd
-            | BinOp::SaturatingAdd
-            | BinOp::Mul
-            | BinOp::SaturatingMul
-            | BinOp::BitAnd
-            | BinOp::BitOr
-            | BinOp::BitXor
-            | BinOp::Eq
-            | BinOp::Ne
-            | BinOp::And
-            | BinOp::Or
-            | BinOp::Min
-            | BinOp::Max
-            | BinOp::AbsDiff
-    )
-}
-
-fn can_sort_all_operands(op: BinOp) -> bool {
-    // Ops whose operand swap is observably safe even when both
-    // operands are arbitrary non-literal expressions. Excludes Add /
-    // Mul because float reassociation changes rounding for non-literal
-    // chains; `should_swap_operands` handles the both-literal case
-    // separately so the canonical fingerprint still normalises
-    // `Add(1, 2)` vs `Add(2, 1)`.
-    matches!(
-        op,
-        BinOp::WrappingAdd
-            | BinOp::SaturatingAdd
-            | BinOp::SaturatingMul
-            | BinOp::BitAnd
-            | BinOp::BitOr
-            | BinOp::BitXor
-            | BinOp::Eq
-            | BinOp::Ne
-            | BinOp::And
-            | BinOp::Or
-            | BinOp::AbsDiff
-    )
 }
 
 fn is_literal(expr: &Expr) -> bool {

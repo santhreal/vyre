@@ -59,6 +59,7 @@ impl PromotionPlan {
     }
 }
 
+// Inline: covers the crate-private `fits_in_budget` and `sorted_by_speedup`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

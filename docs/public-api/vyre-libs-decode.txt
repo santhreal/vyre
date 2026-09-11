@@ -1,0 +1,97 @@
+#[non_exhaustive] pub enum vyre_libs_decode::decode::rle_segment_lengths::PackError
+impl vyre_libs_decode::decode::ziftsieve::ZiftsieveBuffers<'static>
+pub const fn vyre_libs_decode::decode::hex::hex_decoded_capacity(input_len: u32) -> u32
+pub const vyre_libs_decode::decode::base64::BASE64_DECODE_TABLE_BUFFER: &str
+pub const vyre_libs_decode::decode::base64::BASE64_DECODE_TABLE_WORDS: u32
+pub const vyre_libs_decode::decode::base64::BASE64_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_decode::decode::base64::INVALID: u32
+pub const vyre_libs_decode::decode::base64::OP_ID: &str
+pub const vyre_libs_decode::decode::base64::PAD: u32
+pub const vyre_libs_decode::decode::hex::HEX_DECODE_TABLE_BUFFER: &str
+pub const vyre_libs_decode::decode::hex::HEX_DECODE_TABLE_WORDS: u32
+pub const vyre_libs_decode::decode::hex::HEX_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_decode::decode::hex::OP_ID: &str
+pub const vyre_libs_decode::decode::inflate::DYNAMIC_HUFFMAN_REJECT: &str
+pub const vyre_libs_decode::decode::inflate::FIXED_HUFFMAN_REJECT: &str
+pub const vyre_libs_decode::decode::inflate::INFLATE_STORED_HEADER_WORDS: u32
+pub const vyre_libs_decode::decode::inflate::INFLATE_STORED_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_decode::decode::inflate::OP_ID: &str
+pub const vyre_libs_decode::decode::inflate::RESERVED_BTYPE_FIX: &str
+pub const vyre_libs_decode::decode::inflate::STORED_HEADER_FIX: &str
+pub const vyre_libs_decode::decode::rle_segment_lengths::BINDING_SEGMENTS_IN: u32
+pub const vyre_libs_decode::decode::rle_segment_lengths::BINDING_SEGMENT_LENGTHS_OUT: u32
+pub const vyre_libs_decode::decode::rle_segment_lengths::BINDING_SEGMENT_VALUES_OUT: u32
+pub const vyre_libs_decode::decode::rle_segment_lengths::MAX_SEGMENT_LENGTH: u32
+pub const vyre_libs_decode::decode::rle_segment_lengths::MAX_SEGMENT_VALUE: u32
+pub const vyre_libs_decode::decode::rle_segment_lengths::OP_ID: &str
+pub const vyre_libs_decode::decode::rle_segment_lengths::RLE_SEGMENT_LENGTHS_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_decode::decode::ziftsieve::MAX_BLOCK_SIZE: usize
+pub const vyre_libs_decode::decode::ziftsieve::MAX_SEQUENCES_PER_BLOCK: usize
+pub const vyre_libs_decode::decode::ziftsieve::OP_ID: &str
+pub const vyre_libs_decode::decode::ziftsieve::WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_decode::decode::ziftsieve::ZiftsieveBuffers<'static>::CANONICAL: Self
+pub enum vyre_libs_decode::decode::streaming::DecodeScanFuseError
+pub fn vyre_libs_decode::decode::base64::base64_decode(input: &str, output: &str, input_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_decode::decode::base64::base64_decode_body(input: &str, table: &str, output: &str, decoded_len_buffer: &str, input_len: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_decode::decode::base64::base64_decode_child(parent_op_id: &str, input: &str, table: &str, output: &str, decoded_len_buffer: &str, input_len: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_decode::decode::base64::base64_decode_then_aho_corasick(input: &str, decoded: &str, transitions: &str, accept: &str, matches: &str, input_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_decode::decode::base64::decoded_capacity(input_len: u32) -> u32
+pub fn vyre_libs_decode::decode::base64::standard_decode_table() -> [u32; 256]
+pub fn vyre_libs_decode::decode::base64::standard_decode_table_ref() -> &'static [u32; 256]
+pub fn vyre_libs_decode::decode::encodex::encodex_gpu(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_decode::decode::hex::hex_decode(input: &str, output: &str, input_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_decode::decode::hex::hex_decode_body(input: &str, output: &str, table: &str, input_len: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_decode::decode::hex::hex_decode_child(parent_op_id: &str, input: &str, output: &str, table: &str, input_len: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_decode::decode::hex::hex_decode_pair_expr(input: &str, table: &str, pair: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_decode::decode::hex::hex_decode_table() -> [u32; 256]
+pub fn vyre_libs_decode::decode::hex::hex_decode_table_ref() -> &'static [u32; 256]
+pub fn vyre_libs_decode::decode::hex::hex_decode_then_aho_corasick(input: &str, decoded: &str, transitions: &str, accept: &str, matches: &str, input_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_decode::decode::inflate::inflate_stored_block(input: &str, output: &str, input_len: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_decode::decode::inflate::inflate_stored_block_then_aho_corasick(input: &str, decoded: &str, transitions: &str, accept: &str, matches: &str, input_len: u32, state_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_decode::decode::inflate::inflate_stored_body(input: &str, output: &str, inflated_len_buffer: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_decode::decode::inflate::inflate_stored_child(parent_op_id: &str, input: &str, output: &str, inflated_len_buffer: &str) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_decode::decode::inflate::inflate_stored_header_nodes(input: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_decode::decode::inflate::inflate_stored_invalid_len_trap_node() -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_decode::decode::inflate::inflate_stored_len_is_valid_expr() -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_decode::decode::inflate::inflate_stored_non_stored_trap_nodes() -> [vyre_foundation::ir_inner::model::generated::Node; 3]
+pub fn vyre_libs_decode::decode::inflate::inflate_stored_payload_expr(input: &str, index: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_decode::decode::rle_segment_lengths::pack_rle_segments(segments: &[(u32, u8)]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_libs_decode::decode::rle_segment_lengths::PackError>
+pub fn vyre_libs_decode::decode::rle_segment_lengths::rle_segment_lengths(segment_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_decode::decode::rle_segment_lengths::try_pack_rle_segments_into(segments: &[(u32, u8)], out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_libs_decode::decode::rle_segment_lengths::PackError>
+pub fn vyre_libs_decode::decode::streaming::fuse_decode_scan(decoder: vyre_foundation::ir_inner::model::program::definition::Program, scanner: vyre_foundation::ir_inner::model::program::definition::Program, handoff_buf: &str, handoff_byte_count: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_decode::decode::streaming::DecodeScanFuseError>
+pub fn vyre_libs_decode::decode::ziftsieve::ziftsieve_gpu(buffers: vyre_libs_decode::decode::ziftsieve::ZiftsieveBuffers<'_>, extents: vyre_libs_decode::decode::ziftsieve::ZiftsieveExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_decode::decode::ziftsieve::ziftsieve_literal_copy(buffers: vyre_libs_decode::decode::ziftsieve::ZiftsieveBuffers<'_>, extents: vyre_libs_decode::decode::ziftsieve::ZiftsieveExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_decode::decode::ziftsieve::ziftsieve_literal_copy_body(buffers: vyre_libs_decode::decode::ziftsieve::ZiftsieveBuffers<'_>, seq_count: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_decode::link_anchor()
+pub mod vyre_libs_decode
+pub mod vyre_libs_decode::decode
+pub mod vyre_libs_decode::decode::base64
+pub mod vyre_libs_decode::decode::encodex
+pub mod vyre_libs_decode::decode::hex
+pub mod vyre_libs_decode::decode::inflate
+pub mod vyre_libs_decode::decode::rle_segment_lengths
+pub mod vyre_libs_decode::decode::streaming
+pub mod vyre_libs_decode::decode::ziftsieve
+pub struct vyre_libs_decode::decode::ziftsieve::ZiftsieveBuffers<'a>
+pub struct vyre_libs_decode::decode::ziftsieve::ZiftsieveExtents
+pub vyre_libs_decode::decode::rle_segment_lengths::PackError::AllocationFailed
+pub vyre_libs_decode::decode::rle_segment_lengths::PackError::AllocationFailed::message: alloc::string::String
+pub vyre_libs_decode::decode::rle_segment_lengths::PackError::LengthTooLarge
+pub vyre_libs_decode::decode::rle_segment_lengths::PackError::LengthTooLarge::length: u32
+pub vyre_libs_decode::decode::rle_segment_lengths::PackError::LengthTooLarge::segment: usize
+pub vyre_libs_decode::decode::rle_segment_lengths::PackError::ValueTooLarge
+pub vyre_libs_decode::decode::rle_segment_lengths::PackError::ValueTooLarge::segment: usize
+pub vyre_libs_decode::decode::rle_segment_lengths::PackError::ValueTooLarge::value: u32
+pub vyre_libs_decode::decode::streaming::DecodeScanFuseError::Fusion(vyre_foundation::execution_plan::fusion::FusionError)
+pub vyre_libs_decode::decode::streaming::DecodeScanFuseError::HandoffBufferMissing
+pub vyre_libs_decode::decode::streaming::DecodeScanFuseError::HandoffBufferMissing::handoff: alloc::string::String
+pub vyre_libs_decode::decode::streaming::DecodeScanFuseError::ZeroHandoff
+pub vyre_libs_decode::decode::streaming::DecodeScanFuseError::ZeroHandoff::handoff: alloc::string::String
+pub vyre_libs_decode::decode::ziftsieve::ZiftsieveBuffers::input: &'a str
+pub vyre_libs_decode::decode::ziftsieve::ZiftsieveBuffers::output: &'a str
+pub vyre_libs_decode::decode::ziftsieve::ZiftsieveBuffers::seq_literal_len: &'a str
+pub vyre_libs_decode::decode::ziftsieve::ZiftsieveBuffers::seq_literal_offset: &'a str
+pub vyre_libs_decode::decode::ziftsieve::ZiftsieveBuffers::seq_literal_start: &'a str
+pub vyre_libs_decode::decode::ziftsieve::ZiftsieveExtents::input_len: u32
+pub vyre_libs_decode::decode::ziftsieve::ZiftsieveExtents::max_output: u32
+pub vyre_libs_decode::decode::ziftsieve::ZiftsieveExtents::seq_count: u32

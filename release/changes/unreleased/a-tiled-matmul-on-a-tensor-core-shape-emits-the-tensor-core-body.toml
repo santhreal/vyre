@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A tiled matrix multiply on an F16 M16N8K16-eligible shape emits the tensor-core body, which no public builder could reach before."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Scope truncation at the first Return has one implementation, vyre_foundation::transform::rewrite_walk::reachable_prefix. The pass engine encoder and the foundation DCE both read it instead of carrying their own copy."

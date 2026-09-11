@@ -1,0 +1,2 @@
+category = "Added"
+text = "The vyre-safetensors adapter reads bounded safetensors headers and sharded indexes without reading tensor payloads, confines shard paths to the checkpoint root, rejects duplicate or unmapped tensors, validates caller-supplied dtype and shape requirements, and streams complete shards against an exact trusted BLAKE3 set before returning an immutable checkpoint identity."

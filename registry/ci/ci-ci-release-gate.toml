@@ -1,0 +1,14 @@
+lane = "ci-ci-release-gate"
+workflow = ".github/workflows/ci.yml"
+job = "ci-release-gate"
+state = "live"
+required_status = "CI / CI release gate"
+triggers = ["push", "pull_request"]
+steps = [
+  { command = '''if [ "${{ needs.matrix.result }}" != "success" ] \
+  || [ "${{ needs.release-evidence-shape.result }}" != "success" ]; then
+  echo "::error::A required CI job failed or did not run."
+  exit 1
+fi
+echo "CI release gate passed."''' },
+]

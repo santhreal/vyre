@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use thiserror::Error;
-use vyre_driver::aot::{AotLauncherRequest, LauncherDependency};
+use vyre_driver::{AotLauncherRequest, LauncherDependency};
 
 use crate::artifact::{registration, TargetId};
 use vyre_megakernel::ArtifactEnvelope;
@@ -88,12 +88,14 @@ pub fn emit_launcher_rust(
         include_ttt_loop: opts.include_ttt_loop,
     };
 
-    let target_files = vyre_driver::aot::emit_aot_launcher_target(&selected_target, &request)
-        .map_err(|error| match error {
-            vyre_driver::BackendError::UnsupportedFeature { .. } => {
-                LauncherError::TargetNotEnabled(selected_target.clone())
+    let target_files =
+        vyre_driver::emit_aot_launcher_target(&selected_target, &request).map_err(|error| {
+            match error {
+                vyre_driver::BackendError::UnsupportedFeature { .. } => {
+                    LauncherError::TargetNotEnabled(selected_target.clone())
+                }
+                other => LauncherError::Backend(other.to_string()),
             }
-            other => LauncherError::Backend(other.to_string()),
         })?;
 
     let mut tree = target_files.files;
@@ -206,6 +208,7 @@ Target-owned collective support is {collective_status} in this launcher.
     )
 }
 
+// Inline: covers the private `emit_launcher_cargo_toml`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

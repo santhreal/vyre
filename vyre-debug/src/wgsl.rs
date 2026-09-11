@@ -12,8 +12,8 @@ pub struct WgslDump {
 
 /// Lower a program and emit WGSL with variable source lines.
 pub fn dump_wgsl(program: &Program) -> Result<WgslDump, String> {
-    let lowered = vyre_lower::lower_verified(program).map_err(|e| format!("{:?}", e))?;
-    let module = vyre_emit_naga::emit(&lowered.descriptor).map_err(|e| format!("{:?}", e))?;
+    let lowered = vyre_lower::lower_physical(program).map_err(|e| format!("{:?}", e))?;
+    let module = vyre_emit_naga::emit(lowered.descriptor()).map_err(|e| format!("{:?}", e))?;
     let info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
         naga::valid::Capabilities::all(),

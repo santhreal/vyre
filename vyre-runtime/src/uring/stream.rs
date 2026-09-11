@@ -7,181 +7,12 @@
 //! via [`GpuMappedBuffer::from_bar1_peer_with_owner`] plus NVMe passthrough.
 //! The io_uring writer never targets an ordinary userspace bounce buffer.
 
+#[cfg(feature = "uring-cmd-nvme")]
+use super::buffer::IORING_OP_URING_CMD;
+use super::buffer::{GpuMappedBuffer, Iovec, IORING_OP_READV, IORING_OP_READ_FIXED};
 use super::ring::IoUringState;
-use crate::PipelineError;
-use core::marker::PhantomData;
+use crate::{CounterArithmetic, CounterScope, PipelineError, RequestFault};
 use core::sync::atomic::{AtomicU32, Ordering};
-
-/// Minimal `iovec` struct matching the Linux ABI for `readv`.
-#[repr(C)]
-#[derive(Debug, Clone, Copy)]
-pub struct Iovec {
-    /// Target buffer address for this chunk of the read.
-    pub iov_base: *mut core::ffi::c_void,
-    /// Byte length of the target buffer.
-    pub iov_len: usize,
-}
-
-/// `IORING_OP_READV`  -  scatter-read into an array of iovecs.
-pub const IORING_OP_READV: u8 = 1;
-/// `IORING_OP_READ_FIXED`  -  read into a pre-registered buffer.
-pub const IORING_OP_READ_FIXED: u8 = 22;
-/// `IORING_OP_URING_CMD`  -  vendor-specific passthrough (NVMe). Kernel 6.0+.
-pub const IORING_OP_URING_CMD: u8 = 46;
-
-/// GPU-visible memory region that io_uring is allowed to DMA into.
-///
-/// Compatibility constructors cover host-visible shared mappings. The BAR1
-/// constructor covers the native GPUDirect path where NVMe DMA lands directly
-/// in GPU-owned memory.
-pub struct GpuMappedBuffer<'a> {
-    ptr: *mut u8,
-    len: usize,
-    _owner: PhantomData<&'a mut [u8]>,
-}
-
-// SAFETY: Send + Sync because (a) the constructor's safety contract
-// requires the caller to commit the lifetime invariant, and (b) the
-// raw pointer is only dereferenced by the kernel via io_uring  -
-// vyre-runtime never reads through it directly.
-unsafe impl Send for GpuMappedBuffer<'_> {}
-unsafe impl Sync for GpuMappedBuffer<'_> {}
-
-macro_rules! define_mapped_owner_constructor {
-    ($name:ident, $ptr:ident, $doc:expr) => {
-        #[doc = $doc]
-        pub unsafe fn $name<O: ?Sized>(_owner: &'a mut O, $ptr: *mut u8, len: usize) -> Self {
-            Self {
-                ptr: $ptr,
-                len,
-                _owner: PhantomData,
-            }
-        }
-    };
-}
-
-impl<'a> GpuMappedBuffer<'a> {
-    /// Construct from a borrowed host-visible byte slice.
-    ///
-    /// # Safety
-    ///
-    /// The caller asserts:
-    /// - `slice` aliases a device allocation created with host-visible
-    ///   host-shared usage bits by the concrete backend.
-    /// - No other code reads or writes through `slice` while the
-    ///   returned handle is alive.
-    pub unsafe fn from_host_visible_slice(slice: &'a mut [u8]) -> Self {
-        Self {
-            ptr: slice.as_mut_ptr(),
-            len: slice.len(),
-            _owner: PhantomData,
-        }
-    }
-
-    define_mapped_owner_constructor!(
-        from_host_visible_owner,
-        ptr,
-        concat!(
-            "Construct from a raw pointer plus an explicit owner anchor.\n\n",
-            "The borrow on `owner` forces the mapped region to outlive every derived ",
-            "[`AsyncUringStream`].\n\n",
-            "# Safety\n\n",
-            "The caller must ensure that `ptr` names a `len`-byte host-visible GPU ",
-            "allocation owned by `owner`, and that no other code accesses the region ",
-            "while the returned handle is alive."
-        )
-    );
-
-    /// Duplicate the mapped-buffer handle for the same underlying region.
-    ///
-    /// # Safety
-    ///
-    /// The caller must uphold the same aliasing and lifetime guarantees as
-    /// [`GpuMappedBuffer::from_host_visible_slice`]. This does not clone memory;
-    /// it creates another handle to the same mapped bytes.
-    pub unsafe fn duplicate(&self) -> Self {
-        Self {
-            ptr: self.ptr,
-            len: self.len,
-            _owner: PhantomData,
-        }
-    }
-
-    /// Carve out a sub-region of this mapped buffer.
-    ///
-    /// This preserves the original constructor contract: the returned
-    /// handle aliases the same host-visible GPU allocation and carries
-    /// no ownership of its own.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`PipelineError::QueueFull`] when `offset + len`
-    /// exceeds the mapped buffer bounds.
-    pub fn sub_region(&self, offset: usize, len: usize) -> Result<Self, crate::PipelineError> {
-        let _end = vyre_driver::accounting::checked_usize_byte_range_end_lazy(
-            offset,
-            len,
-            self.len,
-            || {
-                crate::PipelineError::QueueFull {
-                queue: "submission",
-                fix: "GpuMappedBuffer::sub_region offset + len overflows usize; reduce slot size or enlarge the staging buffer",
-            }
-            },
-            |_| {
-                crate::PipelineError::QueueFull {
-                queue: "submission",
-                fix: "GpuMappedBuffer::sub_region exceeds the mapped allocation; reduce slot size or enlarge the staging buffer",
-            }
-            },
-        )?;
-        Ok(Self {
-            ptr: self.ptr.wrapping_add(offset),
-            len,
-            _owner: PhantomData,
-        })
-    }
-
-    /// Byte length of the mapped region.
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.len
-    }
-
-    /// Whether the region is empty.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-
-    /// Raw pointer for io_uring submission. Crate-private.
-    pub(crate) fn as_ptr(&self) -> *mut u8 {
-        self.ptr
-    }
-
-    /// Borrow the mapped bytes as a mutable slice.
-    ///
-    /// # Safety
-    ///
-    /// The caller must ensure exclusive mutable access to the region for the
-    /// lifetime of the returned slice.
-    pub unsafe fn as_mut_slice(&mut self) -> &mut [u8] {
-        // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
-        unsafe { core::slice::from_raw_parts_mut(self.ptr, self.len) }
-    }
-
-    define_mapped_owner_constructor!(
-        from_bar1_peer_with_owner,
-        peer_ptr,
-        concat!(
-            "Construct from a PCIe peer-memory pointer for direct storage DMA.\n\n",
-            "# Safety\n\n",
-            "The caller must ensure that `peer_ptr` names a GPU allocation suitable ",
-            "for peer DMA, that the allocation outlives the handle, and that the ",
-            "io_uring kernel and storage driver both support DMA mapping."
-        )
-    );
-}
 
 /// Streaming reader that pushes chunked reads into an io_uring SQ and
 /// advances an atomic tail pointer the megakernel observes.
@@ -192,11 +23,6 @@ pub struct AsyncUringStream<'a> {
     pub(crate) inflight: u32,
     pub(crate) pending_submissions: u32,
 }
-
-// SAFETY: raw pointer fields covered by GpuMappedBuffer's contract +
-// the constructor's safety commitment on megakernel_tail_ptr.
-unsafe impl Send for AsyncUringStream<'_> {}
-unsafe impl Sync for AsyncUringStream<'_> {}
 
 impl<'a> AsyncUringStream<'a> {
     /// Create a stream bound to the given ring state, GPU-mapped
@@ -225,8 +51,10 @@ impl<'a> AsyncUringStream<'a> {
     ///
     /// # Errors
     ///
-    /// - [`PipelineError::QueueFull`] if the SQ is full OR the
-    ///   destination slot exceeds buffer bounds.
+    /// - [`PipelineError::InvalidRequest`] if `iovs_storage` is empty.
+    /// - [`PipelineError::QueueFull`] if the SQ holds every entry it has.
+    /// - [`PipelineError::RegionBounds`] if the destination slot ends past the
+    ///   mapped buffer.
     /// - Range errors surface later as [`PipelineError::IoUringSyscall`]
     ///   on `poll` if the kernel rejects the SQE.
     ///
@@ -234,7 +62,7 @@ impl<'a> AsyncUringStream<'a> {
     ///
     /// `iovs_storage` must live until this SQE's completion is reaped;
     /// the kernel dereferences `iov_base` at I/O time, not submit time.
-    pub unsafe fn submit_read_to_gpu(
+    pub fn submit_read_to_gpu(
         &mut self,
         fd: i32,
         offset: u64,
@@ -243,14 +71,11 @@ impl<'a> AsyncUringStream<'a> {
         iovs_storage: &mut [Iovec],
     ) -> Result<(), PipelineError> {
         if iovs_storage.is_empty() {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "caller supplied empty iovs_storage; pass at least one slot",
-            });
+            return Err(empty_iovec_storage());
         }
         let target_offset = checked_chunk_target_offset(chunk_idx, len)?;
         // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
-        unsafe { self.submit_read_to_gpu_at(fd, offset, len, target_offset, iovs_storage) }
+        self.submit_read_to_gpu_at(fd, offset, len, target_offset, iovs_storage)
     }
 
     /// Submit a read directly into a byte offset inside the mapped buffer.
@@ -262,13 +87,14 @@ impl<'a> AsyncUringStream<'a> {
     ///
     /// # Errors
     ///
-    /// - [`PipelineError::QueueFull`] if the SQ is full OR the target range
-    ///   exceeds the mapped buffer bounds.
+    /// - [`PipelineError::QueueFull`] if the SQ holds every entry it has.
+    /// - [`PipelineError::RegionBounds`] if the target range ends past the
+    ///   mapped buffer.
     ///
     /// # Safety
     ///
     /// `iovs_storage` must live until this SQE's completion is reaped.
-    pub unsafe fn submit_read_to_gpu_at(
+    pub fn submit_read_to_gpu_at(
         &mut self,
         fd: i32,
         offset: u64,
@@ -278,16 +104,14 @@ impl<'a> AsyncUringStream<'a> {
     ) -> Result<(), PipelineError> {
         // SAFETY: registered fixed buffers + file index are valid for the lifetime
         // of the ring; the SQE is built on the ring's own SQ slot.
-        unsafe {
-            self.submit_read_to_gpu_at_with_user_data(
-                fd,
-                offset,
-                len,
-                target_offset,
-                target_offset,
-                iovs_storage,
-            )
-        }
+        self.submit_read_to_gpu_at_with_user_data(
+            fd,
+            offset,
+            len,
+            target_offset,
+            target_offset,
+            iovs_storage,
+        )
     }
 
     /// Submit a read into an arbitrary byte offset and preserve caller-defined
@@ -295,13 +119,15 @@ impl<'a> AsyncUringStream<'a> {
     ///
     /// # Errors
     ///
-    /// Returns [`PipelineError::QueueFull`] when the SQ is full, the iovec
-    /// storage is empty, or the target range exceeds the mapped GPU buffer.
+    /// Returns [`PipelineError::QueueFull`] when the SQ holds every entry it
+    /// has, [`PipelineError::InvalidRequest`] when the iovec storage is empty,
+    /// and [`PipelineError::RegionBounds`] when the target range ends past the
+    /// mapped GPU buffer.
     ///
     /// # Safety
     ///
     /// `iovs_storage` must live until this SQE's completion is reaped.
-    pub unsafe fn submit_read_to_gpu_at_with_user_data(
+    pub fn submit_read_to_gpu_at_with_user_data(
         &mut self,
         fd: i32,
         offset: u64,
@@ -311,34 +137,32 @@ impl<'a> AsyncUringStream<'a> {
         iovs_storage: &mut [Iovec],
     ) -> Result<(), PipelineError> {
         if iovs_storage.is_empty() {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "caller supplied empty iovs_storage; pass at least one slot",
-            });
+            return Err(empty_iovec_storage());
         }
         let end = checked_target_end(target_offset, len)?;
         let gpu_len = usize_to_u64(self.gpu_buffer.len(), "mapped GPU buffer length")?;
         if end > gpu_len {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "target_offset + len exceeds GpuMappedBuffer length; enlarge the buffer or reduce the read size",
+            return Err(PipelineError::RegionBounds {
+                region: "GpuMappedBuffer mapped allocation",
+                offset: target_offset,
+                len: u64::from(len),
+                region_len: gpu_len,
+                unit: "bytes",
+                fix: "enlarge the buffer or reduce the read size",
             });
         }
 
+        let submission_entries = self.ring_state.submission_entries();
         let Some(sqe) = self.ring_state.get_sqe() else {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "SQ full; call AsyncUringStream::poll to drain completions then retry",
-            });
+            return Err(submission_queue_full(submission_entries));
         };
 
         // SAFETY: bounds-checked above; writing to a sub-region of
         // the host-visible GpuMappedBuffer the caller committed.
-        let target_addr = unsafe {
-            self.gpu_buffer
-                .as_ptr()
-                .add(u64_to_usize(target_offset, "target offset")?)
-        };
+        let target_addr = self
+            .gpu_buffer
+            .as_ptr()
+            .wrapping_add(u64_to_usize(target_offset, "target offset")?);
 
         iovs_storage[0] = Iovec {
             iov_base: target_addr.cast::<core::ffi::c_void>(),
@@ -396,8 +220,7 @@ impl<'a> AsyncUringStream<'a> {
 
         while let Some(cqe) = self.ring_state.peek_cqe() {
             let res = cqe.res;
-            self.ring_state.advance_cq();
-            decrement_queue_counter(&mut self.inflight, "inflight SQE count")?;
+            self.reap_completion("rebuild the stream state before reusing it")?;
 
             if res < 0 {
                 if first_error.is_none() {
@@ -416,9 +239,14 @@ impl<'a> AsyncUringStream<'a> {
             completed = vyre_driver::accounting::checked_add_u32_value(
                 completed,
                 1,
-                PipelineError::QueueFull {
-                    queue: "completion",
-                    fix: "io_uring completion count overflowed u32; drain completions more frequently",
+                PipelineError::CounterOverflow {
+                    scope: CounterScope::IoUring,
+                    counter: "reaped completion count",
+                    arithmetic: CounterArithmetic::Sum,
+                    lhs: u64::from(completed),
+                    rhs: 1,
+                    bits: 32,
+                    fix: "drain completions more frequently",
                 },
             )?;
         }
@@ -431,6 +259,25 @@ impl<'a> AsyncUringStream<'a> {
             Some(err) => Err(err),
             None => Ok(completed),
         }
+    }
+
+    /// Advance past one peeked completion and account it against the inflight
+    /// submissions.
+    ///
+    /// The completion queue advance and the inflight decrement are one step
+    /// because a reap that advances the queue without accounting for it leaves
+    /// the two counters describing different sets of submissions. The resident
+    /// queue pump, the NVMe ingest driver and the resident IO loop each reap
+    /// from their own loop and rebuild different state, which is what `fix`
+    /// states.
+    ///
+    /// # Errors
+    ///
+    /// [`PipelineError::CounterOrder`] when a completion is reaped with no
+    /// inflight submission left to account it against.
+    pub(crate) fn reap_completion(&mut self, fix: &'static str) -> Result<(), PipelineError> {
+        self.ring_state.advance_cq();
+        decrement_queue_counter(&mut self.inflight, "inflight SQE count", fix)
     }
 
     /// Flush pending submissions + wait for at least one completion.
@@ -454,6 +301,12 @@ impl<'a> AsyncUringStream<'a> {
         self.inflight
     }
 
+    /// Submission entries this stream's ring holds, the bound on inflight work.
+    #[must_use]
+    pub fn submission_entries(&self) -> u32 {
+        self.ring_state.submission_entries()
+    }
+
     /// Submit an NVMe passthrough command via `IORING_OP_URING_CMD`.
     /// Requires the `uring-cmd-nvme` feature and Linux kernel 6.0+.
     ///
@@ -469,8 +322,9 @@ impl<'a> AsyncUringStream<'a> {
     ///   variant is unreachable in this cfg-gated method but remains
     ///   part of the public error contract shared with the feature-gated
     ///   implementation.
-    /// - [`PipelineError::QueueFull`] if the SQ is full or the NVMe
-    ///   command buffer is malformed (must be exactly 64 bytes).
+    /// - [`PipelineError::InvalidRequest`] if the NVMe command buffer is not
+    ///   exactly 64 bytes.
+    /// - [`PipelineError::QueueFull`] if the SQ holds every entry it has.
     ///
     /// # Safety
     ///
@@ -480,24 +334,25 @@ impl<'a> AsyncUringStream<'a> {
     ///   rejection returns an errno on the CQE, but a forged payload
     ///   can still trigger device-level misbehavior.
     #[cfg(feature = "uring-cmd-nvme")]
-    pub unsafe fn submit_nvme_passthrough(
+    pub fn submit_nvme_passthrough(
         &mut self,
         fd: i32,
         user_data: u64,
         nvme_sqe_bytes: &[u8],
     ) -> Result<(), PipelineError> {
         if nvme_sqe_bytes.len() != 64 {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "NVMe passthrough SQE must be exactly 64 bytes; see linux/nvme_ioctl.h",
+            return Err(PipelineError::InvalidRequest {
+                fault: RequestFault::LengthMismatch,
+                quantity: "NVMe passthrough command byte length",
+                observed: usize_to_u64(nvme_sqe_bytes.len(), "NVMe command byte length")?,
+                bound: 64,
+                fix: "encode the 64-byte command from linux/nvme_ioctl.h",
             });
         }
 
+        let submission_entries = self.ring_state.submission_entries();
         let Some(sqe) = self.ring_state.get_sqe() else {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "SQ full; call AsyncUringStream::poll to drain completions then retry",
-            });
+            return Err(submission_queue_full(submission_entries));
         };
 
         // SAFETY: caller-provided slice is 64 bytes as validated
@@ -533,8 +388,9 @@ impl<'a> AsyncUringStream<'a> {
     ///
     /// # Errors
     ///
-    /// - [`PipelineError::QueueFull`] if the SQ is full or the
-    ///   destination range exceeds the GPU buffer bounds.
+    /// - [`PipelineError::QueueFull`] if the SQ holds every entry it has.
+    /// - [`PipelineError::RegionBounds`] if the destination range ends past the
+    ///   mapped GPU buffer.
     ///
     /// # Safety
     ///
@@ -542,7 +398,7 @@ impl<'a> AsyncUringStream<'a> {
     /// region overlaps `chunk_idx * len .. (chunk_idx + 1) * len`
     /// inside the [`GpuMappedBuffer`]. Mis-indexing produces a kernel
     /// DMA into the wrong region  -  silent data corruption.
-    pub unsafe fn submit_read_fixed(
+    pub fn submit_read_fixed(
         &mut self,
         fd: i32,
         offset: u64,
@@ -552,16 +408,14 @@ impl<'a> AsyncUringStream<'a> {
     ) -> Result<(), PipelineError> {
         let target_offset = checked_chunk_target_offset(chunk_idx, len)?;
         // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
-        unsafe {
-            self.submit_read_fixed_at(
-                fd,
-                offset,
-                len,
-                target_offset,
-                buf_index,
-                usize_to_u64(chunk_idx, "chunk index")?,
-            )
-        }
+        self.submit_read_fixed_at(
+            fd,
+            offset,
+            len,
+            target_offset,
+            buf_index,
+            usize_to_u64(chunk_idx, "chunk index")?,
+        )
     }
 
     /// Submit an `IORING_OP_READ_FIXED` into a registered buffer at an
@@ -574,15 +428,16 @@ impl<'a> AsyncUringStream<'a> {
     ///
     /// # Errors
     ///
-    /// - [`PipelineError::QueueFull`] if the SQ is full or the
-    ///   destination range exceeds the GPU buffer bounds.
+    /// - [`PipelineError::QueueFull`] if the SQ holds every entry it has.
+    /// - [`PipelineError::RegionBounds`] if the destination range ends past the
+    ///   mapped GPU buffer.
     ///
     /// # Safety
     ///
     /// `buf_index` must reference a still-registered iovec covering the
     /// target range, and `user_data` must remain meaningful to the caller
     /// until the CQE is reaped.
-    pub unsafe fn submit_read_fixed_at(
+    pub fn submit_read_fixed_at(
         &mut self,
         fd: i32,
         offset: u64,
@@ -594,26 +449,27 @@ impl<'a> AsyncUringStream<'a> {
         let end = checked_target_end(target_offset, len)?;
         let gpu_len = usize_to_u64(self.gpu_buffer.len(), "mapped GPU buffer length")?;
         if end > gpu_len {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "chunk_idx * len exceeds GpuMappedBuffer length",
+            return Err(PipelineError::RegionBounds {
+                region: "GpuMappedBuffer mapped allocation",
+                offset: target_offset,
+                len: u64::from(len),
+                region_len: gpu_len,
+                unit: "bytes",
+                fix: "enlarge the buffer or reduce the read size",
             });
         }
 
+        let submission_entries = self.ring_state.submission_entries();
         let Some(sqe) = self.ring_state.get_sqe() else {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "SQ full; call AsyncUringStream::poll to drain completions then retry",
-            });
+            return Err(submission_queue_full(submission_entries));
         };
 
         // SAFETY: bounds-checked target address inside the host-visible
         // GpuMappedBuffer the caller committed at construction.
-        let target_addr = unsafe {
-            self.gpu_buffer
-                .as_ptr()
-                .add(u64_to_usize(target_offset, "target offset")?)
-        };
+        let target_addr = self
+            .gpu_buffer
+            .as_ptr()
+            .wrapping_add(u64_to_usize(target_offset, "target offset")?);
 
         sqe.opcode = IORING_OP_READ_FIXED;
         sqe.fd = fd;
@@ -644,7 +500,7 @@ impl<'a> AsyncUringStream<'a> {
     /// `file_index` must name a still-registered fd.
     /// `iovs_storage` must outlive the completion. All other
     /// conditions match `submit_read_to_gpu`.
-    pub unsafe fn submit_read_to_gpu_fixed_file(
+    pub fn submit_read_to_gpu_fixed_file(
         &mut self,
         file_index: i32,
         offset: u64,
@@ -653,35 +509,33 @@ impl<'a> AsyncUringStream<'a> {
         iovs_storage: &mut [Iovec],
     ) -> Result<(), PipelineError> {
         if iovs_storage.is_empty() {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "caller supplied empty iovs_storage; pass at least one slot",
-            });
+            return Err(empty_iovec_storage());
         }
         let target_offset = checked_chunk_target_offset(chunk_idx, len)?;
         let end = checked_target_end(target_offset, len)?;
         let gpu_len = usize_to_u64(self.gpu_buffer.len(), "mapped GPU buffer length")?;
         if end > gpu_len {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "chunk_idx * len exceeds GpuMappedBuffer length",
+            return Err(PipelineError::RegionBounds {
+                region: "GpuMappedBuffer mapped allocation",
+                offset: target_offset,
+                len: u64::from(len),
+                region_len: gpu_len,
+                unit: "bytes",
+                fix: "enlarge the buffer or reduce the read size",
             });
         }
 
+        let submission_entries = self.ring_state.submission_entries();
         let Some(sqe) = self.ring_state.get_sqe() else {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "SQ full; call AsyncUringStream::poll to drain completions then retry",
-            });
+            return Err(submission_queue_full(submission_entries));
         };
 
         // SAFETY: same invariants as submit_read_to_gpu, plus the
         // caller committed that file_index is a registered fd.
-        let target_addr = unsafe {
-            self.gpu_buffer
-                .as_ptr()
-                .add(u64_to_usize(target_offset, "target offset")?)
-        };
+        let target_addr = self
+            .gpu_buffer
+            .as_ptr()
+            .wrapping_add(u64_to_usize(target_offset, "target offset")?);
         iovs_storage[0] = Iovec {
             iov_base: target_addr.cast::<core::ffi::c_void>(),
             iov_len: u32_to_usize(len, "read length")?,
@@ -707,7 +561,7 @@ impl<'a> AsyncUringStream<'a> {
     /// structured error rather than a link failure.
     #[cfg(not(feature = "uring-cmd-nvme"))]
     #[allow(clippy::unused_self, clippy::missing_safety_doc)]
-    pub unsafe fn submit_nvme_passthrough(
+    pub fn submit_nvme_passthrough(
         &mut self,
         _fd: i32,
         _user_data: u64,
@@ -717,70 +571,102 @@ impl<'a> AsyncUringStream<'a> {
     }
 }
 
+/// The submission queue holds every entry it has, so the caller must reap
+/// completions before submitting again.
+fn submission_queue_full(depth: u32) -> PipelineError {
+    PipelineError::QueueFull {
+        queue: "submission",
+        depth,
+        fix: "call AsyncUringStream::poll to drain completions then retry",
+    }
+}
+
+/// A caller passed no iovec slots, so there is nowhere to record the
+/// destination the kernel would write into.
+fn empty_iovec_storage() -> PipelineError {
+    PipelineError::InvalidRequest {
+        fault: RequestFault::BelowMinimum,
+        quantity: "iovec storage slots",
+        observed: 0,
+        bound: 1,
+        fix: "pass at least one iovec slot",
+    }
+}
+
 fn checked_chunk_target_offset(chunk_idx: usize, len: u32) -> Result<u64, PipelineError> {
     let chunk_idx = usize_to_u64(chunk_idx, "chunk index")?;
     vyre_driver::accounting::checked_mul_u64_lazy(chunk_idx, u64::from(len), || {
-        PipelineError::QueueFull {
-            queue: "submission",
-            fix: "chunk_idx * len overflows u64; split the IO batch before submission",
+        PipelineError::CounterOverflow {
+            scope: CounterScope::IoUring,
+            counter: "chunk destination offset",
+            arithmetic: CounterArithmetic::Product,
+            lhs: chunk_idx,
+            rhs: u64::from(len),
+            bits: 64,
+            fix: "split the IO batch before submission",
         }
     })
 }
 
 fn checked_target_end(target_offset: u64, len: u32) -> Result<u64, PipelineError> {
     vyre_driver::accounting::checked_add_u64_lazy(target_offset, u64::from(len), || {
-        PipelineError::QueueFull {
-            queue: "submission",
-            fix: "target_offset + len overflows u64; split the IO batch before submission",
+        PipelineError::CounterOverflow {
+            scope: CounterScope::IoUring,
+            counter: "target range end offset",
+            arithmetic: CounterArithmetic::Sum,
+            lhs: target_offset,
+            rhs: u64::from(len),
+            bits: 64,
+            fix: "split the IO batch before submission",
         }
     })
 }
 
 fn increment_queue_counter(counter: &mut u32, label: &'static str) -> Result<(), PipelineError> {
+    let current = *counter;
     *counter = vyre_driver::accounting::checked_add_u32_value(
-        *counter,
+        current,
         1,
-        PipelineError::QueueFull {
-            queue: "submission",
+        PipelineError::CounterOverflow {
+            scope: CounterScope::IoUring,
+            counter: label,
+            arithmetic: CounterArithmetic::Sum,
+            lhs: u64::from(current),
+            rhs: 1,
+            bits: 32,
             fix: match label {
-                "inflight SQE count" => {
-                    "inflight SQE count overflowed u32; poll completions before submitting more work"
-                }
-                "pending submission count" => {
-                    "pending submission count overflowed u32; flush submissions before queuing more work"
-                }
-                _ => {
-                    "io_uring queue counter overflowed u32; drain the queue before submitting more work"
-                }
+                "inflight SQE count" => "poll completions before submitting more work",
+                "pending submission count" => "flush submissions before queuing more work",
+                _ => "drain the queue before submitting more work",
             },
         },
     )?;
     Ok(())
 }
 
-fn decrement_queue_counter(counter: &mut u32, label: &'static str) -> Result<(), PipelineError> {
-    *counter = counter.checked_sub(1).ok_or(PipelineError::QueueFull {
-        queue: "completion",
-        fix: match label {
-            "inflight SQE count" => {
-                "io_uring completion arrived with no inflight SQE; rebuild the stream state"
-            }
-            _ => "io_uring queue counter underflowed; rebuild the stream state",
-        },
+fn decrement_queue_counter(
+    counter: &mut u32,
+    label: &'static str,
+    fix: &'static str,
+) -> Result<(), PipelineError> {
+    let current = *counter;
+    *counter = current.checked_sub(1).ok_or(PipelineError::CounterOrder {
+        scope: CounterScope::IoUring,
+        produced_counter: label,
+        produced: u64::from(current),
+        consumed_counter: "reaped completions",
+        consumed: u64::from(current).saturating_add(1),
+        fix,
     })?;
     Ok(())
 }
 
 fn usize_to_u64(value: usize, label: &'static str) -> Result<u64, PipelineError> {
-    u64::try_from(value).map_err(|_| PipelineError::QueueFull {
-        queue: "submission",
-        fix: match label {
-            "chunk index" => "chunk index cannot fit u64; split the IO batch before submission",
-            "mapped GPU buffer length" => {
-                "mapped GPU buffer length cannot fit u64; split the staging allocation"
-            }
-            _ => "host usize value cannot fit u64; split the IO batch before submission",
-        },
+    u64::try_from(value).map_err(|_| PipelineError::IntegerWidth {
+        quantity: label,
+        value: value as u128,
+        bits: 64,
+        fix: "split the IO batch before submission",
     })
 }
 
@@ -789,40 +675,19 @@ fn pointer_addr_u64<T>(ptr: *const T, label: &'static str) -> Result<u64, Pipeli
 }
 
 fn u64_to_usize(value: u64, label: &'static str) -> Result<usize, PipelineError> {
-    usize::try_from(value).map_err(|_| PipelineError::QueueFull {
-        queue: "submission",
-        fix: match label {
-            "target offset" => {
-                "target offset cannot fit usize; split the IO batch before submission"
-            }
-            _ => "u64 value cannot fit usize; split the IO batch before submission",
-        },
+    usize::try_from(value).map_err(|_| PipelineError::IntegerWidth {
+        quantity: label,
+        value: u128::from(value),
+        bits: usize::BITS,
+        fix: "split the IO batch before submission",
     })
 }
 
 fn u32_to_usize(value: u32, label: &'static str) -> Result<usize, PipelineError> {
-    usize::try_from(value).map_err(|_| PipelineError::QueueFull {
-        queue: "submission",
-        fix: match label {
-            "read length" => "read length cannot fit usize; split the IO request before submission",
-            _ => "u32 value cannot fit usize; split the IO request before submission",
-        },
+    usize::try_from(value).map_err(|_| PipelineError::IntegerWidth {
+        quantity: label,
+        value: u128::from(value),
+        bits: usize::BITS,
+        fix: "split the IO request before submission",
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn mapped_slice_roundtrip_is_miri_clean() {
-        let mut backing = [1_u8, 2, 3, 4];
-        // SAFETY: `backing` stays live and uniquely borrowed for the mapped buffer lifetime.
-        let mut mapped = unsafe { GpuMappedBuffer::from_host_visible_slice(&mut backing) };
-        // SAFETY: the mapped buffer was built from `backing` and remains uniquely borrowed.
-        let slice = unsafe { mapped.as_mut_slice() };
-        slice[0] = 9;
-        slice[3] = 7;
-        assert_eq!(backing, [9, 2, 3, 7]);
-    }
 }

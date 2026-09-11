@@ -1,166 +1,120 @@
-#![forbid(unsafe_code)]
+//! Reference-only semantic executor and reference target compilation dialect.
 
-//! Registry adapter that exposes `vyre-reference` as a `VyreBackend`.
+mod program_dispatch;
 
-use std::sync::Arc;
+pub use program_dispatch::{target_profile, ReferenceSemanticExecutor};
 
-use vyre_driver::backend::private;
-use vyre_driver::backend::{
-    core_supported_ops, BackendCapability, BackendError, BackendPrecedence, BackendRegistration,
-};
-use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, Program};
+pub use vyre_driver::{BackendError, DispatchConfig};
+use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
 
-/// Stable backend id for the pure-Rust reference interpreter.
-pub const CPU_REF_BACKEND_ID: &str = "cpu-ref";
-/// Validated identity for the non-production reference target.
-pub const CPU_REF_TARGET_ID: vyre_foundation::operation::TargetId =
-    vyre_foundation::operation::TargetId::expect_valid(CPU_REF_BACKEND_ID);
+/// Lane count the interpreter's subgroup simulator models.
+///
+/// [`vyre_reference::subgroup::SubgroupSimulator`] is built at this width, and
+/// a ballot the oracle returns is only comparable to a device answer when both
+/// report the same width.
+pub const REFERENCE_SUBGROUP_WIDTH: u32 = 32;
 
-/// Dispatch backend backed by `vyre_reference::reference_eval`.
+/// Workgroup-scoped scratch the interpreter admits, in bytes.
+///
+/// The interpreter allocates scratch in host memory, so this figure exists to
+/// keep the oracle from refusing a program a device accepts rather than to
+/// describe a hardware bank. It sits above the largest per-workgroup scratch
+/// any shipped target offers, which is 227 KiB of opt-in shared memory on the
+/// widest CUDA part.
+pub const REFERENCE_SHARED_SCRATCH_BYTES: u32 = 256 * 1024;
+
+/// Executor id the conformance evidence and the conformance CLI spell for the
+/// reference oracle.
+///
+/// The oracle is not a backend. It submits no `BackendRegistration`, resolves
+/// to nothing in the `VyreBackend` registry, and is reached through this
+/// crate's API rather than through device dispatch. Recording it as a backend
+/// id put it back into the backend set through the evidence path, so it has
+/// its own id with one owner here rather than a copy in each caller.
+pub const ORACLE_EXECUTOR_ID: &str = "reference-oracle";
+
+/// Whether `id` selects the reference oracle.
+#[must_use]
+pub fn is_oracle_executor_id(id: &str) -> bool {
+    id == ORACLE_EXECUTOR_ID
+}
+
+/// Pure evaluation helper backed by `vyre_reference::reference_eval`.
 #[derive(Debug, Default, Clone, Copy)]
-pub struct CpuRefBackend;
+pub struct CpuRefEvaluator;
 
-impl private::Sealed for CpuRefBackend {}
-
-impl VyreBackend for CpuRefBackend {
-    fn id(&self) -> &'static str {
-        CPU_REF_BACKEND_ID
-    }
-
-    fn version(&self) -> &'static str {
-        env!("CARGO_PKG_VERSION")
-    }
-
-    fn dispatch(
+impl CpuRefEvaluator {
+    /// Execute a program on input byte buffers using reference semantics.
+    pub fn evaluate(
         &self,
         program: &Program,
-        inputs: &[Vec<u8>],
+        inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
-        let values = reference_values(program, inputs)?;
-        // The interpreter infers its grid from buffer SHAPES, which cannot express
-        // the per-invocation count of a byte-scan program (the haystack is packed
-        // 4 bytes/u32 and the scan length is a runtime value). When the caller
-        // declares the true element-grid coverage via `dispatch_elements`, pass it
-        // as the interpreter's dispatch floor so high positions are covered exactly
-        // as the real GPU dispatch would, otherwise the tail is silently skipped
-        // (the Law-10 under-coverage this backend used to exhibit). `None` (every
-        // megakernel, whose `grid_override` is a work-queue length, not an element
-        // count) keeps buffer-shape inference so its grid is never over-run.
-        // An explicit dispatch grid fully specifies the workgroup coverage (its
-        // N-D shape, e.g. one query per `grid.y` block for batched persistent-BFS),
-        // so it wins over the 1-D `dispatch_elements` floor; the shape-inference
-        // path only applies when neither is set. See `DispatchConfig::dispatch_grid`.
-        let result = match (config.dispatch_grid, config.dispatch_elements) {
-            (Some(grid), _) => vyre_reference::reference_eval_with_grid(program, &values, grid),
-            (None, Some(elements)) => {
-                vyre_reference::reference_eval_with_dispatch(program, &values, elements)
-            }
-            (None, None) => vyre_reference::reference_eval(program, &values),
-        };
-        result
-            .map(|outputs| outputs.iter().map(Value::to_bytes).collect())
-            .map_err(|error| {
-                BackendError::new(format!(
-                    "cpu-ref reference dispatch failed: {error}. Fix: validate the Program and input buffer ABI before dispatch."
-                ))
-            })
+        interpret(program, inputs, config)
     }
 
-    fn supported_ops(&self) -> &std::collections::HashSet<vyre_foundation::ir::OpId> {
-        core_supported_ops()
-    }
-
-    fn max_workgroup_size(&self) -> [u32; 3] {
-        [1024, 1, 1]
-    }
-
-    fn max_compute_workgroups_per_dimension(&self) -> u32 {
-        u32::MAX
+    /// Execute a program on input byte buffers using default reference dispatch configuration.
+    pub fn evaluate_default(
+        &self,
+        program: &Program,
+        inputs: &[&[u8]],
+    ) -> Result<Vec<Vec<u8>>, BackendError> {
+        self.evaluate(program, inputs, &DispatchConfig::default())
     }
 }
 
-fn reference_values(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Value>, BackendError> {
-    // `is_backend_allocated_output` is the SINGLE cross-backend contract in
-    // vyre-foundation, shared verbatim with the reference interpreter, do NOT re-inline
-    // it here (drift would make this backend disagree with the interpreter on outputs).
-    let mut next_input = 0usize;
-    let mut values = Vec::new();
-    for buffer in program.buffers() {
-        if buffer.access() == BufferAccess::Workgroup {
-            continue;
-        }
-        let bytes = if buffer.is_backend_allocated_output() {
-            synthesized_zero_buffer(buffer, "backend-allocated output")?
-        } else if let Some(input) = inputs.get(next_input) {
-            next_input += 1;
-            input.clone()
-        } else {
-            synthesized_zero_buffer(buffer, "missing input")?
-        };
-        values.push(Value::Bytes(Arc::from(bytes)));
-    }
-    if next_input != inputs.len() {
-        return Err(BackendError::new(format!(
-            "cpu-ref received {} extra input buffer(s). Fix: pass inputs in Program::buffers order without trailing buffers.",
-            inputs.len() - next_input
-        )));
-    }
-    Ok(values)
-}
-
-fn synthesized_zero_buffer(
-    buffer: &BufferDecl,
-    role: &'static str,
-) -> Result<Vec<u8>, BackendError> {
-    let element_size = buffer.element().size_bytes().ok_or_else(|| {
-        BackendError::new(format!(
-            "cpu-ref cannot synthesize {role} buffer `{}` because its element type is unsized. Fix: declare fixed-width buffers or pass an explicit input buffer.",
-            buffer.name()
-        ))
-    })?;
-    let byte_len = usize::try_from(buffer.count())
-        .ok()
-        .and_then(|count| count.checked_mul(element_size))
-        .ok_or_else(|| {
+fn interpret(
+    program: &Program,
+    inputs: &[&[u8]],
+    config: &DispatchConfig,
+) -> Result<Vec<Vec<u8>>, BackendError> {
+    let expanded = strict_expanded(program, config)?;
+    let program = expanded.as_ref().unwrap_or(program);
+    let values = reference_values(program, inputs)?;
+    let result = vyre_reference::ReferenceRequest::standard(program, &values).outputs();
+    result
+        .map(|outputs| outputs.iter().map(Value::to_bytes).collect())
+        .map_err(|error| {
             BackendError::new(format!(
-                "cpu-ref {role} buffer `{}` size overflows usize. Fix: use a representable buffer size.",
-                buffer.name()
+                "reference evaluation failed: {error}. Fix: validate the Program and input buffer ABI before evaluation."
             ))
-        })?;
-    Ok(vec![0u8; byte_len])
+        })
 }
 
-fn acquire_cpu_ref() -> Result<Box<dyn VyreBackend>, BackendError> {
-    Ok(Box::new(CpuRefBackend))
-}
-
-inventory::submit! {
-    BackendRegistration {
-        id: CPU_REF_BACKEND_ID,
-        target_id: CPU_REF_TARGET_ID,
-        payload_format: None,
-        reference_oracle: true,
-        factory: acquire_cpu_ref,
-        supported_ops: core_supported_ops,
-        semantic_operations: vyre_driver::backend::dialect_only_supported_ops,
-        target_compiler: None,
-        materializer: None,
+/// The program with every approximable f32 operation expanded, or `None` when
+/// the dispatch did not ask for strict IEEE lowering.
+fn strict_expanded(
+    program: &Program,
+    config: &DispatchConfig,
+) -> Result<Option<Program>, BackendError> {
+    if !config.float_lowering.blocks_contraction() {
+        return Ok(None);
     }
+    vyre_foundation::fp_expansion::expand_strict_transcendentals(program).map_err(|error| {
+        BackendError::new(format!(
+            "reference evaluator cannot lower float mode `{}`: {error}. Fix: give the operation an exact f32 \
+             expansion in vyre_foundation::fp_expansion, so the oracle evaluates the program a \
+             strict device kernel executes.",
+            config.float_lowering.cache_label()
+        ))
+    })
 }
 
-inventory::submit! {
-    BackendCapability {
-        id: CPU_REF_BACKEND_ID,
-        dispatches: true,
-    }
-}
-
-inventory::submit! {
-    BackendPrecedence {
-        id: CPU_REF_BACKEND_ID,
-        rank: 900,
-    }
+fn reference_values(program: &Program, inputs: &[&[u8]]) -> Result<Vec<Value>, BackendError> {
+    // `vyre_reference::reference_input_values` is the interpreter's own input
+    // ABI. This backend walked the buffers itself and selected them as
+    // `access() != Workgroup && !is_backend_allocated_output()`, which admits a
+    // `Shared` buffer, a `Persistent` buffer, and a non-read-write
+    // `pipeline_live_out` that no backend stages from the host, so the oracle
+    // asked for one value more than a device dispatch and every later buffer
+    // read the one before it.
+    vyre_reference::reference_input_values(program, inputs).map_err(|mismatch| {
+        BackendError::new(format!(
+            "reference input buffers do not match the program: {mismatch}. Fix: pass one buffer per \
+             reference input in Program::buffers order; a synthesized zero buffer would answer an \
+             ABI failure with fabricated data."
+        ))
+    })
 }

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Op matrix rows no longer carry a bench_targets field that no producer fills; the benchmark roster owns the mapping from a target to the case it measures."

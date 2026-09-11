@@ -409,6 +409,7 @@ fn read_u32_le_at(bytes: &[u8], offset: usize, context: &'static str) -> Result<
     Ok(u32::from_le_bytes(raw))
 }
 
+// Inline: covers `decode_unique_equivalence_pairs`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::decode_unique_equivalence_pairs;

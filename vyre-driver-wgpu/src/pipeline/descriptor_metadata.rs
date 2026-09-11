@@ -13,13 +13,13 @@ use vyre_emit_naga::program::TrapTag;
 use vyre_lower::TRAP_SIDECAR_NAME;
 
 use crate::descriptor_mapping::{
-    descriptor_bind_group, descriptor_buffer_access, descriptor_memory_kind,
+    descriptor_binding_key, descriptor_buffer_access, descriptor_memory_kind,
 };
 use crate::pipeline::element_size_bytes;
 
 /// Metadata for one buffer binding derived from a `Program` at compile time.
 #[derive(Clone, Debug)]
-pub(crate) struct BufferBindingInfo {
+pub struct BufferBindingInfo {
     /// `group N` slot.
     pub group: u32,
     /// `binding slot N` slot.
@@ -43,13 +43,19 @@ pub(crate) struct BufferBindingInfo {
     /// Backend-owned trap sidecar; not supplied by callers and not returned as
     /// a public output.
     pub internal_trap: bool,
+    /// Whether one caller-provided input slot supplies this binding's contents.
+    ///
+    /// Recorded from `BufferDecl::consumes_host_input`, the single definition of
+    /// the host input ABI, so each binding walk reads one answer rather than
+    /// re-deriving the rule from flattened fields that omit `pipeline_live_out`.
+    pub consumes_host_input: bool,
 }
 
-pub(crate) fn descriptor_buffer_bindings(
+/// Build buffer binding metadata for a lowered kernel descriptor.
+pub fn descriptor_buffer_bindings(
     descriptor: &vyre_lower::KernelDescriptor,
     public_output_bindings: &FxHashSet<u32>,
-    explicit_output_bindings: &FxHashSet<u32>,
-    pipeline_live_out_bindings: &FxHashSet<u32>,
+    host_input_bindings: &FxHashSet<(u32, u32)>,
 ) -> Result<Vec<BufferBindingInfo>, BackendError> {
     let mut bindings = Vec::new();
     vyre_driver::allocation::try_reserve_vec_to_capacity(
@@ -63,18 +69,16 @@ pub(crate) fn descriptor_buffer_bindings(
             ))
         })?;
     for slot in &descriptor.bindings.slots {
-        let Some(group) = descriptor_bind_group(slot.memory_class) else {
+        let Some((group, key_slot)) = descriptor_binding_key(slot.memory_class, slot.slot) else {
             continue;
         };
         let access = descriptor_buffer_access(slot.visibility);
         let internal_trap = slot.name == TRAP_SIDECAR_NAME;
         let is_output = public_output_bindings.contains(&slot.slot) && !internal_trap;
-        let explicit_output = explicit_output_bindings.contains(&slot.slot);
-        let pipeline_live_out = pipeline_live_out_bindings.contains(&slot.slot);
-        let preserve_input_contents = access == vyre_foundation::ir::BufferAccess::ReadWrite
-            && !explicit_output
-            && !(is_output && pipeline_live_out)
-            && !internal_trap;
+        let consumes_host_input =
+            host_input_bindings.contains(&(group, key_slot)) && !internal_trap;
+        let preserve_input_contents =
+            access == vyre_foundation::ir::BufferAccess::ReadWrite && consumes_host_input;
         bindings.push(BufferBindingInfo {
             group,
             binding: slot.slot,
@@ -87,6 +91,7 @@ pub(crate) fn descriptor_buffer_bindings(
             is_output,
             preserve_input_contents,
             internal_trap,
+            consumes_host_input,
         });
     }
     Ok(bindings)
@@ -205,64 +210,137 @@ pub(crate) fn create_bind_group_layouts(
     Ok(layouts.into())
 }
 
+/// The descriptor's trap tag table, as this backend decodes sidecar words with.
+///
+/// `TrapTag` is an alias of the owner's pair type, so this is the owner's table
+/// verbatim: no reprojection, no second allocation, and no way for a code to
+/// mean one thing here and another in an emitter.
 pub(crate) fn descriptor_trap_tags(
     descriptor: &vyre_lower::KernelDescriptor,
 ) -> Result<Vec<TrapTag>, BackendError> {
-    fn recursive_op_count(body: &vyre_lower::KernelBody) -> Result<usize, BackendError> {
-        let mut count = body.ops.len();
-        for child in &body.child_bodies {
-            count = count.checked_add(recursive_op_count(child)?).ok_or_else(|| {
-                BackendError::new(
-                    "kernel descriptor recursive op count overflowed usize. Fix: split nested kernel bodies before descriptor metadata extraction.",
-                )
-            })?;
+    vyre_lower::descriptor_trap_tags(&descriptor.body).map_err(|source| {
+        BackendError::new(format!(
+            "descriptor trap tag table unavailable: {source}. Fix: split nested kernel bodies before descriptor metadata extraction."
+        ))
+    })
+}
+
+// Inline: this module records the canonical host-input answer onto binding
+// metadata, and these cases read that record. A device is never reached, so
+// this runs on any host.
+#[cfg(test)]
+mod tests {
+    use vyre_lower::{BindingVisibility, MemoryClass};
+
+    use super::*;
+    use crate::pipeline::descriptor_fixture::{descriptor_of, full_grid, slot};
+
+    #[test]
+    fn recorded_host_input_answer_is_the_supplied_set() {
+        let slots = full_grid();
+        // Alternating membership, so neither an all-true nor an all-false
+        // projection can agree with it.
+        let host_inputs: FxHashSet<(u32, u32)> = slots
+            .iter()
+            .filter(|slot| slot.slot % 2 == 0)
+            .filter_map(|slot| descriptor_binding_key(slot.memory_class, slot.slot))
+            .collect();
+        let bindings =
+            descriptor_buffer_bindings(&descriptor_of(slots), &FxHashSet::default(), &host_inputs)
+                .expect("binding metadata for a well-formed descriptor");
+        assert!(
+            !bindings.is_empty(),
+            "the grid must reach at least one bind-group-mapped class"
+        );
+        for binding in &bindings {
+            assert_eq!(
+                binding.consumes_host_input,
+                host_inputs.contains(&(binding.group, binding.binding)),
+                "binding {} recorded {} for a host-input set that says {}",
+                binding.binding,
+                binding.consumes_host_input,
+                host_inputs.contains(&(binding.group, binding.binding))
+            );
         }
-        Ok(count)
     }
 
-    fn walk(
-        body: &vyre_lower::KernelBody,
-        seen: &mut FxHashSet<vyre_lower::descriptor::Name>,
-        out: &mut Vec<TrapTag>,
-    ) -> Result<(), BackendError> {
-        for op in &body.ops {
-            if let vyre_lower::KernelOpKind::Trap { tag } = &op.kind {
-                if seen.insert(tag.clone()) {
-                    let code = out
-                        .len()
-                        .checked_add(1)
-                        .and_then(|value| u32::try_from(value).ok())
-                        .ok_or_else(|| {
-                            BackendError::new(
-                                "kernel descriptor trap tag code overflowed u32. Fix: split trap-tag metadata before pipeline creation.",
-                            )
-                        })?;
-                    out.push(TrapTag {
-                        code,
-                        tag: Arc::from(tag.as_ref()),
-                    });
-                }
-            }
-        }
-        for child in &body.child_bodies {
-            walk(child, seen, out)?;
-        }
-        Ok(())
+    #[test]
+    fn trap_sidecar_never_consumes_a_host_input_slot() {
+        let slots = vec![slot(
+            0,
+            TRAP_SIDECAR_NAME,
+            MemoryClass::Global,
+            BindingVisibility::ReadWrite,
+        )];
+        let public_outputs: FxHashSet<u32> = FxHashSet::from_iter([0]);
+        let host_inputs: FxHashSet<(u32, u32)> = FxHashSet::from_iter([(0, 0)]);
+        let bindings =
+            descriptor_buffer_bindings(&descriptor_of(slots), &public_outputs, &host_inputs)
+                .expect("binding metadata for a trap sidecar descriptor");
+        let sidecar = bindings
+            .iter()
+            .find(|binding| binding.internal_trap)
+            .expect("the trap sidecar slot maps to a bind group");
+        assert!(
+            !sidecar.consumes_host_input,
+            "the trap sidecar is backend-allocated and takes no caller input"
+        );
+        assert!(
+            !sidecar.is_output,
+            "the trap sidecar is not a public output"
+        );
+        assert!(
+            !sidecar.preserve_input_contents,
+            "a binding with no host input has no contents to preserve"
+        );
     }
 
-    let op_count = recursive_op_count(&descriptor.body)?;
-    let mut seen = FxHashSet::default();
-    vyre_foundation::allocation::try_reserve_hash_set_to_capacity(&mut seen, op_count).map_err(|source| {
-        BackendError::new(format!(
-            "trap-tag dedup allocation failed for {op_count} descriptor ops: {source}. Fix: split nested kernel bodies before descriptor metadata extraction."
-        ))
-    })?;
-    let mut out = Vec::new();
-    vyre_driver::allocation::try_reserve_vec_to_capacity(&mut out, op_count).map_err(|source| {
-        BackendError::new(format!(
-            "trap-tag output allocation failed for {op_count} descriptor ops: {source}. Fix: split nested kernel bodies before descriptor metadata extraction."
-        ))
-    })?;
-    walk(&descriptor.body, &mut seen, &mut out)?;
-    Ok(out)
+    /// Preserved contents track read-write access and host input together, and
+    /// the answer does not depend on which bind group the binding lands in.
+    ///
+    /// The host input set is keyed on the binding slot alone. It was once keyed
+    /// on a bind group pair whose recorded half was a literal `0` while the
+    /// lookup asked `descriptor_bind_group`, so a `Uniform`-class binding was
+    /// written as group `0`, read as group `1`, and never matched. The grid
+    /// below crosses every memory class with every visibility, which reaches a
+    /// read-write binding in group `1`, and the count assertion holds that
+    /// coverage: a grid that stopped reaching a non-zero group would leave the
+    /// divergence unobserved rather than turn this red.
+    #[test]
+    fn preserved_contents_require_read_write_and_a_host_input() {
+        let slots = full_grid();
+        let host_inputs: FxHashSet<(u32, u32)> = slots
+            .iter()
+            .filter_map(|slot| descriptor_binding_key(slot.memory_class, slot.slot))
+            .collect();
+        let bindings =
+            descriptor_buffer_bindings(&descriptor_of(slots), &FxHashSet::default(), &host_inputs)
+                .expect("binding metadata for a well-formed descriptor");
+        for binding in &bindings {
+            let expected = binding.access == vyre_foundation::ir::BufferAccess::ReadWrite
+                && binding.consumes_host_input;
+            assert_eq!(
+                binding.preserve_input_contents,
+                expected,
+                "binding {} preserves {} under access {:?} and host input {}",
+                binding.binding,
+                binding.preserve_input_contents,
+                binding.access,
+                binding.consumes_host_input
+            );
+        }
+        let preserved_outside_group_zero = bindings
+            .iter()
+            .filter(|binding| binding.group != 0 && binding.preserve_input_contents)
+            .count();
+        assert!(
+            preserved_outside_group_zero > 0,
+            "no read-write host input landed outside bind group 0, so this case cannot see a \
+             host input set that disagrees with the group its lookup reads. Bindings: {:?}",
+            bindings
+                .iter()
+                .map(|binding| (binding.group, binding.binding, &binding.access))
+                .collect::<Vec<_>>()
+        );
+    }
 }

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The `error-codes` gate test validates that the driver and validation catalogs render valid TOML naming every declared variant and rule with their regeneration headers, replacing an assertion that a function equalled itself."

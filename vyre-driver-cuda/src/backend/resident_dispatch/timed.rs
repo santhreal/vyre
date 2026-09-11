@@ -10,12 +10,19 @@ use crate::backend::resident::{
 
 impl CudaBackend {
     /// Dispatch with CUDA-resident buffers and return ordered output readbacks.
+    ///
+    /// A grid-sync program whose grid exceeds cooperative thread residency has
+    /// no native launch on this device and takes the segmented route, the same
+    /// decision the borrowed entry points make from the same residency bound.
     pub fn dispatch_resident_timed(
         &self,
         program: &Program,
         handles: &[CudaResidentBuffer],
         config: &DispatchConfig,
     ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+        if let Some(resources) = self.resident_grid_sync_split_route(program, handles, config)? {
+            return self.dispatch_resident_with_grid_sync_split_timed(program, &resources, config);
+        }
         self.dispatch_bindings_timed(program, &resident_bindings_from_handles(handles)?, config)
     }
 
@@ -42,13 +49,9 @@ impl CudaBackend {
                 .elapsed_nanos_u64(started, "resident-dispatch wall latency")?;
             self.telemetry
                 .record_timed_dispatch(wall_ns, None, Some(enqueue_ns), Some(wait_ns));
-            return Ok(vyre_driver::TimedDispatchResult {
-                outputs,
-                wall_ns,
-                device_ns: None,
-                enqueue_ns: Some(enqueue_ns),
-                wait_ns: Some(wait_ns),
-            });
+            return Ok(vyre_driver::TimedDispatchResult::split_timed(
+                outputs, wall_ns, None, enqueue_ns, wait_ns,
+            ));
         }
         let started = std::time::Instant::now();
         let enqueue_started = std::time::Instant::now();
@@ -61,12 +64,13 @@ impl CudaBackend {
         let module_key = probe::measure(probe::Phase::ModuleKey, || {
             self.module_cache_key_for_ptx_source_key(ptx_source_key)
         })?;
-        probe::record_counts(
+        let _kernel_window = probe::arm_dispatch(
             program,
             ptx_src.len(),
             bindings.len(),
             prepared.fixpoint_iterations as usize,
             prepared.launch.grid,
+            &self.launch_resources,
         );
         let resident_dispatch = self.dispatch_resident_async_concrete_with_ptx_key(
             program, bindings, config, &ptx_src, module_key, true, None, true, &prepared,
@@ -81,25 +85,10 @@ impl CudaBackend {
             .elapsed_nanos_u64(started, "native-resident-dispatch wall latency")?;
         self.telemetry
             .record_timed_dispatch(wall_ns, device_ns, Some(enqueue_ns), Some(wait_ns));
-        if probe::enabled() {
-            let ptx_cache = self.ptx_source_cache_snapshot();
-            probe::emit(
-                self.telemetry.snapshot().timed_dispatches,
-                wall_ns,
-                enqueue_ns,
-                wait_ns,
-                device_ns,
-                ptx_cache.hits,
-                ptx_cache.misses,
-            );
-        }
-        Ok(vyre_driver::TimedDispatchResult {
-            outputs,
-            wall_ns,
-            device_ns,
-            enqueue_ns: Some(enqueue_ns),
-            wait_ns: Some(wait_ns),
-        })
+        probe::emit_dispatch(self, wall_ns, enqueue_ns, wait_ns, device_ns);
+        Ok(vyre_driver::TimedDispatchResult::split_timed(
+            outputs, wall_ns, device_ns, enqueue_ns, wait_ns,
+        ))
     }
 
     pub(crate) fn dispatch_resident_outputs_with_ptx_key_into(

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The adaptive sparse traversal branch now tests source activity in the input frontier while writing discovered vertices to the output frontier. The previous composer used the zero-initialized output as both probe and destination, so sparse, resident, and past-first-workgroup traversals emitted no reachable vertices on real CUDA devices."

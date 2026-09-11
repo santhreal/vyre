@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre-conform` adds connected-graph conformance covering four graph classes (pure dataflow, retained iterative state, irregular ragged work, and independent concurrent arms) executed through the production route (`CompileRequest -> ArtifactEnvelope -> TargetPayload -> ArtifactInstance -> BindingSet -> Completion`) with independent reference oracle validation."

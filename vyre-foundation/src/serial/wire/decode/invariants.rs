@@ -1,7 +1,7 @@
 //! Semantic invariants enforced while decoding `VIR0` wire payloads.
 
 use super::from_wire::DecodedBuffer;
-use crate::ir_inner::model::types::DataType;
+use crate::ir_inner::model::op_signature::DataType;
 
 pub(crate) fn validate_workgroup_size(workgroup_size: [u32; 3]) -> Result<(), String> {
     for (axis, size) in workgroup_size.into_iter().enumerate() {
@@ -14,7 +14,7 @@ pub(crate) fn validate_workgroup_size(workgroup_size: [u32; 3]) -> Result<(), St
     Ok(())
 }
 
-pub(crate) fn validate_output_range_order(start: usize, end: usize) -> Result<(), String> {
+pub(crate) fn validate_output_range_order(start: u64, end: u64) -> Result<(), String> {
     if start > end {
         return Err(format!(
             "InvalidDiscriminant: output range start {start} exceeds end {end}. Fix: reserialize with Program::to_wire()."
@@ -37,9 +37,8 @@ pub(crate) fn validate_output_range_fits(
             buffer.name
         )
     })?;
-    let full_size = usize::try_from(count_value)
-        .ok()
-        .and_then(|count| count.checked_mul(element_size))
+    let full_size = (count_value as u64)
+        .checked_mul(element_size as u64)
         .ok_or_else(|| {
             format!(
                 "InvalidDiscriminant: output range full byte size overflows for buffer `{}`. Fix: split the buffer or reject tampered Program bytes.",

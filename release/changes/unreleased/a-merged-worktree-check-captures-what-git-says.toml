@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The merged-worktree gate captures git's streams instead of inheriting them, so a message about an unknown rev cannot land inside the report a parent gate parses."

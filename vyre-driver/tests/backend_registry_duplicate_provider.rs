@@ -51,7 +51,7 @@ inventory::submit! {
 /// WHY: provider identity must never depend on link-time inventory order.
 #[test]
 fn duplicate_backend_provider_returns_startup_error() {
-    let error = match vyre_driver::backend::registered_backends() {
+    let error = match vyre_driver::registered_backends() {
         Ok(_) => panic!("duplicate backend providers must reject registry startup"),
         Err(error) => error,
     };

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "pattern::aho_corasick, pattern::aho_corasick_bounded and pattern::aho_corasick_program_from_dfa_wire are each reachable at one path. The module holding them was named for the function it contains, so one pub use re-exported both namespaces and every builder was also reachable through pattern::aho_corasick::. nn::attention::fused_tile_attention and resident_work_queue::scheduler::PRIORITY_OFFSETS_BASE and PRIORITY_STARVATION_COUNTER lost their second paths the same way."

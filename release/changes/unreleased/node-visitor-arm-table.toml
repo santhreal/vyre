@@ -1,0 +1,2 @@
+category = "Added"
+text = "`node_visitor_uniform_arms!` implements the named `NodeVisitor` methods with one shared body, from a single declaration of each method parameter list. The trait stays abstract by default, so a method added to it is still missing until an implementor names it."

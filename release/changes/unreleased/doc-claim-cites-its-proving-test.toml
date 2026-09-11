@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The `primitives_feature_classification` doc claim cites `vyre-primitives/tests/feature_organization.rs`, the test that enforces it, instead of a source file that no longer exists."

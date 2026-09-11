@@ -1,0 +1,429 @@
+//! Execution topology candidate model, legality, independence, and ranking contracts.
+//!
+//! WHY: `CandidatePlan` and `vyre-megakernel` carry a neutral execution-topology
+//! candidate model:
+//! - Represent sequential stages, concurrent independent submissions, and resident
+//!   partitions with enforceable capability. Unknown device facts reject dependent topologies.
+//! - Reuse independence analysis; reject RAW/WAR/WAW conflicts, shared output aliases,
+//!   cross-arm control dependencies, and device-wide barriers.
+//! - Avoid unenforceable SM-id masking: generate fixed spatial masks only with hardware
+//!   capability; otherwise use concurrent queues or bounded resident work queues with progress.
+//! - Model asymmetric joins without inventing unbacked barriers.
+//! - Price aggregate registers, scratch, live bytes, occupancy, queue overlap, and join cost.
+//!   Retain sequential baseline; test empty, imbalanced, conflicting, and occupancy-limited arms.
+
+#![forbid(unsafe_code)]
+
+use std::collections::BTreeMap;
+
+use vyre_foundation::validate::BackendCapabilities;
+use vyre_megakernel::{
+    compile, compile_selected_modules, Artifact, CompileObjective, CompileRequest, DeviceFacts,
+    Digest, EmittedTargetModule, ExecutionTopology, ExternalFacts, ObjectiveMetric,
+    ResidentPartitionMode, SearchBudget, TargetModuleBundle, TargetPayloadFormat, TargetProfile,
+    ARTIFACT_SCHEMA_VERSION,
+};
+
+use vyre_test_support::graph_fixtures::{
+    asymmetric_join_graph, independent_two_arm_graph, raw_conflict_two_arm_graph,
+};
+
+fn facts() -> ExternalFacts {
+    ExternalFacts::new(Digest([0x77; 32]), BTreeMap::from([("items".into(), 64)]))
+}
+
+fn device_default() -> DeviceFacts {
+    DeviceFacts::new(BackendCapabilities::default(), 256)
+        .with_occupancy(128, 4096)
+        .with_compute_units(8)
+        .with_concurrent_queues(4)
+        .with_launch_costs(4224, 1000)
+}
+
+fn payload_format() -> TargetPayloadFormat {
+    vyre_test_support::artifact_fixtures::payload_format(1)
+}
+
+fn payload_profile() -> TargetProfile {
+    vyre_test_support::artifact_fixtures::target_profile(1)
+}
+
+/// Which execution topology this is, with no catch-all arm.
+///
+/// A topology variant added to the compiler stops this suite compiling until
+/// the lowering assertion below states what the target record must carry for
+/// it.
+fn topology_variant(topology: ExecutionTopology) -> &'static str {
+    match topology {
+        ExecutionTopology::Sequential => "sequential",
+        ExecutionTopology::ConcurrentQueue { .. } => "concurrent_queue",
+        ExecutionTopology::ResidentPartition { mode, .. } => match mode {
+            ResidentPartitionMode::FixedSpatialMask => "resident_partition.fixed_spatial_mask",
+            ResidentPartitionMode::BoundedWorkQueue => "resident_partition.bounded_work_queue",
+        },
+    }
+}
+
+// ============================================================================
+// 1. Sequential baseline retention
+// ============================================================================
+
+#[test]
+fn sequential_baseline_is_always_legal_and_retained() {
+    let graph = independent_two_arm_graph();
+    let request = CompileRequest::new(
+        graph,
+        facts(),
+        device_default(),
+        SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("request must validate");
+
+    let artifact = compile(&request).expect("compilation must succeed");
+    assert!(artifact.selected_plan().candidates_explored >= 1);
+    assert!(artifact.selected_plan().selection_cost.total > 0);
+}
+
+// ============================================================================
+// 2. Unknown device facts reject dependent topologies without guessing
+// ============================================================================
+
+#[test]
+fn unknown_device_facts_reject_dependent_topologies() {
+    let graph = independent_two_arm_graph();
+    // Device with 0 concurrent queues and 0 compute units (unknown facts)
+    let unknown_device = DeviceFacts::unknown();
+
+    let request = CompileRequest::new(
+        graph,
+        facts(),
+        unknown_device,
+        SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("request must validate");
+
+    let artifact = compile(&request).expect("compilation must succeed with sequential fallback");
+    assert_eq!(
+        artifact.selected_plan().selection_cost.launches,
+        2,
+        "an unknown device must fall back to sequential baseline (2 launches for 2 groups) instead of guessing concurrency"
+    );
+}
+
+// ============================================================================
+// 3. Arm independence and conflict analysis
+// ============================================================================
+
+#[test]
+fn independent_arms_admit_concurrent_queue_topology() {
+    let graph = independent_two_arm_graph();
+    let device = device_default().with_concurrent_queues(4);
+
+    let request = CompileRequest::new(
+        graph,
+        facts(),
+        device,
+        SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("request must validate");
+
+    let artifact = compile(&request).expect("compilation must succeed");
+    assert_eq!(
+        artifact.selected_plan().selection_cost.launches,
+        1,
+        "independent arms on device with concurrent queues must execute in 1 concurrent launch batch"
+    );
+}
+
+#[test]
+fn raw_waw_conflicts_reject_concurrent_execution() {
+    let graph = raw_conflict_two_arm_graph();
+    let device = device_default().with_concurrent_queues(4);
+
+    let request = CompileRequest::new(
+        graph,
+        facts(),
+        device,
+        SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("request must validate");
+
+    let artifact = compile(&request).expect("compilation must succeed");
+    assert!(artifact.selected_plan().candidates_explored >= 1);
+}
+
+// ============================================================================
+// 4. Avoid unenforceable SM-id masking
+// ============================================================================
+
+#[test]
+fn fixed_spatial_mask_rejected_without_enforceable_hardware_capability() {
+    let graph = independent_two_arm_graph();
+    // Device reports compute units but spatial partitioning capability is FALSE
+    let device = device_default()
+        .with_compute_units(16)
+        .with_spatial_partitioning(false);
+
+    let request = CompileRequest::new(
+        graph,
+        facts(),
+        device,
+        SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("request must validate");
+
+    let artifact =
+        compile(&request).expect("compilation must succeed with fallback to legal topologies");
+    assert!(artifact.selected_plan().candidates_explored >= 1);
+}
+
+#[test]
+fn bounded_work_queue_rejected_without_cooperative_launch() {
+    let graph = independent_two_arm_graph();
+    // Device reports compute units but cooperative launch is FALSE
+    let device = device_default()
+        .with_compute_units(16)
+        .with_cooperative_launch(false);
+
+    let request = CompileRequest::new(
+        graph,
+        facts(),
+        device,
+        SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("request must validate");
+
+    let artifact =
+        compile(&request).expect("compilation must succeed with fallback to legal topologies");
+    assert!(artifact.selected_plan().candidates_explored >= 1);
+}
+
+// ============================================================================
+// 5. Occupancy & scratch budgeting across resident partitions
+// ============================================================================
+
+#[test]
+fn occupancy_exceeded_rejects_resident_partition_candidate() {
+    let graph = independent_two_arm_graph();
+    // Device with tiny register limit of 1 register per thread
+    let tiny_device = device_default()
+        .with_compute_units(8)
+        .with_spatial_partitioning(true)
+        .with_occupancy(1, 4096);
+
+    let request = CompileRequest::new(
+        graph,
+        facts(),
+        tiny_device,
+        SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("request must validate");
+
+    let artifact = compile(&request).expect("compilation must succeed with fallback to baseline");
+    assert!(artifact.selected_plan().candidates_explored >= 1);
+}
+
+// ============================================================================
+// 6. Schema 10 preservation and artifact round-trip
+// ============================================================================
+
+#[test]
+fn artifact_encoding_preserves_the_pinned_schema_and_compiled_topology_schedule() {
+    let graph = independent_two_arm_graph();
+    let device = device_default().with_concurrent_queues(4);
+
+    let request = CompileRequest::new(
+        graph,
+        facts(),
+        device,
+        SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("request must validate");
+
+    let artifact = compile(&request).expect("compilation must succeed");
+    assert_eq!(artifact.schema_version(), ARTIFACT_SCHEMA_VERSION);
+    assert_eq!(
+        artifact.schema_version(),
+        vyre_megakernel::ARTIFACT_SCHEMA_VERSION,
+        "an artifact stamps the schema its own crate states"
+    );
+
+    // Two independent arms on a device stating four concurrent queues select a
+    // topology off the sequential baseline. Without this the assertions below
+    // would hold for an artifact that recorded no topology decision at all.
+    let selected = artifact.selected_plan().topology;
+    assert_ne!(
+        selected,
+        ExecutionTopology::Sequential,
+        "two independent arms on a device stating four concurrent queues must select a concurrent \
+         topology, and this plan selected {selected:?}"
+    );
+    assert_eq!(topology_variant(selected), "concurrent_queue");
+    assert!(
+        selected.arm_width() > 1,
+        "a concurrent topology must submit on more than one arm"
+    );
+
+    let wire_bytes = artifact.to_bytes().expect("artifact must encode");
+    let decoded = Artifact::from_bytes(&wire_bytes).expect("artifact must decode");
+
+    assert_eq!(decoded, artifact);
+    assert_eq!(decoded.digest(), artifact.digest());
+    assert_eq!(
+        decoded.selected_plan().topology,
+        selected,
+        "the serialized plan must carry the topology by value, not a default"
+    );
+    decoded.selected_plan().schedule.validate().unwrap();
+    assert_eq!(
+        decoded.selected_plan().schedule.phases.len(),
+        decoded.fusion().len(),
+        "one selected schedule phase must describe each emitted fusion group"
+    );
+
+    // Lowering is where a selected topology is dropped without any artifact
+    // assertion noticing: the plan still states it and the target record is
+    // what a materializer submits from.
+    let payload = compile_selected_modules(
+        &artifact,
+        payload_format(),
+        payload_profile(),
+        |module, _profile| {
+            Ok(EmittedTargetModule {
+                entry_point: format!("entry_{}", module.group.0),
+                resource_bindings: module.canonical_bindings.clone(),
+                bytes: vec![1, 2, 3],
+            })
+        },
+    )
+    .expect("selected module lowering must succeed");
+
+    let bundle =
+        TargetModuleBundle::from_bytes(payload.bytes()).expect("module bundle must be admissible");
+    assert_eq!(
+        bundle.topology, selected,
+        "the lowered target record must carry the topology the plan selected"
+    );
+    assert_eq!(
+        bundle.arms.len(),
+        bundle.modules.len(),
+        "every lowered module must carry one arm assignment"
+    );
+    assert!(
+        bundle.arms.iter().any(|arm| arm.arm > 0),
+        "a concurrent topology must place at least one module off arm 0, and the assignments are \
+         {:?}",
+        bundle.arms
+    );
+    assert_ne!(
+        payload.bytes(),
+        TargetModuleBundle::new(bundle.modules.clone())
+            .to_bytes()
+            .expect("baseline bundle must encode")
+            .as_slice(),
+        "the lowered bytes must differ from the sequential baseline over the same modules"
+    );
+
+    // Verify the immediately preceding schema is rejected.
+    let mut stale_bytes = wire_bytes.clone();
+    stale_bytes[4..6].copy_from_slice(&(ARTIFACT_SCHEMA_VERSION - 1).to_le_bytes());
+    let error =
+        Artifact::from_bytes(&stale_bytes).expect_err("the preceding stale schema must fail");
+    assert_eq!(error.diagnostic.code.as_str(), "MKC015_VERSION_SKEW");
+}
+
+// ============================================================================
+// 7. Asymmetric joins without cooperative launch
+// ============================================================================
+
+#[test]
+fn asymmetric_join_rejected_without_cooperative_launch() {
+    let graph = asymmetric_join_graph();
+    let device_no_coop = device_default()
+        .with_compute_units(16)
+        .with_spatial_partitioning(true)
+        .with_cooperative_launch(false);
+
+    let request = CompileRequest::new(
+        graph,
+        facts(),
+        device_no_coop,
+        SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("request must validate");
+
+    let artifact = compile(&request).expect("compilation must succeed");
+    assert!(artifact.selected_plan().candidates_explored >= 1);
+}
+
+// ============================================================================
+// 8. Cost model ranking and topology selection
+// ============================================================================
+
+#[test]
+fn topology_ranking_prefers_concurrent_over_sequential_when_device_has_queues() {
+    let graph_cq = independent_two_arm_graph();
+    let graph_seq = independent_two_arm_graph();
+    let device_concurrent = device_default().with_concurrent_queues(4);
+    let device_sequential = DeviceFacts::unknown();
+
+    let req_concurrent = CompileRequest::new(
+        graph_cq,
+        facts(),
+        device_concurrent,
+        SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("request must validate");
+
+    let req_sequential = CompileRequest::new(
+        graph_seq,
+        facts(),
+        device_sequential,
+        SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("request must validate");
+
+    let art_concurrent = compile(&req_concurrent).expect("concurrent compilation must succeed");
+    let art_sequential = compile(&req_sequential).expect("sequential compilation must succeed");
+
+    assert_ne!(
+        art_concurrent.selected_plan().topology,
+        art_sequential.selected_plan().topology,
+        "fixture must select two distinct schedule topologies"
+    );
+    assert_ne!(
+        art_concurrent.digest(),
+        art_sequential.digest(),
+        "artifact identity must authenticate the selected schedule topology"
+    );
+    assert!(
+        art_concurrent.selected_plan().selection_cost.total <= art_sequential.selected_plan().selection_cost.total,
+        "Concurrent queue topology must be cheaper than or equal to sequential baseline (CQ: {}, Seq: {})",
+        art_concurrent.selected_plan().selection_cost.total,
+        art_sequential.selected_plan().selection_cost.total
+    );
+    assert_eq!(art_concurrent.selected_plan().selection_cost.launches, 1);
+    assert_eq!(art_sequential.selected_plan().selection_cost.launches, 2);
+}

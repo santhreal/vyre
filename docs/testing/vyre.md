@@ -3,22 +3,21 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre
+./cargo_full test -p vyre
 ```
 
-Expose canonical frontend IR, compiler artifact, runtime submission, and scan product entry points without re-owning backend contracts.
+Public facade. Re-export IR, driver, runtime, and the artifact compiler. Own no logic.
 
-The crate lives at `vyre`. The `public-facade` owner maintains its
-`facade` testing contract.
+The crate lives at `vyre` and owns the `public-facade` seam in the `facade` layer.
 
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre
+./cargo_full test -p vyre
 ```
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --all-features
+./cargo_full test -p vyre --all-features
 ```
 
 ## Feature sets
@@ -31,12 +30,9 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --all-features
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_release_surface` | `vyre/examples/vyre_release_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --example vyre_release_surface` |
-| `lib` | `vyre` | `vyre/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre` |
-| `test` | `artifact_workflow` | `vyre/tests/artifact_workflow.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --test artifact_workflow` |
-| `test` | `ir_surface` | `vyre/tests/ir_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --test ir_surface` |
-| `test` | `wire_malformed_adversarial` | `vyre/tests/wire_malformed_adversarial.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --test wire_malformed_adversarial` |
-| `test` | `wire_v1_round_trip` | `vyre/tests/wire_v1_round_trip.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --test wire_v1_round_trip` |
+| `example` | `vyre_release_surface` | `vyre/examples/vyre_release_surface.rs` | None | `./cargo_full test -p vyre --example vyre_release_surface` |
+| `lib` | `vyre` | `vyre/src/lib.rs` | None | `./cargo_full test -p vyre` |
+| `test` | `all_tests` | `vyre/tests/all_tests.rs` | None | `./cargo_full test -p vyre --test all_tests` |
 
 ## Test classes
 

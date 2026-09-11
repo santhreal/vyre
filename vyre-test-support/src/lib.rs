@@ -1,38 +1,397 @@
 //! Shared test-only harness helpers for the vyre workspace.
 //!
-//! # The registry/coverage CLOSURE gate. ONE definitional home
+//! # The registry/coverage closure gate, one definitional home
 //!
-//! Every vyre crate that ships `pub fn ... -> Program` builders needs the same contract:
-//! each builder must be reachable from its `inventory::submit!` registry OR pinned by a
-//! parity/behavioral test, otherwise a builder can rot, diverge from its GPU/reference
-//! arm, or silently lose coverage with nothing red. Historically each crate shipped its
-//! own ~230-line copy of the enumerator (and 22 crates shipped a *tautology stub* whose doc
-//! claimed adversarial closure coverage while asserting `bytes[0] == bytes[0]`: a Law 6 /
-//! Law 9 evasion). That duplication is itself a ONE-PLACE violation: 26 copies drift.
+//! Every vyre crate that ships `pub fn ... -> Program` builders owes the same
+//! contract: each builder is reachable from that crate's `inventory::submit!`
+//! registry, or it is pinned by a parity/behavioral test. A builder that is
+//! neither still compiles, still appears in the catalogs generated from source,
+//! and still diverges from its reference arm with nothing red.
 //!
-//! [`assert_registry_closure`] is the single canonical enumerator. Each crate's
-//! `tests/adversarial_registry_closure.rs` becomes a thin wrapper:
+//! [`assert_registry_closure`] is the one enumerator, and
+//! [`registry_closure_gate!`] is how a crate declares its gate. The crate's
+//! `tests/registry_closure.rs` carries only what is crate-specific, the floor
+//! and the waived builders, because the test name, the manifest-directory
+//! argument and the call itself are the same in every crate and were being
+//! copied verbatim:
 //!
 //! ```ignore
-//! const COVERAGE_WAIVER: &[&str] = &[ /* builder, reason */ ];
-//! #[test]
-//! fn every_program_builder_is_tested_registered_or_explicitly_waived() {
-//!     vyre_test_support::assert_registry_closure(env!("CARGO_MANIFEST_DIR"), COVERAGE_WAIVER, 4);
+//! vyre_test_support::registry_closure_gate! {
+//!     floor: 4,
+//!     waiver: ["uncovered_builder_with_its_reason_above"],
 //! }
 //! ```
 //!
-//! The enumeration is **feature-independent** (it reads source files as TEXT, never compiling
-//! them), so the gate is green under any feature set, it matches CI regardless of which
-//! `--features` the runner selects. See `BACKLOG.md` WIRING-tautology-closure-25crates.
-#![forbid(unsafe_code)]
+//! The candidate set is derived from the crate's tree on each run rather than
+//! listed in the caller, so a builder added tomorrow is judged tomorrow. That
+//! derivation's failure mode is finding nothing: zero builders are trivially
+//! all covered, so `BUILDER_FLOOR` is what makes a broken scan fail instead of
+//! reporting a clean sweep of a nearly empty set.
+//!
+//! The enumeration is feature-independent: it reads source files as TEXT and
+//! never compiles them, so it reports the same builder set whichever features
+//! the runner selects.
 
+/// Declare this crate's registry/coverage closure gate.
+///
+/// `floor` is the minimum builder count the source enumeration must find, and
+/// `waiver` lists builders that are knowingly uncovered. Both are the only
+/// crate-specific parts of the gate, so they are the only arguments; the test
+/// name and the crate directory are derived here. The directory is the run-time
+/// checkout root joined to `CARGO_PKG_NAME`, which expands at the call site and
+/// so names the crate that declares the gate. A compiled-in manifest directory
+/// would name whichever checkout built the binary, and every checkout here
+/// shares one target directory.
+#[macro_export]
+macro_rules! registry_closure_gate {
+    (floor: $floor:expr, waiver: [$($waived:expr),* $(,)?] $(,)?) => {
+        #[test]
+        fn every_program_builder_is_tested_registered_or_explicitly_waived() {
+            $crate::assert_registry_closure(
+                $crate::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")),
+                &[$($waived),*],
+                $floor,
+            );
+        }
+    };
+}
+
+/// Declare a test-only `Expr::Opaque` payload type.
+///
+/// An extension payload is six trait methods of which five are the same in
+/// every test that needs one: report `Ok(())` from validation, hand back
+/// `self` for downcasting, and answer the two identity questions from a
+/// literal. Only the kind string, the debug identity, the result type, the
+/// CSE answer and the fingerprint byte differ, so those are the arguments.
+///
+/// A test that needs a payload with reachable structure, a wire body, or a
+/// validation failure writes the impl out: this macro is for the inert leaf.
+///
+/// `ExprNode` and `DataType` are named unqualified, so the caller must have
+/// both in scope. `vyre-foundation` implements these traits on its own types
+/// from inside itself, where a path through this crate's dependency on it
+/// names a different crate instance and does not compile.
+#[macro_export]
+macro_rules! test_expr_extension {
+    (
+        $name:ident,
+        kind: $kind:expr,
+        identity: $identity:expr,
+        result_type: $result_type:expr,
+        cse_safe: $cse_safe:expr,
+        fingerprint: $fingerprint:expr $(,)?
+    ) => {
+        #[derive(Debug)]
+        struct $name;
+
+        impl ExprNode for $name {
+            fn extension_kind(&self) -> &'static str {
+                $kind
+            }
+            fn debug_identity(&self) -> &str {
+                $identity
+            }
+            fn result_type(&self) -> Option<DataType> {
+                $result_type
+            }
+            fn cse_safe(&self) -> bool {
+                $cse_safe
+            }
+            fn stable_fingerprint(&self) -> [u8; 32] {
+                [$fingerprint; 32]
+            }
+            fn validate_extension(&self) -> ::core::result::Result<(), ::std::string::String> {
+                Ok(())
+            }
+            fn as_any(&self) -> &dyn ::std::any::Any {
+                self
+            }
+        }
+    };
+}
+
+/// Declare a test-only `Node::Opaque` payload type.
+///
+/// The statement form of [`test_expr_extension!`]: a statement extension has
+/// no result type and no CSE answer, so only the kind string, the debug
+/// identity and the fingerprint byte differ between tests. `NodeExtension` is
+/// named unqualified, so the caller must have it in scope.
+#[macro_export]
+macro_rules! test_node_extension {
+    (
+        $name:ident,
+        kind: $kind:expr,
+        identity: $identity:expr,
+        fingerprint: $fingerprint:expr $(,)?
+    ) => {
+        #[derive(Debug)]
+        struct $name;
+
+        impl NodeExtension for $name {
+            fn extension_kind(&self) -> &'static str {
+                $kind
+            }
+            fn debug_identity(&self) -> &str {
+                $identity
+            }
+            fn stable_fingerprint(&self) -> [u8; 32] {
+                [$fingerprint; 32]
+            }
+            fn validate_extension(&self) -> ::core::result::Result<(), ::std::string::String> {
+                Ok(())
+            }
+            fn as_any(&self) -> &dyn ::std::any::Any {
+                self
+            }
+        }
+    };
+}
+
+/// Declare a test-only `Expr::Opaque` payload type that carries wire bytes.
+///
+/// The payload-carrying counterpart of [`test_expr_extension!`]: a wire
+/// round-trip test needs an extension whose bytes come back out, so the
+/// fingerprint is a Blake3 digest of the payload rather than a repeated byte
+/// and `wire_payload` hands the bytes back. Only the payload varies per value;
+/// the CSE answer is one decision per fixture type, so it is an argument.
+///
+/// The generated type is `pub(crate)` with a `pub(crate)` payload field, so a
+/// fixture module can hand it to sibling test modules.
+///
+/// `ExprNode` and `DataType` are named unqualified, so the caller must have
+/// both in scope, and `blake3` must be a dependency of the calling crate.
+#[macro_export]
+macro_rules! test_payload_expr_extension {
+    (
+        $name:ident,
+        kind: $kind:expr,
+        identity: $identity:expr,
+        result_type: $result_type:expr,
+        cse_safe: $cse_safe:expr $(,)?
+    ) => {
+        #[derive(Debug)]
+        pub(crate) struct $name {
+            /// Bytes this extension writes to the wire and reads back.
+            pub(crate) payload: ::std::vec::Vec<u8>,
+        }
+
+        impl ExprNode for $name {
+            fn extension_kind(&self) -> &'static str {
+                $kind
+            }
+            fn debug_identity(&self) -> &str {
+                $identity
+            }
+            fn result_type(&self) -> Option<DataType> {
+                $result_type
+            }
+            fn cse_safe(&self) -> bool {
+                $cse_safe
+            }
+            fn stable_fingerprint(&self) -> [u8; 32] {
+                *blake3::hash(&self.payload).as_bytes()
+            }
+            fn validate_extension(&self) -> ::core::result::Result<(), ::std::string::String> {
+                Ok(())
+            }
+            fn as_any(&self) -> &dyn ::std::any::Any {
+                self
+            }
+            fn wire_payload(&self) -> ::std::vec::Vec<u8> {
+                self.payload.clone()
+            }
+        }
+    };
+}
+
+/// Declare a test-only `Node::Opaque` payload type that carries wire bytes.
+///
+/// The statement form of [`test_payload_expr_extension!`]. A statement
+/// extension has no result type and no CSE answer, and instead answers the two
+/// effect questions the walkers read. The trait's conservative defaults are
+/// impure and divergent, so a fixture that is neither states both.
+///
+/// `NodeExtension` is named unqualified, so the caller must have it in scope,
+/// and `blake3` must be a dependency of the calling crate.
+#[macro_export]
+macro_rules! test_payload_node_extension {
+    (
+        $name:ident,
+        kind: $kind:expr,
+        identity: $identity:expr,
+        is_pure: $is_pure:expr,
+        is_divergent: $is_divergent:expr $(,)?
+    ) => {
+        #[derive(Debug)]
+        pub(crate) struct $name {
+            /// Bytes this extension writes to the wire and reads back.
+            pub(crate) payload: ::std::vec::Vec<u8>,
+        }
+
+        impl NodeExtension for $name {
+            fn extension_kind(&self) -> &'static str {
+                $kind
+            }
+            fn debug_identity(&self) -> &str {
+                $identity
+            }
+            fn stable_fingerprint(&self) -> [u8; 32] {
+                *blake3::hash(&self.payload).as_bytes()
+            }
+            fn validate_extension(&self) -> ::core::result::Result<(), ::std::string::String> {
+                Ok(())
+            }
+            fn as_any(&self) -> &dyn ::std::any::Any {
+                self
+            }
+            fn wire_payload(&self) -> ::std::vec::Vec<u8> {
+                self.payload.clone()
+            }
+            fn is_pure(&self) -> bool {
+                $is_pure
+            }
+            fn is_divergent(&self) -> bool {
+                $is_divergent
+            }
+        }
+    };
+}
+
+/// Declare a test operation signature over `u32` values.
+///
+/// A dialect or operation fixture that only needs "some registered operation"
+/// states one signature: named `u32` inputs and one named `u32` output, no
+/// attributes, no bytes extraction. Only the parameter names differ, so those
+/// are the arguments, and the shape stays one value across the crates that
+/// register such an operation.
+///
+/// Expands to a `Signature` expression usable in a `const`, so `Signature` and
+/// `TypedParam` must both be in scope at the call site.
+#[macro_export]
+macro_rules! u32_signature {
+    (inputs: [$($input:expr),+ $(,)?], output: $output:expr $(,)?) => {
+        Signature {
+            inputs: &[$(TypedParam {
+                name: $input,
+                ty: "u32",
+            }),+],
+            outputs: &[TypedParam {
+                name: $output,
+                ty: "u32",
+            }],
+            attrs: &[],
+            bytes_extraction: false,
+        }
+    };
+}
+
+#[cfg(feature = "ir-fixtures")]
+pub mod adversarial_generators;
+mod registry_closure;
+pub use registry_closure::{
+    assert_registry_closure, assert_registry_closure_crates, collect_rust_files,
+};
+#[cfg(feature = "semantic-requests")]
+pub mod artifact_fixtures;
+#[cfg(feature = "parity-oracles")]
+pub mod async_span_parity;
+#[cfg(feature = "ir-fixtures")]
+pub mod backend_capabilities;
+#[cfg(feature = "driver-contracts")]
+pub mod backend_doubles;
+pub mod backend_execution_domain;
+pub mod bin_op_variants;
+#[cfg(feature = "ir-fixtures")]
+pub mod binop_parity;
+pub mod case_table;
+#[cfg(feature = "ir-fixtures")]
+pub mod cast_parity;
+#[cfg(feature = "ir-fixtures")]
+pub mod collective_programs;
 pub mod consumer_boundary;
+pub mod data_type_elements;
+#[cfg(feature = "ir-fixtures")]
+pub mod data_type_variants;
+#[cfg(feature = "parity-oracles")]
+pub mod differential_matrix;
+#[cfg(feature = "ir-fixtures")]
+pub mod elementwise_programs;
+pub mod exploded_ifds_cases;
+#[cfg(feature = "ir-fixtures")]
+pub mod expr_variants;
+#[cfg(feature = "ir-fixtures")]
+pub mod extension_variants;
+pub mod fixed_point;
+#[cfg(feature = "driver-artifact-contracts")]
+pub mod fixture_instance;
+/// Two-node and multi-arm program graph shapes planning suites compile.
+#[cfg(feature = "ir-fixtures")]
+pub mod graph_fixtures;
+#[cfg(feature = "ir-fixtures")]
+pub mod graph_shapes;
+#[cfg(feature = "ir-fixtures")]
+pub mod graph_values;
+#[cfg(feature = "ir-fixtures")]
+pub mod grid_sync_programs;
+#[cfg(feature = "parity-oracles")]
+pub mod hardware_oracle;
+#[cfg(feature = "host-input-abi")]
+pub mod host_input_abi;
+#[cfg(feature = "ir-fixtures")]
+pub mod ir_regions;
+#[cfg(feature = "ir-fixtures")]
+pub mod ir_variants;
+pub mod le_words;
+#[cfg(feature = "ir-fixtures")]
+pub mod logical_markers;
+#[cfg(feature = "ir-fixtures")]
+pub mod memory_order_variants;
 pub mod monorepo;
+#[cfg(feature = "ir-fixtures")]
+pub mod mutation_testing;
+#[cfg(feature = "ir-fixtures")]
+pub mod pass_programs;
+#[cfg(feature = "driver-contracts")]
+pub mod preferred_dispatch_backend_contract;
+#[cfg(feature = "parity-oracles")]
+pub mod registry_nets;
+pub mod replay_capsule;
+#[cfg(feature = "driver-artifact-contracts")]
+pub mod resident_async_overlap_contract;
+pub mod scalar_corpora;
+#[cfg(feature = "ir-fixtures")]
+pub mod selected_schedules;
+#[cfg(feature = "semantic-requests")]
+pub mod semantic_requests;
+#[cfg(feature = "spec-strategies")]
+pub mod spec_op_strategies;
+pub mod spec_variant_tables;
+#[cfg(feature = "ir-fixtures")]
+pub mod strict_float_programs;
+#[cfg(feature = "golden-corpus")]
+pub mod structural_ir;
+pub mod sweep_rng;
+#[cfg(feature = "driver-artifact-contracts")]
+pub mod target_compiler_contract;
+#[cfg(feature = "ir-fixtures")]
+pub mod target_facet_join;
+#[cfg(feature = "semantic-parity")]
+pub mod test_parity_oracles;
+#[cfg(feature = "ir-fixtures")]
+pub mod tile_programs;
+#[cfg(feature = "ir-fixtures")]
+pub mod wire_hostile_inputs;
+#[cfg(feature = "ir-fixtures")]
+pub mod wire_round_trip;
+pub mod word_corpora;
+#[cfg(feature = "ir-fixtures")]
+pub use pass_programs::overfire_grid;
+pub mod public_api;
 
 use std::collections::BTreeSet;
 use std::fs;
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Per-file read cap for the source enumeration.
 ///
@@ -41,10 +400,16 @@ use std::path::{Path, PathBuf};
 /// memory during a test run, so each file is capped and an over-cap file is a
 /// loud failure rather than a silent truncation (a truncated file would drop
 /// builders from the enumeration and quietly weaken the closure gate).
-const MAX_SOURCE_FILE_BYTES: u64 = 4_194_304;
+pub const MAX_SOURCE_FILE_BYTES: u64 = 4_194_304;
 
 /// Read one source file as text, bounded by [`MAX_SOURCE_FILE_BYTES`].
-pub(crate) fn read_source_file_bounded(path: &Path) -> std::io::Result<String> {
+///
+/// The reader every source-derived closure test shares with
+/// [`top_level_variant_names`] and [`braced_body`]. A silent truncation drops
+/// members from a derived variant set, and a short set agrees with a
+/// containment assertion, so the cap is enforced as an error here rather than
+/// left to each caller.
+pub fn read_source_file_bounded(path: &Path) -> std::io::Result<String> {
     read_source_file_with_cap(path, MAX_SOURCE_FILE_BYTES)
 }
 
@@ -64,381 +429,132 @@ fn read_source_file_with_cap(path: &Path, max_bytes: u64) -> std::io::Result<Str
     Ok(text)
 }
 
-/// Assert the registry-closure contract for the crate rooted at `manifest_dir`.
+/// The brace-delimited body that follows `declaration` in `source`.
 ///
-/// Source-enumerates every `pub fn NAME(...) -> Program` builder under `<manifest_dir>/src`,
-/// EXCLUDING `impl`-block methods (`&self` receiver) and IR-transform passes (first parameter
-/// is `Program`/`&Program`/`&mut Program`: a pass rewrites an existing Program rather than
-/// constructing one from source inputs, so it submits no `OperationRegistration` and is
-/// exercised by optimizer/pass tests, not the source-builder registry contract).
+/// `declaration` is the text up to and including the opening brace, so
+/// `"pub enum DataType {"` or `"pub trait NodeVisitor {"`. The returned slice
+/// excludes both braces and is nesting-aware, which is the whole reason this
+/// is one function: a scan that stopped at the first `}` would end inside the
+/// first struct-shaped variant or the first defaulted method body, and would
+/// then report a short member list as fact.
 ///
-/// A builder is COVERED iff its name appears (word-boundary) in (a) an `inventory::submit!`
-/// block, (b) any file under `<manifest_dir>/tests` (except the closure gate itself), or
-/// (c) an inline `#[cfg(test)]` / `#[test]` / `mod tests` region of a source file.
-///
-/// Every UNCOVERED builder must be listed in `waiver` with a trailing `//` reason. Three
-/// guards keep the waiver honest and only-shrinkable:
-/// * **stale**: a waiver entry that is no longer a builder (renamed/removed/now a transform);
-/// * **now-covered**: a waiver entry that has since gained a test/registry footprint;
-/// * **unwaived**: an uncovered builder missing from the waiver (the real finding to fix).
-///
-/// `floor` is the minimum expected builder count; it fails loudly if the source enumeration
-/// silently breaks (e.g. a parser regression that finds zero builders).
-///
-/// # Panics
-/// Panics (i.e. fails the test) on any guard violation, or if a source/test file is unreadable.
-pub fn assert_registry_closure(manifest_dir: &str, waiver: &[&str], floor: usize) {
-    let crate_name = Path::new(manifest_dir)
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("<crate>");
-    let src = Path::new(manifest_dir).join("src");
-    let tests = Path::new(manifest_dir).join("tests");
-
-    let mut src_files = Vec::new();
-    collect_rust_files(&src, &mut src_files);
-    let mut test_files = Vec::new();
-    collect_rust_files(&tests, &mut test_files);
-
-    let mut builders: BTreeSet<String> = BTreeSet::new();
-    let mut corpus = String::new();
-    for path in &src_files {
-        let text = read_source_file_bounded(path)
-            .unwrap_or_else(|e| panic!("{crate_name} source file {path:?} must be readable: {e}"));
-        for name in program_builders_in(&text) {
-            builders.insert(name);
-        }
-        for block in inventory_submit_blocks(&text) {
-            corpus.push_str(&block);
-            corpus.push('\n');
-        }
-        if let Some(pos) = ["#[cfg(test)]", "#[test]", "mod tests"]
-            .iter()
-            .filter_map(|marker| text.find(marker))
-            .min()
-        {
-            corpus.push_str(&text[pos..]);
-            corpus.push('\n');
+/// Returns `None` when `declaration` does not appear, or when its braces never
+/// close.
+#[must_use]
+pub fn braced_body<'a>(source: &'a str, declaration: &str) -> Option<&'a str> {
+    let start = source.find(declaration)? + declaration.len();
+    let mut depth = 1usize;
+    for (offset, ch) in source[start..].char_indices() {
+        match ch {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(&source[start..start + offset]);
+                }
+            }
+            _ => {}
         }
     }
-    for path in &test_files {
-        if path.file_name().and_then(|n| n.to_str()) == Some("adversarial_registry_closure.rs") {
-            continue;
-        }
-        corpus.push_str(
-            &read_source_file_bounded(path).unwrap_or_else(|e| {
-                panic!("{crate_name} test file {path:?} must be readable: {e}")
-            }),
-        );
-        corpus.push('\n');
-    }
-
-    let uncovered: BTreeSet<String> = builders
-        .iter()
-        .filter(|b| !corpus_contains_word(&corpus, b))
-        .cloned()
-        .collect();
-
-    eprintln!(
-        "[{crate_name}] registry closure: {} public `pub fn -> Program` builders enumerated, {} uncovered",
-        builders.len(),
-        uncovered.len()
-    );
-    let waiver_set: BTreeSet<String> = waiver.iter().map(|s| (*s).to_string()).collect();
-
-    let stale: BTreeSet<&String> = waiver_set
-        .iter()
-        .filter(|w| !builders.contains(*w))
-        .collect();
-    let now_covered: BTreeSet<&String> = waiver_set
-        .iter()
-        .filter(|w| !uncovered.contains(*w))
-        .collect();
-    let unwaived: BTreeSet<&String> = uncovered.difference(&waiver_set).collect();
-
-    if !stale.is_empty() || !now_covered.is_empty() || !unwaived.is_empty() {
-        eprintln!("== [{crate_name}] registry closure diagnostic ==");
-        eprintln!("builders={} uncovered={}", builders.len(), uncovered.len());
-        eprintln!("UNCOVERED (ground truth for the waiver): {uncovered:?}");
-        eprintln!("STALE waiver (not a builder): {stale:?}");
-        eprintln!("NOW-COVERED waiver (remove): {now_covered:?}");
-        eprintln!("UNWAIVED (untested+unregistered, must fix): {unwaived:?}");
-    }
-    assert!(
-        stale.is_empty(),
-        "[{crate_name}] COVERAGE_WAIVER has stale entries (no such `pub fn -> Program` builder. \
-         renamed, removed, or now a transform pass): {stale:?}. Fix: remove them."
-    );
-    assert!(
-        now_covered.is_empty(),
-        "[{crate_name}] these builders are now COVERED but still in COVERAGE_WAIVER: {now_covered:?}. \
-         Fix: remove them (the waiver must shrink)."
-    );
-    assert!(
-        unwaived.is_empty(),
-        "[{crate_name}] {} Program builder(s) have NO parity/behavioral test AND are NOT registered \
-         in the inventory: {unwaived:?}. Fix: add a reference_eval parity test, submit an OperationRegistration, \
-         or add to COVERAGE_WAIVER with a reason. See BACKLOG.md WIRING-tautology-closure-25crates.",
-        unwaived.len()
-    );
-
-    assert!(
-        builders.len() >= floor,
-        "[{crate_name}] expected >= {floor} source `pub fn -> Program` builders (excluding `&self` \
-         methods and IR-transform passes), found {}, the source enumeration is broken.",
-        builders.len()
-    );
+    None
 }
 
-/// Collect every `.rs` file under `dir` into `out`.
+/// Variant names declared directly in an enum body, ignoring payload contents.
 ///
-/// # Panics
-/// Panics when a directory entry is unreadable. The closure gate enumerates source
-/// text, so skipping an unreadable file would quietly shrink the builder set and
-/// weaken the gate.
-fn collect_rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = fs::read_dir(dir) else {
-        return;
-    };
-    for entry in entries {
-        let path = entry.expect("source entry must be readable").path();
-        if path.is_dir() {
-            collect_rust_files(&path, out);
-        } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
-            out.push(path);
-        }
-    }
-}
-
-/// Names of every `pub fn NAME(...) -> Program` whose return type is exactly `Program`,
-/// excluding `&self` methods and IR-transform passes (see [`assert_registry_closure`]).
-fn program_builders_in(text: &str) -> Vec<String> {
-    let mut names = Vec::new();
-    let mut search = 0;
-    while let Some(rel) = text[search..].find("fn ") {
-        let pos = search + rel;
-        search = pos + 3;
-        let before = text[..pos].trim_end();
-        if !before.ends_with("pub") {
-            continue;
-        }
-        let rest = &text[pos + 3..];
-        let name: String = rest
-            .chars()
-            .take_while(|c| c.is_alphanumeric() || *c == '_')
-            .collect();
-        if name.is_empty() {
-            continue;
-        }
-        let after_name = &rest[name.len()..];
-        let window = after_name.split('{').next().unwrap_or("");
-        // Skip `impl`-block methods (`pub fn m(&self, ...) -> Program`).
-        if takes_self_receiver(after_name) {
-            continue;
-        }
-        // Skip IR-transform passes (`pub fn pass(program: Program, ...) -> Program` /
-        // `pub fn pass(&Program) -> Program`): a pass rewrites an existing Program, it does
-        // not CONSTRUCT one from source inputs, so it submits no OperationRegistration and
-        // is exercised by optimizer/pass tests, not the source-builder registry contract.
-        if first_param_is_program(after_name) {
-            continue;
-        }
-        if returns_program(window) {
-            names.push(name);
+/// `body` is what [`braced_body`] returns for a `pub enum NAME {` declaration.
+/// One owner because every source-derived variant enumeration asks the same
+/// question of a different enum, and a second scan that skipped attributes or
+/// doc comments differently would report a different member set for the same
+/// file.
+#[must_use]
+pub fn top_level_variant_names(body: &str) -> BTreeSet<String> {
+    let mut names = BTreeSet::new();
+    let mut depth = 0usize;
+    let mut at_item_start = true;
+    let mut chars = body.char_indices().peekable();
+    while let Some((offset, ch)) = chars.next() {
+        match ch {
+            '{' | '(' | '[' => {
+                depth += 1;
+                at_item_start = false;
+            }
+            '}' | ')' | ']' => depth = depth.saturating_sub(1),
+            ',' if depth == 0 => at_item_start = true,
+            '/' if depth == 0 && body[offset..].starts_with("//") => {
+                for (_, skipped) in chars.by_ref() {
+                    if skipped == '\n' {
+                        break;
+                    }
+                }
+            }
+            // An attribute belongs to the item after it, so skipping one must
+            // leave the item-start state alone. Clearing it made every variant
+            // of an enum whose variants carry `#[error(..)]` invisible, and an
+            // empty derived set certifies nothing it claims to close over.
+            '#' if depth == 0 => {
+                let mut bracket_depth = 0usize;
+                let mut in_string = false;
+                let mut escaped = false;
+                for (_, skipped) in chars.by_ref() {
+                    if escaped {
+                        escaped = false;
+                        continue;
+                    }
+                    match skipped {
+                        '\\' if in_string => escaped = true,
+                        '"' => in_string = !in_string,
+                        '[' if !in_string => bracket_depth += 1,
+                        ']' if !in_string => {
+                            bracket_depth -= 1;
+                            if bracket_depth == 0 {
+                                break;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            c if c.is_whitespace() => {}
+            c if depth == 0 && at_item_start && c.is_ascii_uppercase() => {
+                let end = body[offset..]
+                    .find(|c: char| !c.is_ascii_alphanumeric() && c != '_')
+                    .map_or(body.len(), |len| offset + len);
+                names.insert(body[offset..end].to_string());
+                at_item_start = false;
+                while chars.peek().is_some_and(|(next, _)| *next < end) {
+                    chars.next();
+                }
+            }
+            _ => at_item_start = false,
         }
     }
     names
 }
 
-/// True iff the parameter list beginning in `after_name` has a `self` receiver.
-fn takes_self_receiver(after_name: &str) -> bool {
-    let Some(open) = after_name.find('(') else {
-        return false;
-    };
-    let mut s = after_name[open + 1..].trim_start();
-    if let Some(rest) = s.strip_prefix('&') {
-        s = rest.trim_start();
-        if s.starts_with('\'') {
-            s = s[1..]
-                .trim_start_matches(|c: char| c.is_alphanumeric() || c == '_')
-                .trim_start();
-        }
-    }
-    if let Some(rest) = s.strip_prefix("mut ") {
-        s = rest.trim_start();
-    }
-    if let Some(after_self) = s.strip_prefix("self") {
-        matches!(
-            after_self.chars().next(),
-            None | Some(',') | Some(')') | Some(':') | Some(' ') | Some('\n') | Some('\r')
-        )
-    } else {
-        false
-    }
-}
-
-/// True iff the FIRST parameter's declared type is `Program` / `&Program` / `&mut Program`
-/// (a signal that this `pub fn` is an IR-transform pass, not a source builder).
-fn first_param_is_program(after_name: &str) -> bool {
-    let Some(open) = after_name.find('(') else {
-        return false;
-    };
-    let params = &after_name[open + 1..];
-    let first = params.split([',', ')']).next().unwrap_or("");
-    let Some(colon) = first.find(':') else {
-        return false;
-    };
-    let mut ty = first[colon + 1..].trim_start();
-    ty = ty.strip_prefix('&').unwrap_or(ty).trim_start();
-    if ty.starts_with('\'') {
-        ty = ty[1..]
-            .trim_start_matches(|c: char| c.is_alphanumeric() || c == '_')
-            .trim_start();
-    }
-    ty = ty.strip_prefix("mut ").unwrap_or(ty).trim_start();
-    ty.strip_prefix("Program").is_some_and(|rest| {
-        rest.chars()
-            .next()
-            .is_none_or(|c| !(c.is_alphanumeric() || c == '_'))
-    })
-}
-
-fn returns_program(window: &str) -> bool {
-    for arrow in ["-> Program", "->Program"] {
-        if let Some(i) = window.find(arrow) {
-            let next = window[i + arrow.len()..].chars().next();
-            match next {
-                None => return true,
-                Some(c) if !(c.is_alphanumeric() || c == '_') => return true,
-                _ => {}
-            }
-        }
-    }
-    false
-}
-
-/// Extract the brace-balanced body of every `inventory::submit! { ... }` block.
-fn inventory_submit_blocks(text: &str) -> Vec<String> {
-    let mut blocks = Vec::new();
-    let mut search = 0;
-    while let Some(rel) = text[search..].find("inventory::submit!") {
-        let start = search + rel;
-        let Some(brace_rel) = text[start..].find('{') else {
-            break;
-        };
-        let open = start + brace_rel;
-        let mut depth = 0i32;
-        let mut end = open;
-        for (i, ch) in text[open..].char_indices() {
-            match ch {
-                '{' => depth += 1,
-                '}' => {
-                    depth -= 1;
-                    if depth == 0 {
-                        end = open + i;
-                        break;
-                    }
-                }
-                _ => {}
-            }
-        }
-        blocks.push(text[open..=end].to_string());
-        search = end + 1;
-    }
-    blocks
-}
-
-/// True iff `name` appears in `corpus` bounded by non-identifier characters.
-fn corpus_contains_word(corpus: &str, name: &str) -> bool {
-    let bytes = corpus.as_bytes();
-    let nb = name.as_bytes();
-    let mut i = 0;
-    while let Some(rel) = corpus[i..].find(name) {
-        let pos = i + rel;
-        let before_ok = pos == 0 || !is_ident_byte(bytes[pos - 1]);
-        let after = pos + nb.len();
-        let after_ok = after >= bytes.len() || !is_ident_byte(bytes[after]);
-        if before_ok && after_ok {
-            return true;
-        }
-        i = pos + 1;
-    }
-    false
-}
-
-fn is_ident_byte(b: u8) -> bool {
-    b.is_ascii_alphanumeric() || b == b'_'
+/// Every `IrLevel` variant declared in `vyre-spec`, read from source.
+///
+/// One owner because a level-closure test in one crate and a pipeline-partition
+/// test in another ask the same question of the same enum, and two readers can
+/// disagree about the member set the compiler actually has.
+///
+/// # Panics
+/// Panics when `vyre-spec/src/ir_level.rs` is unreadable or no longer declares
+/// `pub enum IrLevel`, because either one makes the derived set silently short.
+#[must_use]
+pub fn declared_level_variants() -> BTreeSet<String> {
+    let path = monorepo::vyre_crate_directory("vyre-spec")
+        .join("src")
+        .join("ir_level.rs");
+    let source = std::fs::read_to_string(&path)
+        .unwrap_or_else(|err| panic!("Fix: cannot read {path:?} to derive the level set: {err}"));
+    let body = braced_body(&source, "pub enum IrLevel {")
+        .unwrap_or_else(|| panic!("Fix: {path:?} no longer declares `pub enum IrLevel`"));
+    top_level_variant_names(body)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn detects_plain_program_builder() {
-        assert_eq!(
-            program_builders_in("pub fn make_thing(n: u32) -> Program { todo }"),
-            vec!["make_thing".to_string()]
-        );
-    }
-
-    #[test]
-    fn excludes_self_methods() {
-        assert!(program_builders_in("pub fn build(&self, n: u32) -> Program { x }").is_empty());
-        assert!(program_builders_in("pub fn build(&self) -> Program { x }").is_empty());
-        assert!(
-            program_builders_in("pub fn build(&'a mut self, n: u32) -> Program { x }").is_empty()
-        );
-    }
-
-    #[test]
-    fn excludes_transform_passes() {
-        assert!(program_builders_in("pub fn cse(program: Program) -> Program { p }").is_empty());
-        assert!(program_builders_in("pub fn opt(p: &Program) -> Program { p }").is_empty());
-        assert!(
-            program_builders_in("pub fn run(p: &'a mut Program, x: u32) -> Program { p }")
-                .is_empty()
-        );
-    }
-
-    #[test]
-    fn keeps_builder_with_non_program_first_param() {
-        assert_eq!(
-            program_builders_in("pub fn lower(ast: &Ast, cfg: Config) -> Program { p }"),
-            vec!["lower".to_string()]
-        );
-    }
-
-    #[test]
-    fn requires_exact_program_return() {
-        assert!(program_builders_in("pub fn f(n: u32) -> ProgramGraph { x }").is_empty());
-        assert!(program_builders_in("pub fn f(n: u32) -> Result<Program> { x }").is_empty());
-    }
-
-    #[test]
-    fn non_pub_is_ignored() {
-        assert!(program_builders_in("fn f(n: u32) -> Program { x }").is_empty());
-    }
-
-    #[test]
-    fn word_boundary_matching() {
-        assert!(corpus_contains_word("register(make_thing);", "make_thing"));
-        assert!(!corpus_contains_word(
-            "register(make_thing_ext);",
-            "make_thing"
-        ));
-        assert!(!corpus_contains_word("premake_thing", "make_thing"));
-    }
-
-    #[test]
-    fn inventory_block_is_balanced() {
-        let blocks = inventory_submit_blocks(
-            "inventory::submit! { OperationRegistration::primitive(OP_ID, build, None, None) }",
-        );
-        assert_eq!(blocks.len(), 1);
-        assert!(blocks[0].contains("OperationRegistration"));
-        assert!(blocks[0].ends_with('}'));
-    }
 
     /// Source readers accept input exactly at the configured cap.
     #[test]

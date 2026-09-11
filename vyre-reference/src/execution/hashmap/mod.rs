@@ -4,16 +4,16 @@
 //! This root module owns expression evaluation and the split modules own their
 //! state, memory, execution, synchronization, and subgroup contracts.
 
+pub(crate) mod invocation;
 pub(crate) mod memory;
-pub(crate) mod state;
 pub(crate) mod step;
 pub(crate) mod subgroup;
 pub(crate) mod sync;
 
-use memory::{atomic_buffer_mut, output_value, resolve_buffer, HashmapMemory};
 #[cfg(feature = "subgroup-ops")]
-use state::HashmapInvocationSnapshot;
-use state::{create_invocations, run_invocations, HashmapInvocation};
+use invocation::HashmapInvocationSnapshot;
+use invocation::{create_invocations, run_invocations, HashmapInvocation};
+use memory::{atomic_buffer_mut, output_value, resolve_buffer, HashmapMemory};
 use step::{axis_value, eval_call, eval_to_index};
 #[cfg(feature = "subgroup-ops")]
 use subgroup::{eval_subgroup_ballot, eval_subgroup_reduce, eval_subgroup_shuffle};
@@ -24,9 +24,10 @@ use crate::{
     atomics,
     oob::{self, Buffer},
     value::Value,
+    workgroup::InvocationIds,
 };
 use rustc_hash::FxHashMap;
-use vyre_foundation::ir::{AtomicOp, BufferAccess, Expr, MemoryOrdering, Node, Program};
+use vyre_foundation::ir::{AtomicOp, BufferAccess, Expr, Program};
 
 /// Order in which the interpreter steps workgroups and the invocations within
 /// each workgroup.
@@ -49,75 +50,111 @@ pub(crate) enum LaneOrder {
     /// Workgroups and intra-workgroup invocations both stepped in reverse. Only the
     /// STEPPING order changes; every invocation keeps its true global/local ids.
     Reversed,
+    /// Workgroups and intra-workgroup invocations both stepped starting `by` positions
+    /// in, wrapping around. Only the STEPPING order changes; every invocation keeps its
+    /// true global/local ids.
+    ///
+    /// Reversal alone is a symmetric permutation, so a defect that maps lane identity
+    /// onto step position survives any "reverse it back" repair and stays invisible to a
+    /// forward-vs-reversed comparison of a reversal-symmetric program. A rotation is
+    /// asymmetric, so it separates lane identity from step position for real.
+    Rotated(u32),
+    /// Workgroups stepped in reverse while the invocations inside each workgroup
+    /// keep their forward order. Only the STEPPING order changes; every invocation
+    /// keeps its true global/local ids.
+    ///
+    /// [`Reversed`](LaneOrder::Reversed) and [`Rotated`](LaneOrder::Rotated)
+    /// permute both axes together, so a program whose lanes are disjoint within a
+    /// workgroup but conflicting across workgroups has the same last writer under
+    /// every one of them once the two permutations cancel. Reversing only the
+    /// workgroup axis separates the two, which is the only order that surfaces a
+    /// cross-workgroup write-write conflict on a shared slot.
+    WorkgroupReversed,
 }
 
-/// A `MemoryOrdering::GridSync` barrier, the grid-wide fence `fuse_programs` inserts
-/// between arms whose later arm reads an earlier arm's cross-workgroup
-/// (launch-geometry) output. On real hardware the driver lowers it into separate
-/// globally-ordered dispatch segments; the reference interpreter mirrors that by
-/// advancing the whole grid through one segment before the next.
-fn is_grid_sync_barrier(node: &Node) -> bool {
-    matches!(
-        node,
-        Node::Barrier {
-            ordering: MemoryOrdering::GridSync
-        }
-    )
+/// Which dispatch axis a permutation is being applied to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum StepAxis {
+    /// The workgroup list of the whole dispatch.
+    Workgroup,
+    /// The invocation list inside one workgroup.
+    Lane,
 }
 
-/// Whether a GridSync barrier appears anywhere in the SEQUENTIAL scope tree, the
-/// top level or nested inside transparent `Block` / `Region` scopes. It does NOT
-/// descend into data-dependent control flow (`If` / `Loop`), where a grid-wide fence
-/// is ill-defined and fusion never emits one.
-fn contains_grid_sync(nodes: &[Node]) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::Block(inner) => contains_grid_sync(inner),
-        Node::Region { body, .. } => contains_grid_sync(body),
-        other => is_grid_sync_barrier(other),
-    })
-}
-
-/// Flatten every transparent scope (`Block` / `Region`) that CONTAINS a GridSync so
-/// each GridSync becomes a top-level node ready to split on. A re-fused program (e.g.
-/// the exclusive scan = fuse(inclusive-chain, subtract)) nests the inner chain's
-/// A→B / B→C GridSyncs one arm-scope deeper, so a single-level unwrap misses them.
-/// Scopes WITHOUT a GridSync are kept intact (their locals keep their own scope);
-/// only GridSync-carrying wrappers are dissolved, and post-fusion arm names are
-/// already globally unique, so dropping such a wrapper's scope cannot collide.
-fn flatten_grid_sync_scopes(nodes: &[Node], out: &mut Vec<Node>) {
-    for node in nodes {
-        match node {
-            Node::Block(inner) if contains_grid_sync(inner) => {
-                flatten_grid_sync_scopes(inner, out);
+/// Permute a dispatch-order list in place according to `lane_order`.
+///
+/// One home for the permutation so the workgroup list and the per-workgroup
+/// invocation list cannot drift into stepping different orders. `axis` states
+/// which of the two lists is being permuted, because an order may move one axis
+/// without the other.
+///
+/// The match has no catch-all arm, so a new order states its own permutation on
+/// both axes rather than borrowing the previous variant's.
+fn apply_step_order<T>(items: &mut [T], lane_order: LaneOrder, axis: StepAxis) {
+    match (lane_order, axis) {
+        (LaneOrder::Forward, StepAxis::Workgroup | StepAxis::Lane)
+        | (LaneOrder::WorkgroupReversed, StepAxis::Lane) => {}
+        (LaneOrder::Reversed, StepAxis::Workgroup | StepAxis::Lane)
+        | (LaneOrder::WorkgroupReversed, StepAxis::Workgroup) => items.reverse(),
+        (LaneOrder::Rotated(by), StepAxis::Workgroup | StepAxis::Lane) => {
+            if !items.is_empty() {
+                items.rotate_left(by as usize % items.len());
             }
-            Node::Region { body, .. } if contains_grid_sync(body) => {
-                flatten_grid_sync_scopes(body, out);
-            }
-            other => out.push(other.clone()),
         }
     }
 }
 
-/// Split a flattened body (all GridSyncs top-level) into execution segments at each
-/// GridSync barrier. Running the ENTIRE grid through segment `k` before any
-/// workgroup enters segment `k+1` reproduces the driver's dispatch split and makes
-/// GridSync globally ordered (fixes multi-block prefix-scan Pass-B reading Pass-A's
-/// per-block totals, and the same shape in every fused multi-pass kernel).
-fn split_top_level_grid_sync(nodes: &[Node]) -> Vec<&[Node]> {
-    let mut segments = Vec::new();
-    let mut start = 0;
-    for (index, node) in nodes.iter().enumerate() {
-        if is_grid_sync_barrier(node) {
-            segments.push(&nodes[start..index]);
-            start = index + 1;
-        }
-    }
-    segments.push(&nodes[start..]);
-    segments
+/// One workgroup suspended on a whole-grid fence.
+///
+/// The lanes keep their frames, locals and pending state exactly as the fence
+/// found them, and the workgroup memory they share travels with them, because
+/// a fence orders memory and does not end the workgroup. Resuming is therefore
+/// clearing the wait flag, not re-entering a rewritten program: the oracle
+/// evaluates the fenced program the caller submitted rather than the segments
+/// a backend without a cooperative launch would cut it into.
+struct GridFenceHold<'a> {
+    /// Workgroup coordinates the held lanes belong to.
+    coords: [u32; 3],
+    invocations: Vec<HashmapInvocation<'a>>,
+    workgroup: FxHashMap<String, Buffer>,
 }
 
-/// True when `reference_eval` RETURNS this buffer among its outputs. This is the SINGLE
-/// source of truth for the interpreter's output ABI: `reference_eval` collects exactly
+/// Record one buffer access against the active race exploration.
+///
+/// The visibility scope and storage domain come from where the buffer resides:
+/// a workgroup-local buffer is coherent across the lanes of one workgroup, and
+/// a storage buffer is coherent across the device. Outside an exploration this
+/// records nothing, so an ordinary evaluation pays one thread-local read.
+pub(crate) fn note_buffer_access(
+    memory: &HashmapMemory,
+    buffer: &str,
+    index: u32,
+    invocation: &HashmapInvocation<'_>,
+    kind: crate::interleaving::MemoryAccessKind,
+) {
+    let (scope, domain) = if memory.workgroup.contains_key(buffer) {
+        (
+            vyre_foundation::ir::MemoryScope::Workgroup,
+            vyre_foundation::ir::StorageDomain::WorkgroupLocal,
+        )
+    } else {
+        (
+            vyre_foundation::ir::MemoryScope::Device,
+            vyre_foundation::ir::StorageDomain::DeviceGlobal,
+        )
+    };
+    crate::interleaving::note_access(
+        buffer,
+        u64::from(index),
+        invocation.ids.global,
+        kind,
+        scope,
+        domain,
+    );
+}
+
+/// True when the oracle RETURNS this buffer among its outputs. This is the SINGLE
+/// source of truth for the interpreter's output ABI: the oracle collects exactly
 /// these decls, in `Program::buffers` order, into its result `Vec`. Test harnesses that
 /// need the position of a named output MUST use [`output_index`] (which filters by this
 /// predicate) rather than re-deriving the selection, a hand-rolled copy silently drifts
@@ -133,24 +170,28 @@ pub fn is_reference_output(decl: &vyre_foundation::ir::BufferDecl) -> bool {
 
 /// Does the caller have to supply a `Value` for this buffer?
 ///
-/// The other half of the interpreter's ABI, and the source of truth for it:
-/// `reference_eval` consumes exactly one `Value` per matching decl, in
-/// `Program::buffers` order. A workgroup buffer is allocated per dispatch and a
-/// backend-allocated output is zero-filled, so neither is supplied.
+/// The other half of the interpreter's ABI: the oracle consumes exactly
+/// one `Value` per matching decl, in `Program::buffers` order.
 ///
-/// Callers that build an input vector MUST use this rather than re-deriving the
-/// selection. The obvious hand-rolled form, `!decl.is_output()`, is not the same
-/// predicate: `is_backend_allocated_output` is the cross-backend contract, and
-/// the two disagree on a decl that is marked as an output without being
-/// backend-allocated. A copy that drifts shifts every later input by one, which
-/// surfaces as a missing value for whichever buffer the offset ran past rather
-/// than as anything pointing at the copy.
+/// The rule itself is `BufferDecl::consumes_host_input`, which `vyre_driver`'s
+/// binding-role mapping and every backend also read, so the oracle asks for the
+/// same list a device dispatch asks for. This function used to spell the rule
+/// out as `access() != Workgroup && !is_backend_allocated_output()`, which
+/// admitted three declarations no backend stages from the host: a `Shared`-kind
+/// buffer, a `Persistent`-kind buffer, and a `pipeline_live_out` buffer whose
+/// access is not `ReadWrite`. A program declaring one of those could not pass
+/// parity, because the oracle wanted one more value than the device, and the
+/// failure named a missing input rather than the disagreement.
+///
+/// Callers that build an input vector read this rather than re-deriving the
+/// selection. A copy that drifts shifts every later input by one, which surfaces
+/// as a missing value for whichever buffer the offset ran past.
 #[must_use]
 pub fn is_reference_input(decl: &vyre_foundation::ir::BufferDecl) -> bool {
-    decl.access() != BufferAccess::Workgroup && !decl.is_backend_allocated_output()
+    decl.consumes_host_input()
 }
 
-/// Position of the buffer `name` within `reference_eval`'s returned outputs, the
+/// Position of the buffer `name` within the oracle's returned outputs, the
 /// buffers matching [`is_reference_output`], in `Program::buffers` order, or `None`
 /// when the program declares no such returned output under that name.
 pub fn output_index(program: &Program, name: &str) -> Option<usize> {
@@ -161,6 +202,28 @@ pub fn output_index(program: &Program, name: &str) -> Option<usize> {
         .position(|decl| decl.name() == name)
 }
 
+/// Evaluate one expression for one lane through this evaluator.
+///
+/// The single-expression entry point in `execution::single_expr` builds the
+/// lane state and calls this. No subgroup snapshots exist for a lane evaluated
+/// on its own, so a collective that reads its peers finds an empty peer set and
+/// refuses rather than answering from a fabricated neighbour.
+pub(crate) fn eval_expr_public(
+    expr: &Expr,
+    ids: InvocationIds,
+    entry: &[vyre_foundation::ir::Node],
+    memory: &mut HashmapMemory,
+) -> Result<Value, ReferenceError> {
+    let mut invocation = HashmapInvocation::new(ids, 0, entry);
+    eval_expr(
+        expr,
+        &mut invocation,
+        memory,
+        #[cfg(feature = "subgroup-ops")]
+        &[],
+    )
+}
+
 #[doc = " Execute a vyre IR program using hashmap-backed locals."]
 pub(crate) fn run_hashmap_reference(
     program: &Program,
@@ -169,37 +232,50 @@ pub(crate) fn run_hashmap_reference(
     lane_order: LaneOrder,
     explicit_grid: Option<[u32; 3]>,
 ) -> Result<Vec<Value>, ReferenceError> {
-    #[cfg(feature = "subgroup-ops")]
-    let validation_report = vyre_foundation::validate::validate::validate_with_options(
+    let validation_report = vyre_foundation::validate::validate_with_options(
         program,
         vyre_foundation::validate::ValidationOptions::default().with_backend_capabilities(
             vyre_foundation::validate::BackendCapabilities {
+                #[cfg(feature = "subgroup-ops")]
                 supports_subgroup_ops: true,
+                supports_tensor_cores: true,
+                supports_distributed_collectives: true,
+                has_shared_memory: true,
                 ..Default::default()
             },
         ),
     );
-    #[cfg(not(feature = "subgroup-ops"))]
-    let validation_report = vyre_foundation::validate::validate::validate_with_options(
-        program,
-        vyre_foundation::validate::ValidationOptions::default(),
-    );
     if let Some(source) = validation_report.errors.into_iter().next() {
         return Err(ReferenceError::validation(source));
     }
+    // Every public entry point reaches this function, so the termination
+    // contract is armed once here. A caller that already armed a budget, or an
+    // enclosing evaluation, keeps its own ceiling and this guard is inert.
+    let _budget = crate::execution::step_budget::arm(program)?;
     let mut storage = FxHashMap::default();
+    // The interpreter's ABI is exactly the artifact ABI: one Value per
+    // `is_reference_input` buffer. It used to also accept a vector sized to
+    // every non-workgroup buffer, treating the extra entries as initializers
+    // for backend-allocated outputs. Nothing writes those bytes on any path, so
+    // the compatibility branch bought a fixture the right to be malformed: an
+    // op whose fixture carried a placeholder for a backend-allocated output
+    // passed every CPU lens and was rejected only by the strict artifact ABI on
+    // a device, which is the wrong place and the wrong run to find out.
     let logical_input_count = program
         .buffers()
         .iter()
         .filter(|decl| is_reference_input(decl))
         .count();
-    let legacy_input_count = program
-        .buffers()
-        .iter()
-        .filter(|decl| decl.access() != BufferAccess::Workgroup)
-        .count();
-    let legacy_input_mode =
-        inputs.len() == legacy_input_count && inputs.len() != logical_input_count;
+    if inputs.len() > logical_input_count {
+        return Err(ReferenceError::new(format!(
+            "the oracle received {} input Value(s) for a program with {logical_input_count} \
+             reference input buffer(s), so {} of them is an unused input Value. Fix: pass one \
+             Value per buffer accepted by `vyre_reference::is_reference_input`, in \
+             `Program::buffers` order, and none for a backend-allocated output.",
+            inputs.len(),
+            inputs.len() - logical_input_count
+        )));
+    }
     let mut input_index = 0usize;
     let mut output_decls = Vec::new();
     let mut max_output_elements = 0u32;
@@ -218,7 +294,7 @@ pub(crate) fn run_hashmap_reference(
         // The oracle must refuse exactly what the device backends refuse. A
         // backend-allocated output with no static count has no size source on any
         // path: answering it with an empty buffer here certified programs that
-        // CUDA and WGPU both reject, which is a certification hole rather than a
+        // both device backends reject, which is a certification hole rather than a
         // cosmetic inconsistency.
         decl.require_static_readback_size()
             .map_err(|message| ReferenceError::new(message))?;
@@ -227,44 +303,19 @@ pub(crate) fn run_hashmap_reference(
         let bytes = if is_reference_input(decl) {
             let value = inputs.get(input_index).ok_or_else(|| {
                 ReferenceError::new(format!(
-                    "missing input for buffer `{}`. Fix: pass one Value for each non-output, non-workgroup buffer in Program::buffers order.",
+                    "missing input for buffer `{}`. Fix: pass one Value per buffer accepted by \
+                     `vyre_reference::is_reference_input`, in `Program::buffers` order, and none \
+                     for a backend-allocated output.",
                     decl.name()
                 ))
             })?;
             input_index += 1;
             value.to_bytes()
         } else {
-            if legacy_input_mode {
-                let legacy_output_initializer = inputs.get(input_index).ok_or_else(|| {
-                    ReferenceError::new(format!(
-                        "missing legacy output initializer for buffer `{}`. Fix: pass one Value for each non-workgroup buffer or migrate to logical inputs only.",
-                        decl.name()
-                    ))
-                })?;
-                // Backend-allocated outputs are zero-filled, so this Value's
-                // CONTENTS are unused, but its SIZE is still part of the
-                // caller's contract and must be checked. Discarding it whole
-                // meant an undersized output buffer produced a full-size
-                // result with no diagnostic: the caller believed a 12-byte
-                // output had been written when the interpreter had quietly
-                // substituted its own 16-byte buffer (a Law 10 fail-open).
-                //
-                // The requirement is the LOGICAL output size, not the declared
-                // storage size. A buffer declared with an output byte range is
-                // padded on purpose (a tiled kernel rounds its storage up to a
-                // whole tile, and `relu(n = 0)` declares one element so the
-                // decl stays well-formed), and the caller is expected to size
-                // the placeholder to the range it will actually read back.
-                check_min_byte_len(
-                    decl,
-                    legacy_output_initializer.to_bytes().len(),
-                    logical_output_byte_len(decl, required_bytes),
-                )?;
-                input_index += 1;
-            }
             vec![0u8; required_bytes]
         };
         check_min_byte_len(decl, bytes.len(), required_bytes)?;
+        crate::execution::step_budget::charge_memory(bytes.len(), decl.name())?;
         let elements = element_count(decl, bytes.len())?;
         if is_reference_output(decl) {
             max_output_elements = max_output_elements.max(elements);
@@ -277,9 +328,10 @@ pub(crate) fn run_hashmap_reference(
             Buffer::new(bytes, decl.element().clone()),
         );
     }
-    if input_index != inputs.len() {
-        return Err(ReferenceError::new("unused input values supplied. Fix: pass exactly one Value per non-workgroup buffer declaration."));
-    }
+    // No count check closes the loop. The arm above refuses a longer vector and
+    // the per-buffer lookup refuses a shorter one, so by here `input_index` is
+    // the reference input count and equals `inputs.len()`. A third check on
+    // that pair could not fail, and a check that cannot fail certifies nothing.
     if program.workgroup_size().contains(&0) {
         return Err(ReferenceError::new(
             "workgroup size contains zero. Fix: all dimensions must be >= 1.",
@@ -342,34 +394,24 @@ pub(crate) fn run_hashmap_reference(
     };
     let [workgroup_count_x, workgroup_count_y, workgroup_count_z] = counts;
     let entry = program.entry();
+    // The budget was armed before the grid was known, so it carries the fixed
+    // floor. Both terms of the program's own declared work are fixed now, so a
+    // program whose extents are constant is admitted at the work it declares
+    // rather than refused against a ceiling sized for a smaller corpus.
+    crate::execution::step_budget::admit_declared_work(
+        entry,
+        u64::from(workgroup_count_x)
+            .saturating_mul(u64::from(workgroup_count_y))
+            .saturating_mul(u64::from(workgroup_count_z))
+            .saturating_mul(u64::from(invocations_per_workgroup)),
+    );
     #[cfg(feature = "subgroup-ops")]
     let uses_subgroup_ops = vyre_foundation::program_caps::scan(program).subgroup_ops;
-    // Grid-sync-aware execution: if the body carries `GridSync` barriers (a fused
-    // multi-pass kernel the driver would split into ordered dispatches), run the
-    // WHOLE grid through each inter-barrier segment before the next, so a later pass
-    // never reads a prior pass's not-yet-written cross-workgroup output. GridSyncs
-    // can nest inside transparent Block/Region scopes (a re-fused program buries an
-    // inner chain's barriers an arm-scope deep), so flatten those scopes first. A
-    // body with no GridSync keeps the exact single-segment path (`entry`), preserving
-    // the original single-pass behavior byte-for-byte.
-    let has_grid_sync = contains_grid_sync(entry);
-    let flattened: Vec<Node> = if has_grid_sync {
-        let mut nodes = Vec::new();
-        flatten_grid_sync_scopes(entry, &mut nodes);
-        nodes
-    } else {
-        Vec::new()
-    };
-    let segments: Vec<&[Node]> = if has_grid_sync {
-        split_top_level_grid_sync(&flattened)
-    } else {
-        vec![entry]
-    };
-    // Canonical workgroup dispatch order (z,y,x-nested). `LaneOrder::Reversed`
-    // steps this list, and the invocations within each workgroup, back to front
-    // to flip the deterministic last-writer of any non-atomic same-slot store, so a
-    // forward-vs-reversed output comparison surfaces a hidden cross-lane race (see
-    // [`LaneOrder`]). Forward keeps the exact original nested-loop order.
+    // Canonical workgroup dispatch order (z,y,x-nested). A non-`Forward`
+    // [`LaneOrder`] permutes this list, and the invocations within each workgroup, to
+    // flip the deterministic last-writer of any non-atomic same-slot store, so an
+    // output comparison against `Forward` surfaces a hidden cross-lane race. Forward
+    // keeps the exact original nested-loop order.
     let mut wg_coords: Vec<[u32; 3]> = Vec::new();
     for wg_z in 0..workgroup_count_z {
         for wg_y in 0..workgroup_count_y {
@@ -378,41 +420,92 @@ pub(crate) fn run_hashmap_reference(
             }
         }
     }
-    if lane_order == LaneOrder::Reversed {
-        wg_coords.reverse();
-    }
+    apply_step_order(&mut wg_coords, lane_order, StepAxis::Workgroup);
+    // A whole-grid fence orders every invocation in the dispatch. Each
+    // workgroup runs until its lanes are done or suspended on the fence, the
+    // suspended state is held, and no workgroup resumes until the whole grid
+    // has arrived. The fence is a node the invocation state machine waits on,
+    // so nothing rewrites the program on the way in and the oracle's fence
+    // semantics are not borrowed from the lowering it exists to check.
     let mut memory = HashmapMemory::new(storage);
-    for &segment in &segments {
-        for &wg in &wg_coords {
-            memory.reset_workgroup(program)?;
-            let mut invocations = create_invocations(program, wg, segment)?;
-            if lane_order == LaneOrder::Reversed {
-                // Reverse the STEP order only; each invocation retains its true
-                // global/local ids and linear_local_index (fields move with the
-                // element), so semantics are unchanged for a race-free program.
-                invocations.reverse();
+    let mut suspended: Vec<GridFenceHold<'_>> = Vec::new();
+    for &wg in &wg_coords {
+        memory.reset_workgroup(program)?;
+        crate::interleaving::note_workgroup(wg);
+        let mut invocations = create_invocations(program, wg, entry)?;
+        // Permute the STEP order only; each invocation retains its true
+        // global/local ids and linear_local_index (fields move with the
+        // element), so semantics are unchanged for a race-free program.
+        apply_step_order(&mut invocations, lane_order, StepAxis::Lane);
+        let fenced = run_invocations(
+            &mut memory,
+            &mut invocations,
+            #[cfg(feature = "subgroup-ops")]
+            uses_subgroup_ops,
+        )?;
+        if fenced {
+            suspended.push(GridFenceHold {
+                coords: wg,
+                invocations,
+                workgroup: std::mem::take(&mut memory.workgroup),
+            });
+        }
+    }
+    while !suspended.is_empty() {
+        // Every workgroup that is still resident has now reached the fence, so
+        // the fence generation advances once for the whole grid before any lane
+        // resumes past it.
+        crate::interleaving::note_grid_fence();
+        let mut still_fenced = Vec::with_capacity(suspended.len());
+        for hold in suspended {
+            let GridFenceHold {
+                coords,
+                mut invocations,
+                workgroup,
+            } = hold;
+            // The lanes of this workgroup are still resident, so they resume
+            // on the shared memory they left rather than a zeroed copy.
+            memory.workgroup = workgroup;
+            crate::interleaving::note_workgroup(coords);
+            for invocation in &mut invocations {
+                invocation.waiting_at_grid_fence = false;
             }
-            run_invocations(
+            let fenced = run_invocations(
                 &mut memory,
                 &mut invocations,
                 #[cfg(feature = "subgroup-ops")]
                 uses_subgroup_ops,
             )?;
+            if fenced {
+                still_fenced.push(GridFenceHold {
+                    coords,
+                    invocations,
+                    workgroup: std::mem::take(&mut memory.workgroup),
+                });
+            }
         }
+        suspended = still_fenced;
+    }
+    let oob = crate::oob::oob_report();
+    if crate::oob::is_strict_mode() && oob.total() > 0 {
+        return Err(ReferenceError::out_of_bounds(format!(
+            "out-of-bounds access detected during strict reference evaluation: loads={}, stores={}, atomics={}. Fix: gate buffer accesses with explicit bounds checks.",
+            oob.oob_loads, oob.oob_stores, oob.oob_atomics
+        )));
     }
     let mut storage = memory.storage;
-    output_decls . into_iter () . map (| decl | { storage . remove (decl . name ()) . map (| buffer | output_value (buffer , & decl)) . ok_or_else (| | { let name = decl . name () ; ReferenceError::new(format ! ("missing output buffer `{name}` after dispatch. Fix: keep buffer declarations unique.")) }) }) . collect ()
-}
-
-/// Bytes of an output buffer a caller actually reads back.
-///
-/// Equals the declared byte length for an ordinary output. For an output whose
-/// declaration carries an explicit byte range, the padding beyond that range
-/// belongs to the kernel's tiling, never to the caller, so the range length is
-/// what a caller-supplied placeholder has to cover.
-fn logical_output_byte_len(decl: &vyre_foundation::ir::BufferDecl, declared_bytes: usize) -> usize {
-    decl.output_byte_range()
-        .map_or(declared_bytes, |range| range.len())
+    output_decls
+        .into_iter()
+        .map(|decl| {
+            let buffer = storage.remove(decl.name()).ok_or_else(|| {
+                let name = decl.name();
+                ReferenceError::new(format!(
+                    "missing output buffer `{name}` after dispatch. Fix: keep buffer declarations unique."
+                ))
+            })?;
+            output_value(buffer, &decl)
+        })
+        .collect()
 }
 
 /// Reject a caller-supplied buffer that is smaller than its declaration.
@@ -478,12 +571,22 @@ fn eval_expr(
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
             )?;
-            Ok(oob::load(resolve_buffer(memory, buffer)?, idx))
+            note_buffer_access(
+                memory,
+                buffer.as_str(),
+                idx,
+                invocation,
+                crate::interleaving::MemoryAccessKind::Read,
+            );
+            oob::load(resolve_buffer(memory, buffer)?, idx)
         }
         Expr::BufLen { buffer } => Ok(Value::U32(resolve_buffer(memory, buffer)?.len())),
         Expr::InvocationId { axis } => axis_value(invocation.ids.global, *axis),
         Expr::WorkgroupId { axis } => axis_value(invocation.ids.workgroup, *axis),
         Expr::LocalId { axis } => axis_value(invocation.ids.local, *axis),
+        Expr::LogicalIndex { axis } => axis_value(invocation.ids.global, *axis),
+        Expr::LogicalTileId { axis } => axis_value(invocation.ids.workgroup, *axis),
+        Expr::LogicalWithinTileId { axis } => axis_value(invocation.ids.local, *axis),
         Expr::SubgroupLocalId => {
             #[cfg(feature = "subgroup-ops")]
             {
@@ -631,13 +734,14 @@ fn eval_expr(
             index,
             expected,
             value,
-            ordering: _,
+            ordering,
         } => eval_atomic(
             *op,
             buffer,
             index,
             expected.as_deref(),
             value,
+            *ordering,
             invocation,
             memory,
             #[cfg(feature = "subgroup-ops")]
@@ -676,19 +780,17 @@ fn eval_expr(
                 })
             }
         }
+        #[cfg(feature = "subgroup-ops")]
         Expr::SubgroupReduce { op, value } => {
-            #[cfg(feature = "subgroup-ops")]
-            {
-                eval_subgroup_reduce(*op, value, invocation, snapshots, memory)
-            }
-            #[cfg(not(feature = "subgroup-ops"))]
-            {
-                // Single-lane interpreter: a reduction over one lane is that
-                // lane's value for every operator (Add/Mul/Min/Max/And/Or/Xor).
-                let _ = op;
-                eval_expr(value, invocation, memory)
-            }
+            eval_subgroup_reduce(*op, value, invocation, snapshots, memory)
         }
+        // Single-lane interpreter: a reduction over one lane is that lane's
+        // value for every operator (Add/Mul/Min/Max/And/Or/Xor), so the
+        // operator is not read.
+        #[cfg(not(feature = "subgroup-ops"))]
+        Expr::SubgroupReduce { op: _, value } => eval_expr(value, invocation, memory),
+        // `Expr` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => Err(ReferenceError::new("hashmap reference interpreter encountered an unknown expression variant. Fix: add explicit reference semantics for the new ExprNode before dispatch.")),
     }
 }
@@ -699,19 +801,16 @@ fn eval_atomic(
     index: &Expr,
     expected: Option<&Expr>,
     value: &Expr,
+    ordering: vyre_foundation::ir::MemoryOrdering,
     invocation: &mut HashmapInvocation<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<Value, ReferenceError> {
-    match (op, expected) {
-        (AtomicOp::CompareExchange, None) => {
-            return Err(ReferenceError::new("compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange."));
-        }
-        (AtomicOp::CompareExchange, Some(_)) => {}
-        (_, Some(_)) => {
-            return Err(ReferenceError::new("non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange."));
-        }
-        (_, None) => {}
+    if op == AtomicOp::CompareExchange && expected.is_none() {
+        return Err(ReferenceError::new("compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange."));
+    }
+    if op != AtomicOp::CompareExchange && expected.is_some() {
+        return Err(ReferenceError::new("non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange."));
     }
     let idx = eval_to_index(
         index,
@@ -734,146 +833,27 @@ fn eval_atomic(
             "atomic value cannot be represented as u32. Fix: use a scalar u32-compatible argument.",
         )
     })?;
+    note_buffer_access(
+        memory,
+        buffer,
+        idx,
+        invocation,
+        crate::interleaving::MemoryAccessKind::Atomic {
+            // `GridSync` is barrier-only and not a valid atomic ordering, so an
+            // atomic that states it is recorded at the strongest ordering the
+            // closed atomic model has rather than at a relaxed default that
+            // would under-report the synchronization the program asked for.
+            ordering: ordering
+                .to_atomic_ordering()
+                .unwrap_or(vyre_foundation::ir::AtomicOrdering::SeqCst),
+            scope: ordering.memory_scope(),
+        },
+    );
     let target = atomic_buffer_mut(memory, buffer)?;
-    let Some(old) = oob::atomic_load(target, idx) else {
+    let Some(old) = oob::atomic_load(target, idx)? else {
         return Ok(Value::U32(0));
     };
     let (old, new) = atomics::apply(op, old, expected, value)?;
-    oob::atomic_store(target, idx, new);
+    oob::atomic_store(target, idx, new)?;
     Ok(Value::U32(old))
-}
-
-/// Structural locks for the GridSync segmentation that makes fused multi-pass kernels
-/// globally ordered under `reference_eval` (the fix for multi-block prefix-scan Pass-B
-/// reading Pass-A's not-yet-written per-block totals). These pin the private splitting
-/// helpers IN the crate that owns them, the end-to-end value parity lives downstream in
-/// `vyre-primitives`'s multi_block/line_index tests, but the split MECHANICS belong here.
-#[cfg(test)]
-mod grid_sync_segmentation {
-    use super::*;
-    use std::sync::Arc;
-    use vyre_foundation::ir::{Expr, Ident, MemoryOrdering};
-
-    fn gs() -> Node {
-        Node::barrier_with_ordering(MemoryOrdering::GridSync)
-    }
-    fn seqcst() -> Node {
-        Node::barrier_with_ordering(MemoryOrdering::SeqCst)
-    }
-    fn other() -> Node {
-        Node::return_()
-    }
-    fn region(body: Vec<Node>) -> Node {
-        Node::Region {
-            generator: Ident::from("g"),
-            source_region: None,
-            body: Arc::new(body),
-        }
-    }
-    fn gs_count(nodes: &[Node]) -> usize {
-        nodes
-            .iter()
-            .filter(|node| is_grid_sync_barrier(node))
-            .count()
-    }
-    fn has_scope(nodes: &[Node]) -> bool {
-        nodes
-            .iter()
-            .any(|node| matches!(node, Node::Block(_) | Node::Region { .. }))
-    }
-
-    #[test]
-    fn is_grid_sync_barrier_matches_only_gridsync() {
-        assert!(is_grid_sync_barrier(&gs()));
-        // A workgroup-scoped SeqCst barrier is NOT a grid fence and must not split.
-        assert!(!is_grid_sync_barrier(&seqcst()));
-        assert!(!is_grid_sync_barrier(&other()));
-    }
-
-    #[test]
-    fn contains_grid_sync_finds_top_level_and_nested_scopes() {
-        assert!(contains_grid_sync(&[other(), gs(), other()]));
-        assert!(!contains_grid_sync(&[other(), other()]));
-        assert!(!contains_grid_sync(&[seqcst()]));
-        assert!(contains_grid_sync(&[Node::block(vec![gs()])]));
-        assert!(contains_grid_sync(&[region(vec![other(), gs()])]));
-        // A Region wrapping a Block wrapping the barrier (the re-fused exclusive scan).
-        assert!(contains_grid_sync(&[region(vec![Node::block(vec![gs()])])]));
-    }
-
-    #[test]
-    fn contains_grid_sync_does_not_descend_into_data_dependent_control_flow() {
-        // Fusion never emits a grid fence inside an `If`/`Loop`; the splitter must not
-        // treat one there as a top-level segment boundary (it would be ill-defined).
-        let inside_if = Node::if_then(Expr::bool(true), vec![gs()]);
-        assert!(!contains_grid_sync(&[inside_if]));
-    }
-
-    #[test]
-    fn split_partitions_at_each_top_level_barrier() {
-        let body = vec![other(), gs(), other(), gs(), other()];
-        let segments = split_top_level_grid_sync(&body);
-        assert_eq!(segments.len(), 3, "two barriers => three segments");
-        assert!(segments.iter().all(|segment| segment.len() == 1));
-        // The barriers are the split points and appear in NO segment.
-        assert!(segments.iter().all(|segment| gs_count(segment) == 0));
-    }
-
-    #[test]
-    fn split_yields_one_segment_without_a_barrier() {
-        let body = vec![other(), other()];
-        let segments = split_top_level_grid_sync(&body);
-        assert_eq!(segments.len(), 1);
-        assert_eq!(segments[0].len(), 2);
-    }
-
-    #[test]
-    fn split_emits_empty_trailing_segment_for_trailing_barrier() {
-        let body = vec![other(), gs()];
-        let segments = split_top_level_grid_sync(&body);
-        assert_eq!(segments.len(), 2);
-        assert_eq!(segments[0].len(), 1);
-        assert_eq!(segments[1].len(), 0);
-    }
-
-    #[test]
-    fn flatten_dissolves_gridsync_scopes_and_keeps_the_rest() {
-        // A Block carrying a GridSync is dissolved so the barrier surfaces to top level.
-        let mut dissolved = Vec::new();
-        flatten_grid_sync_scopes(&[Node::block(vec![other(), gs(), other()])], &mut dissolved);
-        assert_eq!(dissolved.len(), 3);
-        assert!(
-            !has_scope(&dissolved),
-            "GridSync-carrying Block must be dissolved"
-        );
-        assert_eq!(gs_count(&dissolved), 1);
-
-        // A scope WITHOUT a GridSync is preserved intact (its locals keep their scope).
-        let mut preserved = Vec::new();
-        flatten_grid_sync_scopes(&[Node::block(vec![other(), other()])], &mut preserved);
-        assert_eq!(preserved.len(), 1);
-        assert!(
-            has_scope(&preserved),
-            "a scope with no GridSync must be preserved"
-        );
-    }
-
-    #[test]
-    fn flatten_recurses_through_nested_gridsync_scopes_then_splits() {
-        // The re-fused exclusive-scan shape nests the barrier one scope deeper; the
-        // recursion must reach it so the subsequent split sees it at top level.
-        let nested = region(vec![Node::block(vec![other(), gs(), other()])]);
-        let mut flattened = Vec::new();
-        flatten_grid_sync_scopes(&[nested], &mut flattened);
-        assert!(
-            !has_scope(&flattened),
-            "all GridSync-carrying scopes must dissolve"
-        );
-        assert_eq!(gs_count(&flattened), 1);
-        assert_eq!(
-            split_top_level_grid_sync(&flattened).len(),
-            2,
-            "the surfaced barrier must partition into two segments"
-        );
-    }
 }

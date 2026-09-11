@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The self-exclusive region scan descends through `visit::child_bodies` instead of its own exhaustive `match node`. A node variant that carries a body would have had to be added to both lists, and the scan's copy is the one a reader would not think to check when adding one."

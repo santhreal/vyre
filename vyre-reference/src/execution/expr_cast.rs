@@ -5,19 +5,51 @@ use crate::value::Value;
 use crate::ReferenceError;
 use vyre_foundation::ir::DataType;
 
-pub(crate) fn spec_output_value(ty: DataType, bytes: &[u8]) -> Value {
+/// Decode a call's returned bytes as the declared output type.
+///
+/// Every arm is a decoding this crate has a `Value` for. A type with no arm is
+/// refused rather than returned as its raw bytes: a byte payload where the
+/// caller expects a scalar is a wrong oracle answer, and the conform gate
+/// trusts this value.
+pub(crate) fn spec_output_value(ty: DataType, bytes: &[u8]) -> Result<Value, ReferenceError> {
     match ty {
-        DataType::U32 => Value::U32(read_u32_prefix(bytes)),
-        DataType::I32 => Value::I32(read_u32_prefix(bytes) as i32),
-        DataType::Bool => Value::Bool(read_u32_prefix(bytes) != 0),
-        DataType::U64 => Value::U64(read_u64_prefix(bytes)),
-        DataType::F32 => Value::Float(f64::from(crate::execution::typed_ops::canonical_f32(
-            f32::from_bits(read_u32_prefix(bytes)),
+        DataType::U32 => Ok(Value::U32(read_u32_prefix(bytes))),
+        DataType::I32 => Ok(Value::I32(read_u32_prefix(bytes) as i32)),
+        DataType::Bool => Ok(Value::Bool(read_u32_prefix(bytes) != 0)),
+        DataType::U64 => Ok(Value::U64(read_u64_prefix(bytes))),
+        DataType::F32 => Ok(Value::Float(f64::from(
+            crate::execution::typed_ops::canonical_f32(f32::from_bits(read_u32_prefix(bytes))),
         ))),
-        DataType::Vec2U32 => Value::from(read_fixed_prefix(bytes, 8)),
-        DataType::Vec4U32 => Value::from(read_fixed_prefix(bytes, 16)),
-        DataType::Bytes => Value::from(bytes),
-        _ => Value::from(bytes),
+        DataType::Vec2U32 => Ok(Value::from(read_fixed_prefix(bytes, 8))),
+        DataType::Vec4U32 => Ok(Value::from(read_fixed_prefix(bytes, 16))),
+        DataType::Bytes => Ok(Value::from(bytes)),
+        DataType::F64
+        | DataType::F16
+        | DataType::BF16
+        | DataType::F8E4M3
+        | DataType::F8E5M2
+        | DataType::I4
+        | DataType::FP4
+        | DataType::NF4
+        | DataType::U8
+        | DataType::U16
+        | DataType::I8
+        | DataType::I16
+        | DataType::I64
+        | DataType::Array { .. }
+        | DataType::Vec { .. }
+        | DataType::Tensor
+        | DataType::TensorShaped { .. }
+        | DataType::SparseCsr { .. }
+        | DataType::SparseCoo { .. }
+        | DataType::SparseBsr { .. }
+        | DataType::DeviceMesh { .. }
+        | DataType::Quantized { .. }
+        | DataType::Handle(_)
+        | DataType::Opaque(_) => Err(ReferenceError::new(format!(
+            "the reference call ABI decodes no output value for `{ty:?}`. Fix: give it an \
+             arm in `spec_output_value`, or declare an output type the ABI already decodes."
+        ))),
     }
 }
 
@@ -26,7 +58,7 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
     // (truthy), or F32 (identity). It has NO defined ARITHMETIC conversion to a
     // narrow int (U8/U16/I8/I16), a 64-bit int (U64/I64), or any other exotic
     // scalar: the foundation validator (`validate::cast::cast_is_valid`) rejects
-    // those, and the naga/PTX emitters fail closed on them. Without this guard
+    // those, and the text and binary emitters fail closed on them. Without this guard
     // the narrow/widen arms (or the `_ => to_bytes()` catch-all) would return a
     // meaningless byte payload (the float's raw bits) for such a cast, silently
     // diverging from every backend. Fail closed so the reference SPEC agrees
@@ -65,7 +97,9 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
         DataType::U32 => match value {
             Value::I32(v) => Ok(Value::U32(*v as u32)),
             Value::Float(v) => Ok(Value::U32((*v) as u32)),
-            _ => value
+            Value::U32(v) => Ok(Value::U32(*v)),
+            Value::Bool(b) => Ok(Value::U32(u32::from(*b))),
+            Value::U64(_) | Value::Bytes(_) | Value::Array(_) => value
                 .try_as_u32()
                 .map(Value::U32)
                 .ok_or_else(|| invalid_cast(target, value)),
@@ -73,15 +107,17 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
         DataType::I32 => match value {
             Value::I32(value) => Ok(Value::I32(*value)),
             Value::Float(v) => Ok(Value::I32(*v as i32)),
-            _ => value
-                .try_as_u32()
-                .map(|value| Value::I32(value as i32))
-                .ok_or_else(|| invalid_cast(target, value)),
+            Value::U32(_) | Value::U64(_) | Value::Bool(_) | Value::Bytes(_) | Value::Array(_) => {
+                value
+                    .try_as_u32()
+                    .map(|value| Value::I32(value as i32))
+                    .ok_or_else(|| invalid_cast(target, value))
+            }
         },
         // 64-bit integer widening. `I64` and `U64` share the `Value::U64`
         // bit-pattern representation (the model has no distinct `I64`). The
         // high bits extend per the SOURCE's signedness so the reference matches
-        // the backends (PTX `cvt.s64.s32`, naga sign-replicate) and Rust `as`:
+        // the backends (a widening convert, a sign-replicate) and Rust `as`:
         // a signed `i32` SIGN-extends (`-1i32 -> 0xFFFF_FFFF_FFFF_FFFF`), an
         // unsigned/bool source zero-extends. `try_as_u64`'s `u64::try_from`
         // would instead REJECT negative `i32`: diverging from every backend
@@ -90,7 +126,12 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
         // catch-all, which silently produced a 4-byte payload with no extension.
         DataType::U64 | DataType::I64 => match value {
             Value::I32(v) => Ok(Value::U64(*v as i64 as u64)),
-            _ => value
+            Value::U32(_)
+            | Value::U64(_)
+            | Value::Bool(_)
+            | Value::Bytes(_)
+            | Value::Float(_)
+            | Value::Array(_) => value
                 .try_as_u64()
                 .map(Value::U64)
                 .ok_or_else(|| invalid_cast(target, value)),
@@ -122,7 +163,7 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
             Value::U64(v) => Ok(Value::Float(f64::from(*v as f32))),
             Value::Float(v) => Ok(Value::Float(*v)),
             Value::Bool(b) => Ok(Value::Float(if *b { 1.0 } else { 0.0 })),
-            _ => value
+            Value::Bytes(_) | Value::Array(_) => value
                 .try_as_u32()
                 .map(|v| Value::Float(f64::from(v as f32)))
                 .ok_or_else(|| invalid_cast(target, value)),
@@ -131,7 +172,7 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
         // Narrowing integer casts TRUNCATE the high bits and keep the low
         // `width` bits, matching the documented V035 contract ("narrowing cast
         // may truncate high bits"), Rust `value as u8/u16/i8/i16`, and the masked
-        // narrowing the naga/PTX emitters now apply. WGSL/PTX have no native
+        // narrowing the emitters now apply. No target dialect has a native
         // 8/16-bit scalar register, so a narrowed value is held in a 32-bit slot:
         // U8/U16 keep the masked unsigned magnitude (`Value::U32`), while I8/I16
         // SIGN-extend from the new top bit (`Value::I32`) so e.g. `200 as i8`
@@ -152,7 +193,30 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
         DataType::Bytes => Ok(Value::from(value.to_bytes())),
         DataType::Vec2U32 => Ok(Value::from(widen_to_words(value, 2))),
         DataType::Vec4U32 => Ok(Value::from(widen_to_words(value, 4))),
-        _ => Ok(Value::from(value.to_bytes())),
+        // No catch-all. A cast target with no arm above used to return the
+        // source's raw bytes, so a program that cast to an unsupported type
+        // got a byte payload where it declared a scalar and the oracle
+        // certified it. A new `DataType` fails this build instead.
+        DataType::F64
+        | DataType::F8E4M3
+        | DataType::F8E5M2
+        | DataType::I4
+        | DataType::FP4
+        | DataType::NF4
+        | DataType::Array { .. }
+        | DataType::Vec { .. }
+        | DataType::Tensor
+        | DataType::TensorShaped { .. }
+        | DataType::SparseCsr { .. }
+        | DataType::SparseCoo { .. }
+        | DataType::SparseBsr { .. }
+        | DataType::DeviceMesh { .. }
+        | DataType::Quantized { .. }
+        | DataType::Handle(_)
+        | DataType::Opaque(_) => Err(ReferenceError::new(format!(
+            "cast to {target:?} has no defined reference conversion. Fix: cast to a scalar \
+             or fixed-width vector type the reference evaluator converts."
+        ))),
     }
 }
 
@@ -196,6 +260,7 @@ fn widen_to_words(value: &Value, words: usize) -> Vec<u8> {
     bytes
 }
 
+// Inline: covers the crate-private `cast_value` and `spec_output_value`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -475,7 +540,7 @@ mod tests {
     fn spec_output_value_canonicalizes_f32_subnormal_to_zero() {
         // Positive subnormal: smallest positive subnormal f32 = 0x0000_0001.
         let subnormal_bytes = 0x0000_0001_u32.to_le_bytes();
-        let result = spec_output_value(DataType::F32, &subnormal_bytes);
+        let result = spec_output_value(DataType::F32, &subnormal_bytes).expect("f32 decodes");
         // canonical_f32 maps positive subnormal → +0.0 (preserves sign bit only).
         assert_eq!(
             result,
@@ -490,7 +555,7 @@ mod tests {
     fn spec_output_value_canonicalizes_f32_negative_subnormal_to_negative_zero() {
         // Negative subnormal: 0x8000_0001.
         let neg_subnormal_bytes = 0x8000_0001_u32.to_le_bytes();
-        let result = spec_output_value(DataType::F32, &neg_subnormal_bytes);
+        let result = spec_output_value(DataType::F32, &neg_subnormal_bytes).expect("f32 decodes");
         // canonical_f32 maps negative subnormal → -0.0 (sign bit preserved, mantissa cleared).
         assert_eq!(
             result,
@@ -504,7 +569,7 @@ mod tests {
     fn spec_output_value_canonicalizes_f32_nan_payload_to_canonical_nan() {
         // Payload NaN: signaling NaN with a custom payload bit.
         let payload_nan_bytes = 0x7FA0_0001_u32.to_le_bytes();
-        let result = spec_output_value(DataType::F32, &payload_nan_bytes);
+        let result = spec_output_value(DataType::F32, &payload_nan_bytes).expect("f32 decodes");
         // canonical_f32 maps any NaN to 0x7FC0_0000.
         let expected_bits = f32::from_bits(0x7FC0_0000);
         assert_eq!(
@@ -520,11 +585,25 @@ mod tests {
     fn spec_output_value_normal_f32_passes_through_unchanged() {
         // 1.5f32 = 0x3FC0_0000 (a normal value, not subnormal or NaN).
         let normal_bytes = 0x3FC0_0000_u32.to_le_bytes();
-        let result = spec_output_value(DataType::F32, &normal_bytes);
+        let result = spec_output_value(DataType::F32, &normal_bytes).expect("f32 decodes");
         assert_eq!(
             result,
             Value::Float(f64::from(1.5_f32)),
             "Fix: spec_output_value must not alter normal f32 values"
+        );
+    }
+
+    /// An output type with no decoding is refused by name. Returning its raw
+    /// bytes instead would hand the conform gate a payload where the caller
+    /// declared a scalar, and the gate would trust it.
+    #[test]
+    fn an_output_type_without_a_decoding_is_refused_by_name() {
+        let error = spec_output_value(DataType::Array { element_size: 4 }, &[1, 2, 3, 4])
+            .expect_err("an undecodable output type must not return bytes");
+        let message = error.to_string();
+        assert!(
+            message.contains("Array"),
+            "the refusal names the type it cannot decode: {message}"
         );
     }
 }

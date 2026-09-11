@@ -101,27 +101,15 @@ impl PipelineCacheMetrics {
         })
     }
 
-    pub(super) fn checked_add(self, rhs: Self) -> Self {
-        self.saturating_add(rhs)
-    }
-
-    pub(super) fn try_checked_add(self, rhs: Self) -> Result<Self, PipelineCacheMetricError> {
-        Ok(Self {
-            lookups: try_metric_add(self.lookups, rhs.lookups, "lookups")?,
-            hits: try_metric_add(self.hits, rhs.hits, "hits")?,
-            misses: try_metric_add(self.misses, rhs.misses, "misses")?,
-            puts: try_metric_add(self.puts, rhs.puts, "puts")?,
-            rejected_puts: try_metric_add(self.rejected_puts, rhs.rejected_puts, "rejected puts")?,
-            evictions: try_metric_add(self.evictions, rhs.evictions, "evictions")?,
-            evicted_bytes: try_metric_add(self.evicted_bytes, rhs.evicted_bytes, "evicted bytes")?,
-            flushes: try_metric_add(self.flushes, rhs.flushes, "flushes")?,
-            flush_errors: try_metric_add(self.flush_errors, rhs.flush_errors, "flush errors")?,
-            cached_bytes: try_metric_add(self.cached_bytes, rhs.cached_bytes, "cached bytes")?,
-            entries: try_metric_add(self.entries, rhs.entries, "entries")?,
-        })
-    }
-
-    fn saturating_add(self, rhs: Self) -> Self {
+    /// Sum two readouts, clamping each counter at `u64::MAX`.
+    ///
+    /// `PipelineCacheStore::metrics` returns a value, so an aggregate readout
+    /// has nowhere to report an overflow to. Clamping is the contract; a
+    /// counter that reaches `u64::MAX` is already past every rate this cache
+    /// can be asked about. The fallible surface that matters is on the write
+    /// side, where [`PipelineCacheCounters::try_add`] rejects the increment
+    /// that would wrap.
+    pub(super) fn saturating_add(self, rhs: Self) -> Self {
         Self {
             lookups: self.lookups.saturating_add(rhs.lookups),
             hits: self.hits.saturating_add(rhs.hits),
@@ -136,21 +124,6 @@ impl PipelineCacheMetrics {
             entries: self.entries.saturating_add(rhs.entries),
         }
     }
-}
-
-fn try_metric_add(
-    lhs: u64,
-    rhs: u64,
-    label: &'static str,
-) -> Result<u64, PipelineCacheMetricError> {
-    lhs.checked_add(rhs).ok_or_else(|| {
-        PipelineCacheMetricError::new(
-            label,
-            format!(
-                "pipeline cache metric {label} overflowed u64. Fix: reset or shard pipeline cache metrics before aggregation."
-            ),
-        )
-    })
 }
 
 #[derive(Debug, Default)]
@@ -218,6 +191,7 @@ impl PipelineCacheCounters {
     }
 }
 
+// Inline: covers `PipelineCacheCounters`, `add`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use std::sync::atomic::AtomicU64;
@@ -237,25 +211,7 @@ mod tests {
     }
 
     #[test]
-    fn pipeline_cache_metric_try_aggregation_rejects_overflow_without_panic() {
-        let lhs = PipelineCacheMetrics {
-            cached_bytes: u64::MAX,
-            ..PipelineCacheMetrics::default()
-        };
-        let rhs = PipelineCacheMetrics {
-            cached_bytes: 1,
-            ..PipelineCacheMetrics::default()
-        };
-
-        let error = lhs
-            .try_checked_add(rhs)
-            .expect_err("Fix: fallible pipeline cache metric aggregation must reject overflow");
-        assert_eq!(error.field(), "cached bytes");
-        assert!(error.message().contains("Fix:"));
-    }
-
-    #[test]
-    fn pipeline_cache_metric_compat_aggregation_saturates_on_overflow() {
+    fn pipeline_cache_metric_aggregation_saturates_rather_than_wrapping() {
         let lhs = PipelineCacheMetrics {
             cached_bytes: u64::MAX,
             hits: 41,
@@ -267,7 +223,7 @@ mod tests {
             ..PipelineCacheMetrics::default()
         };
 
-        let metrics = lhs.checked_add(rhs);
+        let metrics = lhs.saturating_add(rhs);
 
         assert_eq!(metrics.cached_bytes, u64::MAX);
         assert_eq!(metrics.hits, 42);

@@ -1,3 +1,5 @@
+use super::*;
+
 #[test]
 fn slot_word_layout_args_start_at_word_4() {
     let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
@@ -53,22 +55,6 @@ fn read_epoch_from_exact_buffer_succeeds() {
 }
 
 #[test]
-fn strict_done_count_rejects_buffer_ending_at_done_count_word() {
-    let short = vec![0u8; (control::DONE_COUNT as usize) * 4];
-    let err = protocol::try_read_done_count(&short)
-        .expect_err("buffer ending exactly at DONE_COUNT word must reject");
-    assert!(err.to_string().contains("Fix:"));
-}
-
-#[test]
-fn strict_epoch_rejects_buffer_ending_at_epoch_word() {
-    let short = vec![0u8; (control::EPOCH as usize) * 4];
-    let err = protocol::try_read_epoch(&short)
-        .expect_err("buffer ending exactly at EPOCH word must reject");
-    assert!(err.to_string().contains("Fix:"));
-}
-
-#[test]
 fn epoch_word_does_not_overlap_priority_offsets() {
     assert!(
         control::EPOCH < control::PRIORITY_OFFSETS_BASE,
@@ -118,7 +104,11 @@ fn packed_slot_13_words_fails() {
     let args = vec![0u32; 12];
     let err = ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &[(1u8, args)])
         .expect_err("packed slot with 13 words must fail");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Capacity,
+        "13 packed words against a 12-word budget is a capacity fault",
+    );
     let msg = err.to_string();
     assert!(
         msg.contains("12-word") || msg.contains("budget") || msg.contains("exceeds"),
@@ -142,10 +132,16 @@ fn packed_slot_256_ops_fails() {
     let ops: Vec<_> = (0..256).map(|_| (0u8, vec![])).collect();
     let err = ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &ops)
         .expect_err("256 inner ops must fail u8 opcode_count overflow");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    let fix = ring_fault_fix(
+        &err,
+        RingEncodingFault::Capacity,
+        "256 inner ops exceeds the u8 opcode-count field",
+    );
+    // The rendered bound is the contract here: the fault class does not carry
+    // the u8 opcode-count limit the caller has to stay under.
     assert!(
-        err.to_string().contains("255"),
-        "error must mention u8 limit: {err}"
+        fix.contains("255"),
+        "the remediation must state the u8 opcode-count limit: {fix}"
     );
 }
 
@@ -160,7 +156,11 @@ fn packed_slot_arg_offset_overflow_fails() {
         .collect();
     let err = ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &ops)
         .expect_err("packed slot with >255 arg words must fail arg_offset u8 overflow");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Capacity,
+        "255 arg words exceeds the packed payload budget",
+    );
 }
 
 #[test]
@@ -188,7 +188,11 @@ fn packed_slot_metadata_overflow_fails_with_many_small_ops() {
     let ops: Vec<_> = (0..8).map(|i| (i as u8, vec![0u32; 1])).collect();
     let err = ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &ops)
         .expect_err("packed slot with 8 ops + args exceeding 12 words must fail");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Capacity,
+        "13 packed words against a 12-word budget is a capacity fault",
+    );
 }
 
 #[test]
@@ -213,7 +217,11 @@ fn packed_slot_rejects_non_publishable_target_slot() {
     ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcode::NOP, &[]).unwrap();
     let err = ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &[(1u8, vec![])])
         .expect_err("packed slot must reject already-PUBLISHED target");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_publish_rejected_by_status(
+        &err,
+        slot::PUBLISHED,
+        "a packed publish into a PUBLISHED target",
+    );
 }
 
 #[test]

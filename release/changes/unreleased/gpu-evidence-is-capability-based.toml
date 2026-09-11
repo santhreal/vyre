@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "GPU routing, conformance, and release evidence now select hardware by reported capabilities rather than a product name. Benchmark reuse and release validation inspect every device in a multi-GPU inventory, reject missing or sub-floor device provenance, fail on incomplete measured samples, and require exact telemetry-table entries instead of guessing memory bandwidth from a partial product name."

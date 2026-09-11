@@ -1,16 +1,26 @@
 use crate::api::case::BenchError;
-use vyre_libs::scan::classic_ac::{classic_ac_bounded_ranges_scan, ClassicAcAutomaton};
 use vyre_foundation::match_result::ByteRange;
+#[cfg(test)]
+use vyre_libs::pattern::classic_ac::ClassicAcAutomaton;
+#[cfg(test)]
+use vyre_reference::composition_witness::classic_ac_bounded_ranges_scan_witness;
 
+#[cfg(test)]
 pub(super) fn cpu_bounded_range_matches(
     ac: &ClassicAcAutomaton,
     pattern_lengths: &[u32],
     haystack: &[u8],
 ) -> Vec<ByteRange> {
-    classic_ac_bounded_ranges_scan(ac, pattern_lengths, haystack)
-        .into_iter()
-        .map(|(pattern_id, start, end)| ByteRange::new(pattern_id, start, end))
-        .collect()
+    classic_ac_bounded_ranges_scan_witness(
+        &ac.dfa.transitions,
+        &ac.dfa.output_offsets,
+        &ac.dfa.output_records,
+        pattern_lengths,
+        haystack,
+    )
+    .into_iter()
+    .map(|(pattern_id, start, end)| ByteRange::new(pattern_id, start, end))
+    .collect()
 }
 
 pub(super) fn cpu_aho_overlapping_matches(

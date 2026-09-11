@@ -16,9 +16,8 @@
     feature = "nn-linear",
     feature = "nn-norm",
     feature = "nn-attention",
-    feature = "matching-substring",
-    feature = "matching-dfa",
-    feature = "crypto-fnv",
+    feature = "pattern-substring",
+    feature = "pattern-dfa",
     feature = "crypto-blake3",
 ))]
 
@@ -150,30 +149,21 @@ fn fp_attention() {
     assert_eq!(fingerprint(&p), fingerprint(&p2));
 }
 
-#[cfg(feature = "matching-substring")]
+#[cfg(feature = "pattern-substring")]
 #[test]
 fn fp_substring_search() {
-    use vyre_libs::scan::substring_search;
+    use vyre_libs::pattern::substring_search;
     let p = substring_search("h", "n", "m", 8, 3);
     let p2 = substring_search("h", "n", "m", 8, 3);
     assert_eq!(fingerprint(&p), fingerprint(&p2));
 }
 
-#[cfg(feature = "matching-dfa")]
+#[cfg(feature = "pattern-dfa")]
 #[test]
 fn fp_aho_corasick() {
-    use vyre_libs::scan::aho_corasick;
+    use vyre_libs::pattern::aho_corasick;
     let p = aho_corasick("h", "t", "a", "m", 8, 4);
     let p2 = aho_corasick("h", "t", "a", "m", 8, 4);
-    assert_eq!(fingerprint(&p), fingerprint(&p2));
-}
-
-#[cfg(feature = "crypto-fnv")]
-#[test]
-fn fp_fnv1a32() {
-    use vyre_libs::hash::fnv1a32;
-    let p = fnv1a32("in", "out");
-    let p2 = fnv1a32("in", "out");
     assert_eq!(fingerprint(&p), fingerprint(&p2));
 }
 

@@ -1,4 +1,4 @@
-//! ROADMAP A13  -  escape facts into scratch reuse across megakernel
+//! escape facts into scratch reuse across megakernel
 //! arms.
 //!
 //! Foundation-side substrate. Walks every `Node::Region` in the
@@ -21,9 +21,8 @@
 //! Buffer reuse is a runtime allocation decision, not an IR
 //! shape change. The IR keeps every buffer named; the runtime
 //! decides which underlying storage backs each name based on the
-//! plan. Keeping the rewrite at the runtime level lets backends
-//! use their own pool / arena strategies (CUDA stream allocator,
-//! wgpu buffer pool) without IR-level constraint.
+//! plan. Keeping the rewrite at the runtime level lets a driver use its own
+//! pool or arena strategy without an IR-level constraint.
 
 use crate::ir::{Ident, Node, Program};
 use crate::optimizer::program_soa::ProgramFacts;

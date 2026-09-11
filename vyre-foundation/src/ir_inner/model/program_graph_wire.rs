@@ -1,14 +1,14 @@
 //! Stable bounded wire codec for connected [`ProgramGraph`] compositions.
 
+use super::op_signature::{BufferAccess, DataType};
 use super::program::Program;
 use super::program_graph::{
     GraphInput, GraphOutput, GraphValueId, ProgramGraph, ProgramGraphError, ShapeDim,
     ValueContract, ValueLifetime,
 };
-use super::types::{BufferAccess, DataType};
 
 const MAGIC: &[u8; 4] = b"VGR0";
-const VERSION: u16 = 2;
+const VERSION: u16 = 3;
 const MAX_GRAPH_WIRE_BYTES: usize = 256 * 1024 * 1024;
 const MAX_GRAPH_ITEMS: usize = 1_000_000;
 const MAX_PORTS_PER_NODE: usize = 1_000_000;
@@ -22,6 +22,16 @@ impl ProgramGraph {
     /// Each node keeps its existing VIR0 [`Program`] encoding. Graph framing
     /// adds stable diagnostic names, typed identities, ports, and retained transitions.
     pub fn to_wire(&self) -> Result<Vec<u8>, ProgramGraphError> {
+        self.encode_wire(false)
+    }
+
+    /// Encode complete graph semantics while excluding physical workgroup
+    /// geometry from each executable node.
+    pub(crate) fn logical_wire(&self) -> Result<Vec<u8>, ProgramGraphError> {
+        self.encode_wire(true)
+    }
+
+    fn encode_wire(&self, normalize_workgroups: bool) -> Result<Vec<u8>, ProgramGraphError> {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(MAGIC);
         bytes.extend_from_slice(&VERSION.to_le_bytes());
@@ -48,10 +58,17 @@ impl ProgramGraph {
                 )));
             }
             put_string(&mut bytes, &node.name)?;
-            let program = node
-                .program
-                .to_wire()
-                .map_err(|error| wire_error(format!("node `{}` Program: {error}", node.name)))?;
+            let program = if normalize_workgroups && node.program.workgroup_size_is_schedule_only()
+            {
+                node.program.with_rewritten_workgroup_size_and_entry(
+                    [1, 1, 1],
+                    node.program.entry().to_vec(),
+                )
+            } else {
+                node.program.clone()
+            }
+            .to_wire()
+            .map_err(|error| wire_error(format!("node `{}` Program: {error}", node.name)))?;
             put_bytes(&mut bytes, &program, "Program bytes")?;
             put_len(&mut bytes, node.inputs.len(), "input port count")?;
             for input in &node.inputs {
@@ -115,7 +132,7 @@ impl ProgramGraph {
         }
 
         let external_count = reader.bounded_len(MAX_GRAPH_ITEMS, "external value count")?;
-        let mut external = Vec::with_capacity(external_count);
+        let mut external = Vec::with_capacity(external_count.min(reader.remaining()));
         for _ in 0..external_count {
             external.push((reader.string()?, reader.contract()?));
         }
@@ -129,7 +146,7 @@ impl ProgramGraph {
             let program = Program::from_wire(program_bytes)
                 .map_err(|error| wire_error(format!("node `{name}` Program: {error}")))?;
             let input_count = reader.bounded_len(MAX_PORTS_PER_NODE, "input port count")?;
-            let mut inputs = Vec::with_capacity(input_count);
+            let mut inputs = Vec::with_capacity(input_count.min(reader.remaining()));
             for _ in 0..input_count {
                 inputs.push(GraphInput {
                     buffer: reader.string()?,
@@ -138,7 +155,7 @@ impl ProgramGraph {
                 });
             }
             let output_count = reader.bounded_len(MAX_PORTS_PER_NODE, "output port count")?;
-            let mut outputs = Vec::with_capacity(output_count);
+            let mut outputs = Vec::with_capacity(output_count.min(reader.remaining()));
             for _ in 0..output_count {
                 let buffer = reader.string()?;
                 let output_name = reader.string()?;
@@ -192,6 +209,13 @@ fn put_contract(bytes: &mut Vec<u8>, contract: &ValueContract) -> Result<(), Pro
                 bytes.push(1);
                 put_string(bytes, symbol)?;
             }
+            ShapeDim::Unresolved => {
+                bytes.push(2);
+            }
+            ShapeDim::Expr(expr_id) => {
+                bytes.push(3);
+                bytes.extend_from_slice(&expr_id.0.to_le_bytes());
+            }
         }
     }
     bytes.push(access_tag(contract.access.clone())?);
@@ -200,6 +224,7 @@ fn put_contract(bytes: &mut Vec<u8>, contract: &ValueContract) -> Result<(), Pro
         ValueLifetime::Invocation => 1,
         ValueLifetime::Retained => 2,
         ValueLifetime::Output => 3,
+        ValueLifetime::Stream => 4,
     });
     Ok(())
 }
@@ -210,9 +235,7 @@ fn access_tag(access: BufferAccess) -> Result<u8, ProgramGraphError> {
         BufferAccess::ReadWrite => Ok(1),
         BufferAccess::WriteOnly => Ok(2),
         BufferAccess::Uniform => Ok(3),
-        _ => Err(wire_error(format!(
-            "unsupported BufferAccess variant {access:?}"
-        ))),
+        BufferAccess::Workgroup => Ok(4),
     }
 }
 
@@ -317,14 +340,16 @@ impl<'a> Reader<'a> {
         let dtype: DataType = serde_json::from_slice(dtype_bytes)
             .map_err(|error| wire_error(format!("dtype decode failed: {error}")))?;
         let rank = self.bounded_len(MAX_RANK, "tensor rank")?;
-        let mut shape = Vec::with_capacity(rank);
+        let mut shape = Vec::with_capacity(rank.min(self.remaining()));
         for _ in 0..rank {
             shape.push(match self.u8()? {
                 0 => ShapeDim::Known(self.u64()?),
                 1 => ShapeDim::Symbol(self.string()?),
+                2 => ShapeDim::Unresolved,
+                3 => ShapeDim::Expr(crate::types::ShapeExprId(self.u32()?)),
                 tag => {
                     return Err(wire_error(format!(
-                        "shape dimension tag is {tag}; expected 0 or 1"
+                        "shape dimension tag is {tag}; expected 0, 1, 2, or 3"
                     )))
                 }
             });
@@ -334,6 +359,7 @@ impl<'a> Reader<'a> {
             1 => BufferAccess::ReadWrite,
             2 => BufferAccess::WriteOnly,
             3 => BufferAccess::Uniform,
+            4 => BufferAccess::Workgroup,
             tag => return Err(wire_error(format!("unknown buffer access tag {tag}"))),
         };
         let lifetime = match self.u8()? {
@@ -341,6 +367,7 @@ impl<'a> Reader<'a> {
             1 => ValueLifetime::Invocation,
             2 => ValueLifetime::Retained,
             3 => ValueLifetime::Output,
+            4 => ValueLifetime::Stream,
             tag => return Err(wire_error(format!("unknown value lifetime tag {tag}"))),
         };
         Ok(ValueContract {

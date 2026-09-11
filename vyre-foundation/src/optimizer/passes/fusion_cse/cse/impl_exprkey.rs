@@ -1,11 +1,11 @@
 use crate::ir::{BinOp, Expr, UnOp};
-use crate::optimizer::passes::fusion_cse::cse::expr_key::{ExprId, ExprKey};
-use crate::optimizer::passes::fusion_cse::cse::{is_commutative, CseCtx, TypeKey};
+use crate::optimizer::passes::fusion_cse::cse::expr_key::{CseExprId, ExprKey};
+use crate::optimizer::passes::fusion_cse::cse::{CseCtx, TypeKey};
 use smallvec::SmallVec;
 
 impl CseCtx {
     #[inline]
-    pub(crate) fn intern_expr(&mut self, expr: &Expr) -> ExprId {
+    pub(crate) fn intern_expr(&mut self, expr: &Expr) -> CseExprId {
         // Soundness (S19): pointer-keyed cache removed. See the
         // matching comment in `impl_csectx.rs::expr`  -  `Box<Expr>`
         // addresses are reused as Cow::Owned rewrites churn through
@@ -28,10 +28,13 @@ impl CseCtx {
             Expr::InvocationId { axis } => ExprKey::InvocationId(*axis),
             Expr::WorkgroupId { axis } => ExprKey::WorkgroupId(*axis),
             Expr::LocalId { axis } => ExprKey::LocalId(*axis),
+            Expr::LogicalIndex { axis } => ExprKey::LogicalIndex(*axis),
+            Expr::LogicalTileId { axis } => ExprKey::LogicalTileId(*axis),
+            Expr::LogicalWithinTileId { axis } => ExprKey::LogicalWithinTileId(*axis),
             Expr::BinOp { op, left, right } => {
                 let mut l = self.intern_expr(left);
                 let mut r = self.intern_expr(right);
-                if is_commutative(op) && r < l {
+                if op.commutes() && r < l {
                     std::mem::swap(&mut l, &mut r);
                 }
                 match op {
@@ -56,7 +59,7 @@ impl CseCtx {
                 op_id.clone(),
                 args.iter()
                     .map(|arg| self.intern_expr(arg))
-                    .collect::<SmallVec<[ExprId; 4]>>(),
+                    .collect::<SmallVec<[CseExprId; 4]>>(),
             ),
             Expr::Fma { a, b, c } => ExprKey::Fma(
                 self.intern_expr(a),
@@ -93,7 +96,7 @@ impl CseCtx {
         if let Some(&id) = self.deduplication.get(&key) {
             id
         } else {
-            let id = ExprId(u32::try_from(self.arena.len()).map_or(u32::MAX, |value| value));
+            let id = CseExprId(u32::try_from(self.arena.len()).map_or(u32::MAX, |value| value));
             self.arena.push(key.clone());
             self.deduplication.insert(key, id);
             id
@@ -199,6 +202,8 @@ fn un_op_key(op: &UnOp) -> Option<u8> {
         UnOp::Unpack4High => Some(33),
         UnOp::Unpack8Low => Some(34),
         UnOp::Unpack8High => Some(35),
+        UnOp::BitcastF32ToU32 => Some(36),
+        UnOp::BitcastU32ToF32 => Some(37),
         _ => None,
     }
 }

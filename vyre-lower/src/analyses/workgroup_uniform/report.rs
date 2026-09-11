@@ -120,6 +120,7 @@ fn hint_for_branch(site: &BranchSite) -> BranchHint {
     }
 }
 
+// Inline: covers the crate-private `divergent_count` and `hints`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

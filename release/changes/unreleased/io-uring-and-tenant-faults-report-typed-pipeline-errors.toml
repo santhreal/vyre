@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "io_uring and tenant accounting faults report typed PipelineError variants that name their operands and corrective actions rather than reporting a full submission queue for out-of-bounds ranges, integer width overflows, or counter order violations."

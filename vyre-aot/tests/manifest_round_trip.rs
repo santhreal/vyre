@@ -1,7 +1,7 @@
 //! Manifest serialization contract for canonical artifact packages.
 
-use vyre_aot::artifact::TargetId;
-use vyre_aot::manifest::Manifest;
+use vyre_aot::Manifest;
+use vyre_aot::TargetId;
 
 /// Regression: the packaging manifest must preserve canonical artifact identities exactly.
 #[test]

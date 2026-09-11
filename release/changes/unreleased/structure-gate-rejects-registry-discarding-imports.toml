@@ -1,0 +1,2 @@
+category = "Added"
+text = "`structure-gate` derives the set of crates that submit `inventory` registrations from the tree and rejects any `use <that crate> as _;` in workspace sources, naming `vyre-registry-link` as the way to read the registry instead. The submitting set is read at scan time rather than listed, so a new submitting crate is judged the moment it submits, and a companion contract fails when the scan finds no submitters, which is the state that would accept every discarding import in the tree."

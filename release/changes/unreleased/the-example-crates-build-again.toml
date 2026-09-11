@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The scaffold under `examples/libs-template` renders into a crate that builds. It pinned `thiserror` to an exact version the workspace had moved past, so the rendered crate could not resolve, and it passed the `Arc<[u32]>` shape of `TensorRef::shape` where `TensorRefError::ShapeMismatch` takes `Vec<u32>`, so it could not compile. Its shape and element-count checks now call `check_same_shape` and `checked_element_count` instead of restating them, and its conformance test no longer uses a crate it did not declare."

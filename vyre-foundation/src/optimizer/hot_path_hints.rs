@@ -1,4 +1,4 @@
-//! ROADMAP I1  -  hot-path recording into optimizer hints.
+//! hot-path recording into optimizer hints.
 //!
 //! Foundation-side substrate. Backends record per-Region dispatch
 //! latency at runtime; the optimizer reads the recorded hints to
@@ -87,6 +87,17 @@ struct HintEntry {
     timestamp: u64,
 }
 
+impl HintEntry {
+    /// Fold one dispatch sample in and mark the entry as most recently used.
+    fn accumulate(&mut self, timestamp: u64, kernel_ns: u64, bytes_touched: u64) {
+        self.record.dispatch_count = self.record.dispatch_count.saturating_add(1);
+        self.record.kernel_ns_total = self.record.kernel_ns_total.saturating_add(kernel_ns);
+        self.record.kernel_ns_max = self.record.kernel_ns_max.max(kernel_ns);
+        self.record.bytes_total = self.record.bytes_total.saturating_add(bytes_touched);
+        self.timestamp = timestamp;
+    }
+}
+
 /// Bounded LRU store of per-region performance records. Cheap to
 /// clone (independent copy of internal metadata), Send + Sync.
 pub struct HotPathHints {
@@ -133,42 +144,49 @@ impl HotPathHints {
     /// Record a dispatch sample for `region_generator`. Existing
     /// record gets accumulated; new region triggers LRU eviction
     /// when at capacity.
+    ///
+    /// Every sample after the first for a region takes the update path, which
+    /// owns no key: this used to allocate the key string twice per sample
+    /// (`to_owned` then `clone` for the entry API) whether or not the region
+    /// was already recorded.
     pub fn record(&self, region_generator: &str, kernel_ns: u64, bytes_touched: u64) {
         if self.capacity == 0 {
             return;
         }
-        let key = region_generator.to_owned();
         let timestamp = self.clock.fetch_add(1, Ordering::Relaxed);
-        let mut entry = self.records.entry(key.clone()).or_insert(HintEntry {
-            record: RegionRecord {
-                dispatch_count: 0,
-                kernel_ns_total: 0,
-                kernel_ns_max: 0,
-                bytes_total: 0,
-            },
-            timestamp,
-        });
-        entry.record.dispatch_count = entry.record.dispatch_count.saturating_add(1);
-        entry.record.kernel_ns_total = entry.record.kernel_ns_total.saturating_add(kernel_ns);
-        if kernel_ns > entry.record.kernel_ns_max {
-            entry.record.kernel_ns_max = kernel_ns;
+        match self.records.get_mut(region_generator) {
+            Some(mut entry) => entry.accumulate(timestamp, kernel_ns, bytes_touched),
+            None => {
+                let mut entry =
+                    self.records
+                        .entry(region_generator.to_owned())
+                        .or_insert(HintEntry {
+                            record: RegionRecord {
+                                dispatch_count: 0,
+                                kernel_ns_total: 0,
+                                kernel_ns_max: 0,
+                                bytes_total: 0,
+                            },
+                            timestamp,
+                        });
+                entry.accumulate(timestamp, kernel_ns, bytes_touched);
+            }
         }
-        entry.record.bytes_total = entry.record.bytes_total.saturating_add(bytes_touched);
-        entry.timestamp = timestamp;
-        drop(entry);
 
         while self.records.len() > self.capacity {
+            // One key leaves the map, so one key is cloned. Pairing every key
+            // with its timestamp before taking the minimum cloned the whole map
+            // on each eviction, which is the scan an LRU eviction is already
+            // paying for once.
             let oldest = self
                 .records
                 .iter()
-                .map(|e| (e.key().clone(), e.value().timestamp))
-                .min_by_key(|(_, ts)| *ts)
-                .map(|(k, _)| k);
-            if let Some(k) = oldest {
-                self.records.remove(&k);
-            } else {
+                .min_by_key(|entry| entry.value().timestamp)
+                .map(|entry| entry.key().clone());
+            let Some(key) = oldest else {
                 break;
-            }
+            };
+            self.records.remove(&key);
         }
     }
 

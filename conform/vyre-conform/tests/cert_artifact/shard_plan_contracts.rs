@@ -1,5 +1,11 @@
 use super::*;
+#[cfg(feature = "device-tests")]
+use vyre_driver_reference::ORACLE_EXECUTOR_ID;
 
+/// WHY: this drives two real `prove` shards through the built binary, which
+/// acquires a device. On a runner with no driver the acquisition aborts the
+/// process from inside cudarc, so it is admitted only where hardware is.
+#[cfg(feature = "device-tests")]
 #[test]
 fn prove_merges_live_gpu_certificate_shards() {
     let dir = tempfile::tempdir().expect("tempdir");
@@ -27,22 +33,7 @@ fn prove_merges_live_gpu_certificate_shards() {
         );
     }
 
-    let status = Command::new(conform_binary())
-        .args(["merge", "--out"])
-        .arg(&merged)
-        .arg(&shard_a)
-        .arg(&shard_b)
-        .status()
-        .expect("Fix: the built vyre-conform binary must launch");
-    assert!(
-        status.success(),
-        "Fix: merge must accept live signed GPU proof shards."
-    );
-
-    let merged_json =
-        std::fs::read_to_string(&merged).expect("Fix: merge must write a readable artifact");
-    let parsed: Value =
-        serde_json::from_str(&merged_json).expect("Fix: merged artifact must be valid JSON");
+    let parsed = merge_shards(&merged, &shard_a, &shard_b);
     assert_eq!(
         parsed["backend_id"].as_str(),
         Some("merged"),
@@ -58,9 +49,9 @@ fn prove_merges_live_gpu_certificate_shards() {
     );
     let mut backends = std::collections::BTreeSet::new();
     for pair in pairs {
-        let backend = pair["backend_id"]
+        let backend = pair["executor_id"]
             .as_str()
-            .expect("Fix: merged live pair must carry backend_id");
+            .expect("Fix: merged live pair must carry executor_id");
         backends.insert(backend.to_string());
         assert_eq!(
             pair["passed"].as_bool(),
@@ -75,7 +66,7 @@ fn prove_merges_live_gpu_certificate_shards() {
             "Fix: VYRE_BACKEND={selected} merged shards must preserve only the selected backend."
         );
     } else {
-        for required in ["cuda", "wgpu", "cpu-ref"] {
+        for required in ["cuda", "wgpu", ORACLE_EXECUTOR_ID] {
             assert!(
                 backends.contains(required),
                 "Fix: merged live GPU shards must preserve backend `{required}`."

@@ -15,6 +15,7 @@ pub(crate) struct QueueClosureLaneProfile {
 }
 
 impl QueueClosureLaneProfile {
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn from_wave_lengths(
         queue_capacity: u32,
@@ -163,6 +164,7 @@ const fn u128_to_u64_saturating(value: u128) -> u64 {
     }
 }
 
+#[cfg(test)]
 const fn u128_to_u32_saturating(value: u128) -> u32 {
     if value > u32::MAX as u128 {
         u32::MAX
@@ -174,6 +176,7 @@ const fn u128_to_u32_saturating(value: u128) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cases::mix32;
 
     #[test]
     fn generated_queue_closure_lane_profiles_account_for_every_elided_lane() {
@@ -376,13 +379,5 @@ mod tests {
         assert_eq!(rejected_zero, CASES);
         assert_eq!(rejected_capacity, CASES);
         assert_eq!(rejected_sum, CASES);
-    }
-
-    const fn mix32(mut value: u32) -> u32 {
-        value ^= value >> 16;
-        value = value.wrapping_mul(0x7FEB_352D);
-        value ^= value >> 15;
-        value = value.wrapping_mul(0x846C_A68B);
-        value ^ (value >> 16)
     }
 }

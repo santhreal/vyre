@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The gate sweep's wiring check now runs from gate to workflow as well as from workflow to gate. A registered gate that no workflow names, directly or through a subset a workflow runs, fails the check instead of sitting in the registry as decoration. `file-size` was red on fourteen source files while nothing in CI named it, so its judgement reached nobody who could act on it. Wiring failures are not pinnable."

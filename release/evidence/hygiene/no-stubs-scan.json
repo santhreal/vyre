@@ -1,72 +1,301 @@
 {
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"4a65df6872a1f68dc6c828ed0507d735faeafe08","commit_timestamp":"1789120972","parent_commit":"f52c75222db4f8536ccd540b2cb40ac2efc294f4","dirty":true,"source_fingerprint":"git:4a65df6872a1f68dc6c828ed0507d735faeafe08:dirty=true:worktree=24f9fae05c76c820e1ad3a2068f1a8c34b9ea7dd5e8cde44ff4c96e37371fb97"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "scan": "no-stubs",
   "findings": [
     {
-      "path": "vyre-driver/src/grid_sync.rs",
-      "line": 1437,
+      "path": "conform/vyre-conform-spec/src/schema.rs",
+      "line": 173,
+      "pattern": "placeholder_text",
+      "text": "/// Construct an unsigned certificate with deterministic placeholder fields."
+    },
+    {
+      "path": "vyre-bench/src/evidence/receipt.rs",
+      "line": 289,
+      "pattern": "placeholder_text",
+      "text": "/// Panics when the receipt does not serialize. A placeholder address would"
+    },
+    {
+      "path": "vyre-driver/src/backend/vyre_backend.rs",
+      "line": 72,
+      "pattern": "placeholder_text",
+      "text": "/// one is a count the backend rejects rather than a placeholder it skips. A"
+    },
+    {
+      "path": "vyre-driver/src/grid_sync/resident_dispatch.rs",
+      "line": 203,
       "pattern": "placeholder_text",
       "text": "// unused buffer, so the placeholder is bound but inert (proven equal to"
     },
     {
-      "path": "vyre-bench/src/cases/scan_ac_irregular.rs",
-      "line": 84,
-      "pattern": "TODO",
-      "text": "b\"TODO:\","
+      "path": "vyre-driver-wgpu/src/engine/record_and_readback/mod.rs",
+      "line": 188,
+      "pattern": "placeholder_text",
+      "text": "// non-trap binding, with a zeroed placeholder for every backend-allocated"
     },
     {
-      "path": "vyre-driver-cuda/src/backend/stream_ordered_pool.rs",
-      "line": 21,
-      "pattern": "TODO",
-      "text": "//! rather than a pending TODO: on the warm steady state the"
+      "path": "vyre-driver-wgpu/src/engine/record_and_readback/mod.rs",
+      "line": 190,
+      "pattern": "placeholder_text",
+      "text": "// interpreter rejects the placeholder shape and cuda never accepted it, so"
+    },
+    {
+      "path": "vyre-foundation/src/ir_inner/model/node/impl_node.rs",
+      "line": 293,
+      "pattern": "placeholder_text",
+      "text": "/// node records placeholder operands. Emit"
+    },
+    {
+      "path": "vyre-foundation/src/substrate/query.rs",
+      "line": 591,
+      "pattern": "placeholder_text",
+      "text": "// output is cloned to leave a placeholder behind."
     },
     {
       "path": "vyre-foundation/src/validate/binding.rs",
-      "line": 43,
+      "line": 42,
       "pattern": "placeholder_text",
       "text": "/// `false` this field is `DataType::U32` as a placeholder; callers"
     },
     {
       "path": "vyre-foundation/src/validate/binding.rs",
-      "line": 49,
+      "line": 48,
       "pattern": "placeholder_text",
       "text": "/// placeholder; V045 assignment-type checking must be skipped."
     },
     {
-      "path": "vyre-test-support/src/lib.rs",
-      "line": 9,
-      "pattern": "stub_text",
-      "text": "//! own ~230-line copy of the enumerator (and 22 crates shipped a *tautology stub* whose doc"
-    },
-    {
-      "path": "vyre-reference/src/execution/mod.rs",
-      "line": 61,
-      "pattern": "placeholder_text",
-      "text": "// lowering table's placeholder, which cleared the output buffer instead"
-    },
-    {
-      "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 257,
-      "pattern": "placeholder_text",
-      "text": "// the placeholder to the range it will actually read back."
-    },
-    {
-      "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 412,
-      "pattern": "placeholder_text",
-      "text": "/// what a caller-supplied placeholder has to cover."
-    },
-    {
-      "path": "vyre-primitives/src/graph/program_graph.rs",
-      "line": 269,
+      "path": "vyre-libs-graph/src/graph/program_graph.rs",
+      "line": 363,
       "pattern": "placeholder_text",
       "text": "// `max(edge_count, 1)`. A zero-edge graph still carries a single placeholder"
     },
     {
-      "path": "conform/vyre-conform-spec/src/schema.rs",
-      "line": 165,
+      "path": "vyre-libs-reduce/src/reduce/grid_stride_tree.rs",
+      "line": 153,
       "pattern": "placeholder_text",
-      "text": "/// Construct an unsigned certificate with deterministic placeholder fields."
+      "text": "// single-block form cannot drift into demanding a placeholder for its own"
+    },
+    {
+      "path": "vyre-megakernel/src/baseline.rs",
+      "line": 22,
+      "pattern": "placeholder_text",
+      "text": "/// candidate rather than a placeholder: it is the schedule every ranking is"
+    },
+    {
+      "path": "vyre-primitives/src/hardware/mod.rs",
+      "line": 474,
+      "pattern": "placeholder_text",
+      "text": "/// zeroed placeholder for one described a call the artifact ABI rejects."
+    },
+    {
+      "path": "vyre-reference/src/execution/hashmap/mod.rs",
+      "line": 261,
+      "pattern": "placeholder_text",
+      "text": "// op whose fixture carried a placeholder for a backend-allocated output"
+    },
+    {
+      "path": "vyre-spec/src/all_algebraic_laws.rs",
+      "line": 15,
+      "pattern": "placeholder_text",
+      "text": "/// Parameterized variants carry stable placeholder payloads that exercise the"
+    },
+    {
+      "path": "vyre-spec/src/law_family.rs",
+      "line": 234,
+      "pattern": "placeholder_text",
+      "text": "/// The payload is a stable placeholder, not a claim about any operation:"
+    },
+    {
+      "path": "vyre-spec/src/op_contract.rs",
+      "line": 533,
+      "pattern": "placeholder_text",
+      "text": "/// placeholder."
+    },
+    {
+      "path": "vyre-spec/src/op_contract.rs",
+      "line": 565,
+      "pattern": "placeholder_text",
+      "text": "| \"placeholder\""
+    },
+    {
+      "path": "vyre-spec/src/op_contract.rs",
+      "line": 574,
+      "pattern": "placeholder_text",
+      "text": "|| lower.starts_with(\"placeholder:\")"
+    },
+    {
+      "path": "vyre-spec/src/op_contract.rs",
+      "line": 586,
+      "pattern": "placeholder_text",
+      "text": "/// Opaque reason was too short or contained a placeholder string."
+    },
+    {
+      "path": "vyre-spec/src/op_contract.rs",
+      "line": 601,
+      "pattern": "placeholder_text",
+      "text": "write!(f, \"invalid or placeholder opaque reason: `{reason}`\")"
+    },
+    {
+      "path": "vyre-test-support/src/host_input_abi.rs",
+      "line": 254,
+      "pattern": "placeholder_text",
+      "text": "/// Assert `backend` refuses a long-form input list carrying a placeholder for"
+    },
+    {
+      "path": "vyre-test-support/src/host_input_abi.rs",
+      "line": 258,
+      "pattern": "placeholder_text",
+      "text": "/// A placeholder slot is the shape a caller writes when it counts bindings"
+    },
+    {
+      "path": "vyre-test-support/src/host_input_abi.rs",
+      "line": 278,
+      "pattern": "placeholder_text",
+      "text": "// A placeholder for the backend-allocated output sits at binding index 1."
+    },
+    {
+      "path": "vyre-test-support/src/ir_variants.rs",
+      "line": 110,
+      "pattern": "placeholder_text",
+      "text": "/// variants with placeholder operands, so this set is the one to use when the"
+    },
+    {
+      "path": "xtask/src/gate_metadata/descriptors_a_g.rs",
+      "line": 102,
+      "pattern": "placeholder_text",
+      "text": "help: \"Cross-validate every speedup cell across the three measured backend comparison  matrices. Proves every measured cell records positive speedup, is strictly reproducible  from its source probe, cites no placeholder, and is traceable back to its host, commit,  GPU model, driver version, and measurement timestamp. Proves nothing about benchmark  methodology: this gate reads the produced matrices and their source artifacts, never  starts a benchmark run. Run with --write to re-derive the markdown summary table.\","
+    },
+    {
+      "path": "xtask/src/gates/crate_pages.rs",
+      "line": 103,
+      "pattern": "placeholder_text",
+      "text": "format!(\"`{name}` records a placeholder where its exclusion belongs\"),"
+    },
+    {
+      "path": "xtask/src/gates/crate_pages.rs",
+      "line": 122,
+      "pattern": "placeholder_text",
+      "text": "/// Whether a section body records a placeholder instead of a statement."
+    },
+    {
+      "path": "xtask/src/gates/crate_readmes.rs",
+      "line": 322,
+      "pattern": "placeholder_text",
+      "text": "/// Every version the release train declares, keyed as a template placeholder."
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 16,
+      "pattern": "placeholder_text",
+      "text": "//! rather than skipped, and a template placeholder this gate cannot render is"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 45,
+      "pattern": "placeholder_text",
+      "text": "/// A placeholder outside this table is a finding, because rendering an unknown"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 194,
+      "pattern": "placeholder_text",
+      "text": "/// One template: every placeholder known, and the rendered crate passing."
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 220,
+      "pattern": "placeholder_text",
+      "text": "format!(\"`{path}` uses the placeholder `{unknown}`, which this gate cannot render\"),"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 405,
+      "pattern": "placeholder_text",
+      "text": "/// Substitute every known placeholder."
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 408,
+      "pattern": "placeholder_text",
+      "text": "for (placeholder, value) in PLACEHOLDERS {"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 409,
+      "pattern": "placeholder_text",
+      "text": "rendered = rendered.replace(placeholder, value);"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 423,
+      "pattern": "placeholder_text",
+      "text": "let placeholder = &after[..close + 2];"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 424,
+      "pattern": "placeholder_text",
+      "text": "if !PLACEHOLDERS.iter().any(|(known, _)| *known == placeholder)"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 425,
+      "pattern": "placeholder_text",
+      "text": "&& !unknown.iter().any(|found| found == placeholder)"
+    },
+    {
+      "path": "xtask/src/gates/example_capability.rs",
+      "line": 427,
+      "pattern": "placeholder_text",
+      "text": "unknown.push(placeholder.to_string());"
+    },
+    {
+      "path": "xtask/src/gates/hygiene_matrix/classification.rs",
+      "line": 351,
+      "pattern": "TODO",
+      "text": "if matches!(pattern, \"TODO\" | \"FIXME\" | \"placeholder_text\" | \"stub_text\") {"
+    },
+    {
+      "path": "xtask/src/gates/hygiene_matrix/classification.rs",
+      "line": 351,
+      "pattern": "FIXME",
+      "text": "if matches!(pattern, \"TODO\" | \"FIXME\" | \"placeholder_text\" | \"stub_text\") {"
+    },
+    {
+      "path": "xtask/src/gates/hygiene_matrix/rules.rs",
+      "line": 339,
+      "pattern": "stub_text",
+      "text": "/// pattern table row reading `text: \"todo!(\",` is that spelling, not a stub."
+    },
+    {
+      "path": "xtask/src/gates/hygiene_matrix/rules.rs",
+      "line": 368,
+      "pattern": "placeholder_text",
+      "text": "/// The family covers an unfinished item, a placeholder, and the macros and"
+    },
+    {
+      "path": "xtask/src/gates/hygiene_matrix/rules.rs",
+      "line": 376,
+      "pattern": "FIXME",
+      "text": "| \"FIXME\""
+    },
+    {
+      "path": "xtask-evidence/src/report_fixture.rs",
+      "line": 68,
+      "pattern": "placeholder_text",
+      "text": "/// it rather than carrying a placeholder."
+    },
+    {
+      "path": "xtask-registry/src/gates/cross_target.rs",
+      "line": 294,
+      "pattern": "placeholder_text",
+      "text": "/// platform is prose and compiles nothing. That also drops the placeholder"
+    },
+    {
+      "path": "xtask-registry/src/gates/cross_target.rs",
+      "line": 297,
+      "pattern": "placeholder_text",
+      "text": "/// accepts only `[a-z0-9_]` there, so anything else is a placeholder rather than"
     }
   ],
   "release_blocking_findings": [],

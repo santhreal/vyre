@@ -21,5 +21,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Run loom tests
         run: |
-          # Only run tests named loom_* under cfg loom. If a crate has none, it is a no-op.
+          # Only run tests named loom_* under cfg loom. The member set is the
+          # workspace, not a list: a crate with no loom_ test is a no-op, and a
+          # crate that gains one is covered without editing this job.
           ./cargo_full test --workspace --release -- --test-threads=1 loom_

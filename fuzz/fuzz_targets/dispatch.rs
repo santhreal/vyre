@@ -14,7 +14,7 @@
 
 use libfuzzer_sys::fuzz_target;
 use std::sync::OnceLock;
-use vyre::ir::{BufferAccess, Program};
+use vyre::ir::Program;
 use vyre::validate;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
@@ -32,45 +32,35 @@ fn backend() -> Option<&'static WgpuBackend> {
     BACKEND.get_or_init(|| WgpuBackend::acquire().ok()).as_ref()
 }
 
+/// Zero-filled bytes for exactly the buffers a dispatch stages from the host.
+///
+/// `BufferDecl::consumes_host_input` is the single definition of that list, and
+/// this returns it in binding order, so the vector is the dispatch input list
+/// rather than something that has to be filtered again. Spelling the rule out
+/// as `ReadOnly | ReadWrite | Uniform` was a copy that disagreed with it on a
+/// `Shared`-kind buffer, a `Persistent`-kind buffer, an output and a pipeline
+/// live-out, and every dispatch built that way is refused for arity before the
+/// fuzzer reaches the backend.
 fn zeroed_dispatch_inputs(program: &Program, max_total: usize) -> Option<Vec<Vec<u8>>> {
     let mut total = 0usize;
-    let mut inputs = vec![Vec::new(); program.buffers().len()];
-    for (idx, buffer) in program.buffers().iter().enumerate() {
-        match buffer.access() {
-            BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform => {
-                let byte_len = usize::try_from(buffer.count())
-                    .ok()
-                    .and_then(|count| count.checked_mul(buffer.element().min_bytes()))?;
-                if byte_len == 0 {
-                    return None;
-                }
-                total = total.checked_add(byte_len)?;
-                if total > max_total {
-                    return None;
-                }
-                inputs[idx] = vec![0u8; byte_len];
-            }
-            BufferAccess::Workgroup => {}
-            _ => {}
+    let mut inputs = Vec::with_capacity(program.buffers().len());
+    for buffer in program.buffers() {
+        if !buffer.consumes_host_input() {
+            continue;
         }
+        let byte_len = usize::try_from(buffer.count())
+            .ok()
+            .and_then(|count| count.checked_mul(buffer.element().min_bytes()))?;
+        if byte_len == 0 {
+            return None;
+        }
+        total = total.checked_add(byte_len)?;
+        if total > max_total {
+            return None;
+        }
+        inputs.push(vec![0u8; byte_len]);
     }
     Some(inputs)
-}
-
-fn gpu_dispatch_inputs(program: &Program, all_inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
-    program
-        .buffers()
-        .iter()
-        .enumerate()
-        .filter_map(|(buffer_idx, buffer)| {
-            matches!(
-                buffer.access(),
-                BufferAccess::ReadOnly | BufferAccess::ReadWrite | BufferAccess::Uniform
-            )
-            .then(|| all_inputs.get(buffer_idx).cloned())
-        })
-        .flatten()
-        .collect()
 }
 
 fuzz_target!(|data: &[u8]| {
@@ -99,26 +89,20 @@ fuzz_target!(|data: &[u8]| {
 
     let required = vyre_foundation::program_caps::scan(&program);
     if let Some(backend) = backend() {
-        if let Err(missing) = vyre_foundation::program_caps::check_backend_capabilities(
+        if vyre_foundation::program_caps::check_backend_capabilities(
             backend.id(),
-            backend.supports_subgroup_ops(),
-            backend.supports_f16(),
-            backend.supports_bf16(),
-            backend.supports_indirect_dispatch(),
-            true,
-            backend.supports_distributed_collectives(),
-            backend.max_workgroup_size(),
+            &vyre_driver::validation::ProgramValidationCaps::from_backend(backend).support(),
             &required,
-        ) {
-            let _ = missing;
+        )
+        .is_err()
+        {
             return;
         }
     }
 
-    let Some(all_inputs) = zeroed_dispatch_inputs(&program, MAX_DISPATCH_INPUT_BYTES) else {
+    let Some(gpu_inputs) = zeroed_dispatch_inputs(&program, MAX_DISPATCH_INPUT_BYTES) else {
         return;
     };
-    let gpu_inputs = gpu_dispatch_inputs(&program, &all_inputs);
     if gpu_inputs.is_empty() {
         return;
     }

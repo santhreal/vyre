@@ -1,0 +1,2 @@
+category = "Changed"
+text = "One walk builds a skewed CSR benchmark fixture. cases::skewed_graph::build_skewed_csr_arrays takes the node and edge labelling a case supplies and produces the CSR arrays, frontier bitset and degree counts, and cases::skewed_graph::active_high_degree_sources counts high-degree frontier sources for both the CSR and the IFDS queue cases."

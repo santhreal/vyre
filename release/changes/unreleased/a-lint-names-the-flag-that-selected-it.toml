@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A `vyre-lints` missing-root diagnostic names the `--check-...` flag that selected the lint, and reported violations are refused when their kind is outside the kind list the lint registers."

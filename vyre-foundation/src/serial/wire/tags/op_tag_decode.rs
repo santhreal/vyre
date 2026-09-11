@@ -88,7 +88,20 @@ pub(crate) const UN_OP_TAGS: &[(u8, UnOp)] = &[
     (0x22, UnOp::Unpack8Low),
     (0x23, UnOp::Unpack8High),
     (0x24, UnOp::Reciprocal),
+    (0x25, UnOp::BitcastF32ToU32),
+    (0x26, UnOp::BitcastU32ToF32),
 ];
+
+/// Every builtin `UnOp` the frozen wire-tag table names, in tag order.
+///
+/// The table is the workspace's complete builtin unary set: a variant with no
+/// row here cannot be serialized at all, and `vyre-spec`'s wire-tag surface
+/// tests pin every row. Callers that need to enumerate the builtin set read it
+/// from here instead of keeping a list that goes stale in silence.
+#[must_use]
+pub fn builtin_un_ops() -> Vec<UnOp> {
+    UN_OP_TAGS.iter().map(|(_, op)| op.clone()).collect()
+}
 
 #[inline]
 pub(crate) fn bin_op_from_tag(tag: u8) -> Result<BinOp, String> {

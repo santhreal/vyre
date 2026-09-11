@@ -57,8 +57,8 @@ pub struct DeviceSignature {
     pub device_name_contains: Vec<String>,
     /// Maximum streaming compute units for this architecture family.
     pub max_sm: u32,
-    /// Native subgroup/warp/wave size.
-    pub warp_size: u32,
+    /// Native subgroup size.
+    pub subgroup_size: u32,
     /// Maximum registers per thread.
     pub regs_per_thread_max: u32,
     /// Shared memory per compute unit in KiB.
@@ -123,10 +123,10 @@ impl DeviceSignature {
                 "device signature family is empty. Fix: set the architecture family.".to_string(),
             );
         }
-        if self.warp_size == 0 || !self.warp_size.is_power_of_two() {
+        if self.subgroup_size == 0 || !self.subgroup_size.is_power_of_two() {
             return Err(format!(
-                "device signature `{}` has invalid warp_size {}. Fix: use a non-zero power of two.",
-                self.id, self.warp_size
+                "device signature `{}` has invalid subgroup_size {}. Fix: use a non-zero power of two.",
+                self.id, self.subgroup_size
             ));
         }
         if self.ideal_vector_pack_bits == 0 || self.ideal_vector_pack_bits % 32 != 0 {
@@ -156,9 +156,9 @@ impl DeviceSignature {
     /// Apply architecture facts to a neutral device profile.
     #[must_use]
     pub fn apply_to_profile(&self, mut profile: DeviceProfile) -> DeviceProfile {
-        profile.subgroup_size = self.warp_size;
+        profile.subgroup_size = self.subgroup_size;
         profile.supports_tensor_cores = self.tensor_core_supported;
-        profile.has_subgroup_shuffle = self.warp_size > 0;
+        profile.has_subgroup_shuffle = self.subgroup_size > 0;
         profile.has_shared_memory |= self.shared_mem_per_sm_kb > 0;
         if profile.max_shared_memory_bytes == 0 {
             profile.max_shared_memory_bytes =
@@ -381,6 +381,8 @@ fn parse_u32(value: &str) -> Option<u32> {
     Some(out)
 }
 
+// Inline: `vyre_driver::device_signature` is `pub(crate)`, so no integration test can reach what
+// this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::{DeviceSignature, DeviceSignatureTable};
@@ -390,7 +392,7 @@ mod tests {
 id = "sample_arch"
 family = "sample"
 max_sm = 128
-warp_size = 32
+subgroup_size = 32
 regs_per_thread_max = 255
 shared_mem_per_sm_kb = 128
 l1_kb = 128
@@ -411,17 +413,18 @@ bank_width_bytes = 4
 
         assert_eq!(signature.id, "sample_arch");
         assert_eq!(signature.architecture_generation, None);
-        assert_eq!(signature.warp_size, 32);
+        assert_eq!(signature.subgroup_size, 32);
         assert!(signature.tensor_core_supported);
     }
 
     #[test]
-    fn rejects_invalid_warp_size() {
-        let err =
-            DeviceSignature::from_toml_str(&SAMPLE.replace("warp_size = 32", "warp_size = 48"))
-                .unwrap_err();
+    fn rejects_invalid_subgroup_size() {
+        let err = DeviceSignature::from_toml_str(
+            &SAMPLE.replace("subgroup_size = 32", "subgroup_size = 48"),
+        )
+        .unwrap_err();
 
-        assert!(err.contains("warp_size"));
+        assert!(err.contains("subgroup_size"));
     }
 
     #[test]
@@ -472,7 +475,7 @@ bank_width_bytes = 4
 
     #[test]
     fn repository_device_signatures_load() {
-        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../devices");
+        let dir = vyre_test_support::monorepo::vyre_workspace_root().join("devices");
         let table = DeviceSignatureTable::load_dir(dir).unwrap();
 
         assert!(table.get("blackwell_120").is_some());
@@ -507,7 +510,7 @@ bank_width_bytes = 4
     /// callers ask for it.
     ///
     /// Backend projections call `builtins()` on every dispatch (twice, in the
-    /// CUDA case: once deriving validation capabilities and once deriving
+    /// native backend case: once deriving validation capabilities and once deriving
     /// adapter caps), so a reparse here is a per-dispatch TOML parse on the
     /// hot path. This pins the invariant rather than a duration, because a
     /// timing assertion would be flaky on a contended box and would not

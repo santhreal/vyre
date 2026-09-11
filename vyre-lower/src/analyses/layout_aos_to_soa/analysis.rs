@@ -63,118 +63,40 @@ fn compound_lane_count(dtype: &DataType) -> Option<u32> {
     }
 }
 
+// Inline: covers the crate-private `analyze` and `compound_lane_count`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, KernelOpKind, LiteralValue, MemoryClass,
-    };
+    use crate::analyses::load_counts::fixtures::kernel;
+    use crate::descriptor_builder::{body, descriptor, global_ro, if_then_else, load_global};
+    use crate::BindingSlot;
 
-    fn vec4_binding(slot: u32) -> BindingSlot {
-        BindingSlot {
-            slot,
-            element_type: DataType::Vec {
+    fn vec4_binding(index: u32) -> BindingSlot {
+        global_ro(
+            index,
+            DataType::Vec {
                 element: Box::new(DataType::F32),
                 count: 4,
             },
-            element_count: None,
-            memory_class: MemoryClass::Global,
-            visibility: BindingVisibility::ReadOnly,
-            name: format!("v{slot}"),
-        }
-    }
-
-    fn scalar_binding(slot: u32) -> BindingSlot {
-        BindingSlot {
-            slot,
-            element_type: DataType::F32,
-            element_count: None,
-            memory_class: MemoryClass::Global,
-            visibility: BindingVisibility::ReadOnly,
-            name: format!("s{slot}"),
-        }
+            &format!("v{index}"),
+        )
     }
 
     #[test]
     fn empty_kernel_has_no_candidates() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("k").dispatch(64, 1, 1).build();
         assert!(analyze(&desc).candidates.is_empty());
     }
 
     #[test]
     fn scalar_binding_is_not_candidate() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![scalar_binding(0)],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
-        assert!(analyze(&desc).candidates.is_empty());
+        let binding = global_ro(0, DataType::F32, "s0");
+        assert!(analyze(&kernel(binding, 2)).candidates.is_empty());
     }
 
     #[test]
     fn vec4_binding_with_two_loads_is_candidate() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![vec4_binding(0)],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
-        let p = analyze(&desc);
+        let p = analyze(&kernel(vec4_binding(0), 2));
         assert_eq!(p.candidates.len(), 1);
         assert_eq!(p.candidates[0].component_count, 4);
         assert_eq!(p.candidates[0].load_count, 2);
@@ -184,69 +106,21 @@ mod tests {
 
     #[test]
     fn vec4_binding_with_one_load_is_not_candidate() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![vec4_binding(0)],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
-        assert!(analyze(&desc).candidates.is_empty());
+        assert!(analyze(&kernel(vec4_binding(0), 1)).candidates.is_empty());
     }
 
     #[test]
     fn structured_if_else_counts_both_load_branches() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![vec4_binding(0)],
-            },
-            dispatch: Dispatch::new(32, 1, 1),
-            body: KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::StructuredIfThenElse,
-                    operands: vec![99, 0, 1],
-                    result: None,
-                }],
-                child_bodies: vec![
-                    KernelBody {
-                        ops: vec![KernelOp {
-                            kind: KernelOpKind::LoadGlobal,
-                            operands: vec![0, 0],
-                            result: Some(1),
-                        }],
-                        child_bodies: vec![],
-                        literals: vec![],
-                    },
-                    KernelBody {
-                        ops: vec![KernelOp {
-                            kind: KernelOpKind::LoadGlobal,
-                            operands: vec![0, 0],
-                            result: Some(2),
-                        }],
-                        child_bodies: vec![],
-                        literals: vec![],
-                    },
-                ],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("k")
+            .slot(vec4_binding(0))
+            .dispatch(32, 1, 1)
+            .body(
+                body()
+                    .op(if_then_else(99, 0, 1))
+                    .child(body().op(load_global(0, 0, 1)))
+                    .child(body().op(load_global(0, 0, 2))),
+            )
+            .build();
 
         let plan = analyze(&desc);
 

@@ -2,35 +2,13 @@
 
 #![forbid(unsafe_code)]
 
+#[path = "support/program_graph_fixtures.rs"]
+mod support;
+use support::{contract, copy_program};
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, GraphValueId, Node, Program,
+    BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, GraphValueId, Program,
     ProgramGraph, ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
 };
-
-fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
-    ValueContract {
-        dtype: DataType::F32,
-        shape: vec![ShapeDim::Symbol("tokens".into()), ShapeDim::Known(8)],
-        access,
-        lifetime,
-    }
-}
-
-fn copy_program(input: &str, output: &str) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32),
-            BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::F32),
-        ],
-        [1, 1, 1],
-        vec![Node::store(
-            output,
-            vyre_foundation::ir::Expr::u32(0),
-            vyre_foundation::ir::Expr::load(input, vyre_foundation::ir::Expr::u32(0)),
-        )],
-    )
-}
-
 fn two_output_program(input: &str, first: &str, second: &str) -> Program {
     Program::wrapped(
         vec![
@@ -274,6 +252,43 @@ fn sequence_state_transition_preserves_contract() {
         graph.values()[outputs[0].0 as usize].retained_successor_of,
         Some(state)
     );
+}
+
+/// A retained-to-output transition is reserved for a Program result buffer.
+/// Ordinary mutable state must remain retained across every successor edge.
+#[test]
+fn non_output_buffer_cannot_end_a_retained_succession() {
+    let retained = contract(BufferAccess::ReadWrite, ValueLifetime::Retained);
+    let mut graph = ProgramGraph::new();
+    let state = graph
+        .add_external_value("cache.0", retained.clone())
+        .expect("initial retained state must be valid");
+    let program = Program::wrapped(
+        vec![BufferDecl::read_write("cache", 0, DataType::F32)],
+        [1, 1, 1],
+        Vec::new(),
+    );
+    let error = graph
+        .add_node(
+            "decode.final",
+            program,
+            vec![GraphInput {
+                buffer: "cache".into(),
+                value: state,
+                contract: retained,
+            }],
+            vec![GraphOutput {
+                buffer: "cache".into(),
+                name: "cache.output".into(),
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+                retained_successor_of: Some(state),
+            }],
+        )
+        .expect_err("an ordinary mutable buffer must not terminate retained state");
+    assert!(matches!(
+        error,
+        ProgramGraphError::InvalidRetainedTransition { .. }
+    ));
 }
 
 /// Prevents model layers from changing cache shape or lifetime across decode steps.
@@ -872,12 +887,11 @@ fn malformed_graph_wire_frames_fail_closed() {
         .contains("magic mismatch"));
 
     let mut bad_version = bytes.clone();
-    bad_version[4..6].copy_from_slice(&3_u16.to_le_bytes());
+    bad_version[4..6].copy_from_slice(&99_u16.to_le_bytes());
     assert!(ProgramGraph::from_wire(&bad_version)
         .expect_err("Fix: unknown version must fail")
         .to_string()
-        .contains("unsupported graph wire version 3"));
-
+        .contains("unsupported graph wire version 99"));
     assert!(ProgramGraph::from_wire(&bytes[..bytes.len() - 1])
         .expect_err("Fix: truncated retained identity must fail")
         .to_string()
@@ -896,13 +910,48 @@ fn malformed_graph_wire_frames_fail_closed() {
 fn oversized_graph_wire_counts_fail_before_allocation() {
     let mut bytes = Vec::new();
     bytes.extend_from_slice(b"VGR0");
-    bytes.extend_from_slice(&2_u16.to_le_bytes());
+    bytes.extend_from_slice(&3_u16.to_le_bytes());
     bytes.extend_from_slice(&u32::MAX.to_le_bytes());
     let error = ProgramGraph::from_wire(&bytes)
         .expect_err("Fix: hostile external count must fail before allocation");
     assert!(error
         .to_string()
         .contains("external value count is 4294967295; maximum is 1000000"));
+}
+
+/// Prevents hostile node count fields from reserving unbounded memory before decoding.
+#[test]
+fn oversized_graph_wire_node_count_fails_before_allocation() {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(b"VGR0");
+    bytes.extend_from_slice(&3_u16.to_le_bytes());
+    bytes.extend_from_slice(&0_u32.to_le_bytes()); // 0 external values
+    bytes.extend_from_slice(&u32::MAX.to_le_bytes()); // node count exceeds MAX_GRAPH_ITEMS
+    let error = ProgramGraph::from_wire(&bytes)
+        .expect_err("Fix: hostile node count must fail before allocation");
+    assert!(error
+        .to_string()
+        .contains("node count is 4294967295; maximum is 1000000"));
+}
+
+/// Prevents hostile tensor rank from allocating huge vectors during contract decode.
+#[test]
+fn oversized_graph_wire_tensor_rank_fails_before_allocation() {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(b"VGR0");
+    bytes.extend_from_slice(&3_u16.to_le_bytes());
+    bytes.extend_from_slice(&1_u32.to_le_bytes()); // 1 external value
+    bytes.extend_from_slice(&4_u32.to_le_bytes()); // name len
+    bytes.extend_from_slice(b"val0");
+    let dtype_json = serde_json::to_vec(&DataType::F32).expect("dtype json");
+    bytes.extend_from_slice(&(dtype_json.len() as u32).to_le_bytes());
+    bytes.extend_from_slice(&dtype_json);
+    bytes.extend_from_slice(&10_000_u32.to_le_bytes()); // rank exceeds MAX_RANK (256)
+    let error = ProgramGraph::from_wire(&bytes)
+        .expect_err("Fix: hostile tensor rank must fail before allocation");
+    assert!(error
+        .to_string()
+        .contains("tensor rank is 10000; maximum is 256"));
 }
 
 /// Prevents wire data from introducing a retained edge to a nonexistent value.
@@ -916,5 +965,203 @@ fn graph_wire_dangling_retained_identity_fails_validation() {
     assert_eq!(
         ProgramGraph::from_wire(&bytes).expect_err("Fix: nonexistent retained identity must fail"),
         ProgramGraphError::MissingValue(GraphValueId(99))
+    );
+}
+
+/// Proves a replacement cannot orphan the predecessor a retained output reads.
+///
+/// `add_node` refuses an output declaring `retained_successor_of` when the prior
+/// value is not among the node's inputs. A replacement swaps the inputs, so the
+/// same invariant has to hold there or the retained chain would break with the
+/// graph reporting success.
+#[test]
+fn a_replacement_that_drops_a_retained_predecessor_is_refused() {
+    let mut graph = stateful_wire_graph();
+    let node = graph.nodes()[0].id;
+    let ports = graph.nodes()[node.0 as usize].output_ports.clone();
+    let retained_prior = ports[0]
+        .retained_successor_of
+        .expect("Fix: the fixture output must declare a retained predecessor");
+
+    let error = graph
+        .replace_node(
+            node,
+            Program::wrapped(
+                vec![BufferDecl::storage(
+                    "cache",
+                    0,
+                    BufferAccess::ReadWrite,
+                    DataType::F32,
+                )],
+                [64, 1, 1],
+                Vec::new(),
+            ),
+            Vec::new(),
+            ports.clone(),
+        )
+        .expect_err("Fix: dropping the retained predecessor must be refused");
+    assert_eq!(
+        error,
+        ProgramGraphError::MissingRetainedInput {
+            output: "cache.1".to_string(),
+            prior: retained_prior,
+        }
+    );
+    assert_eq!(
+        graph.nodes()[node.0 as usize].inputs.len(),
+        1,
+        "the refused replacement must leave the node's inputs in place"
+    );
+
+    // Keeping the predecessor bound is accepted, and the retained chain survives.
+    let inputs = graph.nodes()[node.0 as usize].inputs.clone();
+    graph
+        .replace_node(
+            node,
+            Program::wrapped(
+                vec![BufferDecl::storage(
+                    "cache",
+                    0,
+                    BufferAccess::ReadWrite,
+                    DataType::F32,
+                )],
+                [64, 1, 1],
+                Vec::new(),
+            ),
+            inputs,
+            ports,
+        )
+        .expect("Fix: a replacement keeping the retained predecessor must apply");
+    assert_eq!(
+        graph.nodes()[node.0 as usize].program.workgroup_size(),
+        [64, 1, 1],
+        "the replacement program must be installed"
+    );
+    assert!(
+        graph.values()[retained_prior.0 as usize]
+            .consumers
+            .contains(&node),
+        "the retained predecessor must still record the node as a consumer"
+    );
+}
+#[test]
+fn whole_graph_builder_and_subgraph_inlining_contracts() {
+    use vyre_foundation::ir::{
+        ControlBounds, DataType, Expr, ExternalEffect, Node, Program, ProgramGraphBuilder, ShapeDim,
+    };
+
+    let mut sub_builder = ProgramGraphBuilder::new();
+    let sub_in = sub_builder
+        .input("sub_in", DataType::F32, vec![ShapeDim::Known(16)])
+        .expect("sub input");
+    let sub_p = Program::wrapped(
+        vec![
+            BufferDecl::read("sub_in", 0, DataType::F32).with_count(16),
+            BufferDecl::output("sub_out", 1, DataType::F32).with_count(16),
+        ],
+        [16, 1, 1],
+        vec![Node::store(
+            "sub_out",
+            Expr::gid_x(),
+            Expr::mul(Expr::load("sub_in", Expr::gid_x()), Expr::f32(2.0)),
+        )],
+    );
+    sub_builder
+        .add_node(
+            "sub_scale",
+            sub_p,
+            vec![GraphInput {
+                buffer: "sub_in".into(),
+                value: sub_in,
+                contract: ValueContract {
+                    dtype: DataType::F32,
+                    shape: vec![ShapeDim::Known(16)],
+                    access: BufferAccess::ReadOnly,
+                    lifetime: ValueLifetime::Invocation,
+                },
+            }],
+            vec![GraphOutput {
+                buffer: "sub_out".into(),
+                name: "sub_out_val".into(),
+                contract: ValueContract {
+                    dtype: DataType::F32,
+                    shape: vec![ShapeDim::Known(16)],
+                    access: BufferAccess::ReadOnly,
+                    lifetime: ValueLifetime::Invocation,
+                },
+                retained_successor_of: None,
+            }],
+        )
+        .expect("sub node");
+    let subgraph = sub_builder.build().expect("subgraph build");
+    let mut main_builder = ProgramGraphBuilder::new();
+    let main_in = main_builder
+        .input("main_in", DataType::F32, vec![ShapeDim::Known(16)])
+        .expect("main input");
+    let stream_val = main_builder
+        .stream("stream_chan", DataType::F32, vec![ShapeDim::Known(16)])
+        .expect("stream");
+    let retained = main_builder
+        .retained_state("retained_state", DataType::F32, vec![ShapeDim::Known(16)])
+        .expect("retained");
+
+    let mut mapping = std::collections::BTreeMap::new();
+    mapping.insert(sub_in, main_in);
+    let inlined_outs = main_builder
+        .inline_subgraph("step1", &subgraph, &mapping)
+        .expect("inlined subgraph");
+    assert_eq!(inlined_outs.len(), 1);
+
+    let loop_outs = main_builder
+        .add_bounded_loop(
+            "loop_block",
+            &subgraph,
+            &inlined_outs,
+            &[],
+            ControlBounds {
+                max_steps: 3,
+                guaranteed_termination: true,
+            },
+        )
+        .expect("bounded loop");
+    assert_eq!(loop_outs.len(), 1);
+
+    main_builder
+        .add_effect_barrier(
+            "barrier_node",
+            ExternalEffect::StorageBarrier,
+            vec![GraphInput {
+                buffer: "in_buf".into(),
+                value: loop_outs[0],
+                contract: ValueContract {
+                    dtype: DataType::F32,
+                    shape: vec![ShapeDim::Known(16)],
+                    access: BufferAccess::ReadOnly,
+                    lifetime: ValueLifetime::Invocation,
+                },
+            }],
+            vec![GraphOutput {
+                buffer: "out_buf".into(),
+                name: "final_out".into(),
+                contract: ValueContract {
+                    dtype: DataType::F32,
+                    shape: vec![ShapeDim::Known(16)],
+                    access: BufferAccess::ReadWrite,
+                    lifetime: ValueLifetime::Output,
+                },
+                retained_successor_of: None,
+            }],
+        )
+        .expect("effect barrier");
+
+    let graph = main_builder.build().expect("main graph build");
+    assert!(graph.nodes().len() >= 5);
+    assert_eq!(
+        graph.values()[stream_val.0 as usize].contract.lifetime,
+        ValueLifetime::Stream
+    );
+    assert_eq!(
+        graph.values()[retained.0 as usize].contract.lifetime,
+        ValueLifetime::Retained
     );
 }

@@ -14,10 +14,11 @@ use naga::{
     GlobalVariable, Module, ResourceBinding, Scalar, ScalarKind, ShaderStage, Span, StorageAccess,
     Type, TypeInner, VectorSize,
 };
+use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_foundation::ir::DataType;
 use vyre_lower::{
-    BindingSlot, BindingVisibility, KernelBody, KernelDescriptor, KernelOpKind, MemoryClass,
-    TRAP_SIDECAR_NAME,
+    BindingSlot, BindingVisibility, GridIndexSpace, KernelBody, KernelDescriptor, KernelOpKind,
+    MemoryClass, TRAP_SIDECAR_NAME,
 };
 
 use super::BodyBuilder;
@@ -55,12 +56,20 @@ pub(super) struct Builtins {
     pub(super) global: u32,
     pub(super) workgroup: u32,
     pub(super) local: u32,
+    /// Workgroup count per grid axis. Pushed only for a grid-linearized index
+    /// space, which is the only lowering that reads the grid's extent.
+    pub(super) num_workgroups: Option<u32>,
     pub(super) subgroup_local: Option<u32>,
     pub(super) subgroup_size: Option<u32>,
 }
 
 impl Builtins {
-    fn push(function: &mut Function, types: TypeHandles, uses_subgroup: bool) -> Self {
+    fn push(
+        function: &mut Function,
+        types: TypeHandles,
+        uses_subgroup: bool,
+        grid_index: GridIndexSpace,
+    ) -> Self {
         let subgroup_local = uses_subgroup.then(|| {
             push_builtin_arg(
                 function,
@@ -96,6 +105,14 @@ impl Builtins {
                 types.vec3_u32_ty,
                 BuiltIn::LocalInvocationId,
             ),
+            num_workgroups: matches!(grid_index, GridIndexSpace::GridLinearized).then(|| {
+                push_builtin_arg(
+                    function,
+                    "_vyre_num_workgroups",
+                    types.vec3_u32_ty,
+                    BuiltIn::NumWorkGroups,
+                )
+            }),
             subgroup_local,
             subgroup_size,
         }
@@ -516,76 +533,94 @@ fn descriptor_trap_sidecar_slot(desc: &KernelDescriptor) -> Result<Option<u32>, 
     Ok(Some(slot.slot))
 }
 
-fn descriptor_trap_tag_codes(body: &KernelBody) -> FxHashMap<vyre_lower::descriptor::Name, u32> {
-    fn walk(
-        body: &KernelBody,
-        tags: &mut FxHashMap<vyre_lower::descriptor::Name, u32>,
-        next: &mut u32,
-    ) {
-        for op in &body.ops {
-            if let KernelOpKind::Trap { tag } = &op.kind {
-                tags.entry(tag.clone()).or_insert_with(|| {
-                    let code = *next;
-                    *next = next.saturating_add(1);
-                    code
-                });
-            }
-        }
-        for child in &body.child_bodies {
-            walk(child, tags, next);
-        }
-    }
-    let mut tags = FxHashMap::default();
-    let mut next = 1;
-    walk(body, &mut tags, &mut next);
-    tags
+/// Index `vyre_lower::descriptor_trap_tags` by tag for the emitter, which
+/// resolves a code from the tag it is lowering. The numbering itself belongs to
+/// vyre-lower so a code decodes to the same tag on every backend and host.
+fn descriptor_trap_tag_codes(
+    body: &KernelBody,
+) -> Result<FxHashMap<vyre_lower::Name, u32>, EmitError> {
+    let table = vyre_lower::descriptor_trap_tags(body).map_err(|source| {
+        EmitError::InvalidDescriptor(format!("trap tag codes unavailable: {source}"))
+    })?;
+    Ok(table
+        .into_iter()
+        .map(|entry| (entry.tag, entry.code))
+        .collect())
 }
 
-pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, EmitError> {
+pub(crate) fn emit_uncached(
+    desc: &KernelDescriptor,
+    float_lowering: FloatLoweringMode,
+) -> Result<naga::Module, EmitError> {
+    let grid_index = desc.dispatch.grid_index;
+    if matches!(grid_index, GridIndexSpace::GridLinearized) && !desc.admits_grid_linearized_index()
+    {
+        return Err(EmitError::InvalidDescriptor(
+            "descriptor declares a grid-linearized index space but reads the grid's shape through the global invocation id on y or z, or through the workgroup id. Fix: plan this launch on one grid axis, or address it from the global invocation id x axis alone.".to_owned(),
+        ));
+    }
     let mut builder = ModuleBuilder::new();
     let atomic_slots = collect_atomic_binding_slots(desc);
     for binding in &desc.bindings.slots {
         builder.add_binding(binding, atomic_slots.contains(&binding.slot))?;
     }
     let trap_sidecar_slot = descriptor_trap_sidecar_slot(desc)?;
-    let trap_tag_codes = descriptor_trap_tag_codes(&desc.body);
+    let trap_tag_codes = descriptor_trap_tag_codes(&desc.body)?;
 
-    let mut function = Function::default();
-    function.name = Some("main".to_owned());
-    let builtins = Builtins::push(&mut function, builder.types, body_uses_subgroup(&desc.body));
-    let mut body_builder = BodyBuilder {
-        function: &mut function,
-        values: FxHashMap::default(),
-        value_types: FxHashMap::default(),
-        globals: &builder.bindings,
-        binding_types: &builder.binding_types,
-        binding_counts: &builder.binding_counts,
-        binding_data_types: &builder.binding_data_types,
-        builtins,
-        types: builder.types,
-        loop_locals: FxHashMap::default(),
-        loop_types: FxHashMap::default(),
-        loop_carrier_targets: FxHashSet::default(),
-        loop_carrier_locals: FxHashMap::default(),
-        child_body_depth: 0,
-        block_scoped_locals: FxHashMap::default(),
-        named_carrier_locals: FxHashMap::default(),
-        named_carrier_types: FxHashMap::default(),
-        named_carrier_result_ids: FxHashMap::default(),
-        trap_sidecar_slot,
-        trap_tag_codes,
-        op_dispatch_routes: Default::default(),
-    };
-    body_builder.emit_body(&desc.body)?;
+    // A whole-grid fence is a launch boundary on every route without a
+    // cooperative launch, so the fused body emits as one compute entry point per
+    // dispatch segment, submitted in order. A fence-free descriptor yields a
+    // single segment and the same single `main` as before.
+    let segments = vyre_lower::dispatch_segments(desc)
+        .map_err(|source| EmitError::InvalidDescriptor(source.to_string()))?;
+    for (index, segment) in segments.iter().enumerate() {
+        let name = crate::grid_segments::segment_entry_name(index);
+        let mut function = Function::default();
+        function.name = Some(name.clone());
+        let builtins = Builtins::push(
+            &mut function,
+            builder.types,
+            body_uses_subgroup(segment),
+            grid_index,
+        );
+        let mut body_builder = BodyBuilder {
+            function: &mut function,
+            values: FxHashMap::default(),
+            value_types: FxHashMap::default(),
+            globals: &builder.bindings,
+            binding_types: &builder.binding_types,
+            binding_counts: &builder.binding_counts,
+            binding_data_types: &builder.binding_data_types,
+            builtins,
+            grid_index,
+            workgroup_size: desc.dispatch.workgroup_size,
+            types: builder.types,
+            loop_locals: FxHashMap::default(),
+            loop_types: FxHashMap::default(),
+            loop_carrier_targets: FxHashSet::default(),
+            loop_carrier_locals: FxHashMap::default(),
+            child_body_depth: 0,
+            block_scoped_locals: FxHashMap::default(),
+            named_carrier_locals: FxHashMap::default(),
+            named_carrier_types: FxHashMap::default(),
+            named_carrier_result_ids: FxHashMap::default(),
+            vector_lanes: FxHashMap::default(),
+            trap_sidecar_slot,
+            trap_tag_codes: trap_tag_codes.clone(),
+            op_dispatch_routes: Default::default(),
+            float_lowering,
+        };
+        body_builder.emit_body(segment)?;
 
-    builder.module.entry_points.push(EntryPoint {
-        name: "main".to_owned(),
-        stage: ShaderStage::Compute,
-        early_depth_test: None,
-        workgroup_size: desc.dispatch.workgroup_size,
-        workgroup_size_overrides: None,
-        function,
-    });
+        builder.module.entry_points.push(EntryPoint {
+            name,
+            stage: ShaderStage::Compute,
+            early_depth_test: None,
+            workgroup_size: desc.dispatch.workgroup_size,
+            workgroup_size_overrides: None,
+            function,
+        });
+    }
 
     Ok(builder.module)
 }
@@ -594,6 +629,7 @@ pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, Emi
 // Re-export the cache wrapper from this module so the `crate::emit`
 // boundary stays unchanged.
 
+// Inline: covers the private `emitter::setup` type and builtin tables, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -610,11 +646,11 @@ mod tests {
             [1, 1, 1],
             vec![Node::store("out", Expr::u32(0), Expr::buf_len("input"))],
         );
-        let descriptor = vyre_lower::lower_verified(&program)
-            .map(|lowered| lowered.descriptor)
+        let descriptor = vyre_lower::lower_physical(&program)
+            .map(|lowered| lowered.into_descriptor())
             .expect("Fix: counted storage buf_len program must lower");
-        let module =
-            emit_uncached(&descriptor).expect("Fix: counted storage buf_len descriptor must emit");
+        let module = emit_uncached(&descriptor, FloatLoweringMode::default())
+            .expect("Fix: counted storage buf_len descriptor must emit");
         let function = &module.entry_points[0].function;
 
         assert!(

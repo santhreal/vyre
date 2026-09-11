@@ -1,13 +1,12 @@
-use super::{collect_expr_refs, expr_has_effect, reachable_prefix, LiveResult};
-use crate::ir::{Ident, Node};
-use im::HashSet;
+use super::{collect_expr_refs, expr_has_effect, reachable_prefix, LiveResult, LiveSet};
+use crate::ir::Node;
 
 #[inline]
 #[expect(
     clippy::too_many_lines,
     reason = "reverse liveness/DCE pass keeps Node reconstruction and live-set transfer together"
 )]
-pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: HashSet<Ident>) -> LiveResult {
+pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: LiveSet) -> LiveResult {
     let reachable_len = reachable_prefix(&nodes).len();
     let mut live = live_after;
     let mut kept = Vec::with_capacity(reachable_len);
@@ -86,6 +85,7 @@ pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: HashSet<Ident>) 
             }
             Node::Return => kept.push(Node::Return),
             Node::Barrier { ordering } => kept.push(Node::Barrier { ordering }),
+            Node::LogicalBarrier { ordering } => kept.push(Node::LogicalBarrier { ordering }),
             Node::IndirectDispatch {
                 count_buffer,
                 count_offset,
@@ -152,6 +152,60 @@ pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: HashSet<Ident>) 
                 kept.push(Node::Trap { address, tag });
             }
             Node::Resume { tag } => kept.push(Node::Resume { tag }),
+            Node::TileLoad { ref origin, .. } => {
+                for off in origin {
+                    collect_expr_refs(off, &mut live);
+                }
+                kept.push(node);
+            }
+            Node::TileStore {
+                ref origin,
+                ref tile,
+                ..
+            } => {
+                for off in origin {
+                    collect_expr_refs(off, &mut live);
+                }
+                live.insert(tile.clone());
+                kept.push(node);
+            }
+            Node::TileElementwise { out, inputs, body } => {
+                let mut inner_live = live.clone();
+                inner_live.insert(out.clone());
+                let body_result = eliminate_dead_lets(body, inner_live);
+                live.extend(body_result.live_in);
+                for inp in &inputs {
+                    live.insert(inp.clone());
+                }
+                kept.push(Node::TileElementwise {
+                    out,
+                    inputs,
+                    body: body_result.nodes,
+                });
+            }
+            Node::TileMatmul { acc, a, b } => {
+                live.insert(acc.clone());
+                live.insert(a.clone());
+                live.insert(b.clone());
+                kept.push(Node::TileMatmul { acc, a, b });
+            }
+            Node::TileReduce {
+                out,
+                tile,
+                op,
+                axis,
+            } => {
+                live.insert(tile.clone());
+                kept.push(Node::TileReduce {
+                    out,
+                    tile,
+                    op,
+                    axis,
+                });
+            }
+            Node::TileDecl { .. } => {
+                kept.push(node);
+            }
             Node::Opaque(extension) => kept.push(Node::Opaque(extension)),
         }
     }

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`CONTRIBUTING.md` states the stale build artifact recovery as a product fact. The section described how work is produced here and named the build directory, which is a property of one machine that a reader who has just cloned the repository can act on none of. The recovery rule is unchanged: when a build error names a symbol the source in front of you already defines, rebuild that one crate."

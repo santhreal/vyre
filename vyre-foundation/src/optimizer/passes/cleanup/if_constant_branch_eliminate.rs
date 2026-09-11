@@ -35,8 +35,8 @@
 //! emits unreachable code, codegen pays for the branch.
 
 use crate::ir::{Expr, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 
 /// Drop the dead arm of `Node::If` with a compile-time-known boolean.
 #[derive(Debug, Default)]
@@ -54,61 +54,38 @@ impl IfConstantBranchEliminatePass {
     /// Skip programs without any `If` whose condition is a literal bool.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        if !program
-            .stats()
-            .has_any_node_kind(crate::ir::stats::NODE_KIND_IF)
-        {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_constant_if))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_IF],
+            &mut is_constant_if,
+        )
     }
 
     /// Walk the entry tree; replace constant-condition `Node::If` with
     /// the surviving arm wrapped in a `Node::Block`.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .map(|node| eliminate_node(node, &mut changed))
-                .collect()
-        });
-        PassResult { program, changed }
+        driver::rewrite_entry_nodes(program, &mut surviving_arm)
     }
 }
 
-/// Recurse into `node`'s descendants. After recursion, if `node` is itself
-/// an `If` with a literal-bool condition, replace it with the surviving
-/// arm wrapped in a `Block`.
-fn eliminate_node(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| eliminate_node(child, changed));
-    match recursed {
+/// The surviving arm of a constant-condition `If`, wrapped in a `Block`.
+///
+/// The `Block` keeps the arm's bindings in the scope the branch gave them,
+/// which is why the dead arm can go without a scope analysis.
+fn surviving_arm(node: &Node) -> Option<Vec<Node>> {
+    match node {
         Node::If {
             cond: Expr::LitBool(true),
             then,
-            otherwise: _,
-        } => {
-            *changed = true;
-            Node::Block(then)
-        }
+            ..
+        } => Some(vec![Node::Block(then.clone())]),
         Node::If {
             cond: Expr::LitBool(false),
-            then: _,
             otherwise,
-        } => {
-            *changed = true;
-            Node::Block(otherwise)
-        }
-        other => other,
+            ..
+        } => Some(vec![Node::Block(otherwise.clone())]),
+        _ => None,
     }
 }
 
@@ -137,18 +114,9 @@ mod tests {
     }
 
     fn count_ifs(node: &Node) -> usize {
-        match node {
-            Node::If {
-                then, otherwise, ..
-            } => {
-                1 + then.iter().map(count_ifs).sum::<usize>()
-                    + otherwise.iter().map(count_ifs).sum::<usize>()
-            }
-            Node::Loop { body, .. } => body.iter().map(count_ifs).sum(),
-            Node::Block(body) => body.iter().map(count_ifs).sum(),
-            Node::Region { body, .. } => body.iter().map(count_ifs).sum(),
-            _ => 0,
-        }
+        crate::test_ir_inspect::count_nodes(std::slice::from_ref(node), |candidate| {
+            matches!(candidate, Node::If { .. })
+        })
     }
 
     #[test]
@@ -235,7 +203,8 @@ mod tests {
 
     #[test]
     fn if_u32_zero_is_not_matched() {
-        // LitU32(0) is falsy in WGSL but this pass only matches LitBool.
+        // A zero integer literal is falsy in a target language, but this pass
+        // only matches LitBool.
         // Verify the pass does NOT fire (negative twin).
         let entry = vec![Node::if_then(
             Expr::u32(0),
@@ -251,7 +220,8 @@ mod tests {
 
     #[test]
     fn if_u32_one_is_not_matched() {
-        // LitU32(1) is truthy in WGSL but this pass only matches LitBool.
+        // A one integer literal is truthy in a target language, but this pass
+        // only matches LitBool.
         let entry = vec![Node::if_then(
             Expr::u32(1),
             vec![Node::store("buf", Expr::u32(0), Expr::u32(7))],

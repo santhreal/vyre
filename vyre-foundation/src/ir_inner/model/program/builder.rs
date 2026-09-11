@@ -2,7 +2,6 @@ use std::sync::{Arc, OnceLock};
 
 use rustc_hash::FxHashMap;
 
-use crate::ir_inner::model::arena::{ArenaProgram, ExprArena};
 use crate::ir_inner::model::node::Node;
 
 use super::{BufferDecl, Program};
@@ -29,7 +28,7 @@ macro_rules! define_raw_program_constructor {
 impl Program {
     /// Synthetic generator id used when callers submit a raw top-level body
     /// instead of an explicit `Node::Region`.
-    pub const ROOT_REGION_GENERATOR: &'static str = "vyre.program.root";
+    pub const ROOT_REGION_GENERATOR: &'static str = "anonymous::vyre.program.root";
 
     /// Create a complete program from buffer declarations, workgroup size, and
     /// entry-point nodes, auto-wrapping the top-level body in a root Region
@@ -40,7 +39,7 @@ impl Program {
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
+    /// use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
     ///
     /// let program = Program::wrapped(
     ///     vec![BufferDecl::storage(
@@ -238,27 +237,12 @@ impl Program {
         Arc::try_unwrap(self.entry).unwrap_or_else(|entry| entry.as_ref().clone())
     }
 
-    /// Create an arena-backed program scaffold.
-    ///
-    /// This constructor is the opt-in path for builders that want
-    /// [`ExprRef`](crate::ir_inner::model::arena::ExprRef) handles instead of boxed
-    /// expression trees. [`Program::wrapped`] remains the boxed-tree constructor.
-    #[must_use]
-    #[inline]
-    pub fn with_arena(
-        arena: &ExprArena,
-        buffers: Vec<BufferDecl>,
-        workgroup_size: [u32; 3],
-    ) -> ArenaProgram<'_> {
-        ArenaProgram::new(arena, buffers, workgroup_size)
-    }
-
     /// Create a minimal program with no buffers and an empty body.
     ///
     /// # Examples
     ///
     /// ```
-    /// use vyre::ir::Program;
+    /// use vyre_foundation::ir::Program;
     ///
     /// let program = Program::empty();
     ///

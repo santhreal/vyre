@@ -1,6 +1,7 @@
 [package]
 name = "vyre-conform"
-version = "0.7.2"
+version = "0.8.0"
+autotests = false
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -10,15 +11,48 @@ homepage.workspace = true
 description = "Canonical Vyre conformance engine and thin proof CLI."
 publish = false
 
+# `vyre-driver-spirv` is linked for its registration, not called by name, so a
+# source scan reports it as unused. Dropping it resolves `--backend spirv` to no
+# registration and writes one `unknown backend` row per op.
+[package.metadata.cargo-machete]
+ignored = ["vyre-test-support", "vyre-driver-spirv"]
+
+[package.metadata.vyre]
+publication_class = "conformance-tooling"
+
 [lints]
 workspace = true
 
 [lib]
 path = "src/lib.rs"
 
+# The suite compares the reference path against every concrete driver, so it
+# needs the driver crates the `gpu` feature pulls in. Declared here rather than
+# wrapped in a file-level `cfg`: cargo then skips the target when the feature is
+# off, which is what `--no-default-features --all-targets` needs from any
+# consumer, instead of compiling 606 lines down to an empty test binary.
+#
+# spirv is linked for the same reason as the rest. Without it `--backend spirv`
+# resolved to no registration and the run wrote one `unknown backend` row per
+# op: 349 rows that read as a judged backend with 349 defects.
+
 [features]
 default = ["gpu"]
-gpu = ["dep:vyre-driver-cuda", "dep:vyre-driver-metal", "dep:vyre-driver-wgpu"]
+gpu = [
+    "dep:vyre-driver-cuda",
+    "dep:vyre-driver-spirv",
+    "dep:vyre-driver-wgpu",
+    "vyre-registry-link/cuda",
+    "vyre-registry-link/metal",
+    "vyre-registry-link/spirv",
+    "vyre-registry-link/wgpu",
+]
+# A test that drives the built binary through a real device is compiled only
+# where the device is. `gpu` links the concrete drivers, which every lane does,
+# so requiring it admits nothing: it is on by default. The admission is this
+# feature, which `conform.yml` turns on for the runner that has the device, and
+# it pulls in `gpu` because a test that acquires a backend also has to link it.
+device-tests = ["gpu"]
 
 [dependencies]
 blake3 = { workspace = true }
@@ -34,17 +68,63 @@ vyre = { workspace = true }
 vyre-conform-spec = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-driver-cuda = { workspace = true, optional = true }
-vyre-driver-metal = { workspace = true, optional = true }
-vyre-driver-reference = { workspace = true }
+vyre-driver-spirv = { workspace = true, optional = true }
 vyre-driver-wgpu = { workspace = true, optional = true }
+# The reference dispatch route: it owns the ids that select the interpreter
+# rather than a registered device, so no module here spells them itself.
+vyre-driver-reference = { workspace = true }
 vyre-foundation = { workspace = true }
-vyre-intrinsics = { workspace = true }
-vyre-libs = { workspace = true, features = ["full", "logical", "nn-moe", "security", "visual", "parsing", "math", "nn", "matching", "crypto"] }
+vyre-libs = { workspace = true, features = ["full"] }
 vyre-megakernel = { workspace = true }
-vyre-primitives = { workspace = true }
+vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
+# The registries this harness judges are read through their owner, which links
+# every submitting crate and asserts each one reached the registry. Naming a
+# submitting crate here for link effect alone is what left readers judging a
+# partial registry.
+vyre-registry-link = { workspace = true, default-features = false, features = ["operations"] }
 vyre-runtime = { workspace = true }
 vyre-spec = { workspace = true }
 
 [dev-dependencies]
+# `ir-fixtures` for the one owner of the single-element copy node every bundle
+# fixture here builds.
+vyre-test-support = { workspace = true, features = [
+    "ir-fixtures",
+    "semantic-requests",
+    "driver-contracts",
+] }
+# The bundle round-trip contract judges the descriptor a lowering produced, so it
+# needs the lowering that owns `LiteralValue` and its encoding.
+vyre-lower.workspace = true
+# Run-time checkout root, so a contract binary reused across checkouts still
+# reports on the tree cargo was invoked in. publish = false on both sides.
+structure-gate = { path = "../../structure-gate" }
 toml = { workspace = true }
+# `vyre_test_support::spec_variant_tables` reads the public-API snapshot through
+# the run-time checkout root, so every crate that calls it carries this.
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"
+
+# Isolated: `cert_regression_pin/test_operation.rs` submits an operation into the
+# process-global registry so a canonical bundle can carry a dialect op id in its
+# wire bytes. `op_matrix_truth` in `all_tests` asserts every registered op is
+# matrixed, and a fixture op is not a shipped op, so the two cannot share a
+# process. See `xtask/test-harness-isolation.toml`.
+[[test]]
+name = "cert_regression_pin"
+path = "tests/cert_regression_pin/main.rs"
+
+[[test]]
+name = "all_tests_device_tests"
+path = "tests/all_tests_device_tests.rs"
+required-features = ["device-tests"]
+
+# Isolated: the survey executes every provable law family against every
+# registered operation through the reference oracle, which is the whole
+# registry run once per family and does not belong in `all_tests`.
+[[test]]
+name = "operation_disposition_closure"
+path = "tests/operation_disposition_closure.rs"

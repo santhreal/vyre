@@ -1,4 +1,4 @@
-//! ROADMAP A27  -  fission a `Node::Loop` whose body partitions cleanly
+//! fission a `Node::Loop` whose body partitions cleanly
 //! into two consecutive halves that touch disjoint buffer sets.
 //!
 //! Op id: `vyre-foundation::optimizer::passes::loop_fission`.
@@ -43,8 +43,8 @@
 
 use super::{collect_touched_buffers, legality};
 use crate::ir::{Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 use rustc_hash::FxHashSet;
 
 /// Fission a `Node::Loop` with a buffer-disjoint partitionable body
@@ -62,87 +62,87 @@ impl LoopFission {
     /// Skip programs without a fissionable Loop.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        if !program.stats().has_node_loop() {
-            return PassAnalysis::SKIP;
-        }
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut is_fissionable_loop))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_LOOP],
+            &mut is_fissionable_loop,
+        )
     }
 
     /// Walk the entry tree and split fissionable Loops.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| fission_in_body(entry, &mut changed));
-        PassResult { program, changed }
+        driver::rewrite_entry_bodies(program, &mut fission_in_body)
     }
 }
 
-fn fission_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
-    let body: Vec<Node> = body.into_iter().map(|n| recurse(n, changed)).collect();
-    let mut out: Vec<Node> = Vec::with_capacity(body.len());
-    for node in body {
-        match node {
-            Node::Loop {
-                var,
-                from,
-                to,
-                body: loop_body,
-            } => {
-                let bounds_ok = matches!(from, Expr::LitU32(_)) && matches!(to, Expr::LitU32(_));
-                if !bounds_ok {
-                    out.push(Node::Loop {
-                        var,
-                        from,
-                        to,
-                        body: loop_body,
-                    });
-                    continue;
-                }
-                if let Some((prefix, suffix)) = try_partition(&loop_body, &var) {
-                    *changed = true;
-                    let fresh_var = freshen(&var, &loop_body);
-                    let renamed_suffix: Vec<Node> = suffix
-                        .into_iter()
-                        .map(|n| legality::rename_var_in_node(n, &var, &fresh_var))
-                        .collect();
-                    out.push(Node::Loop {
-                        var: var.clone(),
-                        from: from.clone(),
-                        to: to.clone(),
-                        body: prefix,
-                    });
-                    out.push(Node::Loop {
-                        var: fresh_var,
-                        from,
-                        to,
-                        body: renamed_suffix,
-                    });
-                } else {
-                    out.push(Node::Loop {
-                        var,
-                        from,
-                        to,
-                        body: loop_body,
-                    });
-                }
+/// Split every fissionable `Loop` in `body` into a prefix and a suffix loop.
+///
+/// This is a body rule rather than a node rule because the two loops replace
+/// one node as siblings, and a `Block` around them would be new IR that no
+/// later pass removes.
+fn fission_in_body(body: &[Node]) -> Option<Vec<Node>> {
+    // Locating the first split before allocating is what keeps the common case
+    // free. This used to deep-clone every node into `out` and then discard the
+    // whole vector on the `None` return, once per body per scheduler
+    // iteration, for the overwhelming majority of bodies that split nothing.
+    let first = body.iter().position(|node| is_fissionable_loop(node))?;
+    let mut out: Vec<Node> = Vec::with_capacity(body.len() + 1);
+    out.extend_from_slice(&body[..first]);
+    for node in &body[first..] {
+        match split_loop(node) {
+            Some((prefix_loop, suffix_loop)) => {
+                out.push(prefix_loop);
+                out.push(suffix_loop);
             }
-            other => out.push(other),
+            None => out.push(node.clone()),
         }
     }
-    out
+    Some(out)
 }
 
-fn recurse(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| recurse(child, changed));
-    node_map::map_body(recursed, &mut |body| fission_in_body(body, changed))
+/// The prefix and suffix loops that replace `node`, when it is fissionable.
+///
+/// [`is_fissionable_loop`] answers the same question without building either
+/// loop, and the two must agree: a `position` that finds a node this declines
+/// would return an unchanged body as a change.
+fn split_loop(node: &Node) -> Option<(Node, Node)> {
+    let Node::Loop {
+        var,
+        from,
+        to,
+        body: loop_body,
+    } = node
+    else {
+        return None;
+    };
+    if !matches!(from, Expr::LitU32(_)) || !matches!(to, Expr::LitU32(_)) {
+        return None;
+    }
+    let (prefix, suffix) = try_partition(loop_body, var)?;
+    let fresh_var = freshen(var, loop_body);
+    let renamed_suffix: Vec<Node> = suffix
+        .into_iter()
+        .map(|n| legality::rename_var_in_node(n, var, &fresh_var))
+        .collect();
+    // Both halves keep the original bounds, so the pair costs one clone of
+    // each rather than two.
+    let from = from.clone();
+    let to = to.clone();
+    Some((
+        Node::Loop {
+            var: var.clone(),
+            from: from.clone(),
+            to: to.clone(),
+            body: prefix,
+        },
+        Node::Loop {
+            var: fresh_var,
+            from,
+            to,
+            body: renamed_suffix,
+        },
+    ))
 }
 
 /// True iff `nodes` contains an op whose ordering or cross-thread
@@ -237,31 +237,13 @@ mod tests {
     use super::*;
     use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node};
 
-    #[derive(Debug)]
-    struct OpaqueReader;
-
-    impl ExprNode for OpaqueReader {
-        fn extension_kind(&self) -> &'static str {
-            "test.opaque_buffer_reader"
-        }
-        fn debug_identity(&self) -> &str {
-            "opaque_reader"
-        }
-        fn result_type(&self) -> Option<DataType> {
-            Some(DataType::U32)
-        }
-        fn cse_safe(&self) -> bool {
-            false
-        }
-        fn stable_fingerprint(&self) -> [u8; 32] {
-            [11; 32]
-        }
-        fn validate_extension(&self) -> std::result::Result<(), String> {
-            Ok(())
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
+    vyre_test_support::test_expr_extension! {
+        OpaqueReader,
+        kind: "test.opaque_buffer_reader",
+        identity: "opaque_reader",
+        result_type: Some(DataType::U32),
+        cse_safe: false,
+        fingerprint: 11,
     }
 
     fn buf(name: &str) -> BufferDecl {
@@ -273,25 +255,7 @@ mod tests {
     }
 
     fn count_loops(nodes: &[Node]) -> usize {
-        let mut total = 0;
-        for n in nodes {
-            match n {
-                Node::Loop { body, .. } => {
-                    total += 1;
-                    total += count_loops(body);
-                }
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    total += count_loops(then);
-                    total += count_loops(otherwise);
-                }
-                Node::Block(body) => total += count_loops(body),
-                Node::Region { body, .. } => total += count_loops(body),
-                _ => {}
-            }
-        }
-        total
+        crate::test_ir_inspect::count_nodes(nodes, |node| matches!(node, Node::Loop { .. }))
     }
 
     /// Positive: a loop body that writes two distinct buffers fissions

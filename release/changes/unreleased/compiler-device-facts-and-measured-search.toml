@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The whole-program compiler validates and ranks against live device facts. CompileRequest carries a DeviceFacts snapshot, a program that needs a capability the device lacks fails at compile, a whole-grid fence without cooperative launch fails at compile, the candidate cost model prices launches, materialized bytes and the occupancy cliff a fusion group crosses, and a measurement budget is spent through compile_measured with device-timestamped launches instead of being ignored."

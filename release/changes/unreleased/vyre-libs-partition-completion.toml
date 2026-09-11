@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Each vyre-libs domain is a separate package that registers its own test target, and the shared test parity fixtures are owned by vyre-test-support."

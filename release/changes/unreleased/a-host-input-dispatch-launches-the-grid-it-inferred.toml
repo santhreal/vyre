@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A host-input benchmark dispatch launches the grid it inferred. The inferred dispatch configuration was computed and discarded, and the host-input submission path builds its binding set with no invocation grid, so every host-input GPU benchmark ran on a single workgroup and reported one block's throughput as the device's. The grid is now bound to the submission, and grid-sync split routing consults whether a cooperative launch fits rather than whether the backend offers one at all."

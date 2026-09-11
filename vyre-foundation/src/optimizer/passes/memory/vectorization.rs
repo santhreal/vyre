@@ -1,5 +1,5 @@
 use crate::ir::{CacheLocality, MemoryHints, Program};
-use crate::optimizer::fact_substrate::{FactSubstrate, UseFacts};
+use crate::optimizer::fact_cache::{FactCache, UseFacts};
 use crate::optimizer::program_shape_facts::ProgramShapeFacts;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 
@@ -36,11 +36,11 @@ impl Vectorization {
     /// Rewrite buffer hints when shape facts prove tail-free vector lanes.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let substrate = FactSubstrate::derive_shape_and_use_cached(&program);
-        let shapes = substrate.shape.as_deref().unwrap_or_else(|| {
+        let facts = FactCache::derive_shape_and_use_cached(&program);
+        let shapes = facts.shape.as_deref().unwrap_or_else(|| {
             unreachable!("derive_shape_and_use_cached contract: shape always populated")
         });
-        let use_facts = substrate.use_facts.as_deref().unwrap_or_else(|| {
+        let use_facts = facts.use_facts.as_deref().unwrap_or_else(|| {
             unreachable!("derive_shape_and_use_cached contract: use_facts always populated")
         });
         let rewritten_buffers = {

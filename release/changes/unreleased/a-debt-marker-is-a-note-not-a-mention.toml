@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The heuristic audit reads an author's note, not any sentence that names a policy. A marker now has to open a plain comment: a doc comment describing a cache's eviction policy to its caller, a term used mid-paragraph while explaining an allocation, and a marker inside a string literal or an inline test module are no longer reported as hand-rolled heuristics. Three of the four findings it reported were descriptions, one of them on a test, and two sat in crates that cannot depend on the composition the fix names."

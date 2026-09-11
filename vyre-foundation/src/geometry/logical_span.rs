@@ -1,0 +1,691 @@
+//! Logical launch span read out of a program's own guards.
+//!
+//! A launch span derived from declared buffers takes the largest one. That is
+//! correct for a gather, whose output is both the guarded domain and the widest
+//! buffer, and wrong for a scatter, which guards on a small source and declares
+//! a much larger destination. A paged cache append is the case that separates
+//! them: it moves one decoded chunk into a cache sized for the whole sequence,
+//! so a buffer-derived span fires one lane per cache element and the guard
+//! discards all but the chunk.
+//!
+//! The guard is already in the IR. This analysis reads it, so the span is a
+//! compiler-owned fact derived from the program rather than a number an
+//! operation publishes for a caller to pass back down.
+//!
+//! The answer is `None` unless every effect in the program is dominated by a
+//! constant upper bound on axis-0 logical index. An unbounded effect means high
+//! lanes are observable and the buffer-derived span stands.
+//!
+//! An effect is not always a statement. An atomic read-modify-write reaches
+//! memory from an expression position, and a program whose every write is an
+//! atomic OR carries no effect-shaped statement at all, so operand expressions
+//! are scanned for one. `admitted_logical_span` still takes the full-span path
+//! for such a program: an atomic, a subgroup collective and a workgroup-scoped
+//! buffer make the result depend on how many invocations ran rather than only
+//! on which elements each one touched.
+//!
+//! A guard is not always the branch condition either. The predicated-tail form
+//! binds the comparison to a local, selects a value that is zero outside it,
+//! and branches on that value being nonzero, so the bound reaches the effect
+//! through two locals. The walk proves that chain rather than reporting the
+//! program unbounded.
+//!
+//! A span also has to be widened, and for the same reason: the program states
+//! it. A declaration states elements and a launch covers logical points, so the
+//! two differ wherever the program packs several points into one element. The
+//! byte scan is that case, and `logical_points_per_element` reads its divisor
+//! out of the index arithmetic.
+
+use std::collections::{HashMap, HashSet};
+
+use crate::ir::{BufferAccess, Expr, Node, Program};
+use crate::ir_inner::model::expr::Ident;
+use crate::ir_inner::model::op_signature::BinOp;
+use crate::visit::{any_subexpr, child_bodies, node_operands, node_variadic_operands};
+
+/// Largest axis-0 logical index a program can affect, when every effect it
+/// performs is dominated by a constant bound on that index.
+///
+/// Returns `None` when the program performs an effect no such guard dominates,
+/// because an unbounded effect leaves high lanes observable. A program that
+/// performs no effect at all affects no index, so the answer is `Some(0)`: the
+/// launch minimum belongs to whoever sizes the launch, not to this analysis.
+#[must_use]
+pub fn guarded_logical_span(program: &Program) -> Option<u32> {
+    bounded_effect_span(program, Facts::default())
+}
+
+/// Axis-0 tiles a program can affect, when every effect it performs is
+/// dominated by a constant bound on the axis-0 tile index.
+///
+/// This is the same walk [`guarded_logical_span`] runs, reading the guards
+/// against the tile index instead of the lane index, and it admits a narrowing
+/// the lane answer cannot. Capping a launch at a lane bound can cut a workgroup
+/// in half, so a program whose lanes cooperate through workgroup scratch, a
+/// subgroup collective or an atomic keeps the span it declares. A tile bound
+/// removes whole workgroups and never part of one: every lane below the bound
+/// still launches, and a workgroup entirely above it performs no effect at all.
+/// None of the three couplings crosses a workgroup boundary, so a removed
+/// workgroup shares no scratch and no subgroup with a remaining one.
+///
+/// Returns `None` when an effect no tile guard dominates leaves high workgroups
+/// observable, and `Some(0)` for a program that performs no effect.
+fn guarded_logical_tile_span(program: &Program) -> Option<u32> {
+    bounded_effect_span(
+        program,
+        Facts {
+            subject: IndexSubject::Tile,
+            ..Facts::default()
+        },
+    )
+}
+
+/// Run the effect walk over `program` with `facts` as its initial state.
+fn bounded_effect_span(program: &Program, mut facts: Facts) -> Option<u32> {
+    let mut walk = Walk {
+        span: None,
+        bounded: true,
+    };
+    walk.nodes(&program.entry, None, &mut facts);
+    if walk.bounded {
+        Some(walk.span.unwrap_or(0))
+    } else {
+        None
+    }
+}
+
+/// Whether a launch must cover the whole input span whatever the guards admit.
+///
+/// Three constructs make the result depend on how many invocations ran rather
+/// than only on which elements each one touched, so a narrower launch changes
+/// the value instead of skipping idle lanes: an atomic, a subgroup collective,
+/// and a workgroup-scoped buffer. The last one is the shared-memory reduction:
+/// every lane of a group contributes a partial, and a launch narrowed to the
+/// one-element output leaves the rest of the input unreduced.
+///
+/// This states when a LANE bound may not cap the launch. A tile bound removes
+/// whole workgroups, which none of the three couplings crosses, and the
+/// guarded tile span states that narrowing separately.
+#[must_use]
+pub fn launch_covers_full_input_span(program: &Program) -> bool {
+    program.stats().atomic_op_count > 0
+        || program
+            .buffers()
+            .iter()
+            .any(|buffer| buffer.access() == BufferAccess::Workgroup)
+        || crate::program_caps::scan(program).subgroup_ops
+}
+
+/// Narrow a resource-derived launch span to the domain the program admits.
+///
+/// A resource-derived span takes the widest declared buffer, which a scatter
+/// makes far larger than the domain its guard admits, and which a fused
+/// multi-pass program makes far larger than the grid either pass reduces over.
+/// Two bounds cap it, and the tighter one wins. Where every effect is dominated
+/// by a constant bound on the axis-0 tile index, the launch covers that many
+/// whole workgroups. Where every effect is dominated by a constant bound on
+/// axis-0 logical index and no lane of the program cooperates with another,
+/// that bound caps the launch too. The result is at least one, because a launch
+/// of zero workgroups records no work at all.
+#[must_use]
+pub fn admitted_logical_span(program: &Program, resource_span: u32) -> u32 {
+    let span = admitted_tile_span(program, resource_span);
+    if launch_covers_full_input_span(program) {
+        return span;
+    }
+    match guarded_logical_span(program) {
+        Some(guarded) => span.min(guarded).max(1),
+        None => span,
+    }
+}
+
+/// Cap `resource_span` at the whole workgroups the program's tile guards admit.
+///
+/// An atomic keeps the declared span. Its contribution is counted once per
+/// invocation that performs it, and the walk reads an atomic out of the operand
+/// positions of a statement rather than out of the program's own atomic count,
+/// so an atomic it does not reach would be narrowed away silently. That is the
+/// same position [`launch_covers_full_input_span`] states for the lane bound.
+///
+/// A packed program keeps the declared span too. A tile bound counts
+/// workgroups of launch index, and `resource_span` counts declared elements,
+/// and the two are the same unit only where one logical point is one element.
+/// The byte scan declares a `U32` haystack and gives one lane one byte, so its
+/// launch domain is four times the count a caller derives from the
+/// declaration, and a tile bound compared against that count caps the launch
+/// at a quarter of its input. [`logical_points_per_element`] reads the factor,
+/// and any factor above one leaves the comparison without a common unit.
+///
+/// A tile span of zero keeps the declared span. Zero states that the walk
+/// reached no tile-guarded effect, which carries no bound, and a program whose
+/// body performs no store at all reads that way. The lane bound and
+/// [`launch_covers_full_input_span`] decide such a program, as they do for a
+/// subgroup collective whose only statement is a ballot.
+fn admitted_tile_span(program: &Program, resource_span: u32) -> u32 {
+    if program.stats().atomic_op_count > 0 || packs_many_points_per_element(program) {
+        return resource_span.max(1);
+    }
+    let Some(tiles) = guarded_logical_tile_span(program).filter(|tiles| *tiles > 0) else {
+        return resource_span.max(1);
+    };
+    let width = u64::from(program.workgroup_size[0].max(1));
+    let span = u64::from(tiles).saturating_mul(width);
+    u32::try_from(span)
+        .unwrap_or(u32::MAX)
+        .min(resource_span)
+        .max(1)
+}
+
+/// Whether any buffer of `program` carries more than one logical point per
+/// declared element.
+fn packs_many_points_per_element(program: &Program) -> bool {
+    program
+        .buffers()
+        .iter()
+        .any(|buffer| logical_points_per_element(program, buffer.name()) > 1)
+}
+
+/// Logical points axis-0 index spans per element of `buffer`.
+///
+/// A packed program addresses a narrower unit than the element type it
+/// declares. The byte scan is the case: the haystack is declared `U32`, one
+/// lane owns one byte, and the load is `haystack[i / 4]`, so the index domain
+/// is four times the declared count and equals no declared buffer. A launch
+/// span taken from the widest declaration covers one quarter of the input and
+/// the program reports the matches of the first quarter as its whole answer.
+///
+/// The divisor is already in the IR. This analysis reads it, so the widening
+/// is a compiler-owned fact derived from the program, the dual of the
+/// narrowing [`guarded_logical_span`] reads out of the guards.
+///
+/// The result is the largest constant divisor applied to axis-0 logical index
+/// on the way to an access of `buffer`, and 1 when the index reaches it
+/// undivided or does not reach it at all. Division by a power of two also
+/// appears as a right shift, because strength reduction rewrites the divisor,
+/// so both forms are read. A divisor of zero contributes nothing, since it
+/// divides no domain.
+#[must_use]
+pub fn logical_points_per_element(program: &Program, buffer: &str) -> u32 {
+    let mut scale = Scale { buffer, points: 1 };
+    scale.nodes(&program.entry, &mut Facts::default());
+    scale.points
+}
+
+/// Largest divisor seen so far on the way to an access of one buffer.
+struct Scale<'a> {
+    buffer: &'a str,
+    points: u32,
+}
+
+impl Scale<'_> {
+    /// Walk a statement list, keeping the locals proven equal to the index.
+    fn nodes(&mut self, nodes: &[Node], facts: &mut Facts) {
+        for node in nodes {
+            self.node(node, facts);
+        }
+    }
+
+    /// Read every access this node performs in its own operand positions.
+    ///
+    /// A load and an atomic read-modify-write both reach memory from an
+    /// expression position, and a store names its buffer on the statement, so
+    /// the statement case is read separately. Operand positions come from
+    /// `node_operands` and `node_variadic_operands`, so a new node variant
+    /// carries its operands here without naming them again.
+    fn operands(&mut self, node: &Node, facts: &Facts) {
+        for operand in node_operands(node).into_iter().flatten() {
+            self.expr(operand, facts);
+        }
+        for operand in node_variadic_operands(node) {
+            self.expr(operand, facts);
+        }
+    }
+
+    /// Read every access `expr` and its subexpressions perform.
+    ///
+    /// The predicate reports no match, so the walk visits every subexpression
+    /// rather than stopping at the first access.
+    fn expr(&mut self, expr: &Expr, facts: &Facts) {
+        let mut read = |sub: &Expr| {
+            if let Expr::Load { buffer, index } | Expr::Atomic { buffer, index, .. } = sub {
+                if buffer.as_str() == self.buffer {
+                    self.points = self.points.max(index_divisor(index, facts));
+                }
+            }
+            false
+        };
+        let _exhausted = any_subexpr(expr, &mut read);
+    }
+
+    fn node(&mut self, node: &Node, facts: &mut Facts) {
+        self.operands(node, facts);
+        if let Node::Store {
+            buffer,
+            index,
+            value: _,
+        } = node
+        {
+            if buffer.as_str() == self.buffer {
+                self.points = self.points.max(index_divisor(index, facts));
+            }
+        }
+        match node {
+            Node::Let { name, value } => facts.learn(name, value),
+            Node::Assign { name, .. } => facts.forget(name),
+            Node::TileLoad { tile: name, .. } | Node::TileDecl { name, .. } => facts.forget(name),
+            _ => {}
+        }
+        // A nested body runs conditionally or repeatedly, so what it proves
+        // does not hold after it and each descends on its own copy. A
+        // statement with no body copies nothing.
+        let bodies = child_bodies(node);
+        if bodies.iter().all(|body| body.is_empty()) {
+            return;
+        }
+        let mut entering = facts.clone();
+        if let Node::Loop { var, body, .. } = node {
+            entering.forget(var);
+            let mut rebound = HashSet::new();
+            rebound_names(body, &mut rebound);
+            for name in &rebound {
+                entering.forget(name);
+            }
+        }
+        for body in bodies.into_iter().filter(|body| !body.is_empty()) {
+            let mut inner = entering.clone();
+            self.nodes(body, &mut inner);
+        }
+    }
+}
+
+/// Constant divisor `index` applies to axis-0 logical index, or 1.
+///
+/// A packed index is `i / k` or, once strength reduction has run, `i >> s`.
+/// Anything else states no relation between the index and the axis, so it
+/// widens nothing.
+fn index_divisor(index: &Expr, facts: &Facts) -> u32 {
+    let Expr::BinOp { op, left, right } = index else {
+        return 1;
+    };
+    if !is_axis_zero_index(left, facts) {
+        return 1;
+    }
+    match op {
+        BinOp::Div => literal_u32(right)
+            .filter(|divisor| *divisor > 0)
+            .unwrap_or(1),
+        BinOp::Shr => literal_u32(right)
+            .filter(|shift| *shift < u32::BITS)
+            .map_or(1, |shift| 1u32 << shift),
+        _ => 1,
+    }
+}
+
+/// Which axis-0 index the walk reads its guards against.
+///
+/// A guard states a bound on one of two indices, and the launch narrowing each
+/// one admits is different. `Lane` is the logical index a launch covers point
+/// by point. `Tile` is the workgroup index, so a bound on it removes whole
+/// workgroups.
+#[derive(Clone, Copy, Default, Eq, PartialEq)]
+enum IndexSubject {
+    #[default]
+    Lane,
+    Tile,
+}
+
+/// Facts the walk proves about locals in scope.
+///
+/// A guard is not always written against the index expression. The production
+/// form binds the predicate to a local, selects a value that is zero outside
+/// it, and branches on that value being nonzero, so the bound reaches the
+/// effect through two locals rather than through the branch condition. Four
+/// sets carry that chain: locals equal to the subject index, locals holding
+/// a predicate that bounds the index, locals whose value is zero once the index
+/// passes a bound, and locals holding a sum with the index as an addend, which
+/// is the cell a chunked walk owns.
+#[derive(Clone, Default)]
+struct Facts {
+    subject: IndexSubject,
+    index: HashSet<Ident>,
+    guards: HashMap<Ident, u32>,
+    zeroed: HashMap<Ident, u32>,
+    index_sums: HashSet<Ident>,
+}
+
+impl Facts {
+    /// Drop every fact about `name`.
+    fn forget(&mut self, name: &Ident) {
+        self.index.remove(name);
+        self.guards.remove(name);
+        self.zeroed.remove(name);
+        self.index_sums.remove(name);
+    }
+
+    /// Record what `value` proves about the local it is bound to.
+    fn learn(&mut self, name: &Ident, value: &Expr) {
+        let index = is_axis_zero_index(value, self);
+        let guard = axis_zero_upper_bound(value, self);
+        let zeroed = zero_outside_bound(value, self);
+        let index_sum = sum_contains_axis_zero_index(value, self);
+        self.forget(name);
+        if index {
+            self.index.insert(name.clone());
+        } else if let Some(limit) = guard {
+            self.guards.insert(name.clone(), limit);
+        } else if let Some(limit) = zeroed {
+            self.zeroed.insert(name.clone(), limit);
+        } else if index_sum {
+            self.index_sums.insert(name.clone());
+        }
+    }
+}
+
+/// Accumulated span, and whether every effect seen so far was bounded.
+struct Walk {
+    span: Option<u32>,
+    bounded: bool,
+}
+
+impl Walk {
+    /// Record an effect observed under `bound`.
+    fn effect(&mut self, bound: Option<u32>) {
+        match bound {
+            Some(limit) => {
+                self.span = Some(self.span.map_or(limit, |seen: u32| seen.max(limit)));
+            }
+            None => self.bounded = false,
+        }
+    }
+
+    /// Walk a statement list under an active bound.
+    fn nodes(&mut self, nodes: &[Node], bound: Option<u32>, facts: &mut Facts) {
+        for node in nodes {
+            self.node(node, bound, facts);
+        }
+    }
+
+    /// Record an atomic this node performs in one of its own operands.
+    ///
+    /// An atomic reaches memory from an expression position, so a walk that
+    /// only counts effect-shaped statements reports "affects no index" for a
+    /// program whose every write is an atomic read-modify-write. Operand
+    /// positions come from `node_operands` and `node_variadic_operands`, so a
+    /// new node variant carries its operands here without naming them again.
+    fn atomic_operands(&mut self, node: &Node, bound: Option<u32>) {
+        let mut is_atomic = |expr: &Expr| matches!(expr, Expr::Atomic { .. });
+        let scalar = node_operands(node)
+            .into_iter()
+            .flatten()
+            .any(|operand| any_subexpr(operand, &mut is_atomic));
+        let variadic = node_variadic_operands(node)
+            .iter()
+            .any(|operand| any_subexpr(operand, &mut is_atomic));
+        if scalar || variadic {
+            self.effect(bound);
+        }
+    }
+
+    fn node(&mut self, node: &Node, bound: Option<u32>, facts: &mut Facts) {
+        self.atomic_operands(node, bound);
+        match node {
+            Node::Let { name, value } => facts.learn(name, value),
+            Node::Assign { name, .. } => facts.forget(name),
+            Node::If {
+                cond,
+                then,
+                otherwise,
+            } => {
+                let taken = match axis_zero_upper_bound(cond, facts) {
+                    Some(limit) => Some(bound.map_or(limit, |outer| outer.min(limit))),
+                    None => bound,
+                };
+                let mut inner = facts.clone();
+                self.nodes(then, taken, &mut inner);
+                let mut alternate = facts.clone();
+                self.nodes(otherwise, bound, &mut alternate);
+            }
+            Node::Loop { var, body, .. } => {
+                let mut inner = facts.clone();
+                inner.forget(var);
+                let mut rebound = HashSet::new();
+                rebound_names(body, &mut rebound);
+                for name in &rebound {
+                    inner.forget(name);
+                }
+                self.nodes(body, bound, &mut inner);
+            }
+            Node::Block(body) => {
+                let mut inner = facts.clone();
+                self.nodes(body, bound, &mut inner);
+            }
+            Node::Region { body, .. } => {
+                let mut inner = facts.clone();
+                self.nodes(body, bound, &mut inner);
+            }
+            Node::TileElementwise { body, .. } => {
+                self.effect(bound);
+                let mut inner = facts.clone();
+                self.nodes(body, bound, &mut inner);
+            }
+            Node::Store { .. }
+            | Node::AsyncStore { .. }
+            | Node::TileStore { .. }
+            | Node::TileMatmul { .. }
+            | Node::TileReduce { .. }
+            | Node::IndirectDispatch { .. }
+            | Node::Trap { .. }
+            | Node::AllReduce { .. }
+            | Node::AllGather { .. }
+            | Node::ReduceScatter { .. }
+            | Node::Broadcast { .. }
+            | Node::Opaque(_) => self.effect(bound),
+            Node::TileLoad { tile: name, .. } | Node::TileDecl { name, .. } => facts.forget(name),
+            Node::AsyncLoad { .. }
+            | Node::AsyncWait { .. }
+            | Node::Resume { .. }
+            | Node::Return
+            | Node::Barrier { .. }
+            | Node::LogicalBarrier { .. } => {}
+        }
+    }
+}
+
+/// Names `nodes` rebinds anywhere inside itself.
+///
+/// A loop body runs more than once, and the walk reads it once. A local proven
+/// equal to axis-0 logical index before the loop, and reassigned inside it, no
+/// longer holds the index on the second iteration, so a guard written against
+/// that local bounds nothing. Dropping every rebound name at the loop boundary
+/// keeps the analysis conservative there.
+fn rebound_names(nodes: &[Node], out: &mut HashSet<Ident>) {
+    for node in nodes {
+        match node {
+            Node::Let { name, .. } | Node::Assign { name, .. } => {
+                out.insert(name.clone());
+            }
+            Node::If {
+                then, otherwise, ..
+            } => {
+                rebound_names(then, out);
+                rebound_names(otherwise, out);
+            }
+            Node::Loop { var, body, .. } => {
+                out.insert(var.clone());
+                rebound_names(body, out);
+            }
+            Node::Block(body) | Node::TileElementwise { body, .. } => rebound_names(body, out),
+            Node::Region { body, .. } => rebound_names(body, out),
+            Node::Store { .. }
+            | Node::AsyncStore { .. }
+            | Node::TileStore { .. }
+            | Node::TileMatmul { .. }
+            | Node::TileReduce { .. }
+            | Node::IndirectDispatch { .. }
+            | Node::Trap { .. }
+            | Node::AllReduce { .. }
+            | Node::AllGather { .. }
+            | Node::ReduceScatter { .. }
+            | Node::Broadcast { .. }
+            | Node::Opaque(_)
+            | Node::AsyncLoad { .. }
+            | Node::AsyncWait { .. }
+            | Node::Resume { .. }
+            | Node::Return
+            | Node::Barrier { .. }
+            | Node::LogicalBarrier { .. } => {}
+            Node::TileLoad { tile: name, .. } | Node::TileDecl { name, .. } => {
+                out.insert(name.clone());
+            }
+        }
+    }
+}
+
+/// Whether `expr` is the walk's subject index, directly or through a proven
+/// local.
+///
+/// The lane subject is the axis-0 logical index a launch covers point by point.
+/// The tile subject is the axis-0 workgroup index, which schedule lowering
+/// rewrites `LogicalTileId` into, so both spellings read the same index.
+fn is_axis_zero_index(expr: &Expr, facts: &Facts) -> bool {
+    match expr {
+        Expr::LogicalIndex { axis } | Expr::InvocationId { axis } => {
+            facts.subject == IndexSubject::Lane && *axis == 0
+        }
+        Expr::LogicalTileId { axis } | Expr::WorkgroupId { axis } => {
+            facts.subject == IndexSubject::Tile && *axis == 0
+        }
+        Expr::Var(name) => facts.index.contains(name),
+        _ => false,
+    }
+}
+
+/// Whether `expr` is a sum carrying axis-0 logical index as one addend.
+///
+/// A chunked walk guards `chunk * lanes + index` against the element count, so
+/// the bound reaches the index through an addition rather than standing against
+/// the index itself. Every addend is a `u32` and so at least zero: the index is
+/// at most the sum, and a bound on the sum bounds the index. The exception is a
+/// sum that wraps, which needs an addend within the bound of the `u32` ceiling,
+/// and no admitted launch geometry reaches that, since the widest span this
+/// analysis returns is the resource span of a declared buffer.
+fn sum_contains_axis_zero_index(expr: &Expr, facts: &Facts) -> bool {
+    if is_axis_zero_index(expr, facts) {
+        return true;
+    }
+    match expr {
+        Expr::Var(name) => facts.index_sums.contains(name),
+        Expr::BinOp {
+            op: BinOp::Add,
+            left,
+            right,
+        } => {
+            sum_contains_axis_zero_index(left, facts) || sum_contains_axis_zero_index(right, facts)
+        }
+        _ => false,
+    }
+}
+
+/// Bound past which `expr` evaluates to zero for every axis-0 logical index.
+///
+/// A predicated tail is written as `select(index < k, value, 0)`, so the value
+/// carries the guard even where no branch does. The fact composes: masking with
+/// a zeroed value keeps the tighter bound, and adding two of them keeps the
+/// wider one.
+fn zero_outside_bound(expr: &Expr, facts: &Facts) -> Option<u32> {
+    match expr {
+        Expr::LitU32(0) => Some(0),
+        Expr::Var(name) => facts.zeroed.get(name).copied(),
+        Expr::Select {
+            cond,
+            true_val,
+            false_val,
+        } => {
+            if literal_u32(false_val) != Some(0) {
+                return None;
+            }
+            let guard = axis_zero_upper_bound(cond, facts);
+            match (guard, zero_outside_bound(true_val, facts)) {
+                (Some(bound), Some(taken)) => Some(bound.min(taken)),
+                (bound, None) | (None, bound) => bound,
+            }
+        }
+        Expr::BinOp { op, left, right } => match op {
+            BinOp::BitAnd | BinOp::Mul => {
+                let left_bound = zero_outside_bound(left, facts);
+                let right_bound = zero_outside_bound(right, facts);
+                match (left_bound, right_bound) {
+                    (Some(left_limit), Some(right_limit)) => Some(left_limit.min(right_limit)),
+                    (bound, None) | (None, bound) => bound,
+                }
+            }
+            BinOp::BitOr | BinOp::Add => {
+                Some(zero_outside_bound(left, facts)?.max(zero_outside_bound(right, facts)?))
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// Constant upper bound `cond` places on axis-0 logical index, if any.
+///
+/// `index < k` and `index <= k` bound the taken branch. `index == k` bounds it
+/// too, and is the form a serial region takes: one lane does the whole walk, so
+/// a launch sized from its output buffer would fire one full walk per element.
+/// A conjunction bounds the branch through whichever side bounds it more
+/// tightly, because both hold there; a disjunction needs both sides bounded and
+/// keeps the wider one. A local holding a predicate carries that predicate's
+/// bound, and a test that a zeroed value is nonzero carries the bound past
+/// which the value is zero.
+///
+/// A comparison against a sum carrying the index as an addend bounds the index
+/// too, which is the form a chunked walk takes.
+fn axis_zero_upper_bound(cond: &Expr, facts: &Facts) -> Option<u32> {
+    if let Expr::Var(name) = cond {
+        return facts.guards.get(name).copied();
+    }
+    let Expr::BinOp { op, left, right } = cond else {
+        return None;
+    };
+    match op {
+        BinOp::Lt if is_axis_zero_index(left, facts) => literal_u32(right),
+        BinOp::Le if is_axis_zero_index(left, facts) => literal_u32(right)?.checked_add(1),
+        BinOp::Gt if is_axis_zero_index(right, facts) => literal_u32(left),
+        BinOp::Ge if is_axis_zero_index(right, facts) => literal_u32(left)?.checked_add(1),
+        BinOp::Eq if is_axis_zero_index(left, facts) => literal_u32(right)?.checked_add(1),
+        BinOp::Eq if is_axis_zero_index(right, facts) => literal_u32(left)?.checked_add(1),
+        BinOp::Lt if sum_contains_axis_zero_index(left, facts) => literal_u32(right),
+        BinOp::Le if sum_contains_axis_zero_index(left, facts) => {
+            literal_u32(right)?.checked_add(1)
+        }
+        BinOp::Gt if sum_contains_axis_zero_index(right, facts) => literal_u32(left),
+        BinOp::Ge if sum_contains_axis_zero_index(right, facts) => {
+            literal_u32(left)?.checked_add(1)
+        }
+        BinOp::Ne if literal_u32(right) == Some(0) => zero_outside_bound(left, facts),
+        BinOp::Ne if literal_u32(left) == Some(0) => zero_outside_bound(right, facts),
+        BinOp::Gt if literal_u32(right) == Some(0) => zero_outside_bound(left, facts),
+        BinOp::Lt if literal_u32(left) == Some(0) => zero_outside_bound(right, facts),
+        BinOp::And => {
+            let left_bound = axis_zero_upper_bound(left, facts);
+            let right_bound = axis_zero_upper_bound(right, facts);
+            match (left_bound, right_bound) {
+                (Some(left_limit), Some(right_limit)) => Some(left_limit.min(right_limit)),
+                (bound, None) | (None, bound) => bound,
+            }
+        }
+        BinOp::Or => {
+            Some(axis_zero_upper_bound(left, facts)?.max(axis_zero_upper_bound(right, facts)?))
+        }
+        _ => None,
+    }
+}
+
+/// Literal `u32` value of `expr`, if it is one.
+fn literal_u32(expr: &Expr) -> Option<u32> {
+    match expr {
+        Expr::LitU32(value) => Some(*value),
+        _ => None,
+    }
+}

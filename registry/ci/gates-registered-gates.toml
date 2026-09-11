@@ -1,0 +1,16 @@
+lane = "gates-registered-gates"
+workflow = ".github/workflows/gates.yml"
+job = "registered-gates"
+state = "live"
+required_status = "gates / Every registered gate"
+triggers = ["pull_request", "push"]
+steps = [
+  { gate = "gates" },
+  { subset = "composition" },
+  { subset = "structure" },
+  { subset = "docs" },
+  { subset = "ir" },
+  { command = "./cargo_full run -p structure-gate" },
+  { script = "scripts/check_external_ir_extension_ci.sh" },
+  { gate = "bench-coverage" },
+]

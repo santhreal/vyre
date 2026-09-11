@@ -1,7 +1,7 @@
 //! Generated property coverage for extension-id determinism and reserved range.
 
 use proptest::prelude::*;
-use vyre_spec::extension::{
+use vyre_spec::{
     ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
     ExtensionUnOpId,
 };

@@ -34,7 +34,7 @@ fn program_with_const_in_async_offset_and_size() -> Program {
         ],
         [1, 1, 1],
         vec![
-            Node::async_load_ext(
+            Node::async_load_gpu_driven(
                 "src",
                 "dst",
                 Expr::add(Expr::u32(2), Expr::u32(3)), // -> 5

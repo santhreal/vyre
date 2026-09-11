@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Gate fixtures that created an empty directory to stand for a crate now write Rust source into it, so a rule that reads whether a directory carries source is proved in both directions."

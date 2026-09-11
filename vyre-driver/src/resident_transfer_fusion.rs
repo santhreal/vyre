@@ -3,8 +3,8 @@
 //! Resident GPU resources are long-lived allocation handles with byte-addressed
 //! transfer intervals. Backends can fuse overlapping or adjacent device-to-host
 //! readback intervals without changing caller-visible output slices. This module
-//! owns that pure interval policy so CUDA, WGPU, and future backends do not
-//! carry divergent coalescing logic.
+//! owns that pure interval policy so no backend carries divergent coalescing
+//! logic.
 
 use smallvec::SmallVec;
 
@@ -516,15 +516,20 @@ fn resident_upload_copy_owned<'copy, 'a>(
     }
 }
 
+// Inline: the suite grades against `crate::resident_transfer_fixtures`, which is gated on
+// `cfg(any(test, feature = "test-fixtures"))` and so is absent from an integration test build.
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
-
     use smallvec::SmallVec;
 
     use super::{
         fuse_resident_transfer_intervals, fuse_resident_upload_copies, push_resident_upload_copy,
-        ResidentTransferInterval, ResidentUploadBytes, ResidentUploadCopy,
+        ResidentTransferInterval, ResidentUploadCopy,
+    };
+    use crate::resident_transfer_fixtures::{
+        assert_fused_transfers_preserve_requests, assert_upload_fusion_preserves_ordered_writes,
+        materialize_transfer_request as materialize_request,
+        materialize_transfer_view as materialize_view, ordered_transfer_requests,
     };
 
     #[test]
@@ -695,90 +700,17 @@ mod tests {
     #[test]
     fn generated_fusion_preserves_every_requested_output_and_accounts_union_bytes() {
         for seed in 0..8192_u64 {
-            let requested = generated_requests(seed);
+            let requested = ordered_transfer_requests(seed);
             let fused = fuse_resident_transfer_intervals(&requested)
                 .expect("Fix: generated resident transfer requests must fuse without overflow");
 
-            assert_eq!(fused.views.len(), requested.len());
-            assert_eq!(fused.non_empty_copy_count, fused.copies.len());
-            assert_eq!(
-                fused.bytes,
-                expected_union_bytes(&requested),
-                "Fix: fused byte accounting must equal the handle-scoped interval union for seed {seed}."
-            );
-
-            for pair in fused.copies.windows(2) {
-                let left = pair[0];
-                let right = pair[1];
-                let left_end = left.src + left.byte_len as u64;
-                assert!(
-                    left.handle_id != right.handle_id || right.src > left_end,
-                    "Fix: fused copies must not leave mergeable same-handle intervals for seed {seed}."
-                );
-            }
-
-            for (index, request) in requested.iter().enumerate() {
-                let view = fused.views[index];
-                assert_eq!(view.byte_len, request.byte_len);
-                if request.byte_len != 0 {
-                    assert!(view.copy_slot < fused.copies.len());
-                    assert_eq!(
-                        materialize_view(
-                            &fused.copies,
-                            view.copy_slot,
-                            view.byte_offset,
-                            view.byte_len
-                        ),
-                        materialize_request(*request),
-                        "Fix: fused view must materialize request {index} for seed {seed}."
-                    );
-                }
-            }
+            assert_fused_transfers_preserve_requests(seed, &requested, &fused);
         }
     }
 
     #[test]
     fn generated_upload_fusion_preserves_ordered_write_semantics() {
-        for seed in 0..4096_u64 {
-            let requests = generated_upload_requests(seed);
-            let mut copies = SmallVec::<[ResidentUploadCopy<'_>; 8]>::new();
-            for request in &requests {
-                copies.push(ResidentUploadCopy {
-                    handle_id: request.handle_id,
-                    dst_ptr: request.dst_ptr,
-                    bytes: ResidentUploadBytes::Borrowed(request.bytes.as_slice()),
-                });
-            }
-
-            let expected = materialize_upload_requests(&requests);
-            let requested_bytes = requests
-                .iter()
-                .map(|request| request.bytes.len() as u64)
-                .sum::<u64>();
-            let (fused, fused_bytes) = fuse_resident_upload_copies(copies)
-                .expect("Fix: generated resident upload fusion must not overflow");
-
-            assert_eq!(
-                materialize_upload_fused(&fused),
-                expected,
-                "Fix: shared resident upload fusion must preserve ordered write semantics for seed {seed}."
-            );
-            assert!(
-                fused_bytes <= requested_bytes,
-                "Fix: shared resident upload byte accounting must not exceed requested bytes for seed {seed}."
-            );
-            for pair in fused.as_slice().windows(2) {
-                let left = &pair[0];
-                let right = &pair[1];
-                let left_end = left.dst_ptr + left.bytes.len() as u64;
-                assert!(
-                    left.handle_id != right.handle_id
-                        || right.dst_ptr < left.dst_ptr
-                        || right.dst_ptr > left_end,
-                    "Fix: shared resident upload fusion left a mergeable monotonic same-handle interval for seed {seed}."
-                );
-            }
-        }
+        assert_upload_fusion_preserves_ordered_writes(0..4096, fuse_resident_upload_copies);
     }
 
     #[test]
@@ -794,111 +726,5 @@ mod tests {
         assert!(error.to_string().contains("byte accounting overflowed"));
         assert!(copies.is_empty());
         assert_eq!(uploaded_bytes, u64::MAX);
-    }
-
-    struct UploadRequest {
-        handle_id: u64,
-        dst_ptr: u64,
-        bytes: Vec<u8>,
-    }
-
-    fn generated_upload_requests(seed: u64) -> Vec<UploadRequest> {
-        let mut state = seed ^ 0x5151_C0DA_9E37_1234;
-        let count = 1 + (next_u64(&mut state) as usize % 16);
-        let mut requests = Vec::with_capacity(count);
-        for _ in 0..count {
-            let handle_id = next_u64(&mut state) % 4;
-            let dst_ptr = next_u64(&mut state) % 64;
-            let len = 1 + (next_u64(&mut state) as usize % 16);
-            let mut bytes = Vec::with_capacity(len);
-            for _ in 0..len {
-                bytes.push(next_u64(&mut state) as u8);
-            }
-            requests.push(UploadRequest {
-                handle_id,
-                dst_ptr,
-                bytes,
-            });
-        }
-        requests
-    }
-
-    fn materialize_upload_requests(requests: &[UploadRequest]) -> HashMap<(u64, u64), u8> {
-        let mut memory = HashMap::new();
-        for request in requests {
-            for (offset, &byte) in request.bytes.iter().enumerate() {
-                memory.insert((request.handle_id, request.dst_ptr + offset as u64), byte);
-            }
-        }
-        memory
-    }
-
-    fn materialize_upload_fused(copies: &[ResidentUploadCopy<'_>]) -> HashMap<(u64, u64), u8> {
-        let mut memory = HashMap::new();
-        for copy in copies {
-            for (offset, &byte) in copy.bytes.as_slice().iter().enumerate() {
-                memory.insert((copy.handle_id, copy.dst_ptr + offset as u64), byte);
-            }
-        }
-        memory
-    }
-
-    fn generated_requests(seed: u64) -> Vec<ResidentTransferInterval> {
-        let count = (seed as usize % 17) + 1;
-        let mut requests = Vec::with_capacity(count);
-        for i in 0..count {
-            let handle_id = ((seed >> (i % 11)) + i as u64) % 5;
-            let src = ((seed.wrapping_mul(31) + (i as u64 * 13)) % 64) * 4;
-            let byte_len = ((seed as usize + i * 7) % 9) * 4;
-            requests.push(ResidentTransferInterval {
-                handle_id,
-                src,
-                byte_len,
-            });
-        }
-        if seed % 3 == 0 {
-            requests.reverse();
-        }
-        requests
-    }
-
-    fn expected_union_bytes(requests: &[ResidentTransferInterval]) -> u64 {
-        let mut covered = HashSet::<(u64, u64)>::new();
-        for request in requests {
-            for byte in 0..request.byte_len as u64 {
-                covered.insert((request.handle_id, request.src + byte));
-            }
-        }
-        covered.len() as u64
-    }
-
-    fn materialize_view(
-        copies: &[ResidentTransferInterval],
-        copy_slot: usize,
-        byte_offset: usize,
-        byte_len: usize,
-    ) -> Vec<u8> {
-        if byte_len == 0 {
-            return Vec::new();
-        }
-        let copy = copies[copy_slot];
-        (0..byte_len)
-            .map(|offset| ((copy.src + (byte_offset + offset) as u64) & 0xFF) as u8)
-            .collect()
-    }
-
-    fn materialize_request(request: ResidentTransferInterval) -> Vec<u8> {
-        (0..request.byte_len)
-            .map(|offset| ((request.src + offset as u64) & 0xFF) as u8)
-            .collect()
-    }
-
-    fn next_u64(state: &mut u64) -> u64 {
-        let mut x = *state;
-        x ^= x << 13;
-        x ^= x >> 7;
-        x ^= x << 17;
-        *state = x;
-        x
     }
 }

@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`SlotState` is gone from the readback ring. It named the four slot lifecycle states a second time, as a public enum nothing in the workspace constructed, matched, or returned; the ring stores its state as a `u8` and compares against the `SLOT_*` codes. The codes are the single naming and are private to the ring."

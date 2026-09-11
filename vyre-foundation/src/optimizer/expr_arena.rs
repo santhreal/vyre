@@ -1,4 +1,4 @@
-//! ROADMAP A1  -  hash-consed Expr arena.
+//! hash-consed Expr arena.
 //!
 //! Op id: `vyre-foundation::optimizer::expr_arena`. Soundness: read-only
 //! over the input `Expr`; produces an additive side-table that does not
@@ -58,7 +58,7 @@
 //!   extensions needs an `ExprNode::content_hash` API that does not
 //!   exist today.
 
-use crate::ir::model::expr::ExprNode;
+use crate::ir::ExprNode;
 use crate::ir::{AtomicOp, BinOp, DataType, Expr, Ident, MemoryOrdering, SubgroupReduceOp, UnOp};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
@@ -120,6 +120,15 @@ pub enum FlatExpr {
     LocalId {
         axis: u8,
     },
+    LogicalIndex {
+        axis: u8,
+    },
+    LogicalTileId {
+        axis: u8,
+    },
+    LogicalWithinTileId {
+        axis: u8,
+    },
     BinOp {
         op: BinOp,
         left: ExprId,
@@ -168,20 +177,21 @@ pub enum FlatExpr {
     },
     SubgroupLocalId,
     SubgroupSize,
-    /// Opaque extension expressions are interned by `Arc` identity, not
-    /// structural equality (no `ExprNode::content_hash` API). Equal
-    /// contents wrapped in distinct `Arc`s get distinct `ExprId`s.
-    Opaque(OpaqueId),
+    /// Opaque extension expressions are interned by stable content identity
+    /// (extension kind + 32-byte content fingerprint). Equal contents
+    /// wrapped in distinct `Arc` allocations produce identical `ExprId`s.
+    Opaque(OpaqueContentKey),
 }
 
-/// Pointer-identity tag for opaque extension expressions. Wraps the
-/// `Arc<dyn ExprNode>` raw pointer cast to `usize`  -  two `Arc`s
-/// pointing to the same allocation produce the same `OpaqueId`; two
-/// `Arc`s wrapping equal contents but with distinct allocations
-/// produce different `OpaqueId`s.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct OpaqueId(usize);
-
+/// Content-addressed identity for opaque extension expressions. Keys on
+/// stable extension kind and 32-byte content fingerprint.
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct OpaqueContentKey {
+    /// Extension kind namespace.
+    pub kind: String,
+    /// Content fingerprint.
+    pub fingerprint: [u8; 32],
+}
 /// Hash-consed arena of [`FlatExpr`] nodes.
 ///
 /// Build one per program (or share across passes within the same
@@ -200,8 +210,8 @@ pub struct ExprArena {
     /// `OpaqueId` is just a usize fingerprint; `rebuild` reconstructs
     /// the `Arc` by looking up here.
     opaques: Vec<Arc<dyn ExprNode>>,
-    /// `OpaqueId` already seen → its index into `opaques`.
-    opaque_lookup: FxHashMap<OpaqueId, usize>,
+    /// `OpaqueContentKey` already seen → its index into `opaques`.
+    opaque_lookup: FxHashMap<OpaqueContentKey, usize>,
     hashcons: FxHashMap<Arc<FlatExpr>, ExprId>,
 }
 
@@ -218,6 +228,21 @@ impl ExprArena {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.nodes.is_empty()
+    }
+
+    /// Bytes this arena holds for its interned nodes and lookup tables.
+    ///
+    /// Counts the arena's own storage: one `FlatExpr` plus its `Arc` header per
+    /// interned node, one hash-cons entry per node, and the opaque side tables.
+    /// It does not reach through an `Arc<dyn ExprNode>` into an extension's own
+    /// allocation, which the arena did not make.
+    #[must_use]
+    pub fn allocated_bytes(&self) -> usize {
+        use std::mem::size_of;
+        self.nodes.len() * (size_of::<FlatExpr>() + size_of::<Arc<FlatExpr>>())
+            + self.hashcons.len() * (size_of::<Arc<FlatExpr>>() + size_of::<ExprId>())
+            + self.opaques.len() * size_of::<Arc<dyn ExprNode>>()
+            + self.opaque_lookup.len() * (size_of::<OpaqueContentKey>() + size_of::<usize>())
     }
 
     /// Borrow the [`FlatExpr`] previously interned at `id`.
@@ -263,6 +288,9 @@ impl ExprArena {
             FlatExpr::InvocationId { axis } => Expr::InvocationId { axis },
             FlatExpr::WorkgroupId { axis } => Expr::WorkgroupId { axis },
             FlatExpr::LocalId { axis } => Expr::LocalId { axis },
+            FlatExpr::LogicalIndex { axis } => Expr::LogicalIndex { axis },
+            FlatExpr::LogicalTileId { axis } => Expr::LogicalTileId { axis },
+            FlatExpr::LogicalWithinTileId { axis } => Expr::LogicalWithinTileId { axis },
             FlatExpr::BinOp { op, left, right } => Expr::BinOp {
                 op,
                 left: Box::new(self.rebuild(left)),
@@ -322,16 +350,12 @@ impl ExprArena {
             },
             FlatExpr::SubgroupLocalId => Expr::SubgroupLocalId,
             FlatExpr::SubgroupSize => Expr::SubgroupSize,
-            FlatExpr::Opaque(opaque_id) => {
-                let idx = self
-                    .opaque_lookup
-                    .get(&opaque_id)
-                    .copied()
-                    .unwrap_or_else(|| {
-                        unreachable!(
-                            "rebuild only sees OpaqueIds produced by intern_flat (this arena)"
-                        )
-                    });
+            FlatExpr::Opaque(key) => {
+                let idx = self.opaque_lookup.get(&key).copied().unwrap_or_else(|| {
+                    unreachable!(
+                        "rebuild only sees OpaqueContentKeys produced by intern_flat (this arena)"
+                    )
+                });
                 Expr::Opaque(Arc::clone(&self.opaques[idx]))
             }
         }
@@ -370,6 +394,9 @@ impl ExprArena {
             Expr::InvocationId { axis } => FlatExpr::InvocationId { axis: *axis },
             Expr::WorkgroupId { axis } => FlatExpr::WorkgroupId { axis: *axis },
             Expr::LocalId { axis } => FlatExpr::LocalId { axis: *axis },
+            Expr::LogicalIndex { axis } => FlatExpr::LogicalIndex { axis: *axis },
+            Expr::LogicalTileId { axis } => FlatExpr::LogicalTileId { axis: *axis },
+            Expr::LogicalWithinTileId { axis } => FlatExpr::LogicalWithinTileId { axis: *axis },
             Expr::BinOp { op, left, right } => FlatExpr::BinOp {
                 op: *op,
                 left: self.intern(left),
@@ -430,20 +457,39 @@ impl ExprArena {
             Expr::SubgroupLocalId => FlatExpr::SubgroupLocalId,
             Expr::SubgroupSize => FlatExpr::SubgroupSize,
             Expr::Opaque(arc) => {
-                let opaque_id = OpaqueId(Arc::as_ptr(arc).cast::<()>() as usize);
-                self.opaque_lookup.entry(opaque_id).or_insert_with(|| {
+                let key = OpaqueContentKey {
+                    kind: arc.extension_kind().to_string(),
+                    fingerprint: arc.stable_fingerprint(),
+                };
+                self.opaque_lookup.entry(key.clone()).or_insert_with(|| {
                     let idx = self.opaques.len();
                     self.opaques.push(Arc::clone(arc));
                     idx
                 });
-                FlatExpr::Opaque(opaque_id)
+                FlatExpr::Opaque(key)
             }
         }
     }
 }
 
+/// `ExprId` for the node about to be pushed at index `len`.
+///
+/// # Panics
+///
+/// Panics once the arena holds `u32::MAX` nodes. Saturating instead would
+/// hand every further node the same id, `get` would return one node for
+/// another, and the optimizer would rewrite the program into something it
+/// never described  -  a wrong answer no later pass can detect. The bound is
+/// a real ceiling on interned nodes, not a programming error, so it is
+/// reported as exhaustion.
 fn expr_id_from_len(len: usize) -> ExprId {
-    ExprId(u32::try_from(len).unwrap_or(u32::MAX))
+    match u32::try_from(len) {
+        Ok(index) if index < u32::MAX => ExprId(index),
+        _ => panic!(
+            "ExprArena exhausted its {} node ids. Fix: split the program before interning, or lower it in regions.",
+            u32::MAX
+        ),
+    }
 }
 
 #[cfg(test)]
@@ -574,43 +620,49 @@ mod tests {
     }
 
     #[test]
-    fn opaque_expr_interning_via_arc_identity() {
-        // Build two `Arc`s pointing at the same allocation; their
-        // OpaqueIds must collapse.
-        use crate::ir::model::expr::ExprNode;
+    fn opaque_expr_interning_via_stable_content() {
+        // Opaque nodes with equal content must collapse across distinct Arcs.
         use crate::ir::DataType;
-        use std::any::Any;
+        use crate::ir::ExprNode;
 
-        #[derive(Debug)]
-        struct DummyOpaque;
-        impl ExprNode for DummyOpaque {
-            fn extension_kind(&self) -> &'static str {
-                "dummy"
-            }
-            fn debug_identity(&self) -> &str {
-                "dummy"
-            }
-            fn result_type(&self) -> Option<DataType> {
-                Some(DataType::U32)
-            }
-            fn cse_safe(&self) -> bool {
-                true
-            }
-            fn stable_fingerprint(&self) -> [u8; 32] {
-                [0u8; 32]
-            }
-            fn validate_extension(&self) -> Result<(), String> {
-                Ok(())
-            }
-            fn as_any(&self) -> &dyn Any {
-                self
-            }
-        }
-        let arc: Arc<dyn ExprNode> = Arc::new(DummyOpaque);
+        vyre_test_support::test_expr_extension!(
+            DummyOpaque,
+            kind: "dummy",
+            identity: "dummy",
+            result_type: Some(DataType::U32),
+            cse_safe: true,
+            fingerprint: 0,
+        );
+
+        let arc_a: Arc<dyn ExprNode> = Arc::new(DummyOpaque);
+        let arc_b: Arc<dyn ExprNode> = Arc::new(DummyOpaque);
+        assert!(!Arc::ptr_eq(&arc_a, &arc_b), "two distinct Arc allocations");
         let mut arena = ExprArena::default();
-        let id_a = arena.intern(&Expr::Opaque(Arc::clone(&arc)));
-        let id_b = arena.intern(&Expr::Opaque(arc));
-        assert_eq!(id_a, id_b, "two Arcs of the same allocation must collapse");
+        let id_a = arena.intern(&Expr::Opaque(arc_a));
+        let id_b = arena.intern(&Expr::Opaque(arc_b));
+        assert_eq!(
+            id_a, id_b,
+            "two distinct Arcs with equal content must collapse to same ExprId"
+        );
         assert_eq!(arena.len(), 1);
+    }
+
+    #[test]
+    fn last_usable_index_is_still_an_id() {
+        // One below the ceiling is a node the arena can address, so it is an
+        // id and not an exhaustion.
+        assert_eq!(
+            expr_id_from_len(u32::MAX as usize - 1),
+            ExprId(u32::MAX - 1)
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "ExprArena exhausted")]
+    fn exhausted_ids_refuse_instead_of_colliding() {
+        // The saturating conversion this replaced returned `u32::MAX` here and
+        // for every node after it, so two distinct expressions shared one id
+        // and `get` answered with the wrong node.
+        let _ = expr_id_from_len(u32::MAX as usize);
     }
 }

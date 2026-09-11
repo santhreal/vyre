@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Resident value-returning dispatch helpers now preserve backend upload, kernel, and readback fusion instead of adding separate host synchronization boundaries."

@@ -1,19 +1,21 @@
 //! Parity tests for vyre-primitives graph::toposort + graph::reachable
 //! + graph::level_wave.
 
-#![cfg(test)]
+#![cfg(all(test, feature = "device-tests"))]
 
-mod common;
+use crate::harness;
 
-use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_driver::DispatchConfig;
+use harness::{bytes_u32, u32_bytes, with_live_backend};
+use vyre_driver::{BindingPlan, DispatchConfig};
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::graph::level_wave::{
-    cpu_ref as level_wave_cpu, level_wave_dispatch_grid, level_wave_program,
+use vyre_libs::graph::level_wave::level_wave_program;
+use vyre_libs::graph::reachable::reachable_program;
+use vyre_libs::graph::toposort::toposort_program;
+use vyre_reference::composition_witness::{
+    level_wave_witness as level_wave_cpu, reachable_witness as reachable,
+    toposort_witness as toposort,
 };
-use vyre_primitives::graph::reachable::{reachable, reachable_program};
-use vyre_primitives::graph::toposort::{toposort, toposort_program};
 
 /// Build CSR for `toposort_program`: offsets indexed by `to`, targets
 /// listing `from`-nodes. Mirrors the CPU `toposort` "outgoing"
@@ -41,28 +43,38 @@ fn build_toposort_csr(node_count: u32, edges: &[(u32, u32)]) -> (Vec<u32>, Vec<u
 fn run_toposort(backend: &CudaBackend, node_count: u32, edges: &[(u32, u32)]) -> Vec<u32> {
     let (offsets, targets) = build_toposort_csr(node_count, edges);
     let program = toposort_program(node_count, "offsets", "targets", "indeg", "queue", "order");
-    let inputs: Vec<Vec<u8>> = vec![
-        u32_bytes(&offsets),
-        // targets buffer; the kernel reads up to edge_count.
-        if targets.is_empty() {
-            vec![0u8; 4]
-        } else {
-            u32_bytes(&targets)
-        },
-        // indeg scratch  -  zero-init.
-        vec![0u8; node_count.max(1) as usize * 4],
-        // queue scratch  -  zero-init.
-        vec![0u8; node_count.max(1) as usize * 4],
-        // order out  -  zero-init.
-        vec![0u8; node_count.max(1) as usize * 4],
-    ];
+    // The ABI plan is the one answer to which declarations take a host input
+    // slot and which come back as outputs. `order` is pipeline-live-out, so the
+    // backend allocates and clears it and no host input slot exists for it.
+    let plan = BindingPlan::build(&program).expect("toposort program has a backend ABI plan");
+    let inputs: Vec<Vec<u8>> = plan
+        .input_indices
+        .iter()
+        .map(|&index| {
+            let buffer = &program.buffers()[index];
+            match buffer.name() {
+                "offsets" => u32_bytes(&offsets),
+                // The kernel reads up to edge_count; an edgeless graph still
+                // needs one word of storage to bind.
+                "targets" if targets.is_empty() => vec![0u8; 4],
+                "targets" => u32_bytes(&targets),
+                "indeg" | "queue" => vec![0u8; buffer.count().max(1) as usize * 4],
+                other => panic!("unexpected toposort host input `{other}`"),
+            }
+        })
+        .collect();
     let mut config = DispatchConfig::default();
     // workgroup [1,1,1], serial lane-0 kernel.
     config.grid_override = Some([1, 1, 1]);
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");
-    let mut out = bytes_u32(&outputs[2]);
+    let order_slot = plan
+        .output_indices
+        .iter()
+        .position(|&index| program.buffers()[index].name() == "order")
+        .expect("toposort declares `order` as an output");
+    let mut out = bytes_u32(&outputs[order_slot]);
     out.truncate(node_count as usize);
     out
 }
@@ -363,8 +375,7 @@ fn run_level_wave(backend: &CudaBackend, depths: &[u32], max_depth: u32) -> Vec<
     let program = Program::wrapped(buffers, inner.workgroup_size, inner.entry().to_vec());
 
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(depths), vec![0u8; lane_count as usize * 4]];
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some(level_wave_dispatch_grid(lane_count));
+    let config = DispatchConfig::default();
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");
@@ -414,8 +425,7 @@ fn run_level_wave_cross_block_dependency(
     );
     let program = Program::wrapped(buffers, inner.workgroup_size, inner.entry().to_vec());
     let inputs: Vec<Vec<u8>> = vec![u32_bytes(depths), vec![0u8; lane_count as usize * 4]];
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some(level_wave_dispatch_grid(lane_count));
+    let config = DispatchConfig::default();
     let outputs = backend
         .dispatch(&program, &inputs, &config)
         .expect("dispatch");

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The WGPU release suite now completes on the portable target limits it records. The metadata workload uses a 256-lane workgroup, the grouped INT4 workload keeps its one-dimensional dispatch below 65,535 workgroups without changing its per-item mathematics or release threshold, and `release-benchmarks` declares ownership of the WGPU suite and all seventeen WGPU workload artifacts."

@@ -3,78 +3,47 @@
 //! Each test asserts the exact PTX instruction suffix/mnemonic that the
 //! fix introduced, confirming the pre-fix behaviour is gone.
 
-use vyre_foundation::ir::{BinOp, DataType};
-use vyre_lower::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-    KernelOp, KernelOpKind, LiteralValue, MemoryClass,
+use vyre_foundation::ir::{AtomicOp, BinOp, DataType, MemoryOrdering};
+use vyre_lower::descriptor_builder::{
+    binop, body, column_walk_tile, descriptor, effect, global_rw, lit, load_global, op,
+    store_global, strided_tile_program,
 };
+use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue, WORKGROUP_SLOT_BASE};
 
-fn rw_slot_typed(id: u32, name: &str, element_type: DataType) -> BindingSlot {
-    BindingSlot {
-        slot: id,
-        element_type,
-        element_count: None,
-        memory_class: MemoryClass::Global,
-        visibility: BindingVisibility::ReadWrite,
-        name: name.into(),
-    }
+/// Verify then emit, reporting `what` if either step rejects the descriptor.
+fn emit(desc: &KernelDescriptor, what: &str) -> String {
+    let verified = vyre_lower::verify_descriptor(desc).expect("descriptor verification");
+    vyre_emit_ptx::emit(&verified).unwrap_or_else(|e| panic!("{what} must emit without error: {e}"))
+}
+
+fn thread_id(result: u32) -> vyre_lower::KernelOp {
+    op(KernelOpKind::LocalInvocationId, [0], result)
+}
+
+fn cast(target: DataType, source: u32, result: u32) -> vyre_lower::KernelOp {
+    op(KernelOpKind::Cast { target }, [source], result)
 }
 
 /// Build a minimal descriptor that emits a BinOp on I32 operands via
 /// LocalInvocationId (so the op survives constant folding) and stores the
 /// result.
-fn i32_binop_descriptor(op: BinOp) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "i32_binop".into(),
-        bindings: BindingLayout {
-            slots: vec![rw_slot_typed(0, "out", DataType::I32)],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                // result 0: LocalInvocationId (I32 cast below), keeps op live
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                // result 1: cast to I32 so the BinOp operands are I32
-                KernelOp {
-                    kind: KernelOpKind::Cast {
-                        target: DataType::I32,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                // result 2: literal shift amount 1 (U32 literal, PTX shift
-                // amount is always U32)
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(2),
-                },
-                // result 3: store index (literal 0)
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(3),
-                },
-                // result 4: I32 BinOp
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(op),
-                    operands: vec![1, 2],
-                    result: Some(4),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 3, 4],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(1), LiteralValue::U32(0)],
-        },
-    }
+fn i32_binop_descriptor(kind: BinOp) -> KernelDescriptor {
+    descriptor("i32_binop")
+        .slot(global_rw(0, DataType::I32, "out"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                // result 0 keeps the op live, result 1 makes the BinOp
+                // operands I32, result 2 is the U32 shift amount PTX wants.
+                .op(thread_id(0))
+                .op(cast(DataType::I32, 0, 1))
+                .op(lit(0, 2))
+                .op(lit(1, 3))
+                .op(binop(kind, 1, 2, 4))
+                .op(store_global(0, 3, 4))
+                .literals([LiteralValue::U32(1), LiteralValue::U32(0)]),
+        )
+        .build()
 }
 
 /// VYRE-PTX-001: `Shr` on I32 must emit `shr.s32` (arithmetic), not
@@ -86,11 +55,7 @@ fn i32_binop_descriptor(op: BinOp) -> KernelDescriptor {
 /// `(-4) >> 1` via `shr.u32` produces 0x7FFFFFFE instead of -2 (0xFFFFFFFE).
 #[test]
 fn shr_on_i32_emits_s32_suffix_not_u32() {
-    let desc = i32_binop_descriptor(BinOp::Shr);
-    let ptx = vyre_emit_ptx::emit(
-        &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
-    )
-    .expect("I32 Shr descriptor must emit without error");
+    let ptx = emit(&i32_binop_descriptor(BinOp::Shr), "I32 Shr descriptor");
 
     assert!(
         ptx.contains("shr.s32"),
@@ -111,48 +76,20 @@ fn shr_on_i32_emits_s32_suffix_not_u32() {
 /// must not accidentally break unsigned shifts.
 #[test]
 fn shr_on_u32_still_emits_u32_suffix() {
-    let desc = KernelDescriptor {
-        id: "u32_shr".into(),
-        bindings: BindingLayout {
-            slots: vec![rw_slot_typed(0, "out", DataType::U32)],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Shr),
-                    operands: vec![0, 1],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 2, 3],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(1), LiteralValue::U32(0)],
-        },
-    };
-    let ptx = vyre_emit_ptx::emit(
-        &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
-    )
-    .expect("U32 Shr descriptor must emit without error");
+    let desc = descriptor("u32_shr")
+        .slot(global_rw(0, DataType::U32, "out"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .op(thread_id(0))
+                .op(lit(0, 1))
+                .op(lit(1, 2))
+                .op(binop(BinOp::Shr, 0, 1, 3))
+                .op(store_global(0, 2, 3))
+                .literals([LiteralValue::U32(1), LiteralValue::U32(0)]),
+        )
+        .build();
+    let ptx = emit(&desc, "U32 Shr descriptor");
     assert!(
         ptx.contains("shr.u32"),
         "Shr on U32 operands must still emit `shr.u32`; \
@@ -175,55 +112,23 @@ fn shr_on_u32_still_emits_u32_suffix() {
 /// can appear.
 #[test]
 fn ensure_buffer_length_reg_emits_correct_offset_for_slot_1() {
-    let desc = KernelDescriptor {
-        id: "two_slot_bounds".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                rw_slot_typed(0, "a", DataType::U32),
-                rw_slot_typed(1, "b", DataType::U32),
-            ],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                // result 0: literal 0 for slot 0 index
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                // result 1: literal 0 for slot 1 index
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                // result 2: load from slot 0
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(2),
-                },
-                // result 3: load from slot 1
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![1, 1],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 0, 3],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0)],
-        },
-    };
-    let ptx = vyre_emit_ptx::emit(
-        &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
-    )
-    .expect("two-slot descriptor must emit without error");
+    let desc = descriptor("two_slot_bounds")
+        .slots([
+            global_rw(0, DataType::U32, "a"),
+            global_rw(1, DataType::U32, "b"),
+        ])
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .op(lit(0, 0))
+                .op(lit(0, 1))
+                .op(load_global(0, 0, 2))
+                .op(load_global(1, 1, 3))
+                .op(store_global(0, 0, 3))
+                .literal(LiteralValue::U32(0)),
+        )
+        .build();
+    let ptx = emit(&desc, "two-slot descriptor");
 
     // slot 0: byte_offset = 0*4+4 = 4  → `[%rd0 + 4]`
     // slot 1: byte_offset = 1*4+4 = 8  → `[%rd0 + 8]`
@@ -247,55 +152,22 @@ fn ensure_buffer_length_reg_emits_correct_offset_for_slot_1() {
 /// old two-step truncating path `cvt.u32.u64`.
 #[test]
 fn f16_store_of_u64_value_uses_direct_cvt_rn_f32_u64() {
-    // Build a descriptor that loads a U64 value then stores it to an F16
-    // binding, exercising the ensure_f32_store_operand(U64) path.
-    //
-    // We use Cast(U64) from a LocalInvocationId (U32) to produce a U64
-    // register, then store to an F16 output slot.
-    let desc = KernelDescriptor {
-        id: "u64_to_f16_store".into(),
-        bindings: BindingLayout {
-            slots: vec![rw_slot_typed(0, "out_f16", DataType::F16)],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                // result 0: thread id (U32)
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                // result 1: cast U32 → U64  (produces a U64 register)
-                KernelOp {
-                    kind: KernelOpKind::Cast {
-                        target: DataType::U64,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                // result 2: store index (literal 0)
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(2),
-                },
-                // Store the U64 value to an F16 binding, exercises
-                // ensure_f32_store_operand(U64) inside emit_store_value.
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 2, 1],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0)],
-        },
-    };
-    let ptx = vyre_emit_ptx::emit(
-        &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
-    )
-    .expect("U64 → F16 store descriptor must emit without error");
+    // Load a U64 value then store it to an F16 binding, exercising the
+    // ensure_f32_store_operand(U64) path. Cast(U64) from a LocalInvocationId
+    // (U32) is what produces the U64 register.
+    let desc = descriptor("u64_to_f16_store")
+        .slot(global_rw(0, DataType::F16, "out_f16"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .op(thread_id(0))
+                .op(cast(DataType::U64, 0, 1))
+                .op(lit(0, 2))
+                .op(store_global(0, 2, 1))
+                .literal(LiteralValue::U32(0)),
+        )
+        .build();
+    let ptx = emit(&desc, "U64 to F16 store descriptor");
 
     // The fixed path: single-instruction conversion preserving all 64 bits.
     assert!(
@@ -309,5 +181,183 @@ fn f16_store_of_u64_value_uses_direct_cvt_rn_f32_u64() {
         !ptx.contains("cvt.u32.u64"),
         "`cvt.u32.u64` must not appear; it truncates the high 32 bits of the U64 \
          value before conversion. PTX emitted:\n{ptx}"
+    );
+}
+
+/// The shared declaration the emitter writes for the tile binding at `bytes`.
+///
+/// The symbol carries the binding's slot, and the tile sits at the base of the
+/// workgroup slot range, so the expected line is derived from that constant
+/// rather than restated.
+fn shared_declaration(bytes: u32) -> String {
+    format!(".shared .align 4 .b8 shared_buf_{WORKGROUP_SLOT_BASE}[{bytes}];")
+}
+
+/// Lines that add a row count times the pad to a shared element index.
+///
+/// The launch prologue emits `mad.lo.u32` too, three times, for the global id
+/// on each axis, so the opcode alone identifies nothing. The padded-address
+/// site is the one whose multiplier is the immediate pad.
+fn padded_address_sites(ptx: &str, pad_elements: u32) -> usize {
+    let immediate_pad = format!(", {pad_elements}, %r");
+    ptx.lines()
+        .filter(|line| line.contains("mad.lo.u32") && line.contains(&immediate_pad))
+        .count()
+}
+
+/// The classified 32-way conflict of a column walk is mitigated in the emitted
+/// kernel, not only in the selector's ranking.
+///
+/// One element of padding per 32-element row is the cheapest accepted candidate
+/// for this geometry, so the tile is declared at 32 rows of 33 elements and the
+/// element index is rewritten to `index + (index >> 5) * 1` at the one shared
+/// address site both the store and the load pass through. That is the same
+/// address as `(index >> 5) * 33 + (index & 31)` for every index inside the
+/// extent, in two instructions rather than four.
+#[test]
+fn a_permutable_shared_tile_is_padded_and_its_index_rewritten() {
+    let ptx = emit(&column_walk_tile(1024), "column walk over a padded tile");
+
+    let padded = shared_declaration(4224);
+    assert!(
+        ptx.contains(&padded),
+        "a padded tile is declared at its grown extent: 32 rows of 33 four-byte \
+         elements is 4224 bytes, not 4096. Expected `{padded}`. PTX emitted:\n{ptx}"
+    );
+    assert_eq!(
+        padded_address_sites(&ptx, 1),
+        2,
+        "both the store and the load add their row count times the pad, so a \
+         rewrite applied at one site only is a wrong kernel. PTX emitted:\n{ptx}"
+    );
+    assert_eq!(
+        ptx.matches(", 31;").count(),
+        0,
+        "the reduced form needs no within-row mask, so a mask by 31 here is the \
+         four-instruction rewrite the padding no longer emits. PTX emitted:\n{ptx}"
+    );
+}
+
+/// A tile whose extent is not a whole number of rows cannot be padded: the
+/// rewrite would address elements the grown allocation does not contain. The
+/// emitter refuses the strategy rather than approximating it, so the
+/// declaration and the index stay as the descriptor stated them.
+#[test]
+fn a_tile_that_is_not_a_whole_number_of_rows_is_not_padded() {
+    let ptx = emit(&column_walk_tile(1000), "column walk over an unpadded tile");
+
+    let declared = shared_declaration(4000);
+    assert!(
+        ptx.contains(&declared),
+        "a refused strategy leaves the declared extent alone. Expected \
+         `{declared}`. PTX emitted:\n{ptx}"
+    );
+    assert_eq!(
+        padded_address_sites(&ptx, 1),
+        0,
+        "no row-padding rewrite is emitted for a tile the strategy was refused \
+         for. PTX emitted:\n{ptx}"
+    );
+}
+
+/// A real lowered program with a strided shared tile lowers and emits PTX
+/// with the permuted address computation and grown shared memory declaration.
+#[test]
+fn a_real_lowered_conflicting_program_emits_permuted_ptx() {
+    let program = strided_tile_program();
+    let descriptor = vyre_lower::lower(&program).expect("program lowers to descriptor");
+    let ptx = emit(&descriptor, "real lowered conflicting program");
+
+    assert!(
+        ptx.contains(".shared .align 4 .b8 shared_buf_"),
+        "PTX must declare shared memory. Emitted PTX:\n{ptx}"
+    );
+    assert!(
+        ptx.contains("[4224]"),
+        "the 1024-element U32 tile is grown to 4224 bytes under +1 padding per 32-element row. Emitted PTX:\n{ptx}"
+    );
+    assert_eq!(
+        padded_address_sites(&ptx, 1),
+        2,
+        "the store and the load both pass through the padded address. Emitted PTX:\n{ptx}"
+    );
+    assert!(
+        ptx.contains("shr.u32"),
+        "the padded address takes the row count from the index with a shift. Emitted PTX:\n{ptx}"
+    );
+}
+/// An asynchronous transaction reaching a shared binding prevents index
+/// permutation because the transfer addresses the allocation, so the unpermuted
+/// 4096-byte extent and unpermuted address computation are emitted.
+#[test]
+fn an_asynchronous_transfer_prevents_shared_permutation() {
+    let mut desc = column_walk_tile(1024);
+    desc.body.ops.push(effect(
+        KernelOpKind::async_load("dma".into()),
+        [0, WORKGROUP_SLOT_BASE, 0, 0],
+    ));
+    let ptx = emit(&desc, "column walk with async load");
+
+    let declared = shared_declaration(4096);
+    assert!(
+        ptx.contains(&declared),
+        "an async transfer blocks permutation, keeping the declared 4096 bytes. PTX emitted:\n{ptx}"
+    );
+    assert_eq!(
+        padded_address_sites(&ptx, 1),
+        0,
+        "no row-padding rewrite is emitted when an async transfer reaches the binding. PTX emitted:\n{ptx}"
+    );
+}
+
+/// A fused bulk copy (global load feeding shared store at same index) reaching
+/// a shared binding prevents index permutation, keeping the unpermuted 4096-byte
+/// extent and unpermuted address computation.
+#[test]
+fn a_fused_bulk_copy_prevents_shared_permutation() {
+    let mut desc = column_walk_tile(1024);
+    desc.body.ops.push(op(KernelOpKind::LoadGlobal, [0, 0], 5));
+    desc.body.ops.push(op(
+        KernelOpKind::StoreShared,
+        [WORKGROUP_SLOT_BASE, 0, 5],
+        6,
+    ));
+    let ptx = emit(&desc, "column walk with fused bulk copy");
+
+    let declared = shared_declaration(4096);
+    assert!(
+        ptx.contains(&declared),
+        "a fused bulk copy blocks permutation, keeping the declared 4096 bytes. PTX emitted:\n{ptx}"
+    );
+    assert_eq!(
+        padded_address_sites(&ptx, 1),
+        0,
+        "no row-padding rewrite is emitted when a fused bulk copy reaches the binding. PTX emitted:\n{ptx}"
+    );
+}
+
+/// An atomic op reaching a shared binding prevents index permutation.
+#[test]
+fn an_atomic_op_prevents_shared_permutation() {
+    let mut desc = column_walk_tile(1024);
+    desc.body.ops.push(op(
+        KernelOpKind::Atomic {
+            op: AtomicOp::Add,
+            ordering: MemoryOrdering::Relaxed,
+        },
+        [WORKGROUP_SLOT_BASE, 2, 0],
+        4,
+    ));
+    let ptx = emit(&desc, "column walk with atomic");
+
+    let declared = shared_declaration(4096);
+    assert!(
+        ptx.contains(&declared),
+        "an atomic blocks permutation, keeping the declared 4096 bytes. PTX emitted:\n{ptx}"
+    );
+    assert_eq!(
+        padded_address_sites(&ptx, 1),
+        0,
+        "no row-padding rewrite is emitted when an atomic reaches the binding. PTX emitted:\n{ptx}"
     );
 }

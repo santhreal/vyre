@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A verified safetensors tensor is hashed against the digest recorded at verification on every read, so an in-place rewrite that keeps the shard length is refused by tensor name instead of being served as verified content."

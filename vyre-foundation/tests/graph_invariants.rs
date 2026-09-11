@@ -166,7 +166,7 @@ fn graph_validate_error_display_is_actionable() {
 #[test]
 fn graph_validate_error_implements_std_error() {
     let err = GraphValidateError::Cycle { path: vec![0, 1] };
-    let dyn_err: &(dyn std::error::Error) = &err;
+    let dyn_err: &dyn std::error::Error = &err;
     assert!(
         dyn_err.source().is_none(),
         "GraphValidateError must have no source chain"

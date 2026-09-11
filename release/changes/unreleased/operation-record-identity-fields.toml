@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`SemanticDescriptor`, `SemanticOperation`, and `OperationRegistration` declare their shared operation identity fields from one macro, and both `contract_record` implementations read the contract facts from one list. A field added to the identity now reaches all three records."

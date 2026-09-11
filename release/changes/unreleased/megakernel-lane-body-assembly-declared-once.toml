@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Persistent, finite and JIT megakernel lane bodies now share one assembly path and one published-slot claim body, so the node reservation bound, the slot-base binding order and the IO polling block are decided in a single place. Emitted IR and reservation error text are unchanged."

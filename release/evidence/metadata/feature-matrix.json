@@ -1,10 +1,10 @@
 {
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"997287e7ab44b61927039993d65900f6e2149330","commit_timestamp":"1789108100","parent_commit":"956e5380ef0567214833a06e21d408b485495f5b","dirty":false,"source_fingerprint":"git:997287e7ab44b61927039993d65900f6e2149330:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
     "vyre-driver-cuda",
-    "vyre-driver-wgpu",
-    "vyre-frontend-c"
+    "vyre-driver-wgpu"
   ],
   "missing_required_release_packages": [],
   "packages": [
@@ -36,6 +36,17 @@
       "release_policy": "top-level crate exposes explicit cuda and wgpu feature switches with empty default"
     },
     {
+      "name": "vyre-alloc-probe",
+      "manifest": "vyre-alloc-probe/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
       "name": "vyre-aot",
       "manifest": "vyre-aot/Cargo.toml",
       "feature_count": 2,
@@ -52,26 +63,16 @@
     {
       "name": "vyre-bench",
       "manifest": "vyre-bench/Cargo.toml",
-      "feature_count": 2,
+      "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [
         "cli"
       ],
       "features": [
         "cli",
-        "default"
+        "default",
+        "device-tests"
       ],
-      "malformed_features": [],
-      "unresolved_feature_members": [],
-      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
-    },
-    {
-      "name": "vyre-bench-competitors",
-      "manifest": "vyre-bench/competitors/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
-      "default_feature_members": [],
-      "features": [],
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
@@ -79,13 +80,14 @@
     {
       "name": "vyre-conform",
       "manifest": "conform/vyre-conform/Cargo.toml",
-      "feature_count": 2,
+      "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [
         "gpu"
       ],
       "features": [
         "default",
+        "device-tests",
         "gpu"
       ],
       "malformed_features": [],
@@ -117,12 +119,13 @@
     {
       "name": "vyre-driver",
       "manifest": "vyre-driver/Cargo.toml",
-      "feature_count": 2,
+      "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
         "default",
-        "self-substrate-adapters"
+        "libs-compositions",
+        "test-fixtures"
       ],
       "malformed_features": [],
       "unresolved_feature_members": [],
@@ -131,12 +134,13 @@
     {
       "name": "vyre-driver-cuda",
       "manifest": "vyre-driver-cuda/Cargo.toml",
-      "feature_count": 2,
+      "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
         "cuda",
-        "default"
+        "default",
+        "device-tests"
       ],
       "malformed_features": [],
       "unresolved_feature_members": [],
@@ -145,10 +149,13 @@
     {
       "name": "vyre-driver-metal",
       "manifest": "vyre-driver-metal/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
+      "feature_count": 2,
+      "has_default_feature": true,
       "default_feature_members": [],
-      "features": [],
+      "features": [
+        "default",
+        "device-tests"
+      ],
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
@@ -167,10 +174,14 @@
     {
       "name": "vyre-driver-spirv",
       "manifest": "vyre-driver-spirv/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
+      "feature_count": 3,
+      "has_default_feature": true,
       "default_feature_members": [],
-      "features": [],
+      "features": [
+        "default",
+        "device-tests",
+        "spirv-val"
+      ],
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
@@ -178,18 +189,12 @@
     {
       "name": "vyre-driver-wgpu",
       "manifest": "vyre-driver-wgpu/Cargo.toml",
-      "feature_count": 10,
+      "feature_count": 4,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
-        "c-parser",
         "default",
-        "matching-dfa",
-        "matching-nfa",
-        "matching-substring",
-        "math-linalg",
-        "math-scan",
-        "nn-attention",
+        "device-tests",
         "parity-testing",
         "wgpu"
       ],
@@ -270,28 +275,6 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
-      "name": "vyre-frontend-c",
-      "manifest": "vyre-frontend-c/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
-      "default_feature_members": [],
-      "features": [],
-      "malformed_features": [],
-      "unresolved_feature_members": [],
-      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
-    },
-    {
-      "name": "vyre-frontend-rust",
-      "manifest": "vyre-frontend-rust/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
-      "default_feature_members": [],
-      "features": [],
-      "malformed_features": [],
-      "unresolved_feature_members": [],
-      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
-    },
-    {
       "name": "vyre-fuzz",
       "manifest": "fuzz/Cargo.toml",
       "feature_count": 0,
@@ -303,8 +286,8 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
-      "name": "vyre-grammar-gen",
-      "manifest": "vyre-grammar-gen/Cargo.toml",
+      "name": "vyre-graphics-app",
+      "manifest": "consumers/vyre-graphics-app/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -314,80 +297,490 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
-      "name": "vyre-intrinsics",
-      "manifest": "vyre-intrinsics/Cargo.toml",
-      "feature_count": 4,
+      "name": "vyre-libs",
+      "manifest": "vyre-libs/Cargo.toml",
+      "feature_count": 64,
       "has_default_feature": true,
       "default_feature_members": [
-        "all",
-        "subgroup-ops"
+        "math-linalg",
+        "math-scan",
+        "math-broadcast",
+        "nn-activation",
+        "nn-linear",
+        "nn-norm",
+        "pattern-substring",
+        "pattern-dfa",
+        "hash",
+        "decode"
       ],
       "features": [
-        "all",
+        "analysis",
+        "bitset",
+        "builder",
+        "builder-ops",
+        "cat-a-builder-options",
+        "crypto",
+        "crypto-blake3",
+        "decode",
         "default",
-        "hardware",
-        "subgroup-ops"
+        "device",
+        "encoding",
+        "fixpoint",
+        "full",
+        "geom",
+        "go-parser",
+        "graph",
+        "graph-dispatch",
+        "hash",
+        "interactive-graphics",
+        "label",
+        "llm",
+        "logical",
+        "math",
+        "math-algebra",
+        "math-broadcast",
+        "math-dialect",
+        "math-kernels",
+        "math-linalg",
+        "math-scan",
+        "math-succinct",
+        "nfa",
+        "nn",
+        "nn-activation",
+        "nn-attention",
+        "nn-inference",
+        "nn-kernels",
+        "nn-linear",
+        "nn-linear-4bit",
+        "nn-moe",
+        "nn-norm",
+        "opt",
+        "parsing",
+        "parsing-kernels",
+        "pattern",
+        "pattern-dfa",
+        "pattern-kernels",
+        "pattern-nfa",
+        "pattern-regex",
+        "pattern-substring",
+        "predicate",
+        "python-parser",
+        "reasoning",
+        "reduce",
+        "representation",
+        "rule",
+        "scheduling",
+        "security",
+        "solvers",
+        "telemetry",
+        "test-fixtures",
+        "text",
+        "topology",
+        "vfs",
+        "visual"
       ],
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
-      "name": "vyre-libs",
-      "manifest": "vyre-libs/Cargo.toml",
-      "feature_count": 39,
+      "name": "vyre-libs-analysis",
+      "manifest": "vyre-libs-analysis/Cargo.toml",
+      "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [
-        "math-linalg",
-        "math-scan",
-        "math-broadcast",
-        "nn-activation",
-        "nn-linear",
-        "nn-norm",
-        "matching-substring",
-        "matching-dfa",
-        "hash",
+        "analysis"
+      ],
+      "features": [
+        "analysis",
+        "default"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-bitset",
+      "manifest": "vyre-libs-bitset/Cargo.toml",
+      "feature_count": 4,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "bitset",
+        "logical"
+      ],
+      "features": [
+        "bitset",
+        "default",
+        "logical",
+        "test-fixtures"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-builder",
+      "manifest": "vyre-libs-builder/Cargo.toml",
+      "feature_count": 5,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "builder",
+        "builder-ops",
+        "cat-a-builder-options",
+        "telemetry"
+      ],
+      "features": [
+        "builder",
+        "builder-ops",
+        "cat-a-builder-options",
+        "default",
+        "telemetry"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-decode",
+      "manifest": "vyre-libs-decode/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [
         "decode"
       ],
       "features": [
-        "bench",
-        "c-parser",
-        "cpu-parity",
-        "crypto",
-        "crypto-blake3",
-        "crypto-fnv",
         "decode",
+        "default"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-device",
+      "manifest": "vyre-libs-device/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "device"
+      ],
+      "features": [
         "default",
-        "full",
-        "go-parser",
-        "hash",
-        "intern",
-        "logical",
-        "matching",
-        "matching-dfa",
-        "matching-nfa",
-        "matching-regex",
-        "matching-substring",
+        "device"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-encoding",
+      "manifest": "vyre-libs-encoding/Cargo.toml",
+      "feature_count": 3,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "encoding"
+      ],
+      "features": [
+        "default",
+        "encoding",
+        "nn-paging"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-fixpoint",
+      "manifest": "vyre-libs-fixpoint/Cargo.toml",
+      "feature_count": 3,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "fixpoint"
+      ],
+      "features": [
+        "default",
+        "fixpoint",
+        "test-fixtures"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-graph",
+      "manifest": "vyre-libs-graph/Cargo.toml",
+      "feature_count": 7,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "graph"
+      ],
+      "features": [
+        "default",
+        "dense-reachability",
+        "graph",
+        "graph-dispatch",
+        "impact-mask",
+        "interactive-graphics",
+        "topology"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-hash",
+      "manifest": "vyre-libs-hash/Cargo.toml",
+      "feature_count": 3,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "hash"
+      ],
+      "features": [
+        "crypto-blake3",
+        "default",
+        "hash"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-math",
+      "manifest": "vyre-libs-math/Cargo.toml",
+      "feature_count": 12,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "math",
+        "geom",
+        "opt",
+        "representation"
+      ],
+      "features": [
+        "default",
+        "geom",
         "math",
         "math-algebra",
         "math-broadcast",
+        "math-dialect",
+        "math-kernels",
         "math-linalg",
         "math-scan",
         "math-succinct",
+        "opt",
+        "representation"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-nn",
+      "manifest": "vyre-libs-nn/Cargo.toml",
+      "feature_count": 11,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "nn",
+        "nn-inference",
+        "llm"
+      ],
+      "features": [
+        "default",
+        "llm",
         "nn",
         "nn-activation",
         "nn-attention",
         "nn-inference",
+        "nn-kernels",
         "nn-linear",
         "nn-linear-4bit",
         "nn-moe",
-        "nn-norm",
+        "nn-norm"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-parsing",
+      "manifest": "vyre-libs-parsing/Cargo.toml",
+      "feature_count": 5,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "parsing"
+      ],
+      "features": [
+        "default",
+        "go-parser",
         "parsing",
-        "python-parser",
-        "rule",
-        "security",
-        "test-fixtures",
-        "text",
+        "parsing-kernels",
+        "python-parser"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-pattern",
+      "manifest": "vyre-libs-pattern/Cargo.toml",
+      "feature_count": 8,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "pattern"
+      ],
+      "features": [
+        "default",
+        "nfa",
+        "pattern",
+        "pattern-dfa",
+        "pattern-kernels",
+        "pattern-nfa",
+        "pattern-regex",
+        "pattern-substring"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-reasoning",
+      "manifest": "vyre-libs-reasoning/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "reasoning"
+      ],
+      "features": [
+        "default",
+        "reasoning"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-reduce",
+      "manifest": "vyre-libs-reduce/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "reduce"
+      ],
+      "features": [
+        "default",
+        "reduce"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-rule",
+      "manifest": "vyre-libs-rule/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "rule"
+      ],
+      "features": [
+        "default",
+        "rule"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-scheduling",
+      "manifest": "vyre-libs-scheduling/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "scheduling"
+      ],
+      "features": [
+        "default",
+        "scheduling"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-security",
+      "manifest": "vyre-libs-security/Cargo.toml",
+      "feature_count": 4,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "security"
+      ],
+      "features": [
+        "default",
+        "label",
+        "predicate",
+        "security"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-solvers",
+      "manifest": "vyre-libs-solvers/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "solvers"
+      ],
+      "features": [
+        "default",
+        "solvers"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-text",
+      "manifest": "vyre-libs-text/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "text"
+      ],
+      "features": [
+        "default",
+        "text"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-vfs",
+      "manifest": "vyre-libs-vfs/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "vfs"
+      ],
+      "features": [
+        "default",
+        "vfs"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-libs-visual",
+      "manifest": "vyre-libs-visual/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "visual"
+      ],
+      "features": [
+        "default",
         "visual"
       ],
       "malformed_features": [],
@@ -408,10 +801,13 @@
     {
       "name": "vyre-lower",
       "manifest": "vyre-lower/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
+      "feature_count": 2,
+      "has_default_feature": true,
       "default_feature_members": [],
-      "features": [],
+      "features": [
+        "default",
+        "test-fixtures"
+      ],
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
@@ -439,41 +835,46 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
+      "name": "vyre-model-compiler",
+      "manifest": "consumers/vyre-model-compiler/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "vyre-pass-engine",
+      "manifest": "vyre-pass-engine/Cargo.toml",
+      "feature_count": 3,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "optimizer"
+      ],
+      "features": [
+        "all-solvers",
+        "default",
+        "optimizer"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
       "name": "vyre-primitives",
       "manifest": "vyre-primitives/Cargo.toml",
-      "feature_count": 29,
+      "feature_count": 6,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
-        "all-lego",
-        "bitset",
-        "cat",
         "cpu-parity",
-        "decode",
         "default",
-        "dnnf",
-        "effects",
-        "fixpoint",
-        "geom",
         "gpu",
-        "graph",
-        "hash",
+        "hardware",
         "inventory-registry",
-        "label",
-        "matching",
-        "math",
-        "nfa",
-        "nn",
-        "opt",
-        "parsing",
-        "predicate",
-        "reduce",
-        "text",
-        "topology",
-        "types",
-        "visual",
-        "vyre-foundation",
-        "zx"
+        "vyre-foundation"
       ],
       "malformed_features": [],
       "unresolved_feature_members": [],
@@ -496,6 +897,31 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
+      "name": "vyre-registry-link",
+      "manifest": "vyre-registry-link/Cargo.toml",
+      "feature_count": 7,
+      "has_default_feature": true,
+      "default_feature_members": [
+        "operations",
+        "cuda",
+        "metal",
+        "spirv",
+        "wgpu"
+      ],
+      "features": [
+        "cuda",
+        "default",
+        "device-tests",
+        "metal",
+        "operations",
+        "spirv",
+        "wgpu"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
       "name": "vyre-runtime",
       "manifest": "vyre-runtime/Cargo.toml",
       "feature_count": 6,
@@ -503,9 +929,9 @@
       "default_feature_members": [],
       "features": [
         "default",
+        "libs-compositions",
         "megakernel-batch",
         "remote-cache",
-        "self-substrate-adapters",
         "subgroup-ops",
         "uring-cmd-nvme"
       ],
@@ -525,31 +951,6 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
-      "name": "vyre-self-substrate",
-      "manifest": "vyre-self-substrate/Cargo.toml",
-      "feature_count": 11,
-      "has_default_feature": true,
-      "default_feature_members": [
-        "optimizer"
-      ],
-      "features": [
-        "all-solvers",
-        "analysis",
-        "cpu-parity",
-        "data",
-        "default",
-        "graph-solvers",
-        "logic",
-        "math-solvers",
-        "optimizer",
-        "scheduling",
-        "telemetry"
-      ],
-      "malformed_features": [],
-      "unresolved_feature_members": [],
-      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
-    },
-    {
       "name": "vyre-spec",
       "manifest": "vyre-spec/Cargo.toml",
       "feature_count": 0,
@@ -563,6 +964,42 @@
     {
       "name": "vyre-test-support",
       "manifest": "vyre-test-support/Cargo.toml",
+      "feature_count": 10,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "default",
+        "driver-artifact-contracts",
+        "driver-contracts",
+        "golden-corpus",
+        "host-input-abi",
+        "ir-fixtures",
+        "parity-oracles",
+        "semantic-parity",
+        "semantic-requests",
+        "spec-strategies"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "xtask",
+      "manifest": "xtask/Cargo.toml",
+      "feature_count": 2,
+      "has_default_feature": true,
+      "default_feature_members": [],
+      "features": [
+        "default",
+        "public-api-tool"
+      ],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
+      "name": "xtask-evidence",
+      "manifest": "xtask-evidence/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -572,8 +1009,8 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
-      "name": "xtask",
-      "manifest": "xtask/Cargo.toml",
+      "name": "xtask-registry",
+      "manifest": "xtask-registry/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],

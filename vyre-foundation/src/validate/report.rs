@@ -42,6 +42,7 @@ pub(crate) fn warn(
         .with_location(location.diagnostic_location())
         .with_fix(fix)
         .with_cause(
+            super::ValidationPhase::Type.cause_kind(),
             super::ValidationPhase::Type.as_str(),
             "non-fatal validation rule",
         )

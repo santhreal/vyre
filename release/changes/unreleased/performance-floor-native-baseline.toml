@@ -1,0 +1,2 @@
+category = "Added"
+text = "The benchmark harness validates generic IR and schedule search provenance, enforces 14-dimension equality conditions against version-pinned expert-written native baselines, and evaluates per-cell floor verdicts across representative graph pipelines and adversarial regions."

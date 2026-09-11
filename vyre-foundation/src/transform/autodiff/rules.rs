@@ -358,6 +358,8 @@ pub fn unop_adjoint(
         | UnOp::Unpack4High
         | UnOp::Unpack8Low
         | UnOp::Unpack8High
+        | UnOp::BitcastF32ToU32
+        | UnOp::BitcastU32ToF32
         | UnOp::Opaque(_)
         | _ => {
             return Err(AutodiffError::NotDifferentiable {

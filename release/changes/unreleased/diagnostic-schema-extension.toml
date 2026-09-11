@@ -1,0 +1,2 @@
+category = "Added"
+text = "The shared diagnostic protocol now models stable codes, compiler levels, typed spans/paths, artifact/target/device identities, bounded context key-values, and structured cause chains across compiler boundaries without string-lossy conversion."

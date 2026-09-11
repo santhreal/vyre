@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The reviewed workspace roster no longer lists `vyre-frontend-rust`, which left the workspace when the Rust frontend became its own product. The frontend owner table keeps its rust row on purpose: the owner ships outside this workspace, so no member matches it and any workspace crate that grows rust frontend stages is a second frontend."

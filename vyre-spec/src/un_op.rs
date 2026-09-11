@@ -7,7 +7,8 @@
 // Asin=0x1A, Atan=0x1B, Tanh=0x1C, Sinh=0x1D, Cosh=0x1E,
 // InverseSqrt=0x1F, Unpack4Low=0x20, Unpack4High=0x21,
 // Unpack8Low=0x22, Unpack8High=0x23, Reciprocal=0x24,
-// 0x25..=0x7F reserved, Opaque=0x80.
+// BitcastF32ToU32=0x25, BitcastU32ToF32=0x26,
+// 0x27..=0x7F reserved, Opaque=0x80.
 //
 // Rotate ops are *binary* (operand + count), so they live on `BinOp`
 // alongside `Shl`/`Shr`. See `vyre-spec::BinOp::RotateRight/RotateLeft`.
@@ -93,6 +94,15 @@ pub enum UnOp {
     Unpack8High,
     /// Reciprocal (f32).
     Reciprocal,
+    /// Reinterpret the 32 bits of an f32 as a u32, with no rounding.
+    ///
+    /// Every bit pattern is preserved exactly, including both zeros, both
+    /// infinities and every NaN payload.
+    BitcastF32ToU32,
+    /// Reinterpret the 32 bits of a u32 as an f32, with no rounding.
+    ///
+    /// Inverse of [`UnOp::BitcastF32ToU32`] on every one of the 2^32 words.
+    BitcastU32ToF32,
     /// Extension-declared unary operator.
     ///
     /// The `ExtensionUnOpId` resolves through the foundation extension registry
@@ -138,4 +148,6 @@ impl_builtin_wire_tag!(UnOp, Opaque, {
     Unpack8Low => 0x22,
     Unpack8High => 0x23,
     Reciprocal => 0x24,
+    BitcastF32ToU32 => 0x25,
+    BitcastU32ToF32 => 0x26,
 });

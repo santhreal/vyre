@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "xtask gates ignored any word it did not recognise, so `--gate <name>` looked like it ran one gate and ran the entire registry instead. Unknown words are now rejected with the usage text."

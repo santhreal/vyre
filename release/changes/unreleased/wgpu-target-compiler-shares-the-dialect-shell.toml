@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The WGPU target compiler is declared as a `vyre_driver::target_dialect::TargetDialect` value instead of a hand-written implementation. The shell it duplicated (the compiler struct, the profile constructor, the factory, and a local word-comparison helper) is gone; what remains is the dialect record and the WGSL module emitter, so the device limits and payload format a backend reports are stated once in the same place every other backend states them."

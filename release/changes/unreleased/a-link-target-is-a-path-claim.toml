@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "docs-references now resolves markdown link targets, so a page reached by a link is held to a published path the same way a code span is."

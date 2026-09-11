@@ -3,20 +3,14 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    failure, Artifact, ArtifactNodeId, ArtifactValueId, CompileError, CompilerFailureKind, Digest,
+    allocation::DeviceSlot, failure, frame, frame::Frame, Artifact, ArtifactNodeId,
+    ArtifactValueId, CompileError, CompilerFailureKind, Digest,
 };
 
 /// Current schema for the artifact envelope that carries neutral data and target payloads.
 pub const ARTIFACT_ENVELOPE_SCHEMA_VERSION: u16 = 2;
 /// Current schema for one target payload attachment.
-pub const TARGET_PAYLOAD_SCHEMA_VERSION: u16 = 3;
-
-const ENVELOPE_MAGIC: &[u8; 4] = b"VME0";
-const TARGET_PAYLOAD_MAGIC: &[u8; 4] = b"VTP0";
-const FRAME_HEADER_BYTES: usize = 10;
-const DIGEST_BYTES: usize = 32;
-const ENVELOPE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-envelope-v2\0";
-const TARGET_PAYLOAD_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-target-payload-v3\0";
+pub const TARGET_PAYLOAD_SCHEMA_VERSION: u16 = 4;
 
 /// Versioned identity of target bytes without assigning concrete target semantics.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -234,6 +228,7 @@ pub struct TargetEntryPoint {
 #[serde(deny_unknown_fields)]
 struct TargetPayloadBody {
     schema_version: u16,
+    device: DeviceSlot,
     neutral_artifact: Digest,
     format: TargetPayloadFormat,
     profile: TargetProfile,
@@ -274,14 +269,38 @@ impl TargetPayload {
         validate_entries(neutral, &profile, &entries)?;
         let body = TargetPayloadBody {
             schema_version: TARGET_PAYLOAD_SCHEMA_VERSION,
+            device: neutral.topology().anchor,
             neutral_artifact: neutral.digest(),
             format,
             profile,
             entries,
             bytes,
         };
-        let digest = body_digest(TARGET_PAYLOAD_DIGEST_DOMAIN, &body)?;
+        let digest = body_digest(&frame::TARGET_PAYLOAD, &body)?;
         Ok(Self { body, digest })
+    }
+
+    /// The same payload bound to another device of the same mesh.
+    ///
+    /// A mesh placement submits one payload per device. The bytes and entries are
+    /// what the target compiler emitted for the format; the device states which
+    /// member of the mesh runs them, and it participates in the payload identity
+    /// so a payload cannot be submitted to a device it was not bound to.
+    ///
+    /// # Errors
+    ///
+    /// Returns when the rebound payload cannot be serialized.
+    pub fn for_device(&self, device: DeviceSlot) -> Result<Self, CompileError> {
+        let mut body = self.body.clone();
+        body.device = device;
+        let digest = body_digest(&frame::TARGET_PAYLOAD, &body)?;
+        Ok(Self { body, digest })
+    }
+
+    /// Mesh device this payload is submitted to.
+    #[must_use]
+    pub const fn device(&self) -> DeviceSlot {
+        self.body.device
     }
 
     /// Target payload attachment schema.
@@ -328,26 +347,16 @@ impl TargetPayload {
 
     /// Encode this authenticated target payload.
     pub fn to_bytes(&self) -> Result<Vec<u8>, CompileError> {
-        encode_frame(
-            TARGET_PAYLOAD_MAGIC,
-            self.body.schema_version,
-            TARGET_PAYLOAD_DIGEST_DOMAIN,
-            &self.body,
-        )
+        let body = serde_json::to_vec(&self.body).map_err(serialization_failure)?;
+        Ok(frame::TARGET_PAYLOAD
+            .encode(self.body.schema_version, &body)?
+            .bytes)
     }
 
     /// Decode and authenticate one target payload attachment.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, CompileError> {
-        let (version, body, encoded_digest) = decode_frame(
-            bytes,
-            TARGET_PAYLOAD_MAGIC,
-            TARGET_PAYLOAD_SCHEMA_VERSION,
-            TARGET_PAYLOAD_DIGEST_DOMAIN,
-            "target_payload",
-            CompilerFailureKind::TargetPayloadVersionSkew,
-            CompilerFailureKind::TargetPayloadDigestMismatch,
-        )?;
-        let body: TargetPayloadBody = serde_json::from_slice(body).map_err(|error| {
+        let decoded = frame::TARGET_PAYLOAD.decode(bytes)?;
+        let body: TargetPayloadBody = serde_json::from_slice(decoded.body).map_err(|error| {
             failure(
                 CompilerFailureKind::MalformedTargetPayload,
                 "target_payload.body",
@@ -355,7 +364,7 @@ impl TargetPayload {
                 "supply canonical target payload bytes emitted by this crate",
             )
         })?;
-        if body.schema_version != version {
+        if body.schema_version != decoded.version {
             return Err(failure(
                 CompilerFailureKind::TargetPayloadVersionSkew,
                 "target_payload.body.schema_version",
@@ -364,8 +373,7 @@ impl TargetPayload {
             ));
         }
         let canonical = serde_json::to_vec(&body).map_err(serialization_failure)?;
-        if canonical.as_slice() != &bytes[FRAME_HEADER_BYTES..FRAME_HEADER_BYTES + canonical.len()]
-        {
+        if canonical.as_slice() != decoded.body {
             return Err(failure(
                 CompilerFailureKind::MalformedTargetPayload,
                 "target_payload.body",
@@ -375,7 +383,7 @@ impl TargetPayload {
         }
         Ok(Self {
             body,
-            digest: Digest(encoded_digest),
+            digest: Digest(decoded.digest),
         })
     }
 }
@@ -420,39 +428,72 @@ impl ArtifactEnvelope {
     /// Attach a validated target payload to its exact neutral artifact.
     pub fn attach_target_payload(&mut self, payload: TargetPayload) -> Result<(), CompileError> {
         validate_target_payload(&self.neutral, &payload)?;
-        if self
-            .target_payloads
-            .iter()
-            .any(|existing| existing.format() == payload.format())
-        {
+        if self.target_payloads.iter().any(|existing| {
+            existing.format() == payload.format() && existing.device() == payload.device()
+        }) {
             return Err(failure(
                 CompilerFailureKind::MalformedTargetPayload,
                 "envelope.target_payloads",
                 format!(
-                    "duplicate target payload format {} version {}",
+                    "duplicate target payload format {} version {} for device {}",
                     payload.format().identity(),
-                    payload.format().version()
+                    payload.format().version(),
+                    payload.device().0
                 ),
-                "attach at most one payload for each exact format identity and version",
+                "attach at most one payload for each format identity, version, and device",
             ));
         }
         self.target_payloads.push(payload);
-        self.target_payloads
-            .sort_by(|left, right| left.format().cmp(right.format()));
+        self.target_payloads.sort_by(|left, right| {
+            left.format()
+                .cmp(right.format())
+                .then(left.device().cmp(&right.device()))
+        });
         Ok(())
     }
 
-    /// Return the canonical index of the payload compatible with one exact format.
+    /// Device every single-device submission of this artifact uses.
+    #[must_use]
+    fn anchor_device(&self) -> DeviceSlot {
+        self.neutral.topology().anchor
+    }
+
+    /// Return the canonical index of the anchor-device payload for one exact format.
     pub fn require_target_payload_index(
         &self,
         required: &TargetPayloadFormat,
     ) -> Result<usize, CompileError> {
+        self.require_target_payload_index_for_device(required, self.anchor_device())
+    }
+
+    /// Return the canonical index of the payload one mesh device submits for an exact format.
+    pub fn require_target_payload_index_for_device(
+        &self,
+        required: &TargetPayloadFormat,
+        device: DeviceSlot,
+    ) -> Result<usize, CompileError> {
         if let Some(index) = self
             .target_payloads
             .iter()
-            .position(|payload| payload.format() == required)
+            .position(|payload| payload.format() == required && payload.device() == device)
         {
             return Ok(index);
+        }
+        if self
+            .target_payloads
+            .iter()
+            .any(|payload| payload.format() == required)
+        {
+            return Err(failure(
+                CompilerFailureKind::IncompatibleTargetPayload,
+                "envelope.target_payloads.device",
+                format!(
+                    "format {} carries no payload for device {}",
+                    required.identity(),
+                    device.0
+                ),
+                "attach one payload for every device the artifact topology places work on",
+            ));
         }
         if let Some(payload) = self
             .target_payloads
@@ -482,12 +523,21 @@ impl ArtifactEnvelope {
         ))
     }
 
-    /// Return the payload compatible with one exact format identity and version.
+    /// Return the anchor-device payload for one exact format identity and version.
     pub fn require_target_payload(
         &self,
         required: &TargetPayloadFormat,
     ) -> Result<&TargetPayload, CompileError> {
-        let index = self.require_target_payload_index(required)?;
+        self.require_target_payload_for_device(required, self.anchor_device())
+    }
+
+    /// Return the payload one mesh device submits for an exact format identity and version.
+    pub fn require_target_payload_for_device(
+        &self,
+        required: &TargetPayloadFormat,
+        device: DeviceSlot,
+    ) -> Result<&TargetPayload, CompileError> {
+        let index = self.require_target_payload_index_for_device(required, device)?;
         self.target_payloads.get(index).ok_or_else(|| {
             failure(
                 CompilerFailureKind::MalformedArtifact,
@@ -496,6 +546,40 @@ impl ArtifactEnvelope {
                 "discard the artifact and regenerate its canonical envelope",
             )
         })
+    }
+
+    /// Reject an attachment set that leaves one mesh device without its payload.
+    ///
+    /// A submission runs every device the topology places work on, so a format
+    /// attached for one device and missing for another cannot be submitted at all.
+    fn validate_device_coverage(&self) -> Result<(), CompileError> {
+        let devices = self.neutral.topology().submission_devices();
+        for payload in &self.target_payloads {
+            for device in &devices {
+                if !self
+                    .target_payloads
+                    .iter()
+                    .any(|other| other.format() == payload.format() && other.device() == *device)
+                {
+                    return Err(failure(
+                        CompilerFailureKind::IncompatibleTargetPayload,
+                        "envelope.target_payloads.device",
+                        format!(
+                            "target payload format {} covers {} of {} topology device(s); device {} is absent",
+                            payload.format().identity(),
+                            self.target_payloads
+                                .iter()
+                                .filter(|other| other.format() == payload.format())
+                                .count(),
+                            devices.len(),
+                            device.0
+                        ),
+                        "attach one payload per topology device for every attached format",
+                    ));
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Encode the complete authenticated artifact envelope.
@@ -509,26 +593,16 @@ impl ArtifactEnvelope {
                 .map(TargetPayload::to_bytes)
                 .collect::<Result<_, _>>()?,
         };
-        encode_frame(
-            ENVELOPE_MAGIC,
-            body.schema_version,
-            ENVELOPE_DIGEST_DOMAIN,
-            &body,
-        )
+        let body = serde_json::to_vec(&body).map_err(serialization_failure)?;
+        Ok(frame::ENVELOPE
+            .encode(ARTIFACT_ENVELOPE_SCHEMA_VERSION, &body)?
+            .bytes)
     }
 
     /// Decode, authenticate, and validate a complete artifact envelope.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, CompileError> {
-        let (version, body, _) = decode_frame(
-            bytes,
-            ENVELOPE_MAGIC,
-            ARTIFACT_ENVELOPE_SCHEMA_VERSION,
-            ENVELOPE_DIGEST_DOMAIN,
-            "envelope",
-            CompilerFailureKind::VersionSkew,
-            CompilerFailureKind::DigestMismatch,
-        )?;
-        let body: EnvelopeBody = serde_json::from_slice(body).map_err(|error| {
+        let decoded = frame::ENVELOPE.decode(bytes)?;
+        let body: EnvelopeBody = serde_json::from_slice(decoded.body).map_err(|error| {
             failure(
                 CompilerFailureKind::MalformedArtifact,
                 "envelope.body",
@@ -536,7 +610,7 @@ impl ArtifactEnvelope {
                 "supply canonical envelope bytes emitted by this crate",
             )
         })?;
-        if body.schema_version != version {
+        if body.schema_version != decoded.version {
             return Err(failure(
                 CompilerFailureKind::VersionSkew,
                 "envelope.body.schema_version",
@@ -545,8 +619,7 @@ impl ArtifactEnvelope {
             ));
         }
         let canonical = serde_json::to_vec(&body).map_err(serialization_failure)?;
-        if canonical.as_slice() != &bytes[FRAME_HEADER_BYTES..FRAME_HEADER_BYTES + canonical.len()]
-        {
+        if canonical.as_slice() != decoded.body {
             return Err(failure(
                 CompilerFailureKind::MalformedArtifact,
                 "envelope.body",
@@ -559,6 +632,7 @@ impl ArtifactEnvelope {
         for payload_bytes in body.target_payloads {
             envelope.attach_target_payload(TargetPayload::from_bytes(&payload_bytes)?)?;
         }
+        envelope.validate_device_coverage()?;
         Ok(envelope)
     }
 }
@@ -587,8 +661,23 @@ fn validate_target_payload(
             "discard the payload and materialize bytes from this exact neutral artifact",
         ));
     }
+    if !neutral
+        .topology()
+        .submission_devices()
+        .contains(&payload.device())
+    {
+        return Err(failure(
+            CompilerFailureKind::IncompatibleTargetPayload,
+            "target_payload.device",
+            format!(
+                "target payload names device {}, which this artifact is not submitted to",
+                payload.device().0
+            ),
+            "bind the payload to one of the devices this artifact is submitted to",
+        ));
+    }
     validate_entries(neutral, payload.profile(), payload.entries())?;
-    let digest = body_digest(TARGET_PAYLOAD_DIGEST_DOMAIN, &payload.body)?;
+    let digest = body_digest(&frame::TARGET_PAYLOAD, &payload.body)?;
     if digest != payload.digest() {
         return Err(failure(
             CompilerFailureKind::TargetPayloadDigestMismatch,
@@ -613,7 +702,12 @@ fn validate_entries(
             "associate at least one payload entry with a canonical neutral node",
         ));
     }
-    let mut names = BTreeSet::new();
+    // Entry identity is the canonical node. The symbol name is scoped to the
+    // module image that defines it, and every fusion group emits its own image
+    // with its own entry symbol, so two groups both naming their entry `main` is
+    // correct. Requiring the names to be unique across the payload rejected every
+    // artifact with more than one fusion group.
+    let mut nodes = BTreeSet::new();
     for (entry_index, entry) in entries.iter().enumerate() {
         let path = format!("target_payload.entries[{entry_index}]");
         if entry.name.is_empty() {
@@ -624,12 +718,12 @@ fn validate_entries(
                 "supply the emitted entry symbol name",
             ));
         }
-        if !names.insert(entry.name.as_str()) {
+        if !nodes.insert(entry.node) {
             return Err(failure(
                 CompilerFailureKind::MalformedTargetPayload,
-                format!("{path}.name"),
-                format!("duplicate target entry name {}", entry.name),
-                "supply each target entry name exactly once",
+                format!("{path}.node"),
+                format!("duplicate target entry for node {}", entry.node.0),
+                "associate each canonical neutral node with exactly one payload entry",
             ));
         }
         if !neutral.nodes().iter().any(|node| node.id == entry.node) {
@@ -640,30 +734,50 @@ fn validate_entries(
                 "associate the target entry with a canonical neutral node identity",
             ));
         }
-        if !neutral
+        let recorded = neutral
             .geometry()
             .iter()
-            .any(|geometry| geometry.node == entry.node)
-        {
-            return Err(failure(
-                CompilerFailureKind::TargetPayloadAssociationMismatch,
-                format!("{path}.node"),
-                "target entry node has no canonical neutral geometry record",
-                "compile a complete neutral artifact before attaching target bytes",
-            ));
-        }
-        for (field, geometry) in [
-            ("workgroup_size", entry.workgroup_size),
-            ("grid_size", entry.grid_size),
+            .find(|geometry| geometry.node == entry.node)
+            .ok_or_else(|| {
+                failure(
+                    CompilerFailureKind::TargetPayloadAssociationMismatch,
+                    format!("{path}.node"),
+                    "target entry node has no canonical neutral geometry record",
+                    "compile a complete neutral artifact before attaching target bytes",
+                )
+            })?;
+        // The neutral record is the selected schedule projected onto one launch.
+        // A payload that carried its own geometry could differ from it, and the
+        // difference is a kernel launched at a shape nothing compiled.
+        for (field, emitted, selected) in [
+            (
+                "workgroup_size",
+                entry.workgroup_size,
+                recorded.workgroup_size,
+            ),
+            ("grid_size", entry.grid_size, recorded.grid),
         ] {
-            if let Some(axis) = geometry.iter().position(|extent| *extent == 0) {
+            if emitted != selected {
                 return Err(failure(
-                    CompilerFailureKind::MalformedTargetPayload,
-                    format!("{path}.{field}[{axis}]"),
-                    "target entry geometry extent is zero",
-                    "materialize explicit positive target geometry",
+                    CompilerFailureKind::TargetPayloadAssociationMismatch,
+                    format!("{path}.{field}"),
+                    format!(
+                        "target entry states {emitted:?} and the artifact selected {selected:?}"
+                    ),
+                    "attach the geometry the neutral artifact recorded",
                 ));
             }
+        }
+        if entry.dynamic_shared_bytes != recorded.dynamic_shared_bytes {
+            return Err(failure(
+                CompilerFailureKind::TargetPayloadAssociationMismatch,
+                format!("{path}.dynamic_shared_bytes"),
+                format!(
+                    "target entry states {} shared bytes and the artifact selected {}",
+                    entry.dynamic_shared_bytes, recorded.dynamic_shared_bytes
+                ),
+                "attach the shared-memory requirement the neutral artifact recorded",
+            ));
         }
         let limits = profile.max_workgroup_size();
         if let Some(axis) = entry
@@ -718,7 +832,6 @@ fn validate_entries(
             ));
         }
         let mut slots = BTreeSet::new();
-        let mut resources = BTreeSet::new();
         for (binding_index, binding) in entry.resource_bindings.iter().enumerate() {
             let binding_path = format!("{path}.resource_bindings[{binding_index}]");
             if !slots.insert((binding.group, binding.slot)) {
@@ -730,17 +843,6 @@ fn validate_entries(
                         binding.group, binding.slot
                     ),
                     "associate each target binding group/slot exactly once",
-                ));
-            }
-            if !resources.insert(binding.resource) {
-                return Err(failure(
-                    CompilerFailureKind::MalformedTargetPayload,
-                    format!("{binding_path}.resource"),
-                    format!(
-                        "canonical resource {} is bound more than once",
-                        binding.resource.0
-                    ),
-                    "associate each canonical resource with at most one entry binding",
                 ));
             }
             if !neutral
@@ -760,120 +862,9 @@ fn validate_entries(
     Ok(())
 }
 
-fn encode_frame<T: Serialize>(
-    magic: &[u8; 4],
-    version: u16,
-    domain: &[u8],
-    body: &T,
-) -> Result<Vec<u8>, CompileError> {
+fn body_digest<T: Serialize>(frame: &Frame, body: &T) -> Result<Digest, CompileError> {
     let body = serde_json::to_vec(body).map_err(serialization_failure)?;
-    let body_len = u32::try_from(body.len()).map_err(|_| {
-        failure(
-            CompilerFailureKind::MalformedArtifact,
-            "envelope.body",
-            "canonical body exceeds the u32 framing limit",
-            "reduce or detach target payload bytes",
-        )
-    })?;
-    let digest = digest_bytes(domain, version, &body);
-    let mut bytes = Vec::with_capacity(FRAME_HEADER_BYTES + body.len() + DIGEST_BYTES);
-    bytes.extend_from_slice(magic);
-    bytes.extend_from_slice(&version.to_le_bytes());
-    bytes.extend_from_slice(&body_len.to_le_bytes());
-    bytes.extend_from_slice(&body);
-    bytes.extend_from_slice(&digest);
-    Ok(bytes)
-}
-
-fn decode_frame<'a>(
-    bytes: &'a [u8],
-    magic: &[u8; 4],
-    expected_version: u16,
-    domain: &[u8],
-    path: &str,
-    version_code: CompilerFailureKind,
-    digest_code: CompilerFailureKind,
-) -> Result<(u16, &'a [u8], [u8; 32]), CompileError> {
-    if bytes.len() < FRAME_HEADER_BYTES + DIGEST_BYTES {
-        return Err(failure(
-            CompilerFailureKind::MalformedArtifact,
-            format!("{path}.header"),
-            "framed bytes are shorter than the fixed header and digest",
-            "supply one complete canonical frame",
-        ));
-    }
-    if &bytes[..4] != magic {
-        return Err(failure(
-            CompilerFailureKind::MalformedArtifact,
-            format!("{path}.magic"),
-            "framing magic is invalid",
-            "supply bytes emitted for the expected artifact layer",
-        ));
-    }
-    let version = u16::from_le_bytes([bytes[4], bytes[5]]);
-    if version != expected_version {
-        return Err(failure(
-            version_code,
-            format!("{path}.schema_version"),
-            format!("schema {version} is unsupported; expected {expected_version}"),
-            "recompile or re-materialize with a compatible schema version",
-        ));
-    }
-    let body_len = u32::from_le_bytes(bytes[6..10].try_into().expect("fixed frame slice")) as usize;
-    let expected_len = FRAME_HEADER_BYTES
-        .checked_add(body_len)
-        .and_then(|len| len.checked_add(DIGEST_BYTES))
-        .ok_or_else(|| {
-            failure(
-                CompilerFailureKind::MalformedArtifact,
-                format!("{path}.body_length"),
-                "framed body length overflowed addressable memory",
-                "supply bounded canonical artifact bytes",
-            )
-        })?;
-    if bytes.len() != expected_len {
-        return Err(failure(
-            CompilerFailureKind::MalformedArtifact,
-            format!("{path}.body_length"),
-            format!(
-                "framing declares {expected_len} bytes but received {}",
-                bytes.len()
-            ),
-            "supply exactly one complete canonical frame",
-        ));
-    }
-    let body = &bytes[FRAME_HEADER_BYTES..FRAME_HEADER_BYTES + body_len];
-    let expected_digest = digest_bytes(domain, version, body);
-    let encoded_digest: [u8; 32] = bytes[FRAME_HEADER_BYTES + body_len..]
-        .try_into()
-        .expect("validated digest length");
-    if expected_digest != encoded_digest {
-        return Err(failure(
-            digest_code,
-            format!("{path}.digest"),
-            "framed body does not match its content identity",
-            "discard the corrupted bytes and regenerate them",
-        ));
-    }
-    Ok((version, body, encoded_digest))
-}
-
-fn body_digest<T: Serialize>(domain: &[u8], body: &T) -> Result<Digest, CompileError> {
-    let body = serde_json::to_vec(body).map_err(serialization_failure)?;
-    Ok(Digest(digest_bytes(
-        domain,
-        TARGET_PAYLOAD_SCHEMA_VERSION,
-        &body,
-    )))
-}
-
-fn digest_bytes(domain: &[u8], version: u16, body: &[u8]) -> [u8; 32] {
-    let mut hasher = blake3::Hasher::new();
-    hasher.update(domain);
-    hasher.update(&version.to_le_bytes());
-    hasher.update(&(body.len() as u64).to_le_bytes());
-    hasher.update(body);
-    *hasher.finalize().as_bytes()
+    Ok(Digest(frame.digest(frame.version, &body)))
 }
 
 fn serialization_failure(error: serde_json::Error) -> CompileError {

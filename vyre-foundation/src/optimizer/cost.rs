@@ -39,14 +39,15 @@
 //! | `control_flow_count` | `ProgramStats::control_flow_count` | branches + loops (divergence-cost proxy) |
 //! | `register_pressure_estimate` | `ProgramStats::register_pressure_estimate` | concurrent live SSA-ish values (occupancy-cap proxy) |
 //! | `static_storage_bytes` | `ProgramStats::static_storage_bytes` | sum of statically-known buffer byte sizes |
-//! | `divergence_score` | local walker | count of `if invocation_id == K { ... }` patterns (warp-divergence proxy) |
+//! | `divergence_score` | local walker | count of `if invocation_id == K { ... }` patterns (subgroup-divergence proxy) |
 //!
 //! Capability bits are NOT compared  -  passes are allowed to add OR remove
 //! capability requirements; cost-direction is orthogonal.
 
 use super::is_invocation_id_eq_constant;
-use crate::ir::{Node, Program};
+use crate::ir::{Expr, Node, Program};
 use crate::optimizer::AdapterCaps;
+use crate::visit::{expr_children, for_each_descendant};
 
 /// A frozen snapshot of the cost dimensions tracked by the optimizer's
 /// monotone-down post-condition gate.
@@ -71,7 +72,7 @@ pub struct CostCertificate {
     /// Sum of statically-known buffer byte sizes.
     pub static_storage_bytes: u64,
     /// Count of `if invocation_id == K { ... }` patterns at any nesting
-    /// depth  -  warp-divergence proxy. Programs that lift divergent stores
+    /// depth  -  subgroup-divergence proxy. Programs that lift divergent stores
     /// out of an `if invocation_id == K` block reduce this dimension; programs
     /// that introduce one increase it.
     pub divergence_score: u64,
@@ -125,12 +126,20 @@ impl CostCertificate {
     }
 
     /// Compute a device-aware estimate from this certificate.
+    ///
+    /// The tile is an input: this projects the cost of a shape someone else
+    /// selected. It used to rank a tile against the adapter here, which made
+    /// every cost query a second selector answering a question
+    /// `vyre-megakernel` owns.
     #[must_use]
-    pub fn estimate_for_adapter(&self, caps: &AdapterCaps) -> DeviceCostEstimate {
+    pub fn estimate_for_adapter(
+        &self,
+        caps: &AdapterCaps,
+        workgroup_tile: [u32; 3],
+    ) -> DeviceCostEstimate {
         let policy = crate::execution_plan::SchedulingPolicy::standard();
         let vector_pack_bits = policy.select_vector_pack_bits(32, caps);
         let unroll_depth = policy.select_unroll_depth(None, caps);
-        let workgroup_tile = policy.select_workgroup_tile([1, 1, 1], None, caps);
         let vector_divisor = u64::from((vector_pack_bits / 32).max(1));
         let unroll_divisor = u64::from(unroll_depth.max(1));
         let tile_lanes = u64::from(
@@ -156,10 +165,10 @@ impl CostCertificate {
         }
     }
 
-    /// Compute a device-aware estimate for `program`.
+    /// Compute a device-aware estimate for `program` at its declared shape.
     #[must_use]
     pub fn for_program_on_adapter(program: &Program, caps: &AdapterCaps) -> DeviceCostEstimate {
-        Self::for_program(program).estimate_for_adapter(caps)
+        Self::for_program(program).estimate_for_adapter(caps, program.parallel_region_size())
     }
 
     /// Returns `true` when `self` is cost-monotone-down relative to `other`:
@@ -220,19 +229,52 @@ impl CostCertificate {
 
 /// Walk a node tree and add 1 to `score` for every `if invocation_id == K { ... }`
 /// pattern encountered, recursively. The shape `if invocation_id == K { ... }`
-/// (or `if K == invocation_id { ... }`) is the canonical warp-divergent
+/// (or `if K == invocation_id { ... }`) is the canonical subgroup-divergent
 /// pattern this dimension tracks. Other branchy patterns (e.g. `if x < y`) are
-/// not divergent in the same warp-cost sense and are NOT counted here  -  they
+/// not divergent in the same subgroup-cost sense and are NOT counted here  -  they
 /// land in `control_flow_count`, which is also tracked.
+///
+/// The descent is [`for_each_descendant`], the exhaustive owner, and not
+/// `any_descendant` with a predicate that always answers `false`: that spelling
+/// counts a prefix of the tree the moment somebody makes the predicate answer
+/// `true`, and a cost fold that silently stops early lets the scheduler land a
+/// rewrite that raised the dimension it was refusing to raise.
 fn count_divergent_patterns(node: &Node, score: &mut u64) {
-    let _ = crate::visit::node_map::any_descendant(node, &mut |n| {
-        if let Node::If { cond, .. } = n {
+    for_each_descendant(node, &mut |current| {
+        if let Node::If { cond, .. } = current {
             if is_invocation_id_eq_constant(cond) {
                 *score = score.saturating_add(1);
             }
         }
-        false
     });
+}
+
+/// True when recomputing `expr` at a use site costs no more than holding it in
+/// a named binding.
+///
+/// This is the ONE owner of the rematerialization cost question. It has no
+/// operand to re-evaluate, so one register holding a name and one register
+/// holding the same value cost the same, and dropping the name pays one fewer
+/// live binding without paying any extra arithmetic.
+///
+/// The operand count comes from [`expr_children`], the exhaustive owner of which
+/// expression variants contain other expressions, so a variant added tomorrow is
+/// classified by its shape instead of by a per-pass list that predates it. Three
+/// passes carried their own copy of the same twelve-name leaf list; they agreed,
+/// but nothing made them agree, and `rematerialize_cheap_let` dropping a binding
+/// that `fusion` still considers worth one is an oscillation between two passes
+/// in the same pipeline.
+///
+/// Two childless variants are excluded by name because "no operand" does not
+/// make them free: an `Expr::Opaque` payload is extension-defined and an
+/// argument-less `Expr::Call` runs an operation body, so duplicating either one
+/// duplicates work and may duplicate a side effect.
+#[must_use]
+pub fn is_rematerializable_leaf(expr: &Expr) -> bool {
+    match expr {
+        Expr::Opaque(_) | Expr::Call { .. } => false,
+        _ => expr_children(expr).iter().next().is_none(),
+    }
 }
 
 #[cfg(test)]
@@ -374,19 +416,26 @@ mod tests {
         );
     }
 
+    /// WHY: a projection reads device facts for vector width and unroll depth
+    /// and reads the tile from the program that declared it. A tile taken from
+    /// the adapter would make the estimate choose a shape, and choosing shapes
+    /// is one owner's job.
     #[test]
     fn device_profile_fields_change_cost_projection() {
-        let program = Program::wrapped(
+        let buffers = || {
             vec![
                 BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32)
                     .with_count(4096),
-            ],
-            [1, 1, 1],
+            ]
+        };
+        let body = || {
             vec![
                 Node::let_bind("x", Expr::load("buf", Expr::gid_x())),
                 Node::store("buf", Expr::gid_x(), Expr::var("x")),
-            ],
-        );
+            ]
+        };
+        let scalar_region = Program::wrapped(buffers(), [1, 1, 1], body());
+        let tiled_region = Program::wrapped(buffers(), [8, 4, 1], body());
         let compact = AdapterCaps {
             max_workgroup_size: [256, 256, 64],
             max_invocations_per_workgroup: 256,
@@ -402,102 +451,28 @@ mod tests {
             ..compact
         };
 
-        let compact_cost = CostCertificate::for_program_on_adapter(&program, &compact);
-        let wide_cost = CostCertificate::for_program_on_adapter(&program, &wide);
+        let compact_cost = CostCertificate::for_program_on_adapter(&scalar_region, &compact);
+        let wide_cost = CostCertificate::for_program_on_adapter(&scalar_region, &wide);
 
         assert_eq!(compact_cost.vector_pack_bits, 64);
         assert_eq!(wide_cost.vector_pack_bits, 128);
         assert_eq!(compact_cost.unroll_depth, 4);
         assert_eq!(wide_cost.unroll_depth, 8);
-        assert_eq!(compact_cost.workgroup_tile, [8, 8, 1]);
-        assert_eq!(wide_cost.workgroup_tile, [16, 16, 1]);
         assert!(
             wide_cost.score < compact_cost.score,
-            "Fix: wider profile vector/unroll/tile facts must lower the projected device cost"
-        );
-    }
-
-    #[test]
-
-    fn walker_matches_canonical_on_corpus() {
-        // Kept-inline private old walker for drift-prevention
-        fn count_divergent_patterns_old(node: &Node, score: &mut u64, visited: &mut Vec<Node>) {
-            let mut stack: smallvec::SmallVec<[&Node; 64]> = smallvec::SmallVec::new();
-            stack.push(node);
-            while let Some(node) = stack.pop() {
-                visited.push(node.clone());
-                match node {
-                    Node::If {
-                        cond,
-                        then,
-                        otherwise,
-                    } => {
-                        if super::is_invocation_id_eq_constant(cond) {
-                            *score = score.saturating_add(1);
-                        }
-                        stack.extend(otherwise.iter());
-                        stack.extend(then.iter());
-                    }
-                    Node::Loop { body, .. } | Node::Block(body) => {
-                        stack.extend(body.iter());
-                    }
-                    Node::Region { body, .. } => stack.extend(body.iter()),
-                    _ => {}
-                }
-            }
-        }
-
-        let inner = Node::if_then(
-            Expr::BinOp {
-                op: BinOp::Eq,
-                left: Box::new(Expr::gid_x()),
-                right: Box::new(Expr::u32(1)),
-            },
-            vec![Node::store("buf", Expr::u32(1), Expr::u32(7))],
-        );
-        let outer = Node::if_then(
-            Expr::BinOp {
-                op: BinOp::Eq,
-                left: Box::new(Expr::gid_x()),
-                right: Box::new(Expr::u32(0)),
-            },
-            vec![inner, Node::Block(vec![Node::Return])],
+            "Fix: wider profile vector and unroll facts must lower the projected device cost"
         );
 
-        let mut score_old = 0;
-        let mut visited_old = Vec::new();
-        count_divergent_patterns_old(&outer, &mut score_old, &mut visited_old);
-
-        let mut score_new = 0;
-        let mut visited_new = Vec::new();
-        let _ = crate::visit::node_map::any_descendant(&outer, &mut |n| {
-            visited_new.push(n.clone());
-            if let Node::If { cond, .. } = n {
-                if super::is_invocation_id_eq_constant(cond) {
-                    score_new += 1;
-                }
-            }
-            false
-        });
-
-        assert_eq!(score_old, score_new, "Divergence score mismatch");
-        assert_eq!(
-            visited_old.len(),
-            visited_new.len(),
-            "Node set length mismatch"
-        );
-
-        // Node-set (unordered) equivalence assertion
-        for node in &visited_old {
-            assert!(
-                visited_new.contains(node),
-                "Old walker visited a node that the new canonical walker missed"
+        for caps in [&compact, &wide] {
+            assert_eq!(
+                CostCertificate::for_program_on_adapter(&scalar_region, caps).workgroup_tile,
+                [1, 1, 1],
+                "Fix: the projected tile is the region the program declares, never the adapter's ideal tile"
             );
-        }
-        for node in &visited_new {
-            assert!(
-                visited_old.contains(node),
-                "New canonical walker visited a node that the old walker missed"
+            assert_eq!(
+                CostCertificate::for_program_on_adapter(&tiled_region, caps).workgroup_tile,
+                [8, 4, 1],
+                "Fix: the projected tile is the region the program declares, never the adapter's ideal tile"
             );
         }
     }

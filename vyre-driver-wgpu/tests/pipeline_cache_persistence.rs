@@ -1,10 +1,14 @@
 //! Cold-process compiled-pipeline persistence regression.
 
+#![cfg(feature = "device-tests")]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, Instant};
 
+use crate::harness;
+use harness::f32_to_ordered;
 use std::collections::BTreeMap;
 use tempfile::TempDir;
 use vyre_driver::{DispatchConfig, VyreBackend};
@@ -12,7 +16,9 @@ use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
 use vyre_foundation::ir::ProgramGraph;
 use vyre_foundation::operation::SemanticOperation;
-use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
+use vyre_megakernel::{
+    CompileObjective, CompileRequest, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
+};
 
 const HELPER_FLAG: &str = "VYRE_PIPELINE_CACHE_HELPER_OUT";
 const HELPER_CASE_ID: &str = "VYRE_PIPELINE_CACHE_HELPER_CASE";
@@ -38,17 +44,18 @@ fn compile_case(case: &SemanticOperation) -> (Duration, Vec<Vec<u8>>) {
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        backend.device_profile().compile_facts(),
         SearchBudget::new(128, 128, 0, 0, 128),
-        60_000,
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 60_000),
     )
     .validate()
     .expect("Fix: persistence regression compile request must validate");
-    let registration =
-        vyre_driver::backend::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
-            .expect("Fix: WGPU backend registration must be linked");
+    let registration = vyre_driver::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
+        .expect("Fix: WGPU backend registration must be linked");
     let compile_start = Instant::now();
-    let _session = vyre_runtime::ArtifactSession::compile(registration, &request)
-        .expect("Fix: persistence regression must materialize an authenticated WGPU artifact");
+    let _session =
+        vyre_runtime::artifact_admission::ArtifactSession::compile(registration, &request)
+            .expect("Fix: persistence regression must materialize an authenticated WGPU artifact");
     let compile_time = compile_start.elapsed();
     let output = backend
         .dispatch(&program, &input_case, &DispatchConfig::default())
@@ -62,14 +69,6 @@ fn compile_case(case: &SemanticOperation) -> (Duration, Vec<Vec<u8>>) {
         assert_outputs_within_tolerance(case.id, tolerance, &expected, &output);
     }
     (compile_time, output)
-}
-
-fn f32_to_ordered(bits: u32) -> u32 {
-    if (bits & 0x8000_0000) != 0 {
-        !bits
-    } else {
-        bits | 0x8000_0000
-    }
 }
 
 fn assert_outputs_within_tolerance(
@@ -167,9 +166,20 @@ fn read_helper_result(root: &Path) -> (Duration, Vec<Vec<u8>>) {
 }
 
 fn helper_case(case_id: &str) -> SemanticOperation {
-    vyre_libs::operation_catalog::all_entries()
+    vyre_libs::operation_catalog::library_entries()
         .find(|entry| entry.id == case_id)
         .unwrap_or_else(|| panic!("Fix: no harness fixture registered for `{case_id}`"))
+}
+
+/// libtest names a test by its module path inside the test binary, and
+/// `module_path!()` carries a leading crate segment that name does not. This
+/// crate builds one `all_tests` target with a module per file, so a bare
+/// function name matches no test at all: libtest then exits 0 having run
+/// nothing and the helper writes no result for the parent to read.
+fn helper_test_filter() -> String {
+    let module = module_path!();
+    let module = module.split_once("::").map_or(module, |(_, rest)| rest);
+    format!("{module}::compiled_pipeline_cache_helper_process")
 }
 
 fn run_helper(cache_root: &Path, output_root: &Path, case_id: &str) -> (Duration, Vec<Vec<u8>>) {
@@ -179,7 +189,7 @@ fn run_helper(cache_root: &Path, output_root: &Path, case_id: &str) -> (Duration
     let mut child =
         Command::new(std::env::current_exe().expect("Fix: test binary path must exist"))
             .arg("--exact")
-            .arg("compiled_pipeline_cache_helper_process")
+            .arg(helper_test_filter())
             .arg("--nocapture")
             .env(HELPER_FLAG, output_root)
             .env(HELPER_CASE_ID, case_id)

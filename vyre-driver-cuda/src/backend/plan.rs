@@ -1,9 +1,9 @@
 //! CUDA dispatch plan assembly helpers.
 
 use smallvec::SmallVec;
-use vyre_driver::binding::{Binding, BindingPlan};
 use vyre_driver::BackendError;
 use vyre_driver::LaunchPlan;
+use vyre_driver::{Binding, BindingPlan};
 
 use super::ordering::sort_unstable_by_key_if_needed;
 use super::staging_reserve::reserve_smallvec;
@@ -98,11 +98,13 @@ impl CudaDispatchPlan {
     }
 }
 
+// Inline: covers `CudaDispatchPlan`, `compute_ordered_output_indices`, which no integration test
+// can name.
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
-    use vyre_driver::binding::{Binding, BindingPlan, BindingRole};
+    use vyre_driver::{Binding, BindingPlan, BindingRole};
 
     use super::*;
 

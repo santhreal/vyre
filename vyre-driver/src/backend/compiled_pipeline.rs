@@ -1,7 +1,7 @@
 //! Backend executable-module dispatch contract.
 
 use crate::backend::{
-    private, BackendError, DispatchConfig, OutputBuffers, Resource, TimedDispatchResult,
+    sealed, BackendError, DispatchConfig, OutputBuffers, Resource, TimedDispatchResult,
 };
 
 /// A materialized backend executable ready for repeated dispatch.
@@ -9,16 +9,34 @@ use crate::backend::{
 /// Canonical artifact materializers construct concrete implementations after
 /// authenticating a target payload. Dispatch must remain bit-identical across
 /// host and resident bindings for the same artifact ABI.
-pub trait CompiledPipeline: private::Sealed + Send + Sync {
+pub trait CompiledPipeline: sealed::Sealed + Send + Sync {
     /// Stable identifier for this pipeline (typically `<backend>:<program-fingerprint>`).
     ///
     /// Used by certificates and debugging to confirm a particular cached
     /// pipeline was reused vs recompiled.
     fn id(&self) -> &str;
 
-    /// Dispatch the precompiled pipeline with new inputs.
+    /// Dispatch the precompiled pipeline with borrowed input buffers.
     ///
-    /// Bit-identical to `VyreBackend::dispatch(self.program, inputs, config)`.
+    /// This is the dispatch every backend implements, because a backend that can
+    /// bind caller memory must not be handed rows it has to own first. The owned
+    /// form below is the convenience over it.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError`] when the backend cannot complete dispatch.
+    /// The error message always includes a `Fix: ` remediation section.
+    fn dispatch_borrowed(
+        &self,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<Vec<Vec<u8>>, BackendError>;
+
+    /// Dispatch the precompiled pipeline with caller-owned input buffers.
+    ///
+    /// Bit-identical to [`CompiledPipeline::dispatch_borrowed`] over the same
+    /// bytes: the rows are borrowed, never copied. Both production backends wrote
+    /// this body themselves before it lived here.
     ///
     /// # Errors
     ///
@@ -28,29 +46,10 @@ pub trait CompiledPipeline: private::Sealed + Send + Sync {
         &self,
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError>;
-
-    /// Dispatch the precompiled pipeline with borrowed input buffers.
-    ///
-    /// Backends may override this to bind caller-owned byte slices directly.
-    /// The default allocates the owned input vector once, preserving the
-    /// existing [`CompiledPipeline::dispatch`] contract for current backends.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`BackendError`] when the backend cannot complete dispatch.
-    fn dispatch_borrowed(
-        &self,
-        inputs: &[&[u8]],
-        config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
-        let owned = crate::backend::clone_borrowed_inputs_for_dispatch(
-            inputs,
-            "compiled pipeline input staging",
-        )?;
-        let outputs = self.dispatch(&owned, config)?;
-        crate::observability::record_dispatch_io(inputs, &outputs);
-        Ok(outputs)
+        let borrowed =
+            crate::backend::borrowed_input_slices(inputs, "compiled pipeline input staging")?;
+        self.dispatch_borrowed(&borrowed, config)
     }
 
     /// Dispatch with backend-owned timing.
@@ -68,16 +67,10 @@ pub trait CompiledPipeline: private::Sealed + Send + Sync {
     ) -> Result<TimedDispatchResult, BackendError> {
         let started = std::time::Instant::now();
         let outputs = self.dispatch_borrowed(inputs, config)?;
-        Ok(TimedDispatchResult {
+        Ok(TimedDispatchResult::host_timed(
             outputs,
-            wall_ns: crate::backend::checked_elapsed_wall_ns(
-                started,
-                "compiled pipeline dispatch",
-            )?,
-            device_ns: None,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+            crate::backend::checked_elapsed_wall_ns(started, "compiled pipeline dispatch")?,
+        ))
     }
 
     /// Dispatch the precompiled pipeline with borrowed inputs and write
@@ -97,6 +90,7 @@ pub trait CompiledPipeline: private::Sealed + Send + Sync {
         outputs: &mut OutputBuffers,
     ) -> Result<(), BackendError> {
         let result = self.dispatch_borrowed(inputs, config)?;
+        crate::observability::record_dispatch_io(inputs, &result);
         let stats = crate::backend::replace_output_buffers_preserving_slots_with_memory_stats(
             result, outputs,
         );
@@ -192,16 +186,13 @@ pub trait CompiledPipeline: private::Sealed + Send + Sync {
     ) -> Result<TimedDispatchResult, BackendError> {
         let started = std::time::Instant::now();
         let outputs = self.dispatch_persistent_handles(inputs, config)?;
-        Ok(TimedDispatchResult {
+        Ok(TimedDispatchResult::host_timed(
             outputs,
-            wall_ns: crate::backend::checked_elapsed_wall_ns(
+            crate::backend::checked_elapsed_wall_ns(
                 started,
                 "compiled persistent handle dispatch",
             )?,
-            device_ns: None,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+        ))
     }
 
     /// Dispatch the precompiled pipeline with mixed host/resident handles and
@@ -303,6 +294,52 @@ pub trait CompiledPipeline: private::Sealed + Send + Sync {
         )?;
         for (batch, slot) in batches.iter().zip(outputs.iter_mut()) {
             self.dispatch_persistent_handles_into(batch, config, slot)?;
+        }
+        Ok(())
+    }
+
+    /// Dispatch several resident-handle submissions and report each item's
+    /// device duration.
+    ///
+    /// A backend that can submit the whole batch before awaiting any of it
+    /// overrides this. Item N's timing then starts when item N-1's work ends
+    /// while item N is already submitted, so what it reports is the item's
+    /// device time and not the host latency of submitting it. The default
+    /// dispatches each item through its own submit-and-wait, which charges
+    /// every item the launch latency of a stream that has nothing else on it.
+    ///
+    /// `device_ns_by_item` is replaced with one entry per batch item, in
+    /// submission order, holding `None` for an item whose backend exposes no
+    /// device timer.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError`] when any item cannot complete dispatch.
+    fn dispatch_persistent_handles_batched_timed(
+        &self,
+        batches: &[&[Resource]],
+        config: &DispatchConfig,
+        outputs: &mut Vec<OutputBuffers>,
+        device_ns_by_item: &mut Vec<Option<u64>>,
+    ) -> Result<(), BackendError> {
+        crate::backend::resize_batch_output_slots(
+            outputs,
+            batches.len(),
+            "compiled resident batch outputs",
+        )?;
+        device_ns_by_item.clear();
+        device_ns_by_item
+            .try_reserve_exact(batches.len())
+            .map_err(|error| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: failed to reserve {} resident batch timing slot(s): {error}. Submit a smaller resident batch.",
+                    batches.len()
+                ),
+            })?;
+        for (batch, slot) in batches.iter().zip(outputs.iter_mut()) {
+            let timed = self.dispatch_persistent_handles_timed(batch, config)?;
+            device_ns_by_item.push(timed.device_ns);
+            crate::replace_output_buffers_preserving_slots(timed.outputs, slot);
         }
         Ok(())
     }

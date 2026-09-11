@@ -1,0 +1,5 @@
+name = "vyre-spec"
+concern = "Own stable schemas, operation definitions, and compatibility contracts without runtime dependencies."
+pages = { spec = "vyre-spec/SPEC.md", readme = "vyre-spec/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = []

@@ -1,0 +1,789 @@
+//! Declarative DAG schema and execution kernel for registered gates.
+//!
+//! Owns DAG construction, dependency cycle detection, topological execution ordering,
+//! prerequisite validation, content-addressed cache key derivation, and change-impact
+//! execution scheduling.
+
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::fmt;
+use std::path::Path;
+
+use crate::gate::{GateDescriptor, RegisteredGate};
+
+/// Errors encountered while validating or ordering the gate DAG.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum DagError {
+    /// A gate declares a prerequisite that does not exist in the registry.
+    MissingPrerequisite {
+        /// Gate declaring the missing prerequisite.
+        gate: &'static str,
+        /// Name of the missing prerequisite.
+        prerequisite: &'static str,
+    },
+    /// A dependency cycle was detected among registered gates.
+    DependencyCycle {
+        /// Names of gates involved in the cycle.
+        cycle: Vec<&'static str>,
+    },
+    /// A gate declares a prerequisite on itself.
+    SelfDependency {
+        /// Name of the gate.
+        gate: &'static str,
+    },
+}
+
+impl fmt::Display for DagError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MissingPrerequisite { gate, prerequisite } => {
+                write!(
+                    f,
+                    "gate `{gate}` declares prerequisite `{prerequisite}`, which is not registered"
+                )
+            }
+            Self::DependencyCycle { cycle } => {
+                write!(
+                    f,
+                    "dependency cycle detected in gate DAG: {}",
+                    cycle.join(" -> ")
+                )
+            }
+            Self::SelfDependency { gate } => {
+                write!(f, "gate `{gate}` declares a dependency on itself")
+            }
+        }
+    }
+}
+
+impl std::error::Error for DagError {}
+
+/// One node in the declarative gate DAG.
+#[derive(Clone, Debug)]
+pub struct DagNode {
+    /// Authoritative metadata descriptor.
+    pub descriptor: GateDescriptor,
+    /// Gates this gate directly depends on.
+    pub prerequisites: Vec<&'static str>,
+    /// Gates that depend on this gate.
+    pub dependents: Vec<&'static str>,
+}
+
+/// The declarative DAG holding all registered gates and their dependencies.
+#[derive(Clone, Debug, Default)]
+pub struct GateDag {
+    nodes: BTreeMap<&'static str, DagNode>,
+}
+
+impl GateDag {
+    /// Build a DAG from a slice of gate descriptors.
+    ///
+    /// # Errors
+    ///
+    /// Returns `DagError` if any prerequisite is missing or if a cycle is detected.
+    pub fn from_descriptors(descriptors: &[GateDescriptor]) -> Result<Self, DagError> {
+        let mut nodes = BTreeMap::new();
+        let known_names: BTreeSet<&'static str> = descriptors.iter().map(|d| d.name).collect();
+
+        for desc in descriptors {
+            if desc.prerequisites.contains(&desc.name) {
+                return Err(DagError::SelfDependency { gate: desc.name });
+            }
+            for prereq in desc.prerequisites {
+                if !known_names.contains(prereq) {
+                    return Err(DagError::MissingPrerequisite {
+                        gate: desc.name,
+                        prerequisite: prereq,
+                    });
+                }
+            }
+            nodes.insert(
+                desc.name,
+                DagNode {
+                    descriptor: *desc,
+                    prerequisites: desc.prerequisites.to_vec(),
+                    dependents: Vec::new(),
+                },
+            );
+        }
+
+        // Build inverse edges (dependents)
+        for desc in descriptors {
+            for prereq in desc.prerequisites {
+                if let Some(node) = nodes.get_mut(prereq) {
+                    node.dependents.push(desc.name);
+                }
+            }
+        }
+
+        let dag = Self { nodes };
+        // Validate acyclicity
+        let _ = dag.topological_order()?;
+        Ok(dag)
+    }
+
+    /// Build a DAG from a slice of registered gates.
+    ///
+    /// # Errors
+    ///
+    /// Returns `DagError` if any prerequisite is missing or if a cycle is detected.
+    pub fn from_registry(gates: &[RegisteredGate]) -> Result<Self, DagError> {
+        let descriptors: Vec<GateDescriptor> = gates.iter().map(|g| *g.descriptor()).collect();
+        Self::from_descriptors(&descriptors)
+    }
+
+    /// Return the node corresponding to `gate_name`, if registered.
+    #[must_use]
+    pub fn get(&self, gate_name: &str) -> Option<&DagNode> {
+        self.nodes.get(gate_name)
+    }
+
+    /// Total number of gates in the DAG.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.nodes.len()
+    }
+
+    /// Whether the DAG is empty.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.nodes.is_empty()
+    }
+
+    /// Return all gate names in the DAG in alphabetical order.
+    #[must_use]
+    pub fn gate_names(&self) -> Vec<&'static str> {
+        self.nodes.keys().copied().collect()
+    }
+
+    /// Total number of dependency edges in the DAG.
+    #[must_use]
+    pub fn edge_count(&self) -> usize {
+        self.nodes.values().map(|n| n.prerequisites.len()).sum()
+    }
+    /// Return the topological ordering of gate execution.
+    ///
+    /// If gate A depends on gate B, B is guaranteed to precede A in the returned order.
+    ///
+    /// # Errors
+    ///
+    /// Returns `DagError::DependencyCycle` if a cycle exists.
+    pub fn topological_order(&self) -> Result<Vec<&'static str>, DagError> {
+        let mut in_degrees: BTreeMap<&'static str, usize> = BTreeMap::new();
+        for (name, node) in &self.nodes {
+            in_degrees.insert(*name, node.prerequisites.len());
+        }
+
+        let mut queue: VecDeque<&'static str> = VecDeque::new();
+        for (name, deg) in &in_degrees {
+            if *deg == 0 {
+                queue.push_back(*name);
+            }
+        }
+
+        let mut ordered = Vec::with_capacity(self.nodes.len());
+        while let Some(current) = queue.pop_front() {
+            ordered.push(current);
+            if let Some(node) = self.nodes.get(current) {
+                for dependent in &node.dependents {
+                    if let Some(deg) = in_degrees.get_mut(dependent) {
+                        *deg -= 1;
+                        if *deg == 0 {
+                            queue.push_back(dependent);
+                        }
+                    }
+                }
+            }
+        }
+
+        if ordered.len() != self.nodes.len() {
+            // Find nodes involved in cycle
+            let mut cycle_nodes = Vec::new();
+            for (name, deg) in in_degrees {
+                if deg > 0 {
+                    cycle_nodes.push(name);
+                }
+            }
+            return Err(DagError::DependencyCycle { cycle: cycle_nodes });
+        }
+
+        Ok(ordered)
+    }
+
+    /// Whether input path matches artifact path (exact or directory prefix).
+    #[must_use]
+    pub fn path_matches(input: &str, artifact: &str) -> bool {
+        let input_path = Path::new(input);
+        let artifact_path = Path::new(artifact);
+        if input_path == artifact_path {
+            return true;
+        }
+        artifact_path.starts_with(input_path)
+    }
+
+    /// Validate the DAG structure, inputs, and prerequisites against the workspace root.
+    #[must_use]
+    pub fn validate(&self, root: &Path) -> Vec<String> {
+        let mut failures = Vec::new();
+
+        // 1. Check topological ordering and cycles
+        if let Err(err) = self.topological_order() {
+            failures.push(format!("DAG ordering error: {err}"));
+        }
+
+        // 2. Check declared inputs exist on disk
+        for (name, node) in &self.nodes {
+            for input in node.descriptor.inputs {
+                let input_path = root.join(input);
+                if !input_path.exists() {
+                    failures.push(format!(
+                        "gate `{name}` declares input path `{input}`, which does not exist in workspace root",
+                    ));
+                }
+            }
+        }
+
+        // 3. Execution-ordering contract:
+        // When gate B inspects an input that gate A regenerates, B must declare A as a prerequisite.
+        for (b_name, b_node) in &self.nodes {
+            for input in b_node.descriptor.inputs {
+                for (a_name, a_node) in &self.nodes {
+                    if a_name == b_name {
+                        continue;
+                    }
+                    for artifact in a_node.descriptor.artifacts {
+                        if Self::path_matches(input, artifact)
+                            && !b_node.prerequisites.contains(a_name)
+                        {
+                            failures.push(format!(
+                                "gate `{b_name}` inspects `{input}` which is regenerated by gate `{a_name}` (artifact `{artifact}`), but does not declare `{a_name}` as a prerequisite",
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Reject unjustified prerequisites:
+        // A declared prerequisite A of gate B must produce an artifact matching at least one declared input of B.
+        for (b_name, b_node) in &self.nodes {
+            for prereq in &b_node.prerequisites {
+                let Some(a_node) = self.nodes.get(prereq) else {
+                    continue;
+                };
+                let has_relation = b_node.descriptor.inputs.iter().any(|input| {
+                    a_node
+                        .descriptor
+                        .artifacts
+                        .iter()
+                        .any(|artifact| Self::path_matches(input, artifact))
+                });
+                if !has_relation {
+                    failures.push(format!(
+                        "gate `{b_name}` declares prerequisite `{prereq}`, but `{prereq}` produces no artifact matching any declared input of `{b_name}`",
+                    ));
+                }
+            }
+        }
+
+        failures
+    }
+
+    /// Check if a gate is skippable because its cache key matches the previous run.
+    #[must_use]
+    pub fn is_skippable(
+        &self,
+        gate_name: &str,
+        root: &Path,
+        recorded_cache_key: Option<&str>,
+    ) -> bool {
+        let Some(node) = self.nodes.get(gate_name) else {
+            return false;
+        };
+        let current_key = node.descriptor.compute_cache_key(root);
+        recorded_cache_key == Some(&current_key)
+    }
+}
+
+/// Execution status of one gate in a DAG run.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum GateExecutionStatus {
+    /// Gate ran and passed (findings <= baseline).
+    Passed {
+        /// Number of findings reported.
+        findings: usize,
+        /// Computed cache key.
+        cache_key: String,
+    },
+    /// Gate ran and failed (findings > baseline or execution error).
+    Failed {
+        /// Number of findings or error message.
+        error: String,
+    },
+    /// Gate was skipped because its inputs and descriptor are unchanged.
+    SkippedUnchanged {
+        /// Matched cache key.
+        cache_key: String,
+    },
+    /// Gate was skipped because one of its prerequisites failed.
+    SkippedPrerequisiteFailed {
+        /// Name of the prerequisite that failed.
+        failed_prerequisite: &'static str,
+    },
+}
+
+/// Execution options for running a selection of gates through the DAG kernel.
+#[derive(Clone, Debug, Default)]
+pub struct DagExecutionOptions {
+    /// Allow skipping gates whose inputs are unchanged since their last recorded run.
+    pub skip_unchanged: bool,
+    /// Recorded cache keys from previous clean runs: gate_name -> cache_key.
+    pub cache_keys: BTreeMap<String, String>,
+}
+
+/// Summary result of a DAG execution pass.
+#[derive(Clone, Debug, Default)]
+pub struct DagExecutionReport {
+    /// Outcome per gate name.
+    pub outcomes: BTreeMap<&'static str, GateExecutionStatus>,
+    /// Any fatal failure messages.
+    pub failures: Vec<String>,
+}
+
+impl DagExecutionReport {
+    /// Whether all executed gates succeeded or were cleanly skipped.
+    #[must_use]
+    pub fn is_success(&self) -> bool {
+        self.failures.is_empty()
+            && self.outcomes.values().all(|s| {
+                matches!(
+                    s,
+                    GateExecutionStatus::Passed { .. }
+                        | GateExecutionStatus::SkippedUnchanged { .. }
+                )
+            })
+    }
+}
+
+/// Execute a list of gates through the DAG kernel enforcing prerequisite ordering and caching.
+pub fn execute_dag(
+    root: &Path,
+    dag: &GateDag,
+    gates: &[RegisteredGate],
+    options: &DagExecutionOptions,
+) -> DagExecutionReport {
+    let mut report = DagExecutionReport::default();
+    let order = match dag.topological_order() {
+        Ok(o) => o,
+        Err(err) => {
+            report
+                .failures
+                .push(format!("DAG execution aborted: {err}"));
+            return report;
+        }
+    };
+
+    let selected_names: BTreeSet<&str> = gates.iter().map(RegisteredGate::name).collect();
+
+    for gate_name in order {
+        if !selected_names.contains(gate_name) {
+            continue;
+        }
+        let Some(node) = dag.get(gate_name) else {
+            continue;
+        };
+
+        // 1. Check prerequisites
+        let mut failed_prereq: Option<&'static str> = None;
+        for prereq in &node.prerequisites {
+            if let Some(status) = report.outcomes.get(prereq) {
+                if !matches!(
+                    status,
+                    GateExecutionStatus::Passed { .. }
+                        | GateExecutionStatus::SkippedUnchanged { .. }
+                ) {
+                    failed_prereq = Some(prereq);
+                    break;
+                }
+            }
+        }
+
+        if let Some(failed) = failed_prereq {
+            report.outcomes.insert(
+                gate_name,
+                GateExecutionStatus::SkippedPrerequisiteFailed {
+                    failed_prerequisite: failed,
+                },
+            );
+            continue;
+        }
+
+        // 2. Check if skippable
+        let cache_key = node.descriptor.compute_cache_key(root);
+        if options.skip_unchanged {
+            if let Some(recorded) = options.cache_keys.get(gate_name) {
+                if *recorded == cache_key {
+                    report.outcomes.insert(
+                        gate_name,
+                        GateExecutionStatus::SkippedUnchanged {
+                            cache_key: cache_key.clone(),
+                        },
+                    );
+                    continue;
+                }
+            }
+        }
+
+        // 3. Find registered gate and execute
+        let Some(registered) = gates.iter().find(|g| g.name() == gate_name) else {
+            continue;
+        };
+
+        let ctx = crate::gate::GateCtx::new(root.to_path_buf(), Vec::new());
+        match registered.run(&ctx) {
+            Ok(gate_report) => {
+                let found = gate_report.count();
+                if found == 0 {
+                    report.outcomes.insert(
+                        gate_name,
+                        GateExecutionStatus::Passed {
+                            findings: 0,
+                            cache_key,
+                        },
+                    );
+                } else {
+                    report.outcomes.insert(
+                        gate_name,
+                        GateExecutionStatus::Failed {
+                            error: format!("reported {found} finding(s)"),
+                        },
+                    );
+                }
+            }
+            Err(err) => {
+                report.outcomes.insert(
+                    gate_name,
+                    GateExecutionStatus::Failed {
+                        error: err.to_string(),
+                    },
+                );
+            }
+        }
+    }
+
+    report
+}
+
+/// Summary report from regenerating artifacts across all generating gates in topological order.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct RegenerateReport {
+    /// Generating gates executed in write mode.
+    pub executed_writers: Vec<&'static str>,
+    /// Exact workspace-relative artifact paths that changed during regeneration.
+    pub changed_artifacts: Vec<String>,
+    /// Gates refused because a prerequisite reported findings or errors: `(gate, failed_prereq)`.
+    pub refused_gates: Vec<(&'static str, &'static str)>,
+    /// Errors encountered during the regeneration run.
+    pub failures: Vec<String>,
+}
+
+impl RegenerateReport {
+    /// Whether all writer gates executed cleanly and no gate was refused or failed.
+    #[must_use]
+    pub fn is_clean(&self) -> bool {
+        self.failures.is_empty() && self.refused_gates.is_empty()
+    }
+}
+
+/// Regenerate every artifact in topological DAG order.
+///
+/// Refuses to run any writer gate whose prerequisite reported a finding or failed.
+/// Captures artifact state before and after execution to report exactly which paths changed.
+pub fn regenerate_all(root: &Path, gates: &[RegisteredGate]) -> Result<RegenerateReport, DagError> {
+    let dag = GateDag::from_registry(gates)?;
+    let order = dag.topological_order()?;
+
+    let mut report = RegenerateReport::default();
+    let mut failed_gates = BTreeSet::new();
+
+    // Collect all prerequisite gates needed by writer gates
+    let mut needed_gates = BTreeSet::new();
+    for gate_name in &order {
+        let Some(node) = dag.get(gate_name) else {
+            continue;
+        };
+        if node.descriptor.generates() {
+            needed_gates.insert(*gate_name);
+            for prereq in &node.prerequisites {
+                needed_gates.insert(*prereq);
+            }
+        }
+    }
+
+    for gate_name in order {
+        if !needed_gates.contains(gate_name) {
+            continue;
+        }
+        let Some(node) = dag.get(gate_name) else {
+            continue;
+        };
+        let Some(registered) = gates.iter().find(|g| g.name() == gate_name) else {
+            continue;
+        };
+
+        // Check if any prerequisite failed
+        let mut failed_prereq = None;
+        for prereq in &node.prerequisites {
+            if failed_gates.contains(prereq) {
+                failed_prereq = Some(*prereq);
+                break;
+            }
+        }
+
+        if let Some(prereq) = failed_prereq {
+            failed_gates.insert(gate_name);
+            if node.descriptor.generates() {
+                report.refused_gates.push((gate_name, prereq));
+            }
+            continue;
+        }
+
+        if node.descriptor.generates() {
+            // Snapshot artifact hashes before running
+            let mut before_hashes: BTreeMap<&'static str, Option<String>> = BTreeMap::new();
+            for artifact in node.descriptor.artifacts {
+                let p = root.join(artifact);
+                let hash = std::fs::read(&p)
+                    .ok()
+                    .map(|bytes| blake3::hash(&bytes).to_hex().to_string());
+                before_hashes.insert(*artifact, hash);
+            }
+
+            // Run gate in write mode
+            let ctx = crate::gate::GateCtx::new(root.to_path_buf(), vec!["--write".to_string()]);
+            match registered.run(&ctx) {
+                Ok(gate_report) => {
+                    let found = gate_report.count();
+                    if found > 0 {
+                        failed_gates.insert(gate_name);
+                        report.failures.push(format!(
+                            "writer gate `{gate_name}` reported {found} finding(s) in write mode",
+                        ));
+                    } else {
+                        report.executed_writers.push(gate_name);
+                        // Detect changed artifacts
+                        for (artifact, before_hash) in before_hashes {
+                            let p = root.join(artifact);
+                            let after_hash = std::fs::read(&p)
+                                .ok()
+                                .map(|bytes| blake3::hash(&bytes).to_hex().to_string());
+                            if before_hash != after_hash {
+                                report.changed_artifacts.push(artifact.to_string());
+                            }
+                        }
+                    }
+                }
+                Err(err) => {
+                    failed_gates.insert(gate_name);
+                    report
+                        .failures
+                        .push(format!("writer gate `{gate_name}` failed: {err}"));
+                }
+            }
+        } else {
+            // Run prerequisite check in comparison mode
+            let ctx = crate::gate::GateCtx::new(root.to_path_buf(), Vec::new());
+            match registered.run(&ctx) {
+                Ok(gate_report) => {
+                    if gate_report.count() > 0 {
+                        failed_gates.insert(gate_name);
+                    }
+                }
+                Err(_) => {
+                    failed_gates.insert(gate_name);
+                }
+            }
+        }
+    }
+
+    Ok(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::gate::ResourceClass;
+    use crate::gate::{Finding, GateBehavior, GateCtx, GateError, Report};
+
+    const DUMMY_GATE_A: GateDescriptor = GateDescriptor {
+        name: "gate-a",
+        help: "Gate A help",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "test subject",
+        inputs: &[],
+        artifacts: &["docs/generated/dummy-a.toml"],
+        prerequisites: &[],
+        resource_class: ResourceClass::Cpu,
+        proof: "crate::gate_dag::tests::dag_validation_detects_cycles_and_missing_prerequisites",
+    };
+
+    const DUMMY_GATE_B: GateDescriptor = GateDescriptor {
+        name: "gate-b",
+        help: "Gate B help",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "test subject",
+        inputs: &["docs/generated/dummy-a.toml"],
+        artifacts: &["docs/generated/dummy-b.toml"],
+        prerequisites: &["gate-a"],
+        resource_class: ResourceClass::Cpu,
+        proof: "crate::gate_dag::tests::dag_validation_detects_cycles_and_missing_prerequisites",
+    };
+
+    const DUMMY_GATE_C: GateDescriptor = GateDescriptor {
+        name: "gate-c",
+        help: "Gate C help",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "test subject",
+        inputs: &["docs/generated/dummy-b.toml"],
+        artifacts: &[],
+        prerequisites: &["gate-b"],
+        resource_class: ResourceClass::Cpu,
+        proof: "crate::gate_dag::tests::dag_validation_detects_cycles_and_missing_prerequisites",
+    };
+    #[test]
+    fn topological_sort_orders_prerequisites_first() {
+        static GATES: [GateDescriptor; 3] = [DUMMY_GATE_C, DUMMY_GATE_B, DUMMY_GATE_A];
+        let dag = GateDag::from_descriptors(&GATES).expect("DAG should build");
+        let order = dag
+            .topological_order()
+            .expect("Topological sort should succeed");
+
+        let pos_a = order.iter().position(|&x| x == "gate-a").unwrap();
+        let pos_b = order.iter().position(|&x| x == "gate-b").unwrap();
+        let pos_c = order.iter().position(|&x| x == "gate-c").unwrap();
+
+        assert!(pos_a < pos_b, "gate-a must come before gate-b");
+        assert!(pos_b < pos_c, "gate-b must come before gate-c");
+    }
+
+    #[test]
+    fn dag_detects_dependency_cycle() {
+        const CYCLE_A: GateDescriptor = GateDescriptor {
+            name: "cycle-a",
+            help: "Cycle A",
+            package: "xtask",
+            areas: &["contract-rules"],
+            subject: "test",
+            inputs: &[],
+            artifacts: &[],
+            prerequisites: &["cycle-b"],
+            resource_class: ResourceClass::Cpu,
+            proof:
+                "crate::gate_dag::tests::dag_validation_detects_cycles_and_missing_prerequisites",
+        };
+        const CYCLE_B: GateDescriptor = GateDescriptor {
+            name: "cycle-b",
+            help: "Cycle B",
+            package: "xtask",
+            areas: &["contract-rules"],
+            subject: "test",
+            inputs: &[],
+            artifacts: &[],
+            prerequisites: &["cycle-a"],
+            resource_class: ResourceClass::Cpu,
+            proof:
+                "crate::gate_dag::tests::dag_validation_detects_cycles_and_missing_prerequisites",
+        };
+        static CYCLE_GATES: [GateDescriptor; 2] = [CYCLE_A, CYCLE_B];
+        let res = GateDag::from_descriptors(&CYCLE_GATES);
+        assert!(res.is_err());
+        assert!(matches!(res.unwrap_err(), DagError::DependencyCycle { .. }));
+    }
+
+    #[test]
+    fn dag_detects_missing_prerequisites() {
+        const ORPHAN: GateDescriptor = GateDescriptor {
+            name: "orphan-gate",
+            help: "Orphan gate",
+            package: "xtask",
+            areas: &["contract-rules"],
+            subject: "test",
+            inputs: &[],
+            artifacts: &[],
+            prerequisites: &["non-existent-gate"],
+            resource_class: ResourceClass::Cpu,
+            proof:
+                "crate::gate_dag::tests::dag_validation_detects_cycles_and_missing_prerequisites",
+        };
+        static ORPHAN_GATES: [GateDescriptor; 1] = [ORPHAN];
+        let res = GateDag::from_descriptors(&ORPHAN_GATES);
+        assert!(res.is_err());
+        assert!(matches!(
+            res.unwrap_err(),
+            DagError::MissingPrerequisite { .. }
+        ));
+    }
+
+    #[test]
+    fn dag_validation_detects_cycles_and_missing_prerequisites() {
+        // Closure proof test: validates that live GATE_METADATA is valid DAG
+        let dag = GateDag::from_descriptors(crate::gate_metadata::GATE_METADATA)
+            .expect("Live GATE_METADATA must be a valid acyclic DAG");
+        let root = crate::checkout::checkout_root();
+        let failures = dag.validate(&root);
+        assert!(failures.is_empty(), "DAG validation failed: {failures:?}");
+    }
+
+    #[test]
+    fn regenerate_all_respects_prerequisites_and_reports_cleanly() {
+        struct DummyWriterA;
+        impl GateBehavior for DummyWriterA {
+            fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+                let rep = Report::default();
+                if ctx.args.contains(&"--write".to_string()) {
+                    let path = ctx.root.join("docs/generated/dummy-a.toml");
+                    let _ = std::fs::create_dir_all(path.parent().unwrap());
+                    let _ = std::fs::write(&path, "content-a");
+                }
+                Ok(rep)
+            }
+        }
+        struct DummyWriterB;
+        impl GateBehavior for DummyWriterB {
+            fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+                let rep = Report::default();
+                if ctx.args.contains(&"--write".to_string()) {
+                    let path = ctx.root.join("docs/generated/dummy-b.toml");
+                    let _ = std::fs::create_dir_all(path.parent().unwrap());
+                    let _ = std::fs::write(&path, "content-b");
+                }
+                Ok(rep)
+            }
+        }
+        struct DummyPrereqFail;
+        impl GateBehavior for DummyPrereqFail {
+            fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
+                let mut rep = Report::default();
+                rep.find(Finding::new("prerequisite failure", "fix"));
+                Ok(rep)
+            }
+        }
+
+        let reg_a = RegisteredGate::new(&DUMMY_GATE_A, &DummyWriterA);
+        let reg_b = RegisteredGate::new(&DUMMY_GATE_B, &DummyWriterB);
+        let reg_c = RegisteredGate::new(&DUMMY_GATE_C, &DummyPrereqFail);
+
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        let root = temp_dir.path();
+
+        let report =
+            regenerate_all(root, &[reg_a, reg_b, reg_c]).expect("regenerate_all should succeed");
+
+        assert_eq!(report.executed_writers, vec!["gate-a", "gate-b"]);
+        assert!(report.refused_gates.is_empty());
+        assert!(report.failures.is_empty());
+        assert_eq!(report.changed_artifacts.len(), 2);
+    }
+}

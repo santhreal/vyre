@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-driver-metal`'s `backend_metric_snapshot` builds its scalar counters from a name-and-accessor table rather than fourteen hand-written pushes. A counter added to `MetalMetrics` and forgotten in the snapshot was previously invisible, because the push list carried no relation to the struct. The resident-buffer branch moved to `push_resident_table_metrics` next to the lock helper it shares a failure mode with, and the comment explaining the poison sentinel states the reason instead of citing an internal rule number."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`examples/external_backend_extension` registers a dispatch backend from outside the workspace. It described `vyre_driver::VyreBackend` as sealed against outside implementations and built a program instead, which stated a limitation that does not hold: `vyre_driver::sealed` is exported, so the crate now implements the trait, submits a `BackendRegistration` and a `BackendCapability`, and asserts that `vyre_driver::acquire` serves it and that a dispatch through it returns the expected bytes. Execution stays inside `vyre-reference`."

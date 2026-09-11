@@ -1,4 +1,4 @@
-//! ROADMAP A11  -  reaching-def facts into cross-control-flow const fold.
+//! reaching-def facts into cross-control-flow const fold.
 //!
 //! Built on top of the A2 `ProgramFacts` substrate. For every
 //! `Node::Let { name, value: Lit* }` whose `name` is never rebound
@@ -55,9 +55,11 @@
 //! single Let. The substitution then crosses arbitrary
 //! control-flow boundaries safely.
 
-use crate::ir::{Expr, Node, Program};
+use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::program_soa::ProgramFacts;
+use crate::optimizer::rewrite::rewrite_program;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::visit::for_each_node;
 use rustc_hash::FxHashMap;
 
 /// Cross-control-flow literal Let propagation.
@@ -103,150 +105,14 @@ impl ReachingDefPropagatePass {
                 changed: false,
             };
         }
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            entry
-                .into_iter()
-                .map(|n| substitute_node(n, &propagations, &mut changed))
-                .collect()
+        let (program, changed) = rewrite_program(program, |candidate| {
+            let Expr::Var(name) = candidate else {
+                return None;
+            };
+            propagations.get(name).cloned()
         });
         PassResult { program, changed }
     }
-}
-
-#[expect(
-    clippy::too_many_lines,
-    reason = "literal propagation keeps Node reconstruction and substitution in one ownership-preserving pass"
-)]
-fn substitute_node(node: Node, propagations: &FxHashMap<String, Expr>, changed: &mut bool) -> Node {
-    match node {
-        Node::Let { name, value } => {
-            let new_value = substitute_expr(value, propagations, changed);
-            // Attempt to update the propagation map for this Let if
-            // its name is propagatable AND its (now-substituted)
-            // value is a literal. We do this in two passes via
-            // `transform` instead of mutating `propagations` here,
-            // so the API stays simple. The map was built before the
-            // substitution started; subsequent passes will pick up
-            // any new propagatable Lets that surface after this one
-            // collapses.
-            Node::Let {
-                name,
-                value: new_value,
-            }
-        }
-        Node::Assign { name, value } => Node::Assign {
-            name,
-            value: substitute_expr(value, propagations, changed),
-        },
-        Node::Store {
-            buffer,
-            index,
-            value,
-        } => Node::Store {
-            buffer,
-            index: substitute_expr(index, propagations, changed),
-            value: substitute_expr(value, propagations, changed),
-        },
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::If {
-            cond: substitute_expr(cond, propagations, changed),
-            then: then
-                .into_iter()
-                .map(|n| substitute_node(n, propagations, changed))
-                .collect(),
-            otherwise: otherwise
-                .into_iter()
-                .map(|n| substitute_node(n, propagations, changed))
-                .collect(),
-        },
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => Node::Loop {
-            var,
-            from: substitute_expr(from, propagations, changed),
-            to: substitute_expr(to, propagations, changed),
-            body: body
-                .into_iter()
-                .map(|n| substitute_node(n, propagations, changed))
-                .collect(),
-        },
-        Node::Block(body) => Node::Block(
-            body.into_iter()
-                .map(|n| substitute_node(n, propagations, changed))
-                .collect(),
-        ),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec: Vec<Node> = match std::sync::Arc::try_unwrap(body) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            Node::Region {
-                generator,
-                source_region,
-                body: std::sync::Arc::new(
-                    body_vec
-                        .into_iter()
-                        .map(|n| substitute_node(n, propagations, changed))
-                        .collect(),
-                ),
-            }
-        }
-        Node::AsyncLoad {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => Node::AsyncLoad {
-            source,
-            destination,
-            tag,
-            offset: Box::new(substitute_expr(*offset, propagations, changed)),
-            size: Box::new(substitute_expr(*size, propagations, changed)),
-        },
-        Node::AsyncStore {
-            source,
-            destination,
-            offset,
-            size,
-            tag,
-        } => Node::AsyncStore {
-            source,
-            destination,
-            tag,
-            offset: Box::new(substitute_expr(*offset, propagations, changed)),
-            size: Box::new(substitute_expr(*size, propagations, changed)),
-        },
-        Node::Trap { address, tag } => Node::Trap {
-            address: Box::new(substitute_expr(*address, propagations, changed)),
-            tag,
-        },
-        other => other,
-    }
-}
-
-fn substitute_expr(expr: Expr, propagations: &FxHashMap<String, Expr>, changed: &mut bool) -> Expr {
-    crate::optimizer::rewrite::rewrite_expr(&expr, &mut |candidate| {
-        let Expr::Var(name) = candidate else {
-            return None;
-        };
-        propagations.get(name.as_str()).map(|literal| {
-            *changed = true;
-            literal.clone()
-        })
-    })
-    .into_owned()
 }
 
 // Override `collect_propagatable_lets` to fetch literal values
@@ -254,57 +120,50 @@ fn substitute_expr(expr: Expr, propagations: &FxHashMap<String, Expr>, changed: 
 // values to keep build-time fast). Uses one preorder walk over
 // the entry to find the value at each propagatable Let's name.
 
+/// Every unique-`Let` name in `program` that binds a literal, with that
+/// literal.
+///
+/// Keyed by `Ident` rather than by `String`. Cloning an `Ident` is a refcount
+/// bump on its `Arc<str>`; the `String` keys this used to build charged a heap
+/// allocation and a memcpy per candidate binding, once into the candidate set
+/// and again into the value map. `Ident` hashes through the same `str` its
+/// `Borrow<str>` impl exposes, so the key change is invisible to lookups.
 fn collect_propagatable_lets_with_values(
     facts: &ProgramFacts,
     program: &Program,
-) -> FxHashMap<String, Expr> {
-    let mut candidates: rustc_hash::FxHashSet<String> = rustc_hash::FxHashSet::default();
+) -> FxHashMap<Ident, Expr> {
+    let mut candidates: rustc_hash::FxHashSet<Ident> = rustc_hash::FxHashSet::default();
     for (_, name) in facts.lets() {
         if !facts.is_name_rebound(name.as_str()) {
-            candidates.insert(name.as_str().to_owned());
+            candidates.insert(name.clone());
         }
     }
     if candidates.is_empty() {
         return FxHashMap::default();
     }
-    let mut out: FxHashMap<String, Expr> = FxHashMap::default();
-    for node in program.entry() {
-        scan_for_literal_lets(node, &candidates, &mut out);
-    }
+    let mut out: FxHashMap<Ident, Expr> = FxHashMap::default();
+    scan_for_literal_lets(program.entry(), &candidates, &mut out);
     out
 }
 
+/// Every candidate name in `nodes` bound to a literal, at any nesting depth.
+///
+/// Descent comes from [`for_each_node`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => {}`, so a literal
+/// binding inside a fifth body-bearing variant was never recorded and its uses
+/// were never substituted.
 fn scan_for_literal_lets(
-    node: &Node,
-    candidates: &rustc_hash::FxHashSet<String>,
-    out: &mut FxHashMap<String, Expr>,
+    nodes: &[Node],
+    candidates: &rustc_hash::FxHashSet<Ident>,
+    out: &mut FxHashMap<Ident, Expr>,
 ) {
-    match node {
-        Node::Let { name, value } if candidates.contains(name.as_str()) && is_literal(value) => {
-            out.insert(name.as_str().to_owned(), value.clone());
-        }
-        Node::If {
-            then, otherwise, ..
-        } => {
-            for n in then {
-                scan_for_literal_lets(n, candidates, out);
-            }
-            for n in otherwise {
-                scan_for_literal_lets(n, candidates, out);
+    for_each_node(nodes, |node| {
+        if let Node::Let { name, value } = node {
+            if candidates.contains(name) && is_literal(value) {
+                out.insert(name.clone(), value.clone());
             }
         }
-        Node::Loop { body, .. } | Node::Block(body) => {
-            for n in body {
-                scan_for_literal_lets(n, candidates, out);
-            }
-        }
-        Node::Region { body, .. } => {
-            for n in body.iter() {
-                scan_for_literal_lets(n, candidates, out);
-            }
-        }
-        _ => {}
-    }
+    });
 }
 
 fn is_literal(expr: &Expr) -> bool {
@@ -327,29 +186,11 @@ mod tests {
         Program::wrapped(vec![buf()], [1, 1, 1], entry)
     }
 
+    /// The production entry point. The copy this replaces re-derived the
+    /// propagation map and then walked the entry itself, so it could agree with
+    /// itself while disagreeing with the pass every caller runs.
     fn run(program: Program) -> PassResult {
-        // The propagation map is computed inside transform via
-        // `collect_propagatable_lets_with_values`; test invokes it
-        // through the public API.
-        let facts = ProgramFacts::build(&program);
-        let propagations = collect_propagatable_lets_with_values(&facts, &program);
-        if propagations.is_empty() {
-            return PassResult {
-                program,
-                changed: false,
-            };
-        }
-        let scaffold = program.with_rewritten_entry(Vec::new());
-        let mut changed = false;
-        let entry: Vec<Node> = program
-            .into_entry_vec()
-            .into_iter()
-            .map(|n| substitute_node(n, &propagations, &mut changed))
-            .collect();
-        PassResult {
-            program: scaffold.with_rewritten_entry(entry),
-            changed,
-        }
+        ReachingDefPropagatePass::transform(program)
     }
 
     fn count_var_reads(nodes: &[Node], target: &str) -> usize {

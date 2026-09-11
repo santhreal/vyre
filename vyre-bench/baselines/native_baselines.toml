@@ -1,0 +1,175 @@
+# Canonical version-pinned expert-written native kernel baselines catalog.
+#
+# Requirement:
+# "Version-pinned native kernel baselines must be vendored as a pinned external baseline
+# with its version recorded, never copied into a Vyre crate as an emitted payload."
+
+schema = 1
+
+[[baseline]]
+id = "native.cub.inclusive_scan_v2_1_0"
+name = "NVIDIA CUB DeviceScan Inclusive Scan"
+vendor_or_library = "NVIDIA CUB"
+pinned_version = "2.1.0"
+upstream_url = "https://github.com/NVIDIA/cub"
+commit_or_tag = "v2.1.0"
+source_file = "cub_inclusive_scan.cu"
+source_sha256 = "b7e408d66046e7f80dbca39775f0f3eefd6b2cbb1dc7417e3f89ee60882e379e"
+toolchain = "nvcc 12.4"
+compilation_flags = ["-O3", "-std=c++17", "--use_fast_math=false", "-arch=sm_90a"]
+
+[baseline.equality_conditions]
+semantics = "exact"
+dtype = "u32"
+shapes = "[1048576]"
+raggedness = "uniform_contiguous"
+initial_and_final_state = "clean_buffers_unaliased"
+target = "sm_90a"
+stream = "cuda_stream_non_blocking_0"
+toolchain_and_flags = "nvcc_12.4_-O3"
+clock_and_power_state = "locked_base_clock_tdp_100pct"
+warmup = "300_warmup_iterations_discarded"
+interleaving = "ab_ba_round_robin_interleaving"
+repetitions = "30_measured_samples_clt"
+cache_state = "flushed_l2_between_iterations"
+objective = "minimize_p50_latency"
+
+[[baseline]]
+id = "native.cutlass.gemm_v3_5_0"
+name = "NVIDIA CUTLASS Tensor Core GEMM"
+vendor_or_library = "NVIDIA CUTLASS"
+pinned_version = "3.5.0"
+upstream_url = "https://github.com/NVIDIA/cutlass"
+commit_or_tag = "v3.5.0"
+source_file = "cutlass_gemm.cu"
+source_sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+toolchain = "nvcc 12.4"
+compilation_flags = ["-O3", "-std=c++17", "--use_fast_math=false", "-arch=sm_90a"]
+
+[baseline.equality_conditions]
+semantics = "fp32_ulp_tol:4"
+dtype = "f32"
+shapes = "[4096, 4096]x[4096, 4096]"
+raggedness = "uniform_contiguous"
+initial_and_final_state = "clean_buffers_unaliased"
+target = "sm_90a"
+stream = "cuda_stream_non_blocking_0"
+toolchain_and_flags = "nvcc_12.4_-O3"
+clock_and_power_state = "locked_base_clock_tdp_100pct"
+warmup = "300_warmup_iterations_discarded"
+interleaving = "ab_ba_round_robin_interleaving"
+repetitions = "30_measured_samples_clt"
+cache_state = "flushed_l2_between_iterations"
+objective = "maximize_throughput_gflops"
+
+[[baseline]]
+id = "native.flash_attention.v2_5_8"
+name = "FlashAttention-2 Causal Multi-Head Attention"
+vendor_or_library = "Tri Dao / FlashAttention"
+pinned_version = "2.5.8"
+upstream_url = "https://github.com/Dao-AILab/flash-attention"
+commit_or_tag = "v2.5.8"
+source_file = "flash_attention.cu"
+source_sha256 = "8f3957276cb2b508f7f1390494fb2167d4f9bfbe1f36402ecdf88db9a8ee8cb1"
+toolchain = "nvcc 12.4"
+compilation_flags = ["-O3", "-std=c++17", "--use_fast_math=false", "-arch=sm_90a"]
+
+[baseline.equality_conditions]
+semantics = "fp32_ulp_tol:8"
+dtype = "f32"
+shapes = "b=4,h=32,s=4096,d=128"
+raggedness = "uniform_contiguous"
+initial_and_final_state = "clean_buffers_unaliased"
+target = "sm_90a"
+stream = "cuda_stream_non_blocking_0"
+toolchain_and_flags = "nvcc_12.4_-O3"
+clock_and_power_state = "locked_base_clock_tdp_100pct"
+warmup = "300_warmup_iterations_discarded"
+interleaving = "ab_ba_round_robin_interleaving"
+repetitions = "30_measured_samples_clt"
+cache_state = "flushed_l2_between_iterations"
+objective = "minimize_p50_latency"
+
+[[baseline]]
+id = "native.cub.segmented_reduce_v2_1_0"
+name = "NVIDIA CUB DeviceSegmentedReduce"
+vendor_or_library = "NVIDIA CUB"
+pinned_version = "2.1.0"
+upstream_url = "https://github.com/NVIDIA/cub"
+commit_or_tag = "v2.1.0"
+source_file = "adversarial_ragged.cu"
+source_sha256 = "c18a23b9d624ef84c311400d720b001a182d8d85f8185ecffac2337d1d5218d6"
+toolchain = "nvcc 12.4"
+compilation_flags = ["-O3", "-std=c++17", "--use_fast_math=false", "-arch=sm_90a"]
+
+[baseline.equality_conditions]
+semantics = "exact"
+dtype = "u32"
+shapes = "segments=65536,total_elements=16777216"
+raggedness = "ragged_power_law:alpha=1.5"
+initial_and_final_state = "clean_buffers_unaliased"
+target = "sm_90a"
+stream = "cuda_stream_non_blocking_0"
+toolchain_and_flags = "nvcc_12.4_-O3"
+clock_and_power_state = "locked_base_clock_tdp_100pct"
+warmup = "300_warmup_iterations_discarded"
+interleaving = "ab_ba_round_robin_interleaving"
+repetitions = "30_measured_samples_clt"
+cache_state = "flushed_l2_between_iterations"
+objective = "minimize_p50_latency"
+
+[[baseline]]
+id = "native.cusparse.spmv_v12_3_0"
+name = "NVIDIA cuSPARSE CSR SpMV"
+vendor_or_library = "NVIDIA cuSPARSE"
+pinned_version = "12.3.0"
+upstream_url = "https://developer.nvidia.com/cusparse"
+commit_or_tag = "cuda-12.3.0"
+source_file = "cusparse_spmv.cu"
+source_sha256 = "35c24e69e06180373e970104f65342a1727c95e1974dcda90967384a22ad3ef0"
+toolchain = "nvcc 12.4"
+compilation_flags = ["-O3", "-std=c++17", "--use_fast_math=false", "-lcusparse", "-arch=sm_90a"]
+
+[baseline.equality_conditions]
+semantics = "exact"
+dtype = "f32"
+shapes = "rows=1048576,cols=1048576,nnz=10000000"
+raggedness = "csr_irregular_degree"
+initial_and_final_state = "clean_buffers_unaliased"
+target = "sm_90a"
+stream = "cuda_stream_non_blocking_0"
+toolchain_and_flags = "nvcc_12.4_-O3"
+clock_and_power_state = "locked_base_clock_tdp_100pct"
+warmup = "300_warmup_iterations_discarded"
+interleaving = "ab_ba_round_robin_interleaving"
+repetitions = "30_measured_samples_clt"
+cache_state = "flushed_l2_between_iterations"
+objective = "maximize_throughput_gb_s"
+
+[[baseline]]
+id = "native.graph_pipeline.v1_0_0"
+name = "Expert-Written Fused 5-Stage Native Graph Pipeline"
+vendor_or_library = "NVIDIA CUDA Samples & Reference Implementations"
+pinned_version = "1.0.0"
+upstream_url = "https://github.com/NVIDIA/cuda-samples"
+commit_or_tag = "v12.4"
+source_file = "complete_graph_pipeline.cu"
+source_sha256 = "8cf7bb22d7dc15d97fefc67ecba5db004dbf43503f8fcbcfb2bfb26d8ee8f566"
+toolchain = "nvcc 12.4"
+compilation_flags = ["-O3", "-std=c++17", "--use_fast_math=false", "-arch=sm_90a"]
+
+[baseline.equality_conditions]
+semantics = "fp32_ulp_tol:4"
+dtype = "f32"
+shapes = "[1024, 4096] -> [4096, 4096] -> [1024, 4096]"
+raggedness = "uniform_contiguous"
+initial_and_final_state = "clean_buffers_unaliased"
+target = "sm_90a"
+stream = "cuda_stream_non_blocking_0"
+toolchain_and_flags = "nvcc_12.4_-O3"
+clock_and_power_state = "locked_base_clock_tdp_100pct"
+warmup = "300_warmup_iterations_discarded"
+interleaving = "ab_ba_round_robin_interleaving"
+repetitions = "30_measured_samples_clt"
+cache_state = "flushed_l2_between_iterations"
+objective = "minimize_p50_latency"

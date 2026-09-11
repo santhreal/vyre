@@ -49,7 +49,8 @@ fn read_only_load_hoist_preserves_arm_local_rebind_scope() {
     let inputs = [Value::U32(42)]; // ro[0]; overwritten in observable output by the trailing x=7
 
     // Original: an arm runs (out=42), arm `x` pops, then `let x = 7`, out = 7.
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original program is well-scoped and must run");
     assert_eq!(
         original,
@@ -63,10 +64,12 @@ fn read_only_load_hoist_preserves_arm_local_rebind_scope() {
     // pass hoists `let x = load(ro,0)` out of the If, `x` becomes enclosing-
     // scoped and the trailing `let x = 7` is a duplicate binding the validator
     // rejects -- reference_eval errors and this `.expect` panics.
-    let transformed = vyre_reference::reference_eval(&hoisted, &inputs).expect(
-        "read_only_load_hoist must not extend a hoisted binding's scope so it \
+    let transformed = vyre_reference::ReferenceRequest::standard(&hoisted, &inputs)
+        .outputs()
+        .expect(
+            "read_only_load_hoist must not extend a hoisted binding's scope so it \
          collides with a later rebind of the same name",
-    );
+        );
 
     assert_eq!(
         transformed, original,

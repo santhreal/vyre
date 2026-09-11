@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The hot-path scan measures the path a successful call takes. An allocation that builds an error is excluded and counted separately, because this workspace requires an error to carry context and a fix, so the CUDA host dispatch surface read as nineteen per-launch allocations when every one of them was a format inside a return Err. Each file's note now ends with its error-path count, and every hot-path budget in docs/optimization/HOT_PATHS.toml is lowered to the measurement that remains."

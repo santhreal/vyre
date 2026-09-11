@@ -31,7 +31,7 @@
 //!   comparison is *unsound* for float operands: a float `x` that is
 //!   `NaN` at runtime makes `x == x` false and `x != x` true under
 //!   IEEE-754, which the reference oracle (`vyre-reference`
-//!   `binop_f32`) and the SPIR-V emitter (`OpFOrdEqual`) both honor.
+//!   `binop_f32`) and every target emitter honor.
 //!   Folding it to a bool literal here would (a) miscompile NaN checks
 //!   and (b) corrupt the content-addressed cache by giving the
 //!   genuinely-distinct programs `x == x` and `true` the same
@@ -44,7 +44,6 @@
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
-use vyre_spec::BinOp;
 
 /// Run the canonical-form pass on `program`, returning the
 /// canonicalized form with `validated=false` so downstream passes
@@ -146,21 +145,10 @@ fn canonicalize_expr(expr: Expr) -> Expr {
         Expr::BinOp { op, left, right } => {
             let mut l = canonicalize_expr(*left);
             let mut r = canonicalize_expr(*right);
-            if is_commutative_binop(op) {
-                // Rule: literal-on-right for all commutative ops.
-                // Non-literals are sorted ONLY for bitwise/boolean ops
-                // because IEEE-754 float Add/Mul NaN payload propagation
-                // is not commutative at the bit level.
-                let l_is_lit = is_literal(&l);
-                let r_is_lit = is_literal(&r);
-                let should_swap = match (l_is_lit, r_is_lit) {
-                    (true, false) => true,
-                    (false, true) => false,
-                    _ => is_safe_to_sort_nonliterals(op) && expr_sort_key(&l) > expr_sort_key(&r),
-                };
-                if should_swap {
-                    std::mem::swap(&mut l, &mut r);
-                }
+            if crate::ir_inner::model::program::canonical::commutative_operands_out_of_order(
+                op, &l, &r,
+            ) {
+                std::mem::swap(&mut l, &mut r);
             }
             // NOTE: reflexive comparison (`x == x`, `x != x`) is NOT folded
             // here. canonicalize is type-blind and the fold is unsound for
@@ -239,85 +227,20 @@ fn canonicalize_expr(expr: Expr) -> Expr {
     }
 }
 
-fn is_commutative_binop(op: BinOp) -> bool {
-    matches!(
-        op,
-        BinOp::Add
-            | BinOp::Mul
-            | BinOp::BitAnd
-            | BinOp::BitOr
-            | BinOp::BitXor
-            | BinOp::Eq
-            | BinOp::Ne
-            | BinOp::And
-            | BinOp::Or
-    )
-}
-
-/// Operations where sorting non-literal operands is semantics-preserving
-/// for all Vyre types (integers and booleans). Add/Mul are excluded
-/// because IEEE-754 NaN payload propagation makes them non-commutative
-/// at the bit level for float operands.
-fn is_safe_to_sort_nonliterals(op: BinOp) -> bool {
-    matches!(
-        op,
-        BinOp::BitAnd
-            | BinOp::BitOr
-            | BinOp::BitXor
-            | BinOp::Eq
-            | BinOp::Ne
-            | BinOp::And
-            | BinOp::Or
-    )
-}
-
-fn is_literal(expr: &Expr) -> bool {
-    matches!(
-        expr,
-        Expr::LitU32(_) | Expr::LitI32(_) | Expr::LitF32(_) | Expr::LitBool(_)
-    )
-}
-
-/// Total order used to break ties on commutative-operand sort.
-/// Stable across runs: only depends on the Expr's structural key.
-/// Goal is determinism, not perceived "smaller is simpler" meaning.
-fn expr_sort_key(expr: &Expr) -> u64 {
-    match expr {
-        Expr::LitU32(v) => u64::from(*v),
-        Expr::LitI32(v) => u64::from(u32::from_ne_bytes(v.to_ne_bytes())),
-        Expr::LitF32(v) => u64::from(v.to_bits()),
-        Expr::LitBool(v) => u64::from(*v),
-        Expr::BufferRef { buffer } => buffer.cached_hash(),
-        // VYRE_IR_HOTSPOTS LOW: `Ident` carries a precomputed hash
-        // (see ident.rs::cached_hash). Using it here replaces the
-        // per-comparison FNV walk with a single u64 field read, so
-        // the commutative-sort is O(n log n) in comparisons instead
-        // of O(n * |name| * log n).
-        Expr::Var(name) => name.cached_hash() & 0xFFFF_FFFF,
-        Expr::Load { buffer, .. } => 0x1_0000_0000 | buffer.cached_hash(),
-        Expr::BufLen { buffer } => 0x2_0000_0000 | buffer.cached_hash(),
-        Expr::InvocationId { axis } => 0x3_0000_0000 | u64::from(*axis),
-        Expr::WorkgroupId { axis } => 0x4_0000_0000 | u64::from(*axis),
-        Expr::LocalId { axis } => 0x5_0000_0000 | u64::from(*axis),
-        Expr::BinOp { .. } => 0x6_0000_0000,
-        Expr::UnOp { .. } => 0x7_0000_0000,
-        Expr::Call { .. } => 0x8_0000_0000,
-        Expr::Fma { .. } => 0x9_0000_0000,
-        Expr::Select { .. } => 0xa_0000_0000,
-        Expr::Cast { .. } => 0xb_0000_0000,
-        Expr::Atomic { .. } => 0xc_0000_0000,
-        Expr::SubgroupBallot { .. } => 0xd_0000_0000,
-        Expr::SubgroupShuffle { .. } => 0xe_0000_0000,
-        Expr::SubgroupReduce { .. } => 0xf_0000_0000,
-        Expr::SubgroupLocalId | Expr::SubgroupSize => 0x20_0000_0000,
-        Expr::Opaque(_) => 0x10_0000_0000,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{BufferDecl, DataType, Expr as E, Ident, Program};
+    use crate::ir::{BinOp, BufferDecl, DataType, Expr as E, Program};
+
+    /// Which operand side a literal must land on is what these assertions
+    /// name. The canonical order itself is decided in
+    /// `ir_inner::model::program::canonical`.
+    fn is_literal(expr: &Expr) -> bool {
+        matches!(
+            expr,
+            Expr::LitU32(_) | Expr::LitI32(_) | Expr::LitF32(_) | Expr::LitBool(_)
+        )
+    }
 
     fn scalar_out_prog(body: Vec<Node>) -> Program {
         Program::wrapped(
@@ -325,24 +248,6 @@ mod tests {
             [1, 1, 1],
             body,
         )
-    }
-
-    #[test]
-    fn expr_sort_key_uses_cached_ident_hash_for_name_bearing_exprs() {
-        let name = Ident::from("very_long_identifier_that_must_not_be_rehashed_per_compare");
-
-        assert_eq!(
-            expr_sort_key(&Expr::Var(name.clone())),
-            name.cached_hash() & 0xFFFF_FFFF
-        );
-        assert_eq!(
-            expr_sort_key(&Expr::load(name.clone(), Expr::u32(0))),
-            0x1_0000_0000 | name.cached_hash()
-        );
-        assert_eq!(
-            expr_sort_key(&Expr::buf_len(name.clone())),
-            0x2_0000_0000 | name.cached_hash()
-        );
     }
 
     #[test]
@@ -403,7 +308,7 @@ mod tests {
             E::add(E::u32(3), E::var("a")),
         )]);
         let canonical = run(p);
-        let body = crate::test_util::region_body(&canonical);
+        let body = crate::test_ir_inspect::region_body(&canonical);
         match &body[0] {
             Node::Store { value, .. } => match value {
                 Expr::BinOp { left, right, .. } => {
@@ -461,7 +366,7 @@ mod tests {
                 _ => {}
             }
         }
-        let entry_body = crate::test_util::region_body(&canonical);
+        let entry_body = crate::test_ir_inspect::region_body(&canonical);
         match &entry_body[0] {
             Node::Store { value, .. } => find_mul_and_check(value),
             other => panic!("expected Store, got {other:?}"),
@@ -473,14 +378,14 @@ mod tests {
         // canonicalize must NOT fold `a == a` to `true`. The pass is
         // type-blind, and for a float `a` that is NaN at runtime
         // `a == a` is *false* under IEEE-754 (the reference oracle's
-        // `binop_f32` and the SPIR-V `OpFOrdEqual` emitter both agree).
+        // `binop_f32` and every target emitter agree).
         // Folding it to a bool literal would miscompile NaN checks and
         // collide distinct programs in the content-addressed cache.
         // The Eq node is preserved verbatim (operand order unchanged
         // because both operands are the same Var).
         let p = scalar_out_prog(vec![Node::let_bind("t", E::eq(E::var("a"), E::var("a")))]);
         let canonical = run(p);
-        let entry_body = crate::test_util::region_body(&canonical);
+        let entry_body = crate::test_ir_inspect::region_body(&canonical);
         match &entry_body[0] {
             Node::Let { value, .. } => match value {
                 Expr::BinOp {
@@ -504,7 +409,7 @@ mod tests {
         // not fold it to a bool literal. The Ne node is preserved.
         let p = scalar_out_prog(vec![Node::let_bind("t", E::ne(E::var("a"), E::var("a")))]);
         let canonical = run(p);
-        let entry_body = crate::test_util::region_body(&canonical);
+        let entry_body = crate::test_ir_inspect::region_body(&canonical);
         match &entry_body[0] {
             Node::Let { value, .. } => match value {
                 Expr::BinOp {
@@ -577,7 +482,7 @@ mod tests {
     fn eq_different_vars_unchanged() {
         let p = scalar_out_prog(vec![Node::let_bind("t", E::eq(E::var("a"), E::var("b")))]);
         let canonical = run(p);
-        let entry_body = crate::test_util::region_body(&canonical);
+        let entry_body = crate::test_ir_inspect::region_body(&canonical);
         match &entry_body[0] {
             Node::Let { value, .. } => match value {
                 Expr::BinOp {

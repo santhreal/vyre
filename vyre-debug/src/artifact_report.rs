@@ -21,8 +21,10 @@ pub struct TargetPayloadReport {
 pub struct ArtifactReport {
     /// Neutral artifact digest.
     pub artifact: String,
-    /// Source graph digest.
+    /// Resolved logical-program digest.
     pub source_graph: String,
+    /// Graph digest before any binding resolved it.
+    pub semantic_graph: String,
     /// Validated compile-request digest.
     pub request: String,
     /// Compiler version recorded by the artifact.
@@ -61,6 +63,7 @@ impl ArtifactReport {
         Self {
             artifact: digest_hex(artifact.digest().as_bytes()),
             source_graph: digest_hex(provenance.source_graph.as_bytes()),
+            semantic_graph: digest_hex(provenance.semantic_graph.as_bytes()),
             request: digest_hex(provenance.request.as_bytes()),
             compiler_version: provenance.compiler_version.clone(),
             selected_plan: artifact.selected_plan().clone(),

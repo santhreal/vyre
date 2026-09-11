@@ -1,15 +1,17 @@
 //! Quantized datatype contracts for the reference oracle.
 //!
 //! The spec exposes INT4/FP4/NF4/FP8 datatypes for GPU inference paths. The
-//! CPU oracle must therefore preserve their fixed-width storage bytes exactly
-//! and return typed zero payloads for out-of-bounds loads instead of degrading
-//! through empty `Bytes`.
+//! CPU oracle must preserve their fixed-width storage bytes exactly. A load
+//! past the buffer is refused under the strict default; diagnostic permissive
+//! mode counts the absorbed load instead of refusing it, and the payload it
+//! absorbs keeps the element's storage width rather than degrading to empty
+//! `Bytes`.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_reference::{reference_eval, value::Value};
+use vyre_reference::{value::Value, ReferenceErrorClass, ReferenceRequest};
 
-fn run_single_load_store(ty: DataType, input: Vec<u8>, index: u32) -> Vec<u8> {
-    let program = Program::wrapped(
+fn load_store_program(ty: DataType, index: u32) -> Program {
+    Program::wrapped(
         vec![
             BufferDecl::storage("input", 0, BufferAccess::ReadOnly, ty.clone()).with_count(1),
             BufferDecl::output("out", 1, ty).with_count(1),
@@ -20,10 +22,63 @@ fn run_single_load_store(ty: DataType, input: Vec<u8>, index: u32) -> Vec<u8> {
             Expr::u32(0),
             Expr::load("input", Expr::u32(index)),
         )],
-    );
-    let outputs = reference_eval(&program, &[Value::Bytes(input.into())])
-        .expect("quantized load/store oracle program must execute");
+    )
+}
+
+fn run_single_load_store(ty: DataType, input: Vec<u8>, index: u32) -> Vec<u8> {
+    let outputs = vyre_reference::ReferenceRequest::standard(
+        &load_store_program(ty, index),
+        &[Value::Bytes(input.into())],
+    )
+    .outputs()
+    .expect("quantized load/store oracle program must execute");
     outputs[0].to_bytes()
+}
+
+/// Diagnostic permissive mode counts an out-of-bounds load instead of
+/// refusing it.
+///
+/// The absorbed payload is not reachable from here, and that is the point:
+/// permissive mode issues no output value a device could be graded against.
+/// The width of that payload is a property of [`Value::try_zero_for`] and is
+/// asserted directly against it below.
+fn absorbed_oob_load_count(ty: DataType, input: Vec<u8>) -> u64 {
+    let program = load_store_program(ty, 99);
+    let inputs = [Value::Bytes(input.into())];
+    let report = ReferenceRequest::standard(&program, &inputs)
+        .execute_permissive()
+        .expect("Fix: diagnostic mode must absorb an out-of-bounds load rather than refuse it.");
+    report.oob_report.oob_loads
+}
+
+/// Under the strict default a load past the buffer is refused for every
+/// quantized width. These cases used to assert the absorbed typed zero, which
+/// is a value the device never produces.
+#[test]
+fn quantized_out_of_bounds_load_refuses_under_the_strict_default() {
+    for ty in [
+        DataType::I4,
+        DataType::FP4,
+        DataType::NF4,
+        DataType::F8E4M3,
+        DataType::F8E5M2,
+        DataType::F16,
+        DataType::BF16,
+        DataType::I16,
+        DataType::U16,
+    ] {
+        let error = vyre_reference::ReferenceRequest::standard(
+            &load_store_program(ty.clone(), 99),
+            &[Value::Bytes(vec![0xFF, 0xFF].into())],
+        )
+        .outputs()
+        .expect_err("Fix: a quantized load past the buffer must be refused.");
+        assert_eq!(
+            error.error_class(),
+            ReferenceErrorClass::OutOfBoundsAccess,
+            "{ty} out-of-bounds load must refuse as an out-of-bounds access, got {error:?}"
+        );
+    }
 }
 
 #[test]
@@ -45,8 +100,9 @@ fn quantized_scalar_load_store_preserves_raw_storage_bits() {
     }
 }
 
+/// The absorbed payload of a one-byte quantized element keeps one byte.
 #[test]
-fn quantized_scalar_oob_load_returns_typed_zero_byte() {
+fn absorbed_quantized_scalar_load_keeps_its_one_byte_width() {
     for ty in [
         DataType::I4,
         DataType::FP4,
@@ -54,21 +110,34 @@ fn quantized_scalar_oob_load_returns_typed_zero_byte() {
         DataType::F8E4M3,
         DataType::F8E5M2,
     ] {
+        assert!(
+            absorbed_oob_load_count(ty.clone(), vec![0xFF]) > 0,
+            "{ty} absorbed load must be counted, or this measures an in-bounds load"
+        );
         assert_eq!(
-            run_single_load_store(ty.clone(), vec![0xFF], 99),
+            Value::try_zero_for(ty.clone())
+                .expect("Fix: the declared element type must have a defined zero")
+                .to_bytes(),
             vec![0],
-            "{ty} OOB load must return a one-byte typed zero, not empty Bytes"
+            "{ty} absorbed load must keep a one-byte typed zero, not empty Bytes"
         );
     }
 }
 
+/// The absorbed payload of a two-byte element keeps two bytes.
 #[test]
-fn half_and_bfloat_oob_loads_return_two_byte_typed_zero() {
+fn absorbed_half_and_bfloat_loads_keep_their_two_byte_width() {
     for ty in [DataType::F16, DataType::BF16, DataType::I16, DataType::U16] {
+        assert!(
+            absorbed_oob_load_count(ty.clone(), vec![0xFF, 0xFF]) > 0,
+            "{ty} absorbed load must be counted, or this measures an in-bounds load"
+        );
         assert_eq!(
-            run_single_load_store(ty.clone(), vec![0xFF, 0xFF], 99),
+            Value::try_zero_for(ty.clone())
+                .expect("Fix: the declared element type must have a defined zero")
+                .to_bytes(),
             vec![0, 0],
-            "{ty} OOB load must preserve its two-byte storage shape"
+            "{ty} absorbed load must preserve its two-byte storage shape"
         );
     }
 }
@@ -84,8 +153,10 @@ fn packed_i4_reference_buffer_len_reports_logical_elements() {
         vec![Node::store("out", Expr::u32(0), Expr::buf_len("input"))],
     );
 
-    let outputs = reference_eval(&program, &[Value::Bytes(vec![0u8; 4].into())])
-        .expect("Fix: packed I4 buffer length oracle must execute.");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&program, &[Value::Bytes(vec![0u8; 4].into())])
+            .outputs()
+            .expect("Fix: packed I4 buffer length oracle must execute.");
 
     assert_eq!(
         outputs[0].to_bytes(),

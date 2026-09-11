@@ -1,7 +1,7 @@
 //! The registered optimizer must preserve reference semantics for this corpus.
 //!
 //! This is a smoke oracle; property coverage for idempotence and wire stability
-//! lives in `optimizer_idempotence_proptest.rs` (inventories #34–#35, #109).
+//! lives in `optimizer_idempotence_proptest.rs`.
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::optimizer as optimize;
@@ -23,12 +23,14 @@ fn optimize_preserves_reference_result_for_arithmetic_store() {
         Expr::sub(Expr::u32(10), Expr::u32(2)),
     ));
     let reference_inputs = [Value::U32(0)];
-    let base = vyre_reference::reference_eval(&program, &reference_inputs)
+    let base = vyre_reference::ReferenceRequest::standard(&program, &reference_inputs)
+        .outputs()
         .expect("Fix: unoptimized program must execute on the reference interpreter");
 
     let optimized =
         optimize::optimize(program.clone()).expect("registered optimizer must converge");
-    let opt = vyre_reference::reference_eval(&optimized, &reference_inputs)
+    let opt = vyre_reference::ReferenceRequest::standard(&optimized, &reference_inputs)
+        .outputs()
         .expect("Fix: optimized program must execute on the reference interpreter");
 
     assert_eq!(

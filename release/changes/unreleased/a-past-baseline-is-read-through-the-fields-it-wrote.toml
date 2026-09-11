@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`gate-canon` reads the base revision of the baseline file through the fields that revision wrote. Reading it with the current row shape made the gate unrunnable against any base older than the last schema change, so the registered sweep reported that the gate could not run instead of whether a pinned count had risen. The working-tree copy is still held to exactly `name` and `findings` with every count zero."

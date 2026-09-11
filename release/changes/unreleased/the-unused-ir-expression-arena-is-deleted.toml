@@ -1,0 +1,2 @@
+category = "Removed"
+text = "vyre_foundation::ir::ExprArena, ExprRef, ArenaProgram and Program::with_arena are gone. Nothing in the workspace ever constructed one: it was a second expression arena beside the live flat arena in optimizer::expr_arena, published under a colliding name, and it carried the only unsafe code in vyre-foundation. The crate no longer allows unsafe outside one test that frees leaked static keys, and no longer depends on bumpalo."

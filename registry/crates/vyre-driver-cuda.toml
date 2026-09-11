@@ -1,0 +1,5 @@
+name = "vyre-driver-cuda"
+concern = "Own pure PTX target compilation, native device acquisition, materialization, dispatch, graphs, and release-path evidence."
+pages = { spec = "vyre-driver-cuda/SPEC.md", readme = "vyre-driver-cuda/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-driver", "vyre-emit-ptx", "vyre-foundation", "vyre-libs", "vyre-lower", "vyre-megakernel", "vyre-pass-engine", "vyre-spec"]

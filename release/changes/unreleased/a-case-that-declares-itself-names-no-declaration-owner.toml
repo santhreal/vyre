@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A benchmark case that open-codes the case trait reports no declaration owner, so an owner named by exactly one case no longer passes for a shared one, and the CUB scan case is recorded in the published enumeration."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The radix-2 FFT butterfly and the pointwise complex multiply state their multiply-add pairs as `fma`, so the device and the CPU reference round the same number of times instead of leaving the contraction to whichever backend compiled the program."

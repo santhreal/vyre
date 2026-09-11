@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The crate ownership registry records the feature selection each dependency edge is built with. The `xtask-registry` to `vyre-libs` row named no features while the edge enables `full` and `matching-regex`, so the derived crate graph described a build nothing performs. The row now names both, and the graph is regenerated from it."

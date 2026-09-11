@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The CUDA C-preprocessing parity tests share their two dispatchers. The payload, tokenize, macro-expansion and filter files each declared a private reference dispatcher that evaluates the program on the host and a private CUDA dispatcher that runs it on the device once owned and once borrowed, four copies of each. `vyre-driver-cuda/tests/common/c_preprocess_oracles.rs` now owns `ReferenceOracle` and `CudaOracle`; the parity assertion each file makes stays in that file, because the two arms being compared are the point of the test."

@@ -5,13 +5,14 @@ use std::collections::BTreeSet;
 use vyre_foundation::ir::BinOp;
 use vyre_foundation::optimizer::algebraic_rules::{
     arithmetic_rewrite_proof_contracts, binop_identity_replacement,
-    strength_reduce_power_of_two_shift, IdentityReplacement, ScalarLiteral,
+    strength_reduce_power_of_two_shift, IdentityReplacement,
     REWRITE_ID_CANONICALIZE_ADD_COMMUTATIVE, REWRITE_ID_CANONICALIZE_MUL_COMMUTATIVE,
     REWRITE_ID_CONST_FOLD_ADD_LITERALS, REWRITE_ID_CONST_FOLD_MUL_LITERALS,
     REWRITE_ID_IDENTITY_ELIM_ADD_ZERO, REWRITE_ID_IDENTITY_ELIM_MUL_ONE,
     REWRITE_ID_IDENTITY_ELIM_MUL_ZERO, REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_EIGHT,
     REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_FOUR, REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_TWO,
 };
+use vyre_foundation::region_ssa::ScalarLiteral;
 
 #[test]
 fn identity_rules_cover_bool_and_integer_absorbers() {
@@ -35,6 +36,39 @@ fn identity_rules_cover_bool_and_integer_absorbers() {
     assert_eq!(
         binop_identity_replacement(BinOp::Mul, false, None, Some(ScalarLiteral::U32(0))),
         Some(IdentityReplacement::Right)
+    );
+}
+
+/// WHY: ordinary float addition and subtraction use different signed-zero
+/// identities. A value comparison treats both zeros as equal and silently
+/// changes the sign of a runtime `-0.0`.
+#[test]
+fn float_signed_zero_identity_contracts() {
+    for (literal, expected) in [
+        (ScalarLiteral::F32(-0.0), Some(IdentityReplacement::Left)),
+        (ScalarLiteral::F32(0.0), None),
+    ] {
+        assert_eq!(
+            binop_identity_replacement(BinOp::Add, false, None, Some(literal)),
+            expected
+        );
+    }
+    for (literal, expected) in [
+        (ScalarLiteral::F32(-0.0), Some(IdentityReplacement::Right)),
+        (ScalarLiteral::F32(0.0), None),
+    ] {
+        assert_eq!(
+            binop_identity_replacement(BinOp::Add, false, Some(literal), None),
+            expected
+        );
+    }
+    assert_eq!(
+        binop_identity_replacement(BinOp::Sub, false, None, Some(ScalarLiteral::F32(0.0))),
+        Some(IdentityReplacement::Left)
+    );
+    assert_eq!(
+        binop_identity_replacement(BinOp::Sub, false, None, Some(ScalarLiteral::F32(-0.0))),
+        None
     );
 }
 

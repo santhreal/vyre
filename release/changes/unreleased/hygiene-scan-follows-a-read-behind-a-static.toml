@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The hygiene scan reaches a source read hoisted into a static initializer, so a test that inspects Rust source through a `LazyLock` corpus is detected again. The scan followed calls between functions only, so such a file reported as inspecting no source and its declared row in `docs/testing/STRUCTURAL_GATES.toml` was reported as stale to delete."

@@ -35,7 +35,7 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, CacheLocality, DataType, Expr, Ident, LinearType, MemoryHints,
     MemoryKind, Node, Program, ShapePredicate,
 };
-use vyre_foundation::optimizer::fact_substrate::FactSubstrate;
+use vyre_foundation::optimizer::fact_cache::FactCache;
 use vyre_foundation::optimizer::program_shape_facts::ProgramShapeFacts;
 use vyre_foundation::optimizer::program_soa::ProgramFacts;
 

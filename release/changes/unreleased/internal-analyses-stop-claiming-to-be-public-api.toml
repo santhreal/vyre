@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Items no consumer can reach are no longer declared public: the value-range body walk, the shared-memory promotion budget entry, and the pipeline blob ceiling are private to their crates, and the deprecation warning code has one published path at vyre_driver::DEPRECATED_OP_CODE."

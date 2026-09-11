@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The panic budget reads a module gated behind cfg(test) as test code, derived from the declarations the tree writes, so a fixture module no shipped build compiles no longer counts against its crate."

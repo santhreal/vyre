@@ -24,6 +24,26 @@ ignore = [
     # dependency is transitive, so the switch belongs to the crates that pull
     # it rather than to this workspace.
     { id = "RUSTSEC-2024-0436", reason = "paste is archived upstream, reached transitively; the replacement is the dependents' to make." },
+    # bitmaps 3.2.1: reached only through imbl, the maintained fork of im that
+    # this workspace moved to in order to clear im's own unmaintained advisory
+    # and RUSTSEC-2023-0126, the OrdSet aliasing violation. The persistent
+    # collections are load-bearing: the DCE live set is cloned at every branch
+    # arm and the lowering scope snapshots its binding map per scope, so a std
+    # map would deep-copy every identifier instead of sharing structure.
+    # Nothing depends on bitmaps directly and there is no advisory of substance
+    # against it, only lack of maintenance.
+    { id = "RUSTSEC-2026-0247", reason = "bitmaps is unmaintained, reached transitively through imbl; no vulnerability and no successor to move to." },
+    # arrayref 0.3.9 is yanked and this workspace pins it anyway, because the
+    # only unyanked successor is hostile. Every arrayref release from 0.3.5 to
+    # 0.3.9 was yanked on 2026-08-20 and 0.3.10 was published the same day,
+    # which forces any resolver honouring `yanked = "deny"` onto the new one.
+    # 0.3.10 adds a dependency on `proc-macro1`, a typosquat of proc-macro2
+    # whose build script base64-decodes an IP literal, disables TLS
+    # certificate verification with a permissive verifier, downloads a
+    # per-platform binary, writes it to /tmp/rust-setup, marks it executable
+    # and spawns it. See the ban below. A yanked release whose checksum is
+    # pinned in Cargo.lock is the safe side of that choice.
+    { crate = "arrayref@0.3.9", reason = "yanked upstream; the only unyanked successor ships a build-script dropper. Pinned by checksum in Cargo.lock." },
 ]
 
 [licenses]
@@ -68,6 +88,16 @@ deny = [
     # listed as an allowed wrapper rather than the ban being weakened.
     { crate = "openssl", wrappers = ["vyre-bench"], reason = "Fix: use rustls instead  -  avoid linking system openssl. Benchmark baselines are the sole exception." },
     { crate = "openssl-sys", wrappers = ["openssl"], reason = "Fix: use rustls  -  no C dependency bleed." },
+    # `proc-macro1` is not a proc-macro crate. It is a typosquat of
+    # proc-macro2 whose build.rs assembles an IP literal from base64 fragments,
+    # builds a rustls client with a certificate verifier that returns
+    # "verified" for every chain, downloads a per-platform binary, writes it to
+    # /tmp/rust-setup or %TEMP%\rust-setup.ps1, marks it executable, and spawns
+    # it detached so cargo does not wait on it. It reaches this workspace only
+    # through arrayref 0.3.10, which reaches it through blake3. The ban carries
+    # no wrappers: nothing may depend on it.
+    { crate = "proc-macro1", reason = "Fix: this crate is a dropper. Its build script fetches and executes a remote payload. Do not resolve it under any name or version." },
+    { crate = "arrayref@0.3.10", reason = "Fix: pin arrayref to 0.3.9. 0.3.10 was published the day every earlier release was yanked and it is what pulls in the proc-macro1 dropper." },
 ]
 
 skip = []

@@ -4,7 +4,7 @@
 ///
 /// Example: `FloatType::F32` records that a law was checked over IEEE 754
 /// binary32 inputs.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub enum FloatType {
     /// IEEE 754 binary16.

@@ -2,7 +2,6 @@
 
 use crate::backend::DispatchConfig;
 use vyre_foundation::ir::Program;
-use vyre_spec::BackendId;
 
 /// Return the normalized program digest used by backend pipeline caches.
 ///
@@ -39,10 +38,32 @@ pub fn update_dispatch_policy_cache_hash(hasher: &mut blake3::Hasher, config: &D
         }
     };
     hasher.update(b"\0wg\0");
-    match config.workgroup_override {
+    match config.launch_workgroup() {
         Some(workgroup) => {
             hasher.update(&[1]);
             for axis in workgroup {
+                hasher.update(&axis.to_le_bytes());
+            }
+        }
+        None => {
+            hasher.update(&[0]);
+        }
+    };
+    // Two rounding modes over one program are two different modules, so the
+    // mode and the contract it belongs to are both in the key. The contract
+    // version is what makes an artifact cached before the mode existed miss
+    // instead of being served to a strict-mode dispatch.
+    hasher.update(b"\0float\0");
+    hasher.update(config.float_lowering.cache_label().as_bytes());
+    hasher.update(&vyre_foundation::fp_parity::FLOAT_LOWERING_CONTRACT_VERSION.to_le_bytes());
+    // The ceiling decides whether the launch is folded across grid axes, and a
+    // folded launch is emitted with a grid-linearized element index, so two
+    // ceilings over one program are two different modules.
+    hasher.update(b"\0axes\0");
+    match config.max_workgroups_per_axis {
+        Some(limits) => {
+            hasher.update(&[1]);
+            for axis in limits {
                 hasher.update(&axis.to_le_bytes());
             }
         }
@@ -68,13 +89,15 @@ pub fn dispatch_policy_cache_digest(config: &DispatchConfig) -> [u8; 32] {
 #[must_use]
 pub fn dispatch_policy_cache_string(config: &DispatchConfig) -> String {
     // "ulp=" (4) + max u8 decimal (3) + ":wg=" (4) + workgroup repr
-    // (~32) ≈ 64 bytes worst case; pre-size so the 4 push_str calls
-    // do not realloc.
-    let mut policy = String::with_capacity(64);
+    // (~32) + ":float=" (7) + mode label (~11) ≈ 96 bytes worst case; pre-size
+    // so the push_str calls do not realloc.
+    let mut policy = String::with_capacity(96);
     policy.push_str("ulp=");
     push_debug_option_u8(&mut policy, config.ulp_budget);
     policy.push_str(":wg=");
-    push_debug_option_workgroup(&mut policy, config.workgroup_override);
+    push_debug_option_workgroup(&mut policy, config.launch_workgroup());
+    policy.push_str(":float=");
+    policy.push_str(config.float_lowering.cache_label());
     policy
 }
 
@@ -193,13 +216,15 @@ pub(super) fn push_decimal_u32(out: &mut String, value: u32) {
     }
 }
 
+// Inline: covers `push_decimal_u32`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{
-        dispatch_policy_cache_digest, hex_encode, push_decimal_u32, push_lower_hex,
-        update_dispatch_policy_cache_hash,
+        dispatch_policy_cache_digest, dispatch_policy_cache_string, hex_encode, push_decimal_u32,
+        push_lower_hex, update_dispatch_policy_cache_hash,
     };
     use crate::backend::DispatchConfig;
+    use vyre_foundation::fp_parity::FloatLoweringMode;
 
     #[test]
     fn hex_encode_and_push_lower_hex_agree_on_known_bytes() {
@@ -207,6 +232,45 @@ mod tests {
         let mut out = String::from("k=");
         push_lower_hex(&[0xde, 0xad, 0xbe, 0xef], &mut out);
         assert_eq!(out, "k=deadbeef");
+    }
+
+    /// WHY: a rounding mode changes the emitted module, so two modes over one
+    /// program are two cache entries. The sweep runs the whole
+    /// `FloatLoweringMode` roster rather than the pair that existed when this
+    /// was written: a mode added without reaching the key would serve
+    /// contracted arithmetic to a strict request out of the disk cache.
+    #[test]
+    fn every_float_lowering_mode_is_its_own_cache_identity() {
+        let policy_of = |mode: FloatLoweringMode| {
+            let mut config = DispatchConfig::default();
+            config.float_lowering = mode;
+            (
+                dispatch_policy_cache_digest(&config),
+                dispatch_policy_cache_string(&config),
+            )
+        };
+        let mut seen: Vec<([u8; 32], String)> = Vec::new();
+        for &mode in FloatLoweringMode::EVERY {
+            let (digest, string) = policy_of(mode);
+            assert!(
+                string.contains(mode.cache_label()),
+                "Fix: the policy fingerprint must name the float lowering mode; `{string}` omits `{}`.",
+                mode.cache_label()
+            );
+            for (other_digest, other_string) in &seen {
+                assert_ne!(
+                    *other_digest, digest,
+                    "Fix: mix the float lowering mode into the dispatch policy digest; `{}` collides with `{string}`.",
+                    other_string
+                );
+                assert_ne!(
+                    *other_string, string,
+                    "Fix: give every float lowering mode its own policy fingerprint."
+                );
+            }
+            seen.push((digest, string));
+        }
+        assert_eq!(seen.len(), FloatLoweringMode::EVERY.len());
     }
 
     #[test]
@@ -241,5 +305,33 @@ mod tests {
                 "Fix: dispatch-policy digest must stay single-sourced through update_dispatch_policy_cache_hash for generated case {case}."
             );
         }
+    }
+
+    /// WHY: a frozen launch selects the workgroup a backend compiles against, so
+    /// two artifacts differing only in that workgroup must not share a pipeline
+    /// cache entry. A key that reads only the tuner override would collide them
+    /// and run the second launch on the first launch's kernel.
+    #[test]
+    fn a_frozen_launch_workgroup_separates_pipeline_cache_keys() {
+        let launch_of = |workgroup: [u32; 3]| {
+            let mut config = DispatchConfig::default();
+            config.launch = Some(
+                crate::launch_directive::LaunchDirective::stated(workgroup, [8, 1, 1], 0)
+                    .expect("the stated fixture launch is positive"),
+            );
+            config
+        };
+        let narrow = dispatch_policy_cache_digest(&launch_of([64, 1, 1]));
+        let wide = dispatch_policy_cache_digest(&launch_of([256, 1, 1]));
+        assert_ne!(
+            narrow, wide,
+            "Fix: a frozen launch workgroup must reach the pipeline cache key."
+        );
+
+        // The same kernel, stated through either authority, is one cache entry:
+        // the grid is a launch argument and does not change generated code.
+        let mut overridden = DispatchConfig::default();
+        overridden.workgroup_override = Some([64, 1, 1]);
+        assert_eq!(dispatch_policy_cache_digest(&overridden), narrow);
     }
 }

@@ -8,21 +8,23 @@
 // - Epoch / done counter placement
 // - Packed slot overflow behavior
 
-// `#![allow(clippy::assertions_on_constants)]` was moved to the parent
-// `megakernel_protocol_layout_contracts.rs` because inner attributes
-// cannot ride an `include!`-d chunk.
+#[path = "megakernel_protocol_layout_contracts__slot_word_layout_args_start_at_word_4.rs"]
+mod megakernel_protocol_layout_contracts_slot_word_layout_args_start_at_word_4;
+
+// `#![allow(clippy::assertions_on_constants)]` lives on the parent
+// `megakernel_protocol_layout_contracts.rs` crate root.
 
 use vyre_runtime::resident_work_queue::{
     protocol::{self, control, opcode, slot, ARG0_WORD, ARGS_PER_SLOT, SLOT_WORDS},
     scheduler::{self, PRIORITY_LEVELS},
     ResidentWorkQueue,
 };
-use vyre_runtime::PipelineError;
+use vyre_runtime::RingEncodingFault;
 
-fn write_word(bytes: &mut [u8], word_idx: usize, value: u32) {
-    let off = word_idx * 4;
-    bytes[off..off + 4].copy_from_slice(&value.to_le_bytes());
-}
+use crate::ring_expectations::{
+    assert_publish_rejected_by_status, assert_ring_fault, protocol_missing_word, ring_fault_fix,
+};
+use vyre_test_support::le_words::write_word;
 
 fn read_word(bytes: &[u8], word_idx: usize) -> u32 {
     let off = word_idx * 4;
@@ -224,7 +226,13 @@ fn strict_metrics_reader_rejects_less_than_full_metrics_window() {
     let short = vec![0u8; (control::METRICS_BASE as usize) * 4];
     let err = ResidentWorkQueue::try_read_metrics(&short)
         .expect_err("control buffer ending at metrics base must reject metrics read");
-    assert!(err.to_string().contains("Fix:"));
+    let (buffer, word_idx, byte_len) = protocol_missing_word(
+        &err,
+        "a control buffer ending at the metrics base must name the first metrics word",
+    );
+    assert_eq!(buffer, "control");
+    assert_eq!(word_idx, control::METRICS_BASE as usize);
+    assert_eq!(byte_len, (control::METRICS_BASE as usize) * 4);
 }
 
 // ---------------------------------------------------------------------------
@@ -269,15 +277,21 @@ fn strict_observable_rejects_index_at_exact_buffer_end() {
     let ctrl = ResidentWorkQueue::encode_control(false, 0, 2).unwrap();
     let err = ResidentWorkQueue::try_read_observable(&ctrl, 2)
         .expect_err("observable index 2 is at word OBSERVABLE_BASE+2 == buffer end / 4");
-    assert!(err.to_string().contains("Fix:"));
+    let (buffer, word_idx, byte_len) = protocol_missing_word(
+        &err,
+        "an observable index at the buffer end must name the missing word",
+    );
+    assert_eq!(buffer, "control");
+    assert_eq!(word_idx, (control::OBSERVABLE_BASE + 2) as usize);
+    assert_eq!(byte_len, ctrl.len());
 }
 
 #[test]
 fn strict_observable_accepts_last_valid_index() {
     let mut ctrl = ResidentWorkQueue::encode_control(false, 0, 2).unwrap();
     write_word(&mut ctrl, (control::OBSERVABLE_BASE + 1) as usize, 0xBEEF);
-    let val =
-        ResidentWorkQueue::try_read_observable(&ctrl, 1).expect("index 1 must be valid for 2 observables");
+    let val = ResidentWorkQueue::try_read_observable(&ctrl, 1)
+        .expect("index 1 must be valid for 2 observables");
     assert_eq!(val, 0xBEEF);
 }
 
@@ -335,7 +349,11 @@ fn slot_publish_at_count_is_rejected() {
     let mut ring = ResidentWorkQueue::encode_empty_ring(8).unwrap();
     let err = ResidentWorkQueue::publish_slot(&mut ring, 8, 0, opcode::NOP, &[])
         .expect_err("slot index == slot_count must be rejected");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::OutOfBounds,
+        "slot index == slot_count is out of bounds",
+    );
 }
 
 #[test]
@@ -343,7 +361,11 @@ fn slot_publish_rejects_malformed_ring_not_multiple_of_slot_bytes() {
     let mut ring = vec![0u8; (SLOT_WORDS as usize * 4) + 1];
     let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcode::NOP, &[])
         .expect_err("ring length not a multiple of slot bytes must be rejected");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Geometry,
+        "a ring length off a slot multiple is malformed geometry",
+    );
 }
 
 #[test]
@@ -385,7 +407,11 @@ fn publish_slot_args_one_over_budget_fails() {
     let args = vec![0u32; ARGS_PER_SLOT as usize + 1];
     let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcode::NOP, &args)
         .expect_err("ARGS_PER_SLOT + 1 args must be rejected");
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Capacity,
+        "one arg over ARGS_PER_SLOT is a capacity fault",
+    );
 }
 
 #[test]
@@ -423,4 +449,3 @@ fn slot_word_layout_priority_is_word_3() {
         "priority must be at word 3 and default to NORMAL"
     );
 }
-

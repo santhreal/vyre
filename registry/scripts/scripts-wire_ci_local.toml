@@ -1,0 +1,3 @@
+path = "scripts/wire_ci_local.sh"
+state = "operator"
+reason = "the pre-push hook body: fmt, clippy, check, test and a determinism rerun over the wire crates"

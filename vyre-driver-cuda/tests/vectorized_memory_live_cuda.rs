@@ -1,10 +1,12 @@
 //! Live CUDA/reference coverage for PTX vectorized memory chains.
 
-mod common;
-#[path = "common/vectorized_memory_dynamic_affine.rs"]
+#![cfg(feature = "device-tests")]
+
+use crate::harness;
+#[path = "harness/vectorized_memory_dynamic_affine.rs"]
 mod vectorized_memory_dynamic_affine;
 
-use common::{
+use harness::{
     assert_f32_output_lanes, assert_u32_output_lanes, bool_bytes, cuda_reference_outputs,
     f32_bytes, i32_bytes, live_backend, u32_bytes,
 };
@@ -25,8 +27,8 @@ fn narrow_u8_scalar_copy_emits_byte_ptx_and_matches_reference_on_live_cuda() {
     let ptx = vyre_driver_cuda::codegen::program_to_ptx(&program, &DispatchConfig::default())
         .expect("Fix: CUDA PTX emission must support byte-wide U8 memory programs.");
     assert!(
-        ptx.contains("ld.global.u8"),
-        "Fix: U8 loads must use byte-wide PTX memory operations.\n{ptx}"
+        ptx.contains("ld.global.nc.u8"),
+        "Fix: U8 loads must use byte-wide PTX memory operations, and a read-only input reads through the read-only data cache.\n{ptx}"
     );
     assert!(
         ptx.contains("st.global.u8"),
@@ -58,12 +60,11 @@ fn vectorized_scalar_copy_emits_packed_ptx_and_matches_reference_on_live_cuda() 
         let program = vectorized_copy_program(case.ty.clone());
         let ptx = vyre_driver_cuda::codegen::program_to_ptx(&program, &DispatchConfig::default())
             .expect("Fix: CUDA PTX emission must support unit-stride vectorized memory programs.");
-        let vector_load = format!("ld.global.v4.{}", case.ptx_suffix);
-        let vector_load_nc = format!("ld.global.nc.v4.{}", case.ptx_suffix);
+        let vector_load = format!("ld.global.nc.v4.{}", case.ptx_suffix);
         let vector_store = format!("st.global.v4.{}", case.ptx_suffix);
         assert!(
-            ptx.contains(&vector_load) || ptx.contains(&vector_load_nc),
-            "Fix: CUDA release PTX must fuse four adjacent {name} loads into a packed v4 global load.\n{ptx}",
+            ptx.contains(&vector_load),
+            "Fix: CUDA release PTX must fuse four adjacent {name} loads into a packed v4 read-only-cache global load.\n{ptx}",
             name = case.name
         );
         assert!(
@@ -101,12 +102,11 @@ fn vectorized_scalar_pair_copy_emits_packed_v2_ptx_and_matches_reference_on_live
             .expect(
                 "Fix: CUDA PTX emission must support unit-stride v2 vectorized memory programs.",
             );
-        let vector_load = format!("ld.global.v2.{}", case.ptx_suffix);
-        let vector_load_nc = format!("ld.global.nc.v2.{}", case.ptx_suffix);
+        let vector_load = format!("ld.global.nc.v2.{}", case.ptx_suffix);
         let vector_store = format!("st.global.v2.{}", case.ptx_suffix);
         assert!(
-            ptx.contains(&vector_load) || ptx.contains(&vector_load_nc),
-            "Fix: CUDA release PTX must fuse two adjacent {name} loads into a packed v2 global load.\n{ptx}",
+            ptx.contains(&vector_load),
+            "Fix: CUDA release PTX must fuse two adjacent {name} loads into a packed v2 read-only-cache global load.\n{ptx}",
             name = case.name
         );
         assert!(
@@ -145,12 +145,11 @@ fn vectorized_symbolic_affine_copy_emits_packed_v4_ptx_and_matches_reference_on_
             .expect(
             "Fix: CUDA PTX emission must support symbolically-aligned vectorized memory programs.",
         );
-        let vector_load = format!("ld.global.v4.{}", case.ptx_suffix);
-        let vector_load_nc = format!("ld.global.nc.v4.{}", case.ptx_suffix);
+        let vector_load = format!("ld.global.nc.v4.{}", case.ptx_suffix);
         let vector_store = format!("st.global.v4.{}", case.ptx_suffix);
         assert!(
-            ptx.contains(&vector_load) || ptx.contains(&vector_load_nc),
-            "Fix: CUDA release PTX must fuse symbolic-affine adjacent {name} loads into a packed v4 global load.\n{ptx}",
+            ptx.contains(&vector_load),
+            "Fix: CUDA release PTX must fuse symbolic-affine adjacent {name} loads into a packed v4 read-only-cache global load.\n{ptx}",
             name = case.name
         );
         assert!(

@@ -4,7 +4,7 @@
 //! descriptor body tree, resolving child bodies and assigning each site a
 //! flattened op index.
 //!
-//! - `vyre_lower::analyses::workgroup_uniform::analyze`
+//! - `vyre_lower::analyses::analyze_workgroup_uniform`
 //! - `vyre_emit_ptx::patterns::predicated_execution::analyze`
 //! - `vyre_emit_ptx::patterns::ldmatrix_cp_async::analyze`
 //!
@@ -30,7 +30,7 @@
 use vyre_emit_ptx::patterns::{ldmatrix_cp_async, predicated_execution};
 use vyre_emit_ptx::ComputeCapability;
 use vyre_foundation::ir::DataType;
-use vyre_lower::analyses::workgroup_uniform::{self, BranchUniformity};
+use vyre_lower::analyses::{analyze_workgroup_uniform, BranchUniformity};
 use vyre_lower::descriptor_builder::{
     body, descriptor, effect, global_ro, lit, op, shared_rw, KernelBodyBuilder,
 };
@@ -164,7 +164,7 @@ fn fixtures() -> Vec<KernelDescriptor> {
 }
 
 fn uniform_sites(desc: &KernelDescriptor) -> Vec<(usize, BranchUniformity)> {
-    workgroup_uniform::analyze(desc)
+    analyze_workgroup_uniform(desc)
         .branches
         .iter()
         .map(|b| (b.op_index, b.uniformity))
@@ -222,7 +222,10 @@ fn check<T: std::fmt::Debug + PartialEq>(
 fn uniformity_walk_reports_the_pinned_branch_sites() {
     let expected: Vec<Vec<(usize, BranchUniformity)>> = vec![
         vec![],
-        vec![(1, BranchUniformity::Uniform), (3, BranchUniformity::Uniform)],
+        vec![
+            (1, BranchUniformity::Uniform),
+            (3, BranchUniformity::Uniform),
+        ],
         vec![(7, BranchUniformity::Uniform)],
         vec![(4, BranchUniformity::Uniform)],
         vec![(1, BranchUniformity::Uniform)],

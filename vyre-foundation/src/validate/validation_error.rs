@@ -6,8 +6,9 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
+use super::catalog::{ValidationRule, VALIDATION_RULES};
 use crate::diagnostics::{
-    Diagnostic, DiagnosticCode, DiagnosticStage, OpLocation, RetryClass, Severity,
+    CauseKind, CompilerLevel, Diagnostic, DiagnosticCode, DiagnosticStage, OpLocation, RetryClass,
 };
 
 /// Stable validation rule identity.
@@ -34,107 +35,6 @@ impl<'de> Deserialize<'de> for ValidationCode {
     }
 }
 
-const VALIDATION_RULES: &[(&str, ValidationPhase)] = &[
-    ("V008", ValidationPhase::Node),
-    ("V009", ValidationPhase::Memory),
-    ("V010", ValidationPhase::Memory),
-    ("V011", ValidationPhase::Node),
-    ("V012", ValidationPhase::Expression),
-    ("V013", ValidationPhase::Memory),
-    ("V014", ValidationPhase::Memory),
-    ("V016", ValidationPhase::Expression),
-    ("V018", ValidationPhase::Limits),
-    ("V019", ValidationPhase::Limits),
-    ("V020", ValidationPhase::Expression),
-    ("V021", ValidationPhase::Expression),
-    ("V022", ValidationPhase::Expression),
-    ("V023", ValidationPhase::Expression),
-    ("V025", ValidationPhase::Memory),
-    ("V027", ValidationPhase::Memory),
-    ("V028", ValidationPhase::Type),
-    ("V029", ValidationPhase::Expression),
-    ("V030", ValidationPhase::Expression),
-    ("V031", ValidationPhase::Node),
-    ("V032", ValidationPhase::Node),
-    ("V033", ValidationPhase::Limits),
-    ("V034", ValidationPhase::Expression),
-    ("V035", ValidationPhase::Type),
-    ("V036", ValidationPhase::Node),
-    ("V041", ValidationPhase::Expression),
-    ("V042", ValidationPhase::Memory),
-    ("V043", ValidationPhase::Memory),
-    ("V044", ValidationPhase::Type),
-    ("V045", ValidationPhase::Node),
-    ("V046", ValidationPhase::Node),
-    ("V047", ValidationPhase::Expression),
-    ("V051", ValidationPhase::Expression),
-    ("V052", ValidationPhase::Expression),
-    ("V053", ValidationPhase::Expression),
-    ("V054", ValidationPhase::Expression),
-    ("V055", ValidationPhase::Memory),
-    ("V056", ValidationPhase::Capability),
-    ("V057", ValidationPhase::Memory),
-    ("V058", ValidationPhase::Memory),
-    ("V059", ValidationPhase::Memory),
-    ("V060", ValidationPhase::Memory),
-    ("V061", ValidationPhase::Memory),
-    ("V063", ValidationPhase::Memory),
-    ("V064", ValidationPhase::Memory),
-    ("V065", ValidationPhase::Memory),
-    ("V066", ValidationPhase::Expression),
-    ("V067", ValidationPhase::Expression),
-    ("V068", ValidationPhase::Expression),
-    ("V070", ValidationPhase::Program),
-    ("V083", ValidationPhase::Program),
-    ("V084", ValidationPhase::Type),
-    ("V085", ValidationPhase::Type),
-    ("V086", ValidationPhase::Type),
-    ("V087", ValidationPhase::Type),
-    ("V088", ValidationPhase::Type),
-    ("V089", ValidationPhase::Type),
-    ("V090", ValidationPhase::Type),
-    ("V091", ValidationPhase::Type),
-    ("V092", ValidationPhase::Type),
-    ("V093", ValidationPhase::Type),
-    ("V094", ValidationPhase::Type),
-    ("V095", ValidationPhase::Type),
-    ("V096", ValidationPhase::Type),
-    ("V097", ValidationPhase::Type),
-    ("V098", ValidationPhase::Type),
-    ("V099", ValidationPhase::Type),
-    ("V100", ValidationPhase::Type),
-    ("V101", ValidationPhase::Type),
-    ("V102", ValidationPhase::Type),
-    ("V103", ValidationPhase::Type),
-    ("V104", ValidationPhase::Type),
-    ("V105", ValidationPhase::Program),
-    ("V106", ValidationPhase::Program),
-    ("V107", ValidationPhase::Program),
-    ("V108", ValidationPhase::Program),
-    ("V109", ValidationPhase::Program),
-    ("V110", ValidationPhase::Program),
-    ("V111", ValidationPhase::Node),
-    ("V112", ValidationPhase::Node),
-    ("V113", ValidationPhase::Node),
-    ("V114", ValidationPhase::Node),
-    ("V115", ValidationPhase::Composition),
-    ("V116", ValidationPhase::Composition),
-    ("V117", ValidationPhase::Node),
-    ("V118", ValidationPhase::Node),
-    ("V119", ValidationPhase::Node),
-    ("V120", ValidationPhase::Node),
-    ("V121", ValidationPhase::Node),
-    ("V122", ValidationPhase::Node),
-    ("V123", ValidationPhase::Node),
-    ("V124", ValidationPhase::Node),
-    ("V125", ValidationPhase::Node),
-    ("V126", ValidationPhase::Node),
-    ("V127", ValidationPhase::Node),
-    ("V128", ValidationPhase::Node),
-    ("V129", ValidationPhase::Memory),
-    ("V130", ValidationPhase::Program),
-];
-
 impl ValidationCode {
     /// Backend capability rejected an operation used by the program.
     pub const V056: Self = Self(Cow::Borrowed("V056"));
@@ -153,18 +53,39 @@ impl ValidationCode {
 
     /// Iterate every registered validation rule and its sole owning phase.
     ///
-    /// The registry is the source for diagnostics tooling and documentation
-    /// coverage. New rules must be added here before they can deserialize.
+    /// The registry is the source for diagnostics tooling and for the
+    /// generated catalog. A rule must appear in
+    /// `crate::validate::catalog::VALIDATION_RULES` before a code naming it
+    /// can deserialize.
     pub fn registered() -> impl ExactSizeIterator<Item = (&'static str, ValidationPhase)> + Clone {
-        VALIDATION_RULES.iter().copied()
+        VALIDATION_RULES.iter().map(|rule| (rule.code, rule.phase))
     }
 
     /// Return the sole validator phase allowed to emit this rule.
     #[must_use]
     pub fn phase(&self) -> Option<ValidationPhase> {
+        self.rule().map(|rule| rule.phase)
+    }
+
+    /// Return the invariant this rule enforces.
+    #[must_use]
+    pub fn invariant(&self) -> Option<&'static str> {
+        self.rule().map(|rule| rule.invariant)
+    }
+
+    /// Return the correction this rule offers to the program's author.
+    ///
+    /// This is the rule-level correction. An emitted [`ValidationError`]
+    /// carries a corrective action naming the offending buffer or binding.
+    #[must_use]
+    pub fn corrective_action(&self) -> Option<&'static str> {
+        self.rule().map(|rule| rule.corrective_action)
+    }
+
+    fn rule(&self) -> Option<&'static ValidationRule> {
         VALIDATION_RULES
             .iter()
-            .find_map(|(code, phase)| (*code == self.as_str()).then_some(*phase))
+            .find(|rule| rule.code == self.as_str())
     }
 }
 
@@ -210,6 +131,24 @@ impl ValidationPhase {
             Self::Capability => "capability",
             Self::Composition => "composition",
             Self::Limits => "limits",
+        }
+    }
+
+    /// Recovery class a caller routes on for a rejection in this phase.
+    ///
+    /// The match has no catch-all arm, so a new phase is a recorded decision
+    /// rather than a silent reuse of an existing class.
+    #[must_use]
+    pub const fn cause_kind(self) -> CauseKind {
+        match self {
+            Self::Program
+            | Self::Node
+            | Self::Expression
+            | Self::Type
+            | Self::Memory
+            | Self::Composition => CauseKind::InvalidInput,
+            Self::Capability => CauseKind::UnsupportedCapability,
+            Self::Limits => CauseKind::ResourceExhausted,
         }
     }
 }
@@ -443,35 +382,24 @@ impl ValidationError {
     /// Project the issue into the shared diagnostic protocol.
     #[must_use]
     pub fn diagnostic(&self) -> Diagnostic {
-        Diagnostic {
-            severity: Severity::Error,
-            code: DiagnosticCode::from_owned(self.code.as_str().to_string()),
-            stage: DiagnosticStage::Validate,
-            message: self.cause.clone(),
-            location: Some(self.location.diagnostic_location()),
-            suggested_fix: Some(self.corrective_action.clone()),
-            cause: Some(crate::diagnostics::DiagnosticCause {
-                kind: self.phase.as_str().to_string(),
-                detail: self.cause.to_string(),
-            }),
-            retry: self.retry,
-            doc_url: Some(Cow::Owned(format!(
-                "https://docs.vyre.dev/validator-errors#{}",
-                self.code.as_str().to_ascii_lowercase()
-            ))),
-        }
-    }
-}
-
-impl From<&ValidationError> for Diagnostic {
-    fn from(issue: &ValidationError) -> Self {
-        issue.diagnostic()
-    }
-}
-
-impl From<ValidationError> for Diagnostic {
-    fn from(issue: ValidationError) -> Self {
-        issue.diagnostic()
+        Diagnostic::error_with_code(
+            DiagnosticCode::from_owned(self.code.as_str().to_string()),
+            self.cause.clone(),
+        )
+        .with_stage(DiagnosticStage::Validate)
+        .with_compiler_level(CompilerLevel::FoundationIr)
+        .with_location(self.location.diagnostic_location())
+        .with_fix(self.corrective_action.clone())
+        .with_cause(
+            self.phase.cause_kind(),
+            self.phase.as_str(),
+            self.cause.to_string(),
+        )
+        .with_retry(self.retry)
+        .with_doc_url(format!(
+            "https://docs.vyre.dev/validator-errors#{}",
+            self.code.as_str().to_ascii_lowercase()
+        ))
     }
 }
 
@@ -482,6 +410,8 @@ impl fmt::Display for ValidationError {
 }
 
 impl std::error::Error for ValidationError {}
+
+crate::diagnostic_conversions!(ValidationError, diagnostic);
 
 #[cfg(test)]
 mod tests {
@@ -561,10 +491,9 @@ mod tests {
             diagnostic.suggested_fix.as_deref(),
             Some("cast the operand to f32")
         );
-        assert_eq!(
-            diagnostic.cause.as_ref().map(|cause| cause.kind.as_str()),
-            Some("type")
-        );
+        let cause = diagnostic.cause().expect("typed cause must be present");
+        assert_eq!(cause.kind, CauseKind::InvalidInput);
+        assert_eq!(cause.subject, "type");
     }
 
     #[test]

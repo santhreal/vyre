@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Undocumented production panic ceilings are now zero after fallible paths propagate errors and intentional infallible wrappers declare their panic contracts."

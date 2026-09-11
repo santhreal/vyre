@@ -1,0 +1,5 @@
+name = "vyre-emit-ptx"
+concern = "Consume verified lowering products and emit the primary binary backend text artifact."
+pages = { spec = "vyre-emit-ptx/SPEC.md", readme = "vyre-emit-ptx/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-foundation", "vyre-lower"]

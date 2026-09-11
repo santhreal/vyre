@@ -1,0 +1,2 @@
+category = "Added"
+text = "Neutral lowering compares the per-binding read, write and read-modify-write effects a program states against the lowered kernel descriptor and rejects a kernel that lost a store, invented one, or changed a read-modify-write into a plain access."

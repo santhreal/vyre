@@ -173,6 +173,8 @@ fn apply_context_bias(cost: u64, bps: u32) -> u64 {
     )
 }
 
+// Inline: `vyre_driver::device_extraction` is `pub(crate)`, so no integration test can reach what
+// this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -303,7 +305,6 @@ mod tests {
         let (graph, root) = specialized_toy_graph();
         let profile = DeviceProfile::conservative("native");
         let record = AutotuneRecord {
-            workgroup_size: [128, 1, 1],
             unroll: 4,
             tile: [0, 0, 0],
             recorded_at: String::new(),

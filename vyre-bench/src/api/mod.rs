@@ -1,8 +1,9 @@
 pub mod candidate;
 pub mod case;
-pub mod competitor;
+pub(crate) mod context;
 pub mod metric;
 pub mod resident;
+pub(crate) mod resident_pool;
 pub mod score;
 pub mod suite;
 

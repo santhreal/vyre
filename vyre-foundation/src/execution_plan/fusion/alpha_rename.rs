@@ -16,11 +16,13 @@
 //!   across unrelated primitives) are still prefixed so they cannot collide
 //!   once the arms are spliced into one flat scope.
 
-use std::sync::Arc;
+use std::borrow::Cow;
 
 use rustc_hash::FxHashSet;
 
 use crate::ir::{Expr, Ident, Node, Program};
+use crate::transform::rewrite_walk::{self, NodeRewrite};
+use crate::visit::for_each_node;
 
 /// Prefix used to mark a name as arm-qualified by fusion.
 const FUSION_ARM_PREFIX: &str = "__vyre_fuse_a";
@@ -83,7 +85,7 @@ impl<'a> ArmRenamer<'a> {
     /// wrap, carries no provenance, and lands the arm body in the shared scope.
     ///
     /// A *provenance* `Region` (any other generator, e.g. a primitive's
-    /// `vyre-primitives::label::resolve_family` group) is preserved verbatim:
+    /// `vyre-libs::label::resolve_family` group) is preserved verbatim:
     /// its breadcrumb/label semantics are asserted on downstream
     /// (`null_check_sanitized_by_uses_pg_node_tags_not_frontier`), and its
     /// bindings are genuinely arm-local. The fused program re-acquires one
@@ -93,7 +95,7 @@ impl<'a> ArmRenamer<'a> {
     /// Isolated fusion ([`push_alpha_renamed_arm_entry_node`]) does NOT unwrap:
     /// it re-wraps each arm in its own `Block` scope, where reused arm-local
     /// names must stay isolated, not linked.
-    pub(super) fn push_entry_node(&self, out: &mut Vec<Node>, node: &Node) {
+    pub(super) fn push_entry_node(&mut self, out: &mut Vec<Node>, node: &Node) {
         if let RenameScope::MultiplyDeclared(_) = self.scope {
             if let Node::Region {
                 generator, body, ..
@@ -110,167 +112,58 @@ impl<'a> ArmRenamer<'a> {
         out.push(self.node(node));
     }
 
-    /// Rename one identifier unless the policy leaves it alone or it is already
-    /// arm-qualified (idempotent: re-prefixing a temp from a prior fusion level
-    /// would desync it from its matching decl/use, the historical
-    /// `__vyre_fuse_a1___vyre_fuse_a0___cmp_5` miscompile).
-    fn ident(&self, name: &Ident) -> Ident {
+    /// The arm-qualified form of `name`, or `None` when the policy leaves it
+    /// alone or it is already arm-qualified (idempotent: re-prefixing a temp
+    /// from a prior fusion level would desync it from its matching decl/use,
+    /// the historical `__vyre_fuse_a1___vyre_fuse_a0___cmp_5` miscompile).
+    ///
+    /// `None` rather than an equal `Ident` is what lets the shared walk leave
+    /// an untouched subtree in place.
+    fn renamed(&self, name: &Ident) -> Option<Ident> {
         let rename = match self.scope {
             RenameScope::All => true,
             RenameScope::MultiplyDeclared(set) => set.contains(name),
         };
         if !rename || name.as_str().starts_with(FUSION_ARM_PREFIX) {
-            return name.clone();
+            return None;
         }
-        Ident::from(format!(
+        Some(Ident::from(format!(
             "{FUSION_ARM_PREFIX}{}_{}",
             self.arm_idx,
             name.as_str()
-        ))
+        )))
     }
 
-    fn nodes(&self, nodes: &[Node]) -> Vec<Node> {
-        nodes.iter().map(|node| self.node(node)).collect()
+    fn node(&mut self, node: &Node) -> Node {
+        rewrite_walk::rewrite_node(node, self).unwrap_or_else(|| node.clone())
     }
+}
 
-    fn node(&self, node: &Node) -> Node {
-        match node {
-            Node::Let { name, value } => Node::Let {
-                name: self.ident(name),
-                value: self.expr(value),
-            },
-            Node::Assign { name, value } => Node::Assign {
-                name: self.ident(name),
-                value: self.expr(value),
-            },
-            Node::Store {
-                buffer,
-                index,
-                value,
-            } => Node::Store {
-                buffer: buffer.clone(),
-                index: self.expr(index),
-                value: self.expr(value),
-            },
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => Node::If {
-                cond: self.expr(cond),
-                then: self.nodes(then),
-                otherwise: self.nodes(otherwise),
-            },
-            Node::Loop {
-                var,
-                from,
-                to,
-                body,
-            } => Node::Loop {
-                var: self.ident(var),
-                from: self.expr(from),
-                to: self.expr(to),
-                body: self.nodes(body),
-            },
-            Node::Block(body) => Node::Block(self.nodes(body)),
-            Node::Region {
-                generator,
-                source_region,
-                body,
-            } => Node::Region {
-                generator: generator.clone(),
-                source_region: source_region.clone(),
-                body: Arc::new(self.nodes(body)),
-            },
-            Node::AsyncLoad {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => Node::AsyncLoad {
-                source: source.clone(),
-                destination: destination.clone(),
-                offset: Box::new(self.expr(offset)),
-                size: Box::new(self.expr(size)),
-                tag: self.ident(tag),
-            },
-            Node::AsyncStore {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => Node::AsyncStore {
-                source: source.clone(),
-                destination: destination.clone(),
-                offset: Box::new(self.expr(offset)),
-                size: Box::new(self.expr(size)),
-                tag: self.ident(tag),
-            },
-            Node::AsyncWait { tag } => Node::AsyncWait {
-                tag: self.ident(tag),
-            },
-            Node::Trap { address, tag } => Node::Trap {
-                address: Box::new(self.expr(address)),
-                tag: self.ident(tag),
-            },
-            Node::Resume { tag } => Node::Resume {
-                tag: self.ident(tag),
-            },
-            Node::IndirectDispatch {
-                count_buffer,
-                count_offset,
-            } => Node::IndirectDispatch {
-                count_buffer: count_buffer.clone(),
-                count_offset: *count_offset,
-            },
-            Node::AllReduce { buffer, op, group } => Node::AllReduce {
-                buffer: buffer.clone(),
-                op: *op,
-                group: *group,
-            },
-            Node::AllGather {
-                input,
-                output,
-                group,
-            } => Node::AllGather {
-                input: input.clone(),
-                output: output.clone(),
-                group: *group,
-            },
-            Node::ReduceScatter {
-                input,
-                output,
-                op,
-                group,
-            } => Node::ReduceScatter {
-                input: input.clone(),
-                output: output.clone(),
-                op: *op,
-                group: *group,
-            },
-            Node::Broadcast {
-                buffer,
-                root,
-                group,
-            } => Node::Broadcast {
-                buffer: buffer.clone(),
-                root: *root,
-                group: *group,
-            },
-            Node::Return => Node::Return,
-            Node::Barrier { ordering } => Node::barrier_with_ordering(*ordering),
-            Node::Opaque(extension) => Node::Opaque(Arc::clone(extension)),
+impl NodeRewrite for ArmRenamer<'_> {
+    /// Only `Expr::Var` carries a value-namespace name, and only a name the
+    /// policy actually rewrites reports a change, so an arm whose names are all
+    /// left alone (the common shared-namespace case) keeps its expressions.
+    fn operand(&mut self, expr: &Expr) -> Option<Expr> {
+        match crate::optimizer::rewrite::rewrite_expr(expr, &mut |candidate| match candidate {
+            Expr::Var(name) => self.renamed(name).map(Expr::Var),
+            _ => None,
+        }) {
+            Cow::Borrowed(_) => None,
+            Cow::Owned(rewritten) => Some(rewritten),
         }
     }
 
-    fn expr(&self, expr: &Expr) -> Expr {
-        crate::optimizer::rewrite::rewrite_expr(expr, &mut |candidate| match candidate {
-            Expr::Var(name) => Some(Expr::Var(self.ident(name))),
-            _ => None,
-        })
-        .into_owned()
+    /// A fused arm renames its tags for the same reason it renames its values:
+    /// two arms spliced into one scope that both opened a transfer under the
+    /// tag `stage0` would pair each start with the other arm's wait. Both ends
+    /// of a pair sit in the same arm, so prefixing every occurrence keeps them
+    /// together.
+    fn tag(&mut self, name: &Ident) -> Option<Ident> {
+        self.renamed(name)
+    }
+
+    fn binding(&mut self, name: &Ident) -> Option<Ident> {
+        self.renamed(name)
     }
 }
 
@@ -296,9 +189,7 @@ pub(super) fn multiply_declared_names(arm_entries: &[&[Node]]) -> FxHashSet<Iden
     let mut decl_arms: rustc_hash::FxHashMap<Ident, usize> = rustc_hash::FxHashMap::default();
     for entry in arm_entries {
         let mut declared = FxHashSet::default();
-        for node in *entry {
-            collect_declared_names(node, &mut declared);
-        }
+        collect_declared_names(entry, &mut declared);
         for name in declared {
             *decl_arms.entry(name).or_insert(0) += 1;
         }
@@ -309,39 +200,25 @@ pub(super) fn multiply_declared_names(arm_entries: &[&[Node]]) -> FxHashSet<Iden
         .collect()
 }
 
-/// Names bound within this arm: `Let` targets and `Loop` induction vars.
+/// Names bound anywhere in `nodes`: `Let` targets and `Loop` induction vars.
 /// (`Assign` is a mutation of an existing binding, not a new declaration, so
 /// a cross-arm assign target is correctly treated as a reference below.)
-fn collect_declared_names(node: &Node, out: &mut FxHashSet<Ident>) {
-    match node {
+///
+/// Descent comes from `visit::for_each_node`, the one owner of which
+/// node variants nest. The hand-written match this replaces re-listed the four
+/// body-bearing variants and ended in `_ => {}`, so a `Let` inside a fifth
+/// nesting variant read as undeclared, fusion left the name unqualified, and
+/// two arms declaring it collided in the fused program.
+fn collect_declared_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
+    for_each_node(nodes, |node| match node {
         Node::Let { name, .. } => {
             out.insert(name.clone());
         }
-        Node::Loop { var, body, .. } => {
+        Node::Loop { var, .. } => {
             out.insert(var.clone());
-            for n in body {
-                collect_declared_names(n, out);
-            }
-        }
-        Node::If {
-            then, otherwise, ..
-        } => {
-            for n in then.iter().chain(otherwise.iter()) {
-                collect_declared_names(n, out);
-            }
-        }
-        Node::Block(body) => {
-            for n in body {
-                collect_declared_names(n, out);
-            }
-        }
-        Node::Region { body, .. } => {
-            for n in body.iter() {
-                collect_declared_names(n, out);
-            }
         }
         _ => {}
-    }
+    });
 }
 
 #[cfg(test)]
@@ -355,7 +232,9 @@ mod tests {
 
     #[test]
     fn bare_temp_is_prefixed_once() {
-        let out = ArmRenamer::isolated(0).ident(&Ident::from("cmp_5"));
+        let out = ArmRenamer::isolated(0)
+            .binding(&Ident::from("cmp_5"))
+            .expect("an isolated arm renames every binding it declares");
         assert_eq!(out.as_str(), "__vyre_fuse_a0_cmp_5");
         assert!(out.as_str().starts_with(FUSION_ARM_PREFIX));
     }
@@ -364,23 +243,27 @@ mod tests {
     fn already_qualified_temp_is_not_re_prefixed() {
         // A temp produced by a prior/nested fusion level is already globally
         // unique; re-prefixing it at the next level desyncs the use from its
-        // decl (the csrf_missing_token miscompile). Renaming it again must be
-        // an identity.
-        let inner = ArmRenamer::isolated(0).ident(&Ident::from("cmp_5"));
-        let outer = ArmRenamer::isolated(1).ident(&inner);
-        assert_eq!(
-            outer.as_str(),
-            inner.as_str(),
+        // decl (the csrf_missing_token miscompile). Renaming it again must
+        // report no change so the shared walk leaves it in place.
+        let inner = ArmRenamer::isolated(0)
+            .binding(&Ident::from("cmp_5"))
+            .expect("a bare temp is renamed");
+        assert!(
+            ArmRenamer::isolated(1).binding(&inner).is_none(),
             "fusion temp must not accumulate a second arm prefix"
         );
-        let outer2 = ArmRenamer::isolated(2).ident(&outer);
-        assert_eq!(outer2.as_str(), inner.as_str());
+        assert!(ArmRenamer::isolated(2).binding(&inner).is_none());
     }
 
     #[test]
     fn distinct_bare_temps_in_distinct_arms_stay_distinct() {
-        let a0 = ArmRenamer::isolated(0).ident(&Ident::from("x"));
-        let a1 = ArmRenamer::isolated(1).ident(&Ident::from("x"));
+        let name = Ident::from("x");
+        let a0 = ArmRenamer::isolated(0)
+            .binding(&name)
+            .expect("an isolated arm renames every binding it declares");
+        let a1 = ArmRenamer::isolated(1)
+            .binding(&name)
+            .expect("an isolated arm renames every binding it declares");
         assert_ne!(a0.as_str(), a1.as_str());
     }
 
@@ -388,13 +271,16 @@ mod tests {
     fn single_declared_name_is_left_unrenamed_in_every_arm() {
         // The csrf invariant: a value declared in exactly one arm and consumed
         // in another must keep ONE name. Such a name is NOT in the
-        // multiply-declared set, so it is never prefixed regardless of arm
-        // index (the consumer's `Var` matches the producer's `Let`).
+        // multiply-declared set, so no arm index reports a rename and the
+        // consumer's `Var` still matches the producer's `Let`.
         let multiply_declared = names([]); // `__cmp_5` declared in only one arm
-        let producer = ArmRenamer::shared(1, &multiply_declared).ident(&Ident::from("__cmp_5"));
-        let consumer = ArmRenamer::shared(0, &multiply_declared).ident(&Ident::from("__cmp_5"));
-        assert_eq!(producer.as_str(), "__cmp_5");
-        assert_eq!(consumer.as_str(), producer.as_str());
+        let name = Ident::from("__cmp_5");
+        assert!(ArmRenamer::shared(1, &multiply_declared)
+            .binding(&name)
+            .is_none());
+        assert!(ArmRenamer::shared(0, &multiply_declared)
+            .binding(&name)
+            .is_none());
     }
 
     #[test]
@@ -403,8 +289,13 @@ mod tests {
         // primitives) collides once arms splice into one flat scope, so it is
         // prefixed per arm.
         let multiply_declared = names(["acc"]);
-        let a0 = ArmRenamer::shared(0, &multiply_declared).ident(&Ident::from("acc"));
-        let a1 = ArmRenamer::shared(1, &multiply_declared).ident(&Ident::from("acc"));
+        let name = Ident::from("acc");
+        let a0 = ArmRenamer::shared(0, &multiply_declared)
+            .binding(&name)
+            .expect("a multiply-declared name is renamed");
+        let a1 = ArmRenamer::shared(1, &multiply_declared)
+            .binding(&name)
+            .expect("a multiply-declared name is renamed");
         assert_eq!(a0.as_str(), "__vyre_fuse_a0_acc");
         assert_ne!(a0.as_str(), a1.as_str());
     }

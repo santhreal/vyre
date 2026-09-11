@@ -1,0 +1,12 @@
+category = "Changed"
+text = """
+`reduce::workgroup_tree::BlockScanPass` owns a multi-block scan pass. \
+`reduce::multi_block_prefix_scan` and `graph::csr_frontier_queue::word_block_scan` \
+each wrote the same seven steps around the shared sweep: bind lane, block and \
+global, zero-fill the workgroup scratch, stage under `global < bound`, barrier, \
+scan, publish the per-element partial, and have the last lane write the block \
+total. Only the staging differs, so only the staging is a parameter now. Three \
+dead re-export aliases went with it: `reference_build_ifds_csr`, \
+`try_reference_build_ifds_csr` and `bfs_expand` named functions the crate \
+already exports under their own names and had no callers.
+"""

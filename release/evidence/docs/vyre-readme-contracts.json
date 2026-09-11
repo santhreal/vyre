@@ -1,22 +1,20 @@
 {
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"956e5380ef0567214833a06e21d408b485495f5b","commit_timestamp":"1789106722","parent_commit":"7a6de622ef191cf7a9b79fca5d3d23f5f4ca6d97","dirty":false,"source_fingerprint":"git:956e5380ef0567214833a06e21d408b485495f5b:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 2,
   "path": "README.md",
   "exists": true,
   "read_error": null,
-  "source_bytes": 38237,
+  "source_bytes": 2285,
   "required_tokens": [
-    "0.7.2",
-    "vyre",
-    "gpu",
+    "0.8.0",
     "cuda",
     "wgpu",
-    "wire",
-    "condition",
-    "vyre::program",
-    "release/evidence",
-    "cargo add vyre"
+    "vyre-reference",
+    "docs/SUMMARY.md",
+    "CONTRIBUTING.md",
+    "LICENSE-APACHE"
   ],
   "missing_tokens": [],
-  "example_count": 6,
+  "example_count": 2,
   "blockers": []
 }

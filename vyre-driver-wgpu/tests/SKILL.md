@@ -1,87 +1,66 @@
 # tests/SKILL.md  -  vyre-driver-wgpu
 
-Read `../../.internals/skills/testing/SKILL.md` first for the category contract.
-
 ## Purpose
 
-`vyre-driver-wgpu` is the **wgpu backend**: GPU runtime (device
-acquisition, buffer pool, pipeline cache, shader compilation,
-dispatch), IR-to-naga lowering, async readback + streaming engines.
-Every GPU execution path in vyre eventually lives here.
+`vyre-driver-wgpu` is the wgpu backend: device acquisition, buffer pool,
+pipeline cache, shader compilation, dispatch, IR-to-naga lowering, and the async
+readback and resident-buffer engines. Every wgpu execution path in vyre lives
+here.
 
 ## Critical invariants
 
-- **Parity with CPU reference.** Every op that has both a CPU
-  reference and a wgpu lowering produces byte-identical output on
-  every witnessed input. Divergence = backend bug.
-- **`validate_with_cache` is a single-atomic-load fast path.** No
-  re-hashing, no DashMap probe after 0.6.
-- **Pipeline cache key covers every dimension that changes
-  lowering outcome.** `workgroup_size[0..3]`, every binding attr,
-  feature flags. Missing dimensions = silent miscache hazard.
-- **Capability queries never over-promise.** Returning `true` from
-  `supports_subgroup_ops` requires that the lowering actually
-  emits subgroup intrinsics AND the adapter supports them.
-- **Honest deadline enforcement.** `DispatchConfig.timeout` must
-  surface a structured error on overrun, with a `tracing::warn`
-  event.
+- Parity with the CPU reference. Every op with both a reference implementation
+  and a wgpu lowering produces byte-identical output on every witnessed input.
+  A divergence is a backend bug, never a tolerance to widen.
+- `validate_with_cache` is a single atomic load on the hit path. It re-hashes
+  nothing and probes no map.
+- The pipeline cache key covers every dimension that changes the lowering
+  outcome: workgroup size, every binding attribute, and the feature flags. A
+  missing dimension is a silent miscache.
+- Capability queries never over-promise. Reporting `supports_subgroup_ops` as
+  available requires both that the lowering emits subgroup intrinsics and that
+  the adapter supports them.
+- Deadline enforcement is honest. A `DispatchConfig` timeout overrun surfaces a
+  structured error.
+- Dispatch never falls back to the host. A program this backend cannot execute
+  on the device fails closed.
 
 ## Adversarial surface
 
-- `Program` with workgroup `[0, 0, 0]`  -  rejected, no panic
-- `Program` with 10 000 buffers  -  bounded, structured error if cap
-  exceeded
-- Concurrent `WgpuBackend::dispatch` from 8 threads  -  no data
-  races, no poisoned mutexes, stats still consistent
-- Adapter that advertises SUBGROUP but fails to compile a subgroup
-  shader  -  capability report must flip to `false` after first
-  failure, not stay `true` silently
-- Readback with `Maintain::Wait` on a dropped queue  -  structured
-  error
-- Artifact materialization racing device-loss recovery  -  stale generations fail closed
+- `Program` with workgroup `[0, 0, 0]`. Rejected, no panic.
+- `Program` with ten thousand buffers. Bounded, structured error past the cap.
+- Concurrent `WgpuBackend::dispatch` from eight threads. No data race, no
+  poisoned mutex, stats still consistent.
+- An adapter that advertises subgroup support but fails to compile a subgroup
+  shader. The capability report must flip to unavailable after the first
+  failure instead of staying available.
+- Readback with `Maintain::Wait` on a dropped queue. Structured error.
+- Artifact materialization racing device-loss recovery. Stale generations fail
+  closed.
 
 ## Cross-crate contracts
 
-- Implements `vyre_driver::VyreBackend`  -  every defaulted method
-  exercised by the `Mock/FullBackend` contract test in
-  `vyre-driver/tests/backend_contract.rs`
-- Implements `vyre_driver::CompiledPipeline`  -  dispatch must be
-  bit-identical to `VyreBackend::dispatch` per the contract
-- Consumes `vyre_foundation::Program`  -  round-trip through
-  `to_wire` / `from_wire` must produce bit-identical GPU output
-
-## Bench targets
-
-- `dispatch_small_program` (single kernel, 64 workgroup_size, tiny
-  inputs)  -  latency baseline
-- `dispatch_throughput`  -  Bytes/s across 1 KB / 64 KB / 1 MB inputs
-- `pipeline_cache_hit` vs `pipeline_cache_miss`  -  per-call cost
-- `buffer_pool_acquire`  -  target O(1), sub-100 ns
-- `bind_group_cache_hit`  -  once the #8 gap closes, add baseline
-- `validate_with_cache_hit`  -  target sub-10 ns (atomic load only)
-
-## Fuzz targets
-
-- `pipeline_disk_cache::compute_cache_key`  -  arbitrary program +
-  arbitrary fingerprint → no panic
-- `lowering::naga_emit`  -  arbitrary program → emit naga module →
-  no panic (naga's own validator does the rest)
+- Implements `vyre_driver::VyreBackend`. The trait's defaults and overrides are
+  owned by `vyre-driver/tests/backend_trait_contract.rs`; this crate tests what
+  its own overrides do on a device.
+- Implements `vyre_driver::CompiledPipeline`. Dispatch through a compiled
+  pipeline must be bit-identical to `VyreBackend::dispatch`.
+- Consumes `vyre_foundation::Program`. A wire round trip must produce
+  bit-identical GPU output.
 
 ## What NOT to test here
 
-- Wire format  -  `vyre-foundation/tests`
-- IR semantics / CPU reference  -  `vyre-reference/tests`
-- Op metadata  -  `vyre-spec/tests`
-- Driver-tier trait contracts  -  `vyre-driver/tests/backend_contract.rs`
+- Wire format. That is `vyre-foundation/tests`.
+- IR semantics and the CPU reference. Those are `vyre-reference/tests`.
+- Operation metadata. That is `vyre-spec/tests`.
+- Driver-tier trait contracts. Those are `vyre-driver/tests/backend_trait_contract.rs`
+  and `vyre-driver/tests/backend_registry.rs`.
 
 ## Running
 
 ```bash
 ./cargo_full test -p vyre-driver-wgpu
-./cargo_full test -p vyre-driver-wgpu --test adversarial
-./cargo_full test -p vyre-driver-wgpu --test property
-./cargo_full test -p vyre-driver-wgpu --test gap
-./cargo_full test -p vyre-driver-wgpu --test integration
-./cargo_full bench -p vyre-driver-wgpu
-cd vyre-driver-wgpu/fuzz && ../../cargo_full fuzz run pipeline_cache_key
+./cargo_full test -p vyre-driver-wgpu --test capability_contract
+./cargo_full test -p vyre-driver-wgpu --test dispatch_never_cpu_fallback
+./cargo_full test -p vyre-driver-wgpu --test async_dispatch_contract
 ```

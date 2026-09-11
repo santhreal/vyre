@@ -1,0 +1,2 @@
+category = "Added"
+text = "A compilation request states the dialect schema version its program was built against, and a version below the dialect's supported floor, above its schema version, or predating a called operation fails validation before any plan is derived."

@@ -1,0 +1,2 @@
+category = "Added"
+text = "The neural library now executes floating channel-major depthwise causal convolution with exact left padding, masks, bias, SiLU, F16/BF16 conversion, and output truncation. A short-chunk route emits an explicit next-state generation whose outputs and tail match full prefill across arbitrary token partitions and reset."

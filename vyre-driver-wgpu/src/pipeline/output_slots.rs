@@ -21,43 +21,66 @@ where
     )
 }
 
+// Inline: covers `resize_vec_with`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::resize_vec_with;
 
+    /// The neutral resize policy is proved in `vyre_driver::output_slots`. What
+    /// belongs here is the only thing this wrapper decides: which backend and
+    /// which corrective action a failed reservation names. A verbatim copy of
+    /// the policy test used to sit here and asserted neither.
     #[test]
-    fn generated_output_slot_resize_preserves_prefix_and_matches_requested_len() {
-        for case in 0..4096 {
-            let initial_len = case % 17;
-            let target_len = (case * 7 + 3) % 23;
-            let mut slots = Vec::new();
-            slots
-                .try_reserve(initial_len)
-                .expect("Fix: generated resize test must reserve initial slots");
-            for idx in 0..initial_len {
-                slots.push(vec![idx as u8; (idx % 5) + 1]);
-            }
-            let expected_prefix: Vec<Vec<u8>> = slots.iter().take(target_len).cloned().collect();
-
-            resize_vec_with(&mut slots, target_len, Vec::new, "generated output slots")
-                .expect("Fix: generated output slot resize should be fallible but successful");
-
-            assert_eq!(
-                slots.len(),
-                target_len,
-                "generated resize case {case} must match target length"
+    fn a_failed_reservation_names_the_wgpu_pipeline_and_its_corrective_action() {
+        let mut slots: Vec<Vec<u8>> = Vec::new();
+        let error = resize_vec_with(&mut slots, usize::MAX, Vec::new, "compiled output slots")
+            .expect_err("Fix: a slot count that cannot be reserved must fail, not truncate.");
+        let rendered = error.to_string();
+        for expected in [
+            "WGPU pipeline",
+            "compiled output slots",
+            "split the dispatch batch before readback",
+        ] {
+            assert!(
+                rendered.contains(expected),
+                "Fix: the WGPU slot-reservation diagnostic must contain `{expected}`, got: {rendered}"
             );
-            assert_eq!(
-                &slots[..expected_prefix.len()],
-                expected_prefix.as_slice(),
-                "generated resize case {case} must preserve existing output slots"
-            );
-            for slot in slots.iter().skip(initial_len.min(target_len)) {
-                assert!(
-                    slot.is_empty(),
-                    "generated resize case {case} must initialize new output slots as empty Vecs"
-                );
-            }
         }
+    }
+
+    #[test]
+    fn resizing_through_the_wrapper_grows_shrinks_and_holds_at_the_boundaries() {
+        let mut slots: Vec<Vec<u8>> = vec![vec![1], vec![2, 3]];
+
+        resize_vec_with(&mut slots, 4, Vec::new, "grow")
+            .expect("Fix: growing output slots must succeed.");
+        assert_eq!(
+            slots,
+            vec![vec![1], vec![2, 3], Vec::new(), Vec::new()],
+            "Fix: growth must preserve the existing prefix and add empty slots."
+        );
+
+        resize_vec_with(&mut slots, 4, Vec::new, "hold")
+            .expect("Fix: resizing to the current length must succeed.");
+        assert_eq!(
+            slots.len(),
+            4,
+            "Fix: resizing to the current length must not change the slot count."
+        );
+
+        resize_vec_with(&mut slots, 1, Vec::new, "shrink")
+            .expect("Fix: shrinking output slots must succeed.");
+        assert_eq!(
+            slots,
+            vec![vec![1_u8]],
+            "Fix: shrinking must drop stale trailing slots and keep the prefix."
+        );
+
+        resize_vec_with(&mut slots, 0, Vec::new, "empty")
+            .expect("Fix: resizing to zero slots must succeed.");
+        assert!(
+            slots.is_empty(),
+            "Fix: resizing to zero must leave no output slots."
+        );
     }
 }

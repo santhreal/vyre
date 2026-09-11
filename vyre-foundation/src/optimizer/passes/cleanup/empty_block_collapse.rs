@@ -28,8 +28,8 @@
 //! Recurses into If/Loop/Block/Region bodies.
 
 use crate::ir::{Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
 
 /// Drop empty `Node::Block(vec![])` markers from sibling sequences.
 #[derive(Debug, Default)]
@@ -44,63 +44,26 @@ impl EmptyBlockCollapsePass {
     /// Skip programs without any empty Block.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        // No Block in the program at all → no empty Block to collapse.
-        if !program
-            .stats()
-            .has_any_node_kind(crate::ir::stats::NODE_KIND_BLOCK)
-        {
-            return PassAnalysis::SKIP;
-        }
-        if program.entry().iter().any(|n| {
-            node_map::any_descendant(
-                n,
-                &mut |child| matches!(child, Node::Block(b) if b.is_empty()),
-            )
-        }) {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_BLOCK],
+            &mut is_empty_block,
+        )
     }
 
     /// Walk the entry tree; drop every `Node::Block(vec![])` from
     /// sibling sequences at every nesting level.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut changed = false;
-        let program = program.map_entry(|entry| {
-            drop_empty_blocks(
-                entry
-                    .into_iter()
-                    .map(|n| collapse_node(n, &mut changed))
-                    .collect(),
-                &mut changed,
-            )
-        });
-        PassResult { program, changed }
+        driver::rewrite_entry_bodies(program, &mut |body| {
+            driver::without_nodes(body, is_empty_block)
+        })
     }
 }
 
-/// Recurse into `node`'s descendants (via `node_map::map_children`) and
-/// then prune empty Block children from the resulting body sequence.
-fn collapse_node(node: Node, changed: &mut bool) -> Node {
-    let recursed = node_map::map_children(node, &mut |child| collapse_node(child, changed));
-    node_map::map_body(recursed, &mut |body| drop_empty_blocks(body, changed))
-}
-
-/// Drop `Node::Block(vec![])` siblings from a body sequence, flipping
-/// `changed` when at least one is dropped.
-fn drop_empty_blocks(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
-    let mut out = Vec::with_capacity(body.len());
-    for node in body {
-        match &node {
-            Node::Block(inner) if inner.is_empty() => {
-                *changed = true;
-            }
-            _ => out.push(node),
-        }
-    }
-    out
+/// True iff `node` is a `Block` carrying no statements.
+fn is_empty_block(node: &Node) -> bool {
+    matches!(node, Node::Block(body) if body.is_empty())
 }
 
 #[cfg(test)]

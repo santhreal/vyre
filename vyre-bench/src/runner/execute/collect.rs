@@ -6,8 +6,7 @@ use std::collections::BTreeMap;
 use crate::api::case::BenchRun;
 
 use super::metric_keys::{
-    custom_metric_key, custom_metric_value, derived_metric_key, gpu_counter_value, metric_key,
-    rate_per_second_x1000,
+    custom_metric_key, custom_metric_value, derived_metric_key, metric_key, rate_per_second_x1000,
 };
 
 pub(super) fn collect_samples(
@@ -113,23 +112,29 @@ pub(super) fn collect_derived_metrics(
             .unwrap_or(0)
             .saturating_add(metrics.output_bytes.unwrap_or(0))
     });
-    // device_gb_s_x1000 requires explicit bytes_read + bytes_written from the case.
-    // If neither is set, omit device_gb_s_x1000 entirely rather than substituting
-    // host_bytes, that substitution would report a spurious device bandwidth figure
-    // computed from host I/O, which is a metric miscompile (Law 10 silent fallback).
-    let device_bytes = match (metrics.bytes_read, metrics.bytes_written) {
-        (Some(r), Some(w)) => {
-            let total = r.saturating_add(w);
-            if total > 0 {
-                Some(total)
-            } else {
-                None
+    // device_gb_s_x1000 states a device bandwidth, so it is computed from the
+    // bytes the device moves. A case that states `device_bytes_moved` is taken
+    // at its word. Otherwise the host transfer total stands in, which is exact
+    // for a transfer case whose host traffic IS its device traffic, and the
+    // metric is omitted entirely when neither is set rather than substituting
+    // `host_bytes`: that substitution reported a device bandwidth computed from
+    // host I/O.
+    let device_bytes = metrics
+        .device_bytes_moved
+        .filter(|bytes| *bytes > 0)
+        .or_else(|| match (metrics.bytes_read, metrics.bytes_written) {
+            (Some(r), Some(w)) => {
+                let total = r.saturating_add(w);
+                if total > 0 {
+                    Some(total)
+                } else {
+                    None
+                }
             }
-        }
-        (Some(r), None) if r > 0 => Some(r),
-        (None, Some(w)) if w > 0 => Some(w),
-        _ => None,
-    };
+            (Some(r), None) if r > 0 => Some(r),
+            (None, Some(w)) if w > 0 => Some(w),
+            _ => None,
+        });
 
     if let Some(wall_ns) = metrics.wall_ns.filter(|ns| *ns > 0) {
         if host_bytes > 0 {
@@ -143,20 +148,25 @@ pub(super) fn collect_derived_metrics(
         }
     }
 
-    if let Some(dev_bytes) = device_bytes {
-        if let Some(device_ns) = metrics.dispatch_ns.or(metrics.wall_ns).filter(|ns| *ns > 0) {
-            if let Some(key) = derived_metric_key(prefix, "device_gb_s_x1000") {
-                samples.entry(key).or_default().push(rate_per_second_x1000(
-                    dev_bytes,
-                    device_ns,
-                    1_000_000_000,
-                ));
-            }
+    // The device's own active time, which both device-side rates below are
+    // computed against. A roofline fraction states how much of the device's
+    // bandwidth the kernel used while it was running, so wall time is the wrong
+    // denominator: it includes readback and host overhead, and on a resident
+    // case whose sample wall time is ten times its kernel time it reported a
+    // bandwidth-bound kernel as using 0.4% of the device.
+    let device_ns = metrics.dispatch_ns.or(metrics.wall_ns).filter(|ns| *ns > 0);
+    if let (Some(dev_bytes), Some(device_ns)) = (device_bytes, device_ns) {
+        if let Some(key) = derived_metric_key(prefix, "device_gb_s_x1000") {
+            samples.entry(key).or_default().push(rate_per_second_x1000(
+                dev_bytes,
+                device_ns,
+                1_000_000_000,
+            ));
         }
     }
 
     if let Some(flop_count) = custom_metric_value(metrics, "flop_count") {
-        if let Some(active_ns) = metrics.dispatch_ns.or(metrics.wall_ns).filter(|ns| *ns > 0) {
+        if let Some(active_ns) = device_ns {
             if let Some(key) = derived_metric_key(prefix, "gflops_x1000") {
                 samples.entry(key).or_default().push(rate_per_second_x1000(
                     flop_count,
@@ -166,21 +176,44 @@ pub(super) fn collect_derived_metrics(
             }
         }
     }
+}
 
-    if let Some(peak_gb_s_x1000) =
-        gpu_counter_value(metrics, "memory_peak_gb_s_x1000").filter(|v| *v > 0)
-    {
-        if let (Some(dev_bytes), Some(wall_ns)) =
-            (device_bytes, metrics.wall_ns.filter(|ns| *ns > 0))
-        {
-            let achieved_gb_s_x1000 = rate_per_second_x1000(dev_bytes, wall_ns, 1_000_000_000);
-            if let Some(key) = derived_metric_key(prefix, "roofline_mem_pct_x1000") {
-                samples.entry(key).or_default().push(
-                    ((u128::from(achieved_gb_s_x1000) * 100_000) / u128::from(peak_gb_s_x1000))
-                        .min(u128::from(u64::MAX)) as u64,
-                );
-            }
-        }
+/// Derive the roofline memory fraction from the whole achieved-rate series.
+///
+/// The device memory peak is a device property, and NVML telemetry is captured
+/// on one sample per run, so a per-sample derivation produced exactly one
+/// roofline sample: the one paired with that telemetry. When that sample was a
+/// scheduling outlier, the fraction stated a small percentage of the device
+/// while the achieved-rate p50 over the same 200 samples stated 39% of peak,
+/// and a bandwidth contract evaluated against it flipped between runs on one
+/// binary. The fraction is computed once per achieved-rate sample against the
+/// run's peak instead, so its p50 is the p50 of the rate.
+///
+/// Does not catch a wrong `memory_peak_gb_s_x1000`; that is the device
+/// telemetry's own figure.
+pub(super) fn derive_roofline_fractions(samples: &mut BTreeMap<&'static str, Vec<u64>>) {
+    let Some(peak_gb_s_x1000) = samples
+        .get("memory_peak_gb_s_x1000")
+        .and_then(|values| values.iter().copied().find(|value| *value > 0))
+    else {
+        return;
+    };
+    let Some(fractions) = samples.get("device_gb_s_x1000").map(|rates| {
+        rates
+            .iter()
+            .map(|achieved_gb_s_x1000| {
+                ((u128::from(*achieved_gb_s_x1000) * 100_000) / u128::from(peak_gb_s_x1000))
+                    .min(u128::from(u64::MAX)) as u64
+            })
+            .collect::<Vec<u64>>()
+    }) else {
+        return;
+    };
+    if fractions.is_empty() {
+        return;
+    }
+    if let Some(key) = derived_metric_key("", "roofline_mem_pct_x1000") {
+        samples.insert(key, fractions);
     }
 }
 
@@ -190,7 +223,10 @@ mod tests {
 
     use crate::api::metric::{BenchMetrics, MetricPoint};
 
-    use super::{collect_derived_metrics, collect_metric_fields};
+    use super::{
+        collect_derived_metrics, collect_gpu_counters, collect_metric_fields,
+        derive_roofline_fractions,
+    };
 
     fn metrics_with_host_only(input_bytes: u64, wall_ns: u64) -> BenchMetrics {
         BenchMetrics {
@@ -268,6 +304,129 @@ mod tests {
         );
     }
 
+    /// WHY: `bytes_read` and `bytes_written` are HOST transfer bytes. On a
+    /// resident dispatch they are 0 and the readback size, so a device rate
+    /// derived from them states host I/O as device bandwidth. The release
+    /// scatter case published 12.047 GB/s from a 131072-byte readback while its
+    /// kernel moved 8650752 bytes. A case that states `device_bytes_moved` must
+    /// have that figure used instead.
+    ///
+    /// Does not catch a case that states a wrong `device_bytes_moved`; that is
+    /// the case's own accounting, asserted where the case builds it.
+    #[test]
+    fn device_rate_prefers_stated_device_traffic_over_host_transfers() {
+        // A resident dispatch: no host read, a 131072-byte readback, and a
+        // kernel that moved 8650752 bytes in 10828 ns.
+        let metrics = BenchMetrics {
+            bytes_read: Some(0),
+            bytes_written: Some(131_072),
+            device_bytes_moved: Some(8_650_752),
+            dispatch_ns: Some(10_828),
+            wall_ns: Some(94_088),
+            ..Default::default()
+        };
+        let mut samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
+        collect_derived_metrics("", &metrics, &mut samples);
+
+        // 8650752 B / 10828 ns = 798.9 GB/s. The host-transfer figure would
+        // have been 131072 / 10828 = 12.1 GB/s.
+        assert_eq!(samples["device_gb_s_x1000"][0], 798_924);
+
+        // A case that states no device traffic keeps the host transfer total,
+        // which is exact when the host transfer IS the device traffic.
+        let transfer_only = BenchMetrics {
+            device_bytes_moved: None,
+            ..metrics
+        };
+        let mut transfer_samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
+        collect_derived_metrics("", &transfer_only, &mut transfer_samples);
+        assert_eq!(transfer_samples["device_gb_s_x1000"][0], 12_104);
+    }
+
+    /// WHY: a roofline percentage states how much of the device's bandwidth the
+    /// kernel used while it was running, so it is computed against device
+    /// active time. Computed against sample wall time it charges readback and
+    /// host overhead to the device: the resident conditional case published
+    /// 0.45% of a 1792 GB/s device for a kernel using 44%, because its wall
+    /// time is ten times its kernel time.
+    ///
+    /// Does not catch a wrong `memory_peak_gb_s_x1000`; that is the device
+    /// telemetry's own figure.
+    #[test]
+    fn roofline_fraction_is_computed_against_device_active_time() {
+        let metrics = BenchMetrics {
+            device_bytes_moved: Some(8_650_752),
+            dispatch_ns: Some(10_828),
+            wall_ns: Some(94_088),
+            gpu_counter: vec![crate::api::metric::GpuCounter {
+                name: "memory_peak_gb_s_x1000".to_string(),
+                value: 1_792_000,
+            }],
+            ..Default::default()
+        };
+        let mut samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
+        collect_gpu_counters("", &metrics, &mut samples);
+        collect_derived_metrics("", &metrics, &mut samples);
+        derive_roofline_fractions(&mut samples);
+
+        // 8650752 B / 10828 ns = 798.924 GB/s, which is 44.582% of 1792 GB/s.
+        // Against wall time it would have been 91.943 GB/s, or 5.131%.
+        assert_eq!(
+            samples["roofline_mem_pct_x1000"][0], 44_582,
+            "Fix: roofline_mem_pct_x1000 must divide device bytes by device active time."
+        );
+    }
+
+    /// WHY: the device memory peak arrives with NVML telemetry, which is
+    /// captured on one sample per run. A fraction derived per sample therefore
+    /// existed for exactly that one sample, and its p50 was that sample's
+    /// value: a scheduling outlier on the telemetry sample stated 2.907% of a
+    /// 1792 GB/s device for a run whose achieved-rate p50 was 39%, and a
+    /// bandwidth contract read against it failed on one run of the same binary
+    /// and passed on the next two. The fraction must span the whole
+    /// achieved-rate series so its p50 tracks the rate's p50.
+    ///
+    /// Does not catch a peak that changes mid-run; the first positive reading
+    /// stands for the run.
+    #[test]
+    fn roofline_fraction_spans_every_achieved_rate_sample() {
+        let mut samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
+        // Three fast samples and one outlier, with telemetry captured on the
+        // outlier: 798.924, 798.924, 798.924, and 52.1 GB/s.
+        samples.insert("device_gb_s_x1000", vec![798_924, 798_924, 798_924, 52_100]);
+        samples.insert("memory_peak_gb_s_x1000", vec![1_792_000]);
+        derive_roofline_fractions(&mut samples);
+
+        assert_eq!(
+            samples["roofline_mem_pct_x1000"],
+            vec![44_582, 44_582, 44_582, 2_907],
+            "Fix: the roofline fraction must be derived once per achieved-rate sample."
+        );
+    }
+
+    /// WHY: without device memory-peak telemetry there is no denominator, and
+    /// a case whose contract states a bandwidth fraction must fail closed on
+    /// the absent metric rather than read a fabricated one.
+    #[test]
+    fn roofline_fraction_is_absent_without_a_device_peak() {
+        let mut samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
+        samples.insert("device_gb_s_x1000", vec![798_924]);
+        derive_roofline_fractions(&mut samples);
+
+        assert!(
+            !samples.contains_key("roofline_mem_pct_x1000"),
+            "Fix: a roofline fraction must not be published without a measured device peak."
+        );
+
+        let mut rate_less: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
+        rate_less.insert("memory_peak_gb_s_x1000", vec![1_792_000]);
+        derive_roofline_fractions(&mut rate_less);
+        assert!(
+            !rate_less.contains_key("roofline_mem_pct_x1000"),
+            "Fix: a roofline fraction must not be published without a measured device rate."
+        );
+    }
+
     /// Regression for dead-cold-fields-in-collect-fields-array: the 7 cold_* names
     /// previously listed in FIELDS are permanently inert because metric_key() returns
     /// None for them.  After the fix the FIELDS array no longer contains cold_* entries,
@@ -329,19 +488,7 @@ mod tests {
         use super::collect_custom_metrics;
         // Verify the collect path: build BenchMetrics with custom points for each
         // synthetic workload name and confirm they appear in the sample map.
-        let names = [
-            "condition_records",
-            "quantified_records",
-            "scatter_records",
-            "aggregation_records",
-            "entropy_records",
-            "alias_records",
-            "ifds_records",
-            "ast_nodes",
-            "queued_records",
-            "rewrite_records",
-            "callgraph_witness_digest",
-        ];
+        let names = crate::runner::execute::metric_keys::SYNTHETIC_COUNT_METRIC_NAMES;
         let mut metrics = BenchMetrics::default();
         for (i, name) in names.iter().enumerate() {
             metrics.custom.push(MetricPoint {
@@ -361,5 +508,24 @@ mod tests {
                  got {actual:?}"
             );
         }
+    }
+    /// WHY: a non-dispatch evidence case reports an explicit zero launch count.
+    /// Dropping zero here makes release normalization invent one launch.
+    #[test]
+    fn collect_custom_metrics_preserves_explicit_zero_kernel_launches() {
+        use super::collect_custom_metrics;
+
+        let metrics = BenchMetrics {
+            custom: vec![MetricPoint {
+                name: "kernel_launches".to_string(),
+                value: 0,
+            }],
+            ..Default::default()
+        };
+        let mut samples = BTreeMap::new();
+
+        collect_custom_metrics("", &metrics, &mut samples);
+
+        assert_eq!(samples.get("kernel_launches"), Some(&vec![0]));
     }
 }

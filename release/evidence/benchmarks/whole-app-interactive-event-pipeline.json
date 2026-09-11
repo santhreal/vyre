@@ -1,0 +1,60 @@
+{
+  "schema_version": "vyre.whole-application-record.v2",
+  "workload_id": "workload.whole_app.interactive_event_pipeline",
+  "workload_name": "Latency-Sensitive Interactive UI Layout & Multi-Layer Composite Raster",
+  "domain": "LatencySensitiveInteractive",
+  "graph_node_count": 3,
+  "graph_edge_count": 2,
+  "compile_request_validated": true,
+  "production_route": {
+    "backend_id": "cuda",
+    "device_id": "NVIDIA GeForce RTX 3080 Ti",
+    "device_generation": 2,
+    "artifact_digest": "83fc48820b033b3eafd83e19973f74407a280bbd88591bbcf4b824c25db51739",
+    "target_payload_digest": "99a2aaba088cdc6265b2c8379282e31b880c015759c9c67293330a973dcb5b84",
+    "bound_resource_count": 6,
+    "completed_submissions": 31
+  },
+  "parity_result": {
+    "compared_values": 1,
+    "is_exact_match": true,
+    "max_ulp_distance": 0,
+    "reference_digest": "dfb67354d133ebe5364a19155c163243b07e3756187e45bb822fd315f14aaab4",
+    "candidate_digest": "dfb67354d133ebe5364a19155c163243b07e3756187e45bb822fd315f14aaab4",
+    "parity_status": "matched_exact_bytes"
+  },
+  "compile_time_ns": 806418,
+  "load_time_ns": 11357429,
+  "measured_samples": 30,
+  "p50_latency_ns": 49037,
+  "p99_latency_ns": 53933,
+  "device_p50_latency_ns": 12128,
+  "throughput": {
+    "gflops": null,
+    "gb_per_sec": 0.2505862919836042,
+    "items_per_sec": 10441095.499316843
+  },
+  "peak_bytes": 10240,
+  "resident_bytes": 4096,
+  "cold_state": {
+    "latency_ns": 89511,
+    "memory_bytes": null,
+    "is_cold_start": true,
+    "warmup_ratio": 1.8253767563268553
+  },
+  "warm_state": {
+    "latency_ns": 49037,
+    "memory_bytes": null,
+    "is_cold_start": false,
+    "warmup_ratio": 1.8253767563268553
+  },
+  "selected_schedule_id": "schedule.c5463fc4bc40350a351858482c7b3812d171b0c4692565b2ca8fb8c7f4a3f19c",
+  "input_digest": "8376a12b2fb33d0dbfc8c4ba0838f2b7d8bb6f29ed2d2dcd254c9da0d245d765",
+  "native_baseline_unmeasured": {
+    "baseline_id": "native.skia.composite_raster_blend_v1_2_0",
+    "baseline_name": "Skia / DirectWrite-Style GPU Compositor Pipeline",
+    "reason": "no version-pinned native baseline `native.skia.composite_raster_blend_v1_2_0` is vendored. Fix: vendor the pinned native kernel and register it before claiming a comparison against it."
+  },
+  "host_environment": "x86_64-linux / cuda / NVIDIA GeForce RTX 3080 Ti",
+  "recorded_at_utc": "2026-09-10T09:07:29Z"
+}

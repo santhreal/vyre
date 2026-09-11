@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The required CI document names each gates workflow job by its display name, which is the status context branch protection waits for."

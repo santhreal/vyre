@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The wgpu device fixtures pass one input per binding that consumes host bytes and none for a backend-allocated output, which is the single artifact input ABI the cuda backend and the reference interpreter already required."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Public API snapshots now cover every workspace package whose Cargo manifest permits publication, including CUDA and every emitter/runtime library. The manifest-derived gate rejects both missing snapshots and stale snapshots for packages that no longer publish."

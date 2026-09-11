@@ -1,39 +1,34 @@
 //! Shared-memory bank-conflict analysis for vyre kernels.
 //!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section B.3 item B13.
+//! Shared memory is divided into banks, and each bank serves one read or write
+//! per cycle. When K threads in one subgroup address K different locations that
+//! map to the same bank, those accesses serialize, costing up to 32x throughput
+//! at a 32-way conflict.
 //!
-//! Shared memory on modern GPUs is divided into N banks. Each bank can
-//! serve one read or write per cycle. When K threads in the same
-//! warp/subgroup access K different addresses that map to the **same
-//! bank**, those accesses serialize  -  costing up to 32x throughput
-//! for the worst case (32-way conflict).
+//! A stride whose `addr % BANK_COUNT` is equal for every thread produces one. A
+//! 32x32 shared tile walked column-major at stride 32 puts all 32 threads on
+//! bank 0.
 //!
-//! A common cause: a stride pattern where `addr % BANK_COUNT` is the
-//! same for every thread. Classic example: a 32x32 tile in shared
-//! memory accessed column-major with stride 32  -  all 32 threads in a
-//! warp hit bank 0, full 32-way serialization.
+//! This module detects bank-conflict candidates among shared-memory
+//! load/store ops in a `KernelDescriptor`, and derives the per-binding access
+//! phase profiles a target needs before it may rewrite an index. Both operate
+//! substrate-neutrally on the post-lowering descriptor. Which rewrite to apply,
+//! and applying it, belong to the emitter that states the bank geometry: a
+//! primary-binary emitter selects one strategy per permutable shared binding and
+//! rewrites the element index at its single address site.
 //!
-//! This crate detects bank-conflict candidates among shared-memory
-//! load/store ops in a `KernelDescriptor`. Operates substrate-neutrally
-//! on the post-lowering descriptor; emit-time concerns (per-substrate
-//! bank count, swizzle-padding strategies) live in emitter crates.
-//!
-//! Phase 1 (this crate today): detection only. Walk every
-//! `LoadShared`/`StoreShared` op, look at the index expression's
-//! stride, classify as `NoConflict` / `Conflict` / `Unknown`, return
-//! a `BankConflictReport`. Phase 2 (follow-up): rewrites that pad
-//! shared-mem allocations or swizzle indices to break conflict
-//! patterns.
-//!
-//! Caller can override the default bank count via
-//! `analyze_with_bank_count`.
+//! The bank count is a device fact the caller states; `analyze` takes it and
+//! this crate holds no default for it.
 
-pub mod analysis;
-pub mod report;
+pub(crate) mod analysis;
+pub(crate) mod report;
+pub(crate) mod strategy;
 
-pub use analysis::{analyze, analyze_with_bank_count};
+pub use analysis::analyze;
 pub use report::{BankAccessSite, BankConflictKind, BankConflictReport, ConflictSeverity};
-
-/// Default bank count. This is a reasonable pessimistic default for
-/// discrete GPU substrates.
-pub const DEFAULT_BANK_COUNT: u32 = 32;
+pub use strategy::{
+    derive_shared_access_profiles, evaluate_mitigation_candidate, select_bank_conflict_strategy,
+    AccessPhase, AccessPhaseProfile, BankConflictMitigation, MitigationEvaluation,
+    PhaseConflictReport, SharedBindingAccessProfile, SharedPermutationBlock, TargetBankGeometry,
+    CANDIDATE_MITIGATIONS,
+};

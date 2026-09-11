@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The crate ownership registry records the reference backend edge nowhere, matching the manifests that dropped it when the cpu-ref registration was removed, and records the `vyre-conform` to `vyre-driver-spirv` and `vyre-emit-spirv` to `vyre-foundation` edges the manifests declare."

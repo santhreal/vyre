@@ -45,6 +45,7 @@ pub(crate) fn declared_bindings(wgsl: &str) -> Vec<(u32, u32)> {
     bindings
 }
 
+// Inline: covers `declared_bindings`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::declared_bindings;

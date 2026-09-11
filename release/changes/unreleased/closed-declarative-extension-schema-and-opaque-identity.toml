@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Open IR extensions now require collision-resistant full digests with explicit collision rejection, mandatory proof fields without permissive defaults, canonical decode and re-encode round-trip equality, stable content interning, full-identity program hashing, and reconciled effect and divergence walks."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The host and resident execution paths of a materialized artifact instance have one implementation, `vyre_driver::materialize::MaterializedInstance` and `ResidentInstance`, instead of one per driver. Four backends wrote the same two bodies around the same `InstanceCore` calls and the same submission routing; what differs is the launch, the handle order a resident launch reads, and the rejection text, so those are the hooks and everything else is a default. A backend now supplies a launch and its own wording."

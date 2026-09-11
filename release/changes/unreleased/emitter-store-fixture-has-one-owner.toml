@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The smallest store descriptor every emitter contract suite opens with is `vyre_lower::descriptor_builder::store_literal_kernel`. Four copies of the same op list differed only in binding access, element count and dispatch extent, so a copy that drifted compared a different program under the same name."

@@ -7,45 +7,19 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, CollectiveOp, CommGroup, DataType, Node, Program,
 };
 use vyre_foundation::program_caps::scan;
+use vyre_foundation::transform::collectives::{
+    collective_transport_plan, lower_single_rank_collectives,
+};
 use vyre_foundation::validate::{
     validate, validate_with_options, BackendCapabilities, ValidationOptions,
 };
-
-fn collective_buffers() -> Vec<BufferDecl> {
-    vec![
-        BufferDecl::storage("a", 0, BufferAccess::ReadWrite, DataType::U32).with_count(8),
-        BufferDecl::read("input", 1, DataType::U32).with_count(8),
-        BufferDecl::storage("out", 2, BufferAccess::ReadWrite, DataType::U32).with_count(8),
-    ]
-}
+use vyre_test_support::collective_programs::{collective_buffers, collective_nodes};
 
 fn collective_program() -> Program {
     Program::wrapped(
         collective_buffers(),
         [64, 1, 1],
-        vec![
-            Node::AllReduce {
-                buffer: "a".into(),
-                op: CollectiveOp::Sum,
-                group: CommGroup::WORLD,
-            },
-            Node::AllGather {
-                input: "input".into(),
-                output: "out".into(),
-                group: CommGroup::WORLD,
-            },
-            Node::ReduceScatter {
-                input: "input".into(),
-                output: "out".into(),
-                op: CollectiveOp::Max,
-                group: CommGroup(3),
-            },
-            Node::Broadcast {
-                buffer: "a".into(),
-                root: 1,
-                group: CommGroup(3),
-            },
-        ],
+        collective_nodes(CommGroup(3), 1).into(),
     )
 }
 
@@ -192,4 +166,33 @@ fn collective_nodes_are_visible_to_required_capability_scan() {
         required.distributed_collectives,
         "Fix: dispatch admission must see RFC-0004 collective requirements before backend launch."
     );
+}
+
+/// Every collective kind on the world group lowers to a local rewrite, and the
+/// plan counts one of each before it does.
+///
+/// A kind that stopped lowering would leave a distributed collective in a
+/// program the single-rank path reported as fully local.
+#[test]
+fn local_single_rank_lowering_covers_all_collective_node_kinds() {
+    let program = Program::wrapped(
+        collective_buffers(),
+        [64, 1, 1],
+        vec![Node::Block(collective_nodes(CommGroup::WORLD, 0).into())],
+    );
+
+    let plan = collective_transport_plan(&program);
+    assert_eq!(plan.local_single_rank_collectives(), 4);
+    assert_eq!(plan.transport_collectives(), 0);
+    assert_eq!(plan.local_ops().all_reduce(), 1);
+    assert_eq!(plan.local_ops().all_gather(), 1);
+    assert_eq!(plan.local_ops().reduce_scatter(), 1);
+    assert_eq!(plan.local_ops().broadcast(), 1);
+
+    let lowered = lower_single_rank_collectives(&program)
+        .expect("Fix: all WORLD single-rank collective kinds must lower locally")
+        .expect("Fix: local collective lowering must rewrite the program");
+
+    assert!(!lowered.stats().distributed_collectives());
+    assert!(validate(&lowered).is_empty());
 }

@@ -2,11 +2,7 @@ use super::*;
 
 #[test]
 fn egraph_device_image_upload_plan_preserves_single_slab_layout() {
-    let snapshot = GpuEGraphSnapshot::build([
-        (2u32, "lit", &[][..]),
-        (1u32, "lit", &[][..]),
-        (2u32, "add", &[1u32, 2u32][..]),
-    ]);
+    let snapshot = shared_eclass_add_snapshot();
 
     let plan = plan_cuda_egraph_device_upload(&snapshot)
         .expect("Fix: valid foundation e-graph image must produce a CUDA upload plan");
@@ -32,11 +28,7 @@ fn egraph_device_image_upload_plan_preserves_single_slab_layout() {
 
 #[test]
 fn borrowed_egraph_device_image_upload_plan_matches_owned_plan_without_image_clone() {
-    let snapshot = GpuEGraphSnapshot::build([
-        (2u32, "lit", &[][..]),
-        (1u32, "lit", &[][..]),
-        (2u32, "add", &[1u32, 2u32][..]),
-    ]);
+    let snapshot = shared_eclass_add_snapshot();
     let image = snapshot
         .try_pack_device_image()
         .expect("Fix: valid foundation e-graph image must pack.");
@@ -52,12 +44,13 @@ fn borrowed_egraph_device_image_upload_plan_matches_owned_plan_without_image_clo
 
 #[test]
 fn cuda_upload_byte_layout_matches_foundation_device_image_layout() {
-    let snapshot = GpuEGraphSnapshot::build([
+    let snapshot = GpuEGraphSnapshot::try_build([
         (2u32, "lit", &[][..]),
         (1u32, "lit", &[][..]),
         (2u32, "add", &[1u32, 2u32][..]),
         (3u32, "mul", &[2u32, 1u32][..]),
-    ]);
+    ])
+    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
     let image = snapshot
         .try_pack_device_image()
         .expect("Fix: valid foundation e-graph image must pack.");
@@ -87,7 +80,8 @@ fn cuda_upload_byte_layout_matches_foundation_device_image_layout() {
 
 #[test]
 fn egraph_device_image_upload_plan_rejects_malformed_snapshot() {
-    let mut snapshot = GpuEGraphSnapshot::build([(0u32, "lit", &[][..])]);
+    let mut snapshot = GpuEGraphSnapshot::try_build([(0u32, "lit", &[][..])])
+        .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
     snapshot.rows[0].language_op_id = 99;
 
     let error = plan_cuda_egraph_device_upload(&snapshot)
@@ -103,24 +97,11 @@ fn egraph_device_image_upload_plan_rejects_malformed_snapshot() {
     }
 }
 
-fn assert_span_matches_foundation(
-    cuda: CudaEGraphDeviceByteSpan,
-    foundation: vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceSpan,
-) {
-    assert_eq!(cuda.offset(), foundation.offset() * 4);
-    assert_eq!(cuda.byte_len(), foundation.len() * 4);
-}
-
 #[test]
 fn borrowed_egraph_device_image_upload_round_trips_through_cuda_resident_memory() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let snapshot = GpuEGraphSnapshot::build([
-        (10u32, "lit", &[][..]),
-        (20u32, "lit", &[][..]),
-        (30u32, "add", &[10u32, 20u32][..]),
-        (40u32, "add", &[10u32, 20u32][..]),
-    ]);
+    let snapshot = duplicate_add_snapshot();
     let image = snapshot
         .try_pack_device_image()
         .expect("Fix: valid foundation e-graph image must pack.");
@@ -152,11 +133,7 @@ fn borrowed_egraph_device_image_upload_round_trips_through_cuda_resident_memory(
 fn egraph_device_image_upload_round_trips_through_cuda_resident_memory() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let snapshot = GpuEGraphSnapshot::build([
-        (2u32, "lit", &[][..]),
-        (1u32, "lit", &[][..]),
-        (2u32, "add", &[1u32, 2u32][..]),
-    ]);
+    let snapshot = shared_eclass_add_snapshot();
     let plan = plan_cuda_egraph_device_upload(&snapshot)
         .expect("Fix: valid foundation e-graph image must produce a CUDA upload plan");
     let expected_bytes = plan

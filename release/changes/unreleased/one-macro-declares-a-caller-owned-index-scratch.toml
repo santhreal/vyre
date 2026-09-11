@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A caller-owned index scratch is declared once. caller_owned_index_scratch! in vyre-driver reservation policy takes the key type, reservation, error and counted noun of a planner scratch and generates the wrapper, replacing three hand-written copies of the same reserve-sort-drain body. The behavior claims stay with ReusableIndexScratch, so the copied sort tests in the CUDA staging reserve are gone."

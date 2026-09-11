@@ -10,7 +10,7 @@ use vyre_libs::nn::{
     attention::{Attention, Softmax},
     norm::LayerNorm,
 };
-use vyre_libs::tensor_ref::{TensorRef, TensorRefError};
+use vyre_libs::{TensorRef, TensorRefError};
 
 #[test]
 fn softmax_rejects_input_equals_output_name() {

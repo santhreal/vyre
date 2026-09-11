@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A feature selection that compiles the builder skeletons without the reduce dialect, such as hash alone, builds again, because the reduction programs that fold through a workgroup tree moved into a submodule the reduce feature gates."

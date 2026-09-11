@@ -15,9 +15,10 @@
 
 use std::sync::Arc;
 
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::visit;
 
 fn nested_fence_program() -> Program {
     Program::wrapped(
@@ -39,21 +40,25 @@ fn nested_fence_program() -> Program {
     )
 }
 
+/// Grid-sync fences anywhere in `nodes`, at any depth.
+///
+/// Descent comes from `for_each_node` so this counter cannot go stale against a
+/// new `Node` variant that carries a body: the hand-written version reached
+/// four variants and returned zero for the rest, which for a test that proves a
+/// fence SURVIVES is the failure mode that reads as a pass.
 fn grid_sync_fences(nodes: &[Node]) -> usize {
-    nodes
-        .iter()
-        .map(|node| match node {
+    let mut fences = 0;
+    visit::for_each_node(nodes, |node| {
+        if matches!(
+            node,
             Node::Barrier {
-                ordering: MemoryOrdering::GridSync,
-            } => 1,
-            Node::If {
-                then, otherwise, ..
-            } => grid_sync_fences(then) + grid_sync_fences(otherwise),
-            Node::Loop { body, .. } | Node::Block(body) => grid_sync_fences(body),
-            Node::Region { body, .. } => grid_sync_fences(body),
-            _ => 0,
-        })
-        .sum()
+                ordering: MemoryOrdering::GridSync
+            }
+        ) {
+            fences += 1;
+        }
+    });
+    fences
 }
 
 /// A loop-nested fence is detected, is not a split point, and is still present
@@ -78,7 +83,8 @@ fn a_loop_nested_grid_sync_fence_is_preserved_through_the_split() {
          would route this program down the non-grid path with no fence and no error"
     );
 
-    let segments = vyre_driver::grid_sync::split_on_grid_sync(&program);
+    let segments = vyre_driver::grid_sync::try_split_on_grid_sync(&program)
+        .expect("Fix: the fixture program must split at its grid-sync fences");
     assert_eq!(
         segments.len(),
         1,
@@ -117,7 +123,8 @@ fn a_dispatch_level_grid_sync_fence_becomes_a_launch_boundary() {
             ]),
         }],
     );
-    let segments = vyre_driver::grid_sync::split_on_grid_sync(&program);
+    let segments = vyre_driver::grid_sync::try_split_on_grid_sync(&program)
+        .expect("Fix: the fixture program must split at its grid-sync fences");
     assert_eq!(
         segments.len(),
         2,

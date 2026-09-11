@@ -1,5 +1,7 @@
 //! Wgpu subgroup capability diagnostics test suite.
 
+#![cfg(feature = "device-tests")]
+
 const DIAGNOSTICS: &str =
     include_str!("../../docs/optimization/WGPU_SUBGROUP_CAPABILITY_DIAGNOSTICS.toml");
 

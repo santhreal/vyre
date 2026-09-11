@@ -1,0 +1,159 @@
+# Structural IR golden for the parsing/ token-walk clone families.
+#
+# One section per clone-family entry point, in roster order. `digest` is BLAKE3
+# over the canonicalized buffer roster and node tree of the program that entry
+# point builds. The remaining lines say which class of change a moved digest is:
+# the roster is the ABI, the histograms and depth say whether a node was added
+# or dropped, and the per-region breakdown localizes a change to one owner.
+#
+# Nothing here reads the wire format, so a serialization revision does not move
+# a section and a changed operand, dropped node or reordered data dependence
+# does.
+#
+# Regenerate with the bless test in the file that reads this golden, then read
+# the diff: a change here is a change in what the compiler emits.
+===== python/structure
+digest ca8c6d5721f3f2bf1affae88edc9cfeb0c184bdc176902501e759bcd7eeb20db
+nodes 76 exprs 290
+depth 10
+node_kinds Assign=22 If=22 Let=17 Loop=7 Region=2 Store=6
+expr_kinds Atomic=1 BinOp=69 LitU32=104 Load=15 LogicalIndex=5 Select=16 Var=80
+buffers:
+  BufferDecl { name: "tok_lens", binding: 2, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_types", binding: 0, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_counts", binding: 4, access: ReadWrite, kind: Global, element: U32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_starts", binding: 1, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_records", binding: 3, access: ReadWrite, kind: Global, element: U32, count: 96, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::parsing::python312_extract_structure nodes=1 exprs=0 node_kinds=Region=1 expr_kinds=none
+  vyre-libs::text::line_index nodes=74 exprs=290 node_kinds=Assign=22 If=22 Let=17 Loop=7 Store=6 expr_kinds=Atomic=1 BinOp=69 LitU32=104 Load=15 LogicalIndex=5 Select=16 Var=80
+===== python/imports
+digest a66ab225926c6316ca712061c0cb4ca21478d68436a05b816081c8e15a690f3a
+nodes 46 exprs 266
+depth 9
+node_kinds Assign=11 If=12 Let=10 Loop=5 Region=2 Store=6
+expr_kinds Atomic=1 BinOp=62 LitU32=93 Load=16 LogicalIndex=13 Select=23 Var=58
+buffers:
+  BufferDecl { name: "tok_lens", binding: 2, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_types", binding: 0, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_counts", binding: 4, access: ReadWrite, kind: Global, element: U32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_starts", binding: 1, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_records", binding: 3, access: ReadWrite, kind: Global, element: U32, count: 96, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::parsing::python312_extract_imports nodes=1 exprs=0 node_kinds=Region=1 expr_kinds=none
+  vyre-libs::text::line_index nodes=44 exprs=266 node_kinds=Assign=11 If=12 Let=10 Loop=5 Store=6 expr_kinds=Atomic=1 BinOp=62 LitU32=93 Load=16 LogicalIndex=13 Select=23 Var=58
+===== python/with_blocks
+digest f701aab3a1c010620e183d8e60500fc18057714a77f3efee94486f3296ab13e3
+nodes 60 exprs 294
+depth 9
+node_kinds Assign=15 If=15 Let=14 Loop=8 Region=2 Store=6
+expr_kinds Atomic=1 BinOp=71 LitU32=103 Load=18 LogicalIndex=6 Select=20 Var=75
+buffers:
+  BufferDecl { name: "tok_lens", binding: 2, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_types", binding: 0, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_counts", binding: 4, access: ReadWrite, kind: Global, element: U32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_starts", binding: 1, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_records", binding: 3, access: ReadWrite, kind: Global, element: U32, count: 96, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::parsing::python312_extract_with_blocks nodes=1 exprs=0 node_kinds=Region=1 expr_kinds=none
+  vyre-libs::text::line_index nodes=58 exprs=294 node_kinds=Assign=15 If=15 Let=14 Loop=8 Store=6 expr_kinds=Atomic=1 BinOp=71 LitU32=103 Load=18 LogicalIndex=6 Select=20 Var=75
+===== python/calls
+digest e49c2ae6417f240a60e31ec0794d64ff8fbe39545e8c2471e85ed5fb95b82d18
+nodes 90 exprs 418
+depth 9
+node_kinds Assign=21 If=26 Let=23 Loop=9 Region=2 Store=9
+expr_kinds Atomic=2 BinOp=103 LitU32=146 Load=24 LogicalIndex=12 Select=26 Var=105
+buffers:
+  BufferDecl { name: "tok_lens", binding: 2, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_calls", binding: 3, access: ReadWrite, kind: Global, element: U32, count: 112, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_types", binding: 0, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_kwargs", binding: 5, access: ReadWrite, kind: Global, element: U32, count: 32, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_starts", binding: 1, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_kw_counts", binding: 6, access: ReadWrite, kind: Global, element: U32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_call_counts", binding: 4, access: ReadWrite, kind: Global, element: U32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::parsing::core_delimiter_match nodes=88 exprs=418 node_kinds=Assign=21 If=26 Let=23 Loop=9 Store=9 expr_kinds=Atomic=2 BinOp=103 LitU32=146 Load=24 LogicalIndex=12 Select=26 Var=105
+  vyre-libs::parsing::python312_extract_calls nodes=1 exprs=0 node_kinds=Region=1 expr_kinds=none
+===== python/decorators
+digest 4a6bf9bd0804d958492b9c5c48fe50da8493b4d11311350c4a25b71ddf2608ef
+nodes 83 exprs 406
+depth 9
+node_kinds Assign=24 If=24 Let=15 Loop=12 Region=2 Store=6
+expr_kinds Atomic=1 BinOp=96 LitU32=146 Load=26 LogicalIndex=3 Select=29 Var=105
+buffers:
+  BufferDecl { name: "tok_lens", binding: 2, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_types", binding: 0, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_counts", binding: 4, access: ReadWrite, kind: Global, element: U32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_starts", binding: 1, access: ReadOnly, kind: Readonly, element: U32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_records", binding: 3, access: ReadWrite, kind: Global, element: U32, count: 96, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::parsing::core_delimiter_match nodes=81 exprs=406 node_kinds=Assign=24 If=24 Let=15 Loop=12 Store=6 expr_kinds=Atomic=1 BinOp=96 LitU32=146 Load=26 LogicalIndex=3 Select=29 Var=105
+  vyre-libs::parsing::python312_extract_decorators nodes=1 exprs=0 node_kinds=Region=1 expr_kinds=none
+===== go/packages_and_imports
+digest 2c3ffed14ee5f1fccdd2cdd120def3b1fd79c8735fc37bd3195eb070eaf9f658
+nodes 24 exprs 245
+depth 9
+node_kinds Assign=1 If=11 Let=4 Loop=1 Region=1 Store=6
+expr_kinds Atomic=3 BinOp=84 BufLen=4 LitU32=74 Load=41 LogicalIndex=28 Var=11
+buffers:
+  BufferDecl { name: "haystack", binding: 3, access: ReadOnly, kind: Readonly, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_lens", binding: 2, access: ReadOnly, kind: Readonly, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_types", binding: 0, access: ReadOnly, kind: Readonly, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_starts", binding: 1, access: ReadOnly, kind: Readonly, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_imports", binding: 6, access: ReadWrite, kind: Global, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_packages", binding: 4, access: ReadWrite, kind: Global, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_import_counts", binding: 7, access: ReadWrite, kind: Global, element: U32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_package_counts", binding: 5, access: ReadWrite, kind: Global, element: U32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::parsing::go_extract_packages_and_imports nodes=23 exprs=245 node_kinds=Assign=1 If=11 Let=4 Loop=1 Store=6 expr_kinds=Atomic=3 BinOp=84 BufLen=4 LitU32=74 Load=41 LogicalIndex=28 Var=11
+===== go/declarations
+digest cc2974a1c0b271e8779b39a56e9782d52a6380ed241289d24718e48b7f8c41cf
+nodes 65 exprs 416
+depth 9
+node_kinds Assign=16 If=20 Let=15 Loop=3 Region=1 Store=10
+expr_kinds Atomic=2 BinOp=138 BufLen=5 LitU32=132 Load=59 LogicalIndex=30 Var=50
+buffers:
+  BufferDecl { name: "haystack", binding: 3, access: ReadOnly, kind: Readonly, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_lens", binding: 2, access: ReadOnly, kind: Readonly, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_decls", binding: 4, access: ReadWrite, kind: Global, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_types", binding: 0, access: ReadOnly, kind: Readonly, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "tok_starts", binding: 1, access: ReadOnly, kind: Readonly, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_decl_counts", binding: 5, access: ReadWrite, kind: Global, element: U32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::parsing::go_extract_declarations nodes=64 exprs=416 node_kinds=Assign=16 If=20 Let=15 Loop=3 Store=10 expr_kinds=Atomic=2 BinOp=138 BufLen=5 LitU32=132 Load=59 LogicalIndex=30 Var=50
+===== core/ast/shunting
+digest 1461525c6470e06a5756070e9b12f02eeb428a72f7f3a8c6e421f44791d555e2
+nodes 103 exprs 749
+depth 11
+node_kinds Assign=20 If=21 Let=29 Loop=4 Region=5 Store=24
+expr_kinds Atomic=4 BinOp=245 BufLen=2 LitU32=237 Load=13 LogicalIndex=21 Select=37 UnOp=1 Var=189
+buffers:
+  BufferDecl { name: "tok_types", binding: 0, access: ReadOnly, kind: Readonly, element: U32, count: 65536, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "statements", binding: 1, access: ReadOnly, kind: Readonly, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_ast_count", binding: 3, access: ReadWrite, kind: Global, element: U32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_ast_nodes", binding: 2, access: ReadWrite, kind: Global, element: U32, count: 262144, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "scratch_op_stack", binding: 6, access: ReadWrite, kind: Global, element: U32, count: 4194304, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "scratch_val_stack", binding: 5, access: ReadWrite, kind: Global, element: U32, count: 4194304, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_statement_roots", binding: 4, access: ReadWrite, kind: Global, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  anonymous::shunting_yard_statement_pass nodes=31 exprs=180 node_kinds=Assign=3 If=6 Let=9 Loop=1 Region=3 Store=9 expr_kinds=Atomic=1 BinOp=56 BufLen=1 LitU32=57 Load=4 LogicalIndex=8 Select=8 Var=45
+  vyre-libs::parsing::ast_shunting_yard nodes=2 exprs=7 node_kinds=If=1 Region=1 expr_kinds=BinOp=3 BufLen=1 LitU32=2 LogicalIndex=1
+  vyre-libs::parsing::ast_shunting_yard_reduce nodes=69 exprs=562 node_kinds=Assign=17 If=14 Let=20 Loop=3 Store=15 expr_kinds=Atomic=3 BinOp=186 LitU32=178 Load=9 LogicalIndex=12 Select=29 UnOp=1 Var=144
+===== core/ast/shunting_with_capacity
+digest 28096251419409af6caa5b3dbf2b98a512e0025c1338777854915347fa43e3d4
+nodes 103 exprs 749
+depth 11
+node_kinds Assign=20 If=21 Let=29 Loop=4 Region=5 Store=24
+expr_kinds Atomic=4 BinOp=245 BufLen=2 LitU32=237 Load=13 LogicalIndex=21 Select=37 UnOp=1 Var=189
+buffers:
+  BufferDecl { name: "tok_types", binding: 0, access: ReadOnly, kind: Readonly, element: U32, count: 4096, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "statements", binding: 1, access: ReadOnly, kind: Readonly, element: U32, count: 200, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_ast_count", binding: 3, access: ReadWrite, kind: Global, element: U32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_ast_nodes", binding: 2, access: ReadWrite, kind: Global, element: U32, count: 16384, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "scratch_op_stack", binding: 6, access: ReadWrite, kind: Global, element: U32, count: 6400, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "scratch_val_stack", binding: 5, access: ReadWrite, kind: Global, element: U32, count: 6400, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out_statement_roots", binding: 4, access: ReadWrite, kind: Global, element: U32, count: 100, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  anonymous::shunting_yard_statement_pass nodes=31 exprs=180 node_kinds=Assign=3 If=6 Let=9 Loop=1 Region=3 Store=9 expr_kinds=Atomic=1 BinOp=56 BufLen=1 LitU32=57 Load=4 LogicalIndex=8 Select=8 Var=45
+  vyre-libs::parsing::ast_shunting_yard nodes=2 exprs=7 node_kinds=If=1 Region=1 expr_kinds=BinOp=3 BufLen=1 LitU32=2 LogicalIndex=1
+  vyre-libs::parsing::ast_shunting_yard_reduce nodes=69 exprs=562 node_kinds=Assign=17 If=14 Let=20 Loop=3 Store=15 expr_kinds=Atomic=3 BinOp=186 LitU32=178 Load=9 LogicalIndex=12 Select=29 UnOp=1 Var=144

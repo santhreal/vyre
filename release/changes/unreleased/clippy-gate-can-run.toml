@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`workspace-clippy` passed `--message-format=json` after the `--` that hands the rest of the line to the lint driver, so clippy-driver answered `Unrecognized option: 'message-format'` for every crate and the only gate that judges lints could not run. The flag now sits on cargo's side of the separator."

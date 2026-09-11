@@ -313,6 +313,9 @@ pub(crate) unsafe fn memset_d8_async_checked(
     }
 }
 
+// Inline: covers `CUDA_ASYNC_COPY_ALIGNMENT`, `aligned_async_copy_len`, `d2h_async_checked`,
+// `d2h_sync_checked` and 2 more items this module keeps private, which no integration test can
+// name.
 #[cfg(test)]
 mod tests {
     use super::*;

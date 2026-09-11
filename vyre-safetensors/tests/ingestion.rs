@@ -461,9 +461,9 @@ fn shard_symlink_escape_fails_closed() {
     );
 }
 
-/// Exercises production-scale Qwen3.5-27B ranges without reading 55.6 GB of payloads.
+/// Exercises production-scale shard ranges without reading 55.6 GB of payloads.
 #[test]
-fn official_qwen35_metadata_subset_indexes_without_payload_reads() {
+fn production_metadata_subset_indexes_without_payload_reads() {
     let temp = tempfile::tempdir().expect("Fix: fixture directory must be creatable");
     let shard1 = br#"{"lm_head.weight":{"dtype":"BF16","shape":[248320,5120],"data_offsets":[0,2542796800]},"model.language_model.embed_tokens.weight":{"dtype":"BF16","shape":[248320,5120],"data_offsets":[2542796800,5085593600]}}"#;
     let shard9 = br#"{"model.language_model.layers.0.linear_attn.in_proj_qkv.weight":{"dtype":"BF16","shape":[10240,5120],"data_offsets":[0,104857600]},"model.language_model.layers.3.self_attn.o_proj.weight":{"dtype":"BF16","shape":[5120,6144],"data_offsets":[1971322880,2034237440]}}"#;
@@ -497,7 +497,7 @@ fn official_qwen35_metadata_subset_indexes_without_payload_reads() {
     .expect("Fix: official metadata subset index must be writable");
 
     let index = ShardedSafetensorIndex::open(temp.path(), &index_path)
-        .expect("Fix: official Qwen metadata subset must index");
+        .expect("Fix: production metadata subset must index");
     assert_eq!(index.tensors().len(), 10);
     assert_eq!(index.shards().len(), 3);
     index
@@ -523,7 +523,7 @@ fn official_qwen35_metadata_subset_indexes_without_payload_reads() {
                 shape: &[5_120, 6_144],
             },
         ])
-        .expect("Fix: official Qwen layouts must bind exactly");
+        .expect("Fix: production layouts must bind exactly");
     let head = index
         .tensor("lm_head.weight")
         .expect("Fix: official LM head must resolve");
@@ -674,5 +674,362 @@ fn changed_shard_length_fails_before_digest_verification() {
             indexed,
             actual: indexed + 1,
         }
+    );
+}
+
+/// Proves transactional checkpoint handles protect against symlink swaps after verification.
+#[test]
+fn symlink_swap_between_verification_and_binding_reads_original_verified_content() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let target_a = temp.path().join("real_shard_a.safetensors");
+    let target_b = temp.path().join("real_shard_b.safetensors");
+    let symlink_path = temp.path().join("shard.safetensors");
+
+    let header_a = br#"{"weights":{"dtype":"F32","shape":[2],"data_offsets":[0,8]}}"#;
+    let payload_a = [10_u8; 8];
+    write_shard(&target_a, header_a, &payload_a);
+
+    let header_b = br#"{"weights":{"dtype":"F32","shape":[2],"data_offsets":[0,8]}}"#;
+    let payload_b = [99_u8; 8];
+    write_shard(&target_b, header_b, &payload_b);
+
+    // Create symlink pointing to shard A
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&target_a, &symlink_path).expect("symlink");
+
+    #[cfg(unix)]
+    {
+        let index_path = temp.path().join("model.safetensors.index.json");
+        fs::write(
+            &index_path,
+            br#"{"weight_map":{"weights":"shard.safetensors"}}"#,
+        )
+        .expect("write index");
+
+        let index = ShardedSafetensorIndex::open(temp.path(), &index_path).expect("open index");
+        let shard_rel = Path::new("shard.safetensors");
+        let expected_digest = *blake3::hash(&fs::read(&target_a).expect("read a")).as_bytes();
+
+        let checkpoint = index
+            .verify_transactional([ExpectedShardDigest {
+                shard: shard_rel,
+                blake3: expected_digest,
+            }])
+            .expect("verify transactional");
+
+        // Adversary swaps the symlink to target_b on disk after verification!
+        fs::remove_file(&symlink_path).expect("remove symlink");
+        std::os::unix::fs::symlink(&target_b, &symlink_path).expect("swap symlink to b");
+
+        // The transactional checkpoint holds the open verified handle from target_a.
+        let bytes = checkpoint
+            .read_tensor("weights")
+            .expect("read from transactional checkpoint");
+        assert_eq!(
+            bytes, payload_a,
+            "Transactional handle must read original verified content, not swapped symlink target"
+        );
+
+        // Attempting to re-open index or verify against swapped symlink with expected_digest fails with mismatch by name!
+        let new_index =
+            ShardedSafetensorIndex::open(temp.path(), &index_path).expect("reopen index");
+        let err = new_index
+            .verify_shards([ExpectedShardDigest {
+                shard: shard_rel,
+                blake3: expected_digest,
+            }])
+            .expect_err("verification on swapped symlink must fail");
+        assert!(
+            matches!(err, SafetensorError::ShardDigestMismatch { ref shard, .. } if shard == shard_rel)
+        );
+    }
+}
+
+/// Proves that a resource whose content changes between verification and binding is refused by name.
+#[test]
+fn resource_content_change_between_verification_and_binding_is_refused_by_name() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let shard_path = temp.path().join("weights.safetensors");
+    let header = br#"{"layer.weight":{"dtype":"F32","shape":[2],"data_offsets":[0,8]}}"#;
+    let original_payload = [7_u8; 8];
+    write_shard(&shard_path, header, &original_payload);
+
+    let index_path = temp.path().join("model.safetensors.index.json");
+    fs::write(
+        &index_path,
+        br#"{"weight_map":{"layer.weight":"weights.safetensors"}}"#,
+    )
+    .expect("write index");
+
+    let index = ShardedSafetensorIndex::open(temp.path(), &index_path).expect("open index");
+    let shard_rel = Path::new("weights.safetensors");
+    let expected_digest = *blake3::hash(&fs::read(&shard_path).expect("read")).as_bytes();
+
+    let checkpoint = index
+        .verify_transactional([ExpectedShardDigest {
+            shard: shard_rel,
+            blake3: expected_digest,
+        }])
+        .expect("verify transactional");
+
+    // Verify initial read succeeds
+    let read1 = checkpoint.read_tensor("layer.weight").expect("read tensor");
+    assert_eq!(read1, original_payload);
+
+    // Adversary modifies the file on disk (truncates / changes length)
+    let current_len = fs::metadata(&shard_path).expect("metadata").len();
+    fs::OpenOptions::new()
+        .write(true)
+        .open(&shard_path)
+        .expect("open")
+        .set_len(current_len + 16)
+        .expect("set_len");
+
+    // Subsequent read on the tensor handle detects the length change and refuses by name!
+    let err = checkpoint
+        .read_tensor("layer.weight")
+        .expect_err("read after file length modification must fail");
+    assert!(
+        matches!(&err, SafetensorError::ShardLengthChanged { shard, .. } if shard == shard_rel),
+        "Fix: resource content modification must be refused by name, got {err:?}"
+    );
+}
+
+/// WHY: the verified handle keeps the descriptor it verified, so a rename or a
+/// symlink swap cannot reach a later read. An in-place rewrite does reach it,
+/// and one that keeps the file length leaves every length and metadata check
+/// satisfied. The bytes a binding receives must still be the bytes that were
+/// verified, so the read hashes what it returns against the digest recorded for
+/// that tensor. This does not detect a change made while a read is in flight.
+#[test]
+fn a_same_length_rewrite_of_a_verified_tensor_is_refused_by_name() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let shard_path = temp.path().join("weights.safetensors");
+    let header = br#"{"layer.weight":{"dtype":"F32","shape":[2],"data_offsets":[0,8]},"layer.bias":{"dtype":"F32","shape":[2],"data_offsets":[8,16]}}"#;
+    let original_payload = [7_u8; 16];
+    write_shard(&shard_path, header, &original_payload);
+
+    let index_path = temp.path().join("model.safetensors.index.json");
+    fs::write(
+        &index_path,
+        br#"{"weight_map":{"layer.weight":"weights.safetensors","layer.bias":"weights.safetensors"}}"#,
+    )
+    .expect("write index");
+
+    let index = ShardedSafetensorIndex::open(temp.path(), &index_path).expect("open index");
+    let shard_rel = Path::new("weights.safetensors");
+    let expected_digest = *blake3::hash(&fs::read(&shard_path).expect("read")).as_bytes();
+    let checkpoint = index
+        .verify_transactional([ExpectedShardDigest {
+            shard: shard_rel,
+            blake3: expected_digest,
+        }])
+        .expect("verify transactional");
+    assert_eq!(
+        checkpoint.read_tensor("layer.weight").expect("read tensor"),
+        original_payload[..8]
+    );
+
+    // Rewrite the first tensor's bytes in place. The header and the payload
+    // length are unchanged, so the file keeps its length and its inode and the
+    // verified descriptor reads the replacement.
+    let length_before = fs::metadata(&shard_path).expect("metadata").len();
+    let mut rewritten_payload = [9_u8; 16];
+    rewritten_payload[8..].copy_from_slice(&original_payload[8..]);
+    write_shard(&shard_path, header, &rewritten_payload);
+    assert_eq!(
+        length_before,
+        fs::metadata(&shard_path).expect("metadata").len(),
+        "the rewrite must keep the shard length so only the content check can catch it"
+    );
+
+    let error = checkpoint
+        .read_tensor("layer.weight")
+        .expect_err("a rewritten tensor must not be served as verified content");
+    assert!(
+        matches!(
+            &error,
+            SafetensorError::ShardContentChanged { name, shard }
+                if name == "layer.weight" && shard == shard_rel
+        ),
+        "Fix: a same-length rewrite must be refused by tensor name, got {error:?}"
+    );
+
+    let untouched = checkpoint
+        .read_tensor("layer.bias")
+        .expect("a tensor whose own bytes did not change must still read");
+    assert_eq!(untouched, original_payload[8..]);
+}
+
+/// Proves transactional reader operations read_bytes, read_into, and tensor lookup.
+#[test]
+fn transactional_tensor_reader_operations() {
+    let (temp, index) = requirement_fixture();
+    let shard = Path::new("one.safetensors");
+    let path = temp.path().join(shard);
+    let expected = *blake3::hash(&fs::read(&path).expect("read")).as_bytes();
+
+    let checkpoint = index
+        .verify_transactional([ExpectedShardDigest {
+            shard,
+            blake3: expected,
+        }])
+        .expect("verify transactional");
+
+    let embedding_handle = checkpoint.tensor("embedding").expect("embedding handle");
+    assert_eq!(embedding_handle.tensor().name, "embedding");
+    assert_eq!(embedding_handle.shard(), shard);
+
+    let reader = checkpoint.tensor_reader("embedding").expect("reader");
+    let bytes = reader.read_bytes().expect("read bytes");
+    assert_eq!(bytes.len(), 8);
+
+    let mut buf = vec![0_u8; 8];
+    reader.read_into(&mut buf).expect("read into");
+    assert_eq!(buf, bytes);
+
+    // Nonexistent tensor is refused by name
+    let missing_err = checkpoint
+        .read_tensor("missing.tensor")
+        .expect_err("missing tensor must fail");
+    assert!(
+        matches!(missing_err, SafetensorError::MissingRequiredTensor { name } if name == "missing.tensor")
+    );
+}
+
+/// Proves that substituting a shard file on disk after verification is rejected atomically.
+#[test]
+fn shard_substitution_between_verification_and_binding_fails_atomically() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let shard1_path = temp.path().join("shard1.safetensors");
+    let shard2_path = temp.path().join("shard2.safetensors");
+    let rogue_path = temp.path().join("rogue.safetensors");
+
+    let header1 = br#"{"weight1":{"dtype":"F32","shape":[2],"data_offsets":[0,8]}}"#;
+    let payload1 = [11_u8; 8];
+    write_shard(&shard1_path, header1, &payload1);
+
+    let header2 = br#"{"weight2":{"dtype":"F32","shape":[2],"data_offsets":[0,8]}}"#;
+    let payload2 = [22_u8; 8];
+    write_shard(&shard2_path, header2, &payload2);
+
+    let header_rogue = br#"{"weight2":{"dtype":"F32","shape":[2],"data_offsets":[0,8]}}"#;
+    let payload_rogue = [99_u8; 8];
+    write_shard(&rogue_path, header_rogue, &payload_rogue);
+
+    let index_path = temp.path().join("model.safetensors.index.json");
+    fs::write(
+        &index_path,
+        br#"{"weight_map":{"weight1":"shard1.safetensors","weight2":"shard2.safetensors"}}"#,
+    )
+    .expect("write index");
+
+    let index = ShardedSafetensorIndex::open(temp.path(), &index_path).expect("open index");
+    let s1_rel = Path::new("shard1.safetensors");
+    let s2_rel = Path::new("shard2.safetensors");
+    let d1 = *blake3::hash(&fs::read(&shard1_path).expect("read 1")).as_bytes();
+    let d2 = *blake3::hash(&fs::read(&shard2_path).expect("read 2")).as_bytes();
+
+    let checkpoint = index
+        .verify_transactional([
+            ExpectedShardDigest {
+                shard: s1_rel,
+                blake3: d1,
+            },
+            ExpectedShardDigest {
+                shard: s2_rel,
+                blake3: d2,
+            },
+        ])
+        .expect("verify transactional");
+
+    // Shard 2 is substituted on disk with rogue payload (file replacement on disk)!
+    fs::remove_file(&shard2_path).expect("remove shard2");
+    fs::copy(&rogue_path, &shard2_path).expect("substitute shard2");
+
+    // 1. Transactional checkpoint still safely reads the verified content from the pinned handle
+    let read2 = checkpoint.read_tensor("weight2").expect("read weight2");
+    assert_eq!(
+        read2, payload2,
+        "Transactional handle must read original verified content, not substituted file"
+    );
+
+    // 2. Re-verifying or opening index against the substituted shard fails with digest mismatch
+    let new_index = ShardedSafetensorIndex::open(temp.path(), &index_path).expect("reopen index");
+    let err = new_index
+        .verify_shards([
+            ExpectedShardDigest {
+                shard: s1_rel,
+                blake3: d1,
+            },
+            ExpectedShardDigest {
+                shard: s2_rel,
+                blake3: d2,
+            },
+        ])
+        .expect_err("verification on substituted shard must fail");
+    assert!(
+        matches!(err, SafetensorError::ShardDigestMismatch { ref shard, .. } if shard == s2_rel)
+    );
+}
+
+/// Proves that sparse-file modification or truncation after verification is detected and refused.
+#[test]
+fn sparse_file_change_and_stale_manifest_fail_atomically() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let shard_path = temp.path().join("sparse_shard.safetensors");
+    let header = br#"{"sparse_tensor":{"dtype":"U8","shape":[16],"data_offsets":[0,16]}}"#;
+    write_sparse_shard(&shard_path, header, 16);
+
+    let index_path = temp.path().join("model.safetensors.index.json");
+    fs::write(
+        &index_path,
+        br#"{"weight_map":{"sparse_tensor":"sparse_shard.safetensors"}}"#,
+    )
+    .expect("write index");
+
+    let index = ShardedSafetensorIndex::open(temp.path(), &index_path).expect("open index");
+    let shard_rel = Path::new("sparse_shard.safetensors");
+    let digest = *blake3::hash(&fs::read(&shard_path).expect("read sparse")).as_bytes();
+
+    let checkpoint = index
+        .verify_transactional([ExpectedShardDigest {
+            shard: shard_rel,
+            blake3: digest,
+        }])
+        .expect("verify transactional");
+
+    // 1. Initial read succeeds
+    let bytes = checkpoint
+        .read_tensor("sparse_tensor")
+        .expect("read sparse_tensor");
+    assert_eq!(bytes.len(), 16);
+
+    // 2. Modifying the sparse file length on disk is detected on subsequent read
+    let cur_len = fs::metadata(&shard_path).expect("metadata").len();
+    fs::OpenOptions::new()
+        .write(true)
+        .open(&shard_path)
+        .expect("open")
+        .set_len(cur_len + 32)
+        .expect("set_len");
+
+    let err = checkpoint
+        .read_tensor("sparse_tensor")
+        .expect_err("read after sparse modification must fail");
+    assert!(
+        matches!(&err, SafetensorError::ShardLengthChanged { shard, .. } if shard == shard_rel)
+    );
+
+    // 3. Stale manifest pointing to a non-existent or modified shard fails atomically
+    let stale_index_path = temp.path().join("stale.safetensors.index.json");
+    fs::write(
+        &stale_index_path,
+        br#"{"weight_map":{"tensor_x":"nonexistent_shard.safetensors"}}"#,
+    )
+    .expect("write stale index");
+    assert!(
+        ShardedSafetensorIndex::open(temp.path(), &stale_index_path).is_err(),
+        "Stale manifest pointing to nonexistent shard must fail atomically"
     );
 }

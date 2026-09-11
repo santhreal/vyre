@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The frontier-density traversal dimension is owned and selected by `vyre-megakernel` as `frontier_topology: FrontierTopology` on `SelectedPlan`, with `ARTIFACT_SCHEMA_VERSION` bumped to 18 and driver/backend modules reduced to fact providers."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "All remaining compile-time checkout root derivations in `vyre-foundation`, `vyre-megakernel`, and `vyre-driver-cuda` resolve repository and fixture paths at run time through `vyre_test_support::monorepo` delegations (`vyre_workspace_root` and `vyre_crate_directory`). `structure-gate` checkout provenance gates enforce runtime path derivation across all member sources and test binaries, catching both `env!` and `option_env!` variants without waivers."

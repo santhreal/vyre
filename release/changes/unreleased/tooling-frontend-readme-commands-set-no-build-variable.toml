@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The generated crate README contracts invoke the workspace wrapper directly instead of prefixing `CARGO_BUILD_JOBS=1`. Build configuration is declared once, in the cargo config and the root profiles, where it is reviewable and applies to every build equally; a per-invocation override makes each reader's build a different build, and thirty-six generated documents were teaching exactly that."

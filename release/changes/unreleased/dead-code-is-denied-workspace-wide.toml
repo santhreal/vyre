@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Workspace lint policy denies `dead_code`, `unused_variables`, `unreachable_pub` and `unfulfilled_lint_expectations`, and the 59 items those lints reported are removed or given the caller they were missing. Three were defects rather than dormant code: an impl-visitor flag saved and never restored, so every impl after the first dispatcher-typed one read as dispatcher-self; a duplicated workspace tree open that walked the source twice; and a snapshot test whose name claimed a restored mtime it never set."

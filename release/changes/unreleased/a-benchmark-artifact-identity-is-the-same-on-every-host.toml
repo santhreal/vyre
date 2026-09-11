@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A per-backend benchmark artifact path is built as a repository-relative POSIX identity, so a recording made on Windows names the same artifact the declaration lists."

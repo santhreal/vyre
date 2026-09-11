@@ -1,4 +1,4 @@
-use super::constants::{DEFAULT_MAX_BLOCKS_PER_LAUNCH, DEFAULT_THREADS_PER_BLOCK};
+use super::kernel_abi::{DEFAULT_MAX_BLOCKS_PER_LAUNCH, DEFAULT_THREADS_PER_BLOCK};
 use crate::egraph_device_image::CudaEGraphDeviceKernelView;
 
 /// E-graph kernel pass represented in CUDA launch planning.

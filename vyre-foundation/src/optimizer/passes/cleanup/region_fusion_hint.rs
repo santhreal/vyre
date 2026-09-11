@@ -1,4 +1,4 @@
-//! ROADMAP H5 (foundation_optimizer half)  -  region-fusion hint pass.
+//! Region-fusion hint pass, foundation half.
 //!
 //! Detects adjacent `Node::Region` pairs whose generator names
 //! match a fusion rule in the built-in table (e.g.
@@ -55,18 +55,18 @@ impl RegionFusionHintPass {
         {
             return PassAnalysis::SKIP;
         }
-        if entry_has_top_level_candidate_pair(program.entry())
-            || program.entry().iter().any(has_candidate_pair)
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        PassAnalysis::run_if(
+            entry_has_top_level_candidate_pair(program.entry())
+                || program.entry().iter().any(has_candidate_pair),
+        )
     }
 
     /// Walk the entry tree and fuse every matching Region pair.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
+        if !Self::analyze_impl(&program).should_run {
+            return PassResult::unchanged(program);
+        }
         let mut changed = false;
         let program = program.map_entry(|entry| fuse_in_body(entry, &mut changed));
         PassResult { program, changed }
@@ -279,6 +279,7 @@ fn has_candidate_pair(node: &Node) -> bool {
 mod tests {
     use super::*;
     use crate::ir::{BufferAccess, BufferDecl, DataType, Ident, Node};
+    use crate::visit::for_each_node;
 
     fn buf() -> BufferDecl {
         BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
@@ -296,31 +297,20 @@ mod tests {
         Program::wrapped(vec![buf()], [1, 1, 1], entry)
     }
 
+    /// Every region generator name under `nodes`, in source order.
+    ///
+    /// Descent comes from `visit::for_each_node`, the one owner of
+    /// which node variants nest. The hand-written match this replaces ended in
+    /// `_ => {}`, so a region inside a fifth body-bearing variant read as absent
+    /// and the fusion-hint assertions would have passed on a program whose
+    /// nested regions were never rewritten.
     fn region_generators(nodes: &[Node]) -> Vec<String> {
         let mut out = Vec::new();
-        fn walk(nodes: &[Node], out: &mut Vec<String>) {
-            for n in nodes {
-                if let Node::Region {
-                    generator, body, ..
-                } = n
-                {
-                    out.push(generator.as_str().to_owned());
-                    walk(body.as_ref(), out);
-                }
-                match n {
-                    Node::If {
-                        then, otherwise, ..
-                    } => {
-                        walk(then, out);
-                        walk(otherwise, out);
-                    }
-                    Node::Loop { body, .. } => walk(body, out),
-                    Node::Block(body) => walk(body, out),
-                    _ => {}
-                }
+        for_each_node(nodes, |n| {
+            if let Node::Region { generator, .. } = n {
+                out.push(generator.as_str().to_owned());
             }
-        }
-        walk(nodes, &mut out);
+        });
         out
     }
 

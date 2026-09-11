@@ -1,0 +1,14 @@
+lane = "gpu-parity-cuda-release-bench-evidence"
+workflow = ".github/workflows/gpu-parity.yml"
+job = "cuda-release-bench-evidence"
+state = "live"
+required_status = "GPU Parity + Determinism / CUDA release benchmark evidence"
+triggers = ["pull_request", "push", "workflow_dispatch"]
+steps = [
+  { command = "./cargo_full run -p vyre-bench --release -- run --suite release --case foundation.optimizer.impact --format json --backend cuda --measured-samples 30" },
+  { command = "./cargo_full run -p vyre-bench --release -- run --suite release --case cuda.ptx.patterns.release.corpus --format json --measured-samples 30" },
+  { command = "./cargo_full run -p vyre-bench --release -- run --suite release --case runtime.megakernel.condition.64k --format json --backend cuda --measured-samples 30" },
+  { command = "./cargo_full run -p vyre-bench --release -- run --suite release --case conditions.yara_like.eval.1m --format json --backend cuda --measured-samples 30" },
+  { command = "./cargo_full run -p vyre-bench --release -- run --suite release --case conditions.yara_like.batch.16x64k --format json --backend cuda --measured-samples 30" },
+  { gate = "release-benchmarks", args = ["--backend", "cuda", "--measured-samples", "30", "--write"] },
+]

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "An asynchronous transfer states its visibility, stage ring slot and memory-proxy fence, so a wait completes one slot and leaves the rest of the ring in flight instead of draining every committed transfer."

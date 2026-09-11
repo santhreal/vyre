@@ -1,0 +1,2 @@
+category = "Added"
+text = "A module-layout gate refuses a foo.rs sitting beside a foo/ directory. Rust accepts that pair and the mod.rs layout equally, and a tree carrying both gives a reader two places to look for the same module's own items. This workspace spells a directory module as mod.rs in 476 directories and carried 110 of the other pair at its worst; the gate reads the layout from the source list, so it is green today and red on the first file that reintroduces the pair."

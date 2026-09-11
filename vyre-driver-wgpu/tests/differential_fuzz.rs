@@ -15,24 +15,21 @@
 //! Coverage grows as new Cat-A ops ship  -  each op's author adds a
 //! proptest function here per AUTHORING.md step 4b.
 
+#![cfg(feature = "device-tests")]
 #![allow(deprecated)]
-#![cfg(all(
-    feature = "math-linalg",
-    feature = "math-scan",
-    feature = "matching-substring",
-    feature = "matching-dfa",
-))]
 
-mod common;
+use crate::harness;
 
-use common::{decode_u32_words, u32_bytes};
+use harness::{decode_u32_words, u32_bytes};
 use proptest::prelude::*;
 use vyre::ir::Program;
 use vyre_reference::value::Value;
 
 fn run(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
     let values: Vec<Value> = inputs.into_iter().map(Value::from).collect();
-    let outs = vyre_reference::reference_eval(program, &values).expect("execute");
+    let outs = vyre_reference::ReferenceRequest::standard(program, &values)
+        .outputs()
+        .expect("execute");
     outs.into_iter().map(|v| v.to_bytes()).collect()
 }
 
@@ -55,7 +52,7 @@ proptest! {
     ) {
         use vyre_libs::math::linalg::dot;
         let rhs: Vec<u32> = (0..lhs.len())
-            .map(|i| ((rhs_seed.wrapping_mul(i as u64 + 1) ^ 0xdead_beef) as u32))
+            .map(|i| (rhs_seed.wrapping_mul(i as u64 + 1) ^ 0xdead_beef) as u32)
             .collect();
         let program = dot("a", "b", "c", lhs.len() as u32).unwrap();
         let outputs = run(
@@ -131,7 +128,7 @@ proptest! {
         haystack in "[a-e]{1,24}",
         needle in "[a-e]{1,4}",
     ) {
-        use vyre_libs::scan::substring_search;
+        use vyre_libs::pattern::substring_search;
         let haystack_bytes = haystack.as_bytes();
         let needle_bytes = needle.as_bytes();
         let program = substring_search(
@@ -157,7 +154,7 @@ proptest! {
 
 // ---------- Aho-Corasick ----------
 
-fn cpu_aho_corasick(dfa: &vyre_primitives::matching::CompiledDfa, haystack: &[u8]) -> Vec<u32> {
+fn cpu_aho_corasick(dfa: &vyre_libs::pattern::CompiledDfa, haystack: &[u8]) -> Vec<u32> {
     let mut state = 0u32;
     let mut out = Vec::with_capacity(haystack.len());
     for &b in haystack {
@@ -175,8 +172,8 @@ proptest! {
         patterns in prop::collection::vec("[a-c]{1,4}", 1..6),
         haystack in "[a-c]{1,32}",
     ) {
-        use vyre_libs::scan::{aho_corasick};
-use vyre_primitives::matching::{dfa_compile};
+        use vyre_libs::pattern::{aho_corasick};
+use vyre_libs::pattern::{dfa_compile};
 
         let pattern_bytes: Vec<&[u8]> = patterns.iter().map(|p| p.as_bytes()).collect();
         let compiled = dfa_compile(&pattern_bytes);

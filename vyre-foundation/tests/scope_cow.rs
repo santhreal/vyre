@@ -3,7 +3,7 @@
 //! `Scope` must support nested `child()` scopes that inherit parent
 //! bindings but do not leak mutations back up.
 
-use vyre_foundation::ir::model::program::Scope;
+use vyre_foundation::ir::Scope;
 
 #[test]
 fn new_scope_is_empty() {

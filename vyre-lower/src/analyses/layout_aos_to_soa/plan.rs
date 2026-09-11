@@ -20,6 +20,7 @@ pub struct LayoutCandidate {
 /// Layout-transformation candidates for one kernel.
 pub type LayoutTransformPlan = CandidatePlan<LayoutCandidate>;
 
+// Inline: covers items in the crate-private `analyses::layout_aos_to_soa` module, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The 1D convolution builds its boundary offset from one non-negative distance instead of computing both directions of the same subtraction as the two arms of a select, where one arm wrapped in every lane."

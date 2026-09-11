@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Upgrade assurance tooling into a scaling subsystem with declarative gate descriptors, AST-based source analysis, query kinds, topological artifact regeneration, and runtime validation contracts."

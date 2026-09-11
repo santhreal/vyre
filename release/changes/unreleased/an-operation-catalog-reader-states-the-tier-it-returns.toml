@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre_primitives::operation_catalog::all_entries` is now `intrinsic_entries` and `vyre_libs::operation_catalog::all_entries` is now `library_entries`, so a caller reads the tier it names instead of filtering an intrinsic-only catalog for a library operation."

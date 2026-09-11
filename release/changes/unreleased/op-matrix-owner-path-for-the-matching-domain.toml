@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "OP_MATRIX owner paths point at a directory that exists for the matching domain. The generator derives a vyre-libs owner from the operation id as `vyre-libs/src/<domain>`, with named exceptions for optim, quant and builder. Every `vyre-libs::matching` operation lives under `vyre-libs/src/scan`, so four families named `vyre-libs/src/matching`, which is not a directory, and `op_matrix_covers_every_registered_op_once` failed on the missing path. The domain is now mapped the way optim and quant already are."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Library compositions now use schedule-free logical domain identities and barriers; selected-schedule lowering introduces physical invocation geometry and synchronization, and unresolved logical markers fail before backend emission."

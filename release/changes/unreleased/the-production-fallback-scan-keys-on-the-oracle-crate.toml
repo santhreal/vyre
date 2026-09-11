@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The production CPU fallback scan forbids the whole `vyre_reference` crate in production source rather than one entry-point name, so a renamed or newly added oracle function cannot reopen a CPU route."

@@ -20,7 +20,7 @@
 
 use crate::ir::{Expr, Program};
 use crate::optimizer::expr_arena::{ExprArena, ExprId};
-use crate::transform::visit::walk_exprs;
+use crate::visit::walk_exprs;
 use std::hash::{Hash, Hasher};
 
 /// Stats produced by [`analyze_program_expr_arena`].

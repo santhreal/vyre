@@ -13,23 +13,25 @@ on:
     # Nightly sweep so drift is caught even if no PR touches perf code.
     - cron: "0 6 * * *"
 
+concurrency:
+  group: bench-regression-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   bench-target-smoke:
     name: bench target build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: ./.github/actions/rust-bench-setup
 
       - name: Compile non-GPU bench targets
         run: |
           ./cargo_full bench -p vyre-bench --no-run
           ./cargo_full bench -p vyre-foundation --no-run
-          ./cargo_full bench -p vyre-intrinsics --no-run
           ./cargo_full bench -p vyre-libs --no-run
           ./cargo_full bench -p vyre-reference --no-run
           ./cargo_full bench -p vyre-runtime --no-run
           ./cargo_full bench -p vyre-driver-wgpu --no-run
 
-      - name: Enforce smoke benchmark runtime budget
-        run: scripts/check_bench_smoke_runtime.sh

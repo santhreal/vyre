@@ -37,12 +37,16 @@ use crate::artifact::{registration, TargetId};
 use crate::launcher::{emit_launcher_rust, LauncherError, LauncherOpts};
 use crate::manifest::Manifest;
 use crate::VERSION;
-use vyre_megakernel::{ArtifactEnvelope, TargetPayload};
+use vyre_megakernel::{ArtifactEnvelope, TargetEntryPoint, TargetPayload};
 
 const METRIC_RECORD_WORDS: u32 = 8;
 const MAX_BUNDLE_MANIFEST_BYTES: u64 = 1024 * 1024;
 const MAX_COMPRESSED_ENVELOPE_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_ENVELOPE_BYTES: usize = 64 * 1024 * 1024;
+/// Bound on the compressed weights file one bundle carries.
+const MAX_COMPRESSED_WEIGHTS_BYTES: u64 = 16 * 1024 * 1024 * 1024;
+/// Bound on the weights a bundle decompresses to.
+const MAX_WEIGHTS_BYTES: usize = 64 * 1024 * 1024 * 1024;
 
 /// Files written for one deployable artifact envelope.
 #[derive(Debug, Clone)]
@@ -245,6 +249,115 @@ pub fn read_bundle_artifact(
     Ok((manifest, envelope))
 }
 
+/// Read and authenticate packaged weights bytes against the bundle manifest.
+pub fn read_bundle_weights(bundle_dir: &Path) -> Result<Vec<u8>, BundleError> {
+    let manifest_bytes = read_bytes_bounded(
+        &bundle_dir.join("manifest.json"),
+        MAX_BUNDLE_MANIFEST_BYTES,
+        "manifest",
+    )?;
+    let manifest: Manifest = serde_json::from_slice(&manifest_bytes)?;
+    if manifest.weights_compression != "brotli-11" {
+        return Err(BundleError::InvalidArtifact(format!(
+            "weights compression `{}` is unsupported; expected `brotli-11`",
+            manifest.weights_compression
+        )));
+    }
+    let compressed = read_bytes_bounded(
+        &bundle_dir.join(&manifest.weights_file),
+        MAX_COMPRESSED_WEIGHTS_BYTES,
+        "weights",
+    )?;
+    let weights = brotli_decompress(&compressed)?;
+    if sha256_hex(&weights) != manifest.weights_sha256_hex {
+        return Err(BundleError::InvalidArtifact(
+            "weights SHA-256 does not match manifest identity".to_string(),
+        ));
+    }
+    Ok(weights)
+}
+
+/// Install a published bundle directory into an installation directory.
+///
+/// Verifies the bundle before copying, and preserves a backup in `.previous`
+/// for rollback support.
+pub fn install_package(archive_dir: &Path, install_dir: &Path) -> Result<Manifest, BundleError> {
+    let (manifest, _) = read_bundle_artifact(archive_dir)?;
+    let _ = read_bundle_weights(archive_dir)?;
+
+    fs::create_dir_all(install_dir)?;
+    let active_dir = install_dir.join("active");
+    let prev_dir = install_dir.join(".previous");
+
+    if active_dir.exists() {
+        if prev_dir.exists() {
+            fs::remove_dir_all(&prev_dir)?;
+        }
+        copy_dir_recursive(&active_dir, &prev_dir)?;
+        fs::remove_dir_all(&active_dir)?;
+    }
+
+    fs::create_dir_all(&active_dir)?;
+    copy_dir_recursive(archive_dir, &active_dir)?;
+    Ok(manifest)
+}
+
+/// Load an active installed bundle, authenticating its envelope and weights.
+pub fn load_installed_package(
+    install_dir: &Path,
+) -> Result<(Manifest, ArtifactEnvelope, Vec<u8>), BundleError> {
+    let active_dir = install_dir.join("active");
+    let (manifest, envelope) = read_bundle_artifact(&active_dir)?;
+    let weights = read_bundle_weights(&active_dir)?;
+    Ok((manifest, envelope, weights))
+}
+
+/// Update an installed package with a new archive directory.
+///
+/// Validates the new archive first. If valid, the current active bundle is
+/// saved to `.previous` and the new archive is installed to `active`.
+pub fn update_package(install_dir: &Path, new_archive_dir: &Path) -> Result<Manifest, BundleError> {
+    install_package(new_archive_dir, install_dir)
+}
+
+/// Roll back an installed package to its `.previous` backup.
+pub fn rollback_package(install_dir: &Path) -> Result<Manifest, BundleError> {
+    let active_dir = install_dir.join("active");
+    let prev_dir = install_dir.join(".previous");
+
+    if !prev_dir.exists() {
+        return Err(BundleError::InvalidArtifact(
+            "no previous package version available for rollback".to_string(),
+        ));
+    }
+
+    let (manifest, _) = read_bundle_artifact(&prev_dir)?;
+    let _ = read_bundle_weights(&prev_dir)?;
+
+    if active_dir.exists() {
+        fs::remove_dir_all(&active_dir)?;
+    }
+    fs::create_dir_all(&active_dir)?;
+    copy_dir_recursive(&prev_dir, &active_dir)?;
+    Ok(manifest)
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> io::Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+        if file_type.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else {
+            fs::copy(&src_path, &dst_path)?;
+        }
+    }
+    Ok(())
+}
+
 fn validate_artifact_for_bundle(
     envelope: &ArtifactEnvelope,
     target: &TargetId,
@@ -259,11 +372,6 @@ fn validate_artifact_for_bundle(
     let entry = payload.entries().first().ok_or_else(|| {
         BundleError::InvalidArtifact("target payload has no entry metadata".to_string())
     })?;
-    if entry.resource_bindings.is_empty() {
-        return Err(BundleError::InvalidArtifact(
-            "target entry has no canonical resource bindings".to_string(),
-        ));
-    }
     let neutral = envelope.neutral();
     let geometry = neutral
         .geometry()
@@ -275,9 +383,9 @@ fn validate_artifact_for_bundle(
             )
         })?;
     validate_axes("workgroup_size", geometry.workgroup_size)?;
-    validate_axes("grid_size", entry.grid_size)?;
-    validate_resource_bindings(envelope, payload)?;
-    validate_weight_payload_fits_first_finite_resource(envelope, payload, weights)
+    validate_axes("grid_size", geometry.grid)?;
+    validate_resource_bindings(envelope, entry)?;
+    validate_weight_payload_fits_first_finite_resource(envelope, entry, weights)
 }
 
 fn validate_axes(label: &str, axes: [u32; 3]) -> Result<(), BundleError> {
@@ -299,10 +407,9 @@ fn validate_axes(label: &str, axes: [u32; 3]) -> Result<(), BundleError> {
 
 fn validate_resource_bindings(
     envelope: &ArtifactEnvelope,
-    payload: &TargetPayload,
+    entry: &TargetEntryPoint,
 ) -> Result<(), BundleError> {
     let neutral = envelope.neutral();
-    let entry = &payload.entries()[0];
     let mut metrics_resources = 0_usize;
     for binding in &entry.resource_bindings {
         let resource = neutral
@@ -345,21 +452,30 @@ fn validate_resource_bindings(
 
 fn validate_weight_payload_fits_first_finite_resource(
     envelope: &ArtifactEnvelope,
-    payload: &TargetPayload,
+    entry: &TargetEntryPoint,
     weights: &[u8],
 ) -> Result<(), BundleError> {
-    let entry = &payload.entries()[0];
     let first_binding = entry
         .resource_bindings
         .iter()
         .min_by_key(|binding| binding.slot)
-        .expect("validated non-empty target resource bindings");
+        .ok_or_else(|| {
+            BundleError::InvalidArtifact(format!(
+                "target entry `{}` has no canonical resource bindings",
+                entry.name
+            ))
+        })?;
     let first = envelope
         .neutral()
         .resources()
         .iter()
         .find(|resource| resource.value == first_binding.resource)
-        .expect("canonical target payload validation guarantees resource association");
+        .ok_or_else(|| {
+            BundleError::InvalidArtifact(format!(
+                "binding slot {} names missing canonical resource {}",
+                first_binding.slot, first_binding.resource.0
+            ))
+        })?;
     if first.element_count == 0 {
         return Ok(());
     }
@@ -483,4 +599,22 @@ fn brotli_compress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
             .map_err(|e| BundleError::Brotli(format!("{e}")))?;
     }
     Ok(out)
+}
+
+/// Decompress packaged weights, refusing an expansion past
+/// [`MAX_WEIGHTS_BYTES`].
+///
+/// The compressed bytes are read before the manifest digest can confirm them, so
+/// an expansion ratio is whatever the file on disk claims. Streaming into the
+/// same bounded sink the envelope path uses caps the allocation at the declared
+/// limit instead of at the ratio.
+fn brotli_decompress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
+    let mut output = BoundedOutput {
+        bytes: Vec::new(),
+        max_bytes: MAX_WEIGHTS_BYTES,
+    };
+    let mut reader = brotli::Decompressor::new(input, 4096);
+    io::copy(&mut reader, &mut output)
+        .map_err(|error| BundleError::Brotli(format!("{error:?}")))?;
+    Ok(output.bytes)
 }

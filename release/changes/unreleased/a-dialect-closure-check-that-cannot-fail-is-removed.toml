@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The `define_dialect!` expansion no longer emits an exhaustive-coverage check over its own generated operation enum, which expanded from the same roster as the match arms and could not fail."

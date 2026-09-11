@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Sequential composition witnesses now live only in `vyre-reference::composition_witness`. `vyre-libs`, `vyre-primitives`, parity suites, and release benchmark adapters no longer retain independent host implementations; test and benchmark callers delegate to neutral reference-owned witnesses, while production compilation and dispatch remain GPU-only."

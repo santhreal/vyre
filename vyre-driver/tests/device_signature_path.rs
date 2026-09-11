@@ -1,13 +1,12 @@
 //! Tests for device signature paths.
 
 use std::fs;
-use std::path::PathBuf;
 use vyre_driver::DeviceSignature;
 
 #[test]
 fn blackwell_120_signature_can_be_loaded() {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let path = manifest_dir.join("../devices/blackwell_120.toml");
+    let path =
+        vyre_test_support::monorepo::vyre_workspace_root().join("devices/blackwell_120.toml");
 
     assert!(
         path.exists(),

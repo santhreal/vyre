@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "eigenvector_column_sign declared the matrix it rewrites in place as an output buffer. An output buffer is not a witness input, so the caller matrix never reached the program: the operation read zeros, wrote zeros, and its recorded expected outputs were unreachable. The buffer is read-write, which is what the body does."

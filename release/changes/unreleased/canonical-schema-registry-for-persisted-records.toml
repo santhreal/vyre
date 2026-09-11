@@ -1,0 +1,2 @@
+category = "Changed"
+text = "All persisted, transmitted, cached, signed, and evidence records are now governed by a central declarative schema registry with fixed-width types, canonical field numbers, strict bounds, domain separators, and typed pre-validation deserialization."

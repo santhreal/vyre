@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The worktree-lifetime gate's own test resolves the checkout with `structure_gate::workspace_root` instead of the manifest directory baked in at compile time, so a unit reused across checkouts that share a target directory no longer inspects whichever tree built last."

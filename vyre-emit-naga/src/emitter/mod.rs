@@ -1,28 +1,28 @@
 //! Per-function emit state. Everything below the `BodyBuilder`
 //! boundary lives in topic-specific files (op_dispatch, coercion,
-//! binding_helpers, scalar_ops, async_op, atomic, loops, binop,
-//! op_lookup, setup). This module just defines `BodyBuilder` and
-//! re-exports the entry point.
+//! operand_binding, scalar_ops, async_op, atomic, loops, binop,
+//! carrier_scope, op_lookup, setup). This module just defines
+//! `BodyBuilder` and re-exports the entry point.
 
 mod async_op;
 mod atomic;
-mod binding_helpers;
 mod binop;
+mod carrier_scope;
 mod coercion;
-mod loop_carriers;
 mod loops;
 mod op_dispatch;
 mod op_lookup;
+mod operand_binding;
 mod scalar_ops;
 mod setup;
 mod subgroup;
 
-#[cfg(test)]
-pub(crate) use op_dispatch::op_dispatch_route_cache_probe;
 pub(crate) use setup::emit_uncached;
 use setup::{Builtins, TypeHandles};
+use vyre_lower::GridIndexSpace;
 
 use rustc_hash::{FxHashMap, FxHashSet};
+use smallvec::SmallVec;
 
 use naga::{Expression, Function, GlobalVariable, LocalVariable, Type};
 use vyre_foundation::ir::DataType;
@@ -43,9 +43,15 @@ struct BodyBuilder<'a> {
     /// address `addr`.
     binding_data_types: &'a FxHashMap<u32, DataType>,
     builtins: Builtins,
+    /// Index space this kernel's lanes derive their element index in.
+    grid_index: GridIndexSpace,
+    /// Workgroup shape the entry point declares. A grid-linearized index
+    /// multiplies the workgroup count on an axis by the workgroup size on it to
+    /// reach that axis's invocation extent.
+    workgroup_size: [u32; 3],
     types: TypeHandles,
-    loop_locals: FxHashMap<vyre_lower::descriptor::Name, naga::Handle<LocalVariable>>,
-    loop_types: FxHashMap<vyre_lower::descriptor::Name, naga::Handle<Type>>,
+    loop_locals: FxHashMap<vyre_lower::Name, naga::Handle<LocalVariable>>,
+    loop_types: FxHashMap<vyre_lower::Name, naga::Handle<Type>>,
     /// Q7 fix: result ids that need a function-scope `LocalVariable`
     /// carrier because they are produced inside a `StructuredForLoop`
     /// child body and referenced after the loop in the parent body.
@@ -75,11 +81,11 @@ struct BodyBuilder<'a> {
     /// name. Allocated by `LoopCarrierInit`, written by
     /// `LoopCarrierEnd`, read by `LoopCarrier`. Survives across loop
     /// iterations and post-loop reads.
-    named_carrier_locals: FxHashMap<vyre_lower::descriptor::Name, naga::Handle<LocalVariable>>,
+    named_carrier_locals: FxHashMap<vyre_lower::Name, naga::Handle<LocalVariable>>,
     /// Recorded scalar type per named carrier (decided at init time
     /// from the seed expression). Subsequent reads coerce loaded values
     /// to this type so consumers do not see Bool-vs-u32 mismatches.
-    named_carrier_types: FxHashMap<vyre_lower::descriptor::Name, naga::Handle<Type>>,
+    named_carrier_types: FxHashMap<vyre_lower::Name, naga::Handle<Type>>,
     /// Result-id → carrier name mapping for `LoopCarrier` reads. When
     /// a downstream op references one of these ids, `value_handle_for_id`
     /// emits a fresh `Load` from the named carrier local directly in
@@ -89,8 +95,16 @@ struct BodyBuilder<'a> {
     /// block-scoped local" pattern out of the loop on shaders where the
     /// block-scoped local has a single writer; routing each read
     /// directly to the carrier local forces a per-consumer-site load.
-    named_carrier_result_ids: FxHashMap<u32, vyre_lower::descriptor::Name>,
+    named_carrier_result_ids: FxHashMap<u32, vyre_lower::Name>,
+    vector_lanes: FxHashMap<u32, (SmallVec<[naga::Handle<Expression>; 4]>, naga::Handle<Type>)>,
     trap_sidecar_slot: Option<u32>,
-    trap_tag_codes: FxHashMap<vyre_lower::descriptor::Name, u32>,
+    trap_tag_codes: FxHashMap<vyre_lower::Name, u32>,
     op_dispatch_routes: op_dispatch::OpDispatchRouteCache,
+    /// Rounding this module is emitted under.
+    ///
+    /// [`FloatLoweringMode::StrictIeee`] makes every f32 multiply publish its
+    /// rounded result through an integer reinterpretation before an adjacent
+    /// add can read it, which is what denies the target the fused pair. The
+    /// default mode emits exactly what it emitted before the mode existed.
+    float_lowering: vyre_foundation::fp_parity::FloatLoweringMode,
 }

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The timed CPU reference in `vyre-bench` has one owner, `vyre-bench/src/cases/reference_sample.rs`, and it saturates. Eleven cases hand-rolled the same timer and seven of them cast `Duration::as_nanos()` straight to `u64`, so a reference slower than roughly 584 years was reported as a small number instead of a large one, inverting the speedup it was compared against."

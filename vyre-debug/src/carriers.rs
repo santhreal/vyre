@@ -38,7 +38,7 @@ pub fn find_uncarriered_assigns(
 ) -> Vec<UncarrieredAssign> {
     let mut assigns = Vec::new();
 
-    crate::source_walker::walk_source_assigns(program, |name, loop_path| {
+    crate::source_assignments::walk_source_assigns(program, |name, loop_path| {
         let mut has_carrier_op = false;
         let mut has_final_op = false;
 

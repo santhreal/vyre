@@ -23,7 +23,9 @@ pub(super) fn binop_f32(op: BinOp, left: f32, right: f32) -> Result<Value, crate
         BinOp::Gt => Ok(Value::Bool(left > right)),
         BinOp::Le => Ok(Value::Bool(left <= right)),
         BinOp::Ge => Ok(Value::Bool(left >= right)),
-        _ => Err(ReferenceError::new(format!(
+        // `UnOp` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
+        _ => Err(ReferenceError::incomplete_dispatch_semantics(format!(
             "binary op `{op:?}` is not defined for f32 operands. Fix: use arithmetic or comparison ops only for float primitives."
         ))),
     }
@@ -61,7 +63,9 @@ pub(super) fn unop_f32(op: &UnOp, value: f32) -> Result<Value, crate::ReferenceE
         UnOp::Tanh => Ok(wrap(ieee754::canonical_tanh(value))),
         UnOp::Sinh => Ok(wrap(ieee754::canonical_sinh(value))),
         UnOp::Cosh => Ok(wrap(ieee754::canonical_cosh(value))),
-        _ => Err(ReferenceError::new(format!(
+        // `BinOp` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
+        // oracle_matches_are_exhaustive holds the named set to the declaration.
+        _ => Err(ReferenceError::incomplete_dispatch_semantics(format!(
             "unary op `{op:?}` is not defined for f32 operands. Fix: use numeric or IEEE-754 classification ops only for float primitives."
         ))),
     }
@@ -79,12 +83,9 @@ fn sign(value: f32) -> f32 {
     }
 }
 
-pub(crate) fn canonical_f32(value: f32) -> f32 {
-    if value.is_nan() {
-        f32::from_bits(0x7FC0_0000)
-    } else if value.is_subnormal() {
-        f32::from_bits(value.to_bits() & 0x8000_0000)
-    } else {
-        value
-    }
-}
+/// The one canonicalizer, re-exported at this path for the evaluator's callers.
+///
+/// `vyre-foundation` owns the rule: its literal folder and this interpreter must
+/// canonicalize identically or an optimized program and its own reference run
+/// disagree on a NaN payload or a subnormal's sign.
+pub(crate) use vyre_foundation::fp_parity::canonical_f32;

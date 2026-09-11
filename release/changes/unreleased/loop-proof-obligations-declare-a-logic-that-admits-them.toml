@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Loop transform proof obligations declared an integer arithmetic logic while emitting bit-vector declarations, so the solver rejected the script before reading the assertion and left every one of them undischarged. Iteration spaces are machine integers, so the domain now declares the bit-vector logic, and a contract test rejects any obligation whose declared logic does not admit the sorts it emits."

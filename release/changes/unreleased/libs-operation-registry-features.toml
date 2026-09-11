@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The `vyre-libs` operation-registry target declares the features its assertions need. It pins the numeric tolerance of thirteen registered compositions, eleven of which are only compiled under an `nn` or `math` feature, and it had no manifest entry, so `cargo test -p vyre-libs` built it with default features and it failed on a missing registration rather than on a wrong tolerance. It now requires `math`, `math-linalg`, and the four `nn` domains that own those ops."
