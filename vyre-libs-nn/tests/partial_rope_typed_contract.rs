@@ -139,9 +139,9 @@ fn bf16_position_range_overflow_traps_before_buffer_access() {
     assert!(error.to_string().contains("position range"), "{error}");
 }
 
-/// Locks production Qwen buffer dtypes: BF16 activations with F32 trigonometric tables.
+/// Locks production buffer dtypes: BF16 activations with F32 trigonometric tables.
 #[test]
-fn qwen35_typed_rotary_contract_uses_mixed_buffer_dtypes() {
+fn typed_rotary_contract_uses_mixed_buffer_dtypes() {
     let program = partial_rope_at_offset_typed(
         "q",
         "cos",
@@ -155,7 +155,7 @@ fn qwen35_typed_rotary_contract_uses_mixed_buffer_dtypes() {
         32,
         DataType::BF16,
     )
-    .expect("Fix: production Qwen BF16 RoPE must build");
+    .expect("Fix: production BF16 RoPE must build");
     assert_eq!(program.buffers()[0].element, DataType::BF16);
     assert_eq!(program.buffers()[1].element, DataType::F32);
     assert_eq!(program.buffers()[2].element, DataType::F32);

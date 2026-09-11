@@ -110,8 +110,8 @@ mod tests {
     #[test]
     fn every_row_but_this_process_is_contention() {
         let rows = "\
-4242, /usr/bin/llama-server, 21980\n\
-4243, /usr/local/bin/ollama, [N/A]\n\
+4242, /usr/bin/inference-server, 21980\n\
+4243, /usr/local/bin/serve-daemon, [N/A]\n\
 7777, /home/user/target/release/vyre-bench, 512\n\
 [N/A], /opt/render/worker, 64\n";
 
@@ -128,7 +128,7 @@ mod tests {
         );
         assert_eq!(
             foreign[0].describe(),
-            "pid 4242 `/usr/bin/llama-server` holding 21980 MiB"
+            "pid 4242 `/usr/bin/inference-server` holding 21980 MiB"
         );
         assert!(parse_compute_apps("No running processes found\n", 7777).is_empty());
         assert!(parse_compute_apps("", 7777).is_empty());

@@ -461,9 +461,9 @@ fn shard_symlink_escape_fails_closed() {
     );
 }
 
-/// Exercises production-scale Qwen3.5-27B ranges without reading 55.6 GB of payloads.
+/// Exercises production-scale shard ranges without reading 55.6 GB of payloads.
 #[test]
-fn official_qwen35_metadata_subset_indexes_without_payload_reads() {
+fn production_metadata_subset_indexes_without_payload_reads() {
     let temp = tempfile::tempdir().expect("Fix: fixture directory must be creatable");
     let shard1 = br#"{"lm_head.weight":{"dtype":"BF16","shape":[248320,5120],"data_offsets":[0,2542796800]},"model.language_model.embed_tokens.weight":{"dtype":"BF16","shape":[248320,5120],"data_offsets":[2542796800,5085593600]}}"#;
     let shard9 = br#"{"model.language_model.layers.0.linear_attn.in_proj_qkv.weight":{"dtype":"BF16","shape":[10240,5120],"data_offsets":[0,104857600]},"model.language_model.layers.3.self_attn.o_proj.weight":{"dtype":"BF16","shape":[5120,6144],"data_offsets":[1971322880,2034237440]}}"#;
@@ -497,7 +497,7 @@ fn official_qwen35_metadata_subset_indexes_without_payload_reads() {
     .expect("Fix: official metadata subset index must be writable");
 
     let index = ShardedSafetensorIndex::open(temp.path(), &index_path)
-        .expect("Fix: official Qwen metadata subset must index");
+        .expect("Fix: production metadata subset must index");
     assert_eq!(index.tensors().len(), 10);
     assert_eq!(index.shards().len(), 3);
     index
@@ -523,7 +523,7 @@ fn official_qwen35_metadata_subset_indexes_without_payload_reads() {
                 shape: &[5_120, 6_144],
             },
         ])
-        .expect("Fix: official Qwen layouts must bind exactly");
+        .expect("Fix: production layouts must bind exactly");
     let head = index
         .tensor("lm_head.weight")
         .expect("Fix: official LM head must resolve");

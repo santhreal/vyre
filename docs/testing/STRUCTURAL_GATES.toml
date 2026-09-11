@@ -712,6 +712,18 @@ declarations are what a downstream crate compiles against.
 """
 
 [[gate]]
+file = "vyre/tests/downstream_workflow_fixture.rs"
+tests = ["no_workspace_member_names_a_downstream_model_family"]
+reason = """
+Asserts that no workspace member spells a downstream model family in a type, a
+fixture, a diagnostic, or a file name. The families are declared in a crate the
+workspace excludes, so no program links both trees and no execution observes
+that a core crate wrote one of those names into a doc comment or a refusal
+message. The banned roster is parsed from the downstream declaration at run
+time, so a family added there extends the scan with no edit to the test.
+"""
+
+[[gate]]
 file = "vyre/tests/facade_boundary.rs"
 tests = ["facade_exposes_zero_internal_implementation_symbols", "facade_compiler_module_is_curated_not_whole_crate_alias"]
 reason = """

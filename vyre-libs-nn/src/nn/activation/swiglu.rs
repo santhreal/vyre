@@ -1,7 +1,6 @@
 //! SwiGLU: `y = silu(gate) * up`.
 //!
-//! SwiGLU is the activation used in LLaMA, PaLM, and DeepSeek V4 Flash.
-//! It takes two separate inputs (gate projection and up projection)
+//! SwiGLU takes two separate inputs (gate projection and up projection)
 //! and produces one output.
 //!
 //! Category A composition.

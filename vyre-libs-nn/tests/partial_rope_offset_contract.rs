@@ -52,9 +52,9 @@ fn offset_range_beyond_tables_fails_validation() {
     assert!(error.to_string().contains("position range"), "{error}");
 }
 
-/// Proves Qwen3.5 production head and partial-rotary dimensions construct exact buffer sizes.
+/// Proves production head and partial-rotary dimensions construct exact buffer sizes.
 #[test]
-fn qwen35_production_dimensions_materialize_exact_contracts() {
+fn production_dimensions_materialize_exact_contracts() {
     let program = partial_rope_at_offset("q", "cos", "sin", "q.rotated", 24, 1, 256, 64, 17, 32);
     assert_eq!(program.buffers()[0].count(), 24 * 256);
     assert_eq!(program.buffers()[1].count(), 32 * 32);

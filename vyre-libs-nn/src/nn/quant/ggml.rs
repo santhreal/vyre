@@ -1,6 +1,6 @@
 //! GGML K-Quants dequantization primitives.
 //!
-//! Supports Q2_K, Q4_K, Q6_K block formats used by llama.cpp/GGUF.
+//! Supports the Q2_K, Q4_K, and Q6_K GGUF block formats.
 //! These are block-wise quantization formats with per-block (or per-super-block)
 //! scales and zero-points.
 //!

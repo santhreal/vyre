@@ -137,9 +137,9 @@ fn integer_causal_gqa_dtype_fails_closed() {
     );
 }
 
-/// Locks production Qwen BF16 cache geometry and buffer element types.
+/// Locks production BF16 cache geometry and buffer element types.
 #[test]
-fn qwen35_bf16_decode_dimensions_build_exact_contracts() {
+fn bf16_decode_dimensions_build_exact_contracts() {
     let program = gqa_attention_causal_typed(
         "q",
         "k",
@@ -154,7 +154,7 @@ fn qwen35_bf16_decode_dimensions_build_exact_contracts() {
         17,
         DataType::BF16,
     )
-    .expect("Fix: Qwen production BF16 decode dimensions must build");
+    .expect("Fix: production BF16 decode dimensions must build");
     assert_eq!(program.buffers()[0].element, DataType::BF16);
     assert_eq!(program.buffers()[1].element, DataType::BF16);
     assert_eq!(program.buffers()[2].element, DataType::BF16);
