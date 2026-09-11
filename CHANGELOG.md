@@ -9096,6 +9096,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   backends, and the oracle is not one of them, so `--backend reference-oracle`
   was refused as an id no linked driver registers and the recorded reference
   artifact held zero op pairs against a release floor of 49.
+- Release conformance reads the evidence line the conformance runner writes.
+  The runner names the executor that produced a row, because the reference
+  oracle answers from the interpreter and registers no device, while the
+  recorded artifact keeps the column its readers index. The reader expected the
+  artifact column on the wire and rejected every line, reporting a run in which
+  every operation passed as a runner emitting invalid JSON with zero recorded
+  op pairs.
 - The release and CI evidence contracts now invoke version, metadata, feature,
   package-readiness, conformance, and launch-state producers through their
   fixed --write paths instead of obsolete caller-selected output paths.

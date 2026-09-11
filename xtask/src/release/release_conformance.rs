@@ -29,6 +29,42 @@ const MAX_RELEASE_CONFORMANCE_TEXT_BYTES: u64 = 8_388_608;
 /// than read.
 const ARTIFACT_SCHEMA_VERSION: u32 = 4;
 
+/// One evidence line the conformance runner writes on stdout.
+///
+/// The runner names the executor, not a backend: the reference oracle answers
+/// from the interpreter and registers no device, so it carries an id no
+/// backend registry holds. The recorded artifact keeps the column name its
+/// readers already index, so the wire record converts into [`PairResult`]
+/// rather than the reader guessing between two names for one field.
+///
+/// The digest and class columns are absent here because the runner does not
+/// compute them; they are derived from the row once it is recorded.
+#[derive(Debug, Deserialize)]
+struct DispatchedPair {
+    op_id: String,
+    executor_id: String,
+    passed: bool,
+    message: String,
+    #[serde(default)]
+    replay_capsule: Option<serde_json::Value>,
+}
+
+impl From<DispatchedPair> for PairResult {
+    fn from(dispatched: DispatchedPair) -> Self {
+        Self {
+            op_id: dispatched.op_id,
+            backend_id: dispatched.executor_id,
+            passed: dispatched.passed,
+            message: dispatched.message,
+            input_digest: None,
+            output_digest: None,
+            timing_class: None,
+            failure_class: None,
+            replay_capsule: dispatched.replay_capsule,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 struct PairResult {
     op_id: String,
@@ -658,12 +694,12 @@ fn parse_pairs(stdout: &[u8]) -> Result<ParsedPairs, String> {
             diagnostics.push(trimmed.to_string());
             continue;
         }
-        let pair = serde_json::from_str::<PairResult>(trimmed).map_err(|error| {
+        let pair = serde_json::from_str::<DispatchedPair>(trimmed).map_err(|error| {
             format!(
                 "conformance runner emitted invalid JSON evidence line: {error}; line={trimmed}"
             )
         })?;
-        pairs.push(pair);
+        pairs.push(pair.into());
     }
     Ok(ParsedPairs { pairs, diagnostics })
 }
@@ -675,7 +711,7 @@ fn parse_json_conformance_payload(text: &str) -> Result<ParsedPairs, String> {
         array.clone()
     } else if let Some(array) = value.get("pairs").and_then(serde_json::Value::as_array) {
         array.clone()
-    } else if value.get("op_id").is_some() && value.get("backend_id").is_some() {
+    } else if value.get("op_id").is_some() && value.get("executor_id").is_some() {
         vec![value]
     } else {
         return Err(
@@ -685,9 +721,9 @@ fn parse_json_conformance_payload(text: &str) -> Result<ParsedPairs, String> {
     };
     let mut pairs = Vec::with_capacity(values.len());
     for value in values {
-        let pair = serde_json::from_value::<PairResult>(value)
+        let pair = serde_json::from_value::<DispatchedPair>(value)
             .map_err(|error| format!("conformance JSON pair failed schema validation: {error}"))?;
-        pairs.push(pair);
+        pairs.push(pair.into());
     }
     Ok(ParsedPairs {
         pairs,
@@ -1106,6 +1142,29 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// WHY: the runner's evidence line names the executor and the recorded
+    /// artifact column names the backend. A reader that expects the artifact
+    /// column on the wire rejects every line, which reported as a runner
+    /// emitting invalid JSON and recorded zero op pairs for a run in which
+    /// every op passed. Both payload shapes the reader accepts are covered.
+    ///
+    /// Does not catch a wrong executor id, only that the row reaches the
+    /// artifact under the column its readers index.
+    #[test]
+    fn a_runner_evidence_line_records_its_executor_in_the_artifact_column() {
+        let line = br#"{"op_id":"vyre-libs::bitset::and","executor_id":"reference-oracle","passed":true,"message":"1 witness case(s) passed through reference oracle"}"#;
+        let jsonl = parse_pairs(line).expect("a runner evidence line is readable");
+        assert_eq!(jsonl.pairs.len(), 1, "one line records one pair");
+        assert_eq!(jsonl.pairs[0].backend_id, "reference-oracle");
+        assert_eq!(jsonl.pairs[0].op_id, "vyre-libs::bitset::and");
+        assert!(jsonl.pairs[0].passed);
+
+        let array = format!("[{}]", String::from_utf8_lossy(line));
+        let payload = parse_pairs(array.as_bytes()).expect("a runner JSON array is readable");
+        assert_eq!(payload.pairs.len(), 1, "one array element records one pair");
+        assert_eq!(payload.pairs[0].backend_id, "reference-oracle");
     }
 
     #[test]
