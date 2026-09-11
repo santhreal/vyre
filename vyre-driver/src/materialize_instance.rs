@@ -412,17 +412,22 @@ pub trait MaterializedInstance {
     /// module declares its own binding order overrides this and walks that
     /// order instead.
     ///
+    /// A returned slice may borrow from the instance or its module record
+    /// rather than from `state`: a target module whose emitted binding order
+    /// carries no gap stages a slot the same module writes, and nothing has
+    /// bound that value yet.
+    ///
     /// # Errors
     ///
     /// Returns `unmapped_buffer` for a buffer outside the artifact ABI, and the
     /// unbound-input rejection for a declared input whose value is not bound.
-    fn gather<'state>(
-        &self,
+    fn gather<'a>(
+        &'a self,
         module_index: usize,
-        module: &Self::Module,
+        module: &'a Self::Module,
         plan: &BindingPlan,
-        state: &'state BTreeMap<ArtifactValueId, Vec<u8>>,
-    ) -> Result<Vec<&'state [u8]>, BackendError> {
+        state: &'a BTreeMap<ArtifactValueId, Vec<u8>>,
+    ) -> Result<Vec<&'a [u8]>, BackendError> {
         self.core().gather_inputs_for_module(
             module_index,
             plan,

@@ -9091,6 +9091,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   outside the clock. Re-measured on the shipping path,
   release.condition_eval.1m reports 165.708x with a 4422427 ns baseline p50,
   and no speedup pin had to move.
+- Release conformance selects the reference oracle with `--oracle` instead of
+  spelling it as a backend id. The conformance runner registers device
+  backends, and the oracle is not one of them, so `--backend reference-oracle`
+  was refused as an id no linked driver registers and the recorded reference
+  artifact held zero op pairs against a release floor of 49.
 - The release and CI evidence contracts now invoke version, metadata, feature,
   package-readiness, conformance, and launch-state producers through their
   fixed --write paths instead of obsolete caller-selected output paths.
@@ -9979,6 +9984,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   changing its per-item mathematics or release threshold, and
   `release-benchmarks` declares ownership of the WGPU suite and all seventeen
   WGPU workload artifacts.
+- The WGPU backend stages a launch-time zero for a target binding whose
+  canonical value the same module produces. The emitted binding order carries
+  no gap for such a slot, so the dispatch expects bytes for it, and nothing has
+  bound the value yet because a caller supplies bytes only for what a kernel
+  reads at launch. The refusal that resulted rejected nine hardware primitive
+  operations on WGPU with `canonical artifact value N for target binding "out"
+  is unbound`. A value the module does not produce and nothing bound is still
+  refused. `MaterializedInstance::gather` now returns slices that may borrow
+  from the instance as well as from the bound state.
 - A wgpu strict-float refusal now states why the adapter was refused. The
   verdict was a boolean, so an adapter that executed a fused multiply-add and
   an adapter whose probe never dispatched produced the same message and a

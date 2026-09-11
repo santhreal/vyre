@@ -1166,10 +1166,9 @@ impl<'ast> Visit<'ast> for AstAnalysisVisitor {
 
         // Segment-exact: a substring test convicted any identifier that merely
         // ends in the crate name, such as a local `local_vyre_reference` module.
-        let enters_oracle = path
-            .segments
-            .iter()
-            .any(|segment| segment.ident == "vyre_reference" || segment.ident == "SubgroupSimulator");
+        let enters_oracle = path.segments.iter().any(|segment| {
+            segment.ident == "vyre_reference" || segment.ident == "SubgroupSimulator"
+        });
         if enters_oracle {
             self.record_call("vyre_reference".to_string(), line, false, CallContext::Walk);
         }

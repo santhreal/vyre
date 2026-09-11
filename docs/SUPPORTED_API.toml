@@ -14883,7 +14883,7 @@ exported_item_count = 2748
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::materialize::MaterializedInstance::gather<'state>(&self, module_index: usize, module: &Self::Module, plan: &vyre_driver::BindingPlan, state: &'state alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>) -> core::result::Result<alloc::vec::Vec<&'state [u8]>, vyre_driver::BackendError>"
+  path = "vyre_driver::materialize::MaterializedInstance::gather<'a>(&'a self, module_index: usize, module: &'a Self::Module, plan: &vyre_driver::BindingPlan, state: &'a alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>) -> core::result::Result<alloc::vec::Vec<&'a [u8]>, vyre_driver::BackendError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"

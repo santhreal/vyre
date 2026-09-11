@@ -348,8 +348,14 @@ fn measure(workspace_root: &Path, config: &Config) -> Inspection {
     inspection
 }
 
-/// Dispatch one backend and record what it produced.
-fn measure_backend(workspace_root: &Path, backend_id: &str) -> BackendConformanceArtifact {
+/// The cargo argument vector that dispatches one recorded executor.
+///
+/// The oracle is not a registered backend and is not reachable by spelling a
+/// backend id: the runner refuses `--backend reference-oracle` as an id no
+/// linked driver registers and writes one row per op saying so. It answers
+/// from the reference interpreter, which every build links, so it also needs
+/// none of the concrete driver crates the `gpu` feature pulls in.
+fn dispatch_args(backend_id: &str) -> Vec<String> {
     let mut args = vec![
         "run".to_string(),
         "-p".to_string(),
@@ -365,11 +371,20 @@ fn measure_backend(workspace_root: &Path, backend_id: &str) -> BackendConformanc
         "vyre-conform".to_string(),
         "--".to_string(),
         "dispatch".to_string(),
-        "--backend".to_string(),
-        backend_id.to_string(),
-        "--ops".to_string(),
-        "all".to_string(),
     ]);
+    if backend_id == ORACLE_RECORD_ID {
+        args.push("--oracle".to_string());
+    } else {
+        args.push("--backend".to_string());
+        args.push(backend_id.to_string());
+    }
+    args.extend(["--ops".to_string(), "all".to_string()]);
+    args
+}
+
+/// Dispatch one backend and record what it produced.
+fn measure_backend(workspace_root: &Path, backend_id: &str) -> BackendConformanceArtifact {
+    let args = dispatch_args(backend_id);
     let runner = crate::cargo_runner::binary(workspace_root);
     let command = format!("{} {}", runner.display(), args.join(" "));
     let output = Command::new(&runner)
@@ -1046,6 +1061,50 @@ mod tests {
             timing_class: None,
             failure_class: None,
             replay_capsule: None,
+        }
+    }
+
+    /// WHY: the conformance runner registers backends, and the reference
+    /// oracle is not one of them. Spelling it as a backend id is refused as an
+    /// id no linked driver registers, which recorded one `unknown backend` row
+    /// per op and read as an executor with 358 defects rather than one nothing
+    /// ran. Every executor in the table is covered, so an executor added to it
+    /// without a route decision fails here rather than at the next release.
+    ///
+    /// Does not catch a wrong `--ops` selector or a missing feature: those are
+    /// the same for every executor and this only judges the route.
+    #[test]
+    fn every_recorded_executor_reaches_the_route_that_runs_it() {
+        for (executor, _) in EXECUTOR_ARTIFACTS {
+            let args = dispatch_args(executor);
+            assert!(
+                args.iter().any(|argument| argument == "dispatch"),
+                "`{executor}` must reach the dispatch subcommand: {args:?}"
+            );
+            if *executor == ORACLE_RECORD_ID {
+                assert!(
+                    args.iter().any(|argument| argument == "--oracle"),
+                    "the oracle is selected by `--oracle`: {args:?}"
+                );
+                assert!(
+                    !args.iter().any(|argument| argument == "--backend"),
+                    "the oracle is not reachable by spelling a backend id: {args:?}"
+                );
+            } else {
+                let backend = args
+                    .iter()
+                    .position(|argument| argument == "--backend")
+                    .and_then(|index| args.get(index + 1));
+                assert_eq!(
+                    backend.map(String::as_str),
+                    Some(*executor),
+                    "`{executor}` is selected by its own backend id: {args:?}"
+                );
+                assert!(
+                    !args.iter().any(|argument| argument == "--oracle"),
+                    "`{executor}` is a device backend, not the oracle: {args:?}"
+                );
+            }
         }
     }
 

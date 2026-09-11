@@ -117,6 +117,8 @@ impl ArtifactMaterializer for WgpuMaterializer {
                                 group,
                                 slot: slot.slot,
                                 expected_max,
+                                launch_zeros: expected_max
+                                    .map(|bytes| vec![0_u8; bytes].into_boxed_slice()),
                             });
                         }
                     }
@@ -151,11 +153,21 @@ impl ArtifactMaterializer for WgpuMaterializer {
     }
 }
 
+/// One target binding this backend stages bytes into before a module runs.
 struct ArtifactInputSlot {
     name: String,
     group: u32,
     slot: u32,
     expected_max: Option<usize>,
+    /// What the slot holds at launch when the module produces its own value.
+    ///
+    /// A slot the target module loads from and this module also writes is
+    /// staged, because the emitted binding order carries no gap. Nothing has
+    /// written the value yet, so its launch contents are what the dispatch
+    /// allocates, which is zero. Allocated once here rather than per launch.
+    /// `None` for a runtime-sized declaration, whose byte count is not known
+    /// until a caller supplies it.
+    launch_zeros: Option<Box<[u8]>>,
 }
 
 struct WgpuExecutableModule {
@@ -207,13 +219,26 @@ impl MaterializedInstance for WgpuArtifactInstance {
         "WGSL target module"
     }
 
-    fn gather<'state>(
-        &self,
+    /// Walk the emitted binding order, which is what the target module reads.
+    ///
+    /// A slot whose canonical value the same module produces has nothing bound
+    /// yet: it is an artifact output, and the caller supplies bytes only for
+    /// what a kernel reads at launch. The emitted order carries no gap for it,
+    /// so its launch contents are staged, and what a dispatch allocates is
+    /// zero. A value this module does not produce and nothing bound is still
+    /// the unbound-input refusal.
+    fn gather<'a>(
+        &'a self,
         module_index: usize,
-        module: &Self::Module,
+        module: &'a Self::Module,
         _plan: &BindingPlan,
-        state: &'state BTreeMap<ArtifactValueId, Vec<u8>>,
-    ) -> Result<Vec<&'state [u8]>, BackendError> {
+        state: &'a BTreeMap<ArtifactValueId, Vec<u8>>,
+    ) -> Result<Vec<&'a [u8]>, BackendError> {
+        let produced_here = self
+            .core
+            .module_outputs
+            .get(module_index)
+            .map_or(&[][..], Vec::as_slice);
         let mut inputs = Vec::with_capacity(module.input_slots.len());
         for slot in &module.input_slots {
             let value = self.core.value_for_module_slot(
@@ -223,12 +248,19 @@ impl MaterializedInstance for WgpuArtifactInstance {
                 slot.slot,
                 &slot.name,
             )?;
-            let bytes = state.get(&value).ok_or_else(|| {
-                materialize::invalid_module(&format!(
-                    "canonical artifact value {} for target binding `{}` is unbound",
-                    value.0, slot.name
-                ))
-            })?;
+            let bytes = match state.get(&value) {
+                Some(bound) => bound.as_slice(),
+                None => produced_here
+                    .contains(&value)
+                    .then_some(())
+                    .and_then(|()| slot.launch_zeros.as_deref())
+                    .ok_or_else(|| {
+                        materialize::invalid_module(&format!(
+                            "canonical artifact value {} for target binding `{}` is unbound",
+                            value.0, slot.name
+                        ))
+                    })?,
+            };
             if slot
                 .expected_max
                 .is_some_and(|expected| bytes.len() > expected)
@@ -247,7 +279,7 @@ impl MaterializedInstance for WgpuArtifactInstance {
                     slot.expected_max.unwrap_or_default(),
                 )));
             }
-            inputs.push(bytes.as_slice());
+            inputs.push(bytes);
         }
         Ok(inputs)
     }
