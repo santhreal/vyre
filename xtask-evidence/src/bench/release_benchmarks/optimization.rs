@@ -533,6 +533,7 @@ mod tests {
     #[test]
     fn release_axes_uses_cuda_suite_artifacts_only() {
         let dir = TempDir::new().expect("Fix: create temp workspace for release axes source test.");
+        xtask::fixture_checkout::seeded(dir.path());
         fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
             .expect("Fix: write temporary workspace manifest.");
         let benchmark_dir = dir.path().join("release/evidence/benchmarks");
@@ -671,6 +672,7 @@ mod tests {
     fn release_axes_records_stale_source_provenance_blockers() {
         let dir = TempDir::new()
             .expect("Fix: create temp workspace for release axes provenance blocker test.");
+        xtask::fixture_checkout::seeded(dir.path());
         fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
             .expect("Fix: write temporary workspace manifest.");
         let benchmark_dir = dir.path().join("release/evidence/benchmarks");
@@ -740,6 +742,7 @@ mod tests {
     fn release_axes_records_mislabeled_cuda_suite_backend_blocker() {
         let dir = TempDir::new()
             .expect("Fix: create temp workspace for release axes suite backend test.");
+        xtask::fixture_checkout::seeded(dir.path());
         fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
             .expect("Fix: write temporary workspace manifest.");
         let benchmark_dir = dir.path().join("release/evidence/benchmarks");
@@ -945,6 +948,7 @@ mod tests {
     fn a_missing_optimization_artifact_leaves_every_family_uncovered() {
         let dir = TempDir::new()
             .expect("Fix: create temp workspace for optimization coverage source test.");
+        xtask::fixture_checkout::seeded(dir.path());
         fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
             .expect("Fix: write temporary workspace manifest.");
 

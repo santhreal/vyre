@@ -14,10 +14,7 @@ use super::evidence_schema::{
 use super::frontier_leaderboard::write_frontier_leaderboard;
 use super::optimization::{write_optimization_benchmark_manifest, write_release_axes};
 use super::release_thresholds::{MAX_RELEASE_BENCHMARK_TEXT_BYTES, REQUIRED_CPU_SOTA_100X_CASES};
-use super::runner::{
-    benchmark_artifact_is_reusable, copy_artifact, run_command_status,
-    run_named_benchmark_if_needed,
-};
+use super::runner::{benchmark_artifact_is_reusable, copy_artifact, run_named_benchmark_if_needed};
 use super::suite_inspect::{
     backend_suite_output_path, prefixed_benchmark_artifact, run_workload_benchmark,
     write_backend_suite_with_extra_blockers,
@@ -365,23 +362,6 @@ fn measure(root: &Path, config: &Config, report: &mut Report) {
                 );
             }
         }
-        recorded(
-            report,
-            "writing the optimization matrix",
-            run_command_status(
-                &workspace_root,
-                &[
-                    "run",
-                    "--release",
-                    "--bin",
-                    "xtask",
-                    "--quiet",
-                    "--",
-                    "optimization-matrix",
-                    "--write",
-                ],
-            ),
-        );
         recorded(
             report,
             "writing the optimization benchmark manifest",

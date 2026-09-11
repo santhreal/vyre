@@ -180,14 +180,20 @@ mod tests {
         );
     }
 
-    /// WHY: a checkout with no consumers directory is not a checkout whose
-    /// consumers all build. An error here would fail every gate run in a tree
-    /// that legitimately has none.
+    /// WHY: a checkout with no `consumers` directory is a broken checkout, not
+    /// one whose consumers all build. Reporting zero subjects would fail the
+    /// gate anyway through `cover_complete`, and the two answers differ only in
+    /// whether the failure names the directory that is missing, so the read is
+    /// the answer and the error carries the path.
     #[test]
-    fn a_checkout_with_no_consumers_directory_enumerates_nothing() {
+    fn a_checkout_with_no_consumers_directory_names_the_directory_it_cannot_read() {
         let temp = tempfile::tempdir().expect("tempdir");
-        assert!(consumer_manifests(temp.path())
-            .expect("enumerate")
-            .is_empty());
+        let error = consumer_manifests(temp.path())
+            .expect_err("Fix: a checkout with no consumers directory must be reported, not read as an empty roster.");
+        assert!(
+            error.message.contains("consumers"),
+            "Fix: the failure must name the directory that is missing: {}",
+            error.message
+        );
     }
 }

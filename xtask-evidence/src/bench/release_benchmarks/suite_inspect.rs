@@ -1003,6 +1003,7 @@ mod tests {
     #[test]
     fn write_wgpu_suite_regenerates_gated_fallback_artifact() {
         let dir = TempDir::new().expect("Fix: create a temporary workspace for suite output test.");
+        xtask::fixture_checkout::seeded(dir.path());
 
         write_backend_suite_with_extra_blockers(dir.path(), "wgpu", Vec::new(), Vec::new())
             .expect("Fix: write the backend suite evidence.");
@@ -1036,6 +1037,7 @@ mod tests {
     fn write_backend_suite_records_workload_run_failures() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for suite run-failure blocker test.");
+        xtask::fixture_checkout::seeded(dir.path());
 
         write_backend_suite_with_extra_blockers(
             dir.path(),
@@ -1075,6 +1077,7 @@ mod tests {
     fn write_backend_suite_rejects_duplicate_family_input_coverage() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for suite duplicate family test.");
+        xtask::fixture_checkout::seeded(dir.path());
 
         write_backend_suite_with_extra_blockers(
             dir.path(),
@@ -1128,6 +1131,7 @@ mod tests {
     fn write_backend_suite_rejects_duplicate_artifact_input_paths() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for suite duplicate path test.");
+        xtask::fixture_checkout::seeded(dir.path());
         let artifact_rel = "release/evidence/benchmarks/wgpu-shared-path.json";
 
         write_backend_suite_with_extra_blockers(
@@ -1179,6 +1183,7 @@ mod tests {
     fn write_backend_suite_rejects_blank_requested_case_input() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for suite blank requested-case test.");
+        xtask::fixture_checkout::seeded(dir.path());
         let artifact_rel = "release/evidence/benchmarks/wgpu-blank-requested-case.json";
         let artifact_path = dir.path().join(artifact_rel);
         fs::create_dir_all(

@@ -425,6 +425,7 @@ mod tests {
     fn cpu_100x_proof_rejects_case_failure_hidden_by_passing_contract() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for CPU-SOTA proof regression test.");
+        xtask::fixture_checkout::seeded(dir.path());
         let artifact_rel = "release/evidence/benchmarks/cuda-hidden-invalid.json";
         let artifact_path = dir.path().join(artifact_rel);
         fs::create_dir_all(
@@ -495,6 +496,7 @@ mod tests {
     fn cpu_100x_proof_rejects_missing_pass_status_with_passing_contract() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for missing-status CPU-SOTA proof test.");
+        xtask::fixture_checkout::seeded(dir.path());
         let artifact_rel = "release/evidence/benchmarks/cuda-missing-status.json";
         let artifact_path = dir.path().join(artifact_rel);
         fs::create_dir_all(
@@ -578,6 +580,7 @@ mod tests {
     fn cpu_100x_proof_requires_each_release_defining_case_to_pass_100x() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for required CPU-SOTA proof test.");
+        xtask::fixture_checkout::seeded(dir.path());
         let artifact_rel = "release/evidence/benchmarks/cuda-required-case-failed.json";
         let artifact_path = dir.path().join(artifact_rel);
         fs::create_dir_all(
@@ -652,6 +655,7 @@ mod tests {
     fn cpu_100x_proof_rejects_claimed_speedup_without_measured_100x() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for CPU-SOTA measured speedup test.");
+        xtask::fixture_checkout::seeded(dir.path());
         let artifact_rel = "release/evidence/benchmarks/cuda-claimed-speedup.json";
         let artifact_path = dir.path().join(artifact_rel);
         fs::create_dir_all(
@@ -723,6 +727,7 @@ mod tests {
     fn cpu_100x_proof_surfaces_source_artifact_integrity_blockers() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for CPU-SOTA integrity blocker test.");
+        xtask::fixture_checkout::seeded(dir.path());
         let artifact_rel = "release/evidence/benchmarks/cuda-integrity-drift.json";
         let artifact_path = dir.path().join(artifact_rel);
         fs::create_dir_all(
@@ -794,6 +799,7 @@ mod tests {
     fn cpu_100x_proof_rejects_missing_and_weak_source_fingerprint() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for CPU-SOTA provenance proof test.");
+        xtask::fixture_checkout::seeded(dir.path());
         let artifacts = [
             (
                 "release/evidence/benchmarks/cuda-no-source-fingerprint.json",
@@ -885,6 +891,7 @@ mod tests {
     fn cpu_100x_proof_rejects_whitespace_only_source_provenance() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for blank CPU-SOTA provenance test.");
+        xtask::fixture_checkout::seeded(dir.path());
         let artifact_rel = "release/evidence/benchmarks/cuda-blank-source-provenance.json";
         let artifact_path = dir.path().join(artifact_rel);
         fs::create_dir_all(
@@ -966,6 +973,7 @@ mod tests {
     fn cpu_100x_proof_rejects_stale_source_tree_fingerprint() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for stale CPU-SOTA source-tree test.");
+        xtask::fixture_checkout::seeded(dir.path());
         fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
             .expect("Fix: create temp workspace Cargo.toml for CPU-SOTA source-tree test.");
         let artifact_rel = "release/evidence/benchmarks/cuda-stale-source-tree.json";
@@ -1031,6 +1039,7 @@ mod tests {
     fn cpu_100x_proof_rejects_mixed_source_trees_not_clean_evidence_commit_drift() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for mixed-source CPU-SOTA proof test.");
+        xtask::fixture_checkout::seeded(dir.path());
         let artifacts = [
             (
                 "release/evidence/benchmarks/cuda-source-a.json",
@@ -1118,6 +1127,7 @@ mod tests {
     fn cpu_100x_proof_does_not_count_duplicate_source_artifacts() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for duplicate-source CPU-SOTA proof test.");
+        xtask::fixture_checkout::seeded(dir.path());
         let artifact_rel = "release/evidence/benchmarks/cuda-duplicate-source.json";
         let artifact_path = dir.path().join(artifact_rel);
         fs::create_dir_all(
@@ -1196,6 +1206,7 @@ mod tests {
     fn cpu_100x_proof_rejects_absolute_source_artifact_path() {
         let dir = TempDir::new()
             .expect("Fix: create a temporary workspace for absolute-source CPU-SOTA proof test.");
+        xtask::fixture_checkout::seeded(dir.path());
         let external_artifact = dir.path().join("external-cuda-source.json");
         fs::write(&external_artifact, "{}").expect("Fix: write external CUDA benchmark artifact.");
 
