@@ -406,10 +406,15 @@ path = "tests/all_tests.rs"
             line: None,
             message: "linker `cc` not found".to_string(),
         };
-        let finding = attribute(root, "vyre-driver-wgpu", &elsewhere, &requested, "all_tests");
+        let finding = attribute(
+            root,
+            "vyre-driver-wgpu",
+            &elsewhere,
+            &requested,
+            "all_tests",
+        );
         assert_eq!(
-            finding.message,
-            "vyre-driver-wgpu (test target `all_tests`): linker `cc` not found",
+            finding.message, "vyre-driver-wgpu (test target `all_tests`): linker `cc` not found",
             "a diagnostic from outside the requested targets still explains their build"
         );
         assert!(

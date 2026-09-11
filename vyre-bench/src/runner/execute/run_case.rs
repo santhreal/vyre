@@ -804,8 +804,7 @@ mod tests {
         let failing = evaluate_contract(&contract, &regressed, "cuda");
         assert!(!failing.contract_passed);
         assert!(
-            failing.violations[0].contains("6000 ns")
-                && failing.violations[0].contains("2848 ns"),
+            failing.violations[0].contains("6000 ns") && failing.violations[0].contains("2848 ns"),
             "Fix: the violation must state the observed time and the derivation: {:?}",
             failing.violations
         );

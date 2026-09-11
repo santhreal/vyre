@@ -108,7 +108,14 @@ fn deep_if_else() -> EmitAdversarialCase {
         descriptor: KernelDescriptor {
             id: "adv_deep_if_else".into(),
             bindings: BindingLayout {
-                slots: vec![slot(0, DataType::U32, MemoryClass::Global, BindingVisibility::ReadWrite, "out").with_count(64)],
+                slots: vec![slot(
+                    0,
+                    DataType::U32,
+                    MemoryClass::Global,
+                    BindingVisibility::ReadWrite,
+                    "out",
+                )
+                .with_count(64)],
             },
             dispatch: Dispatch::new(64, 1, 1),
             body: KernelBody {
@@ -131,7 +138,14 @@ fn hostile_workgroup_1024() -> EmitAdversarialCase {
         descriptor: KernelDescriptor {
             id: "adv_hostile_wg_1024".into(),
             bindings: BindingLayout {
-                slots: vec![slot(0, DataType::U32, MemoryClass::Global, BindingVisibility::ReadWrite, "out").with_count(1024)],
+                slots: vec![slot(
+                    0,
+                    DataType::U32,
+                    MemoryClass::Global,
+                    BindingVisibility::ReadWrite,
+                    "out",
+                )
+                .with_count(1024)],
             },
             dispatch: Dispatch::new(1024, 1, 1),
             body: KernelBody {
@@ -157,9 +171,30 @@ fn multi_binding_mixed() -> EmitAdversarialCase {
             id: "adv_multi_binding".into(),
             bindings: BindingLayout {
                 slots: vec![
-                    slot(0, DataType::U32, MemoryClass::Global, BindingVisibility::ReadWrite, "u32_buf").with_count(128),
-                    slot(1, DataType::F32, MemoryClass::Global, BindingVisibility::ReadWrite, "f32_buf").with_count(128),
-                    slot(2, DataType::U32, MemoryClass::Constant, BindingVisibility::ReadOnly, "const_u32").with_count(16),
+                    slot(
+                        0,
+                        DataType::U32,
+                        MemoryClass::Global,
+                        BindingVisibility::ReadWrite,
+                        "u32_buf",
+                    )
+                    .with_count(128),
+                    slot(
+                        1,
+                        DataType::F32,
+                        MemoryClass::Global,
+                        BindingVisibility::ReadWrite,
+                        "f32_buf",
+                    )
+                    .with_count(128),
+                    slot(
+                        2,
+                        DataType::U32,
+                        MemoryClass::Constant,
+                        BindingVisibility::ReadOnly,
+                        "const_u32",
+                    )
+                    .with_count(16),
                 ],
             },
             dispatch: Dispatch::new(128, 1, 1),
@@ -172,9 +207,13 @@ fn multi_binding_mixed() -> EmitAdversarialCase {
                     op(KernelOpKind::BinOpKind(BinOp::Add), vec![2, 3], 4),
                     effect(KernelOpKind::StoreGlobal, vec![0, 1, 4]),
                     op(KernelOpKind::LoadGlobal, vec![1, 1], 5),
-                    op(KernelOpKind::Cast {
+                    op(
+                        KernelOpKind::Cast {
                             target: DataType::F32,
-                        }, vec![4], 6),
+                        },
+                        vec![4],
+                        6,
+                    ),
                     op(KernelOpKind::BinOpKind(BinOp::Add), vec![5, 6], 7),
                     effect(KernelOpKind::StoreGlobal, vec![1, 1, 7]),
                 ],
@@ -195,9 +234,30 @@ fn shared_global_tile() -> EmitAdversarialCase {
             id: "adv_shared_global_tile".into(),
             bindings: BindingLayout {
                 slots: vec![
-                    slot(0, DataType::U32, MemoryClass::Global, BindingVisibility::ReadOnly, "global_in").with_count(256),
-                    slot(1, DataType::U32, MemoryClass::Global, BindingVisibility::ReadWrite, "global_out").with_count(256),
-                    slot(shared_slot, DataType::U32, MemoryClass::Shared, BindingVisibility::ReadWrite, "tile").with_count(256),
+                    slot(
+                        0,
+                        DataType::U32,
+                        MemoryClass::Global,
+                        BindingVisibility::ReadOnly,
+                        "global_in",
+                    )
+                    .with_count(256),
+                    slot(
+                        1,
+                        DataType::U32,
+                        MemoryClass::Global,
+                        BindingVisibility::ReadWrite,
+                        "global_out",
+                    )
+                    .with_count(256),
+                    slot(
+                        shared_slot,
+                        DataType::U32,
+                        MemoryClass::Shared,
+                        BindingVisibility::ReadWrite,
+                        "tile",
+                    )
+                    .with_count(256),
                 ],
             },
             dispatch: Dispatch::new(256, 1, 1),
@@ -206,9 +266,12 @@ fn shared_global_tile() -> EmitAdversarialCase {
                     local_invocation_id(0, 0),
                     op(KernelOpKind::LoadGlobal, vec![0, 0], 1),
                     effect(KernelOpKind::StoreShared, vec![shared_slot, 0, 1]),
-                    effect(KernelOpKind::Barrier {
+                    effect(
+                        KernelOpKind::Barrier {
                             ordering: MemoryOrdering::SeqCst,
-                        }, vec![]),
+                        },
+                        vec![],
+                    ),
                     op(KernelOpKind::LoadShared, vec![shared_slot, 0], 2),
                     op(KernelOpKind::BinOpKind(BinOp::Add), vec![2, 1], 3),
                     effect(KernelOpKind::StoreGlobal, vec![1, 0, 3]),
@@ -223,9 +286,12 @@ fn shared_global_tile() -> EmitAdversarialCase {
 fn loop_with_barrier() -> EmitAdversarialCase {
     let loop_body = KernelBody {
         ops: vec![
-            effect(KernelOpKind::Barrier {
+            effect(
+                KernelOpKind::Barrier {
                     ordering: MemoryOrdering::SeqCst,
-                }, vec![]),
+                },
+                vec![],
+            ),
             local_invocation_id(0, 10),
             lit(0, 11),
             effect(KernelOpKind::StoreGlobal, vec![0, 10, 11]),
@@ -240,16 +306,26 @@ fn loop_with_barrier() -> EmitAdversarialCase {
         descriptor: KernelDescriptor {
             id: "adv_loop_barrier".into(),
             bindings: BindingLayout {
-                slots: vec![slot(0, DataType::U32, MemoryClass::Global, BindingVisibility::ReadWrite, "out").with_count(8)],
+                slots: vec![slot(
+                    0,
+                    DataType::U32,
+                    MemoryClass::Global,
+                    BindingVisibility::ReadWrite,
+                    "out",
+                )
+                .with_count(8)],
             },
             dispatch: Dispatch::new(8, 1, 1),
             body: KernelBody {
                 ops: vec![
                     lit(0, 0),
                     lit(1, 1),
-                    effect(KernelOpKind::StructuredForLoop {
+                    effect(
+                        KernelOpKind::StructuredForLoop {
                             loop_var: Arc::from("i"),
-                        }, vec![0, 1, 0]),
+                        },
+                        vec![0, 1, 0],
+                    ),
                 ],
                 child_bodies: vec![loop_body],
                 literals: vec![LiteralValue::U32(0), LiteralValue::U32(4)],
@@ -266,17 +342,27 @@ fn atomic_counter() -> EmitAdversarialCase {
         descriptor: KernelDescriptor {
             id: "adv_atomic_counter".into(),
             bindings: BindingLayout {
-                slots: vec![slot(0, DataType::U32, MemoryClass::Global, BindingVisibility::ReadWrite, "counter").with_count(1)],
+                slots: vec![slot(
+                    0,
+                    DataType::U32,
+                    MemoryClass::Global,
+                    BindingVisibility::ReadWrite,
+                    "counter",
+                )
+                .with_count(1)],
             },
             dispatch: Dispatch::new(64, 1, 1),
             body: KernelBody {
                 ops: vec![
                     lit(0, 0),
                     lit(1, 1),
-                    effect(KernelOpKind::Atomic {
+                    effect(
+                        KernelOpKind::Atomic {
                             op: AtomicOp::Add,
                             ordering: MemoryOrdering::SeqCst,
-                        }, vec![0, 0, 1]),
+                        },
+                        vec![0, 0, 1],
+                    ),
                 ],
                 child_bodies: vec![],
                 literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
@@ -293,7 +379,14 @@ fn dead_identity_chain() -> EmitAdversarialCase {
         descriptor: KernelDescriptor {
             id: "adv_dead_identity".into(),
             bindings: BindingLayout {
-                slots: vec![slot(0, DataType::U32, MemoryClass::Global, BindingVisibility::ReadWrite, "out").with_count(1)],
+                slots: vec![slot(
+                    0,
+                    DataType::U32,
+                    MemoryClass::Global,
+                    BindingVisibility::ReadWrite,
+                    "out",
+                )
+                .with_count(1)],
             },
             dispatch: Dispatch::new(1, 1, 1),
             body: KernelBody {
@@ -322,8 +415,22 @@ fn vec_load_fusion() -> EmitAdversarialCase {
             id: "adv_vec_load_fusion".into(),
             bindings: BindingLayout {
                 slots: vec![
-                    slot(0, DataType::U32, MemoryClass::Global, BindingVisibility::ReadOnly, "input").with_count(16),
-                    slot(1, DataType::U32, MemoryClass::Global, BindingVisibility::ReadWrite, "output").with_count(16),
+                    slot(
+                        0,
+                        DataType::U32,
+                        MemoryClass::Global,
+                        BindingVisibility::ReadOnly,
+                        "input",
+                    )
+                    .with_count(16),
+                    slot(
+                        1,
+                        DataType::U32,
+                        MemoryClass::Global,
+                        BindingVisibility::ReadWrite,
+                        "output",
+                    )
+                    .with_count(16),
                 ],
             },
             dispatch: Dispatch::new(1, 1, 1),
@@ -360,9 +467,12 @@ fn reject_call() -> EmitAdversarialCase {
             bindings: BindingLayout { slots: vec![] },
             dispatch: Dispatch::new(1, 1, 1),
             body: KernelBody {
-                ops: vec![effect(KernelOpKind::Call {
+                ops: vec![effect(
+                    KernelOpKind::Call {
                         op_id: Arc::from("vyre.primitives.unknown"),
-                    }, vec![])],
+                    },
+                    vec![],
+                )],
                 child_bodies: vec![],
                 literals: vec![],
             },
@@ -380,9 +490,12 @@ fn reject_call() -> EmitAdversarialCase {
 /// synchronization while still emitting.
 fn reject_grid_sync_barrier() -> EmitAdversarialCase {
     let loop_body = KernelBody {
-        ops: vec![effect(KernelOpKind::Barrier {
+        ops: vec![effect(
+            KernelOpKind::Barrier {
                 ordering: MemoryOrdering::GridSync,
-            }, vec![])],
+            },
+            vec![],
+        )],
         child_bodies: vec![],
         literals: vec![],
     };
@@ -398,9 +511,12 @@ fn reject_grid_sync_barrier() -> EmitAdversarialCase {
                 ops: vec![
                     lit(0, 0),
                     lit(1, 1),
-                    effect(KernelOpKind::StructuredForLoop {
+                    effect(
+                        KernelOpKind::StructuredForLoop {
                             loop_var: "i".into(),
-                        }, vec![0, 1, 0]),
+                        },
+                        vec![0, 1, 0],
+                    ),
                 ],
                 child_bodies: vec![loop_body],
                 literals: vec![LiteralValue::U32(0), LiteralValue::U32(4)],
@@ -428,8 +544,22 @@ fn signed_buffer_arithmetic() -> EmitAdversarialCase {
             id: "adv_signed_buffer_arith".into(),
             bindings: BindingLayout {
                 slots: vec![
-                    slot(0, DataType::I32, MemoryClass::Global, BindingVisibility::ReadOnly, "src").with_count(4),
-                    slot(1, DataType::U32, MemoryClass::Global, BindingVisibility::ReadWrite, "out").with_count(4),
+                    slot(
+                        0,
+                        DataType::I32,
+                        MemoryClass::Global,
+                        BindingVisibility::ReadOnly,
+                        "src",
+                    )
+                    .with_count(4),
+                    slot(
+                        1,
+                        DataType::U32,
+                        MemoryClass::Global,
+                        BindingVisibility::ReadWrite,
+                        "out",
+                    )
+                    .with_count(4),
                 ],
             },
             dispatch: Dispatch::new(1, 1, 1),

@@ -44,7 +44,11 @@ impl EmitError {
                 format!("unsupported KernelOp kind in PTX emit: {op:?}"),
             )
             .with_fix("rewrite the unsupported kernel op into PTX-compatible instructions")
-            .with_cause(CauseKind::UnsupportedCapability, "unsupported_op", format!("{op:?}")),
+            .with_cause(
+                CauseKind::UnsupportedCapability,
+                "unsupported_op",
+                format!("{op:?}"),
+            ),
             Self::PtxConstructionFailed(msg) => Diagnostic::emission_error(
                 TARGET,
                 "PTX002_CONSTRUCTION_FAILED",
@@ -75,7 +79,11 @@ impl EmitError {
             .with_fix(
                 "cast the value to a supported PTX scalar type (e.g. f32, f16, u32, i32, u64)",
             )
-            .with_cause(CauseKind::UnsupportedCapability, "unsupported_data_type", dt.clone())
+            .with_cause(
+                CauseKind::UnsupportedCapability,
+                "unsupported_data_type",
+                dt.clone(),
+            )
             .with_context_value("data_type", dt.clone()),
         }
     }

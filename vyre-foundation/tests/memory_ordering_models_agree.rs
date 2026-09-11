@@ -71,8 +71,14 @@ fn a_shared_join_has_one_answer() {
 #[test]
 fn the_grid_barrier_absorbs_every_join() {
     for ordering in MemoryOrdering::ALL {
-        assert_eq!(ordering.join(MemoryOrdering::GridSync), MemoryOrdering::GridSync);
-        assert_eq!(MemoryOrdering::GridSync.join(ordering), MemoryOrdering::GridSync);
+        assert_eq!(
+            ordering.join(MemoryOrdering::GridSync),
+            MemoryOrdering::GridSync
+        );
+        assert_eq!(
+            MemoryOrdering::GridSync.join(ordering),
+            MemoryOrdering::GridSync
+        );
     }
 }
 

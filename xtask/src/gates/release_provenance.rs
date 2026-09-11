@@ -212,7 +212,9 @@ mod tests {
             .verify_build_scripts(&root)
             .expect_err("a network-reading build script is refused");
         assert!(
-            error.to_string().contains("network access is strictly forbidden"),
+            error
+                .to_string()
+                .contains("network access is strictly forbidden"),
             "{error}"
         );
     }

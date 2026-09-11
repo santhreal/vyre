@@ -140,18 +140,16 @@ fn a_launch_wider_than_the_built_grid_stays_in_bounds() {
             .with_min_dispatch_elements(over_fire);
         let oob = request
             .execute_permissive()
-            .unwrap_or_else(|error| {
-                panic!("Fix: tile={tile} must evaluate over-fired: {error}")
-            })
+            .unwrap_or_else(|error| panic!("Fix: tile={tile} must evaluate over-fired: {error}"))
             .oob_report;
         assert_eq!(
             oob.total(),
             0,
             "Fix: tile={tile} (blocks {blocks}) indexed past a buffer under a {over_fire}-lane launch: {oob:?}"
         );
-        let outputs = request.outputs().unwrap_or_else(|error| {
-            panic!("Fix: tile={tile} must evaluate over-fired: {error}")
-        });
+        let outputs = request
+            .outputs()
+            .unwrap_or_else(|error| panic!("Fix: tile={tile} must evaluate over-fired: {error}"));
         let bytes = outputs
             .last()
             .unwrap_or_else(|| panic!("Fix: tile={tile} must report an output buffer"))

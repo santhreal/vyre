@@ -10,11 +10,11 @@ use std::process::Command;
 // copy here cannot drift from the registered-op matrix again.
 use crate::artifact_gate::{self, Inspection};
 use crate::gate::{Finding, GateCtx, GateError, Report};
+use crate::release::conformance_evidence_semantics::ORACLE_RECORD_ID;
 use crate::release::conformance_op_matrix::{
     evaluate_op_matrix_coverage, read_conformance_required_op_matrix,
 };
 use serde::{Deserialize, Serialize};
-use crate::release::conformance_evidence_semantics::ORACLE_RECORD_ID;
 
 const MIN_RELEASE_OP_PAIRS: usize = 49;
 const MAX_RELEASE_CONFORMANCE_TEXT_BYTES: u64 = 8_388_608;
@@ -343,7 +343,8 @@ fn measure(workspace_root: &Path, config: &Config) -> Inspection {
         }
         inspection.generates_evidence(artifact, measurement_of(backend_id), &body);
     }
-    inspection.generates_host_evidence(RELEASE_LOG, &release_log(workspace_root, config, &failures));
+    inspection
+        .generates_host_evidence(RELEASE_LOG, &release_log(workspace_root, config, &failures));
     inspection
 }
 
@@ -980,10 +981,7 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
                         "wgpu".to_string(),
                         ORACLE_RECORD_ID.to_string(),
                     ]
-                } else if matches!(
-                    value.as_str(),
-                    "cuda" | "wgpu" | "metal" | ORACLE_RECORD_ID
-                ) {
+                } else if matches!(value.as_str(), "cuda" | "wgpu" | "metal" | ORACLE_RECORD_ID) {
                     vec![value.clone()]
                 } else {
                     return Err(

@@ -79,14 +79,15 @@ fn smooth_latency_trace_via_hand_checked_empty_and_edge_clamp() {
     let d = ReferenceSemanticExecutor;
 
     // Empty trace → empty output.
-    let got = smooth_latency_trace_via(&d, &semantic_requests::wrapper_policy(), &[], 1, 1.0).unwrap();
+    let got =
+        smooth_latency_trace_via(&d, &semantic_requests::wrapper_policy(), &[], 1, 1.0).unwrap();
     assert!(got.is_empty(), "empty latency trace smooths to empty");
 
     // A short constant trace: convolving a constant with a normalized-ish kernel is dominated by the
     // kernel-weight sum; whatever the exact value, the GPU must equal cpu_conv1d exactly (edge clamp).
     let latency = vec![FIXED_ONE, FIXED_ONE, FIXED_ONE, FIXED_ONE, FIXED_ONE];
-    let got =
-        smooth_latency_trace_via(&d, &semantic_requests::wrapper_policy(), &latency, 2, 1.0).unwrap();
+    let got = smooth_latency_trace_via(&d, &semantic_requests::wrapper_policy(), &latency, 2, 1.0)
+        .unwrap();
     let want = cpu_conv1d(&latency, &gaussian_weights(2, 1.0), 1);
     assert_eq!(
         got, want,

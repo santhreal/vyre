@@ -235,7 +235,9 @@ fn judge_guard(expr_if: &syn::ExprIf, sink: &mut Vec<(u32, &'static str)>) {
 /// recovery path in the drivers, including one that re-queues a flush and
 /// returns the error it caught.
 fn returns_successfully(body: &str) -> bool {
-    body.contains("return ;") || body.contains("return Ok (") || body.trim_end().ends_with("return }")
+    body.contains("return ;")
+        || body.contains("return Ok (")
+        || body.trim_end().ends_with("return }")
 }
 
 /// Whether a guard body ends the process or reports the correction instead of
@@ -258,9 +260,15 @@ fn aborts_loudly(body: &str) -> bool {
     if body.contains("Fix:") {
         return true;
     }
-    ["panic !", "unreachable !", "todo !", "unimplemented !", "abort ()"]
-        .iter()
-        .any(|needle| body.contains(needle))
+    [
+        "panic !",
+        "unreachable !",
+        "todo !",
+        "unimplemented !",
+        "abort ()",
+    ]
+    .iter()
+    .any(|needle| body.contains(needle))
         || body.contains("assert !")
         || body.contains("assert_eq !")
 }
@@ -373,7 +381,10 @@ mod tests {
                 ("top level", format!("fn t() {{ {guard} }}")),
                 ("a nested block", format!("fn t() {{ {{ {guard} }} }}")),
                 ("a loop", format!("fn t() {{ loop {{ {guard} }} }}")),
-                ("a for body", format!("fn t() {{ for _ in 0..1 {{ {guard} }} }}")),
+                (
+                    "a for body",
+                    format!("fn t() {{ for _ in 0..1 {{ {guard} }} }}"),
+                ),
                 (
                     "an else branch",
                     format!("fn t() {{ if a {{ }} else {{ {guard} }} }}"),
@@ -445,14 +456,12 @@ mod tests {
     /// correction.
     #[test]
     fn a_diagnostic_naming_the_correction_is_a_report() {
-        assert!(
-            ast_skips(
-                "fn t() { if let Err(error) = write(p) { \
+        assert!(ast_skips(
+            "fn t() { if let Err(error) = write(p) { \
                  tracing::error!(\"could not write: {error}. Fix: free space on that volume.\"); \
                  return; } }"
-            )
-            .is_empty()
-        );
+        )
+        .is_empty());
         assert_eq!(
             ast_skips(
                 "fn t() { if let Err(_e) = probe() { \

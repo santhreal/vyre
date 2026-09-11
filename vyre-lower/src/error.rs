@@ -1,7 +1,9 @@
 //! Errors surfaced by the lowering pass.
 
 use thiserror::Error;
-use vyre_foundation::diagnostics::{CauseKind, CompilerLevel, Diagnostic, DiagnosticStage, RetryClass};
+use vyre_foundation::diagnostics::{
+    CauseKind, CompilerLevel, Diagnostic, DiagnosticStage, RetryClass,
+};
 
 /// Failure produced while lowering Vyre IR.
 #[derive(Debug, Error)]

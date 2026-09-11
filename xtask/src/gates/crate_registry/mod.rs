@@ -46,8 +46,8 @@ mod workspace;
 mod tests;
 
 pub use render::{render_graph, render_ownership};
-pub use workspace::workspace_state;
 use workspace::manifest_publication_class;
+pub use workspace::workspace_state;
 
 /// The authority every row is read from.
 pub const REGISTRY: &str = "docs/CRATE_OWNERSHIP.toml";
@@ -925,7 +925,6 @@ pub fn edge_points_down(
 ) -> bool {
     source_layer == target_layer || source_rank > target_rank
 }
-
 
 /// Every disagreement between the architecture manifest and the workspace.
 ///

@@ -7,7 +7,6 @@
 //! refused. The read is stated once here and each case states only what its
 //! registry must contain.
 
-
 use std::collections::BTreeSet;
 
 /// One registry file, read with the noun its failures name.

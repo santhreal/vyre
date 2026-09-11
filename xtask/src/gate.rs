@@ -1196,10 +1196,7 @@ pub fn assert_regenerates_clean(name: &str) {
     let root = crate::checkout::checkout_root();
     let gate = crate::subcommands::find(name).expect("Fix: the gate must be registered");
     let restore = ArtifactRestore::capture(&root, gate.descriptor().artifacts);
-    let write_report = gate.run(&GateCtx::new(
-        root.clone(),
-        vec!["--write".to_string()],
-    ));
+    let write_report = gate.run(&GateCtx::new(root.clone(), vec!["--write".to_string()]));
     let comparison_report = write_report
         .as_ref()
         .ok()

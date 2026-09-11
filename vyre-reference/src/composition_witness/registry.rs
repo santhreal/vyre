@@ -373,5 +373,9 @@ fn probe_reduction() -> u64 {
 }
 
 fn probe_text() -> u64 {
-    digest_words(super::byte_histogram_witness(b"vyre").into_iter().map(u64::from))
+    digest_words(
+        super::byte_histogram_witness(b"vyre")
+            .into_iter()
+            .map(u64::from),
+    )
 }

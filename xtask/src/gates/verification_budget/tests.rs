@@ -43,8 +43,16 @@ fn duplication_is_counted_across_packages_and_not_within_one() {
 #[test]
 fn duplication_survives_reformatting_and_not_a_changed_assertion() {
     let sources = vec![
-        source("a/tests/one.rs", "package-a", "fn contract() {\n\n    // note\n    assert!(true);\n}"),
-        source("b/tests/one.rs", "package-b", "fn contract() {\nassert!(true);\n}"),
+        source(
+            "a/tests/one.rs",
+            "package-a",
+            "fn contract() {\n\n    // note\n    assert!(true);\n}",
+        ),
+        source(
+            "b/tests/one.rs",
+            "package-b",
+            "fn contract() {\nassert!(true);\n}",
+        ),
     ];
     assert!(
         duplicate_bytes_by_package(&sources).contains_key("package-b"),
@@ -52,8 +60,16 @@ fn duplication_survives_reformatting_and_not_a_changed_assertion() {
     );
 
     let sources = vec![
-        source("a/tests/one.rs", "package-a", "fn contract() { assert!(true); }"),
-        source("b/tests/one.rs", "package-b", "fn contract() { assert!(false); }"),
+        source(
+            "a/tests/one.rs",
+            "package-a",
+            "fn contract() { assert!(true); }",
+        ),
+        source(
+            "b/tests/one.rs",
+            "package-b",
+            "fn contract() { assert!(false); }",
+        ),
     ];
     assert!(
         duplicate_bytes_by_package(&sources).is_empty(),
@@ -100,7 +116,10 @@ fn a_path_include_is_judged_by_where_it_lands() {
 #[test]
 fn the_longest_member_directory_owns_the_file() {
     let members = BTreeMap::from([
-        ("conform/vyre-conform".to_string(), "vyre-conform".to_string()),
+        (
+            "conform/vyre-conform".to_string(),
+            "vyre-conform".to_string(),
+        ),
         (
             "conform/vyre-conform-spec".to_string(),
             "vyre-conform-spec".to_string(),
@@ -214,7 +233,8 @@ fn a_tier_is_reported_when_either_side_names_it_alone() {
         .collect::<Vec<_>>()
         .join("\n");
     assert!(
-        messages.contains("`emitter` has a budget row and the ownership record declares no such tier"),
+        messages
+            .contains("`emitter` has a budget row and the ownership record declares no such tier"),
         "Fix: a stale row must be reported; messages={messages}"
     );
     assert!(
@@ -256,7 +276,11 @@ fn disk_use_is_a_ceiling_and_the_counts_are_not() {
         "Fix: disk use below its ceiling is clean."
     );
     let over = judge(&measurement(1_001), &declared);
-    assert_eq!(over.len(), 1, "Fix: disk use above its ceiling must report; findings={over:?}");
+    assert_eq!(
+        over.len(),
+        1,
+        "Fix: disk use above its ceiling must report; findings={over:?}"
+    );
     assert!(
         over[0].message.contains("against a ceiling of 1000"),
         "Fix: the finding must state the ceiling; message={}",

@@ -73,7 +73,10 @@ const CORE_MEASURED: &[(&str, usize)] = &[
     ),
     ("vyre-foundation/src/transform/autodiff/grad/mod.rs", 702),
     ("vyre-libs-nn/src/nn/attention/softmax.rs", 439),
-    ("vyre-libs-parsing/src/parsing/python/parse/structure.rs", 506),
+    (
+        "vyre-libs-parsing/src/parsing/python/parse/structure.rs",
+        506,
+    ),
     ("vyre-foundation/src/validate/typecheck/mod.rs", 578),
     ("vyre-libs-math/src/math/linalg/matmul.rs", 482),
     ("vyre-driver-wgpu/src/runtime/readback_ring/ring.rs", 459),

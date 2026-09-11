@@ -92,9 +92,7 @@ fn a_resident_dispatch_aliasing_a_read_only_slot_onto_a_written_slot_is_refused(
 
     let error = backend
         .dispatch_resident_timed(&program, &[shared, shared], &DispatchConfig::default())
-        .expect_err(
-            "Fix: one allocation at a read-only slot and a written slot must be refused.",
-        );
+        .expect_err("Fix: one allocation at a read-only slot and a written slot must be refused.");
     let text = error.to_string();
     assert!(
         text.contains("read-only binding `input`") && text.contains("writable binding `out`"),

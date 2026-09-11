@@ -112,7 +112,6 @@ impl ProtocolVersion {
     }
 }
 
-
 /// Compatibility disposition for a version pair under a protocol domain.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[non_exhaustive]

@@ -313,9 +313,7 @@ impl LawFamily {
                 direction: LawDirection::Bidirectional,
                 guard: LawGuard::ExactOnly,
                 numerical_contract: NumericBehavior::Exact,
-                evidence: LawEvidence::ReferenceOracleWitness {
-                    witness: "chained",
-                },
+                evidence: LawEvidence::ReferenceOracleWitness { witness: "chained" },
                 canonical_form: "f(f(a,b),c) = f(a,f(b,c))",
                 affected_compiler_levels: REWRITE,
             },
@@ -335,9 +333,7 @@ impl LawFamily {
                 direction: LawDirection::LeftToRight,
                 guard: LawGuard::ExactOnly,
                 numerical_contract: NumericBehavior::Exact,
-                evidence: LawEvidence::ReferenceOracleWitness {
-                    witness: "chained",
-                },
+                evidence: LawEvidence::ReferenceOracleWitness { witness: "chained" },
                 canonical_form: "f(f(a,b),b) -> a",
                 affected_compiler_levels: REWRITE,
             },
@@ -692,9 +688,11 @@ impl LawObligation {
     #[must_use]
     pub fn proof_method(&self) -> ProofMethod {
         match self.evidence {
-            LawEvidence::ReferenceOracleWitness { witness } => ProofMethod::ReferenceOracleWitness {
-                witness: witness.to_string(),
-            },
+            LawEvidence::ReferenceOracleWitness { witness } => {
+                ProofMethod::ReferenceOracleWitness {
+                    witness: witness.to_string(),
+                }
+            }
             LawEvidence::MissingPayload { .. } => ProofMethod::None,
         }
     }

@@ -93,10 +93,7 @@ pub fn dfa_byte_scanner_parallel_composition_with(bindings: &ParallelDfaBindings
                     vyre_foundation::ir::DataType::U32,
                     Expr::load(
                         bindings.haystack,
-                        bounded_index_when(
-                            Expr::var("lane_active"),
-                            Expr::var("lane_byte_pos"),
-                        ),
+                        bounded_index_when(Expr::var("lane_active"), Expr::var("lane_byte_pos")),
                     ),
                 ),
                 Expr::u32(0),

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use super::ScheduleTree;
 use crate::schedule::error::ScheduleLegalityError;
 use crate::schedule::{
-    ScheduleResourceBounds, ScheduleTransformRecord, SchedulePhaseId, SCHEDULE_IR_VERSION,
+    SchedulePhaseId, ScheduleResourceBounds, ScheduleTransformRecord, SCHEDULE_IR_VERSION,
 };
 
 /// Symbolic parameter representing a bounded tunable parameter in partial schedules.
@@ -78,9 +78,7 @@ impl PartialSchedule {
                     ));
                 }
             } else if param.default_value.is_none() {
-                return Err(ScheduleLegalityError::MissingPhase(SchedulePhaseId(
-                    0,
-                )));
+                return Err(ScheduleLegalityError::MissingPhase(SchedulePhaseId(0)));
             }
         }
         let plan = SchedulePlan::new(self.root.canonicalize(), bounds);

@@ -404,10 +404,10 @@ fn pins_workgroup_geometry(program: &Program) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use vyre_test_support::graph_fixtures::{independent_two_arm_graph, two_arm_graph};
     use std::collections::BTreeMap;
     use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryOrdering, Node, Program};
     use vyre_foundation::validate::BackendCapabilities;
+    use vyre_test_support::graph_fixtures::{independent_two_arm_graph, two_arm_graph};
     use vyre_test_support::pass_programs::copy_program;
 
     use super::*;

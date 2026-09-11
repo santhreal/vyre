@@ -15,8 +15,7 @@ fn guarded_law_with_executable_proof_validates() {
 
 #[test]
 fn law_with_no_executable_proof_evidence_is_rejected_by_name() {
-    let law =
-        GuardedLaw::declared(AlgebraicLaw::Associative).with_proof_method(ProofMethod::None);
+    let law = GuardedLaw::declared(AlgebraicLaw::Associative).with_proof_method(ProofMethod::None);
     let result = law.validate();
     assert_eq!(
         result,
@@ -33,8 +32,8 @@ fn law_with_no_executable_proof_evidence_is_rejected_by_name() {
 #[test]
 fn counterexample_generator_failing_hypothesis_fails_law_not_test() {
     let generator = CounterexampleGenerator::deterministic("subtraction-commutativity-falsifier");
-    let law = GuardedLaw::declared(AlgebraicLaw::Commutative)
-        .with_counterexample_generator(generator);
+    let law =
+        GuardedLaw::declared(AlgebraicLaw::Commutative).with_counterexample_generator(generator);
 
     // Test a non-commutative operation (e.g. integer subtraction: a - b != b - a)
     let subtraction_commutative = |inputs: &[u64]| -> bool {
@@ -55,8 +54,8 @@ fn counterexample_generator_failing_hypothesis_fails_law_not_test() {
 #[test]
 fn counterexample_generator_passing_on_true_hypothesis() {
     let generator = CounterexampleGenerator::deterministic("addition-commutativity-verifier");
-    let law = GuardedLaw::declared(AlgebraicLaw::Commutative)
-        .with_counterexample_generator(generator);
+    let law =
+        GuardedLaw::declared(AlgebraicLaw::Commutative).with_counterexample_generator(generator);
 
     // Test a truly commutative operation (integer addition: a + b == b + a)
     let addition_commutative = |inputs: &[u64]| -> bool {

@@ -15,7 +15,9 @@ use super::*;
 
 /// The dependency tables of one manifest, with the kind and condition each is
 /// declared under.
-pub(super) fn dependency_tables(manifest: &toml::Table) -> Vec<(&toml::Table, &'static str, String)> {
+pub(super) fn dependency_tables(
+    manifest: &toml::Table,
+) -> Vec<(&toml::Table, &'static str, String)> {
     let mut tables = Vec::new();
     for (key, kind) in [
         ("dependencies", "normal"),

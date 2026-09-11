@@ -227,7 +227,10 @@ fn binary_cases() -> Vec<(Vec<u32>, Vec<u32>)> {
     for lhs_len in lengths {
         for rhs_len in lengths {
             cases.push((vec![0; lhs_len], vec![u32::MAX; rhs_len]));
-            cases.push((ramp_words(lhs_len, 0x1357_9BDF, 1), ramp_words(rhs_len, 0x2468_ACE0, 1)));
+            cases.push((
+                ramp_words(lhs_len, 0x1357_9BDF, 1),
+                ramp_words(rhs_len, 0x2468_ACE0, 1),
+            ));
             cases.push((
                 alternating_words(lhs_len, 0x5555_5555, 0xAAAA_AAAA),
                 alternating_words(rhs_len, 0xFFFF_0000, 0x0000_FFFF),

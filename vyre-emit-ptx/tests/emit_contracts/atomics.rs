@@ -305,8 +305,9 @@ fn global_atomic_kernel(atomic_op: AtomicOp, value: u32) -> KernelDescriptor {
 #[test]
 fn an_identity_read_modify_write_on_a_global_binding_lowers_to_a_coherent_load() {
     for atomic_op in EMITTABLE_RMWS {
-        let s = emit(&global_atomic_kernel(atomic_op, 0))
-            .unwrap_or_else(|error| panic!("Fix: global atomic {atomic_op:?} must emit: {error:?}"));
+        let s = emit(&global_atomic_kernel(atomic_op, 0)).unwrap_or_else(|error| {
+            panic!("Fix: global atomic {atomic_op:?} must emit: {error:?}")
+        });
         match zero_value_lowering(atomic_op) {
             ZeroValueLowering::CoherentLoad => {
                 assert!(
@@ -340,8 +341,9 @@ fn an_identity_read_modify_write_on_a_global_binding_lowers_to_a_coherent_load()
 #[test]
 fn a_non_zero_value_operand_keeps_its_atomic_for_every_operation() {
     for atomic_op in EMITTABLE_RMWS {
-        let s = emit(&global_atomic_kernel(atomic_op, 1))
-            .unwrap_or_else(|error| panic!("Fix: global atomic {atomic_op:?} must emit: {error:?}"));
+        let s = emit(&global_atomic_kernel(atomic_op, 1)).unwrap_or_else(|error| {
+            panic!("Fix: global atomic {atomic_op:?} must emit: {error:?}")
+        });
         assert!(
             s.contains("atom.global"),
             "Fix: {atomic_op:?} against 1 must keep its atom.global; emitted PTX:\n{s}"
@@ -368,8 +370,9 @@ fn an_identity_read_modify_write_on_a_shared_binding_keeps_its_atomic() {
             MemoryOrdering::SeqCst,
             0,
         );
-        let s = emit(&kernel)
-            .unwrap_or_else(|error| panic!("Fix: shared atomic {atomic_op:?} must emit: {error:?}"));
+        let s = emit(&kernel).unwrap_or_else(|error| {
+            panic!("Fix: shared atomic {atomic_op:?} must emit: {error:?}")
+        });
         assert!(
             s.contains("atom.shared"),
             "Fix: an identity {atomic_op:?} on a shared binding must keep atom.shared; emitted PTX:\n{s}"

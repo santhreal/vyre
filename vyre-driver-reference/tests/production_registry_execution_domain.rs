@@ -44,11 +44,7 @@ use vyre_test_support::backend_execution_domain::{
 /// whole set: a change to the oracle id becomes a name this suite requires the
 /// registry to refuse, without an edit here.
 fn oracle_names() -> Vec<&'static str> {
-    vec![
-        vyre_driver_reference::ORACLE_EXECUTOR_ID,
-        "cpu-ref",
-        "cpu",
-    ]
+    vec![vyre_driver_reference::ORACLE_EXECUTOR_ID, "cpu-ref", "cpu"]
 }
 
 fn registry_ids() -> BTreeSet<&'static str> {

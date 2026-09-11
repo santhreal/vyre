@@ -1,6 +1,5 @@
 //! One binary for every integration test in this crate.
 
-
 #[path = "categorical_laws_proptest.rs"]
 pub mod categorical_laws_proptest;
 

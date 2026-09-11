@@ -19,7 +19,9 @@
 use std::collections::BTreeSet;
 
 use vyre_driver_reference::ORACLE_EXECUTOR_ID;
-use xtask::release::conformance_evidence_semantics::{ORACLE_RECORD_ID, REQUIRED_DISPATCH_BACKENDS};
+use xtask::release::conformance_evidence_semantics::{
+    ORACLE_RECORD_ID, REQUIRED_DISPATCH_BACKENDS,
+};
 use xtask_registry::release::conformance_matrix::{dispatch_backend_roster, RECORDED_BACKENDS};
 
 /// The roster as the gate composes it.

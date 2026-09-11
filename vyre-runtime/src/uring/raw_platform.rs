@@ -510,7 +510,13 @@ impl MappedRing {
         // inside them. The borrow lives no longer than the `&self` it came
         // from, and the acquire load on the completion tail that the caller
         // performed first orders the kernel's write to this record before it.
-        unsafe { &*self.cq_ring_ptr.add(offset).cast::<io_uring_cqe>().add(index) }
+        unsafe {
+            &*self
+                .cq_ring_ptr
+                .add(offset)
+                .cast::<io_uring_cqe>()
+                .add(index)
+        }
     }
 }
 
@@ -602,10 +608,7 @@ fn get_errno() -> i32 {
 }
 
 /// Create one io_uring, reporting the parameters the kernel granted it.
-fn sys_io_uring_setup(
-    entries: u32,
-    params: &mut io_uring_params,
-) -> Result<i32, PipelineError> {
+fn sys_io_uring_setup(entries: u32, params: &mut io_uring_params) -> Result<i32, PipelineError> {
     // SAFETY: `params` is a live exclusive borrow, so the kernel writes the
     // returned parameters into memory no other reference reaches.
     let ring_fd = unsafe {

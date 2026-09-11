@@ -484,11 +484,7 @@ pub trait MaterializedInstance {
 ///
 /// Returns [`BackendError::InvalidProgram`] carrying `what` and the allocator's
 /// reason.
-fn reserve_batch_items<T>(
-    items: &mut Vec<T>,
-    len: usize,
-    what: &str,
-) -> Result<(), BackendError> {
+fn reserve_batch_items<T>(items: &mut Vec<T>, len: usize, what: &str) -> Result<(), BackendError> {
     items.try_reserve_exact(len).map_err(|error| {
         BackendError::InvalidProgram {
             fix: format!(

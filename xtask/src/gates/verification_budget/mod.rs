@@ -167,10 +167,7 @@ fn test_sources(tree: &Tree, members: &BTreeMap<String, String>) -> Vec<TestSour
 /// Members nest: `conform/vyre-conform` sits under no member but shares a
 /// prefix with none, while a shorter directory can prefix a longer one. The
 /// longest match is the owning package.
-fn owning_member(
-    relative: &str,
-    members: &BTreeMap<String, String>,
-) -> Option<(String, String)> {
+fn owning_member(relative: &str, members: &BTreeMap<String, String>) -> Option<(String, String)> {
     members
         .iter()
         .filter(|(directory, _)| relative.starts_with(&format!("{directory}/")))
@@ -230,7 +227,10 @@ fn unit_test_binaries(tree: &Tree, directory: &str) -> usize {
 }
 
 /// Test sources whose `#[path]` include resolves outside their own package.
-fn escaping_path_includes(sources: &[TestSource], members: &BTreeMap<String, String>) -> Vec<String> {
+fn escaping_path_includes(
+    sources: &[TestSource],
+    members: &BTreeMap<String, String>,
+) -> Vec<String> {
     let mut escapes = Vec::new();
     for source in sources {
         let Some(directory) = members
@@ -313,7 +313,12 @@ fn measure(tree: &Tree) -> Result<Measurement, GateError> {
     let declared = crate_registry::declared_crates(tree)?;
     let members: BTreeMap<String, String> = declared
         .iter()
-        .map(|entry| (entry.path.trim_end_matches('/').to_string(), entry.package.clone()))
+        .map(|entry| {
+            (
+                entry.path.trim_end_matches('/').to_string(),
+                entry.package.clone(),
+            )
+        })
         .collect();
     let tier_of: BTreeMap<String, String> = declared
         .iter()
@@ -343,7 +348,10 @@ fn measure(tree: &Tree) -> Result<Measurement, GateError> {
             .filter(|source| source.package == member.name)
             .map(|source| source.bytes)
             .sum::<u64>();
-        packages_of.entry(tier.clone()).or_default().push(member.name);
+        packages_of
+            .entry(tier.clone())
+            .or_default()
+            .push(member.name);
     }
 
     // Every module the shared-contract owner declares, and every test source
@@ -570,7 +578,9 @@ fn judge(measurement: &Measurement, declared: &BTreeMap<String, TierCost>) -> Ve
                     "tier `{}` verifies {} compile unit(s) and {} link unit(s) with no budget row",
                     row.tier, row.cost.compile_units, row.cost.link_units
                 ),
-                format!("record the row with `./cargo_full run --bin xtask -- {NAME} --write-budget`"),
+                format!(
+                    "record the row with `./cargo_full run --bin xtask -- {NAME} --write-budget`"
+                ),
             ));
             continue;
         };
@@ -715,7 +725,11 @@ impl crate::gate::GateBehavior for VerificationBudget {
             .iter()
             .map(|row| row.cost.compile_units)
             .sum();
-        let link_units: usize = measurement.tiers.iter().map(|row| row.cost.link_units).sum();
+        let link_units: usize = measurement
+            .tiers
+            .iter()
+            .map(|row| row.cost.link_units)
+            .sum();
         report.note(format!(
             "{compile_units} compile unit(s) and {link_units} link unit(s) across {tiers} tier(s)"
         ));

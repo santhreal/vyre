@@ -918,4 +918,3 @@ fn validate_op(op: &ScheduleOp) -> Result<(), ScheduleLegalityError> {
     }
     Ok(())
 }
-

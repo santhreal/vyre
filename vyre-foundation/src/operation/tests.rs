@@ -572,4 +572,3 @@ fn every_absence_class_produces_a_distinct_validating_decision() {
     }
     assert_eq!(states.len(), AbsenceDecision::ALL.len());
 }
-

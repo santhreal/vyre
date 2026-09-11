@@ -69,7 +69,13 @@ pub(crate) fn check_backend_conformance_report(
             .get("executor_id")
             .or_else(|| report.get("backend_id"))
             .and_then(serde_json::Value::as_str)
-            .map(|id| if id == "cpu-ref" { ORACLE_RECORD_ID } else { id });
+            .map(|id| {
+                if id == "cpu-ref" {
+                    ORACLE_RECORD_ID
+                } else {
+                    id
+                }
+            });
         if recorded != Some(expected) {
             failures.push(format!(
                 "requirement `{}` backend conformance `{suffix}` reports executor `{:?}`, expected `{expected}`",
@@ -176,7 +182,13 @@ pub(crate) fn check_backend_conformance_report(
                 .get("executor_id")
                 .or_else(|| pair.get("backend_id"))
                 .and_then(serde_json::Value::as_str)
-                .map(|id| if id == "cpu-ref" { ORACLE_RECORD_ID } else { id });
+                .map(|id| {
+                    if id == "cpu-ref" {
+                        ORACLE_RECORD_ID
+                    } else {
+                        id
+                    }
+                });
             if recorded != Some(expected) {
                 failures.push(format!(
                     "requirement `{}` backend conformance `{suffix}` pair `{op_id}` reports executor `{:?}`, expected `{expected}`",

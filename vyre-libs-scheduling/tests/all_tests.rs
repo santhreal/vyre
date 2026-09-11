@@ -1,6 +1,5 @@
 //! One binary for every integration test in this crate.
 
-
 #[path = "fusion_scores_via_reference_parity.rs"]
 pub mod fusion_scores_via_reference_parity;
 

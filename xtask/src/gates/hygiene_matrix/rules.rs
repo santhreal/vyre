@@ -229,7 +229,9 @@ pub(crate) fn is_const_block_item_line(trimmed: &str) -> bool {
     };
     binding
         && trimmed.ends_with('{')
-        && rest.split_once(' ').is_some_and(|(name, _)| name.ends_with(':'))
+        && rest
+            .split_once(' ')
+            .is_some_and(|(name, _)| name.ends_with(':'))
 }
 
 /// Consume the visibility and item keywords at the head of `trimmed`.

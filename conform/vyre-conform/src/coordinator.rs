@@ -406,7 +406,8 @@ impl WorkerCoordinator {
                         runner_binary_blake3: request.runner_binary_blake3.clone(),
                         environment_blake3: request.environment_blake3.clone(),
                         device_lease_id: request.device_lease.as_ref().map(|l| l.lease_id.clone()),
-                        elapsed_ms: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
+                        elapsed_ms: u64::try_from(started.elapsed().as_millis())
+                            .unwrap_or(u64::MAX),
                         peak_memory_bytes: 0,
                         auth_tag: String::new(),
                     };
@@ -529,7 +530,8 @@ impl WorkerCoordinator {
                         runner_binary_blake3: request.runner_binary_blake3.clone(),
                         environment_blake3: request.environment_blake3.clone(),
                         device_lease_id: request.device_lease.as_ref().map(|l| l.lease_id.clone()),
-                        elapsed_ms: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
+                        elapsed_ms: u64::try_from(started.elapsed().as_millis())
+                            .unwrap_or(u64::MAX),
                         peak_memory_bytes: 0,
                         auth_tag: String::new(),
                     };

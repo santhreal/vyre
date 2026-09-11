@@ -66,18 +66,32 @@ fn popcount_via_matches_inline_count_ones_oracle() {
 fn popcount_via_hand_checked_cases() {
     let d = ReferenceSemanticExecutor;
     assert_eq!(
-        per_word_popcount_via(&d, &semantic_requests::wrapper_policy(), &[0b1111, 0b101, 0]).unwrap(),
+        per_word_popcount_via(
+            &d,
+            &semantic_requests::wrapper_policy(),
+            &[0b1111, 0b101, 0]
+        )
+        .unwrap(),
         vec![4, 2, 0],
         "popcount per word"
     );
     assert_eq!(
-        per_word_popcount_via(&d, &semantic_requests::wrapper_policy(), &[u32::MAX, u32::MAX])
-            .unwrap(),
+        per_word_popcount_via(
+            &d,
+            &semantic_requests::wrapper_policy(),
+            &[u32::MAX, u32::MAX]
+        )
+        .unwrap(),
         vec![32, 32],
         "all-ones words each count 32"
     );
     assert_eq!(
-        total_set_bits_via(&d, &semantic_requests::wrapper_policy(), &[u32::MAX, 0b111, 0]).unwrap(),
+        total_set_bits_via(
+            &d,
+            &semantic_requests::wrapper_policy(),
+            &[u32::MAX, 0b111, 0]
+        )
+        .unwrap(),
         35,
         "total = 32 + 3 + 0"
     );
@@ -98,8 +112,9 @@ fn adversarial_widths_preserve_exact_reference_parity() {
         assert_eq!(got, want, "words={words}");
 
         let want_total: u64 = want.iter().map(|&c| u64::from(c)).sum();
-        let got_total = total_set_bits_via(&dispatcher, &semantic_requests::wrapper_policy(), &input)
-            .expect("total_set_bits_via must dispatch for adversarial width");
+        let got_total =
+            total_set_bits_via(&dispatcher, &semantic_requests::wrapper_policy(), &input)
+                .expect("total_set_bits_via must dispatch for adversarial width");
         assert_eq!(got_total, want_total, "words={words}");
     }
 }

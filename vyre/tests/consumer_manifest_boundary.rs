@@ -50,8 +50,7 @@ fn consumer_manifests(root: &Path) -> Vec<PathBuf> {
         .unwrap_or_else(|error| panic!("{} must be readable: {error}", consumers.display()));
     let mut manifests: Vec<PathBuf> = entries
         .map(|entry| {
-            entry
-                .unwrap_or_else(|error| panic!("{} must enumerate: {error}", consumers.display()))
+            entry.unwrap_or_else(|error| panic!("{} must enumerate: {error}", consumers.display()))
         })
         .map(|entry| entry.path().join("Cargo.toml"))
         .filter(|manifest| manifest.is_file())
@@ -72,7 +71,10 @@ fn production_dependencies(text: &str, path: &Path) -> BTreeSet<String> {
 }
 
 /// Forbidden dependencies a manifest declares, as `package (class)`.
-fn violations(forbidden: &BTreeMap<String, String>, dependencies: &BTreeSet<String>) -> Vec<String> {
+fn violations(
+    forbidden: &BTreeMap<String, String>,
+    dependencies: &BTreeSet<String>,
+) -> Vec<String> {
     dependencies
         .iter()
         .filter_map(|dependency| {

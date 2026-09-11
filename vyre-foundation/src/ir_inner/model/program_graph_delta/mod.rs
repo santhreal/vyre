@@ -956,4 +956,3 @@ impl GraphDelta {
         })
     }
 }
-

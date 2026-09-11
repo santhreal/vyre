@@ -146,11 +146,7 @@ mod tests {
         let mut cases = Vec::new();
         for status in ["pass", "unstable", "failed"] {
             for invalid in [false, true] {
-                for performance in [
-                    None,
-                    Some(true),
-                    Some(false),
-                ] {
+                for performance in [None, Some(true), Some(false)] {
                     let mut case = fixture::case(
                         &format!("case.{status}.{invalid}.{performance:?}"),
                         &[("wall_ns", 10, 20)],

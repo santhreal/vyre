@@ -380,8 +380,8 @@ fn public_seam_carries_zero_callbacks_zero_handles_and_zero_domain_vocabulary() 
     // workspace member roster. A compiled-in manifest path names whichever
     // checkout last built this binary through the shared target directory, so
     // the facade read would be that tree's.
-    let lib_rs_path =
-        vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")).join("src/lib.rs");
+    let lib_rs_path = vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"))
+        .join("src/lib.rs");
     let content = std::fs::read_to_string(&lib_rs_path).expect("read vyre/src/lib.rs");
     let _ast = syn::parse_file(&content).expect("parse AST");
 

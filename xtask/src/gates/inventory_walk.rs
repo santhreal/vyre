@@ -354,7 +354,13 @@ impl Registry {
     /// that learns one of them does not leave the rest reported.
     #[test]
     fn a_builder_a_lock_names_is_clean_under_every_visibility() {
-        for visibility in ["", "pub ", "pub(crate) ", "pub(super) ", "pub(in crate::a) "] {
+        for visibility in [
+            "",
+            "pub ",
+            "pub(crate) ",
+            "pub(super) ",
+            "pub(in crate::a) ",
+        ] {
             let report = run(&format!(
                 r"
 static REGISTRY: LazyLock<Registry> = LazyLock::new(Registry::build);

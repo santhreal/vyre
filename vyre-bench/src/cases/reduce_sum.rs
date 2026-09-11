@@ -562,8 +562,8 @@ mod tests {
         // Both tile ceilings are real: CUDA admits 1024 invocations per
         // workgroup, WGSL admits 256.
         for tile_ceiling in [1024u32, 256] {
-            let small = prepare_size(SMALL_COUNT, tile_ceiling)
-                .expect("small reduction size prepares");
+            let small =
+                prepare_size(SMALL_COUNT, tile_ceiling).expect("small reduction size prepares");
             assert_eq!(small.count, 32);
             assert_eq!(small.tree_tile, 32);
             assert_eq!(small.atomic().inputs[0].len(), 32 * 4);
@@ -574,8 +574,8 @@ mod tests {
                 "Fix: 32 elements fill one tile, so the tree route takes the single-block form and declares no partials"
             );
 
-            let large = prepare_size(LARGE_COUNT, tile_ceiling)
-                .expect("large reduction size prepares");
+            let large =
+                prepare_size(LARGE_COUNT, tile_ceiling).expect("large reduction size prepares");
             assert_eq!(large.count, 1 << 20);
             assert_eq!(
                 large.tree_tile, tile_ceiling,

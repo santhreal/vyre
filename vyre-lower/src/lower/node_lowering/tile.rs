@@ -6,8 +6,8 @@ use vyre_foundation::ir::{
     row_major_coords, BinOp, DataType, Expr, Ident, Layout, Node, Residency, SubgroupReduceOp, Tile,
 };
 
-use crate::lower::scope::TileBinding;
 use super::LowerCtx;
+use crate::lower::scope::TileBinding;
 
 /// Bits in one 32-bit fragment operand word.
 const WORD_BITS: u32 = 32;
@@ -251,9 +251,7 @@ impl LowerCtx {
             // rank-2 extents states none, and the element counts are the only
             // remaining statement of the shape.
             let (m, k, n) = match (a_extents.as_deref(), b_extents.as_deref()) {
-                (Some(&[a_rows, a_columns]), Some(&[b_rows, b_columns]))
-                    if a_columns == b_rows =>
-                {
+                (Some(&[a_rows, a_columns]), Some(&[b_rows, b_columns])) if a_columns == b_rows => {
                     (a_rows as usize, a_columns as usize, b_columns as usize)
                 }
                 _ => {
@@ -694,8 +692,14 @@ impl LowerCtx {
 
         for (name, tile_bind, scalar_bind) in saved_bindings {
             if let Some(tb) = tile_bind {
-                self.scope
-                    .bind_tile(name, tb.extents, tb.element, tb.layout, tb.residency, tb.results);
+                self.scope.bind_tile(
+                    name,
+                    tb.extents,
+                    tb.element,
+                    tb.layout,
+                    tb.residency,
+                    tb.results,
+                );
             } else if let Some(sb) = scalar_bind {
                 self.scope.bind(name, sb);
             }

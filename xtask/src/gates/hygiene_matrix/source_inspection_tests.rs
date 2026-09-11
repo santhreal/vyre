@@ -568,7 +568,11 @@ fn a_marker_resolver_over_an_authored_tree_is_not_inspecting_this_checkout() {
             }
         "#;
     let mut findings = Vec::new();
-    scan_source_inspection_tests(Path::new("xtask/tests/analyzer.rs"), authored, &mut findings);
+    scan_source_inspection_tests(
+        Path::new("xtask/tests/analyzer.rs"),
+        authored,
+        &mut findings,
+    );
 
     assert!(
         findings.is_empty(),

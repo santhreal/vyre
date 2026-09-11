@@ -11,8 +11,8 @@
 //! This file is the canonical `--test adversarial` entry so `tests/SKILL.md` and
 //! `../../.internals/skills/testing/SKILL.md` align with a named binary.
 
-use vyre_libs_math::math::linalg::Matmul;
 use vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef;
+use vyre_libs_math::math::linalg::Matmul;
 
 /// The named aggregate always executes a hostile boundary even when the
 /// feature-focused sibling binaries are filtered by their own contracts.

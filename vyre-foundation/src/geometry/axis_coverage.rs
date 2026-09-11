@@ -62,7 +62,10 @@ fn ceil_cuberoot(value: u64) -> u64 {
     let mut hi = 1_u64 << 22;
     while lo < hi {
         let mid = lo + ((hi - lo) / 2);
-        match mid.checked_mul(mid).and_then(|square| square.checked_mul(mid)) {
+        match mid
+            .checked_mul(mid)
+            .and_then(|square| square.checked_mul(mid))
+        {
             Some(cube) if cube < value => lo = mid + 1,
             _ => hi = mid,
         }

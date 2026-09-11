@@ -10,7 +10,6 @@
 //! 4. Platform-independent signed payload digest algorithms ([`CanonicalDigest`]).
 //! 5. Cross-language JSON schema generation and export ([`export_schema_json`]).
 
-
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use thiserror::Error;
 

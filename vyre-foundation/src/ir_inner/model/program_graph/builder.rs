@@ -2,9 +2,7 @@
 
 use std::ops::{Deref, DerefMut};
 
-use super::contracts::{
-    GraphValueId, ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
-};
+use super::contracts::{GraphValueId, ProgramGraphError, ShapeDim, ValueContract, ValueLifetime};
 use super::graph::ProgramGraph;
 use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
 

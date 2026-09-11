@@ -6,7 +6,6 @@
 //! assertions that compare derivations across the two suites to keep meaning
 //! what they say.
 
-
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{

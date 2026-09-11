@@ -562,7 +562,11 @@ mod tests {
         assert_eq!(errors[0].message, "no method named `target_payload` found");
 
         let both = parsed(stream, true);
-        assert_eq!(both.len(), 2, "a gate with no deny flag judges warnings too");
+        assert_eq!(
+            both.len(),
+            2,
+            "a gate with no deny flag judges warnings too"
+        );
         assert_eq!(both[0].message, "unused variable");
         assert!(
             both[0].file.is_none() && both[0].line.is_none(),

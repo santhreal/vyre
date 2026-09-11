@@ -250,9 +250,7 @@ fn verdict_within_deadline(program: Program, budget: ReferenceBudget, label: &st
         .spawn(move || {
             let verdict = match ReferenceRequest::new(&program, &[], budget).outputs() {
                 Ok(outputs) => Verdict::Outputs(outputs.len()),
-                Err(error) => {
-                    Verdict::Refused(error.error_class(), error.message().to_string())
-                }
+                Err(error) => Verdict::Refused(error.error_class(), error.message().to_string()),
             };
             drop(sender.send(verdict));
         })
@@ -339,8 +337,11 @@ fn a_million_node_program_ends_in_a_bounded_refusal() {
             "the {label} program walks to {nodes} nodes, under the {MILLION_NODES} this proof \
              requires. Fix: build the program the generator claims to build."
         );
-        let verdict =
-            verdict_within_deadline(program, ReferenceBudget::with_work_ceiling(64_000_000), label);
+        let verdict = verdict_within_deadline(
+            program,
+            ReferenceBudget::with_work_ceiling(64_000_000),
+            label,
+        );
         assert_bounded_outcome(&verdict, label);
     }
 }
@@ -586,12 +587,9 @@ fn assert_admits(program: &Program, budget: ReferenceBudget, shape: &str, limit:
 /// `BudgetExhaustion` under a frame ceiling of `limit`, and that the refusal
 /// states `expected`.
 fn assert_refuses_depth(program: &Program, shape: &str, limit: usize, expected: &str) {
-    let outcome = ReferenceRequest::new(
-        program,
-        &[],
-        ReferenceBudget::new(u64::MAX, 1 << 30, limit),
-    )
-    .outputs();
+    let outcome =
+        ReferenceRequest::new(program, &[], ReferenceBudget::new(u64::MAX, 1 << 30, limit))
+            .outputs();
     let error = match outcome {
         Ok(outputs) => panic!(
             "a {shape}-nested program past a {limit} frame ceiling evaluated to {} output \
@@ -631,4 +629,3 @@ fn assert_distinct(limits: &[usize], shape: &str) {
          limit proves one number works rather than that the budget field is read."
     );
 }
-

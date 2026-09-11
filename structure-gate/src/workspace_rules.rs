@@ -109,11 +109,7 @@ pub fn roster_failures(
     members: &[String],
     excludes: &[String],
 ) -> Vec<String> {
-    let declared: BTreeSet<&str> = members
-        .iter()
-        .chain(excludes)
-        .map(String::as_str)
-        .collect();
+    let declared: BTreeSet<&str> = members.iter().chain(excludes).map(String::as_str).collect();
     let mut failures = Vec::new();
     for directory in manifest_directories {
         if declared.contains(directory.as_str()) {

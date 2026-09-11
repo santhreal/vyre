@@ -47,7 +47,12 @@ fn the_variant_space_is_the_same_from_any_working_directory() {
 #[test]
 fn a_name_the_enum_does_not_declare_is_absent_from_the_space() {
     let space = kernel_op_kind_variants();
-    for absent in ["EmitterDecision", "KernelOpKind", "MatrixMmaSpec", "Serialize"] {
+    for absent in [
+        "EmitterDecision",
+        "KernelOpKind",
+        "MatrixMmaSpec",
+        "Serialize",
+    ] {
         assert!(
             !space.contains(absent),
             "Fix: `{absent}` is not a `KernelOpKind` variant. A scan that admits \

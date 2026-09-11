@@ -22,7 +22,10 @@ pub(super) fn put_bytes(bytes: &mut Vec<u8>, data: &[u8]) -> Result<(), GraphDel
     Ok(())
 }
 
-pub(super) fn put_contract(bytes: &mut Vec<u8>, contract: &ValueContract) -> Result<(), GraphDeltaError> {
+pub(super) fn put_contract(
+    bytes: &mut Vec<u8>,
+    contract: &ValueContract,
+) -> Result<(), GraphDeltaError> {
     // The wire tag for a `DataType` is owned by `serial::wire::tags`. A second
     // mapping here would go stale the next time a data type is added, and the
     // one it replaced listed twelve of the thirty-four variants.
@@ -124,7 +127,10 @@ pub(super) fn read_bytes(bytes: &[u8], cursor: &mut usize) -> Result<Vec<u8>, Gr
     Ok(data)
 }
 
-pub(super) fn read_contract(bytes: &[u8], cursor: &mut usize) -> Result<ValueContract, GraphDeltaError> {
+pub(super) fn read_contract(
+    bytes: &[u8],
+    cursor: &mut usize,
+) -> Result<ValueContract, GraphDeltaError> {
     if *cursor + 3 > bytes.len() {
         return Err(GraphDeltaError::Wire("EOF reading contract header".into()));
     }

@@ -447,12 +447,7 @@ fn scan_published_modules(root: &Path, crate_roots: &[CrateRoot]) -> Vec<String>
         }
     }
     let mut modules: Vec<String> = declared.iter().cloned().collect();
-    modules.extend(reexported_modules(
-        root,
-        crate_roots,
-        &declared,
-        &reexports,
-    ));
+    modules.extend(reexported_modules(root, crate_roots, &declared, &reexports));
     modules.sort();
     modules.dedup();
     modules

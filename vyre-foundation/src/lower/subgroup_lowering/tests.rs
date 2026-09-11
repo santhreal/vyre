@@ -277,9 +277,10 @@ fn lowered_reduction_body_is_closed_over_the_lanes_it_reads() {
         };
         let mut bound: Vec<String> = Vec::new();
         collect_let_names(body, &mut bound);
-        let reads_a_free_variable = any_expr_matching(body, &|expr| {
-            matches!(expr, Expr::Var(v) if !bound.iter().any(|name| name == v.as_str()))
-        });
+        let reads_a_free_variable = any_expr_matching(
+            body,
+            &|expr| matches!(expr, Expr::Var(v) if !bound.iter().any(|name| name == v.as_str())),
+        );
         assert!(
             !reads_a_free_variable,
             "workgroup {workgroup}: the lowered body reads a variable it does not bind: {body:?}"
@@ -322,8 +323,7 @@ fn lowers_every_workgroup_sum_to_subgroup_add() {
 fn lowers_every_workgroup_max_to_subgroup_reduce_max() {
     // workgroup_max_f32 must now lower to the native subgroup Max reduction
     // instead of being kept as the slow shared-memory tree.
-    let Node::Region { body, .. } =
-        workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
+    let Node::Region { body, .. } = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
     else {
         panic!("workgroup_sum_region must build a Region");
     };
@@ -372,8 +372,7 @@ fn lowers_workgroup_max_u32_to_subgroup_reduce_max() {
     // The u32 twin: workgroup_max_u32 must ALSO lower to subgroup_reduce(Max).
     // The lowering recognizes the `workgroup_max_` prefix with a u32 value
     // type, so the new primitive gets the fast subgroup-reduction path for free.
-    let Node::Region { body, .. } =
-        workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
+    let Node::Region { body, .. } = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
     else {
         panic!("workgroup_sum_region must build a Region");
     };
@@ -415,8 +414,7 @@ fn lowers_workgroup_min_f32_to_subgroup_reduce_min() {
     // workgroup_min_f32 must lower to subgroup_reduce(Min), the subgroup-reduce
     // fast path. A missing Min prefix arm would leave the slow shared-memory
     // tree in place (correct, but pessimal. Law 7).
-    let Node::Region { body, .. } =
-        workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
+    let Node::Region { body, .. } = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
     else {
         panic!("workgroup_sum_region must build a Region");
     };
@@ -455,8 +453,7 @@ fn lowers_workgroup_min_f32_to_subgroup_reduce_min() {
 fn lowers_workgroup_min_u32_to_subgroup_reduce_min() {
     // The u32 twin of the Min lowering, exercises the unsigned value-type
     // branch of workgroup_min_value_type.
-    let Node::Region { body, .. } =
-        workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
+    let Node::Region { body, .. } = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
     else {
         panic!("workgroup_sum_region must build a Region");
     };
@@ -496,8 +493,7 @@ fn lowers_two_level_workgroup_max_uses_neg_inf_neutral() {
     // The two-level max reduction must fill out-of-range lanes with the
     // max identity (-inf), not 0, a 0 fill would clobber all-negative
     // inputs. This is the op-aware neutral.
-    let Node::Region { body, .. } =
-        workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
+    let Node::Region { body, .. } = workgroup_sum_region("scratch", ReductionScope::EveryWorkgroup)
     else {
         panic!("workgroup_sum_region must build a Region");
     };

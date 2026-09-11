@@ -42,8 +42,9 @@ fn fusion_pressure_via_matches_rank_product_over_generated_chains() {
         let links = 1 + (case as usize % 4);
         let ranks: Vec<u32> = (0..links).map(|_| xorshift(&mut state) % 7).collect(); // 0..6
 
-        let pressure = fusion_pressure_via(&dispatcher, &semantic_requests::wrapper_policy(), &ranks)
-            .expect("fusion_pressure_via must dispatch the tt_contract_step chain");
+        let pressure =
+            fusion_pressure_via(&dispatcher, &semantic_requests::wrapper_policy(), &ranks)
+                .expect("fusion_pressure_via must dispatch the tt_contract_step chain");
         let want = expected_pressure(&ranks);
         assert_eq!(
             pressure, want,
@@ -68,11 +69,21 @@ fn fusion_pressure_via_matches_known_chains() {
         12.0
     );
     assert_eq!(
-        fusion_pressure_via(&dispatcher, &semantic_requests::wrapper_policy(), &[2, 3, 5]).unwrap(),
+        fusion_pressure_via(
+            &dispatcher,
+            &semantic_requests::wrapper_policy(),
+            &[2, 3, 5]
+        )
+        .unwrap(),
         30.0
     );
     assert_eq!(
-        fusion_pressure_via(&dispatcher, &semantic_requests::wrapper_policy(), &[4, 0, 3]).unwrap(),
+        fusion_pressure_via(
+            &dispatcher,
+            &semantic_requests::wrapper_policy(),
+            &[4, 0, 3]
+        )
+        .unwrap(),
         12.0
     );
     // Empty chain has no pressure.

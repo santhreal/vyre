@@ -410,7 +410,6 @@ impl SchemaDefinition {
     }
 }
 
-
 static STALE_CERT_FIXTURES: &[&str] = &[
     "vyre-conformance-certificate-v0",
     "vyre-conformance-certificate-v1",

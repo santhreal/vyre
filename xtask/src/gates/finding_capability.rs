@@ -799,12 +799,10 @@ fn without_test_modules(text: &str) -> String {
             if !compiled_out_of_release {
                 continue;
             }
-            let first = item_mod
-                .attrs
-                .first()
-                .map_or_else(|| item_mod.mod_token.span.start().line, |attr| {
-                    attr.pound_token.span.start().line
-                });
+            let first = item_mod.attrs.first().map_or_else(
+                || item_mod.mod_token.span.start().line,
+                |attr| attr.pound_token.span.start().line,
+            );
             let last = syn::spanned::Spanned::span(item).end().line;
             cuts.push((first, last));
         }
@@ -813,7 +811,9 @@ fn without_test_modules(text: &str) -> String {
             .enumerate()
             .filter(|(index, _)| {
                 let line = index + 1;
-                !cuts.iter().any(|(first, last)| line >= *first && line <= *last)
+                !cuts
+                    .iter()
+                    .any(|(first, last)| line >= *first && line <= *last)
             })
             .map(|(_, line)| line)
             .collect::<Vec<_>>()

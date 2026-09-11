@@ -235,7 +235,9 @@ fn strip_comments_and_literals(source: &str) -> String {
     while index < bytes.len() {
         let rest = &source[index..];
         if rest.starts_with("//") {
-            let end = rest.find('\n').map_or(source.len(), |offset| index + offset);
+            let end = rest
+                .find('\n')
+                .map_or(source.len(), |offset| index + offset);
             blank_out(&source[index..end], &mut out);
             index = end;
             continue;
@@ -287,11 +289,9 @@ fn raw_string_end(source: &str, index: usize) -> Option<usize> {
     let hashes = after_r.len() - after_r.trim_start_matches('#').len();
     let body = after_r[hashes..].strip_prefix('"')?;
     let terminator = format!("\"{}", "#".repeat(hashes));
-    let end = body
-        .find(&terminator)
-        .map_or(source.len(), |offset| {
-            index + 1 + hashes + 1 + offset + terminator.len()
-        });
+    let end = body.find(&terminator).map_or(source.len(), |offset| {
+        index + 1 + hashes + 1 + offset + terminator.len()
+    });
     Some(end)
 }
 
@@ -346,9 +346,10 @@ fn catch_all_arms(source: &str) -> Vec<(usize, String)> {
                 continue;
             }
             let tail = line[start + 1..].trim_start();
-            if bytes.get(start + 1).is_some_and(|byte| {
-                byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'\''
-            }) {
+            if bytes
+                .get(start + 1)
+                .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'\'')
+            {
                 continue;
             }
             let is_arm = tail.starts_with("=>")

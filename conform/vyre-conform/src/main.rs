@@ -127,7 +127,9 @@ fn main() {
 }
 
 fn print_usage() {
-    println!("usage: vyre-conform dispatch [--backend <backend-id|auto> | --oracle] --ops <all|<op_id>>");
+    println!(
+        "usage: vyre-conform dispatch [--backend <backend-id|auto> | --oracle] --ops <all|<op_id>>"
+    );
     println!("       vyre-conform plan [--out <plan.json>] [--backend <all|backend-id>] [--ops <all|op_id>] [--shard <index>/<count>]");
     println!("       vyre-conform merge --out <merged.json> <prove-shard.json>...");
     println!(

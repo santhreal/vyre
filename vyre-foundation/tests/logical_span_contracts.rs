@@ -618,8 +618,13 @@ fn a_full_span_effect_keeps_the_resource_span_despite_its_guard() {
 /// Buffer the widening tests read.
 fn packed_haystack() -> Vec<BufferDecl> {
     vec![
-        BufferDecl::storage("h", 0, vyre_foundation::ir::BufferAccess::ReadOnly, DataType::U32)
-            .with_count(1024),
+        BufferDecl::storage(
+            "h",
+            0,
+            vyre_foundation::ir::BufferAccess::ReadOnly,
+            DataType::U32,
+        )
+        .with_count(1024),
         BufferDecl::output("out", 1, DataType::U32).with_count(RESOURCE_SPAN),
     ]
 }
@@ -642,11 +647,27 @@ fn reading_store(read: Expr) -> Program {
 #[test]
 fn every_packed_index_form_states_its_exact_point_factor() {
     let cases: Vec<(&str, Expr, u32)> = vec![
-        ("h[index / 4]", Expr::load("h", Expr::div(index(), Expr::u32(4))), 4),
-        ("h[index >> 2]", Expr::load("h", Expr::shr(index(), Expr::u32(2))), 4),
-        ("h[index / 1]", Expr::load("h", Expr::div(index(), Expr::u32(1))), 1),
+        (
+            "h[index / 4]",
+            Expr::load("h", Expr::div(index(), Expr::u32(4))),
+            4,
+        ),
+        (
+            "h[index >> 2]",
+            Expr::load("h", Expr::shr(index(), Expr::u32(2))),
+            4,
+        ),
+        (
+            "h[index / 1]",
+            Expr::load("h", Expr::div(index(), Expr::u32(1))),
+            1,
+        ),
         ("h[index]", Expr::load("h", index()), 1),
-        ("h[index / 0]", Expr::load("h", Expr::div(index(), Expr::u32(0))), 1),
+        (
+            "h[index / 0]",
+            Expr::load("h", Expr::div(index(), Expr::u32(0))),
+            1,
+        ),
         (
             "h[index >> 32]",
             Expr::load("h", Expr::shr(index(), Expr::u32(32))),
@@ -711,7 +732,10 @@ fn a_divisor_written_against_a_bound_index_states_the_factor() {
             ),
         ],
     );
-    assert_eq!(vyre_foundation::logical_points_per_element(&program, "h"), 4);
+    assert_eq!(
+        vyre_foundation::logical_points_per_element(&program, "h"),
+        4
+    );
 }
 
 /// WHY: a local that no longer holds the index states no relation to the axis,
@@ -737,7 +761,10 @@ fn a_divisor_against_a_rebound_local_states_no_factor() {
             ),
         ],
     );
-    assert_eq!(vyre_foundation::logical_points_per_element(&program, "h"), 1);
+    assert_eq!(
+        vyre_foundation::logical_points_per_element(&program, "h"),
+        1
+    );
 
     let reassigned = Program::wrapped(
         packed_haystack(),

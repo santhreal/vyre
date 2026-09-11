@@ -139,8 +139,14 @@ fn inverts_known_diagonal_and_dense_two_by_two_blocks() {
 
     // Dense symmetric block [[4,3],[3,2]], det = -1 → inverse [[-2,3],[3,-4]].
     let dense = vec![4.0, 3.0, 3.0, 2.0];
-    let inv = kfac_autotune_step_via(&dispatcher, &semantic_requests::wrapper_policy(), &dense, 1, 2)
-        .unwrap();
+    let inv = kfac_autotune_step_via(
+        &dispatcher,
+        &semantic_requests::wrapper_policy(),
+        &dense,
+        1,
+        2,
+    )
+    .unwrap();
     let residual = identity_residual(&dense, &inv, 2);
     assert!(
         residual < 1.0e-5,

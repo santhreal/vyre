@@ -191,9 +191,14 @@ fn intervention_delete_incoming_via_matches_cpu_oracle_empty_graph() {
 #[test]
 fn rule2_reverse_incoming_via_matches_cpu_oracle_empty_graph() {
     let dispatcher = ReferenceSemanticExecutor;
-    let via =
-        rule2_reverse_incoming_via(&dispatcher, &semantic_requests::wrapper_policy(), &[], &[], 0)
-            .expect("empty graph rule 2 must dispatch cleanly");
+    let via = rule2_reverse_incoming_via(
+        &dispatcher,
+        &semantic_requests::wrapper_policy(),
+        &[],
+        &[],
+        0,
+    )
+    .expect("empty graph rule 2 must dispatch cleanly");
     let cpu = do_rule2_reverse_incoming_cpu(&[], &[], 0);
     assert_eq!(via, cpu);
     assert!(via.is_empty());
@@ -202,9 +207,14 @@ fn rule2_reverse_incoming_via_matches_cpu_oracle_empty_graph() {
 #[test]
 fn rule3_subgraph_via_matches_cpu_oracle_empty_graph() {
     let dispatcher = ReferenceSemanticExecutor;
-    let (via_reduced, via_kept) =
-        rule3_subgraph_via(&dispatcher, &semantic_requests::wrapper_policy(), &[], &[], 0)
-            .expect("empty graph rule 3 must dispatch cleanly");
+    let (via_reduced, via_kept) = rule3_subgraph_via(
+        &dispatcher,
+        &semantic_requests::wrapper_policy(),
+        &[],
+        &[],
+        0,
+    )
+    .expect("empty graph rule 3 must dispatch cleanly");
     let (cpu_reduced, cpu_kept) = do_rule3_subgraph_cpu(&[], &[], 0);
     assert_eq!(via_reduced, cpu_reduced);
     assert_eq!(via_kept, cpu_kept);

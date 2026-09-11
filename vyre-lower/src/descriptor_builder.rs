@@ -232,10 +232,7 @@ pub fn probe_kernel(kind: KernelOpKind) -> KernelDescriptor {
         [64, 1, 1],
     );
     desc.body.literals = vec![LiteralValue::U32(42), LiteralValue::U32(0)];
-    desc.body.ops = vec![
-        op(KernelOpKind::Literal, [0], 0),
-        op(kind, [0, 0, 0, 0], 1),
-    ];
+    desc.body.ops = vec![op(KernelOpKind::Literal, [0], 0), op(kind, [0, 0, 0, 0], 1)];
     desc
 }
 

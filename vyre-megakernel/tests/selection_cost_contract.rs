@@ -32,7 +32,6 @@ use vyre_megakernel::{
 use vyre_test_support::graph_fixtures::producer_consumer_pair;
 use vyre_test_support::pass_programs::copy_program;
 
-
 /// The floor the cost model prices a launch at when the device measured none.
 ///
 /// Recorded as `dispatch_ns` p50 4224 for `foundation.elementwise.add.1m` in

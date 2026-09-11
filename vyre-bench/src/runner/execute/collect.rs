@@ -6,8 +6,7 @@ use std::collections::BTreeMap;
 use crate::api::case::BenchRun;
 
 use super::metric_keys::{
-    custom_metric_key, custom_metric_value, derived_metric_key, metric_key,
-    rate_per_second_x1000,
+    custom_metric_key, custom_metric_value, derived_metric_key, metric_key, rate_per_second_x1000,
 };
 
 pub(super) fn collect_samples(
@@ -120,8 +119,10 @@ pub(super) fn collect_derived_metrics(
     // metric is omitted entirely when neither is set rather than substituting
     // `host_bytes`: that substitution reported a device bandwidth computed from
     // host I/O.
-    let device_bytes = metrics.device_bytes_moved.filter(|bytes| *bytes > 0).or_else(
-        || match (metrics.bytes_read, metrics.bytes_written) {
+    let device_bytes = metrics
+        .device_bytes_moved
+        .filter(|bytes| *bytes > 0)
+        .or_else(|| match (metrics.bytes_read, metrics.bytes_written) {
             (Some(r), Some(w)) => {
                 let total = r.saturating_add(w);
                 if total > 0 {
@@ -133,8 +134,7 @@ pub(super) fn collect_derived_metrics(
             (Some(r), None) if r > 0 => Some(r),
             (None, Some(w)) if w > 0 => Some(w),
             _ => None,
-        },
-    );
+        });
 
     if let Some(wall_ns) = metrics.wall_ns.filter(|ns| *ns > 0) {
         if host_bytes > 0 {
@@ -393,10 +393,7 @@ mod tests {
         let mut samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
         // Three fast samples and one outlier, with telemetry captured on the
         // outlier: 798.924, 798.924, 798.924, and 52.1 GB/s.
-        samples.insert(
-            "device_gb_s_x1000",
-            vec![798_924, 798_924, 798_924, 52_100],
-        );
+        samples.insert("device_gb_s_x1000", vec![798_924, 798_924, 798_924, 52_100]);
         samples.insert("memory_peak_gb_s_x1000", vec![1_792_000]);
         derive_roofline_fractions(&mut samples);
 

@@ -8,9 +8,7 @@
 use vyre_driver::external_import_contracts::{
     assert_external_import_contract, ExternalImportContractCase,
 };
-use vyre_driver::{
-    ExternalMemoryKind, ImageFormat, ResourcePermittedUsages, TimelineSyncProtocol,
-};
+use vyre_driver::{ExternalMemoryKind, ImageFormat, ResourcePermittedUsages, TimelineSyncProtocol};
 use vyre_driver_wgpu::{WgpuExternalImportPolicy, WgpuExternalMemoryHandle};
 
 #[test]

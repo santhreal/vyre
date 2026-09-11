@@ -323,4 +323,3 @@ fn product_entry_points_require_mandatory_compile_request_fields() {
         .expect_err("unlinked target must fail");
     assert!(matches!(aot_err, CompileError::TargetNotEnabled(id) if id == unlinked_target));
 }
-

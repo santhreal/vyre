@@ -123,10 +123,7 @@ pub fn admitted_logical_span(program: &Program, resource_span: u32) -> u32 {
 /// divides no domain.
 #[must_use]
 pub fn logical_points_per_element(program: &Program, buffer: &str) -> u32 {
-    let mut scale = Scale {
-        buffer,
-        points: 1,
-    };
+    let mut scale = Scale { buffer, points: 1 };
     scale.nodes(&program.entry, &mut Facts::default());
     scale.points
 }
@@ -231,7 +228,9 @@ fn index_divisor(index: &Expr, facts: &Facts) -> u32 {
         return 1;
     }
     match op {
-        BinOp::Div => literal_u32(right).filter(|divisor| *divisor > 0).unwrap_or(1),
+        BinOp::Div => literal_u32(right)
+            .filter(|divisor| *divisor > 0)
+            .unwrap_or(1),
         BinOp::Shr => literal_u32(right)
             .filter(|shift| *shift < u32::BITS)
             .map_or(1, |shift| 1u32 << shift),

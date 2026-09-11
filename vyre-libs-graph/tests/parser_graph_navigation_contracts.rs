@@ -42,7 +42,10 @@ fn preorder_basic_four_node_spine() {
     let (_, node_region) = pack_spine_fixture(4);
     let outz = vec![0u8; 32];
     let program = vyre_libs_graph::graph::ast_walk_preorder("nodes", "out", 4, 8);
-    let outputs = run_walk(&program, &[Value::from(node_region.clone()), Value::from(outz)]);
+    let outputs = run_walk(
+        &program,
+        &[Value::from(node_region.clone()), Value::from(outz)],
+    );
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     let expected = vyre_foundation::vast::walk_preorder_indices(&node_region, 4, 128).unwrap();
@@ -58,7 +61,10 @@ fn preorder_single_node() {
     let (_, node_region) = pack_spine_fixture(1);
     let outz = vec![0u8; 32]; // cap=8 u32s = 32 bytes
     let program = vyre_libs_graph::graph::ast_walk_preorder("nodes", "out", 1, 8);
-    let outputs = run_walk(&program, &[Value::from(node_region.clone()), Value::from(outz)]);
+    let outputs = run_walk(
+        &program,
+        &[Value::from(node_region.clone()), Value::from(outz)],
+    );
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     assert_eq!(got[0], 0, "single-node preorder must emit root = 0");
@@ -107,7 +113,10 @@ fn preorder_eight_node_spine_matches_host() {
     let (_, node_region) = pack_spine_fixture(8);
     let outz = vec![0u8; 64];
     let program = vyre_libs_graph::graph::ast_walk_preorder("nodes", "out", 8, 16);
-    let outputs = run_walk(&program, &[Value::from(node_region.clone()), Value::from(outz)]);
+    let outputs = run_walk(
+        &program,
+        &[Value::from(node_region.clone()), Value::from(outz)],
+    );
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     let expected = vyre_foundation::vast::walk_preorder_indices(&node_region, 8, 128).unwrap();
@@ -119,7 +128,10 @@ fn preorder_branching_tree_matches_host() {
     let node_region = pack_branching_fixture();
     let outz = vec![0u8; 32];
     let program = vyre_libs_graph::graph::ast_walk_preorder("nodes", "out", 6, 8);
-    let outputs = run_walk(&program, &[Value::from(node_region.clone()), Value::from(outz)]);
+    let outputs = run_walk(
+        &program,
+        &[Value::from(node_region.clone()), Value::from(outz)],
+    );
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     let expected = vyre_foundation::vast::walk_preorder_indices(&node_region, 6, 128).unwrap();
@@ -212,7 +224,10 @@ fn postorder_branching_tree_matches_host() {
     let node_region = pack_branching_fixture();
     let outz = vec![0u8; 32];
     let program = vyre_libs_graph::graph::ast_walk_postorder_nodes("nodes", "out", 6, 8);
-    let outputs = run_walk(&program, &[Value::from(node_region.clone()), Value::from(outz)]);
+    let outputs = run_walk(
+        &program,
+        &[Value::from(node_region.clone()), Value::from(outz)],
+    );
 
     let got = decode_u32_words(&outputs[0].to_bytes());
     let expected = vyre_foundation::vast::walk_postorder_indices(&node_region, 6, 128).unwrap();

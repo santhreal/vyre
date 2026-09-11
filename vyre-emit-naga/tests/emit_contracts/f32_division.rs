@@ -168,8 +168,8 @@ fn assert_refined_quotient(module: &naga::Module, what: &str) {
 
 #[test]
 fn f32_divide_is_corrected_to_the_nearest_quotient() {
-    let module = emit(&binop_over_loads("f32_div", DataType::F32, BinOp::Div))
-        .expect("f32 Div must emit");
+    let module =
+        emit(&binop_over_loads("f32_div", DataType::F32, BinOp::Div)).expect("f32 Div must emit");
     assert_valid_wgsl(&module, "f32 Div");
     assert_refined_quotient(&module, "BinOp::Div on f32");
 }

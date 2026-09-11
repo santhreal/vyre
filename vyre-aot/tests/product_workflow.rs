@@ -110,7 +110,12 @@ fn package_install_and_load(
     request: &ValidatedCompileRequest,
     weights: &[u8],
     artifact_name: &str,
-) -> (vyre_aot::Manifest, ArtifactEnvelope, Vec<u8>, ArtifactEnvelope) {
+) -> (
+    vyre_aot::Manifest,
+    ArtifactEnvelope,
+    Vec<u8>,
+    ArtifactEnvelope,
+) {
     let target: TargetId = fixture_target::fixture_target();
     let compiled = compile(request, target.clone()).expect("the fixture target must compile");
     let archive = root.join(format!("{artifact_name}-archive"));

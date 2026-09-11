@@ -95,8 +95,9 @@ impl RetainedPageCache {
         sequence: &[u32],
         existing_pages: &[u32],
     ) -> Result<Vec<u32>, RetainedPageCacheError> {
-        self.inner
-            .try_with_state(|manager| manager.insert_or_extend_prefix(key, sequence, existing_pages))
+        self.inner.try_with_state(|manager| {
+            manager.insert_or_extend_prefix(key, sequence, existing_pages)
+        })
     }
 
     /// Pin pages.
@@ -172,10 +173,8 @@ impl RetainedPageCache {
     /// Every page the previous pool recorded is discarded, which is correct
     /// for both a device reset and a pool a panic left half written.
     pub fn complete_generation_rebuild(&self, new_generation: u64) {
-        self.inner.finish_rebuild(RetainedPageCacheManager::new(
-            self.limits,
-            new_generation,
-        ));
+        self.inner
+            .finish_rebuild(RetainedPageCacheManager::new(self.limits, new_generation));
     }
 
     /// Invalidate device generation.

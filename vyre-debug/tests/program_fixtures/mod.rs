@@ -6,7 +6,6 @@
 //! are only comparable while those copies agree, so the declaration lives here
 //! once.
 
-
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
 /// The one output buffer every debug fixture writes to: sixteen read-write

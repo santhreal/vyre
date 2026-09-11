@@ -99,12 +99,12 @@ mod ir_level;
 /// Known-answer test vector type  -  deterministic input/output pairs.
 /// Specification element.
 mod kat_vector;
-/// Closed algebraic-law vocabulary and the proof obligation each member carries.
-/// Specification element.
-mod law_family;
 /// Canonical catalog of algebraic laws exposed via `law_catalog()`.
 /// Specification element.
 mod law_catalog;
+/// Closed algebraic-law vocabulary and the proof obligation each member carries.
+/// Specification element.
+mod law_family;
 /// Layer enum (IR / backend / runtime)  -  coarse module placement.
 /// Specification element.
 mod layer;
@@ -144,10 +144,10 @@ mod region_law;
 mod resource_capability;
 /// Declarative schema registry for all persisted and wire formats.
 pub mod schema_registry;
-/// The one declaration of a `major.minor.patch` version record.
-mod semver_triple;
 /// Canonical semiring selector for dataflow and algebraic kernels.
 mod semiring;
+/// The one declaration of a `major.minor.patch` version record.
+mod semver_triple;
 /// Soundness markers and precision contracts for cross-engine analysis data.
 pub mod soundness;
 /// Subgroup reduction operator enum  -  add/mul/min/max/and/or/xor.

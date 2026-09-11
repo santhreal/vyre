@@ -272,10 +272,8 @@ impl Value {
             | vyre_foundation::ir::DataType::SparseBsr { .. }
             | vyre_foundation::ir::DataType::DeviceMesh { .. }
             | vyre_foundation::ir::DataType::Quantized { .. }
-            | vyre_foundation::ir::DataType::Opaque(_)) => {
-                fixed_scalar_storage_width(&other)
-                    .map(|width| Self::Bytes(Arc::from(vec![0; width])))
-            }
+            | vyre_foundation::ir::DataType::Opaque(_)) => fixed_scalar_storage_width(&other)
+                .map(|width| Self::Bytes(Arc::from(vec![0; width]))),
         }
     }
 

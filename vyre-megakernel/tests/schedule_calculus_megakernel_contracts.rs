@@ -11,10 +11,10 @@
 use std::collections::BTreeMap;
 use vyre_megakernel::{compile, CompileRequest, Digest, ExternalFacts, SearchBudget};
 
-use vyre_test_support::graph_fixtures::asymmetric_join_graph;
 use crate::search_fixtures::{
     budget, facts, joined_graph, latency_objective, rich_device, single_stage_graph,
 };
+use vyre_test_support::graph_fixtures::asymmetric_join_graph;
 
 fn items_facts() -> ExternalFacts {
     ExternalFacts::new(Digest([0x5a; 32]), BTreeMap::from([("items".into(), 64)]))

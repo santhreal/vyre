@@ -144,9 +144,7 @@ fn the_validated_input_count_equals_the_declarations_that_consume_input() {
 
 /// The refusal wording every caller of a wrong-length input list reads.
 fn both_counts(expected: usize, received: usize) -> String {
-    format!(
-        "expected {expected} input buffer(s) from Program declarations but received {received}"
-    )
+    format!("expected {expected} input buffer(s) from Program declarations but received {received}")
 }
 
 /// WHY: `BindingPlan` takes an input list through seven public entry points,
@@ -216,7 +214,9 @@ fn every_input_taking_entry_point_refuses_a_wrong_count_naming_both_counts() {
         ];
         for (entry_point, refusal) in refusals {
             let refusal = refusal.unwrap_or_else(|| {
-                panic!("Fix: {entry_point} accepted {received} inputs where {expected} are declared.")
+                panic!(
+                    "Fix: {entry_point} accepted {received} inputs where {expected} are declared."
+                )
             });
             let text = refusal.to_string();
             assert!(

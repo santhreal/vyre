@@ -614,6 +614,7 @@ fn brotli_decompress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
         max_bytes: MAX_WEIGHTS_BYTES,
     };
     let mut reader = brotli::Decompressor::new(input, 4096);
-    io::copy(&mut reader, &mut output).map_err(|error| BundleError::Brotli(format!("{error:?}")))?;
+    io::copy(&mut reader, &mut output)
+        .map_err(|error| BundleError::Brotli(format!("{error:?}")))?;
     Ok(output.bytes)
 }

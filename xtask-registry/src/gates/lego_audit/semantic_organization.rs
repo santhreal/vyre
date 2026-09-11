@@ -252,13 +252,7 @@ fn check_family_file_roles(
                 ));
             }
 
-            check_block_skeletons(
-                path,
-                &workspace_rel,
-                &rel,
-                &mut skeleton_homes,
-                findings,
-            );
+            check_block_skeletons(path, &workspace_rel, &rel, &mut skeleton_homes, findings);
         }
     }
 
@@ -952,10 +946,7 @@ mod tests {
         let domains = recognized_domains(&live_roots());
         assert_eq!(
             classify_file_roles("lib.rs", true, &domains),
-            vec![
-                FileRole::OperationImplementation,
-                FileRole::CratePlumbing
-            ]
+            vec![FileRole::OperationImplementation, FileRole::CratePlumbing]
         );
         assert_eq!(
             classify_file_roles(
@@ -963,10 +954,7 @@ mod tests {
                 true,
                 &domains
             ),
-            vec![
-                FileRole::OperationImplementation,
-                FileRole::CratePlumbing
-            ]
+            vec![FileRole::OperationImplementation, FileRole::CratePlumbing]
         );
         assert_eq!(
             classify_file_roles("builder/registrations.rs", true, &domains),

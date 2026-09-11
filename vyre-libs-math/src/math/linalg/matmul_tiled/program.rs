@@ -16,8 +16,10 @@ use vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError;
 use super::body::cooperative_matmul_body;
 use super::mma_body::cooperative_matmul_body_mma;
 use super::mma_fragment::{gate_mma_path, MmaCapabilityRecord};
-use vyre_libs_builder::builder::matrix_tile::{output_tile_shape, padded_tile_lane_count, MatrixShape, TileShape};
 use super::tensor_core_policy::{select_matmul_kernel, MatmulKernelPath};
+use vyre_libs_builder::builder::matrix_tile::{
+    output_tile_shape, padded_tile_lane_count, MatrixShape, TileShape,
+};
 
 pub(crate) struct MatmulTiledProgramSpec<'a> {
     pub(crate) op_id: &'static str,

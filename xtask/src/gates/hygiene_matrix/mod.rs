@@ -308,13 +308,19 @@ fn declare_sibling_artifacts(
             matrix.release_blocker_count
         )]
     };
-    inspection.generates_host_evidence(&format!("{ARTIFACT_DIR}/implementation-intake.json"), &HygieneIntakeArtifact {
-        schema_version: 1,
-        release_blocker_count: matrix.release_blocker_count,
-        intake_summary: matrix.intake_summary.clone(),
-        blockers: intake_blockers,
-    });
-    inspection.generates_host_evidence(&format!("{ARTIFACT_DIR}/threshold-policy.json"), &matrix.threshold_policy);
+    inspection.generates_host_evidence(
+        &format!("{ARTIFACT_DIR}/implementation-intake.json"),
+        &HygieneIntakeArtifact {
+            schema_version: 1,
+            release_blocker_count: matrix.release_blocker_count,
+            intake_summary: matrix.intake_summary.clone(),
+            blockers: intake_blockers,
+        },
+    );
+    inspection.generates_host_evidence(
+        &format!("{ARTIFACT_DIR}/threshold-policy.json"),
+        &matrix.threshold_policy,
+    );
     for &(artifact, scan, patterns) in HYGIENE_SCANS {
         let findings = matrix
             .findings
@@ -339,12 +345,15 @@ fn declare_sibling_artifacts(
                 release_blocking_findings.len()
             )]
         };
-        inspection.generates_host_evidence(&format!("{ARTIFACT_DIR}/{artifact}"), &HygieneScan {
-            schema_version: 1,
-            scan: scan.to_string(),
-            findings,
-            release_blocking_findings,
-            blockers,
-        });
+        inspection.generates_host_evidence(
+            &format!("{ARTIFACT_DIR}/{artifact}"),
+            &HygieneScan {
+                schema_version: 1,
+                scan: scan.to_string(),
+                findings,
+                release_blocking_findings,
+                blockers,
+            },
+        );
     }
 }

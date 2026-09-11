@@ -8,7 +8,9 @@ use harness::emit_validated_wgsl as emit_wgsl;
 
 use vyre_emit_naga::program::emit_module;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_test_support::strict_float_programs::{constant_f32_fma_program, integer_operand_fma_program};
+use vyre_test_support::strict_float_programs::{
+    constant_f32_fma_program, integer_operand_fma_program,
+};
 
 const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 

@@ -25,8 +25,8 @@ use crate::{
     certificate::PruneReason,
     facts::PlanningFacts,
     legality::{
-        analyze_fusion_pair, analyze_topology_legality, FusionDecision,
-        TopologyDecision, TopologyRejectionReason,
+        analyze_fusion_pair, analyze_topology_legality, FusionDecision, TopologyDecision,
+        TopologyRejectionReason,
     },
     DependencyEdge, DeviceFacts, FusionGroupId,
 };

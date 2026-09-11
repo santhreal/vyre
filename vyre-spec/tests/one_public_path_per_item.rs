@@ -197,7 +197,6 @@ fn a_re_export_resolves_to_the_longest_module_prefix_it_names() {
     assert_eq!(resolve(&root, &segments("inner"), &known), Some(inner));
 }
 
-
 /// Every module of the crate, root first, in declaration order.
 ///
 /// A module whose declaration carries `#[path]` or `#[cfg(test)]` resolves to no

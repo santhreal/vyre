@@ -206,10 +206,7 @@ mod tests {
                 vec![vyre_foundation::ir::Node::store(
                     "partials",
                     vyre_foundation::ir::Expr::gid_x(),
-                    vyre_foundation::ir::Expr::load(
-                        "values",
-                        vyre_foundation::ir::Expr::gid_x(),
-                    ),
+                    vyre_foundation::ir::Expr::load("values", vyre_foundation::ir::Expr::gid_x()),
                 )],
             );
 

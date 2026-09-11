@@ -41,17 +41,35 @@ fn word_parallel_and_or_xor_not_via_match_cpu_ref() {
         let rhs: Vec<u32> = (0..words).map(|_| xorshift(&mut state)).collect();
 
         assert_eq!(
-            mask_and_via(&dispatcher, &semantic_requests::wrapper_policy(), &lhs, &rhs).unwrap(),
+            mask_and_via(
+                &dispatcher,
+                &semantic_requests::wrapper_policy(),
+                &lhs,
+                &rhs
+            )
+            .unwrap(),
             reference_mask_and(&lhs, &rhs),
             "case {case}: AND; lhs={lhs:?} rhs={rhs:?}"
         );
         assert_eq!(
-            mask_or_via(&dispatcher, &semantic_requests::wrapper_policy(), &lhs, &rhs).unwrap(),
+            mask_or_via(
+                &dispatcher,
+                &semantic_requests::wrapper_policy(),
+                &lhs,
+                &rhs
+            )
+            .unwrap(),
             reference_mask_or(&lhs, &rhs),
             "case {case}: OR"
         );
         assert_eq!(
-            mask_xor_via(&dispatcher, &semantic_requests::wrapper_policy(), &lhs, &rhs).unwrap(),
+            mask_xor_via(
+                &dispatcher,
+                &semantic_requests::wrapper_policy(),
+                &lhs,
+                &rhs
+            )
+            .unwrap(),
             reference_mask_xor(&lhs, &rhs),
             "case {case}: XOR"
         );
@@ -63,7 +81,13 @@ fn word_parallel_and_or_xor_not_via_match_cpu_ref() {
         // Cross-check AND/OR/XOR against a fully independent inline computation too.
         let inline_and: Vec<u32> = lhs.iter().zip(&rhs).map(|(a, b)| a & b).collect();
         assert_eq!(
-            mask_and_via(&dispatcher, &semantic_requests::wrapper_policy(), &lhs, &rhs).unwrap(),
+            mask_and_via(
+                &dispatcher,
+                &semantic_requests::wrapper_policy(),
+                &lhs,
+                &rhs
+            )
+            .unwrap(),
             inline_and,
             "case {case}: AND vs inline"
         );
@@ -88,12 +112,24 @@ fn binary_predicates_equal_subset_via_match_cpu_ref() {
         };
 
         assert_eq!(
-            mask_equal_via(&dispatcher, &semantic_requests::wrapper_policy(), &lhs, &rhs).unwrap(),
+            mask_equal_via(
+                &dispatcher,
+                &semantic_requests::wrapper_policy(),
+                &lhs,
+                &rhs
+            )
+            .unwrap(),
             reference_mask_equal(&lhs, &rhs),
             "case {case}: EQUAL; lhs={lhs:?} rhs={rhs:?}"
         );
         assert_eq!(
-            mask_subset_of_via(&dispatcher, &semantic_requests::wrapper_policy(), &lhs, &rhs).unwrap(),
+            mask_subset_of_via(
+                &dispatcher,
+                &semantic_requests::wrapper_policy(),
+                &lhs,
+                &rhs
+            )
+            .unwrap(),
             reference_mask_subset_of(&lhs, &rhs),
             "case {case}: SUBSET_OF"
         );

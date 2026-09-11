@@ -280,7 +280,10 @@ impl ShadowMemory {
         let barrier_phase = self.barrier_phase;
         let grid_phase = self.grid_phase;
         let workgroup = self.workgroup;
-        let history = self.accesses.entry((buffer.to_string(), index)).or_default();
+        let history = self
+            .accesses
+            .entry((buffer.to_string(), index))
+            .or_default();
 
         let mut finding = None;
         for prior in history.iter() {

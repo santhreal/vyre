@@ -122,7 +122,6 @@ pub const TOK_TAIL: u32 = 9;
     );
 }
 
-
 /// Every `TOK_`-prefixed declaration in the checkout, keyed by root-relative path.
 fn declarations(root: &Path) -> BTreeMap<String, Vec<String>> {
     let mut found = BTreeMap::new();

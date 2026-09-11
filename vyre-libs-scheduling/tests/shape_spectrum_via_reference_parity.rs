@@ -35,9 +35,13 @@ fn shape_spectrum_via_matches_u32_min_clip_bit_exact() {
             .collect();
         let mp_edge = 1 + xorshift(&mut state) % (8 * FIXED_ONE);
 
-        let got =
-            shape_spectrum_fixed_via(&d, &semantic_requests::wrapper_policy(), &eigenvalues, mp_edge)
-                .expect("shape_spectrum_fixed_via must execute the MP edge clip");
+        let got = shape_spectrum_fixed_via(
+            &d,
+            &semantic_requests::wrapper_policy(),
+            &eigenvalues,
+            mp_edge,
+        )
+        .expect("shape_spectrum_fixed_via must execute the MP edge clip");
 
         // Direct u32 oracle = the exact kernel semantics.
         let want: Vec<u32> = eigenvalues.iter().map(|&e| e.min(mp_edge)).collect();
@@ -85,7 +89,8 @@ fn shape_spectrum_via_hand_checked_clip_boundary() {
     // Edge = 2.0 (16.16). Eigenvalues 1.0, 2.0, 3.5 → clip to 1.0, 2.0, 2.0.
     let edge = 2 * FIXED_ONE;
     let eig = [FIXED_ONE, 2 * FIXED_ONE, 7 * FIXED_ONE / 2];
-    let got = shape_spectrum_fixed_via(&d, &semantic_requests::wrapper_policy(), &eig, edge).unwrap();
+    let got =
+        shape_spectrum_fixed_via(&d, &semantic_requests::wrapper_policy(), &eig, edge).unwrap();
     assert_eq!(
         got,
         vec![FIXED_ONE, 2 * FIXED_ONE, 2 * FIXED_ONE],

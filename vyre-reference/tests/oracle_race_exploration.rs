@@ -65,11 +65,7 @@ fn zeros(count: u32) -> Value {
     Value::from(vec![0u8; count as usize * 4].as_slice())
 }
 
-fn explore(
-    program: &Program,
-    inputs: &[Value],
-    grid: [u32; 3],
-) -> (RaceExplorationReport, usize) {
+fn explore(program: &Program, inputs: &[Value], grid: [u32; 3]) -> (RaceExplorationReport, usize) {
     let request = ReferenceRequest::standard(program, inputs).with_grid(grid);
     let declared = request.declared_race_exploration_orders();
     let report = request
@@ -181,11 +177,7 @@ fn cross_workgroup_exchange(fenced: bool) -> Program {
             Expr::rem(Expr::add(Expr::workgroup_x(), Expr::u32(1)), Expr::u32(2)),
         ),
     ));
-    Program::wrapped(
-        vec![rw("scratch", 0, 2), rw("out", 1, 2)],
-        [1, 1, 1],
-        nodes,
-    )
+    Program::wrapped(vec![rw("scratch", 0, 2), rw("out", 1, 2)], [1, 1, 1], nodes)
 }
 
 #[test]
@@ -244,7 +236,12 @@ fn a_missing_barrier_is_reported_even_when_every_order_agrees() {
     );
     assert_eq!(
         conflicting_locations(&report),
-        locations(&[("scratch", 0), ("scratch", 1), ("scratch", 2), ("scratch", 3)]),
+        locations(&[
+            ("scratch", 0),
+            ("scratch", 1),
+            ("scratch", 2),
+            ("scratch", 3)
+        ]),
         "every lane's publish is read by a peer with nothing between them, got {:?}",
         report.findings
     );

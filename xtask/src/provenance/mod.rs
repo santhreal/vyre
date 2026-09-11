@@ -828,8 +828,8 @@ fn hash_source_tree(root: &Path, rel_dir: &str) -> Result<String, ProvenanceErro
             .map_err(|error| unmeasured(error.to_string()))?
             .to_string_lossy()
             .replace('\\', "/");
-        let bytes = fs::read(entry.path())
-            .map_err(|error| unmeasured(format!("{relative}: {error}")))?;
+        let bytes =
+            fs::read(entry.path()).map_err(|error| unmeasured(format!("{relative}: {error}")))?;
         files.push((relative, bytes));
     }
     if files.is_empty() {
@@ -1177,7 +1177,8 @@ mod measurement_tests {
         let second = tempfile::tempdir().expect("a second temporary directory is required");
         for base in [first.path(), second.path()] {
             fs::create_dir_all(base.join("src/pass")).expect("the fixture tree is required");
-            fs::write(base.join("src/lib.rs"), b"pub fn one() {}\n").expect("the fixture is required");
+            fs::write(base.join("src/lib.rs"), b"pub fn one() {}\n")
+                .expect("the fixture is required");
             fs::write(base.join("src/pass/mod.rs"), b"pub fn two() {}\n")
                 .expect("the nested fixture is required");
         }
@@ -1190,7 +1191,8 @@ mod measurement_tests {
 
         fs::write(first.path().join("src/pass/mod.rs"), b"pub fn three() {}\n")
             .expect("the nested fixture is rewritable");
-        let changed = hash_source_tree(first.path(), "src").expect("the fixture tree is measurable");
+        let changed =
+            hash_source_tree(first.path(), "src").expect("the fixture tree is measurable");
         assert_ne!(
             left, changed,
             "a change below the top level of the tree moved no digest"

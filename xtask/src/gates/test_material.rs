@@ -348,13 +348,17 @@ fn path_declarations(
     let prefix = format!("{member}/src/");
     let mut named = BTreeMap::new();
     for path in tree.paths() {
-        let Some(parent) = path.to_str() else { continue };
+        let Some(parent) = path.to_str() else {
+            continue;
+        };
         if !parent.starts_with(&prefix) || !parent.ends_with(".rs") {
             continue;
         }
         let directory = parent.rsplit_once('/').map_or("", |(head, _)| head);
         for declaration in mod_declarations(&tree.read(parent)?) {
-            let Some(value) = declaration.path else { continue };
+            let Some(value) = declaration.path else {
+                continue;
+            };
             let Some(target) = joined(directory, &value) else {
                 continue;
             };

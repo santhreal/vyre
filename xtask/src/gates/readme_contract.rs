@@ -130,7 +130,9 @@ fn read_landing_page(path: &Path) -> Result<String, String> {
         .map_err(|error| error.to_string())?
         .len();
     if length > MAX_README_BYTES {
-        return Err(format!("{length} bytes exceeds the {MAX_README_BYTES} this gate reads"));
+        return Err(format!(
+            "{length} bytes exceeds the {MAX_README_BYTES} this gate reads"
+        ));
     }
     std::fs::read_to_string(path).map_err(|error| error.to_string())
 }
@@ -217,11 +219,7 @@ mod tests {
     #[test]
     fn a_token_the_page_does_not_state_is_reported_missing() {
         let root = std::env::temp_dir();
-        let contract = measure(
-            &root,
-            page(),
-            vec!["0.8.0".to_string(), "wgpu".to_string()],
-        );
+        let contract = measure(&root, page(), vec!["0.8.0".to_string(), "wgpu".to_string()]);
         assert_eq!(contract.missing_tokens, vec!["wgpu".to_string()]);
         assert_eq!(contract.required_tokens.len(), 2);
         assert_eq!(contract.source_bytes, page().len() as u64);

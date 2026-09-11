@@ -11,8 +11,8 @@ use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::descriptor_builder::{effect, op};
 use vyre_lower::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, FragmentValue, KernelBody,
-    KernelDescriptor, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout,
-    MatrixMmaSpec, MatrixTileShape, MemoryClass,
+    KernelDescriptor, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec,
+    MatrixTileShape, MemoryClass,
 };
 
 /// Release benchmark case for CUDA/PTX fast-path pattern coverage.
@@ -604,7 +604,8 @@ fn matrix_mma_emit_kernel() -> KernelDescriptor {
         literals.push(LiteralValue::F32(0.0));
         ops.push(op(KernelOpKind::Literal, vec![id], id));
     }
-    ops.push(op(KernelOpKind::MatrixMma(Box::new(MatrixMmaSpec {
+    ops.push(op(
+        KernelOpKind::MatrixMma(Box::new(MatrixMmaSpec {
             tile: MatrixTileShape { m: 16, n: 8, k: 16 },
             left: FragmentValue::in_registers(MatrixMmaElement::F16, MatrixMmaLayout::RowMajor, 32),
             right: FragmentValue::in_registers(
@@ -617,7 +618,10 @@ fn matrix_mma_emit_kernel() -> KernelDescriptor {
                 MatrixMmaLayout::RowMajor,
                 32,
             ),
-        })), (0..10).collect::<Vec<u32>>(), 10));
+        })),
+        (0..10).collect::<Vec<u32>>(),
+        10,
+    ));
     KernelDescriptor {
         id: "ptx_matrix_mma_emit".to_string(),
         bindings: BindingLayout { slots: vec![] },

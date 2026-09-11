@@ -43,9 +43,12 @@ fn softmax_pick_config_via_matches_exact_fixed_point_oracle() {
             .map(|_| 1 + xorshift(&mut state) % FIXED_ONE)
             .collect();
 
-        let got =
-            pick_config_pre_exp_fixed_via(&dispatcher, &semantic_requests::wrapper_policy(), &pre_exp)
-                .expect("pick_config_pre_exp_fixed_via must dispatch the softmax step");
+        let got = pick_config_pre_exp_fixed_via(
+            &dispatcher,
+            &semantic_requests::wrapper_policy(),
+            &pre_exp,
+        )
+        .expect("pick_config_pre_exp_fixed_via must dispatch the softmax step");
         let want = softmax_fixed(&pre_exp);
         assert_eq!(
             got, want,
@@ -85,8 +88,9 @@ fn softmax_pick_config_via_hand_checked_cases() {
 
     // A 3-way split 1:1:2 → normalized 0.25, 0.25, 0.5 of FIXED_ONE.
     let q = FIXED_ONE / 4;
-    let got = pick_config_pre_exp_fixed_via(&d, &semantic_requests::wrapper_policy(), &[q, q, 2 * q])
-        .unwrap();
+    let got =
+        pick_config_pre_exp_fixed_via(&d, &semantic_requests::wrapper_policy(), &[q, q, 2 * q])
+            .unwrap();
     assert_eq!(
         got,
         softmax_fixed(&[q, q, 2 * q]),

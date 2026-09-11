@@ -512,5 +512,4 @@ impl From<vyre_driver::BackendError> for PipelineError {
     }
 }
 
-
 vyre_foundation::diagnostic_conversions!(PipelineError, diagnostic);

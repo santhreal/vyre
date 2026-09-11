@@ -173,17 +173,11 @@ pub fn dominator_tree_lca_body(
                         Expr::gt(Expr::var("da"), Expr::var("db")),
                         vec![Node::assign(
                             "a",
-                            bounded_index(
-                                Expr::load(idom, Expr::var("a")),
-                                Expr::buf_len(idom),
-                            ),
+                            bounded_index(Expr::load(idom, Expr::var("a")), Expr::buf_len(idom)),
                         )],
                         vec![Node::assign(
                             "b",
-                            bounded_index(
-                                Expr::load(idom, Expr::var("b")),
-                                Expr::buf_len(idom),
-                            ),
+                            bounded_index(Expr::load(idom, Expr::var("b")), Expr::buf_len(idom)),
                         )],
                     ),
                 ],

@@ -139,11 +139,7 @@ fn a_dispatch_level_fence_emits_one_compute_entry_point_per_segment() {
 #[test]
 fn each_segment_stores_its_own_value_and_no_barrier_survives_the_cut() {
     let module = emit(&three_segment_descriptor()).expect("Fix: fenced descriptor must emit");
-    let expected = [
-        Literal::U32(11),
-        Literal::U32(22),
-        Literal::U32(33),
-    ];
+    let expected = [Literal::U32(11), Literal::U32(22), Literal::U32(33)];
     for (index, ep) in module.entry_points.iter().enumerate() {
         assert_eq!(
             store_values(&ep.function),
@@ -292,7 +288,10 @@ fn parse_enum_variants(source_path: &Path, enum_name: &str) -> BTreeSet<String> 
         if trimmed.starts_with("//") || trimmed.starts_with('#') || trimmed.is_empty() {
             continue;
         }
-        let ident = trimmed.split(&['{', '(', ',', ' '][..]).next().unwrap_or("");
+        let ident = trimmed
+            .split(&['{', '(', ',', ' '][..])
+            .next()
+            .unwrap_or("");
         if ident.starts_with(char::is_uppercase) {
             variants.insert(ident.to_owned());
         }

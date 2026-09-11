@@ -5,9 +5,9 @@
 //!  - Unfused baseline is present in candidate set for every domain and stays executable.
 //!  - Changed workgroup geometry fuses when schedule-only and is rejected by name when pinned.
 
+use vyre_foundation::execution_plan::fusion::FusionRejectionReason;
 use vyre_foundation::execution_plan::fusion::{FusionCandidateKind, FusionCandidateSet};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::execution_plan::fusion::FusionRejectionReason;
 use vyre_megakernel::legality::{analyze_fusion_pair, FusionDecision};
 use vyre_megakernel::{ArtifactNodeId, ArtifactValueId, ExecutionTopology};
 

@@ -26,7 +26,6 @@ use vyre_test_support::graph_values::{graph_output, u32_symbolic};
 
 use vyre_test_support::pass_programs::{add_program, atomic_sum_program, copy_program};
 
-
 fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
     u32_symbolic(access, lifetime)
 }
@@ -89,9 +88,7 @@ fn facts(launch_batch: u32) -> ExternalFacts {
         .insert(vyre_foundation::ir::GraphValueId(1), Digest([0x5A; 32]));
     facts
 }
-use vyre_test_support::artifact_fixtures::{
-    payload_format as target_format, target_profile,
-};
+use vyre_test_support::artifact_fixtures::{payload_format as target_format, target_profile};
 
 fn artifact_for(device: DeviceFacts, launch_batch: u32) -> Artifact {
     let request = CompileRequest::new(

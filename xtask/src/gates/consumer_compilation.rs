@@ -139,9 +139,9 @@ fn check_consumer(root: &Path, manifest_path: &Path) -> Result<Vec<Finding>, Gat
         diagnostic.message
     );
     let fix = format!("fix compiler error in `{}`", manifest_path.display());
-    Ok(vec![diagnostic
-        .place(root, &message, &fix)
-        .unwrap_or_else(|| Finding::in_file(manifest_path, message.clone(), fix.clone()))])
+    Ok(vec![diagnostic.place(root, &message, &fix).unwrap_or_else(
+        || Finding::in_file(manifest_path, message.clone(), fix.clone()),
+    )])
 }
 
 #[cfg(test)]
@@ -186,6 +186,8 @@ mod tests {
     #[test]
     fn a_checkout_with_no_consumers_directory_enumerates_nothing() {
         let temp = tempfile::tempdir().expect("tempdir");
-        assert!(consumer_manifests(temp.path()).expect("enumerate").is_empty());
+        assert!(consumer_manifests(temp.path())
+            .expect("enumerate")
+            .is_empty());
     }
 }

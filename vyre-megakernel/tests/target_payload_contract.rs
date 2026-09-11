@@ -26,9 +26,7 @@ fn diagnostic_path(error: &CompileError) -> Option<&str> {
         .and_then(|location| location.path.as_deref())
 }
 
-use vyre_test_support::artifact_fixtures::{
-    payload_format as format, target_profile as profile,
-};
+use vyre_test_support::artifact_fixtures::{payload_format as format, target_profile as profile};
 struct FixtureCompiler {
     format: TargetPayloadFormat,
     profile: TargetProfile,

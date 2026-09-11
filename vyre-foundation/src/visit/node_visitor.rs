@@ -136,7 +136,7 @@ pub trait NodeVisitor {
 /// Emits one [`NodeVisitor`] method from its parameter list and a shared body.
 #[macro_export]
 macro_rules! node_visitor_arm {
-    ($name:ident($($param:ty),*), $this:ident, $body:block) => {
+    ($name:ident($($param:ty),* $(,)?), $this:ident, $body:block) => {
         fn $name(&mut self $(, _: $param)*) -> ::core::ops::ControlFlow<Self::Break> {
             #[allow(unused_variables)]
             let $this = self;
@@ -148,25 +148,146 @@ macro_rules! node_visitor_arm {
 /// The parameter list of every [`NodeVisitor`] method, declared once.
 #[macro_export]
 macro_rules! node_visitor_uniform_arm {
-    (visit_let, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_let(&$crate::ir::Node, &$crate::ir::Ident, &$crate::ir::Expr), $t, $b); };
-    (visit_assign, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_assign(&$crate::ir::Node, &$crate::ir::Ident, &$crate::ir::Expr), $t, $b); };
-    (visit_store, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_store(&$crate::ir::Node, &$crate::ir::Ident, &$crate::ir::Expr, &$crate::ir::Expr), $t, $b); };
-    (visit_if, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_if(&$crate::ir::Node, &$crate::ir::Expr, &[$crate::ir::Node], &[$crate::ir::Node]), $t, $b); };
-    (visit_loop, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_loop(&$crate::ir::Node, &$crate::ir::Ident, &$crate::ir::Expr, &$crate::ir::Expr, &[$crate::ir::Node]), $t, $b); };
-    (visit_indirect_dispatch, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_indirect_dispatch(&$crate::ir::Node, &$crate::ir::Ident, u64), $t, $b); };
-    (visit_async_load, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_async_load(&$crate::ir::Node, &$crate::ir::Ident, &$crate::ir::Ident, &$crate::ir::Expr, &$crate::ir::Expr, &$crate::ir::Ident), $t, $b); };
-    (visit_async_store, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_async_store(&$crate::ir::Node, &$crate::ir::Ident, &$crate::ir::Ident, &$crate::ir::Expr, &$crate::ir::Expr, &$crate::ir::Ident), $t, $b); };
-    (visit_async_wait, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_async_wait(&$crate::ir::Node, &$crate::ir::Ident), $t, $b); };
-    (visit_trap, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_trap(&$crate::ir::Node, &$crate::ir::Expr, &$crate::ir::Ident), $t, $b); };
-    (visit_resume, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_resume(&$crate::ir::Node, &$crate::ir::Ident), $t, $b); };
-    (visit_return, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_return(&$crate::ir::Node), $t, $b); };
-    (visit_barrier, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_barrier(&$crate::ir::Node), $t, $b); };
-    (visit_logical_barrier, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_logical_barrier(&$crate::ir::Node), $t, $b); };
-    (visit_collective, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_collective(&$crate::ir::Node), $t, $b); };
-    (visit_tile, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_tile(&$crate::ir::Node), $t, $b); };
-    (visit_block, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_block(&$crate::ir::Node, &[$crate::ir::Node]), $t, $b); };
-    (visit_region, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_region(&$crate::ir::Node, &$crate::ir::Ident, &::core::option::Option<$crate::ir::Ident>, &[$crate::ir::Node]), $t, $b); };
-    (visit_opaque_node, $t:ident, $b:block) => { $crate::node_visitor_arm!(visit_opaque_node(&$crate::ir::Node, &dyn $crate::ir::NodeExtension), $t, $b); };
+    (visit_let, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(
+            visit_let(&$crate::ir::Node, &$crate::ir::Ident, &$crate::ir::Expr),
+            $t,
+            $b
+        );
+    };
+    (visit_assign, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(
+            visit_assign(&$crate::ir::Node, &$crate::ir::Ident, &$crate::ir::Expr),
+            $t,
+            $b
+        );
+    };
+    (visit_store, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(
+            visit_store(
+                &$crate::ir::Node,
+                &$crate::ir::Ident,
+                &$crate::ir::Expr,
+                &$crate::ir::Expr
+            ),
+            $t,
+            $b
+        );
+    };
+    (visit_if, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(
+            visit_if(
+                &$crate::ir::Node,
+                &$crate::ir::Expr,
+                &[$crate::ir::Node],
+                &[$crate::ir::Node]
+            ),
+            $t,
+            $b
+        );
+    };
+    (visit_loop, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(
+            visit_loop(
+                &$crate::ir::Node,
+                &$crate::ir::Ident,
+                &$crate::ir::Expr,
+                &$crate::ir::Expr,
+                &[$crate::ir::Node]
+            ),
+            $t,
+            $b
+        );
+    };
+    (visit_indirect_dispatch, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(
+            visit_indirect_dispatch(&$crate::ir::Node, &$crate::ir::Ident, u64),
+            $t,
+            $b
+        );
+    };
+    (visit_async_load, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(
+            visit_async_load(
+                &$crate::ir::Node,
+                &$crate::ir::Ident,
+                &$crate::ir::Ident,
+                &$crate::ir::Expr,
+                &$crate::ir::Expr,
+                &$crate::ir::Ident
+            ),
+            $t,
+            $b
+        );
+    };
+    (visit_async_store, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(
+            visit_async_store(
+                &$crate::ir::Node,
+                &$crate::ir::Ident,
+                &$crate::ir::Ident,
+                &$crate::ir::Expr,
+                &$crate::ir::Expr,
+                &$crate::ir::Ident
+            ),
+            $t,
+            $b
+        );
+    };
+    (visit_async_wait, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(
+            visit_async_wait(&$crate::ir::Node, &$crate::ir::Ident),
+            $t,
+            $b
+        );
+    };
+    (visit_trap, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(
+            visit_trap(&$crate::ir::Node, &$crate::ir::Expr, &$crate::ir::Ident),
+            $t,
+            $b
+        );
+    };
+    (visit_resume, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(visit_resume(&$crate::ir::Node, &$crate::ir::Ident), $t, $b);
+    };
+    (visit_return, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(visit_return(&$crate::ir::Node), $t, $b);
+    };
+    (visit_barrier, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(visit_barrier(&$crate::ir::Node), $t, $b);
+    };
+    (visit_logical_barrier, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(visit_logical_barrier(&$crate::ir::Node), $t, $b);
+    };
+    (visit_collective, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(visit_collective(&$crate::ir::Node), $t, $b);
+    };
+    (visit_tile, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(visit_tile(&$crate::ir::Node), $t, $b);
+    };
+    (visit_block, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(visit_block(&$crate::ir::Node, &[$crate::ir::Node]), $t, $b);
+    };
+    (visit_region, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(
+            visit_region(
+                &$crate::ir::Node,
+                &$crate::ir::Ident,
+                &::core::option::Option<$crate::ir::Ident>,
+                &[$crate::ir::Node],
+            ),
+            $t,
+            $b
+        );
+    };
+    (visit_opaque_node, $t:ident, $b:block) => {
+        $crate::node_visitor_arm!(
+            visit_opaque_node(&$crate::ir::Node, &dyn $crate::ir::NodeExtension),
+            $t,
+            $b
+        );
+    };
 }
 
 /// Implements the named [`NodeVisitor`] methods with one shared body.

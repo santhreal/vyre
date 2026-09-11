@@ -176,7 +176,10 @@ impl SemanticOperation {
 ///
 /// A registration and the semantic record derived from it must agree on what
 /// the canonical program is, so both read it from here.
-pub(super) fn canonical_program(id: &'static str, build: Option<fn() -> Program>) -> Option<Program> {
+pub(super) fn canonical_program(
+    id: &'static str,
+    build: Option<fn() -> Program>,
+) -> Option<Program> {
     build.map(|build| build().with_entry_op_id(id))
 }
 

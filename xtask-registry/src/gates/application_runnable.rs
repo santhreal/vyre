@@ -1395,8 +1395,7 @@ fn application_request(graph: ProgramGraph) -> CompileRequest {
         ExternalFacts::new(Digest([0x11; 32]), BTreeMap::new()),
         DeviceFacts::unknown(),
         SearchBudget::new(64, 100_000, 8, 0, 1_000_000_000),
-        CompileObjective::minimize_latency()
-            .with_bound(ObjectiveMetric::ArtifactBytes, 8_000_000),
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 8_000_000),
     )
 }
 
@@ -1438,7 +1437,10 @@ fn target_features(bundle: &TargetModuleBundle) -> Vec<String> {
 }
 
 /// Compile and lower one derived application into its route record.
-fn route_of(application: &DerivedApplication, certificates: &[ReadCertificate]) -> ApplicationRouteRecord {
+fn route_of(
+    application: &DerivedApplication,
+    certificates: &[ReadCertificate],
+) -> ApplicationRouteRecord {
     let graph = &application.graph;
     let internal_edges = graph
         .values()
@@ -1613,7 +1615,9 @@ fn route_of(application: &DerivedApplication, certificates: &[ReadCertificate]) 
             envelope_admitted: attach_target(artifact.clone(), compiler.as_ref()).is_ok(),
         });
     }
-    record.targets.sort_by(|a, b| a.backend_id.cmp(&b.backend_id));
+    record
+        .targets
+        .sort_by(|a, b| a.backend_id.cmp(&b.backend_id));
     record.target_errors.sort();
 
     record
@@ -1636,7 +1640,10 @@ impl GateBehavior for ApplicationRunnable {
         for dialect in &frontend_dialects {
             if dialect.operations.is_empty() {
                 inspection.find(Finding::new(
-                    format!("frontend dialect `{}` declares no operation", dialect.dialect_id),
+                    format!(
+                        "frontend dialect `{}` declares no operation",
+                        dialect.dialect_id
+                    ),
                     "declare the dialect's operations or retire the dialect",
                 ));
             }
@@ -1844,7 +1851,9 @@ impl GateBehavior for ApplicationRunnable {
             for family in &benchmark_evidence.missing_evidence_artifacts {
                 inspection.blocked(
                     WORKLOAD_MATRIX_PATH,
-                    format!("required workload family names no recorded evidence artifact: {family}"),
+                    format!(
+                        "required workload family names no recorded evidence artifact: {family}"
+                    ),
                     "record the family's benchmark evidence artifact",
                 );
             }
@@ -1866,11 +1875,8 @@ impl GateBehavior for ApplicationRunnable {
 
         let mut applications = Vec::new();
         for dialect in &frontend_dialects {
-            let operations: Vec<&str> = dialect
-                .operations
-                .iter()
-                .map(|op| op.id.as_str())
-                .collect();
+            let operations: Vec<&str> =
+                dialect.operations.iter().map(|op| op.id.as_str()).collect();
             let derived = derive_application(&dialect.dialect_id, &operations);
             applications.push(route_of(&derived, &certificates));
         }

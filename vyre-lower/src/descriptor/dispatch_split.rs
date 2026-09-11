@@ -73,8 +73,7 @@ pub fn dispatch_segments(
 /// barrier and the kernel runs with no cross-workgroup synchronization at all.
 #[must_use]
 pub fn body_contains_grid_fence(body: &KernelBody) -> bool {
-    body.ops.iter().any(is_grid_fence)
-        || body.child_bodies.iter().any(body_contains_grid_fence)
+    body.ops.iter().any(is_grid_fence) || body.child_bodies.iter().any(body_contains_grid_fence)
 }
 
 fn is_grid_fence(op: &KernelOp) -> bool {
@@ -204,9 +203,7 @@ fn operand_result_refs(op: &KernelOp) -> impl Iterator<Item = u32> + '_ {
     op.operands
         .iter()
         .enumerate()
-        .filter(|(position, _)| {
-            classify_operand(&op.kind, *position) == OperandClass::ResultRef
-        })
+        .filter(|(position, _)| classify_operand(&op.kind, *position) == OperandClass::ResultRef)
         .map(|(_, operand)| *operand)
 }
 

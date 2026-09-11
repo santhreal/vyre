@@ -170,6 +170,10 @@ mod tests {
         assert!(commands[0].packages.is_empty());
         assert_eq!(commands[0].features, named(&["device-tests"]));
 
-        assert!(enabling("run: ./cargo_full test -p vyre-foundation\n", "device-tests").is_empty());
+        assert!(enabling(
+            "run: ./cargo_full test -p vyre-foundation\n",
+            "device-tests"
+        )
+        .is_empty());
     }
 }

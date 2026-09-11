@@ -99,12 +99,9 @@ fn the_external_facts_digest_the_caller_states_reaches_the_artifact() {
         "an artifact compiled under stated facts must not carry the identity of one compiled under a zero digest"
     );
 
-    let direct = vyre_megakernel::compile(&request(
-        STATED_FACTS,
-        live_device_facts(),
-        RANKED_BUDGET,
-    ))
-    .expect("the same request must compile directly");
+    let direct =
+        vyre_megakernel::compile(&request(STATED_FACTS, live_device_facts(), RANKED_BUDGET))
+            .expect("the same request must compile directly");
     assert_eq!(
         stated,
         direct.provenance().request,
@@ -121,8 +118,11 @@ fn the_external_facts_digest_the_caller_states_reaches_the_artifact() {
 #[test]
 fn the_device_facts_the_caller_names_reach_the_artifact() {
     let live = aot_request_identity(&request(STATED_FACTS, live_device_facts(), RANKED_BUDGET));
-    let unknown =
-        aot_request_identity(&request(STATED_FACTS, DeviceFacts::unknown(), RANKED_BUDGET));
+    let unknown = aot_request_identity(&request(
+        STATED_FACTS,
+        DeviceFacts::unknown(),
+        RANKED_BUDGET,
+    ));
     let recalibrated = aot_request_identity(&request(
         STATED_FACTS,
         live_device_facts().with_calibration_version(4),
@@ -138,12 +138,9 @@ fn the_device_facts_the_caller_names_reach_the_artifact() {
         "a recalibrated device prices every candidate differently, so it must not share an artifact identity with the calibration it replaced"
     );
 
-    let direct = vyre_megakernel::compile(&request(
-        STATED_FACTS,
-        live_device_facts(),
-        RANKED_BUDGET,
-    ))
-    .expect("the same request must compile directly");
+    let direct =
+        vyre_megakernel::compile(&request(STATED_FACTS, live_device_facts(), RANKED_BUDGET))
+            .expect("the same request must compile directly");
     assert_eq!(
         live,
         direct.provenance().request,
@@ -184,7 +181,11 @@ fn the_search_budget_the_caller_states_is_the_budget_the_artifact_records() {
         "two requests bounded differently must not share one artifact identity"
     );
     assert!(
-        ranked.neutral().selected_plan().search_work.candidates_explored
+        ranked
+            .neutral()
+            .selected_plan()
+            .search_work
+            .candidates_explored
             <= RANKED_BUDGET.max_candidates,
         "the recorded work must stay inside the recorded bound"
     );

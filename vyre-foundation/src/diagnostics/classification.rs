@@ -72,7 +72,6 @@ impl CompilerLevel {
     }
 }
 
-
 /// Compiler or workflow stage that produced a diagnostic.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

@@ -302,7 +302,13 @@ fn every_family_probe_is_reachable_and_deterministic() {
         );
     }
     assert!(
-        owners.values().flatten().copied().collect::<BTreeSet<_>>().len() > 1,
+        owners
+            .values()
+            .flatten()
+            .copied()
+            .collect::<BTreeSet<_>>()
+            .len()
+            > 1,
         "Fix: every family probe produced the same digest, so the probes are not reaching \
          distinct witnesses."
     );

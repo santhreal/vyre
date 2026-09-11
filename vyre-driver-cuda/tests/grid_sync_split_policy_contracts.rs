@@ -400,22 +400,25 @@ fn every_resident_dispatch_entry_point_routes_an_over_residency_grid_the_same_wa
 
     let mut handles = Vec::new();
     for (index, input) in inputs.iter().enumerate() {
-        let handle = backend.allocate_resident(input.len()).unwrap_or_else(|error| {
-            panic!("Fix: resident input {index} allocation must succeed: {error}")
-        });
+        let handle = backend
+            .allocate_resident(input.len())
+            .unwrap_or_else(|error| {
+                panic!("Fix: resident input {index} allocation must succeed: {error}")
+            });
         handles.push(handle);
     }
     let out_handle = backend
         .allocate_resident(inputs[0].len())
         .expect("Fix: resident output allocation must succeed");
     handles.push(out_handle);
-    let seed = |label: &str| {
-        for (handle, input) in handles.iter().zip(inputs.iter()) {
-            backend.upload_resident(*handle, input).unwrap_or_else(|error| {
+    let seed =
+        |label: &str| {
+            for (handle, input) in handles.iter().zip(inputs.iter()) {
+                backend.upload_resident(*handle, input).unwrap_or_else(|error| {
                 panic!("Fix: re-seeding resident inputs before `{label}` must succeed: {error}")
             });
-        }
-    };
+            }
+        };
 
     seed("dispatch_resident");
     backend
@@ -449,13 +452,14 @@ fn every_resident_dispatch_entry_point_routes_an_over_residency_grid_the_same_wa
         ("dispatch_resident", &discarded_outputs),
         (
             "dispatch_resident_timed",
-            timed.outputs.last().expect("the fixture declares an output"),
+            timed
+                .outputs
+                .last()
+                .expect("the fixture declares an output"),
         ),
         (
             "dispatch_resident_async",
-            asynchronous
-                .last()
-                .expect("the fixture declares an output"),
+            asynchronous.last().expect("the fixture declares an output"),
         ),
     ] {
         assert_eq!(

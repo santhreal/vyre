@@ -21,16 +21,14 @@ const SNAPSHOT_DIR: &str = "docs/public-api";
 /// Every line of every committed public-API snapshot.
 fn snapshot_lines(root: &Path) -> Vec<String> {
     let directory = root.join(SNAPSHOT_DIR);
-    let entries = fs::read_dir(&directory).unwrap_or_else(|error| {
-        panic!(
-            "Fix: make `{}` readable: {error}.",
-            directory.display()
-        )
-    });
+    let entries = fs::read_dir(&directory)
+        .unwrap_or_else(|error| panic!("Fix: make `{}` readable: {error}.", directory.display()));
     let mut lines = Vec::new();
     for entry in entries {
         let path = entry
-            .unwrap_or_else(|error| panic!("Fix: read one entry of the snapshot directory: {error}."))
+            .unwrap_or_else(|error| {
+                panic!("Fix: read one entry of the snapshot directory: {error}.")
+            })
             .path();
         if !path.extension().is_some_and(|extension| extension == "txt") {
             continue;

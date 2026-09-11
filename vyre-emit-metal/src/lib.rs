@@ -386,8 +386,7 @@ fn emit_from_naga_module_with_resource_indices(
     let mut msl_options = Options::default();
     msl_options.lang_version = options.lang_version;
     msl_options.fake_missing_bindings = false;
-    let resource_map =
-        metal_entry_point_resource_map(module, resource_indices)?;
+    let resource_map = metal_entry_point_resource_map(module, resource_indices)?;
     msl_options.per_entry_point_map = resource_map.per_entry_point;
 
     let pipeline_options = PipelineOptions::default();

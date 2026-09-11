@@ -56,9 +56,12 @@ fn declared_span(program: &Program) -> u32 {
             buffer.kind() != MemoryKind::Shared && buffer.access() != BufferAccess::Workgroup
         })
         .map(|buffer| {
-            buffer.count().saturating_mul(
-                vyre_foundation::logical_points_per_element(program, buffer.name()),
-            )
+            buffer
+                .count()
+                .saturating_mul(vyre_foundation::logical_points_per_element(
+                    program,
+                    buffer.name(),
+                ))
         })
         .max()
         .unwrap_or(0)

@@ -75,7 +75,9 @@ mod tests {
     fn a_second_naming_no_instant_is_refused() {
         let error = rfc3339_utc(i64::MAX).expect_err("i64::MAX names no instant");
         assert!(
-            error.to_string().contains("not a representable unix second"),
+            error
+                .to_string()
+                .contains("not a representable unix second"),
             "{error}"
         );
     }

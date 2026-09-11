@@ -6,7 +6,6 @@
 //! kept identical for a precedence case in one suite to mean what a coverage
 //! case in the other says.
 
-
 use std::collections::BTreeMap;
 
 use vyre_megakernel::specialization::{

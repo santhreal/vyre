@@ -64,7 +64,11 @@ impl EmitError {
                 format!("unsupported KernelOp kind in naga emit: {op:?}"),
             )
             .with_fix("rewrite the unsupported kernel op into supported scalar/buffer operations")
-            .with_cause(CauseKind::UnsupportedCapability, "unsupported_op", format!("{op:?}")),
+            .with_cause(
+                CauseKind::UnsupportedCapability,
+                "unsupported_op",
+                format!("{op:?}"),
+            ),
             Self::UnsupportedCapability(cap) => Diagnostic::emission_error(
                 TARGET,
                 "NAGA002_UNSUPPORTED_CAPABILITY",
@@ -86,7 +90,11 @@ impl EmitError {
                 format!("unsupported emission capability `workgroup`: {v}"),
             )
             .with_fix("reduce workgroup dimensions to fit target limits")
-            .with_cause(CauseKind::UnsupportedCapability, "workgroup_limit", format!("{v}")),
+            .with_cause(
+                CauseKind::UnsupportedCapability,
+                "workgroup_limit",
+                format!("{v}"),
+            ),
             Self::NagaConstructionFailed(msg) => Diagnostic::emission_error(
                 TARGET,
                 "NAGA004_CONSTRUCTION_FAILED",

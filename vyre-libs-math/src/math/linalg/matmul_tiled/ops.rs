@@ -11,11 +11,11 @@ use super::mma_fragment::{gate_mma_path, MmaCapabilityRecord};
 use super::program::{
     attribute_contraction_to_semiring_gemm, build_matmul_tiled_program, MatmulTiledProgramSpec,
 };
-use vyre_libs_builder::builder::matrix_tile::MatrixShape;
 use super::tensor_core_policy::{
     plan_matmul_kernel, select_matmul_kernel, F32MatmulMode, MatmulKernelCapabilities,
     MatmulKernelPath,
 };
+use vyre_libs_builder::builder::matrix_tile::MatrixShape;
 
 /// Workgroup buffer names the cooperative composer stages tiles through. The
 /// tensor-core body reads A and B from global memory and declares no workgroup

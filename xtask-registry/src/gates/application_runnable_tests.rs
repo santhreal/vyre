@@ -54,7 +54,10 @@ fn as_document(receipt: &ApplicationEvidenceReceipt) -> serde_json::Value {
 
 #[test]
 fn a_complete_authenticated_neutral_receipt_is_admitted() {
-    assert_eq!(validate_evidence_receipt(&neutral_receipt(), SECRET), Ok(()));
+    assert_eq!(
+        validate_evidence_receipt(&neutral_receipt(), SECRET),
+        Ok(())
+    );
 }
 
 /// Every canonical identity field the schema carries is refused when it is zero.
@@ -276,10 +279,14 @@ fn every_execution_topology_variant_has_its_own_tag() {
         ExecutionTopology::Sequential,
         ExecutionTopology::ConcurrentQueue { queues: 4 },
     ];
-    samples.extend(modes.iter().map(|mode| ExecutionTopology::ResidentPartition {
-        partitions: 8,
-        mode: *mode,
-    }));
+    samples.extend(
+        modes
+            .iter()
+            .map(|mode| ExecutionTopology::ResidentPartition {
+                partitions: 8,
+                mode: *mode,
+            }),
+    );
 
     let covered_topologies: BTreeSet<usize> = samples.iter().copied().map(variant_index).collect();
     assert_eq!(
@@ -499,7 +506,8 @@ fn derived_routes() -> Vec<ApplicationRouteRecord> {
     dialects
         .iter()
         .map(|dialect| {
-            let operations: Vec<&str> = dialect.operations.iter().map(|op| op.id.as_str()).collect();
+            let operations: Vec<&str> =
+                dialect.operations.iter().map(|op| op.id.as_str()).collect();
             let derived = derive_application(&dialect.dialect_id, &operations);
             route_of(&derived, &[])
         })
@@ -510,7 +518,10 @@ fn derived_routes() -> Vec<ApplicationRouteRecord> {
 #[test]
 fn every_registered_frontend_operation_carries_a_program_builder() {
     let dialects = derive_frontend_capabilities();
-    assert!(!dialects.is_empty(), "no generic frontend dialect is registered");
+    assert!(
+        !dialects.is_empty(),
+        "no generic frontend dialect is registered"
+    );
     for dialect in &dialects {
         assert!(
             !dialect.operations.is_empty(),
@@ -536,7 +547,10 @@ fn every_registered_frontend_operation_carries_a_program_builder() {
 #[test]
 fn every_registered_production_backend_states_a_payload_format_and_both_facets() {
     let modules = derive_artifact_modules().expect("the backend registry starts");
-    assert!(!modules.is_empty(), "no backend registers an artifact module");
+    assert!(
+        !modules.is_empty(),
+        "no backend registers an artifact module"
+    );
     let production: Vec<_> = modules
         .iter()
         .filter(|module| !module.reference_oracle)
@@ -636,10 +650,12 @@ fn every_derived_application_reaches_a_lowered_target_payload() {
             assert!(
                 target.entry_point_count > 0,
                 "application `{}` payload from `{}` carries no entry point",
-                record.application_id, target.backend_id
+                record.application_id,
+                target.backend_id
             );
             assert_eq!(
-                target.arm_assignment_count, target.module_count,
+                target.arm_assignment_count,
+                target.module_count,
                 "application `{}` lowered {} module(s) through `{}` with {} arm assignment(s)",
                 record.application_id,
                 target.module_count,
