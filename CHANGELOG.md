@@ -6825,6 +6825,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   continuous integration assertion is a registered gate and a script invocation
   carries an assertion the registry, the baseline and the subset roster cannot
   see.
+- A CUDA dispatch zeroes every workgroup buffer before the body runs, so an
+  element the program does not write reads back as zero instead of whatever the
+  previous block on that streaming multiprocessor left in shared memory.
 - A standalone workgroup reduction is built from a WorkgroupReduction value
   naming one fold, so the identity, the combine and the tree sweep are derived
   together instead of arriving as three arguments that could disagree. The
