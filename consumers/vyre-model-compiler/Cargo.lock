@@ -468,31 +468,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.69"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6aaf5339b578ea85b50e080feb250a3e8ae8cfcdff9a461c9ec2904bc923f52"
-dependencies = [
- "thiserror-impl 1.0.69",
-]
-
-[[package]]
-name = "thiserror"
 version = "2.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09a43598840e33d5b0331f38c5e30d13bb11c11210a4b58f0d9b18a5a5eefcd9"
 dependencies = [
- "thiserror-impl 2.0.19",
-]
-
-[[package]]
-name = "thiserror-impl"
-version = "1.0.69"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fee6c4efc90059e10f81e6d42c60a18f76588c3d74cb83a0b242a2b6c7504c1"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.117",
+ "thiserror-impl",
 ]
 
 [[package]]
@@ -612,7 +592,7 @@ dependencies = [
  "serde",
  "serde_json",
  "smallvec",
- "thiserror 2.0.19",
+ "thiserror",
  "toml",
  "tracing",
  "vyre-foundation",
@@ -646,7 +626,7 @@ dependencies = [
  "serde",
  "serde_json",
  "smallvec",
- "thiserror 2.0.19",
+ "thiserror",
  "toml",
  "tracing",
  "vyre-macros",
@@ -689,7 +669,7 @@ name = "vyre-libs-builder"
 version = "0.8.0"
 dependencies = [
  "inventory",
- "thiserror 2.0.19",
+ "thiserror",
  "vyre-foundation",
  "vyre-megakernel",
  "vyre-primitives",
@@ -751,7 +731,7 @@ version = "0.8.0"
 dependencies = [
  "inventory",
  "libm",
- "thiserror 2.0.19",
+ "thiserror",
  "vyre-foundation",
  "vyre-libs-builder",
  "vyre-libs-math",
@@ -781,7 +761,7 @@ dependencies = [
  "rustc-hash",
  "serde",
  "smallvec",
- "thiserror 2.0.19",
+ "thiserror",
  "vyre-foundation",
  "vyre-spec",
 ]
@@ -803,7 +783,7 @@ dependencies = [
  "inventory",
  "serde",
  "serde_json",
- "thiserror 2.0.19",
+ "thiserror",
  "vyre-foundation",
  "vyre-lower",
  "vyre-spec",
@@ -816,7 +796,7 @@ dependencies = [
  "blake3",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror",
  "vyre",
  "vyre-driver-reference",
  "vyre-libs",
@@ -859,7 +839,7 @@ dependencies = [
  "serde",
  "serde_json",
  "smallvec",
- "thiserror 2.0.19",
+ "thiserror",
  "tracing",
  "vyre-driver",
  "vyre-foundation",
@@ -874,7 +854,7 @@ dependencies = [
  "blake3",
  "serde",
  "serde_json",
- "thiserror 2.0.19",
+ "thiserror",
 ]
 
 [[package]]

@@ -58,6 +58,7 @@ const PRODUCT_CRATES: &[&str] = &["vyre-driver", "vyre-runtime", "vyre-megakerne
 /// was the arm that got silenced, so the x86_64 one is the arm that was blind.
 const TRIPLE_FOR_OS: &[(&str, &str)] = &[
     ("android", "aarch64-linux-android"),
+    ("freebsd", "x86_64-unknown-freebsd"),
     ("ios", "aarch64-apple-ios"),
     ("linux", "x86_64-unknown-linux-gnu"),
     ("macos", "x86_64-apple-darwin"),
