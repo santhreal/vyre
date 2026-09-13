@@ -22,6 +22,14 @@ use crate::release::conformance_evidence_semantics::read_conformance_text;
 /// belongs to the runner that produced the record.
 pub const RELEASE_BACKEND_COLUMNS: [&str; 3] = ["reference", "cuda", "wgpu"];
 
+/// Backend columns the matrix declares and release evidence does not judge.
+///
+/// `spirv` is declared `experimental` on every row and `foundation_ir` is the
+/// IR's own status rather than a device, so neither belongs in the release
+/// row count. They are named so that a column which is neither a release
+/// backend nor one of these is reported rather than ignored.
+pub const UNJUDGED_BACKEND_COLUMNS: [&str; 2] = ["spirv", "foundation_ir"];
+
 /// What `docs/optimization/OP_MATRIX.toml` requires of a release.
 #[derive(Default)]
 pub struct OpMatrixCatalog {
@@ -109,6 +117,38 @@ pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog 
             ..OpMatrixCatalog::default()
         };
     }
+    let statuses: BTreeSet<&str> = value
+        .get("backend_status_values")
+        .and_then(toml::Value::as_array)
+        .map(|values| values.iter().filter_map(toml::Value::as_str).collect())
+        .unwrap_or_default();
+    let mut unaccounted_backend_columns = BTreeSet::new();
+    for row in rows {
+        let Some(fields) = row.as_table() else {
+            continue;
+        };
+        for (column, declared) in fields {
+            let Some(declared) = declared.as_str() else {
+                continue;
+            };
+            if statuses.contains(declared)
+                && !RELEASE_BACKEND_COLUMNS.contains(&column.as_str())
+                && !UNJUDGED_BACKEND_COLUMNS.contains(&column.as_str())
+            {
+                unaccounted_backend_columns.insert(column.clone());
+            }
+        }
+    }
+    let errors = unaccounted_backend_columns
+        .into_iter()
+        .map(|column| {
+            format!(
+                "OP_MATRIX row column `{column}` declares a backend status and no release check \
+                 reads it: add it to RELEASE_BACKEND_COLUMNS or record why it is unjudged in \
+                 UNJUDGED_BACKEND_COLUMNS"
+            )
+        })
+        .collect::<Vec<_>>();
     let mut required_ops = BTreeSet::new();
     let mut duplicate_required_op_rows = BTreeSet::new();
     let mut release_backend_rows = Vec::new();
@@ -176,7 +216,7 @@ pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog 
         release_backend_specs,
         missing_release_backend_rows,
         blocked_release_rows,
-        errors: Vec::new(),
+        errors,
     }
 }
 
@@ -428,5 +468,67 @@ mod tests {
         let blockers = blockers_for(&blocked);
         assert_eq!(blockers.len(), 1, "{blockers:?}");
         assert!(blockers[0].contains("blocked_release"), "{blockers:?}");
+    }
+
+    /// Write one op matrix carrying `columns` on its single row and read it.
+    fn read_matrix(columns: &str) -> OpMatrixCatalog {
+        let root = tempfile::tempdir().expect("Fix: create a temporary directory.");
+        let dir = root.path().join("docs/optimization");
+        std::fs::create_dir_all(&dir).expect("Fix: create the matrix directory.");
+        std::fs::write(
+            dir.join("OP_MATRIX.toml"),
+            format!(
+                "schema = 2\n\
+                 backend_status_values = [\"supported\", \"experimental\", \"not_applicable\", \
+                 \"blocked_release\"]\n\n\
+                 [[op]]\n\
+                 family = \"vyre-libs::security::taint_pollution\"\n\
+                 tier = \"libs\"\n\
+                 ops = [\"vyre-libs::security::taint_pollution\"]\n\
+                 reference = \"supported\"\n\
+                 cuda = \"supported\"\n\
+                 wgpu = \"supported\"\n\
+                 spirv = \"experimental\"\n\
+                 foundation_ir = \"supported\"\n\
+                 {columns}"
+            ),
+        )
+        .expect("Fix: write the matrix.");
+        read_conformance_required_op_matrix(root.path())
+    }
+
+    /// WHY: the matrix is generated, and a generator that grows a backend
+    /// column changes nothing in any release check: the row count is derived
+    /// from the columns the reader names, so an unread column is invisible.
+    /// Adding one must go red until somebody decides whether release evidence
+    /// covers it.
+    #[test]
+    fn a_backend_column_no_release_check_reads_is_an_error() {
+        let catalog = read_matrix("rocm = \"supported\"\n");
+        assert_eq!(catalog.errors.len(), 1, "{:?}", catalog.errors);
+        assert!(
+            catalog.errors[0].contains("`rocm`") && catalog.errors[0].contains("no release check"),
+            "Fix: the error must name the column, got {:?}",
+            catalog.errors
+        );
+    }
+
+    /// WHY: the two accounted sets are the whole decision. A matrix carrying
+    /// only them has to read silently, or the error above is noise the reader
+    /// always emits and nobody acts on it.
+    #[test]
+    fn the_accounted_backend_columns_read_without_an_error() {
+        let catalog = read_matrix("");
+        assert!(catalog.errors.is_empty(), "{:?}", catalog.errors);
+        assert_eq!(catalog.release_backend_rows.len(), RELEASE_BACKEND_COLUMNS.len());
+    }
+
+    /// WHY: a status value the matrix does not declare is not a backend cell,
+    /// and treating any string column as one would report `family` and `tier`
+    /// as unread backends.
+    #[test]
+    fn a_column_whose_value_is_not_a_declared_status_is_not_a_backend_column() {
+        let catalog = read_matrix("notes = \"see VX-1\"\n");
+        assert!(catalog.errors.is_empty(), "{:?}", catalog.errors);
     }
 }
