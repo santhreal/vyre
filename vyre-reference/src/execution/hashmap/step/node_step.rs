@@ -345,7 +345,7 @@ pub(crate) fn step_nodes_frame<'a>(
             let elements = vec![Value::Float(0.0); tile.element_count()];
             let bound = invocation
                 .locals
-                .bind(name.as_str(), Value::Array(elements))?;
+                .bind(name.as_str(), Value::array(elements))?;
             invocation
                 .tile_shapes
                 .insert(bound, std::sync::Arc::new(tile.clone()));
@@ -375,7 +375,7 @@ pub(crate) fn step_nodes_frame<'a>(
                 crate::execution::tile::load_elements(target, &origin_coords, tile_type, layout)?;
             let bound = invocation
                 .locals
-                .bind(tile.as_str(), Value::Array(elements))?;
+                .bind(tile.as_str(), Value::array(elements))?;
             invocation
                 .tile_shapes
                 .insert(bound, std::sync::Arc::new(tile_type.clone()));
@@ -402,9 +402,9 @@ pub(crate) fn step_nodes_frame<'a>(
             let tile_val = invocation.locals.local(tile.as_str()).ok_or_else(|| {
                 ReferenceError::new(format!("tile `{tile}` not found in scope for tile store"))
             })?;
-            let elements = match tile_val {
+            let elements: std::sync::Arc<[Value]> = match tile_val {
                 Value::Array(elems) => elems,
-                single => vec![single],
+                single => std::sync::Arc::from([single]),
             };
             let target = buffer_mut(memory, buffer.as_str())?;
             crate::execution::tile::store_elements(target, &origin_coords, &elements)?;
@@ -415,7 +415,7 @@ pub(crate) fn step_nodes_frame<'a>(
             let (b_val, b_shape) = tile_operand(invocation, b, "matmul operand")?;
             let a_elems = crate::execution::tile::to_elements(&a_val);
             let b_elems = crate::execution::tile::to_elements(&b_val);
-            let mut acc_elems = crate::execution::tile::to_elements(&acc_val);
+            let mut acc_elems = crate::execution::tile::to_elements(&acc_val).to_vec();
             crate::execution::tile::matmul(
                 &mut acc_elems,
                 &acc_shape,
@@ -426,7 +426,7 @@ pub(crate) fn step_nodes_frame<'a>(
             )?;
             invocation
                 .locals
-                .assign(acc.as_str(), Value::Array(acc_elems))?;
+                .assign(acc.as_str(), Value::array(acc_elems))?;
         }
         Node::TileReduce {
             out,
@@ -450,7 +450,7 @@ pub(crate) fn step_nodes_frame<'a>(
             ));
             let bound = invocation
                 .locals
-                .bind(out.as_str(), Value::Array(out_vec))?;
+                .bind(out.as_str(), Value::array(out_vec))?;
             invocation.tile_shapes.insert(bound, out_shape);
         }
         Node::TileElementwise { out, inputs, body } => {
@@ -461,12 +461,12 @@ pub(crate) fn step_nodes_frame<'a>(
                 let val = invocation.locals.local(input.as_str()).ok_or_else(|| {
                     ReferenceError::new(format!("tile input `{input}` not found"))
                 })?;
-                let elems = match val {
+                let elems: std::sync::Arc<[Value]> = match val {
                     Value::Array(e) => e,
-                    s => vec![s],
+                    s => std::sync::Arc::from([s]),
                 };
                 max_len = max_len.max(elems.len());
-                saved_inputs.push(Value::Array(elems.clone()));
+                saved_inputs.push(Value::Array(std::sync::Arc::clone(&elems)));
                 input_arrays.push(elems);
                 invocation.locals.remove(input.as_str());
             }
@@ -542,7 +542,7 @@ pub(crate) fn step_nodes_frame<'a>(
             }
             invocation
                 .locals
-                .bind(out.as_str(), Value::Array(out_elems))?;
+                .bind(out.as_str(), Value::array(out_elems))?;
         }
         Node::Opaque(extension) => {
             return Err(ReferenceError::new(format!(

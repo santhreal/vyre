@@ -523,7 +523,7 @@ mod tests {
             "f32 -> u8 must use the float-cast message, got: {err:?}"
         );
         // Array -> I16 is rejected by narrow_low_word.
-        let err = cast_value(&DataType::I16, &Value::Array(vec![Value::U32(1)]))
+        let err = cast_value(&DataType::I16, &Value::array(vec![Value::U32(1)]))
             .expect_err("array -> i16 must fail closed");
         assert!(
             format!("{err:?}").contains("cannot represent"),

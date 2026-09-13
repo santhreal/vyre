@@ -56,14 +56,14 @@ fn generated_value(seed: u32) -> Value {
             (u64::from(mix32(seed ^ 0xCAFE_BABE)) << 32) | u64::from(mix32(seed)),
         )),
         5 => Value::Bytes(Arc::from(generated_bytes(seed))),
-        6 => Value::Array(vec![
+        6 => Value::array(vec![
             Value::U32(mix32(seed)),
             Value::Bool((seed & 1) == 1),
             Value::Bytes(Arc::from(generated_bytes(seed.rotate_left(3)))),
         ]),
-        _ => Value::Array(vec![
+        _ => Value::array(vec![
             generated_leaf(seed ^ 0xA5A5_5A5A),
-            Value::Array(vec![
+            Value::array(vec![
                 Value::U64(u64::from(mix32(seed))),
                 Value::Bytes(Arc::from(generated_bytes(seed ^ 0x5A5A_A5A5))),
             ]),

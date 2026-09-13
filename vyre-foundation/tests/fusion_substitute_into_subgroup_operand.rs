@@ -165,7 +165,7 @@ fn collect_referenced_vars(nodes: &[Node], out: &mut HashSet<String>) {
 #[test]
 fn fusion_substitutes_pending_binding_into_subgroup_operand() {
     let program = program_with_fused_let_in_subgroup_operand();
-    let inputs = [Value::Array(vec![Value::U32(3), Value::U32(5)])];
+    let inputs = [Value::array(vec![Value::U32(3), Value::U32(5)])];
 
     // Original is well-scoped and computes out[0] = subgroup_add(3 + 5) = 8.
     let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)

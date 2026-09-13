@@ -11,11 +11,15 @@ use crate::error::ReferenceError;
 use crate::oob::{self, Buffer};
 use crate::value::Value;
 
-/// Convert a reference [`Value`] to a flattened element vector.
-pub(crate) fn to_elements(val: &Value) -> Vec<Value> {
+/// Borrow a reference [`Value`] as a flattened element slice.
+///
+/// A tile local already holds its elements in shared storage, so the common
+/// case copies a refcount. A scalar is the only shape that allocates, and it
+/// allocates one element.
+pub(crate) fn to_elements(val: &Value) -> std::sync::Arc<[Value]> {
     match val {
-        Value::Array(e) => e.clone(),
-        s => vec![s.clone()],
+        Value::Array(e) => std::sync::Arc::clone(e),
+        s => std::sync::Arc::from([s.clone()]),
     }
 }
 

@@ -74,9 +74,9 @@ fn generated_batched_extend_matches_concatenated_allocating_encoding() {
 fn generated_nested_arrays_obey_declared_width_truncation_and_padding() {
     let mut assertions = 0usize;
     for seed in 0u32..2048 {
-        let value = Value::Array(vec![
+        let value = Value::array(vec![
             generated_value(seed),
-            Value::Array(vec![
+            Value::array(vec![
                 generated_value(seed ^ 0xA5A5_5A5A),
                 generated_value(seed.rotate_left(9)),
             ]),
@@ -108,7 +108,7 @@ fn generated_value(seed: u32) -> Value {
             (u64::from(mix32(seed)) << 32) | u64::from(mix32(seed ^ 0xDEAD_BEEF)),
         )),
         5 => Value::Bytes(Arc::from(generated_bytes(seed))),
-        _ => Value::Array(vec![
+        _ => Value::array(vec![
             Value::U32(mix32(seed)),
             Value::Bool((seed & 1) == 0),
             Value::Bytes(Arc::from(generated_bytes(seed.rotate_left(3)))),

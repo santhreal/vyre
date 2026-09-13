@@ -32,7 +32,7 @@ fn extend_bytes_width_matches_allocating_encoding() {
         Value::Bool(false),
         Value::Bytes(Arc::from([9, 8, 7, 6, 5])),
         Value::Float(-0.0),
-        Value::Array(vec![Value::U32(1), Value::Bool(true)]),
+        Value::array(vec![Value::U32(1), Value::Bool(true)]),
     ];
 
     for value in values {
@@ -113,8 +113,8 @@ fn truthiness_matches_ir_word_convention() {
     assert!(Value::Bool(true).truthy());
     assert!(!Value::Bytes(Arc::from([])).truthy());
     assert!(Value::Bytes(Arc::from([0, 0, 0, 0, 1])).truthy());
-    assert!(!Value::Array(Vec::new()).truthy());
-    assert!(Value::Array(vec![Value::U32(0)]).truthy());
+    assert!(!Value::array(Vec::new()).truthy());
+    assert!(Value::array(vec![Value::U32(0)]).truthy());
     assert!(Value::Float(f64::NAN).truthy());
     assert!(!Value::Float(0.0).truthy());
 }

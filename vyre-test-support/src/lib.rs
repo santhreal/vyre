@@ -322,10 +322,10 @@ pub mod expr_variants;
 #[cfg(feature = "ir-fixtures")]
 pub mod extension_variants;
 pub mod fixed_point;
-#[cfg(feature = "ir-fixtures")]
-pub mod float_cast_closure;
 #[cfg(feature = "driver-artifact-contracts")]
 pub mod fixture_instance;
+#[cfg(feature = "ir-fixtures")]
+pub mod float_cast_closure;
 /// Two-node and multi-arm program graph shapes planning suites compile.
 #[cfg(feature = "ir-fixtures")]
 pub mod graph_fixtures;

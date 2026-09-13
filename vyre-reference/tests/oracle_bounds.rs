@@ -40,9 +40,12 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use vyre_alloc_probe::{Region, ThreadAlloc};
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, Layout, Node, Program, Residency, Tile,
+};
 use vyre_foundation::visit::child_bodies;
-use vyre_reference::{ReferenceBudget, ReferenceErrorClass, ReferenceRequest};
+use vyre_reference::value::Value;
+use vyre_reference::{ReferenceBudget, ReferenceErrorClass, ReferenceRequest, WorkloadEnvelope};
 
 /// Charges every allocation to the thread that made it.
 ///
@@ -81,6 +84,28 @@ const MEASURED_BYTES_PER_NODE: f64 = 887.3;
 /// rounding and the growth steps of the interpreter's own vectors without
 /// admitting a per-node scratch buffer.
 const BYTES_PER_NODE_CEILING: f64 = 1200.0;
+
+/// Extent of each side of the square tile the sharing bound reads.
+const TILE_EXTENT: u32 = 64;
+
+/// Elements in that tile.
+const TILE_ELEMENTS: u32 = TILE_EXTENT * TILE_EXTENT;
+
+/// Bytes one extra read of a bound tile local may allocate.
+///
+/// A tile local holds its elements in shared storage, so reading it back costs
+/// a refcount plus whatever the reading statement allocates for itself, and
+/// nothing that scales with the tile. Measured at 957 bytes under the
+/// unoptimized test profile, for the store's own coordinate and expression
+/// work; the ceiling stands at twice that, and fifty times below the 98,304
+/// bytes a copy of the tile's elements costs, which is what the bound refuses.
+const BYTES_PER_TILE_READ_CEILING: usize = 2000;
+
+/// Bytes a copy of the tile's elements would cost.
+///
+/// Reported alongside a failure so the number the ceiling refuses is visible
+/// next to the number that was measured.
+const TILE_COPY_BYTES: usize = TILE_ELEMENTS as usize * size_of::<vyre_reference::value::Value>();
 
 /// What one bounded evaluation ended as.
 ///
@@ -226,6 +251,51 @@ fn sized_output(elements: u32) -> Program {
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
     )
+}
+
+/// A program that loads one `TILE_ELEMENTS`-element tile and stores it `reads`
+/// times.
+///
+/// Every store reads the tile local back out of the invocation scope, which is
+/// the operation whose cost the sharing bound below measures. The tile shape is
+/// fixed, so the only thing `reads` varies is how many times that local is
+/// read.
+fn tile_reread(reads: usize) -> Program {
+    let tile = Tile::new(
+        DataType::U32,
+        vec![TILE_EXTENT, TILE_EXTENT],
+        Layout::RowMajor,
+        Residency::Register,
+    );
+    let mut nodes = vec![Node::tile_load(
+        "t",
+        tile,
+        "src",
+        vec![Expr::u32(0), Expr::u32(0)],
+        Layout::RowMajor,
+    )];
+    nodes
+        .extend((0..reads).map(|_| Node::tile_store("out", vec![Expr::u32(0), Expr::u32(0)], "t")));
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("src", 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(TILE_ELEMENTS),
+            BufferDecl::output("out", 1, DataType::U32).with_count(TILE_ELEMENTS),
+        ],
+        [1, 1, 1],
+        nodes,
+    )
+}
+
+/// A request that dispatches `program` once.
+///
+/// Without an explicit grid the oracle infers the dispatch from buffer extents,
+/// which for the tile program below is one invocation per element. The bound
+/// measured here is the cost of one read, so the dispatch is pinned to one
+/// invocation and the number the assertion reports is that cost directly.
+fn one_invocation<'a>(program: &'a Program, inputs: &'a [Value]) -> ReferenceRequest<'a> {
+    ReferenceRequest::standard(program, inputs)
+        .with_workload_envelope(WorkloadEnvelope::for_program(program).with_grid([1, 1, 1]))
 }
 
 /// Evaluate `program` under `budget` on its own thread and refuse to wait past
@@ -403,6 +473,78 @@ fn the_oracle_allocates_under_a_measured_ceiling_per_ir_node() {
          fresh measurement.",
         small_change.bytes_allocated,
         large_change.bytes_allocated
+    );
+}
+
+/// Reading a bound tile local back costs a refcount, not a copy of the tile.
+///
+/// # The class closed here
+///
+/// The oracle holds a tile as one local value, and every tile statement reads
+/// that local back out of the invocation scope. While the elements lived in a
+/// `Vec`, each of those reads deep-copied the whole tile, and so did the
+/// save/restore an elementwise body performs around its inputs, and so did the
+/// per-lane snapshot a subgroup collective takes. None of that is visible in a
+/// small fixture and all of it is quadratic in the shape a real kernel has: a
+/// tile read `r` times costs `r` copies of the tile instead of one.
+///
+/// The bound is measured as a difference between two read counts at a fixed
+/// tile shape, so the load itself, the buffers, and everything else that does
+/// not scale with the read count cancels. What remains is what one extra read
+/// costs, which is the number that must not scale with the tile.
+///
+/// # What it does not catch
+///
+/// A copy taken somewhere other than a tile local read: an array value bound
+/// by a non-tile statement, or an output buffer materialized per lane. It also
+/// says nothing about peak resident memory, for the reason the module header
+/// gives.
+#[test]
+fn the_oracle_reads_a_tile_local_without_copying_its_elements() {
+    // The source buffer, built once and shared by every evaluation below, so
+    // building it is charged to none of the measurements.
+    let inputs = [Value::array(vec![Value::U32(7); TILE_ELEMENTS as usize])];
+
+    // One evaluation before the first measurement, so lazily initialized state
+    // shared by every evaluation is charged to neither of the two.
+    drop(one_invocation(&tile_reread(1), &inputs).outputs());
+
+    let few_reads = 2usize;
+    let many_reads = 18usize;
+
+    let few = tile_reread(few_reads);
+    let few_region = Region::new();
+    let few_outputs = one_invocation(&few, &inputs).outputs();
+    let few_change = few_region.change();
+
+    let many = tile_reread(many_reads);
+    let many_region = Region::new();
+    let many_outputs = one_invocation(&many, &inputs).outputs();
+    let many_change = many_region.change();
+
+    assert!(
+        few_outputs.is_ok() && many_outputs.is_ok(),
+        "both measured programs must evaluate, or the difference measures a refusal path rather \
+         than an evaluation. Few: {few_outputs:?}. Many: {many_outputs:?}"
+    );
+
+    let read_delta = many_reads - few_reads;
+    let byte_delta = many_change
+        .bytes_allocated
+        .checked_sub(few_change.bytes_allocated)
+        .expect("the program with more reads must allocate at least as much as the one with fewer");
+    let per_read = byte_delta / read_delta;
+
+    assert!(
+        per_read < BYTES_PER_TILE_READ_CEILING,
+        "one extra read of a {TILE_ELEMENTS}-element tile local allocates {per_read} bytes, past \
+         the {BYTES_PER_TILE_READ_CEILING} byte ceiling. A copy of the tile's elements is \
+         {TILE_COPY_BYTES} bytes, so a per-read cost at that scale means the local's elements are \
+         no longer shared. Measured across {read_delta} reads: {} bytes at {few_reads} reads and \
+         {} bytes at {many_reads}. Fix: keep the tile's elements in shared storage, or restate \
+         the ceiling from a fresh measurement.",
+        few_change.bytes_allocated,
+        many_change.bytes_allocated
     );
 }
 

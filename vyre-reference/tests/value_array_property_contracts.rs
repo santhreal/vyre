@@ -1,4 +1,4 @@
-//! Property contracts for nested value-array byte encoding.
+//! Property contracts for nested value-array equality and byte encoding.
 
 use proptest::prelude::*;
 use vyre_reference::value::Value;
@@ -41,5 +41,48 @@ proptest! {
         expected.extend(value.to_bytes_width(width));
 
         prop_assert_eq!(encoded, expected);
+    }
+}
+
+proptest! {
+    /// An array value equals itself, its clone, and any array with the same
+    /// elements, and differs from every array that differs in one element.
+    ///
+    /// # The class closed here
+    ///
+    /// [`Value`] hand-writes `PartialEq` and also claims `Eq`, which requires
+    /// reflexivity. `Array` had no arm of its own and fell through to the
+    /// catch-all that answers `false`, so an array was unequal to itself: the
+    /// oracle's own output comparison reported a mismatch for every array
+    /// result, and any map keyed by a `Value` could not find an array key it
+    /// had just inserted. A variant added to this enum without an arm lands in
+    /// the same catch-all, which is why the contract is stated as a law over
+    /// the value rather than as one case.
+    ///
+    /// # What it does not catch
+    ///
+    /// Equality of the other variants, which
+    /// `value_encoding_contract` covers, and ordering, which `Value` does not
+    /// define.
+    #[test]
+    fn generated_u32_arrays_are_equal_exactly_to_arrays_with_the_same_elements(
+        values in prop::collection::vec(any::<u32>(), 0..64),
+        index in 0usize..64,
+    ) {
+        let value = u32_array(&values);
+
+        prop_assert_eq!(&value, &value);
+        prop_assert_eq!(value.clone(), u32_array(&values));
+
+        if !values.is_empty() {
+            let mut perturbed = values.clone();
+            let at = index % perturbed.len();
+            perturbed[at] = perturbed[at].wrapping_add(1);
+            prop_assert_ne!(&value, &u32_array(&perturbed));
+        }
+
+        let mut longer = values.clone();
+        longer.push(0);
+        prop_assert_ne!(&value, &u32_array(&longer));
     }
 }

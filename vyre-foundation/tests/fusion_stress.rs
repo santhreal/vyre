@@ -324,7 +324,7 @@ fn many_independent_pure_bindings_inlined_without_duplication() {
         orig_wire.len()
     );
 
-    let inputs = [Value::Array(vec![Value::U32(0); N])];
+    let inputs = [Value::array(vec![Value::U32(0); N])];
     let original_out = vyre_reference::ReferenceRequest::standard(&program, &inputs)
         .outputs()
         .expect("original must run");

@@ -18,8 +18,9 @@ pub enum Value {
     Bytes(Arc<[u8]>),
     /// Floating-point value represented with stable host bits.
     Float(f64),
-    /// Fixed-size array of values.
-    Array(Vec<Value>),
+    /// Fixed-size array of values, shared so a rebind copies a refcount
+    /// rather than every element.
+    Array(Arc<[Value]>),
 }
 
 impl PartialEq for Value {
@@ -31,6 +32,11 @@ impl PartialEq for Value {
             (Self::Bool(a), Self::Bool(b)) => a == b,
             (Self::Bytes(a), Self::Bytes(b)) => a == b,
             (Self::Float(a), Self::Float(b)) => a.to_bits() == b.to_bits(),
+            // Elementwise, and therefore reflexive. Without this arm an
+            // `Array` fell through to the catch-all and compared unequal to
+            // itself, which breaks the `Eq` this type also claims and makes
+            // every oracle comparison of an array output report a mismatch.
+            (Self::Array(a), Self::Array(b)) => a == b,
             (
                 Self::U32(_)
                 | Self::I32(_)
@@ -48,6 +54,15 @@ impl PartialEq for Value {
 impl Eq for Value {}
 
 impl Value {
+    /// Build an array value from owned elements.
+    ///
+    /// The elements move into shared storage once; every later rebind,
+    /// snapshot or tile read copies a refcount.
+    #[must_use]
+    pub fn array(elements: impl Into<Arc<[Self]>>) -> Self {
+        Self::Array(elements.into())
+    }
+
     /// Interpret the value using the IR truth convention.
     #[must_use]
     pub fn truthy(&self) -> bool {
@@ -130,7 +145,7 @@ impl Value {
             Self::Bytes(bytes) => extend_fixed_width(bytes, declared_width, out),
             Self::Float(value) => extend_fixed_width(&value.to_le_bytes(), declared_width, out),
             Self::Array(values) => {
-                for value in values {
+                for value in values.iter() {
                     value.extend_bytes_width(0, out)?;
                 }
                 if let Some(next_len) = fixed_next_len {
@@ -156,7 +171,7 @@ impl Value {
             Self::Bytes(bytes) => copy_bytes_prefix(bytes, target, cursor),
             Self::Float(value) => copy_bytes_prefix(&value.to_le_bytes(), target, cursor),
             Self::Array(values) => {
-                for value in values {
+                for value in values.iter() {
                     if *cursor >= target.len() {
                         break;
                     }

@@ -13,7 +13,7 @@ fn byte_value_strategy() -> impl Strategy<Value = Value> {
         any::<bool>().prop_map(Value::Bool),
         any::<u64>().prop_map(|bits| Value::Float(f64::from_bits(bits))),
         prop::collection::vec(any::<u8>(), 0..=64).prop_map(|bytes| Value::Bytes(Arc::from(bytes))),
-        prop::collection::vec(any::<u32>().prop_map(Value::U32), 0..=16).prop_map(Value::Array),
+        prop::collection::vec(any::<u32>().prop_map(Value::U32), 0..=16).prop_map(Value::array),
     ]
 }
 
