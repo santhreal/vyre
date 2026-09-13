@@ -1455,8 +1455,8 @@
       "laws": [
         "bounded"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -3886,8 +3886,8 @@
       "laws": [
         "inverse-of"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -4156,8 +4156,8 @@
       "laws": [
         "monotonic"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -4301,8 +4301,8 @@
       "laws": [
         "monotonic"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -4437,8 +4437,8 @@
       "laws": [
         "bounded"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -6790,8 +6790,8 @@
       "laws": [
         "distributive"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -7278,8 +7278,8 @@
       "laws": [
         "monotonic"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -10798,8 +10798,8 @@
       "laws": [
         "custom"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -16445,8 +16445,8 @@
       "laws": [
         "distributive"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -27918,8 +27918,8 @@
       "laws": [
         "inverse-of"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -28059,8 +28059,8 @@
       "laws": [
         "monotonic"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -28205,8 +28205,8 @@
       "laws": [
         "distributive"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -28604,8 +28604,8 @@
       "laws": [
         "absorbing"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -28705,8 +28705,8 @@
       "laws": [
         "identity"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -28846,8 +28846,8 @@
       "laws": [
         "monotonic"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -28992,8 +28992,8 @@
       "laws": [
         "complement"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -30740,8 +30740,8 @@
         "bounded",
         "monotonic"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -30840,8 +30840,8 @@
       "laws": [
         "monotonic"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -31615,8 +31615,8 @@
       "laws": [
         "inverse-of"
       ],
-      "transform_decision": "guarded-laws",
-      "absence_class": "law-unrecorded",
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,

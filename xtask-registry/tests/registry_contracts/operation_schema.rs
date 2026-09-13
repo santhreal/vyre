@@ -272,12 +272,15 @@ fn every_projected_operation_states_why_a_law_is_absent() {
         }
         // `guarded-laws` is the one decision whose class depends on the laws
         // themselves: none when an unconditional one is proven, `guarded-only`
-        // when every proven law carries a guard, `law-unrecorded` when no law
-        // carries executable proof at all.
+        // when every proven law carries a guard. The decision is recorded only
+        // when some law in the set has executable proof evidence, so a
+        // `guarded-laws` row stating `law-unrecorded` is the conflation this
+        // partition replaced.
         if decision == "guarded-laws" {
             assert!(
-                matches!(class, None | Some("guarded-only") | Some("law-unrecorded")),
-                "Fix: `{id}` records laws, so its absence class cannot be {class:?}"
+                matches!(class, None | Some("guarded-only")),
+                "Fix: `{id}` records laws with executable proof, so its absence class cannot be \
+                 {class:?}"
             );
             continue;
         }
@@ -293,6 +296,49 @@ fn every_projected_operation_states_why_a_law_is_absent() {
         seen.len() > 1,
         "Fix: the projection collapsed to {seen:?}; a partition that reports one value is the \
          conflation it replaced"
+    );
+}
+
+/// No projected operation leaves the meaning of its absence unrecorded.
+///
+/// WHY: 19 operations declared law labels whose family needs a payload a bare
+/// name cannot state, so nothing examined them, and the declared set displaced
+/// the `with_uncharacterized` or `with_no_legal_rewrite` the registration also
+/// recorded. The row then read `law-unrecorded`, which states that nobody
+/// decided, for operations where somebody had. A consumer reading the catalog
+/// could not tell those apart from the ones nothing was ever said about.
+///
+/// The declared set now carries the decision only when some law in it has
+/// executable proof evidence, and an unproven label is recorded as rejected
+/// naming the payload it lacks.
+///
+/// This closes the class rather than the 19: registering an operation that
+/// records no decision at all, or one whose only laws are bare labels and
+/// which states no absence, turns this red. The list is the live projection,
+/// so a new member is judged without editing the test.
+///
+/// What it does not catch: whether `uncharacterized` is the honest class for a
+/// given operation. That an operation was characterized and the registration
+/// says otherwise is a claim only the algebra can settle.
+#[test]
+fn no_projected_operation_leaves_its_absence_unrecorded() {
+    let schema = read_schema();
+    let unrecorded: Vec<&str> = schema["operations"]
+        .as_array()
+        .expect("Fix: operations must be an array")
+        .iter()
+        .filter(|operation| {
+            operation["absence_class"].as_str()
+                == Some(vyre_spec::AbsenceClass::LawUnrecorded.name())
+        })
+        .map(|operation| operation["id"].as_str().unwrap_or("<unnamed>"))
+        .collect();
+    assert!(
+        unrecorded.is_empty(),
+        "Fix: {} operation(s) record no decision about a law: {unrecorded:?}. Add \
+         `.with_uncharacterized()` or `.with_no_legal_rewrite()` to each registration, or give \
+         its declared law a payload, then regenerate `docs/generated/OP_SCHEMA.json`",
+        unrecorded.len()
     );
 }
 

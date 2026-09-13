@@ -462,44 +462,63 @@ fn derive_numerical(numeric: NumericContract) -> vyre_spec::NumericBehavior {
     }
 }
 
-/// Resolve declared law names into law records, the labels no family in the
-/// closed vocabulary carries, and the families that carry executable evidence.
+/// One declared law set, resolved against the closed law vocabulary.
+struct ResolvedLaws {
+    /// Records for every name a family carries, in declaration order.
+    declared: Vec<vyre_spec::GuardedLaw>,
+    /// Labels no family carries, and labels whose family needs a payload a
+    /// bare name cannot state.
+    rejected: Vec<vyre_spec::RejectedLawLabel>,
+    /// Families backing a declared record with executable evidence.
+    proven: Vec<vyre_spec::LawFamily>,
+    /// Count of declared records carrying executable proof evidence.
+    executable: usize,
+}
+
+/// Resolve declared law names against the closed law vocabulary.
 ///
 /// A name in the vocabulary always produces a record, so nothing a
 /// registration declared is discarded. Whether that record is a proven law is
-/// a separate question its proof method answers: a family whose statement needs
-/// a payload a bare name cannot carry yields `ProofMethod::None`, which
-/// [`vyre_spec::TransformDecision::absence_class`] reports as
-/// [`vyre_spec::AbsenceClass::LawUnrecorded`].
+/// a separate question its evidence answers: a family whose statement needs a
+/// payload a bare name cannot carry discharges nothing, so the label is also
+/// recorded as rejected, naming the payload it lacks.
 ///
 /// A name no family carries records nothing at all. Mapping it onto a custom
 /// law whose check returned true is what let a label assert a property nothing
 /// examined.
-fn resolve_laws(
-    laws: &'static [&'static str],
-) -> (
-    Vec<vyre_spec::GuardedLaw>,
-    Vec<vyre_spec::RejectedLawLabel>,
-    Vec<vyre_spec::LawFamily>,
-) {
-    let mut declared = Vec::new();
-    let mut rejected = Vec::new();
-    let mut proven = Vec::new();
+fn resolve_laws(laws: &'static [&'static str]) -> ResolvedLaws {
+    let mut resolved = ResolvedLaws {
+        declared: Vec::new(),
+        rejected: Vec::new(),
+        proven: Vec::new(),
+        executable: 0,
+    };
     for &name in laws {
         let Some(family) = vyre_spec::LawFamily::from_name(name) else {
-            rejected.push(vyre_spec::RejectedLawLabel {
+            resolved.rejected.push(vyre_spec::RejectedLawLabel {
                 law: name.to_string(),
                 missing_payload: vyre_spec::RejectedLawLabel::UNKNOWN_LAW_NAME.to_string(),
             });
             continue;
         };
         let obligation = family.obligation();
-        if obligation.evidence.is_executable() {
-            proven.push(family);
+        match obligation.evidence {
+            vyre_spec::LawEvidence::ReferenceOracleWitness { .. } => {
+                resolved.proven.push(family);
+                resolved.executable += 1;
+            }
+            vyre_spec::LawEvidence::MissingPayload { payload } => {
+                resolved.rejected.push(vyre_spec::RejectedLawLabel {
+                    law: name.to_string(),
+                    missing_payload: payload.name().to_string(),
+                });
+            }
         }
-        declared.push(obligation.guarded_law(family.representative()));
+        resolved
+            .declared
+            .push(obligation.guarded_law(family.representative()));
     }
-    (declared, rejected, proven)
+    resolved
 }
 
 /// State the recorded absence in the contract vocabulary, with the operation's
@@ -543,18 +562,28 @@ fn absence_decision(
     }
 }
 
+/// Build the contract record from the facts one registration states.
+///
+/// A declared law set carries the decision only when some law in it has
+/// executable proof evidence. A set where none does states no transform: the
+/// labels name families whose statement needs a payload the bare name cannot
+/// carry, so nothing examined the operation. Such a set therefore does not
+/// displace a recorded absence, and each unproven label is recorded as
+/// rejected with the payload it lacks rather than presented as a law.
 pub(crate) fn build_contract_record(
     facts: &ContractFacts<'_>,
 ) -> vyre_spec::SemanticContractRecord {
-    let (declared, rejected, families) = resolve_laws(facts.laws);
-    let decision = if declared.is_empty() {
+    let resolved = resolve_laws(facts.laws);
+    let decision = if resolved.executable > 0 {
+        vyre_spec::TransformDecision::GuardedLaws(resolved.declared)
+    } else {
         match facts.absence {
             Some(decision) => absence_decision(decision, facts.program.as_ref()),
             None => vyre_spec::TransformDecision::NotRecorded,
         }
-    } else {
-        vyre_spec::TransformDecision::GuardedLaws(declared)
     };
+    let families = resolved.proven;
+    let rejected = resolved.rejected;
 
     vyre_spec::SemanticContractRecord {
         id: facts.id.to_string(),
