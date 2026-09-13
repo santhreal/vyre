@@ -153,6 +153,18 @@ jobs:
           ./cargo_full test -p vyre-pass-engine --features all-solvers
           --test all_tests_all_solvers
 
+      - name: oracle tests without its default feature
+        shell: bash
+        # The oracle's subgroup contracts are the mirror image of the two steps
+        # above: they compile only when `subgroup-ops` is OFF, so the per-package
+        # run and the --all-features job both skip them. Without the feature the
+        # oracle declares no subgroup support to validation and refuses every
+        # subgroup expression instead of answering from a one-lane model, and
+        # this is the only run that observes it.
+        run: >-
+          ./cargo_full test -p vyre-reference --no-default-features
+          --test all_tests
+
       - name: Configuration space model and isolated cells check
         shell: bash
         run: ./cargo_full run -p xtask -- configuration-model

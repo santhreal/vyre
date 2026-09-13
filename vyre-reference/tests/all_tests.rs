@@ -207,6 +207,11 @@ pub mod subgroup_shuffle_survives_lane_divergence;
 #[path = "subgroup_edge_contract.rs"]
 pub mod subgroup_edge_contract;
 
+/// Integration tests from `tests/subgroup_expressions_without_a_subgroup_model.rs`.
+#[cfg(not(feature = "subgroup-ops"))]
+#[path = "subgroup_expressions_without_a_subgroup_model.rs"]
+pub mod subgroup_expressions_without_a_subgroup_model;
+
 /// Integration tests from `tests/subnormal_contract.rs`.
 #[path = "subnormal_contract.rs"]
 pub mod subnormal_contract;

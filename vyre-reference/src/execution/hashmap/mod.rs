@@ -224,6 +224,24 @@ pub(crate) fn eval_expr_public(
     )
 }
 
+/// Refuse `expr` because this build has no subgroup to evaluate it over.
+///
+/// Without `subgroup-ops` the oracle declares `supports_subgroup_ops: false` to
+/// validation, which refuses the program as V041 before a value is evaluated,
+/// so a caller normally never reaches these arms. They used to answer anyway,
+/// from a subgroup one lane wide: size 1, local id 0, a ballot that was its own
+/// condition, a reduction that was its own value, and a shuffle that answered
+/// `0` for every lane but the first. A device runs 32 or 64 lanes, so those are
+/// values no execution produces, and the caller that reached them by supplying
+/// its own validation would have been graded against them.
+#[cfg(not(feature = "subgroup-ops"))]
+fn no_subgroup_model(expr: &str) -> ReferenceError {
+    ReferenceError::incomplete_dispatch_semantics(format!(
+        "{expr} needs a subgroup this build does not model. Fix: build vyre-reference with the \
+         `subgroup-ops` feature."
+    ))
+}
+
 #[doc = " Execute a vyre IR program using hashmap-backed locals."]
 pub(crate) fn run_hashmap_reference(
     program: &Program,
@@ -599,7 +617,7 @@ fn eval_expr(
             }
             #[cfg(not(feature = "subgroup-ops"))]
             {
-                Ok(Value::U32(0))
+                Err(no_subgroup_model("subgroup_local_id"))
             }
         }
         Expr::SubgroupSize => {
@@ -609,7 +627,7 @@ fn eval_expr(
             }
             #[cfg(not(feature = "subgroup-ops"))]
             {
-                Ok(Value::U32(1))
+                Err(no_subgroup_model("subgroup_size"))
             }
         }
         Expr::BinOp { op, left, right } => {
@@ -762,8 +780,8 @@ fn eval_expr(
             }
             #[cfg(not(feature = "subgroup-ops"))]
             {
-                let cond = eval_expr(cond, invocation, memory)?.truthy();
-                Ok(Value::U32(u32::from(cond)))
+                let _ = cond;
+                Err(no_subgroup_model("subgroup_ballot"))
             }
         }
         Expr::SubgroupShuffle { value, lane } => {
@@ -773,25 +791,16 @@ fn eval_expr(
             }
             #[cfg(not(feature = "subgroup-ops"))]
             {
-                let value_val = eval_expr(value, invocation, memory)?;
-                let lane_val = eval_expr(lane, invocation, memory)?;
-                let lane_u32 = lane_val . try_as_u32 () . ok_or_else (| | { ReferenceError::new("subgroup_shuffle lane index is not a u32. Fix: use a scalar u32 lane argument.") }) ? ;
-                Ok(if lane_u32 == 0 {
-                    value_val
-                } else {
-                    Value::U32(0)
-                })
+                let _ = (value, lane);
+                Err(no_subgroup_model("subgroup_shuffle"))
             }
         }
         #[cfg(feature = "subgroup-ops")]
         Expr::SubgroupReduce { op, value } => {
             eval_subgroup_reduce(*op, value, invocation, snapshots, memory)
         }
-        // Single-lane interpreter: a reduction over one lane is that lane's
-        // value for every operator (Add/Mul/Min/Max/And/Or/Xor), so the
-        // operator is not read.
         #[cfg(not(feature = "subgroup-ops"))]
-        Expr::SubgroupReduce { op: _, value } => eval_expr(value, invocation, memory),
+        Expr::SubgroupReduce { op: _, value: _ } => Err(no_subgroup_model("subgroup_reduce")),
         // `Expr` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
         // oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => Err(ReferenceError::new("hashmap reference interpreter encountered an unknown expression variant. Fix: add explicit reference semantics for the new ExprNode before dispatch.")),
