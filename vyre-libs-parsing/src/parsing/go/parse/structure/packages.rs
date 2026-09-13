@@ -101,24 +101,23 @@ pub fn go_extract_packages_and_imports(
         ),
     ];
 
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(tok_types, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(tok_starts, 1, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(tok_lens, 2, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(haystack, 3, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(out_packages, 4, BufferAccess::ReadWrite, DataType::U32),
-            BufferDecl::storage(
-                out_package_counts,
-                5,
-                BufferAccess::ReadWrite,
-                DataType::U32,
-            )
+    let mut buffers = super::super::token_stream_decls(tok_types, tok_starts, tok_lens, haystack);
+    buffers.extend([
+        BufferDecl::storage(out_packages, 4, BufferAccess::ReadWrite, DataType::U32),
+        BufferDecl::storage(
+            out_package_counts,
+            5,
+            BufferAccess::ReadWrite,
+            DataType::U32,
+        )
+        .with_count(1),
+        BufferDecl::storage(out_imports, 6, BufferAccess::ReadWrite, DataType::U32),
+        BufferDecl::storage(out_import_counts, 7, BufferAccess::ReadWrite, DataType::U32)
             .with_count(1),
-            BufferDecl::storage(out_imports, 6, BufferAccess::ReadWrite, DataType::U32),
-            BufferDecl::storage(out_import_counts, 7, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-        ],
+    ]);
+
+    Program::wrapped(
+        buffers,
         [256, 1, 1],
         vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_extract_packages_and_imports",

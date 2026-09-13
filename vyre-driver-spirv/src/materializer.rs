@@ -107,9 +107,7 @@ impl ArtifactInstance for SpirvArtifactInstance {
 impl MaterializedInstance for SpirvArtifactInstance {
     type Module = SpirvExecutableModule;
 
-    fn core(&self) -> &InstanceCore {
-        &self.core
-    }
+    vyre_driver::staged_input_gather!();
 
     fn modules(&self) -> &[Self::Module] {
         &self.modules
@@ -117,20 +115,6 @@ impl MaterializedInstance for SpirvArtifactInstance {
 
     fn module_label(&self) -> &'static str {
         "SPIR-V target module"
-    }
-
-    /// Stage this module's inputs in target binding order.
-    ///
-    /// The default walks the Program's host-input order, which omits a buffer
-    /// a previous module wrote and this one reads.
-    fn gather<'a>(
-        &'a self,
-        module_index: usize,
-        module: &'a Self::Module,
-        _plan: &vyre_driver::BindingPlan,
-        state: &'a std::collections::BTreeMap<vyre_megakernel::ArtifactValueId, Vec<u8>>,
-    ) -> Result<Vec<&'a [u8]>, BackendError> {
-        materialize::gather_artifact_inputs(&self.core, module_index, &module.input_slots, state)
     }
 
     fn dispatch(

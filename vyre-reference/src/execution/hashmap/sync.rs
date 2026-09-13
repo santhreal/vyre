@@ -122,16 +122,24 @@ pub(crate) fn verify_uniform_control_flow(
 ///
 /// A barrier's scope is the whole workgroup, so every lane reports the same
 /// one. A subgroup collective's scope is the subgroup the lane sits in.
-fn rendezvous_scope(
-    rendezvous: RendezvousKind,
-    #[cfg_attr(not(feature = "subgroup-ops"), allow(unused_variables))] linear_local_index: u32,
-) -> usize {
+#[cfg(feature = "subgroup-ops")]
+fn rendezvous_scope(rendezvous: RendezvousKind, linear_local_index: u32) -> usize {
     match rendezvous {
         RendezvousKind::Barrier => 0,
-        #[cfg(feature = "subgroup-ops")]
         RendezvousKind::SubgroupCollective => {
             linear_local_index as usize / crate::execution::hashmap::subgroup::subgroup_width()
         }
+    }
+}
+
+/// Which set of lanes a rendezvous of this kind agrees over.
+///
+/// Without the subgroup model `RendezvousKind` declares only `Barrier`, whose
+/// scope is the whole workgroup, so the lane index selects nothing.
+#[cfg(not(feature = "subgroup-ops"))]
+fn rendezvous_scope(rendezvous: RendezvousKind, _linear_local_index: u32) -> usize {
+    match rendezvous {
+        RendezvousKind::Barrier => 0,
     }
 }
 

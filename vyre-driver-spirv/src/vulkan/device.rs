@@ -448,10 +448,12 @@ impl VulkanDevice {
         descriptor_set: vk::DescriptorSet,
         workgroups: [u32; 3],
     ) -> Result<(), BackendError> {
-        // SAFETY: every handle is live and owned by this device; the call
-        // records into a buffer it allocates and frees on its own error paths.
-        let command_buffer =
-            unsafe { self.record_dispatch(pipeline, pipeline_layout, descriptor_set, workgroups) }?;
+        let command_buffer = {
+            // SAFETY: every handle is live and owned by this device; the call
+            // records into a buffer it allocates and frees on its own error
+            // paths.
+            unsafe { self.record_dispatch(pipeline, pipeline_layout, descriptor_set, workgroups) }
+        }?;
 
         // SAFETY: Fence creation is a standard Vulkan device operation, parameters are valid defaults.
         let fence = match unsafe {

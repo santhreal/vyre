@@ -10,7 +10,7 @@ use vyre_foundation::ir::{
     SubgroupReduceOp, Tile,
 };
 use vyre_reference::value::Value;
-use vyre_test_support::tile_programs::tile_cases;
+use vyre_test_support::tile_programs::{self, tile_cases};
 
 fn decode_f32(bytes: &[u8]) -> Vec<f32> {
     bytes
@@ -113,31 +113,7 @@ fn reference_eval_rejects_elementwise_operand_that_does_not_divide_the_output() 
 // Absent and ill-formed tile access descriptions
 // ---------------------------------------------------------------------------
 
-/// A tile access over `a` with the origin, tile and store the case states.
-fn tile_access_program(
-    extents: Vec<u32>,
-    load_origin: Vec<Expr>,
-    store_origin: Vec<Expr>,
-    layout: Layout,
-) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::output("out", 1, DataType::F32).with_count(4),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::tile_load(
-                "t",
-                Tile::new(DataType::F32, extents, layout.clone(), Residency::Register),
-                "a",
-                load_origin,
-                layout,
-            ),
-            Node::tile_store("out", store_origin, "t"),
-        ],
-    )
-}
+use vyre_test_support::tile_programs::tile_access_program;
 
 /// The refusal a tile access program produces.
 fn tile_access_refusal(program: &Program) -> String {
@@ -256,39 +232,17 @@ fn a_layout_that_leaves_a_tile_element_unloaded_is_refused() {
 /// length has the extents the output covers.
 #[test]
 fn an_elementwise_result_carries_the_shape_of_its_broadcast_target() {
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
-            BufferDecl::output("out", 1, DataType::F32).with_count(2),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::tile_load(
-                "t_a",
-                Tile::new(
-                    DataType::F32,
-                    vec![2, 2],
-                    Layout::RowMajor,
-                    Residency::Register,
-                ),
-                "a",
-                vec![Expr::u32(0), Expr::u32(0)],
-                Layout::RowMajor,
-            ),
-            Node::tile_reduce("row_max", "t_a", SubgroupReduceOp::Max, 1),
-            Node::tile_elementwise(
-                "diff",
-                vec![Ident::from("t_a"), Ident::from("row_max")],
-                vec![Node::let_bind(
-                    "diff",
-                    Expr::sub(Expr::var("t_a"), Expr::var("row_max")),
-                )],
-            ),
-            // Reducing the elementwise result is what needs its shape: the
-            // reduce has to know that four elements are two rows of two.
-            Node::tile_reduce("row_min", "diff", SubgroupReduceOp::Min, 1),
-            Node::tile_store("out", vec![Expr::u32(0)], "row_min"),
-        ],
+    let program = tile_programs::single_input_tile_program(
+        2,
+        tile_programs::row_max_difference_prefix()
+            .into_iter()
+            .chain([
+                // Reducing the elementwise result is what needs its shape: the
+                // reduce has to know that four elements are two rows of two.
+                Node::tile_reduce("row_min", "diff", SubgroupReduceOp::Min, 1),
+                Node::tile_store("out", vec![Expr::u32(0)], "row_min"),
+            ])
+            .collect(),
     );
 
     let outputs = vyre_reference::ReferenceRequest::standard(

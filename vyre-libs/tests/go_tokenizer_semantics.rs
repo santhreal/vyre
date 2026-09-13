@@ -644,13 +644,40 @@ fn run_span_extractor(
 /// module. The op id is the identifier the extractor publishes, which is why it
 /// is the thing scanned for: a private helper that builds part of a program has
 /// none, and a new extractor cannot acquire one silently.
+///
+/// The module tree is walked at run time. A compile-time list of file paths
+/// reports a smaller set the moment a file is added, and stops compiling the
+/// moment one is split into a directory.
 fn declared_go_extractor_op_ids() -> Vec<String> {
     const PREFIX: &str = "vyre-libs::parsing::go_extract_";
-    const SOURCES: &[&str] = &[
-        include_str!("../../vyre-libs-parsing/src/parsing/go/parse/ast_ops.rs"),
-        include_str!("../../vyre-libs-parsing/src/parsing/go/parse/structure.rs"),
-    ];
-    let mut names: Vec<String> = SOURCES
+
+    fn read_module_sources(dir: &std::path::Path, into: &mut Vec<String>) {
+        for entry in std::fs::read_dir(dir)
+            .unwrap_or_else(|e| panic!("read Go parse module dir {}: {e}", dir.display()))
+        {
+            let path = entry.expect("Go parse module dir entry").path();
+            if path.is_dir() {
+                read_module_sources(&path, into);
+            } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
+                into.push(
+                    std::fs::read_to_string(&path)
+                        .unwrap_or_else(|e| panic!("read {}: {e}", path.display())),
+                );
+            }
+        }
+    }
+
+    let parse_dir = vyre_test_support::monorepo::vyre_crate_directory("vyre-libs-parsing")
+        .join("src/parsing/go/parse");
+    let mut sources = Vec::new();
+    read_module_sources(&parse_dir, &mut sources);
+    assert!(
+        !sources.is_empty(),
+        "Fix: the Go parse module tree at {} declares no source file",
+        parse_dir.display()
+    );
+
+    let mut names: Vec<String> = sources
         .iter()
         .flat_map(|source| {
             source.match_indices(PREFIX).map(move |(at, _)| {

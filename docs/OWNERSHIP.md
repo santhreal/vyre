@@ -1069,7 +1069,7 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 | --- | --- | --- | --- |
 | `structure-gate` | `source-structure` | Whether a directory carries Rust source, which directory owns a domain, and the checkout root a gate reports on. | None |
 | `vyre-driver` | `backend-contract` | The backend-neutral target, materialization, submission and completion contracts, and the driver registry every backend registers into. | `driver-artifact-contracts`, `driver-contracts`, `host-input-abi` |
-| `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | `driver-artifact-contracts`, `golden-corpus`, `host-input-abi`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests` |
+| `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | `driver-artifact-contracts`, `driver-contracts`, `golden-corpus`, `host-input-abi`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests` |
 | `vyre-lower` | `lowering` | The single verified selected-module representation, lowered from semantic IR. | `golden-corpus` |
 | `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | `driver-artifact-contracts`, `semantic-parity`, `semantic-requests` |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | `semantic-parity` |

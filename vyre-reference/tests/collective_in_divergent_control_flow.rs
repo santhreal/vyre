@@ -230,10 +230,12 @@ fn a_collective_diverging_only_between_subgroups_is_accepted() {
             );
             ReferenceRequest::standard(&program, &[])
                 .outputs()
-                .expect(&format!(
-                    "Fix: `{name}` at {place:?} under a condition every lane of its subgroup \
-                     agrees on reads only its own subgroup and must be accepted"
-                ));
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "Fix: `{name}` at {place:?} under a condition every lane of its subgroup \
+                         agrees on reads only its own subgroup and must be accepted: {e}"
+                    )
+                });
         }
     }
 }

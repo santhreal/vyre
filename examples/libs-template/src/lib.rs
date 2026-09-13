@@ -8,9 +8,8 @@
 
 use vyre_foundation::composition::wrap_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_libs::{
-    check_same_shape, check_tensors, checked_element_count, BuildOptions, TensorRef, TensorRefError,
-};
+use vyre_libs::builder::{check_same_shape, check_tensors, checked_element_count, BuildOptions};
+use vyre_libs::{TensorRef, TensorRefError};
 
 const OP_ID: &str = "{{crate_name}}::example_op";
 

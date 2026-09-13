@@ -773,28 +773,18 @@ fn eval_expr(
             extension.extension_kind(),
             extension.debug_identity()
         ))),
+        #[cfg(feature = "subgroup-ops")]
         Expr::SubgroupBallot { cond } => {
-            #[cfg(feature = "subgroup-ops")]
-            {
-                eval_subgroup_ballot(cond, invocation, snapshots, memory)
-            }
-            #[cfg(not(feature = "subgroup-ops"))]
-            {
-                let _ = cond;
-                Err(no_subgroup_model("subgroup_ballot"))
-            }
+            eval_subgroup_ballot(cond, invocation, snapshots, memory)
         }
+        #[cfg(not(feature = "subgroup-ops"))]
+        Expr::SubgroupBallot { .. } => Err(no_subgroup_model("subgroup_ballot")),
+        #[cfg(feature = "subgroup-ops")]
         Expr::SubgroupShuffle { value, lane } => {
-            #[cfg(feature = "subgroup-ops")]
-            {
-                eval_subgroup_shuffle(value, lane, invocation, snapshots, memory)
-            }
-            #[cfg(not(feature = "subgroup-ops"))]
-            {
-                let _ = (value, lane);
-                Err(no_subgroup_model("subgroup_shuffle"))
-            }
+            eval_subgroup_shuffle(value, lane, invocation, snapshots, memory)
         }
+        #[cfg(not(feature = "subgroup-ops"))]
+        Expr::SubgroupShuffle { .. } => Err(no_subgroup_model("subgroup_shuffle")),
         #[cfg(feature = "subgroup-ops")]
         Expr::SubgroupReduce { op, value } => {
             eval_subgroup_reduce(*op, value, invocation, snapshots, memory)

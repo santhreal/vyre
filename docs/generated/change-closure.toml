@@ -16645,6 +16645,16 @@ public_api_entry = "docs/public-api/vyre-megakernel.txt"
 disposition = "implemented"
 
 [[closure]]
+type_name = "MatrixInstructionSource"
+variant_name = "DeclaredByDescriptor"
+declaration_site = "vyre-lower/src/analyses/contraction_candidates/plan.rs:52"
+constructors = ["MatrixInstructionSource::DeclaredByDescriptor"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)"
+public_api_entry = "docs/public-api/vyre-lower.txt"
+disposition = "implemented"
+
+[[closure]]
 type_name = "MatrixMmaElement"
 variant_name = "BF16"
 declaration_site = "vyre-lower/src/descriptor/mod.rs:246"
@@ -16937,7 +16947,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryAccessKind"
 variant_name = "AsyncTransfer"
-declaration_site = "vyre-reference/src/interleaving.rs:83"
+declaration_site = "vyre-reference/src/interleaving/model.rs:57"
 constructors = ["MemoryAccessKind::AsyncTransfer"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
@@ -16947,7 +16957,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryAccessKind"
 variant_name = "Atomic"
-declaration_site = "vyre-reference/src/interleaving.rs:76"
+declaration_site = "vyre-reference/src/interleaving/model.rs:50"
 constructors = ["MemoryAccessKind::Atomic"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
@@ -16957,7 +16967,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryAccessKind"
 variant_name = "Read"
-declaration_site = "vyre-reference/src/interleaving.rs:72"
+declaration_site = "vyre-reference/src/interleaving/model.rs:46"
 constructors = ["MemoryAccessKind::Read"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
@@ -16967,7 +16977,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryAccessKind"
 variant_name = "Write"
-declaration_site = "vyre-reference/src/interleaving.rs:74"
+declaration_site = "vyre-reference/src/interleaving/model.rs:48"
 constructors = ["MemoryAccessKind::Write"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
@@ -23144,7 +23154,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "RaceFinding"
 variant_name = "ScheduleDisagreement"
-declaration_site = "vyre-reference/src/interleaving.rs:125"
+declaration_site = "vyre-reference/src/interleaving/model.rs:99"
 constructors = ["RaceFinding::ScheduleDisagreement"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -23154,7 +23164,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "RaceFinding"
 variant_name = "UnsynchronizedAccess"
-declaration_site = "vyre-reference/src/interleaving.rs:134"
+declaration_site = "vyre-reference/src/interleaving/model.rs:108"
 constructors = ["RaceFinding::UnsynchronizedAccess"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"

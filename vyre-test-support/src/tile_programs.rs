@@ -86,6 +86,87 @@ pub fn tile_matmul_program(
     )
 }
 
+/// A tile load from `a` and a store to `out`, both over four F32 elements.
+///
+/// The shape every ill-formed access case varies: the tile extents, the origin
+/// each side indexes with, and the layout. Nothing else about those cases
+/// differs, so the buffers, the workgroup and the statement order are stated
+/// once here rather than once per caller.
+#[must_use]
+pub fn tile_access_program(
+    extents: Vec<u32>,
+    load_origin: Vec<Expr>,
+    store_origin: Vec<Expr>,
+    layout: Layout,
+) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
+            BufferDecl::output("out", 1, DataType::F32).with_count(4),
+        ],
+        [1, 1, 1],
+        vec![
+            Node::tile_load(
+                "t",
+                Tile::new(DataType::F32, extents, layout.clone(), Residency::Register),
+                "a",
+                load_origin,
+                layout,
+            ),
+            Node::tile_store("out", store_origin, "t"),
+        ],
+    )
+}
+
+/// A program over a read-only `a` of four F32 elements and an `out` of
+/// `out_elements`, on a single invocation.
+///
+/// The buffer shape every single-input tile case declares. A case varies the
+/// statements and the output length, and nothing else about the declaration.
+#[must_use]
+pub fn single_input_tile_program(out_elements: u32, body: Vec<Node>) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32).with_count(4),
+            BufferDecl::output("out", 1, DataType::F32).with_count(out_elements),
+        ],
+        [1, 1, 1],
+        body,
+    )
+}
+
+/// Load `a` as a 2x2 row-major register tile `t_a`, reduce each row to its
+/// maximum as `row_max`, and bind `diff` to the per-element difference.
+///
+/// The statements a broadcast case shares. What varies is what the case does
+/// with `diff`: store it, or feed it to a step that needs its shape.
+#[must_use]
+pub fn row_max_difference_prefix() -> Vec<Node> {
+    vec![
+        Node::tile_load(
+            "t_a",
+            Tile::new(
+                DataType::F32,
+                vec![2, 2],
+                Layout::RowMajor,
+                Residency::Register,
+            ),
+            "a",
+            vec![Expr::u32(0), Expr::u32(0)],
+            Layout::RowMajor,
+        ),
+        Node::tile_reduce("row_max", "t_a", SubgroupReduceOp::Max, 1),
+        Node::tile_elementwise(
+            "diff",
+            vec![Ident::from("t_a"), Ident::from("row_max")],
+            vec![Node::let_bind(
+                "diff",
+                Expr::sub(Expr::var("t_a"), Expr::var("row_max")),
+            )],
+        ),
+    ]
+}
+
 /// The canonical matrix-fragment matmul: `c[16,8] = a[16,16] x b[16,8]`, F16
 /// inputs accumulating in F32, on a full 32-lane workgroup.
 ///
@@ -222,13 +303,8 @@ pub fn tile_cases() -> Vec<TileCase> {
         },
         TileCase {
             name: "reduce_axis_1",
-            program: Program::wrapped(
-                vec![
-                    BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32)
-                        .with_count(4),
-                    BufferDecl::output("out", 1, DataType::F32).with_count(2),
-                ],
-                [1, 1, 1],
+            program: single_input_tile_program(
+                2,
                 vec![
                     Node::tile_load(
                         "t_a",
@@ -246,32 +322,12 @@ pub fn tile_cases() -> Vec<TileCase> {
         },
         TileCase {
             name: "broadcast_elementwise",
-            program: Program::wrapped(
-                vec![
-                    BufferDecl::storage("a", 0, BufferAccess::ReadOnly, DataType::F32)
-                        .with_count(4),
-                    BufferDecl::output("out", 1, DataType::F32).with_count(4),
-                ],
-                [1, 1, 1],
-                vec![
-                    Node::tile_load(
-                        "t_a",
-                        square(vec![2, 2]),
-                        "a",
-                        vec![Expr::u32(0), Expr::u32(0)],
-                        Layout::RowMajor,
-                    ),
-                    Node::tile_reduce("row_max", "t_a", SubgroupReduceOp::Max, 1),
-                    Node::tile_elementwise(
-                        "diff",
-                        vec![Ident::from("t_a"), Ident::from("row_max")],
-                        vec![Node::let_bind(
-                            "diff",
-                            Expr::sub(Expr::var("t_a"), Expr::var("row_max")),
-                        )],
-                    ),
-                    Node::tile_store("out", vec![Expr::u32(0)], "diff"),
-                ],
+            program: single_input_tile_program(
+                4,
+                row_max_difference_prefix()
+                    .into_iter()
+                    .chain([Node::tile_store("out", vec![Expr::u32(0)], "diff")])
+                    .collect(),
             ),
             inputs: vec![vec![10.0, 20.0, 30.0, 40.0]],
             expected: vec![-10.0, 0.0, -10.0, 0.0],

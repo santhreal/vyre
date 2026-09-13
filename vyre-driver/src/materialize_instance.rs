@@ -930,6 +930,52 @@ macro_rules! resident_pipeline_launch {
     };
 }
 
+/// The `core` accessor and the staged-input `gather` a materialized instance
+/// whose module carries `input_slots` implements.
+///
+/// Both are structural. `core` hands back the field the trait requires, and
+/// `gather` resolves the slots through the one staging primitive. Written out
+/// per backend they are the same text in each driver, and a backend that
+/// diverged there would stage a fused artifact's inter-module values by a
+/// second rule: the SPIR-V driver did, and seven operations read the Program's
+/// host-input order instead of the target binding order.
+///
+/// ```ignore
+/// impl MaterializedInstance for TargetArtifactInstance {
+///     type Module = TargetExecutableModule;
+///
+///     vyre_driver::staged_input_gather!();
+///
+///     fn modules(&self) -> &[Self::Module] { /* per backend */ }
+/// }
+/// ```
+#[macro_export]
+macro_rules! staged_input_gather {
+    () => {
+        fn core(&self) -> &$crate::materialize::InstanceCore {
+            &self.core
+        }
+
+        fn gather<'a>(
+            &'a self,
+            module_index: usize,
+            module: &'a Self::Module,
+            _plan: &$crate::BindingPlan,
+            state: &'a ::std::collections::BTreeMap<
+                ::vyre_megakernel::ArtifactValueId,
+                ::std::vec::Vec<u8>,
+            >,
+        ) -> ::std::result::Result<::std::vec::Vec<&'a [u8]>, $crate::BackendError> {
+            $crate::materialize::gather_artifact_inputs(
+                &self.core,
+                module_index,
+                &module.input_slots,
+                state,
+            )
+        }
+    };
+}
+
 /// A submission whose execution already finished when it was created.
 pub(crate) struct ReadySubmission {
     pub(crate) result: Option<Result<Completion, BackendError>>,

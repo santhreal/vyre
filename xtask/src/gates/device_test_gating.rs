@@ -129,7 +129,7 @@ impl crate::gate::GateBehavior for DeviceTestGating {
             ));
         }
         let device_linked = device_linking_members(&tree)?;
-        let admitted_files = admitted_closure(&parsed);
+        let admitted_files = admitted_closure(&parsed, &manifest_admitted_roots(&tree)?);
         for path in &sources {
             let Some(file) = parsed.get(path) else {
                 continue;
@@ -300,6 +300,24 @@ impl crate::gate::GateBehavior for DeviceTestGating {
     }
 }
 
+/// The test-target roots the manifest admits through `required-features`.
+///
+/// A device test is commonly a module of a harness target whose `[[test]]`
+/// entry carries `required-features = ["device-tests"]`. The module file then
+/// holds no inner cfg of its own, so reading attributes alone reports every
+/// test in that harness as reaching hardware with nothing admitting it.
+fn manifest_admitted_roots(tree: &Tree) -> Result<BTreeSet<PathBuf>, GateError> {
+    let mut roots = BTreeSet::new();
+    for member in tree.member_manifests()? {
+        for target in test_target_membership::ownership(tree, &member).targets {
+            if target.required_features.contains(FEATURE) {
+                roots.insert(PathBuf::from(target.root));
+            }
+        }
+    }
+    Ok(roots)
+}
+
 /// Every file the admission reaches, following `mod` declarations.
 ///
 /// A module file carries no attributes of its own. `tests/foo.rs` gates the
@@ -309,14 +327,21 @@ impl crate::gate::GateBehavior for DeviceTestGating {
 /// toward restating the attribute in every submodule, which is a second copy
 /// of one fact and drifts the moment a root's gate changes.
 ///
-/// Both directions count: a root whose own attributes admit passes admission
-/// to everything it declares, and an admitted `mod` item passes it to that one
-/// child even when the parent is ungated.
-fn admitted_closure(parsed: &BTreeMap<PathBuf, syn::File>) -> BTreeSet<PathBuf> {
+/// Three directions count: a root whose own attributes admit passes admission
+/// to everything it declares, an admitted `mod` item passes it to that one
+/// child even when the parent is ungated, and a `[[test]]` target whose
+/// manifest entry names the feature under `required-features` admits its root.
+/// The manifest is the only admission a harness target has: its modules hold
+/// no inner cfg, because cargo already refuses to compile the target without
+/// the feature.
+fn admitted_closure(
+    parsed: &BTreeMap<PathBuf, syn::File>,
+    manifest_roots: &BTreeSet<PathBuf>,
+) -> BTreeSet<PathBuf> {
     let mut admitted_files = BTreeSet::new();
     let mut frontier: Vec<PathBuf> = parsed
         .iter()
-        .filter(|(_, file)| admitted(&file.attrs))
+        .filter(|(path, file)| admitted(&file.attrs) || manifest_roots.contains(*path))
         .map(|(path, _)| path.clone())
         .collect();
     for (path, file) in parsed {
@@ -1431,10 +1456,44 @@ mod closure_tests {
                 "#[test]\nfn live() { let _ = CudaBackend::acquire(); }\n",
             ),
         ]);
-        let admitted_files = admitted_closure(&parsed);
+        let admitted_files = admitted_closure(&parsed, &BTreeSet::new());
         assert!(
             admitted_files.contains(Path::new("vyre-driver-cuda/tests/resident/lane.rs")),
             "Fix: the closure must follow `mod lane;` out of an admitted root"
+        );
+    }
+
+    /// WHY: a harness target is admitted by its manifest entry, not by an
+    /// attribute. `conform/vyre-conform` declares
+    /// `all_tests_device_tests` with `required-features = ["device-tests"]`
+    /// and every device test in the crate is a `#[path]` module of it, so no
+    /// file in that closure carries an inner cfg. Reading attributes alone
+    /// reported those modules as reaching hardware with nothing admitting
+    /// them, and the fix the finding asked for was a second copy of an
+    /// admission cargo already enforces.
+    #[test]
+    fn a_manifest_admitted_target_admits_its_module_closure() {
+        let parsed = tree(&[
+            (
+                "conform/vyre-conform/tests/all_tests_device_tests.rs",
+                "#[path = \"parity_matrix.rs\"]\npub mod parity_matrix;\n",
+            ),
+            (
+                "conform/vyre-conform/tests/parity_matrix.rs",
+                "#[test]\nfn live() { let _ = WgpuBackend::new(); }\n",
+            ),
+        ]);
+        let root = PathBuf::from("conform/vyre-conform/tests/all_tests_device_tests.rs");
+        let admitted_files =
+            admitted_closure(&parsed, &BTreeSet::from([root.clone()]));
+        assert!(
+            admitted_files.contains(Path::new("conform/vyre-conform/tests/parity_matrix.rs")),
+            "Fix: a `required-features` target must pass admission to the modules it declares"
+        );
+        assert!(
+            admitted_closure(&parsed, &BTreeSet::new()).is_empty(),
+            "Fix: without the manifest root nothing here is admitted, which is the \
+             reading that produced the false findings"
         );
     }
 
@@ -1453,7 +1512,7 @@ mod closure_tests {
                 "#[test]\nfn live() { let _ = WgpuBackend::new(); }\n",
             ),
         ]);
-        let admitted_files = admitted_closure(&parsed);
+        let admitted_files = admitted_closure(&parsed, &BTreeSet::new());
         assert!(admitted_files.contains(Path::new("vyre-driver-wgpu/tests/parity/inner/deep.rs")));
     }
 
@@ -1477,7 +1536,7 @@ mod closure_tests {
                 "#[test]\nfn live() { let _ = CudaBackend::acquire(); }\n",
             ),
         ]);
-        let admitted_files = admitted_closure(&parsed);
+        let admitted_files = admitted_closure(&parsed, &BTreeSet::new());
         assert!(!admitted_files.contains(Path::new("vyre-driver-cuda/tests/loose.rs")));
     }
 
@@ -1500,7 +1559,7 @@ mod closure_tests {
                 "#[test]\nfn live() { let _ = WgpuBackend::new(); }\n",
             ),
         ]);
-        let admitted_files = admitted_closure(&parsed);
+        let admitted_files = admitted_closure(&parsed, &BTreeSet::new());
         assert!(admitted_files.contains(Path::new("conform/vyre-conform/tests/cert/gpu.rs")));
         assert!(!admitted_files.contains(Path::new("conform/vyre-conform/tests/cert/cpu.rs")));
     }
@@ -1520,7 +1579,7 @@ mod closure_tests {
                 "#[test]\nfn live() { let _ = CudaBackend::acquire(); }\n",
             ),
         ]);
-        let admitted_files = admitted_closure(&parsed);
+        let admitted_files = admitted_closure(&parsed, &BTreeSet::new());
         assert!(
             admitted_files.contains(Path::new("vyre-driver-cuda/tests/internal/live.rs")),
             "Fix: `#[path]` names the file, so the closure must follow it"

@@ -77,9 +77,35 @@ pub struct BackendRegistration {
 /// holding it leaves the vendor runtime in whatever state it reached, and the
 /// next acquisition's own error is a better account of that than a poison
 /// report from here.
+///
+/// The lock lives on a named type rather than a bare static: the recovery
+/// class of a mutable owner is stated by a `StateOwnerRecovery` impl, and a
+/// static has nothing to implement it on.
+struct VendorRuntimeBringUp {
+    serialized: std::sync::Mutex<()>,
+}
+
+impl crate::lock_policy::StateOwnerRecovery for VendorRuntimeBringUp {
+    fn failure_domain(&self) -> crate::lock_policy::FailureDomain {
+        crate::lock_policy::FailureDomain::DeviceContext
+    }
+
+    fn recovery_class(&self) -> crate::lock_policy::RecoveryClass {
+        // A vendor runtime that failed to initialize under the guard leaves
+        // the device context in whatever state it reached, and the next
+        // acquisition brings it up again from the same canonical input.
+        crate::lock_policy::RecoveryClass::RestartableFromCanonicalInput
+    }
+}
+
+static VENDOR_RUNTIME_BRING_UP: std::sync::LazyLock<VendorRuntimeBringUp> =
+    std::sync::LazyLock::new(|| VendorRuntimeBringUp {
+        serialized: std::sync::Mutex::new(()),
+    });
+
 fn vendor_runtime_init() -> std::sync::MutexGuard<'static, ()> {
-    static VENDOR_RUNTIME_INIT: std::sync::Mutex<()> = std::sync::Mutex::new(());
-    VENDOR_RUNTIME_INIT
+    VENDOR_RUNTIME_BRING_UP
+        .serialized
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }

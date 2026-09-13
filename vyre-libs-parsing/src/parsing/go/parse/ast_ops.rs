@@ -60,16 +60,13 @@ fn go_extract_span_program(
     body: Vec<Node>,
 ) -> Program {
     let t = Expr::logical_index(0);
+    let mut buffers = super::token_stream_decls(tok_types, tok_starts, tok_lens, haystack);
+    buffers.extend([
+        BufferDecl::storage(out_records, 4, BufferAccess::ReadWrite, DataType::U32),
+        BufferDecl::storage(out_counts, 5, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+    ]);
     Program::wrapped(
-        vec![
-            BufferDecl::storage(tok_types, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(tok_starts, 1, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(tok_lens, 2, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(haystack, 3, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(out_records, 4, BufferAccess::ReadWrite, DataType::U32),
-            BufferDecl::storage(out_counts, 5, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-        ],
+        buffers,
         [256, 1, 1],
         vec![wrap_anonymous_region(
             op_id,

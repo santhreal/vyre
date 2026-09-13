@@ -1024,3 +1024,17 @@ gates do not issue, and executing every writer to find out would rewrite the
 whole evidence tree. The forbidden names are read from the descriptor table at
 run time, so a gate registered tomorrow joins the scan without an edit here.
 """
+
+[[gate]]
+file = "vyre-libs/tests/go_tokenizer_semantics.rs"
+tests = ["every_go_extractor_has_a_bounds_probe"]
+reason = """
+Holds the bounds-probe table equal to the set of extractors the Go parse module
+publishes. Each extractor is a function returning a Program, submitted to no
+registry, so a running process can enumerate only the ones a caller already
+named: the seventh extractor is invisible to execution precisely because
+nothing runs it, which is the defect. Three of the first six indexed one token
+past their guard. The roster is walked out of the module tree at run time, so a
+file added to it, or a file split into a directory, joins the scan without an
+edit here.
+"""
