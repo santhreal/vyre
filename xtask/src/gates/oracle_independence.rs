@@ -19,7 +19,7 @@
 //!
 //! The surface is derived from `vyre-foundation/src/lib.rs` at run time: its
 //! `pub mod` declarations and its `#[macro_export]` macros are what a dependent
-//! crate can name. [`SPECIFICATION_SURFACE`] records the half the oracle may
+//! crate can name. `SPECIFICATION_SURFACE` records the half the oracle may
 //! read, and everything else on that derived surface is forbidden. Recording
 //! the permitted half rather than the forbidden half is what makes a new
 //! foundation module fail closed: the day one is added, the oracle cannot name

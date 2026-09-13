@@ -999,6 +999,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   shard descriptors. A safetensors element type with no counterpart in the IR
   data contract reports `ManifestError::UnsupportedCheckpointDtype` instead of
   resolving to a substitute type.
+- `docs/generated/OP_SCHEMA.json` records each operation's transform decision
+  and absence class, so an empty `laws` array no longer conflates no legal
+  rewrite, guarded only, uncharacterized, and nothing recorded.
 - The `oracle-independence` gate fails when `vyre-reference` names a
   `vyre-foundation` module or macro that decides how a program runs, so the
   interpreter cannot inherit the transform it is supposed to check.
@@ -7097,6 +7100,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - `crate-ownership` rejects an optional internal dependency that no feature
   names, which the rule could not observe while it credited the feature cargo
   derives from the dependency key as a named activation.
+- An operation whose declared laws all lack executable proof evidence keeps the
+  transform decision its registration records, and each unproven label is
+  reported as rejected naming the payload it lacks, instead of the row reading
+  `law-unrecorded`.
 - The operation placement reader reports a source file it could not read or
   that exceeds the read cap, so the registrations that file holds are no longer
   silently missing from the schema.
