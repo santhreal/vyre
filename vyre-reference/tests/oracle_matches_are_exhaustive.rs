@@ -118,7 +118,7 @@ const CATCH_ALL_ALLOWANCE: &[(&str, usize, &str)] = &[
         "scrutinee is a (u32, u32) exponent/fraction pair",
     ),
     (
-        "interleaving.rs",
+        "interleaving/walk.rs",
         1,
         "Node is #[non_exhaustive] in vyre-foundation",
     ),
