@@ -173,24 +173,66 @@ fn source_tree_fingerprint_from_paths(workspace_root: &Path, paths: &[u8]) -> St
     hasher.finalize().to_hex().to_string()
 }
 
-/// Whether `path` names a tree the benchmarked runtime is never built from.
+/// One path rule naming a tree the benchmarked runtime is never built from.
+enum ProvenancePathRule {
+    /// The whole workspace-relative path.
+    Exact(&'static [u8]),
+    /// Every path starting with these bytes.
+    Prefix(&'static [u8]),
+}
+
+impl ProvenancePathRule {
+    /// Whether `path` falls under this rule.
+    fn matches(&self, path: &[u8]) -> bool {
+        match self {
+            Self::Exact(exact) => path == *exact,
+            Self::Prefix(prefix) => path.starts_with(prefix),
+        }
+    }
+
+    /// A workspace-relative path this rule excludes, for exercising the rule.
+    #[cfg(test)]
+    fn sample_path(&self) -> Vec<u8> {
+        match self {
+            Self::Exact(exact) => exact.to_vec(),
+            Self::Prefix(prefix) => {
+                let mut path = prefix.to_vec();
+                path.extend_from_slice(b"excluded-fixture.toml");
+                path
+            }
+        }
+    }
+}
+
+/// Trees the benchmarked runtime is never built from.
 ///
 /// Generated documents, release and verification paperwork, assurance tooling,
 /// and tests are produced from the runtime rather than compiled into it. A
 /// document a crate does compile in, such as `docs/optimization`, is absent
-/// here and keys the measurement as any other source file does.
+/// here and keys the measurement as any other source file does, and so is
+/// `docs/public-api`, which `vyre-runtime` compiles in.
+///
+/// The rules are a table rather than a chain of comparisons so that the
+/// predicate's members can be enumerated and each one exercised.
+const BENCHMARK_PROVENANCE_IGNORED: &[ProvenancePathRule] = &[
+    ProvenancePathRule::Exact(b"cargo_full"),
+    ProvenancePathRule::Exact(b"cargo_full.cmd"),
+    ProvenancePathRule::Exact(b"CHANGELOG.md"),
+    ProvenancePathRule::Prefix(b".github/"),
+    ProvenancePathRule::Prefix(b"docs/generated/"),
+    ProvenancePathRule::Prefix(b"docs/testing/"),
+    ProvenancePathRule::Prefix(b"release/changes/"),
+    ProvenancePathRule::Prefix(b"release/evidence/"),
+    ProvenancePathRule::Prefix(b"scripts/"),
+    ProvenancePathRule::Prefix(b"xtask/"),
+    ProvenancePathRule::Prefix(b"xtask-"),
+];
+
+/// Whether `path` names a tree the benchmarked runtime is never built from.
 fn source_tree_path_is_benchmark_provenance_ignored(path: &[u8]) -> bool {
-    path == b"cargo_full"
-        || path == b"cargo_full.cmd"
-        || path == b"CHANGELOG.md"
-        || path.starts_with(b".github/")
-        || path.starts_with(b"docs/generated/")
-        || path.starts_with(b"docs/testing/")
-        || path.starts_with(b"release/changes/")
-        || path.starts_with(b"release/evidence/")
-        || path.starts_with(b"scripts/")
-        || path.starts_with(b"xtask/")
-        || path.starts_with(b"xtask-")
+    BENCHMARK_PROVENANCE_IGNORED
+        .iter()
+        .any(|rule| rule.matches(path))
         || source_tree_path_is_operator_internal(path)
         || source_tree_path_is_test_evidence(path)
 }
@@ -261,5 +303,60 @@ fn shell_bytes(workspace_root: &Path, args: &[&str]) -> Result<Vec<u8>, String> 
         Ok(output.stdout)
     } else {
         Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+    }
+}
+
+#[cfg(test)]
+mod benchmark_provenance_rules {
+    use super::{source_tree_path_is_benchmark_provenance_ignored, BENCHMARK_PROVENANCE_IGNORED};
+
+    /// Every rule in the table excludes the path it names.
+    ///
+    /// WHY: the exclusions were a chain of comparisons, and the cases that
+    /// exercised them were a list written beside it. A rule added to the chain
+    /// and covered by nothing looked identical to one that was covered. The
+    /// table is now the member list, so a rule added here is exercised without
+    /// editing a test.
+    ///
+    /// What it does not catch: whether a tree belongs in the table. That a
+    /// crate compiles a document in is what
+    /// `every_compiled_in_document_keys_the_measurement` answers.
+    #[test]
+    fn every_rule_excludes_the_tree_it_names() {
+        assert!(
+            !BENCHMARK_PROVENANCE_IGNORED.is_empty(),
+            "Fix: the table is the member list and it is empty"
+        );
+        for rule in BENCHMARK_PROVENANCE_IGNORED {
+            let path = rule.sample_path();
+            assert!(
+                source_tree_path_is_benchmark_provenance_ignored(&path),
+                "Fix: `{}` is in the table and the predicate counts it",
+                String::from_utf8_lossy(&path)
+            );
+        }
+    }
+
+    /// A runtime source file under no rule keys the measurement.
+    ///
+    /// WHY: a prefix widened by one character excludes trees nobody decided to
+    /// exclude. `docs/` would take every reference document, `xtask` without
+    /// the separator would take a crate named `xtaskfoo`, and the fingerprint
+    /// would stop moving for source the runtime is built from.
+    #[test]
+    fn a_runtime_source_file_is_never_excluded() {
+        for path in [
+            &b"vyre-libs-reduce/src/reduce/sum.rs"[..],
+            b"docs/optimization/megakernel.md",
+            b"docs/public-api/vyre-runtime.txt",
+            b"Cargo.toml",
+            b"vyre-bench/src/probes/git.rs",
+        ] {
+            assert!(
+                !source_tree_path_is_benchmark_provenance_ignored(path),
+                "Fix: `{}` is runtime source and must key the measurement",
+                String::from_utf8_lossy(path)
+            );
+        }
     }
 }
