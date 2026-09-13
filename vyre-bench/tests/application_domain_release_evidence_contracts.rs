@@ -964,9 +964,16 @@ fn test_whole_application_evidence_artifacts_are_written_where_directed() {
             .to_string()
     ));
 
+    // A recorded measurement is read by someone who no longer has the tree it
+    // came from, so the artifact gate stamps provenance onto one only under
+    // `release/evidence` and refuses the write anywhere else. What this case
+    // checks is containment: the producer writes nowhere but the directory it
+    // is given. That layout inside a temporary tree states both.
     let directory = tempfile::tempdir().expect("create a temporary directory");
+    let evidence_dir = directory.path().join("release").join("evidence");
+    fs::create_dir_all(&evidence_dir).expect("create the evidence directory");
     let written = vyre_bench::workloads::write_whole_application_evidence_artifacts(
-        directory.path(),
+        &evidence_dir,
         None,
         MIN_MEASURED_SAMPLES,
     )
