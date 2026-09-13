@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"228e092d722e4e5ce1963282833484c52bd427bb","commit_timestamp":"1789269406","parent_commit":"9aa6f79517093234950d1fe007f7dd73f096fa88","dirty":false,"source_fingerprint":"git:228e092d722e4e5ce1963282833484c52bd427bb:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"4fcae889db3c71b9c9d121d8011c4928e739df0d","commit_timestamp":"1789269550","parent_commit":"228e092d722e4e5ce1963282833484c52bd427bb","dirty":false,"source_fingerprint":"git:4fcae889db3c71b9c9d121d8011c4928e739df0d:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 6,
   "total_commands": 15,
   "artifact_failures": 0,
@@ -1219,9 +1219,9 @@
       "owner_lane": "testing_evidence",
       "generator_command": "xtask release-evidence",
       "command_mode": "spawned",
-      "content_sha256": "dcad42e969f522ecdc8f36591998c1eb5246baa5e3aa009ac3689f29554002b1",
-      "source_fingerprint": "release-evidence-source:v1:4d63ba871945cd0dc5b5c8f847f2eec41fc579eee1a73c2cd83128e85d24ee48",
-      "freshness_fingerprint": "release-evidence-freshness:v1:e3914a4dde672230f8c31fb1581bceafbf7db0e92011dd0eea8508ff83941c40",
+      "content_sha256": "dc5b847681efcc7f463ca8290bf26ca4a038bd2db5fae5cc3cf9cbf2722fba12",
+      "source_fingerprint": "release-evidence-source:v1:c8140f10591b7dcabad4b7fcb53b77825f9ec8af54487cae64431ac6acc507b0",
+      "freshness_fingerprint": "release-evidence-freshness:v1:3b955475852216c4a841e290a40d5a5de6b5ad9f054138395b1df0b6cd6a127f",
       "blockers": []
     }
   ],
@@ -1807,9 +1807,9 @@
         "generator_command": "xtask release-evidence",
         "command_mode": "spawned",
         "bytes": 10091,
-        "content_sha256": "dcad42e969f522ecdc8f36591998c1eb5246baa5e3aa009ac3689f29554002b1",
-        "source_fingerprint": "release-evidence-source:v1:4d63ba871945cd0dc5b5c8f847f2eec41fc579eee1a73c2cd83128e85d24ee48",
-        "freshness_fingerprint": "release-evidence-freshness:v1:e3914a4dde672230f8c31fb1581bceafbf7db0e92011dd0eea8508ff83941c40",
+        "content_sha256": "dc5b847681efcc7f463ca8290bf26ca4a038bd2db5fae5cc3cf9cbf2722fba12",
+        "source_fingerprint": "release-evidence-source:v1:c8140f10591b7dcabad4b7fcb53b77825f9ec8af54487cae64431ac6acc507b0",
+        "freshness_fingerprint": "release-evidence-freshness:v1:3b955475852216c4a841e290a40d5a5de6b5ad9f054138395b1df0b6cd6a127f",
         "blockers": []
       },
       {
