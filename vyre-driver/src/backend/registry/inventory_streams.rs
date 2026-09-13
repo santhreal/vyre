@@ -58,15 +58,15 @@ pub struct BackendRegistration {
 
 /// Hold the process-wide claim on vendor runtime initialization.
 ///
-/// A backend factory brings up a vendor userspace runtime the first time it
-/// runs: the CUDA driver for one, the Vulkan loader and its ICD for another.
-/// Those runtimes share process-global state through the same vendor libraries
-/// — on an NVIDIA host `libcuda` and the Vulkan ICD are both
-/// `libnvidia-*`/`libGLX_nvidia` — and bringing two of them up at once is not
-/// supported by either. Proving every backend of a host runs one thread per
-/// backend, which did exactly that and took the process down with a SIGSEGV
-/// inside `vkEnumerateInstanceExtensionProperties`: no output, no error, no
-/// certificate, and nothing in the artifact to say which pair was running.
+/// A backend factory brings up its vendor userspace runtime the first time it
+/// runs: a driver library for one backend, a loader and its installable client
+/// driver for another. On a host whose backends come from one device vendor
+/// those runtimes are the same shared libraries, so they share process-global
+/// state, and bringing two of them up at once is not supported by either.
+/// Proving every backend of a host runs one thread per backend, which did
+/// exactly that and took the process down with a SIGSEGV inside a loader's
+/// instance-extension enumeration: no output, no error, no certificate, and
+/// nothing in the artifact to say which pair was running.
 ///
 /// Serializing costs one bring-up per backend per process, which the work
 /// behind it dwarfs, and nothing after bring-up is held: the guard is dropped

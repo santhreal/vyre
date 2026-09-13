@@ -7,7 +7,7 @@ use crate::proof_plan::{
     hash_proof_plan, ProofPlanSummary, ProofSelectionSummary, UnavailableBackendRecord,
 };
 use crate::prove_command::{LawRecord, ProveArtifact, ProveSignableBody};
-use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+use ed25519_dalek::{Signer, SigningKey};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use vyre_conform_spec::ConformanceResult;
@@ -239,39 +239,9 @@ fn read_and_verify_shard(path: &str) -> Result<VerifiedShard, String> {
             artifact.wire_format_version
         ));
     }
-    let signature_bytes = hex::decode(&artifact.signature).map_err(|error| {
-        format!("certificate `{path}` signature is not hex: {error}. Fix: regenerate the shard.")
+    artifact.verify_signature().map_err(|error| {
+        format!("certificate `{path}`: {error}. Fix: discard the tampered shard and rerun prove.")
     })?;
-    let public_key_bytes = hex::decode(&artifact.public_key).map_err(|error| {
-        format!("certificate `{path}` public_key is not hex: {error}. Fix: regenerate the shard.")
-    })?;
-    let signature = Signature::from_slice(&signature_bytes).map_err(|error| {
-        format!("certificate `{path}` signature is invalid: {error}. Fix: regenerate the shard.")
-    })?;
-    let public_key_array: [u8; 32] = public_key_bytes.as_slice().try_into().map_err(|_| {
-        format!(
-            "certificate `{path}` public_key must decode to 32 bytes. Fix: regenerate the shard."
-        )
-    })?;
-    let verifying_key = VerifyingKey::from_bytes(&public_key_array).map_err(|error| {
-        format!("certificate `{path}` public_key is invalid: {error}. Fix: regenerate the shard.")
-    })?;
-    let signable = ProveSignableBody {
-        wire_format_version: artifact.wire_format_version,
-        program_hash: &artifact.program_hash,
-        backend_id: &artifact.backend_id,
-        plan: &artifact.plan,
-        pairs: &artifact.pairs,
-        laws: &artifact.laws,
-    };
-    let signable_bytes = serde_json::to_vec(&signable).map_err(|error| {
-        format!("failed to serialize certificate `{path}` signable body: {error}. Fix: regenerate the shard.")
-    })?;
-    verifying_key
-        .verify(&signable_bytes, &signature)
-        .map_err(|error| {
-            format!("certificate `{path}` signature verification failed: {error}. Fix: discard the tampered shard and rerun prove.")
-        })?;
 
     if artifact.pairs.is_empty() {
         return Err(format!(

@@ -105,7 +105,15 @@ fn prove_emits_signed_certificate_on_gpu_build() {
             "Fix: VYRE_BACKEND={selected} must restrict prove to the selected backend."
         );
     } else {
-        for required_backend in ["cuda", "wgpu", ORACLE_EXECUTOR_ID] {
+        // The oracle is what every pair is judged against, so a pair naming it
+        // as the executor would be the reference compared with itself. `prove`
+        // filters it out of the proof roster; a certificate that carries it
+        // certifies nothing.
+        assert!(
+            !by_backend.contains_key(ORACLE_EXECUTOR_ID),
+            "Fix: `{ORACLE_EXECUTOR_ID}` is the oracle every pair is judged against and must not appear as a proved executor."
+        );
+        for required_backend in ["cuda", "wgpu"] {
             let ops = by_backend.get(required_backend).unwrap_or_else(|| {
                 panic!("Fix: signed certificate must include backend `{required_backend}`.")
             });
@@ -118,10 +126,10 @@ fn prove_emits_signed_certificate_on_gpu_build() {
         let cuda_ops = by_backend
             .get("cuda")
             .expect("Fix: signed certificate must include cuda ops");
-        for backend in ["wgpu", ORACLE_EXECUTOR_ID] {
-            let ops = by_backend
-                .get(backend)
-                .unwrap_or_else(|| panic!("Fix: signed certificate must include `{backend}` ops."));
+        // Every acquired backend is read off the certificate rather than
+        // listed, so a backend this host grows joins the equality without an
+        // edit here and one that answers a narrower op set fails by name.
+        for (backend, ops) in &by_backend {
             assert_eq!(
                 ops, cuda_ops,
                 "Fix: signed certificate backend `{backend}` must cover the same executable op set as cuda."

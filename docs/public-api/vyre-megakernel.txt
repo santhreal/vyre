@@ -83,6 +83,7 @@ impl vyre_megakernel::mesh::CollectiveSupport
 impl vyre_megakernel::mesh::MeshFacts
 impl vyre_megakernel::mesh::MeshTopologyPlan
 impl vyre_megakernel::mesh::PartitionKind
+impl vyre_megakernel::mesh::RegionPartition
 impl vyre_megakernel::mesh::TransferOrigin
 impl vyre_megakernel::specialization::AxisDomain
 impl vyre_megakernel::specialization::AxisValue
@@ -285,6 +286,7 @@ pub const fn vyre_megakernel::mesh::MeshFacts::version(&self) -> u16
 pub const fn vyre_megakernel::mesh::PartitionKind::as_str(self) -> &'static str
 pub const fn vyre_megakernel::mesh::PartitionKind::one_device(self) -> bool
 pub const fn vyre_megakernel::mesh::PartitionKind::splits_axis(self) -> bool
+pub const fn vyre_megakernel::resource_bind_group(memory_class: vyre_lower::descriptor::MemoryClass) -> core::option::Option<u32>
 pub const fn vyre_megakernel::specialization::AxisDomain::is_identity_domain(&self) -> bool
 pub const fn vyre_megakernel::specialization::AxisValue::identity(self) -> core::option::Option<vyre_megakernel::Digest>
 pub const fn vyre_megakernel::specialization::AxisValue::scalar(self) -> core::option::Option<u64>
@@ -555,6 +557,7 @@ pub fn vyre_megakernel::mesh::MeshTopologyPlan::stage_count(&self) -> u32
 pub fn vyre_megakernel::mesh::MeshTopologyPlan::submission_devices(&self) -> alloc::vec::Vec<vyre_megakernel::allocation::DeviceSlot>
 pub fn vyre_megakernel::mesh::MeshTopologyPlan::validate(&self) -> core::result::Result<(), vyre_megakernel::CompileError>
 pub fn vyre_megakernel::mesh::MeshTopologyPlan::verify_capacity(&self, mesh: &vyre_megakernel::mesh::MeshFacts, peaks: &[vyre_megakernel::allocation::DevicePeak]) -> core::result::Result<(), vyre_megakernel::CompileError>
+pub fn vyre_megakernel::mesh::RegionPartition::replicated_on(node: vyre_megakernel::ArtifactNodeId, device: vyre_megakernel::allocation::DeviceSlot, coordinate: alloc::vec::Vec<u32>, points: u64) -> Self
 pub fn vyre_megakernel::mesh::TransferOrigin::label(self) -> alloc::string::String
 pub fn vyre_megakernel::mesh::implied_width(partitions: &[vyre_megakernel::mesh::RegionPartition]) -> u32
 pub fn vyre_megakernel::registered_level_stage() -> vyre_spec::ir_level::IrLevel
@@ -587,6 +590,7 @@ pub fn vyre_megakernel::specialization::VariantGuard::new(terms: alloc::vec::Vec
 pub fn vyre_megakernel::specialization::VariantGuard::terms(&self) -> &[vyre_megakernel::specialization::GuardTerm]
 pub fn vyre_megakernel::specialization::compile_specialized_portfolio(request: &vyre_megakernel::ValidatedCompileRequest, contract: &vyre_megakernel::specialization::SpecializationContract, proposals: &[vyre_megakernel::specialization::VariantGuard], remainder: vyre_megakernel::specialization::RemainderKind) -> core::result::Result<vyre_megakernel::specialization::SpecializedPortfolio, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::specialization::compile_specialized_portfolio_measured(request: &vyre_megakernel::ValidatedCompileRequest, contract: &vyre_megakernel::specialization::SpecializationContract, proposals: &[vyre_megakernel::specialization::VariantGuard], remainder: vyre_megakernel::specialization::RemainderKind, evaluator: &dyn vyre_megakernel::FinalistEvaluator) -> core::result::Result<vyre_megakernel::specialization::SpecializedPortfolio, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::staged_input_slots(descriptor: &vyre_lower::descriptor::KernelDescriptor, resource_bindings: &[vyre_megakernel::TargetResourceBinding], program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<alloc::vec::Vec<vyre_megakernel::ArtifactInputSlot>, vyre_megakernel::TargetCompileError>
 pub fn vyre_megakernel::target_identity(device: vyre_megakernel::DeviceFacts, objective: &vyre_megakernel::CompileObjective) -> vyre_megakernel::Digest
 pub fn vyre_megakernel::unsupported_workload(message: alloc::string::String) -> vyre_megakernel::CompileError
 pub fn vyre_megakernel::writable_graph_value_buffers(node: &vyre_foundation::ir_inner::model::program_graph::contracts::ProgramGraphNode) -> alloc::vec::Vec<(vyre_foundation::ir_inner::model::program_graph::contracts::GraphValueId, alloc::string::String)>
@@ -602,6 +606,7 @@ pub mod vyre_megakernel::specialization
 pub struct vyre_megakernel::Artifact
 pub struct vyre_megakernel::ArtifactAbi
 pub struct vyre_megakernel::ArtifactEnvelope
+pub struct vyre_megakernel::ArtifactInputSlot
 pub struct vyre_megakernel::ArtifactNodeId(pub u32)
 pub struct vyre_megakernel::ArtifactPortfolio
 pub struct vyre_megakernel::ArtifactValueId(pub u32)
@@ -713,6 +718,11 @@ pub vyre_megakernel::AbiAccess::Uniform
 pub vyre_megakernel::AbiAccess::WriteOnly
 pub vyre_megakernel::ArtifactAbi::entries: alloc::vec::Vec<vyre_megakernel::EntryAbiRecord>
 pub vyre_megakernel::ArtifactAbi::resources: alloc::vec::Vec<vyre_megakernel::ResourceAbiRecord>
+pub vyre_megakernel::ArtifactInputSlot::expected_max: core::option::Option<usize>
+pub vyre_megakernel::ArtifactInputSlot::group: u32
+pub vyre_megakernel::ArtifactInputSlot::launch_zeros: core::option::Option<alloc::boxed::Box<[u8]>>
+pub vyre_megakernel::ArtifactInputSlot::name: alloc::string::String
+pub vyre_megakernel::ArtifactInputSlot::slot: u32
 pub vyre_megakernel::BarrierPhaseRecord::phases: alloc::vec::Vec<vyre_foundation::schedule::SchedulePhaseId>
 pub vyre_megakernel::BarrierPhaseRecord::scope: vyre_foundation::schedule::SynchronizationScope
 pub vyre_megakernel::BarrierRecord::after_stage: u32

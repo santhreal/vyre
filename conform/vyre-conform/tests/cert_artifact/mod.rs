@@ -7,7 +7,7 @@
 
 use std::process::Command;
 
-use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+use ed25519_dalek::{Signer, SigningKey};
 use serde_json::Value;
 
 /// The backend a device lane pins the proof to.
@@ -23,54 +23,13 @@ fn conform_binary() -> &'static str {
     env!("CARGO_BIN_EXE_vyre-conform")
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-struct SyntheticSelectionSummary {
-    backend_filter: String,
-    ops_filter: String,
-    shard_index: Option<usize>,
-    shard_count: Option<usize>,
-    universe_backend_count: usize,
-    universe_op_count: usize,
-    selected_backend_count: usize,
-    selected_op_count: usize,
-}
-
-#[derive(serde::Serialize, serde::Deserialize)]
-struct SyntheticPlanSummary {
-    backend_count: usize,
-    op_count: usize,
-    pair_count: usize,
-    witness_case_count: usize,
-    catalog_hash: String,
-    execution_hash: String,
-    selection: SyntheticSelectionSummary,
-}
-
-#[derive(serde::Serialize, serde::Deserialize)]
-struct SyntheticConformanceResult {
-    op_id: String,
-    executor_id: String,
-    passed: bool,
-    message: String,
-}
-
-#[derive(serde::Serialize, serde::Deserialize)]
-struct SyntheticLawRecord {
-    op_id: String,
-    law: String,
-    witness: String,
-    cases: usize,
-}
-
-#[derive(serde::Serialize)]
-struct SyntheticSignableBody<'a> {
-    wire_format_version: u32,
-    program_hash: &'a str,
-    backend_id: &'a str,
-    plan: &'a SyntheticPlanSummary,
-    pairs: &'a [SyntheticConformanceResult],
-    laws: &'a [SyntheticLawRecord],
-}
+/// A synthetic shard is built from the same types the binary signs, so a field
+/// added to the certificate cannot be dropped here and leave a signature that
+/// no longer covers what a reader rebuilds.
+use vyre_conform::certificate_wire::{
+    LawRecord, ProofPlanSummary, ProofSelectionSummary, ProveArtifact, ProveSignableBody,
+};
+use vyre_conform_spec::ConformanceResult;
 
 fn write_signed_shard(
     path: &std::path::Path,
@@ -80,18 +39,18 @@ fn write_signed_shard(
     pairs: Value,
     laws: Value,
 ) {
-    let pairs_vec: Vec<SyntheticConformanceResult> =
+    let pairs_vec: Vec<ConformanceResult> =
         serde_json::from_value(pairs.clone()).expect("pairs deserialize");
-    let laws_vec: Vec<SyntheticLawRecord> =
+    let laws_vec: Vec<LawRecord> =
         serde_json::from_value(laws.clone()).expect("laws deserialize");
-    let plan = SyntheticPlanSummary {
+    let plan = ProofPlanSummary {
         backend_count: 1,
         op_count: pairs_vec.len(),
         pair_count: pairs_vec.len(),
         witness_case_count: pairs_vec.len(),
         catalog_hash: catalog_hash.to_string(),
         execution_hash: execution_hash.to_string(),
-        selection: SyntheticSelectionSummary {
+        selection: ProofSelectionSummary {
             backend_filter: "cuda".to_string(),
             ops_filter: "all".to_string(),
             shard_index: Some(0),
@@ -100,10 +59,11 @@ fn write_signed_shard(
             universe_op_count: 2,
             selected_backend_count: 1,
             selected_op_count: pairs_vec.len(),
+            unavailable_backends: Vec::new(),
         },
     };
     let key = SigningKey::from_bytes(&[7u8; 32]);
-    let signable = SyntheticSignableBody {
+    let signable = ProveSignableBody {
         wire_format_version: 2u32,
         program_hash,
         backend_id: "all",
@@ -118,7 +78,7 @@ fn write_signed_shard(
         "wire_format_version": 2u32,
         "program_hash": program_hash,
         "backend_id": "all",
-        "plan": serde_json::to_value(&signable.plan).expect("plan to_value"),
+        "plan": serde_json::to_value(&plan).expect("plan to_value"),
         "signature": hex::encode(signature.to_bytes()),
         "public_key": hex::encode(key.verifying_key().to_bytes()),
         "pairs": pairs,
@@ -131,43 +91,16 @@ fn write_signed_shard(
     .expect("Fix: synthetic shard should be writable");
 }
 
+/// Verify one parsed certificate through the type its writer signs.
+///
+/// Deserializing into [`ProveArtifact`] is what makes the check whole: a field
+/// the certificate carries and this reader does not know about fails the parse
+/// rather than silently leaving the signature covering different bytes.
 fn verify_certificate_signature(parsed: &Value) {
-    let signature_hex = parsed["signature"]
-        .as_str()
-        .expect("Fix: certificate must carry signature");
-    let public_key_hex = parsed["public_key"]
-        .as_str()
-        .expect("Fix: certificate must carry public_key");
-    let signature_bytes =
-        hex::decode(signature_hex).expect("Fix: certificate signature must be hex");
-    let public_key_bytes =
-        hex::decode(public_key_hex).expect("Fix: certificate public key must be hex");
-    let signature = Signature::from_slice(&signature_bytes)
-        .expect("Fix: certificate signature must be a 64-byte Ed25519 signature");
-    let public_key_array: [u8; 32] = public_key_bytes
-        .as_slice()
-        .try_into()
-        .expect("Fix: certificate public key must be 32 bytes");
-    let verifying_key = VerifyingKey::from_bytes(&public_key_array)
-        .expect("Fix: certificate public key must be a valid Ed25519 verifying key");
-    let plan: SyntheticPlanSummary =
-        serde_json::from_value(parsed["plan"].clone()).expect("plan deserialize");
-    let pairs_vec: Vec<SyntheticConformanceResult> =
-        serde_json::from_value(parsed["pairs"].clone()).expect("pairs deserialize");
-    let laws_vec: Vec<SyntheticLawRecord> =
-        serde_json::from_value(parsed["laws"].clone()).expect("laws deserialize");
-    let signable = SyntheticSignableBody {
-        wire_format_version: parsed["wire_format_version"].as_u64().expect("version") as u32,
-        program_hash: parsed["program_hash"].as_str().expect("program_hash"),
-        backend_id: parsed["backend_id"].as_str().expect("backend_id"),
-        plan: &plan,
-        pairs: &pairs_vec,
-        laws: &laws_vec,
-    };
-    let signable_bytes =
-        serde_json::to_vec(&signable).expect("Fix: certificate signable body must serialize");
-    verifying_key
-        .verify(&signable_bytes, &signature)
+    let artifact: ProveArtifact = serde_json::from_value(parsed.clone())
+        .expect("Fix: certificate must parse as the artifact its writer signed");
+    artifact
+        .verify_signature()
         .expect("Fix: certificate Ed25519 signature must verify over the canonical body");
 }
 

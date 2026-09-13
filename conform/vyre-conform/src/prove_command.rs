@@ -6,55 +6,22 @@ use std::collections::BTreeSet;
 use crate::artifact_json::write_json_artifact;
 use crate::operation_selection::{select_entries, unified_entries};
 use crate::proof_options::parse_proof_options;
-use crate::proof_plan::{hash_proof_plan, proof_plan_summary, ProofPlanSummary};
+use crate::proof_plan::{hash_proof_plan, proof_plan_summary};
 use crate::proof_scheduler::{
     prepare_entries_in_parallel, proof_worker_count, prove_backends_in_sequence,
 };
 use crate::proof_timing::{emit_proof_timing, ProofTimingReport};
 use ed25519_dalek::{Signer, SigningKey};
-use serde::{Deserialize, Serialize};
 use vyre_conform::backend_selection::{
     partition_by_host_availability, select_backends, semantic_execution_backends,
 };
 use vyre_conform::law_proof::{prove_declared_laws, LawVerdict};
-use vyre_conform_spec::ConformanceResult;
 
 pub(crate) const DEFAULT_CERTIFICATE_DIR: &str = ".internals/certs/";
 
 pub(crate) const DEFAULT_CERTIFICATE_FILE: &str = "prove.json";
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub(crate) struct ProveArtifact {
-    pub(crate) wire_format_version: u32,
-    pub(crate) program_hash: String,
-    pub(crate) backend_id: String,
-    pub(crate) plan: ProofPlanSummary,
-    pub(crate) signature: String,
-    pub(crate) public_key: String,
-    pub(crate) pairs: Vec<ConformanceResult>,
-    #[serde(default)]
-    pub(crate) laws: Vec<LawRecord>,
-}
-
-/// One declared law and the witness that proved it on the reference oracle.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub(crate) struct LawRecord {
-    pub(crate) op_id: String,
-    pub(crate) law: String,
-    pub(crate) witness: String,
-    pub(crate) cases: usize,
-}
-
-/// Typed signable body for prove artifacts ensuring identical field order without ad-hoc JSON indexing.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-pub(crate) struct ProveSignableBody<'a> {
-    pub(crate) wire_format_version: u32,
-    pub(crate) program_hash: &'a str,
-    pub(crate) backend_id: &'a str,
-    pub(crate) plan: &'a ProofPlanSummary,
-    pub(crate) pairs: &'a [ConformanceResult],
-    pub(crate) laws: &'a [LawRecord],
-}
+pub(crate) use vyre_conform::certificate_wire::{LawRecord, ProveArtifact, ProveSignableBody};
 
 /// Prove every declared law of every selected operation, refusing the
 /// certificate when the oracle refutes one.

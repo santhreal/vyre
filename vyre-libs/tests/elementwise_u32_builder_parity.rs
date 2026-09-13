@@ -13,7 +13,7 @@
 #![cfg(feature = "builder")]
 
 use vyre_foundation::ir::Expr;
-use vyre_libs::elementwise::{u32_elementwise_binary, u32_elementwise_unary};
+use vyre_libs::builder::elementwise::{u32_elementwise_binary, u32_elementwise_unary};
 use vyre_reference::value::Value;
 
 const OP_UNARY: &str = "test::elementwise_u32_unary";

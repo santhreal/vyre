@@ -10,48 +10,9 @@ use vyre_conform::backend_selection::{
     select_backends, semantic_execution_backends, UnavailableBackend,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub(crate) struct ProofPlanSummary {
-    pub(crate) backend_count: usize,
-    pub(crate) op_count: usize,
-    pub(crate) pair_count: usize,
-    pub(crate) witness_case_count: usize,
-    pub(crate) catalog_hash: String,
-    pub(crate) execution_hash: String,
-    pub(crate) selection: ProofSelectionSummary,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub(crate) struct ProofSelectionSummary {
-    pub(crate) backend_filter: String,
-    pub(crate) ops_filter: String,
-    pub(crate) shard_index: Option<usize>,
-    pub(crate) shard_count: Option<usize>,
-    pub(crate) universe_backend_count: usize,
-    pub(crate) universe_op_count: usize,
-    pub(crate) selected_backend_count: usize,
-    pub(crate) selected_op_count: usize,
-    /// Registered backends this host cannot acquire, and what refused each.
-    ///
-    /// A certificate covers the backends the host can run. Naming the rest, with
-    /// the refusal, is what keeps `selected_backend_count` from reading as the
-    /// whole registered set on a host that carries more registrations than
-    /// devices.
-    ///
-    /// A host that ran every registered backend omits the field rather than
-    /// writing an empty list, so its certificate is byte-identical to one
-    /// signed before this field existed and the signature over it still
-    /// verifies.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub(crate) unavailable_backends: Vec<UnavailableBackendRecord>,
-}
-
-/// One backend a run did not cover, and why.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub(crate) struct UnavailableBackendRecord {
-    pub(crate) id: String,
-    pub(crate) reason: String,
-}
+pub(crate) use vyre_conform::certificate_wire::{
+    ProofPlanSummary, ProofSelectionSummary, UnavailableBackendRecord,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 struct ProofPlanArtifact {

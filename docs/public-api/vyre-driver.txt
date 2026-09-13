@@ -456,6 +456,7 @@ pub fn vyre_driver::BindingPlan::from_program(program: &vyre_foundation::ir_inne
 pub fn vyre_driver::BindingPlan::validate_borrowed_inputs(&self, inputs: &[&[u8]]) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::BindingPlan::validate_input_byte_lengths(&self, input_lengths: &[usize]) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::BindingPlan::validate_inputs(&self, inputs: &[alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>
+pub fn vyre_driver::BindingPlan::validate_named_inputs(&self, names: &[&str], inputs: &[&[u8]]) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::BindingSet::insert(&mut self, value: vyre_megakernel::identity::ArtifactValueId, resource: vyre_driver::BoundResource)
 pub fn vyre_driver::BindingSetFingerprint::from_plan(plan: &vyre_driver::BindingPlan) -> Self
 pub fn vyre_driver::Chain<A, B>::evaluate(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_driver::EnforceVerdict
@@ -975,6 +976,7 @@ pub fn vyre_driver::materialize::ResidentInstance::resident_module_label(&self) 
 pub fn vyre_driver::materialize::ResidentInstance::submit_routed(&self, bindings: &vyre_driver::BindingSet, mixed: fn() -> vyre_driver::BackendError) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::Submission>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::admit(artifact: &vyre_megakernel::schema::Artifact, payload: &vyre_megakernel::envelope::TargetPayload, target: vyre_driver::materialize::MaterializerTarget<'_>) -> core::result::Result<alloc::vec::Vec<vyre_driver::materialize::AdmittedModule>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::compile_error(backend: &str, error: impl core::fmt::Display) -> vyre_driver::BackendError
+pub fn vyre_driver::materialize::gather_artifact_inputs<'a>(core: &'a vyre_driver::materialize::InstanceCore, module_index: usize, slots: &'a [vyre_megakernel::staged_input_slots::ArtifactInputSlot], state: &'a alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>) -> core::result::Result<alloc::vec::Vec<&'a [u8]>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::host_only_bindings(bindings: &vyre_driver::BindingSet, feature: &str, backend: &str) -> core::result::Result<alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::invalid_module(reason: &str) -> vyre_driver::BackendError
 pub fn vyre_driver::materialize::omitted_output(module_label: &str, output_index: usize, name: &str) -> vyre_driver::BackendError

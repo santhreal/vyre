@@ -16,7 +16,7 @@
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::{BufferAccess, DataType, Expr, Program};
-use vyre_libs::elementwise::ElementwiseComposer;
+use vyre_libs::builder::elementwise::ElementwiseComposer;
 use vyre_primitives::wire::{
     decode_f32_le_bytes_all, decode_u32_le_bytes_all, pack_f32_slice, pack_u32_slice,
 };

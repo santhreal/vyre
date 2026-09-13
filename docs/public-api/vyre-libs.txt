@@ -1,7 +1,5 @@
 pub fn vyre_libs::link_anchor() -> usize
 pub mod vyre_libs
-pub use vyre_libs::<<vyre_libs_builder::builder::*>>
-pub use vyre_libs::<<vyre_libs_builder::plumbing::registration::signatures::*>>
 pub use vyre_libs::TensorRef
 pub use vyre_libs::TensorRefError
 pub use vyre_libs::analysis

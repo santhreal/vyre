@@ -1127,6 +1127,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Changed
 
+- `vyre-driver-spirv` reports the shared-memory budget and subgroup width of
+  the Vulkan device it opened. The registration inherited the neutral profile
+  defaults, so a plan was ranked against 32 KiB of scratch and no subgroup
+  support on a device offering more of both.
+- `vyre-libs` exports its builders under one path each. The crate root glob
+  re-exported everything `vyre-libs-builder`'s `builder` and registration
+  signature modules publish, giving every item two public paths.
 - DeviceProfile::from_backend is the one spelling of the neutral device
   profile. The backend trait default and the Metal runtime override now take it
   and restate only the fields the backend knows better, instead of each writing
@@ -5194,6 +5201,25 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Fixed
 
+- A multi-backend proof run no longer crashes in the driver during concurrent
+  device initialization. Each case opened its own device handle to hash the
+  compilation profile it was selected for, so a run over 358 operations opened
+  hundreds of loader instances across worker threads and exhausted the Vulkan
+  descriptor pool. Compile target facts are resolved once per registered
+  backend and cached, `vyre-driver-spirv` shares one process-wide Vulkan device
+  across acquisitions, and backends are proved one after another.
+- A fused SPIR-V module receives every input the target binding declares.
+  Inputs were supplied in the order the host `Program` declared them, so a
+  megakernel whose stages consume intermediate buffers bound the wrong resource
+  for seven operations and diverged from the reference. Modules now stage
+  intermediate values by name, gather them by the descriptor bindings the
+  emitted module carries, and bind the reserved trap sidecar descriptor
+  extracted from the module decorations.
+- The conformance certificate's signable body is defined once, in
+  `vyre-conform`'s `certificate_wire`. The prove, merge and test paths each
+  restated the serialized layout, so adding the unavailable-backend roster to
+  the proof selection summary left the test copy one field short and the
+  Ed25519 signature no longer verified over the body it was computed from.
 - Every declared feature selection compiles. `vyre-libs-security`'s `predicate`
   builds its programs from the label primitives and now enables `label`,
   `vyre-test-support`'s `driver-contracts` names `Program` in the dispatch

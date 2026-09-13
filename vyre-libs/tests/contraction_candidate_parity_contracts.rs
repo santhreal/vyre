@@ -6,7 +6,7 @@
 //! 3. Contraction candidates (Scalar, SIMT Tiled, Matrix Instruction) are generated with valid properties.
 
 use vyre_foundation::validate::validate;
-use vyre_libs::gemm::ContractionComposer;
+use vyre_libs::builder::gemm::ContractionComposer;
 use vyre_libs::math::linalg::{matmul, matmul_bias};
 use vyre_libs::math::semiring_gemm::semiring_gemm;
 use vyre_libs::nn::linear::{

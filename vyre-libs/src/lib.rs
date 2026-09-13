@@ -11,10 +11,8 @@ pub use vyre_libs_builder::plumbing::operand::buffer_names;
 pub use vyre_libs_builder::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 pub use vyre_libs_builder::prelude;
 
-pub use vyre_libs_builder::builder::*;
 #[cfg(feature = "telemetry")]
 pub use vyre_libs_builder::plumbing::host::telemetry;
-pub use vyre_libs_builder::plumbing::registration::signatures::*;
 pub use vyre_libs_builder::plumbing::registration::{contracts, operation_catalog};
 
 /// Reference every feature-selected domain crate so the linker retains its

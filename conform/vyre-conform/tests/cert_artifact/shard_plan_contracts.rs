@@ -66,12 +66,18 @@ fn prove_merges_live_gpu_certificate_shards() {
             "Fix: VYRE_BACKEND={selected} merged shards must preserve only the selected backend."
         );
     } else {
-        for required in ["cuda", "wgpu", ORACLE_EXECUTOR_ID] {
+        for required in ["cuda", "wgpu"] {
             assert!(
                 backends.contains(required),
                 "Fix: merged live GPU shards must preserve backend `{required}`."
             );
         }
+        // The oracle judges every pair, so a merged shard naming it as an
+        // executor carries the reference compared with itself.
+        assert!(
+            !backends.contains(ORACLE_EXECUTOR_ID),
+            "Fix: `{ORACLE_EXECUTOR_ID}` is the oracle every pair is judged against and must not survive a merge as a proved executor."
+        );
     }
     assert_eq!(
         parsed["plan"]["pair_count"].as_u64(),
