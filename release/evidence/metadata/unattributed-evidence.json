@@ -1,33 +1,7 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"66df41e10a714cc84ea889ee86dd178a3177003d","commit_timestamp":"1789302222","parent_commit":"d7c21b38c7c0a55a6cb99ffe2cbd48d60204a295","dirty":true,"source_fingerprint":"git:66df41e10a714cc84ea889ee86dd178a3177003d:dirty=true:worktree=d5df13970cf4ca20663a06684b8d517eb3a9426d486d3b7cc93cf058a35db332"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"40c9caa82254ec13a1ea318a88aea21cc3a7951c","commit_timestamp":"1789309021","parent_commit":"488781c5428c656051a6a232ca5f732f5f915596","dirty":false,"source_fingerprint":"git:40c9caa82254ec13a1ea318a88aea21cc3a7951c:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
-  "unattributed_count": 5,
-  "attributed_count": 84,
-  "artifacts": [
-    {
-      "path": "release/evidence/benchmarks/whole-app-dense-numerical-pipeline.json",
-      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
-      "recapture": "declare `release/evidence/benchmarks/whole-app-dense-numerical-pipeline.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
-    },
-    {
-      "path": "release/evidence/benchmarks/whole-app-interactive-event-pipeline.json",
-      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
-      "recapture": "declare `release/evidence/benchmarks/whole-app-interactive-event-pipeline.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
-    },
-    {
-      "path": "release/evidence/benchmarks/whole-app-irregular-stateful-traversal.json",
-      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
-      "recapture": "declare `release/evidence/benchmarks/whole-app-irregular-stateful-traversal.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
-    },
-    {
-      "path": "release/evidence/benchmarks/whole-application-domain-matrix.json",
-      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
-      "recapture": "declare `release/evidence/benchmarks/whole-application-domain-matrix.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
-    },
-    {
-      "path": "release/evidence/conformance/release-all-backends-certificate.json",
-      "reason": "carries no provenance record, and no registered gate declares it, so nothing in this tree states what produced it",
-      "recapture": "declare `release/evidence/conformance/release-all-backends-certificate.json` in the artifacts of the gate that produces it, so one gate regenerates it and its provenance"
-    }
-  ]
+  "unattributed_count": 0,
+  "attributed_count": 89,
+  "artifacts": []
 }
