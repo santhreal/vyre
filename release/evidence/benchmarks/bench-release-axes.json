@@ -1,9 +1,9 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"d7c21b38c7c0a55a6cb99ffe2cbd48d60204a295","commit_timestamp":"1789301364","parent_commit":"f8f88940ad99ea3fcab9afd2d0a95fe21e03f6e4","dirty":false,"source_fingerprint":"git:d7c21b38c7c0a55a6cb99ffe2cbd48d60204a295:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"62e9180f9796e19e54a9f945ab43fad71b288907","commit_timestamp":"1789304746","parent_commit":"dc22459d88a8a5896942b143326e4610b4664578","dirty":false,"source_fingerprint":"git:62e9180f9796e19e54a9f945ab43fad71b288907:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
   "schema_version": 1,
-  "warm_us_per_file": 4.676,
-  "cold_pipeline_build_ms": 1.08469,
-  "gbs_scan_throughput": 774.619,
+  "warm_us_per_file": 4.615,
+  "cold_pipeline_build_ms": 1.203144,
+  "gbs_scan_throughput": 1053.757,
   "ulp_drift_max": 0,
   "max_vram_mib": 24564,
   "source_artifacts": [
