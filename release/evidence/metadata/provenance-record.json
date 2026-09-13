@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"741a8d56c3bdd788bcd86f69c8723608fbd6a6c7","commit_timestamp":"1789270481","parent_commit":"b244c330bdaa27920a98a760d0947b894f705798","dirty":false,"source_fingerprint":"git:741a8d56c3bdd788bcd86f69c8723608fbd6a6c7:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"e8e0b6eb0ed7c13beef035f6ab9596da90e2957f","commit_timestamp":"1789274853","parent_commit":"b3e18c752faf39b273bf824c98f3eacadf639a3b","dirty":true,"source_fingerprint":"git:e8e0b6eb0ed7c13beef035f6ab9596da90e2957f:dirty=true:worktree=e850a719e3a488b43e29bb46a317ab71c658e96cd9d4c2a7697633552a948ff9"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "_type": "https://in-toto.io/Statement/v1",
   "predicate": {
     "buildDefinition": {
@@ -2901,7 +2901,7 @@
       "byproducts": [
         {
           "digest": {
-            "sha256": "b3e188929772346ac3090e6ed316f4b6965e08562de6eb98bd2c9294927bf527"
+            "sha256": "2a3f8b6dd2c99519403905b7c1fd6e97a6fda221d070e6161066c1444f05d9c4"
           },
           "name": "docs/generated/OP_SCHEMA.json"
         },
@@ -2931,7 +2931,7 @@
         },
         {
           "digest": {
-            "sha256": "f0591320b553ce8e651602f68068ee2cc5fc6b107eb2d2169653448164b82e00"
+            "sha256": "d11d73235bf3166e30ceed63e9850945f37daa580b6c83ab0e56af056fd825ae"
           },
           "name": "docs/generated/engineering-scorecard.toml"
         },
@@ -2975,7 +2975,7 @@
   "subject": [
     {
       "digest": {
-        "blake3": "d0812e60510b7c6d3f9850763060becdc8f1685942ef29b60df077d90130ae83"
+        "blake3": "399077032dd9cff6ba61d91347ed59ff3c9da13b5d845dd98e39866d0944a8dd"
       },
       "name": "vyre-release-archive"
     }
