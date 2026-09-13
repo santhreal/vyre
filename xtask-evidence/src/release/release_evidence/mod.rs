@@ -15,9 +15,8 @@ mod evidence_index;
 pub(crate) mod expected_artifacts;
 
 use artifact_status::{
-    artifact_blocker_suffix, generator_command, inspect_expected_artifacts,
-    inspect_expected_artifacts_with_mode, release_artifact_status_has_failure,
-    ReleaseEvidenceArtifactStatus,
+    artifact_blocker_suffix, generator_command, inspect_expected_artifacts_with_mode,
+    inspect_pending_artifacts, release_artifact_status_has_failure, ReleaseEvidenceArtifactStatus,
 };
 use evidence_index::{build_evidence_index, ReleaseEvidenceIndex};
 pub(crate) use expected_artifacts::expected_artifacts_for_args;
@@ -253,10 +252,19 @@ fn release_evidence_run(
             .collect(),
     );
     inspection.generates_host_evidence(EXPECTED_ARTIFACT_REGISTRY, &expected_artifact_registry);
-    let final_artifacts = inspect_expected_artifacts(
+    // The registry is one of this run's own two artifacts, so its digest is
+    // taken from the bytes about to be written. Reading it back from the tree
+    // recorded the previous run's digest and needed a second `--write` to
+    // settle.
+    let mut pending = std::collections::BTreeMap::new();
+    if let Some(rendered) = inspection.pending(EXPECTED_ARTIFACT_REGISTRY) {
+        pending.insert(EXPECTED_ARTIFACT_REGISTRY, rendered);
+    }
+    let final_artifacts = inspect_pending_artifacts(
         workspace_root,
         &["release-evidence"],
         &[EXPECTED_ARTIFACT_REGISTRY],
+        &pending,
     );
     let artifact_failures = commands
         .iter()
@@ -547,6 +555,9 @@ fn count_field(value: &serde_json::Value, field: &str) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
+    use super::artifact_status::artifact_semantic_blockers;
     use super::expected_artifacts::expected_artifact_registry_blockers;
     use super::*;
 
@@ -559,10 +570,11 @@ mod tests {
         std::fs::create_dir_all(artifact.parent().unwrap()).unwrap();
         std::fs::write(&artifact, b"{\"blockers\":[]}\n").unwrap();
 
-        let statuses = inspect_expected_artifacts(
+        let statuses = inspect_expected_artifacts_with_mode(
             tmp.path(),
             &["version-matrix"],
             &["release/evidence/metadata/version-matrix.json"],
+            COMMAND_MODE_SPAWNED,
         );
 
         assert_eq!(statuses.len(), 1);
@@ -581,6 +593,127 @@ mod tests {
             .is_some_and(|value| value.starts_with("release-evidence-freshness:v1:")));
         assert!(status.blockers.is_empty(), "{:?}", status.blockers);
     }
+    /// A digest this gate records for an artifact it is about to write must be
+    /// the digest of what it writes, never of the copy the last run left.
+    ///
+    /// `release-evidence` owns two artifacts and one records the other's
+    /// digest. Reading the tree made one `--write` produce an artifact that
+    /// disagreed with the tree it had just written, so the gate stayed red
+    /// until a second and a third write chased it. What this closes is the
+    /// class: any artifact whose bytes this run already rendered is hashed from
+    /// those bytes.
+    #[test]
+    fn a_pending_artifact_is_hashed_from_the_bytes_about_to_be_written() {
+        let tmp = tempfile::tempdir().unwrap();
+        let relative = "release/evidence/metadata/version-matrix.json";
+        let artifact = tmp.path().join(relative);
+        std::fs::create_dir_all(artifact.parent().unwrap()).unwrap();
+        std::fs::write(&artifact, b"{\"blockers\":[],\"stale\":true}\n").unwrap();
+
+        let about_to_write = "{\"blockers\":[]}\n";
+        let pending = BTreeMap::from([(relative, about_to_write)]);
+        let pending_statuses =
+            inspect_pending_artifacts(tmp.path(), &["version-matrix"], &[relative], &pending);
+        let stale_statuses = inspect_expected_artifacts_with_mode(
+            tmp.path(),
+            &["version-matrix"],
+            &[relative],
+            COMMAND_MODE_SPAWNED,
+        );
+
+        assert_eq!(
+            pending_statuses[0].content_sha256,
+            Some(xtask::hash::sha256_hex(about_to_write.as_bytes())),
+            "Fix: the pending digest must name the bytes this run writes"
+        );
+        assert_ne!(
+            pending_statuses[0].content_sha256, stale_statuses[0].content_sha256,
+            "Fix: hashing the file on disk is the defect this closes"
+        );
+        assert_eq!(
+            pending_statuses[0].bytes,
+            about_to_write.len() as u64,
+            "Fix: the recorded length must match the pending bytes"
+        );
+        assert!(pending_statuses[0].exists);
+        assert!(
+            pending_statuses[0].blockers.is_empty(),
+            "{:?}",
+            pending_statuses[0].blockers
+        );
+    }
+
+    /// An artifact this run writes for the first time has no file to read, and
+    /// the record must still state what it will contain rather than report it
+    /// missing.
+    #[test]
+    fn a_pending_artifact_absent_from_the_tree_is_still_recorded() {
+        let tmp = tempfile::tempdir().unwrap();
+        let relative = "release/evidence/metadata/version-matrix.json";
+        let about_to_write = "{\"blockers\":[]}\n";
+        let pending = BTreeMap::from([(relative, about_to_write)]);
+
+        let statuses =
+            inspect_pending_artifacts(tmp.path(), &["version-matrix"], &[relative], &pending);
+
+        assert!(statuses[0].exists, "Fix: a pending artifact is not missing");
+        assert_eq!(statuses[0].read_error, None);
+        assert_eq!(
+            statuses[0].content_sha256,
+            Some(xtask::hash::sha256_hex(about_to_write.as_bytes()))
+        );
+        assert!(
+            statuses[0].blockers.is_empty(),
+            "{:?}",
+            statuses[0].blockers
+        );
+    }
+
+    /// A pending artifact is judged on content, not excused by being pending.
+    #[test]
+    fn a_pending_artifact_that_leaks_a_boundary_still_blocks() {
+        let tmp = tempfile::tempdir().unwrap();
+        let relative = "release/evidence/metadata/version-matrix.json";
+        let leaked = "{\"blockers\":[],\"path\":\"/home/operator/scratch\"}\n";
+        let pending = BTreeMap::from([(relative, leaked)]);
+
+        let statuses =
+            inspect_pending_artifacts(tmp.path(), &["version-matrix"], &[relative], &pending);
+
+        assert_eq!(
+            statuses[0].blockers,
+            artifact_semantic_blockers(
+                relative,
+                leaked.as_bytes(),
+                "xtask version-matrix",
+                COMMAND_MODE_SPAWNED
+            ),
+            "Fix: pending bytes are judged by the same rules as bytes on disk"
+        );
+    }
+
+    /// An artifact with no pending entry is still read from the tree.
+    #[test]
+    fn an_artifact_this_run_does_not_write_is_read_from_the_tree() {
+        let tmp = tempfile::tempdir().unwrap();
+        let relative = "release/evidence/metadata/version-matrix.json";
+        let artifact = tmp.path().join(relative);
+        std::fs::create_dir_all(artifact.parent().unwrap()).unwrap();
+        let on_disk = "{\"blockers\":[]}\n";
+        std::fs::write(&artifact, on_disk.as_bytes()).unwrap();
+
+        let statuses = inspect_pending_artifacts(
+            tmp.path(),
+            &["version-matrix"],
+            &[relative],
+            &BTreeMap::new(),
+        );
+
+        assert_eq!(
+            statuses[0].content_sha256,
+            Some(xtask::hash::sha256_hex(on_disk.as_bytes()))
+        );
+    }
 
     /// The orchestrator must preserve every public-boundary failure reported
     /// for generated evidence instead of treating readable JSON as sufficient.
@@ -597,10 +730,11 @@ mod tests {
         )
         .unwrap();
 
-        let statuses = inspect_expected_artifacts(
+        let statuses = inspect_expected_artifacts_with_mode(
             tmp.path(),
             &["version-matrix"],
             &["release/evidence/metadata/version-matrix.json"],
+            COMMAND_MODE_SPAWNED,
         );
 
         let blockers = &statuses[0].blockers;
@@ -629,7 +763,7 @@ mod tests {
             .unwrap();
         }
 
-        let statuses = inspect_expected_artifacts(
+        let statuses = inspect_expected_artifacts_with_mode(
             tmp.path(),
             &[
                 "whats-similar",
@@ -643,6 +777,7 @@ mod tests {
                 "--duplicate-report-json",
                 REGISTERED_OP_DUPLICATES_ARTIFACT,
             ]),
+            COMMAND_MODE_SPAWNED,
         );
 
         // The lego duplicate evidence is owned by its gate's descriptor, not by
@@ -739,10 +874,11 @@ mod tests {
         )
         .unwrap();
 
-        let statuses = inspect_expected_artifacts(
+        let statuses = inspect_expected_artifacts_with_mode(
             tmp.path(),
             &["whats-similar"],
             &["release/evidence/dedup/registered-op-duplicates.json"],
+            COMMAND_MODE_SPAWNED,
         );
 
         let blockers = &statuses[0].blockers;
@@ -770,10 +906,11 @@ mod tests {
         )
         .unwrap();
 
-        let spawned_statuses = inspect_expected_artifacts(
+        let spawned_statuses = inspect_expected_artifacts_with_mode(
             tmp.path(),
             &["release-benchmarks", "--backend", "cuda"],
             &[artifact_rel],
+            COMMAND_MODE_SPAWNED,
         );
         let spawned_blockers = &spawned_statuses[0].blockers;
         assert!(spawned_blockers
@@ -828,10 +965,11 @@ mod tests {
         )
         .unwrap();
 
-        let spawned_statuses = inspect_expected_artifacts(
+        let spawned_statuses = inspect_expected_artifacts_with_mode(
             tmp.path(),
             &["release-benchmarks", "--backend", "wgpu"],
             &[artifact_rel],
+            COMMAND_MODE_SPAWNED,
         );
         let spawned_blockers = &spawned_statuses[0].blockers;
         assert!(spawned_blockers

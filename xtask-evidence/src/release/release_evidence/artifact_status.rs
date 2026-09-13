@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
@@ -27,16 +28,27 @@ pub(crate) struct ReleaseEvidenceArtifactStatus {
     pub(crate) blockers: Vec<String>,
 }
 
-pub(crate) fn inspect_expected_artifacts(
+/// Statuses for artifacts this same run is about to write, taken from the bytes
+/// it will write rather than from the copy still on disk.
+///
+/// `release-evidence` owns two artifacts and one of them records the other's
+/// digest, so reading the tree recorded the digest of the previous run. One
+/// `--write` then left the artifact disagreeing with the tree it had just
+/// written, and the gate only went quiet after a second and third write. A
+/// generator that cannot settle in one pass reports a stale tree as a defect
+/// and its own output as clean.
+pub(crate) fn inspect_pending_artifacts(
     workspace_root: &Path,
     command_args: &[&'static str],
     expected_artifacts: &[&'static str],
+    pending: &BTreeMap<&str, &str>,
 ) -> Vec<ReleaseEvidenceArtifactStatus> {
-    inspect_expected_artifacts_with_mode(
+    inspect(
         workspace_root,
         command_args,
         expected_artifacts,
         COMMAND_MODE_SPAWNED,
+        pending,
     )
 }
 
@@ -46,11 +58,36 @@ pub(crate) fn inspect_expected_artifacts_with_mode(
     expected_artifacts: &[&'static str],
     command_mode: &'static str,
 ) -> Vec<ReleaseEvidenceArtifactStatus> {
+    inspect(
+        workspace_root,
+        command_args,
+        expected_artifacts,
+        command_mode,
+        &BTreeMap::new(),
+    )
+}
+
+fn inspect(
+    workspace_root: &Path,
+    command_args: &[&'static str],
+    expected_artifacts: &[&'static str],
+    command_mode: &'static str,
+    pending: &BTreeMap<&str, &str>,
+) -> Vec<ReleaseEvidenceArtifactStatus> {
     let owner_lane = owner_lane_for_command(command_args);
     let generator_command = generator_command(command_args);
     expected_artifacts
         .iter()
         .map(|artifact| {
+            if let Some(bytes) = pending.get(artifact) {
+                return pending_status(
+                    artifact,
+                    bytes.as_bytes(),
+                    owner_lane,
+                    &generator_command,
+                    command_mode,
+                );
+            }
             let path = workspace_root.join(artifact);
             match fs::metadata(&path) {
                 Ok(metadata) => {
@@ -128,7 +165,56 @@ pub(crate) fn inspect_expected_artifacts_with_mode(
         .collect()
 }
 
-fn artifact_semantic_blockers(
+/// The status an artifact will have once `bytes` are on disk.
+///
+/// Every field the on-disk arm derives from the file is derived from the bytes
+/// instead, so the record states the artifact this run produces. The file need
+/// not exist yet, which is the case this exists for: the first run in a fresh
+/// checkout writes both artifacts and neither can be read before the other.
+fn pending_status(
+    artifact: &str,
+    bytes: &[u8],
+    owner_lane: &'static str,
+    generator_command: &str,
+    command_mode: &'static str,
+) -> ReleaseEvidenceArtifactStatus {
+    let length = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
+    let content_sha256 = sha256_hex(bytes);
+    let (source_fingerprint, freshness_fingerprint) = artifact_provenance_fingerprints(
+        artifact,
+        generator_command,
+        length,
+        Some(content_sha256.as_str()),
+    );
+    let mut blockers = artifact_provenance_blockers(
+        true,
+        length,
+        None,
+        source_fingerprint.as_deref(),
+        freshness_fingerprint.as_deref(),
+    );
+    blockers.extend(artifact_semantic_blockers(
+        artifact,
+        bytes,
+        generator_command,
+        command_mode,
+    ));
+    ReleaseEvidenceArtifactStatus {
+        path: artifact.to_string(),
+        exists: true,
+        bytes: length,
+        read_error: None,
+        owner_lane,
+        generator_command: generator_command.to_string(),
+        command_mode,
+        content_sha256: Some(content_sha256),
+        source_fingerprint,
+        freshness_fingerprint,
+        blockers,
+    }
+}
+
+pub(crate) fn artifact_semantic_blockers(
     artifact: &str,
     bytes: &[u8],
     expected_generator_command: &str,

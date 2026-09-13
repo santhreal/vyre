@@ -198,6 +198,20 @@ impl Inspection {
         self.findings.push(finding);
     }
 
+    /// The bytes this inspection will write at `path`, before the tree is
+    /// touched.
+    ///
+    /// A gate that owns two artifacts and records one inside the other has to
+    /// state what it is about to write rather than what the last run left, or
+    /// one `--write` never settles.
+    #[must_use]
+    pub fn pending(&self, path: &str) -> Option<&str> {
+        self.artifacts
+            .iter()
+            .find(|artifact| artifact.path == Path::new(path))
+            .map(|artifact| artifact.content.as_str())
+    }
+
     /// Record one blocker sentence a generator produced, against `artifact`.
     ///
     /// The fourteen evidence generators each carried a `blockers` list of prose,
