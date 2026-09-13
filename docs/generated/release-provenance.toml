@@ -1,5 +1,5 @@
 schema_version = 2
-bom_timestamp = "2026-09-13T02:39:05Z"
+bom_timestamp = "2026-09-13T02:52:12Z"
 rustc_version = "1.86.0 (05f9846f8 2025-03-31)"
 cargo_version = "1.86.0 (adf9b6ad1 2025-02-28)"
 target_triples = [
@@ -11,7 +11,7 @@ target_triples = [
 ]
 lockfile_digest = "c861f1b93b4721e8da20b7092d9111898c962e5692028948344cfeac3dc2386a"
 is_offline_capable = true
-reproducible_archive_hash = "9430a445e95ff14cb53e94ee885eb0d6401a43fbe18aeae4c21f4661d8e175b3"
+reproducible_archive_hash = "d0812e60510b7c6d3f9850763060becdc8f1685942ef29b60df077d90130ae83"
 
 [[dependencies]]
 name = "adler2"
@@ -4139,7 +4139,7 @@ digest = "2fbb1f049e9985434e389a67eedd95c9c20315bab34655ce8ebc1b0f4d2438d6"
 
 [[schemas]]
 path = "docs/generated/engineering-scorecard.toml"
-digest = "af454ecf948e1a7b048ebae5c7fc80049c4cc4aa254efb18c1a225063b30ea28"
+digest = "f0591320b553ce8e651602f68068ee2cc5fc6b107eb2d2169653448164b82e00"
 
 [[schemas]]
 path = "docs/generated/error-codes.toml"

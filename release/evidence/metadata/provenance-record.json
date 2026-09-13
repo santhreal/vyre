@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"5748294113bdad0df636c7bac11a44d603867a50","commit_timestamp":"1789267145","parent_commit":"f15a87028b1c8741dcdb660d873b176a0db9530d","dirty":false,"source_fingerprint":"git:5748294113bdad0df636c7bac11a44d603867a50:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"d1dfd72ef88f329f8804876243fa1594b00bd14c","commit_timestamp":"1789267932","parent_commit":"fde1c010d29bf22504f097338b4cd428eb4a1670","dirty":true,"source_fingerprint":"git:d1dfd72ef88f329f8804876243fa1594b00bd14c:dirty=true:worktree=74d22b0b27d1435b90325c7a0bc0c76bd8f0b0116452338241090e16a36f1609"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "_type": "https://in-toto.io/Statement/v1",
   "predicate": {
     "buildDefinition": {
@@ -2931,7 +2931,7 @@
         },
         {
           "digest": {
-            "sha256": "af454ecf948e1a7b048ebae5c7fc80049c4cc4aa254efb18c1a225063b30ea28"
+            "sha256": "f0591320b553ce8e651602f68068ee2cc5fc6b107eb2d2169653448164b82e00"
           },
           "name": "docs/generated/engineering-scorecard.toml"
         },
@@ -2975,7 +2975,7 @@
   "subject": [
     {
       "digest": {
-        "blake3": "9430a445e95ff14cb53e94ee885eb0d6401a43fbe18aeae4c21f4661d8e175b3"
+        "blake3": "d0812e60510b7c6d3f9850763060becdc8f1685942ef29b60df077d90130ae83"
       },
       "name": "vyre-release-archive"
     }

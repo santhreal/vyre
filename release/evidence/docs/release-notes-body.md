@@ -995,6 +995,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   shard descriptors. A safetensors element type with no counterpart in the IR
   data contract reports `ManifestError::UnsupportedCheckpointDtype` instead of
   resolving to a substitute type.
+- The `oracle-independence` gate fails when `vyre-reference` names a
+  `vyre-foundation` module or macro that decides how a program runs, so the
+  interpreter cannot inherit the transform it is supposed to check.
 - The pass invariant audit reports a pass that grows a program past the
   expansion bound its rewrite contract declares, and a registered pass that
   declares no contract.
