@@ -121,6 +121,20 @@ pub fn bounded_index_when(in_range: Expr, index: Expr) -> Expr {
     Expr::select(in_range, index, Expr::u32(0))
 }
 
+/// The lesser of two buffer extents.
+///
+/// A walk that reads one buffer and writes another is bounded by both. A caller
+/// sizes each binding on its own, so a loop bounded by the read extent stores
+/// past the end of the written buffer as soon as the two differ, at the natural
+/// grid, with valid input.
+///
+/// Both operands are counts, so `Expr::select` evaluating both arms costs
+/// nothing here: neither arm is an access.
+#[must_use]
+pub fn lesser_extent(left: Expr, right: Expr) -> Expr {
+    Expr::select(Expr::lt(left.clone(), right.clone()), left, right)
+}
+
 /// The program a builder returns when its inputs cannot produce a valid one.
 ///
 /// Every primitive and composition builder is infallible, so an invalid shape

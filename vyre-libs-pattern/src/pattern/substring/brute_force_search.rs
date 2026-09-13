@@ -81,24 +81,31 @@ fn build_substring_program(
         value: Expr::var("ok"),
     });
 
-    // The guard admits a start offset only when it indexes the match bitmap
-    // and leaves room for the whole needle:
+    // The guard admits a start offset only when it indexes both buffers the
+    // body touches and leaves room for the whole needle:
     //
-    //   i < haystack_len  ∧  needle_len <= haystack_len
+    //   i < haystack_len  ∧  i < matches_len
+    //                     ∧  needle_len <= haystack_len
     //                     ∧  i <= haystack_len - needle_len
     //
-    // The bitmap holds one slot per haystack byte. An empty needle also
-    // matches at offset `haystack_len`, one past the last slot, so the first
-    // conjunct bounds the store. The second keeps the subtraction in the
-    // third from underflowing when a compile-time needle is longer than the
-    // runtime haystack. `i + needle_len <= haystack_len` is not used: that
-    // add wraps near `u32::MAX` and admits the last few offsets.
+    // The first conjunct bounds the loads and the second bounds the store. The
+    // two extents are independent: a caller may bind a haystack longer than the
+    // bitmap it asked for, and a haystack-only bound then stores past the last
+    // slot. An empty needle also matches at offset `haystack_len`, one past the
+    // last slot, which the store bound rejects. The third conjunct keeps the
+    // subtraction in the fourth from underflowing when a compile-time needle is
+    // longer than the runtime haystack. `i + needle_len <= haystack_len` is not
+    // used: that add wraps near `u32::MAX` and admits the last few offsets.
     let body = vec![
         Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::let_bind("haystack_len", Expr::buf_len(haystack)),
+        Node::let_bind("matches_len", Expr::buf_len(matches)),
         Node::if_then(
             Expr::and(
-                Expr::lt(i.clone(), Expr::var("haystack_len")),
+                Expr::and(
+                    Expr::lt(i.clone(), Expr::var("haystack_len")),
+                    Expr::lt(i.clone(), Expr::var("matches_len")),
+                ),
                 Expr::and(
                     Expr::le(Expr::u32(needle_len), Expr::var("haystack_len")),
                     Expr::le(

@@ -49,6 +49,11 @@ fn every_registered_primitive_is_race_free_under_lane_reversal() {
     sweep().assert_race_free_under_lane_reversal();
 }
 
+#[test]
+fn every_registered_primitive_is_oob_clean_on_over_provisioned_inputs() {
+    sweep().assert_oob_clean_under_over_provisioned_inputs();
+}
+
 /// Every registered primitive emits IR that passes validation, fixtured or not.
 ///
 /// The four nets above reach only the entries that carry a fixture, so an

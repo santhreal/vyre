@@ -162,6 +162,53 @@ fn the_out_of_bounds_net_fails_on_an_unguarded_index() {
     );
 }
 
+/// A store whose index is bounded by the extent of a DIFFERENT buffer is in
+/// bounds on the fixture and out of bounds as soon as that other buffer grows.
+fn store_bounded_by(bound: &str) -> Program {
+    program(
+        vec![
+            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+            BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+        ],
+        1,
+        vec![
+            Node::let_bind("n", Expr::buf_len(bound)),
+            Node::store(
+                "out",
+                Expr::sub(Expr::var("n"), Expr::u32(1)),
+                Expr::u32(1),
+            ),
+        ],
+    )
+}
+
+#[test]
+fn the_over_provisioned_input_net_fails_on_a_bound_from_the_wrong_buffer() {
+    let fixture = vec![Value::from(vec![0u8; 4]), Value::from(vec![0u8; 4])];
+    let sweep = one("bound from the input", store_bounded_by("input"), fixture);
+    assert!(
+        failure(|| sweep.assert_oob_clean()).is_none(),
+        "the fixture itself must be in bounds, or the new net is not what caught the defect"
+    );
+    let message = failure(|| sweep.assert_oob_clean_under_over_provisioned_inputs()).expect(
+        "Fix: a store bounded by the input extent must fail the net once the input is longer",
+    );
+    assert!(
+        message.contains("OUT OF BOUNDS"),
+        "the failure must name the out-of-bounds access: {message}"
+    );
+}
+
+#[test]
+fn the_over_provisioned_input_net_passes_a_bound_from_the_stored_buffer() {
+    let fixture = vec![Value::from(vec![0u8; 4]), Value::from(vec![0u8; 4])];
+    let sweep = one("bound from the output", store_bounded_by("out"), fixture);
+    assert!(
+        failure(|| sweep.assert_oob_clean_under_over_provisioned_inputs()).is_none(),
+        "a store gated by the extent of the buffer it writes stays in bounds at any input length"
+    );
+}
+
 #[test]
 fn the_overfire_invariance_net_fails_on_a_grid_sensitive_population() {
     let sweep = one(

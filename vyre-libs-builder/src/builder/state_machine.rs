@@ -250,7 +250,10 @@ impl<'a> TableStateMachineComposer<'a> {
         vec![
             Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
             Node::if_then(
-                Expr::lt(i.clone(), Expr::buf_len(haystack)),
+                Expr::and(
+                    Expr::lt(i.clone(), Expr::buf_len(haystack)),
+                    Expr::lt(i.clone(), Expr::buf_len(matches)),
+                ),
                 vec![
                     Node::let_bind(self.state_var, Expr::u32(0)),
                     Node::let_bind("scan_start", start),

@@ -9,6 +9,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Added
 
+- `vyre_driver::staged_input_gather!` implements the `core` accessor and the
+  staged-input `gather` for a materialized instance whose module carries
+  `input_slots`, so every driver resolves inter-module values in target binding
+  order.
 - Adaptive traversal publishes the nine buffer names one step binds as
   `AdaptiveTraversalBuffers::CANONICAL`, with canonical names for the
   active-source queue and its resident length.
@@ -5213,6 +5217,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Fixed
 
+- Brute-force substring search, the cooperative DFA scan, the Aho-Corasick
+  suffix scan, and the atomic trace compositions bound every store by the
+  extent of the buffer they write, not by the extent of the buffer they read.
+  An invocation whose output buffer is shorter than its input buffer wrote one
+  element past the end.
 - The conformance runner exercises each backend through the route its
   registration declares. A backend that registers a target compiler and a
   materializer takes the production artifact route, as before; the reference

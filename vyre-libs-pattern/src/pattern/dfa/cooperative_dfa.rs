@@ -172,7 +172,10 @@ pub fn cooperative_dfa_scan_body_with_store(
         Node::let_bind("idx", idx),
         Node::let_bind(
             "in_bounds",
-            Expr::lt(Expr::var("idx"), Expr::buf_len(input)),
+            Expr::and(
+                Expr::lt(Expr::var("idx"), Expr::buf_len(input)),
+                Expr::lt(Expr::var("idx"), Expr::buf_len(matches)),
+            ),
         ),
         Node::let_bind("state", Expr::u32(0)),
     ];

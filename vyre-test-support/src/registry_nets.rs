@@ -20,7 +20,7 @@
 //! fixture leaves its composition unjudged, and reporting the remainder as
 //! clean is the exact failure these nets exist to remove.
 
-use vyre_foundation::ir::Program;
+use vyre_foundation::ir::{BufferAccess, Program};
 use vyre_foundation::operation::SemanticOperation;
 use vyre_reference::value::Value;
 use vyre_reference::ReferenceErrorClass;
@@ -384,6 +384,65 @@ impl RegistrySweep {
         );
     }
 
+    /// Every case reads and writes inside its buffers when an input buffer is
+    /// bound LONGER than the fixture binds it.
+    ///
+    /// The other nets vary the grid and the buffer contents. Neither varies the
+    /// EXTENTS, and the extents are independent: a caller binds each buffer at
+    /// whatever length it has, and a declared count of zero is sized at run
+    /// time. A composition that reads `Expr::buf_len` of one buffer and stores
+    /// at that index into another therefore stores past the end of the second
+    /// as soon as the first is bound longer, at the natural grid, with every
+    /// other net green. `substring_search` did: its start-offset guard was
+    /// bounded by the haystack extent and its store landed in a match bitmap
+    /// the caller sized separately.
+    ///
+    /// One extra element per input is the whole perturbation. The class is a
+    /// bound taken from the wrong buffer, and one element past the fixture is
+    /// enough to separate the two extents while the run stays as cheap as the
+    /// fixture.
+    ///
+    /// A case that reaches an IR trap counts as judged: the trap is the program
+    /// refusing input outside its contract with explicit control flow.
+    ///
+    /// # Panics
+    /// Panics when a case accesses a buffer out of bounds on a longer input,
+    /// when a case cannot be evaluated, or when the population is empty.
+    pub fn assert_oob_clean_under_over_provisioned_inputs(&self) {
+        let mut offenders = Vec::new();
+        let mut skipped = Vec::new();
+        let mut checked = 0usize;
+
+        for case in &self.cases {
+            let inputs = extended_inputs(&case.program, &case.inputs, 1);
+            match vyre_reference::ReferenceRequest::standard(&case.program, &inputs).outputs() {
+                Ok(_out) => checked += 1,
+                Err(err) if err.error_class() == OUT_OF_BOUNDS => {
+                    checked += 1;
+                    offenders.push(format!("{} (inputs one element longer): {err}", case.label));
+                }
+                Err(err) if err.is_program_trap() => checked += 1,
+                Err(err) => skipped.push(format!("{} (longer inputs): {err}", case.label)),
+            }
+        }
+
+        self.refuse_skips(
+            "the over-provisioned-input out-of-bounds sweep",
+            checked,
+            &skipped,
+        );
+        assert!(
+            offenders.is_empty(),
+            "Fix: {} of {checked} checked {} fixture case(s) accessed a buffer OUT OF BOUNDS once an input \
+             buffer was bound one element LONGER. A caller sizes each buffer on its own, so a bound taken \
+             from one buffer's extent does not bound an access into another. Gate every access by the extent \
+             of the buffer it touches. Offenders:\n{}",
+            offenders.len(),
+            self.surface,
+            offenders.join("\n")
+        );
+    }
+
     /// Refuse a case the net could not evaluate, and an empty population.
     ///
     /// A net that skips what it cannot evaluate reports a clean sweep of a
@@ -459,6 +518,40 @@ pub fn hostile_contents(inputs: &[Value], index: u32) -> Vec<Value> {
                 Value::Bytes(hostile.into())
             }
             Value::U32(_) => Value::U32(index),
+            other => other.clone(),
+        })
+        .collect()
+}
+
+/// Every READ-ONLY input buffer bound `extra` four-byte elements longer,
+/// zero-filled.
+///
+/// Only the read-only bindings grow. A buffer the program writes is the extent
+/// the caller asked for, and growing it too would move both bounds together and
+/// hide the very divergence this rewrite exists to create.
+///
+/// Supplied values map positionally onto the buffers that consume a host input,
+/// which is the order the reference binds them in. A buffer is bytes to the
+/// interpreter, so the extension is whole words, and a scalar is left alone: a
+/// scalar carries no extent for a bound to be taken from.
+#[must_use]
+pub fn extended_inputs(program: &Program, inputs: &[Value], extra: usize) -> Vec<Value> {
+    let read_only: Vec<bool> = program
+        .buffers()
+        .iter()
+        .filter(|decl| decl.consumes_host_input())
+        .map(|decl| decl.access() == BufferAccess::ReadOnly)
+        .collect();
+    inputs
+        .iter()
+        .enumerate()
+        .map(|(index, input)| match input {
+            Value::Bytes(bytes) if read_only.get(index).copied().unwrap_or(false) => {
+                let mut longer = Vec::with_capacity(bytes.len() + extra * 4);
+                longer.extend_from_slice(bytes);
+                longer.resize(bytes.len() + extra * 4, 0);
+                Value::Bytes(longer.into())
+            }
             other => other.clone(),
         })
         .collect()

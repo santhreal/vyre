@@ -52,3 +52,8 @@ fn every_registered_composition_is_race_free_under_lane_reversal() {
 fn every_registered_composition_is_oob_clean_on_hostile_buffer_contents() {
     sweep().assert_oob_clean_under_hostile_contents();
 }
+
+#[test]
+fn every_registered_composition_is_oob_clean_on_over_provisioned_inputs() {
+    sweep().assert_oob_clean_under_over_provisioned_inputs();
+}
