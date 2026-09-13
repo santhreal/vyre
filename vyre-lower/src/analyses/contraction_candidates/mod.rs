@@ -7,4 +7,7 @@ pub(crate) mod analysis;
 pub(crate) mod plan;
 
 pub use analysis::analyze;
-pub use plan::{ContractionCandidate, ContractionPlan, ContractionStrategy};
+pub use plan::{
+    ContractionCandidate, ContractionPlan, ContractionStrategy, MatrixInstructionSource,
+    SCALAR_OPERAND_LOADS_PER_FMA,
+};

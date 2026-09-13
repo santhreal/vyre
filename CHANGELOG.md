@@ -1127,13 +1127,6 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Changed
 
-- `vyre-driver-spirv` reports the shared-memory budget and subgroup width of
-  the Vulkan device it opened. The registration inherited the neutral profile
-  defaults, so a plan was ranked against 32 KiB of scratch and no subgroup
-  support on a device offering more of both.
-- `vyre-libs` exports its builders under one path each. The crate root glob
-  re-exported everything `vyre-libs-builder`'s `builder` and registration
-  signature modules publish, giving every item two public paths.
 - DeviceProfile::from_backend is the one spelling of the neutral device
   profile. The backend trait default and the Metal runtime override now take it
   and restate only the fields the backend knows better, instead of each writing
@@ -3580,6 +3573,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   its output extent in `u64` as well, so a device buffer extent no longer
   depends on host pointer width and the scan drops an overflow check that could
   only fire on a 32-bit host.
+- Three source files over the per-file line cap are split along their existing
+  concerns: the Vulkan backend into loader and process-wide context, descriptor
+  bindings and readback, and the dispatch itself; the reference oracle's
+  interleaving module into access model, shadow memory, thread-local tracking
+  and the static walk; and the Go structure extractor into the shared
+  declaration span, package and import extraction, and declaration extraction.
 - Foundation now exposes IR-specific `IrError` and `IrResult` contracts instead
   of a cross-domain error sink. Reference interpretation, backend execution,
   WGPU device selection, and runtime framing return owner-local typed failures.
@@ -4142,6 +4141,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   unprobed-capability defaults and nothing used them; a new capability field
   had to be answered by hand in `vyre-driver-spirv/src/lib.rs` and the answer
   was always the conservative one.
+- `vyre-driver-spirv` reports the shared-memory budget and subgroup width of
+  the Vulkan device it opened. The registration inherited the neutral profile
+  defaults, so a plan was ranked against 32 KiB of scratch and no subgroup
+  support on a device offering more of both.
 - The element-wise programs the SPIR-V dispatch tests and the Vulkan probe
   example run have one owner in
   `vyre-driver-spirv/tests/support/elementwise.rs`, shared by path include. The
@@ -4602,6 +4605,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   case that bound the results to `_` and only proved absence of a panic. The
   module and field documentation names the concern each policy decides instead
   of an internal plan label.
+- `vyre-libs` exports its builders under one path each. The crate root glob
+  re-exported everything `vyre-libs-builder`'s `builder` and registration
+  signature modules publish, giving every item two public paths.
 - `vyre-libs` no longer reaches across dialect boundaries in private code.
   `telemetry` has one owner rather than a one-file directory, because counters
   instrument every dialect and belong to none; the scratch reservation, the
@@ -5201,49 +5207,6 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Fixed
 
-- A multi-backend proof run no longer crashes in the driver during concurrent
-  device initialization. Each case opened its own device handle to hash the
-  compilation profile it was selected for, so a run over 358 operations opened
-  hundreds of loader instances across worker threads and exhausted the Vulkan
-  descriptor pool. Compile target facts are resolved once per registered
-  backend and cached, `vyre-driver-spirv` shares one process-wide Vulkan device
-  across acquisitions, and backends are proved one after another.
-- A fused SPIR-V module receives every input the target binding declares.
-  Inputs were supplied in the order the host `Program` declared them, so a
-  megakernel whose stages consume intermediate buffers bound the wrong resource
-  for seven operations and diverged from the reference. Modules now stage
-  intermediate values by name, gather them by the descriptor bindings the
-  emitted module carries, and bind the reserved trap sidecar descriptor
-  extracted from the module decorations.
-- The conformance certificate's signable body is defined once, in
-  `vyre-conform`'s `certificate_wire`. The prove, merge and test paths each
-  restated the serialized layout, so adding the unavailable-backend roster to
-  the proof selection summary left the test copy one field short and the
-  Ed25519 signature no longer verified over the body it was computed from.
-- Every declared feature selection compiles. `vyre-libs-security`'s `predicate`
-  builds its programs from the label primitives and now enables `label`,
-  `vyre-test-support`'s `driver-contracts` names `Program` in the dispatch
-  signature and now enables `vyre-foundation`, and `vyre-libs-nn`'s
-  `EMPTY_RMS_FIX` is compiled for `nn-norm`, its only consumer, rather than
-  for every build of the shared RMS module.
-- The reference oracle refuses a subgroup collective reached from a branch
-  whose condition is not workgroup-uniform. The rule already covered `Barrier`;
-  a collective released once the lanes that skipped the branch retired, so the
-  oracle issued a reduction over whichever lanes were still running as the
-  expected output.
-- `vyre-reference` builds and tests with `--no-default-features`. The lane
-  index carried a dead-code expectation that no longer held, the `Value` import
-  in the step module was unconditional, and a subgroup shuffle test ran on a
-  feature set whose validator refuses subgroup expressions.
-- The reference oracle's race detector treats a release/acquire pair on an
-  atomic location as a synchronization edge, so a program that publishes a
-  payload through a released flag and reads it after acquiring that flag is no
-  longer reported as an unsynchronized access. The edge is credited only
-  through the publisher's accesses that precede the release, and only where
-  both declared memory scopes reach the other invocation, so a
-  workgroup-scoped handoff still reports a cross-workgroup race.
-  `MemoryAccessRecord` gained a `sequence` field stating where the access sits
-  in the exploration order.
 - The conformance runner exercises each backend through the route its
   registration declares. A backend that registers a target compiler and a
   materializer takes the production artifact route, as before; the reference
@@ -7594,6 +7557,18 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   held to its own declared tolerance, and the attribution is refused rather
   than guessed when the second stage writes the piped buffer. No budget was
   widened.
+- The conformance certificate's signable body is defined once, in
+  `vyre-conform`'s `certificate_wire`. The prove, merge and test paths each
+  restated the serialized layout, so adding the unavailable-backend roster to
+  the proof selection summary left the test copy one field short and the
+  Ed25519 signature no longer verified over the body it was computed from.
+- A multi-backend proof run no longer crashes in the driver during concurrent
+  device initialization. Each case opened its own device handle to hash the
+  compilation profile it was selected for, so a run over 358 operations opened
+  hundreds of loader instances across worker threads and exhausted the Vulkan
+  descriptor pool. Compile target facts are resolved once per registered
+  backend and cached, `vyre-driver-spirv` shares one process-wide Vulkan device
+  across acquisitions, and backends are proved one after another.
 - Conformance execution enforces bounded worker process isolation, timeout
   termination bounds, and aligned certificate signing contracts across all
   failure modes.
@@ -7606,6 +7581,20 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   internal crate is checked against every consumer manifest and derives the
   forbidden set from each member's declared publication class, instead of
   reading a field that moved out of the ownership manifest.
+- A contraction candidate states only what its site states. The analysis
+  returned the same three candidates for every contraction: a 16x16x16
+  workgroup tile, an `m16n8k16` F16 matrix instruction, and a constant ranking
+  multiplier, none of which was read from the descriptor. A site declaring
+  other extents, binding only integer element types, or dispatching a
+  single-invocation workgroup received that same answer, so a matrix candidate
+  could name a fragment packing no program expressed. Tile extents and fragment
+  element types now come from the `MatrixMma` the body declares, the workgroup
+  tile from the declared dispatch geometry, the supported element types from
+  the bindings the kernel reads, and the ranking input is
+  `operand_loads_per_fma`, a counted operand-load ratio carrying the derivation
+  it was computed from. A site that declares no matrix operation receives no
+  matrix candidate. Detection is the sum-of-products dataflow itself rather
+  than a binding-size proxy.
 - Logical contractions lower into scalar, SIMT tiled, and matrix-instruction
   candidate strategies in lowering rather than library builders, and TileMatmul
   bitwise-packs F16 fragment operand pairs across warp lanes.
@@ -8232,6 +8221,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Testing guides are now generated for all 36 workspace members from Cargo
   features and targets plus maintained hardware, evidence, skip, and failure
   metadata. The documentation gate rejects missing, orphaned, or stale guides.
+- The clone-family structural IR golden matches the Go extractors again.
+  Folding four out-of-bounds loads back inside their buffers added the clamp
+  expressions and the enclosing branch that admit them, and the golden still
+  carried the pre-fix digests, so the guard reported a drift for
+  `go/packages_and_imports` and `go/declarations` on every run.
 - GPU routing, conformance, and release evidence now select hardware by
   reported capabilities rather than a product name. Benchmark reuse and release
   validation inspect every device in a multi-GPU inventory, reject missing or
@@ -9439,6 +9433,13 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The hygiene scanner recognises a source read resolved from a declaration
   marker and a search written with `match_indices`, so a test that walks the
   checkout through either is no longer classified as inspecting nothing.
+- A fused SPIR-V module receives every input the target binding declares.
+  Inputs were supplied in the order the host `Program` declared them, so a
+  megakernel whose stages consume intermediate buffers bound the wrong resource
+  for seven operations and diverged from the reference. Modules now stage
+  intermediate values by name, gather them by the descriptor bindings the
+  emitted module carries, and bind the reserved trap sidecar descriptor
+  extracted from the module decorations.
 - The WGPU stream-sharding error is now nameable as
   `engine::multi_gpu::StreamShardError` without changing existing signatures.
 - Every registered backend either honors strict-IEEE float lowering or refuses

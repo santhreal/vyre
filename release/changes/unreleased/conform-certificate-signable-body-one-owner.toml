@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The conformance certificate's signable body is defined once, in `vyre-conform`'s `certificate_wire`. The prove, merge and test paths each restated the serialized layout, so adding the unavailable-backend roster to the proof selection summary left the test copy one field short and the Ed25519 signature no longer verified over the body it was computed from."

@@ -90,11 +90,11 @@ regions:
   vyre-libs::parsing::core_delimiter_match nodes=81 exprs=406 node_kinds=Assign=24 If=24 Let=15 Loop=12 Store=6 expr_kinds=Atomic=1 BinOp=96 LitU32=146 Load=26 LogicalIndex=3 Select=29 Var=105
   vyre-libs::parsing::python312_extract_decorators nodes=1 exprs=0 node_kinds=Region=1 expr_kinds=none
 ===== go/packages_and_imports
-digest 2c3ffed14ee5f1fccdd2cdd120def3b1fd79c8735fc37bd3195eb070eaf9f658
-nodes 24 exprs 245
+digest 95531b31707b6d869b0d63479752af5ac8ca6fde3f15f7aefbcd208b03d87ed5
+nodes 24 exprs 391
 depth 9
 node_kinds Assign=1 If=11 Let=4 Loop=1 Region=1 Store=6
-expr_kinds Atomic=3 BinOp=84 BufLen=4 LitU32=74 Load=41 LogicalIndex=28 Var=11
+expr_kinds Atomic=3 BinOp=131 BufLen=38 LitU32=100 Load=54 LogicalIndex=41 Select=13 Var=11
 buffers:
   BufferDecl { name: "haystack", binding: 3, access: ReadOnly, kind: Readonly, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
   BufferDecl { name: "tok_lens", binding: 2, access: ReadOnly, kind: Readonly, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
@@ -105,13 +105,13 @@ buffers:
   BufferDecl { name: "out_import_counts", binding: 7, access: ReadWrite, kind: Global, element: U32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
   BufferDecl { name: "out_package_counts", binding: 5, access: ReadWrite, kind: Global, element: U32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
 regions:
-  vyre-libs::parsing::go_extract_packages_and_imports nodes=23 exprs=245 node_kinds=Assign=1 If=11 Let=4 Loop=1 Store=6 expr_kinds=Atomic=3 BinOp=84 BufLen=4 LitU32=74 Load=41 LogicalIndex=28 Var=11
+  vyre-libs::parsing::go_extract_packages_and_imports nodes=23 exprs=391 node_kinds=Assign=1 If=11 Let=4 Loop=1 Store=6 expr_kinds=Atomic=3 BinOp=131 BufLen=38 LitU32=100 Load=54 LogicalIndex=41 Select=13 Var=11
 ===== go/declarations
-digest cc2974a1c0b271e8779b39a56e9782d52a6380ed241289d24718e48b7f8c41cf
-nodes 65 exprs 416
-depth 9
-node_kinds Assign=16 If=20 Let=15 Loop=3 Region=1 Store=10
-expr_kinds Atomic=2 BinOp=138 BufLen=5 LitU32=132 Load=59 LogicalIndex=30 Var=50
+digest 3c64d78fd64f1d69a9451c2273eefb87c18aa8a0d2741240d95cc5e6257e05b0
+nodes 66 exprs 645
+depth 10
+node_kinds Assign=16 If=21 Let=15 Loop=3 Region=1 Store=10
+expr_kinds Atomic=2 BinOp=218 BufLen=55 LitU32=178 Load=76 LogicalIndex=48 Select=17 Var=51
 buffers:
   BufferDecl { name: "haystack", binding: 3, access: ReadOnly, kind: Readonly, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
   BufferDecl { name: "tok_lens", binding: 2, access: ReadOnly, kind: Readonly, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
@@ -120,7 +120,7 @@ buffers:
   BufferDecl { name: "tok_starts", binding: 1, access: ReadOnly, kind: Readonly, element: U32, count: 0, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
   BufferDecl { name: "out_decl_counts", binding: 5, access: ReadWrite, kind: Global, element: U32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
 regions:
-  vyre-libs::parsing::go_extract_declarations nodes=64 exprs=416 node_kinds=Assign=16 If=20 Let=15 Loop=3 Store=10 expr_kinds=Atomic=2 BinOp=138 BufLen=5 LitU32=132 Load=59 LogicalIndex=30 Var=50
+  vyre-libs::parsing::go_extract_declarations nodes=65 exprs=645 node_kinds=Assign=16 If=21 Let=15 Loop=3 Store=10 expr_kinds=Atomic=2 BinOp=218 BufLen=55 LitU32=178 Load=76 LogicalIndex=48 Select=17 Var=51
 ===== core/ast/shunting
 digest 1461525c6470e06a5756070e9b12f02eeb428a72f7f3a8c6e421f44791d555e2
 nodes 103 exprs 749

@@ -95,6 +95,7 @@ impl vyre_lower::analyses::TargetResourceLimits
 impl vyre_lower::analyses::ValueRangeReport
 impl vyre_lower::analyses::WorkgroupUniformReport
 impl vyre_lower::analyses::alias_facts::AliasFactSet
+impl vyre_lower::analyses::contraction_candidates::ContractionCandidate
 impl vyre_lower::analyses::vec_pack::VecPackChain
 impl vyre_lower::analyses::vec_pack::VecPackReport
 impl vyre_lower::descriptor_builder::KernelBodyBuilder
@@ -170,6 +171,7 @@ pub const vyre_lower::TRAP_SIDECAR_NAME: &str
 pub const vyre_lower::TRAP_SIDECAR_WORDS: u32
 pub const vyre_lower::WORKGROUP_SLOT_BASE: u32
 pub const vyre_lower::analyses::CANDIDATE_MITIGATIONS: [vyre_lower::analyses::BankConflictMitigation; 6]
+pub const vyre_lower::analyses::contraction_candidates::SCALAR_OPERAND_LOADS_PER_FMA: f32
 pub const vyre_lower::pattern_audit::PatternAudit::FINDING_NOUN: &'static str
 pub const vyre_lower::pattern_audit::UNNAMED_KERNEL: &str
 pub const vyre_lower::program_stability_corpus::LANES: u32
@@ -214,6 +216,7 @@ pub enum vyre_lower::analyses::SharedPermutationBlock
 pub enum vyre_lower::analyses::SharedStoreLegality
 pub enum vyre_lower::analyses::StrideExpr
 pub enum vyre_lower::analyses::contraction_candidates::ContractionStrategy
+pub enum vyre_lower::analyses::contraction_candidates::MatrixInstructionSource
 pub enum vyre_lower::analyses::structured_walk::ArmDescent
 pub enum vyre_lower::analyses::structured_walk::BranchForm
 pub enum vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily
@@ -389,6 +392,7 @@ pub fn vyre_lower::analyses::analyze_value_range(desc: &vyre_lower::KernelDescri
 pub fn vyre_lower::analyses::analyze_workgroup_uniform(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::analyses::WorkgroupUniformReport
 pub fn vyre_lower::analyses::candidate_plan::CandidatePlan<Candidate>::candidate_count(&self) -> usize
 pub fn vyre_lower::analyses::child_body_operands<'a>(kind: &vyre_lower::KernelOpKind, operands: &'a [u32]) -> impl core::iter::traits::iterator::Iterator<Item = u32> + 'a
+pub fn vyre_lower::analyses::contraction_candidates::ContractionCandidate::operand_reuse_factor(&self) -> f32
 pub fn vyre_lower::analyses::contraction_candidates::analyze(desc: &vyre_lower::KernelDescriptor) -> vyre_lower::analyses::contraction_candidates::ContractionPlan
 pub fn vyre_lower::analyses::dead_by_no_use(desc: &vyre_lower::KernelDescriptor) -> alloc::vec::Vec<(alloc::vec::Vec<usize>, u32)>
 pub fn vyre_lower::analyses::derive_shared_access_profiles(desc: &vyre_lower::KernelDescriptor, banks: core::num::nonzero::NonZeroU32) -> alloc::vec::Vec<vyre_lower::analyses::SharedBindingAccessProfile>
@@ -1272,7 +1276,8 @@ pub vyre_lower::analyses::alias_facts::NoAliasFact::right_index: u32
 pub vyre_lower::analyses::candidate_plan::CandidatePlan::candidates: alloc::vec::Vec<Candidate>
 pub vyre_lower::analyses::candidate_plan::CandidatePlan::kernel_id: alloc::string::String
 pub vyre_lower::analyses::contraction_candidates::ContractionCandidate::contraction_id: alloc::string::String
-pub vyre_lower::analyses::contraction_candidates::ContractionCandidate::estimated_speedup_factor: f32
+pub vyre_lower::analyses::contraction_candidates::ContractionCandidate::derivation: alloc::string::String
+pub vyre_lower::analyses::contraction_candidates::ContractionCandidate::operand_loads_per_fma: f32
 pub vyre_lower::analyses::contraction_candidates::ContractionCandidate::strategy: vyre_lower::analyses::contraction_candidates::ContractionStrategy
 pub vyre_lower::analyses::contraction_candidates::ContractionCandidate::supported_dtypes: alloc::vec::Vec<vyre_spec::data_type::DataType>
 pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction
@@ -1281,6 +1286,7 @@ pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixIns
 pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction::left_layout: vyre_lower::MatrixMmaLayout
 pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction::right_element: vyre_lower::MatrixMmaElement
 pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction::right_layout: vyre_lower::MatrixMmaLayout
+pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction::source: vyre_lower::analyses::contraction_candidates::MatrixInstructionSource
 pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction::tile: vyre_lower::MatrixTileShape
 pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::Scalar
 pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::SimtTiled
@@ -1288,6 +1294,7 @@ pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::SimtTiled
 pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::SimtTiled::tile_m: u32
 pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::SimtTiled::tile_n: u32
 pub vyre_lower::analyses::contraction_candidates::ContractionStrategy::SimtTiled::workgroup_size: [u32; 3]
+pub vyre_lower::analyses::contraction_candidates::MatrixInstructionSource::DeclaredByDescriptor
 pub vyre_lower::analyses::structured_walk::ArmDescent::Enter
 pub vyre_lower::analyses::structured_walk::ArmDescent::Skip
 pub vyre_lower::analyses::structured_walk::BranchForm::IfThen

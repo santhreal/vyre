@@ -1223,7 +1223,7 @@ seam = "backend-contract"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 2748
+exported_item_count = 2750
 
   [[package.item]]
   path = "T::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>"
@@ -3817,6 +3817,13 @@ exported_item_count = 2748
 
   [[package.item]]
   path = "vyre_driver::BindingPlan::validate_inputs(&self, inputs: &[alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::BindingPlan::validate_named_inputs(&self, names: &[&str], inputs: &[&[u8]]) -> core::result::Result<(), vyre_driver::BackendError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -15115,6 +15122,13 @@ exported_item_count = 2748
 
   [[package.item]]
   path = "vyre_driver::materialize::compile_error(backend: &str, error: impl core::fmt::Display) -> vyre_driver::BackendError"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::materialize::gather_artifact_inputs<'a>(core: &'a vyre_driver::materialize::InstanceCore, module_index: usize, slots: &'a [vyre_megakernel::staged_input_slots::ArtifactInputSlot], state: &'a alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, alloc::vec::Vec<u8>>) -> core::result::Result<alloc::vec::Vec<&'a [u8]>, vyre_driver::BackendError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -27880,7 +27894,7 @@ seam = "spirv-driver"
 publication_class = "concrete-backend"
 publication_contract = "target-support:spirv"
 stability = "backend"
-exported_item_count = 34
+exported_item_count = 36
 
   [[package.item]]
   path = "impl core::default::Default for vyre_driver_spirv::SpirvBackend"
@@ -28016,13 +28030,6 @@ exported_item_count = 34
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver_spirv::SpirvBackendRegistration::device_profile(&self) -> vyre_driver::device_profile::DeviceProfile"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_driver_spirv::SpirvBackendRegistration::dispatch_borrowed(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>"
   kind = "fn"
   stability = "backend"
@@ -28072,6 +28079,13 @@ exported_item_count = 34
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_driver_spirv::SpirvBackendRegistration::max_shared_memory_bytes(&self) -> u32"
+  kind = "fn"
+  stability = "backend"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_driver_spirv::SpirvBackendRegistration::max_storage_buffer_bytes(&self) -> u64"
   kind = "fn"
   stability = "backend"
@@ -28080,6 +28094,20 @@ exported_item_count = 34
 
   [[package.item]]
   path = "vyre_driver_spirv::SpirvBackendRegistration::max_workgroup_size(&self) -> [u32; 3]"
+  kind = "fn"
+  stability = "backend"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver_spirv::SpirvBackendRegistration::subgroup_size(&self) -> core::option::Option<u32>"
+  kind = "fn"
+  stability = "backend"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver_spirv::SpirvBackendRegistration::supports_subgroup_ops(&self) -> bool"
   kind = "fn"
   stability = "backend"
   feature = "unconditional"
@@ -96788,25 +96816,11 @@ seam = "semantic-library"
 publication_class = "stable-consumer-sdk"
 publication_contract = "consumer-seam:vyre-graphics-app"
 stability = "stable"
-exported_item_count = 45
+exported_item_count = 43
 
   [[package.item]]
   path = "vyre_libs"
   kind = "mod"
-  stability = "stable"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_libs::<<vyre_libs_builder::builder::*>>"
-  kind = "use"
-  stability = "stable"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_libs::<<vyre_libs_builder::plumbing::registration::signatures::*>>"
-  kind = "use"
   stability = "stable"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -131974,7 +131988,7 @@ seam = "lowering"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-megakernel"
 stability = "internal"
-exported_item_count = 1351
+exported_item_count = 1359
 
   [[package.item]]
   path = "impl core::cmp::Eq for vyre_lower::KernelBody"
@@ -132643,6 +132657,13 @@ exported_item_count = 1351
 
   [[package.item]]
   path = "impl vyre_lower::analyses::alias_facts::AliasFactSet"
+  kind = "impl"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "impl vyre_lower::analyses::contraction_candidates::ContractionCandidate"
   kind = "impl"
   stability = "internal"
   feature = "unconditional"
@@ -139775,8 +139796,22 @@ exported_item_count = 1351
   wire_compatibility = "wire-bound"
 
   [[package.item]]
-  path = "vyre_lower::analyses::contraction_candidates::ContractionCandidate::estimated_speedup_factor: f32"
+  path = "vyre_lower::analyses::contraction_candidates::ContractionCandidate::derivation: alloc::string::String"
   kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "wire-bound"
+
+  [[package.item]]
+  path = "vyre_lower::analyses::contraction_candidates::ContractionCandidate::operand_loads_per_fma: f32"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "wire-bound"
+
+  [[package.item]]
+  path = "vyre_lower::analyses::contraction_candidates::ContractionCandidate::operand_reuse_factor(&self) -> f32"
+  kind = "fn"
   stability = "internal"
   feature = "unconditional"
   wire_compatibility = "wire-bound"
@@ -139852,6 +139887,13 @@ exported_item_count = 1351
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction::source: vyre_lower::analyses::contraction_candidates::MatrixInstructionSource"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_lower::analyses::contraction_candidates::ContractionStrategy::MatrixInstruction::tile: vyre_lower::MatrixTileShape"
   kind = "field"
   stability = "internal"
@@ -139896,6 +139938,27 @@ exported_item_count = 1351
   [[package.item]]
   path = "vyre_lower::analyses::contraction_candidates::ContractionStrategy::SimtTiled::workgroup_size: [u32; 3]"
   kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::analyses::contraction_candidates::MatrixInstructionSource"
+  kind = "enum"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "wire-bound"
+
+  [[package.item]]
+  path = "vyre_lower::analyses::contraction_candidates::MatrixInstructionSource::DeclaredByDescriptor"
+  kind = "variant"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::analyses::contraction_candidates::SCALAR_OPERAND_LOADS_PER_FMA: f32"
+  kind = "const"
   stability = "internal"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -140518,6 +140581,13 @@ exported_item_count = 1351
 
   [[package.item]]
   path = "vyre_lower::descriptor_builder::load_global(slot: u32, index: u32, result: u32) -> vyre_lower::KernelOp"
+  kind = "fn"
+  stability = "internal"
+  feature = "test-fixtures"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_lower::descriptor_builder::load_store_copy() -> vyre_lower::descriptor_builder::KernelBodyBuilder"
   kind = "fn"
   stability = "internal"
   feature = "test-fixtures"
@@ -141477,7 +141547,7 @@ seam = "megakernel-compiler"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre"
 stability = "internal"
-exported_item_count = 1321
+exported_item_count = 1331
 
   [[package.item]]
   path = "impl core::convert::From<&vyre_megakernel::TargetCompileError> for vyre_foundation::diagnostics::Diagnostic"
@@ -142026,6 +142096,13 @@ exported_item_count = 1321
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "impl vyre_megakernel::mesh::RegionPartition"
+  kind = "impl"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "impl vyre_megakernel::mesh::TransferOrigin"
   kind = "impl"
   stability = "internal"
@@ -142455,6 +142532,48 @@ exported_item_count = 1321
   [[package.item]]
   path = "vyre_megakernel::ArtifactEnvelope::to_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_megakernel::CompileError>"
   kind = "fn"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_megakernel::ArtifactInputSlot"
+  kind = "struct"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_megakernel::ArtifactInputSlot::expected_max: core::option::Option<usize>"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_megakernel::ArtifactInputSlot::group: u32"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_megakernel::ArtifactInputSlot::launch_zeros: core::option::Option<alloc::boxed::Box<[u8]>>"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_megakernel::ArtifactInputSlot::name: alloc::string::String"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_megakernel::ArtifactInputSlot::slot: u32"
+  kind = "field"
   stability = "internal"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -149467,6 +149586,13 @@ exported_item_count = 1321
   wire_compatibility = "wire-bound"
 
   [[package.item]]
+  path = "vyre_megakernel::mesh::RegionPartition::replicated_on(node: vyre_megakernel::ArtifactNodeId, device: vyre_megakernel::allocation::DeviceSlot, coordinate: alloc::vec::Vec<u32>, points: u64) -> Self"
+  kind = "fn"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "wire-bound"
+
+  [[package.item]]
   path = "vyre_megakernel::mesh::RegionPartition::shards: alloc::vec::Vec<vyre_megakernel::mesh::ShardAssignment>"
   kind = "field"
   stability = "internal"
@@ -149636,6 +149762,13 @@ exported_item_count = 1321
 
   [[package.item]]
   path = "vyre_megakernel::registered_level_stage() -> vyre_spec::ir_level::IrLevel"
+  kind = "fn"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_megakernel::resource_bind_group(memory_class: vyre_lower::descriptor::MemoryClass) -> core::option::Option<u32>"
   kind = "fn"
   stability = "internal"
   feature = "unconditional"
@@ -150699,6 +150832,13 @@ exported_item_count = 1321
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_megakernel::staged_input_slots(descriptor: &vyre_lower::descriptor::KernelDescriptor, resource_bindings: &[vyre_megakernel::TargetResourceBinding], program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<alloc::vec::Vec<vyre_megakernel::ArtifactInputSlot>, vyre_megakernel::TargetCompileError>"
+  kind = "fn"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_megakernel::target_identity(device: vyre_megakernel::DeviceFacts, objective: &vyre_megakernel::CompileObjective) -> vyre_megakernel::Digest"
   kind = "fn"
   stability = "internal"
@@ -151659,7 +151799,7 @@ seam = "reference-semantics"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_backend_extension"
 stability = "extension"
-exported_item_count = 1131
+exported_item_count = 1133
 
   [[package.item]]
   path = "impl core::cmp::Eq for vyre_reference::composition_witness::RuleConditionWitness"
@@ -152363,6 +152503,13 @@ exported_item_count = 1131
 
   [[package.item]]
   path = "vyre_reference::MemoryAccessRecord::memory_scope: vyre_foundation::memory_model::scope::MemoryScope"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::MemoryAccessRecord::sequence: u64"
   kind = "field"
   stability = "extension"
   feature = "unconditional"
@@ -159285,7 +159432,7 @@ exported_item_count = 1131
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_reference::value::Value::Array(alloc::vec::Vec<vyre_reference::value::Value>)"
+  path = "vyre_reference::value::Value::Array(alloc::sync::Arc<[vyre_reference::value::Value]>)"
   kind = "variant"
   stability = "extension"
   feature = "unconditional"
@@ -159329,6 +159476,13 @@ exported_item_count = 1131
   [[package.item]]
   path = "vyre_reference::value::Value::U64(u64)"
   kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::value::Value::array(elements: impl core::convert::Into<alloc::sync::Arc<[Self]>>) -> Self"
+  kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"

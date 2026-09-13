@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A multi-backend proof run no longer crashes in the driver during concurrent device initialization. Each case opened its own device handle to hash the compilation profile it was selected for, so a run over 358 operations opened hundreds of loader instances across worker threads and exhausted the Vulkan descriptor pool. Compile target facts are resolved once per registered backend and cached, `vyre-driver-spirv` shares one process-wide Vulkan device across acquisitions, and backends are proved one after another."

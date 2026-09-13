@@ -25,6 +25,10 @@ pub mod async_transaction_contracts;
 #[path = "bank_conflict_strategy_contracts.rs"]
 pub mod bank_conflict_strategy_contracts;
 
+/// Integration tests from `tests/contraction_candidate_derivation.rs`.
+#[path = "contraction_candidate_derivation.rs"]
+pub mod contraction_candidate_derivation;
+
 /// Integration tests from `tests/device_fact_boundary.rs`.
 #[path = "device_fact_boundary.rs"]
 pub mod device_fact_boundary;
