@@ -26,6 +26,12 @@ pub(crate) fn subgroup_simulator() -> &'static SubgroupSimulator {
     SIMULATOR.get_or_init(SubgroupSimulator::default)
 }
 
+/// Lanes in one subgroup of the simulated device.
+#[cfg(feature = "subgroup-ops")]
+pub(crate) fn subgroup_width() -> usize {
+    subgroup_simulator().width()
+}
+
 #[cfg(feature = "subgroup-ops")]
 pub(crate) fn subgroup_slice(
     snapshots: &[HashmapInvocationSnapshot],

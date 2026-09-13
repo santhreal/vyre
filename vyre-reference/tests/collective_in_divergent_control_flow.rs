@@ -1,21 +1,31 @@
-//! A subgroup collective reached from a branch whose condition is not
-//! workgroup-uniform is rejected, not answered.
+//! A rendezvous reached from a branch whose condition is not uniform over that
+//! rendezvous's own scope is rejected, not answered.
 //!
 //! The interpreter releases a lane holding for its peers once every live lane
 //! has arrived, and a lane that took the other branch and retired is not live.
-//! A collective under a divergent branch therefore resolved over whichever
-//! lanes were still running, and the oracle issued that partial reduction as
-//! the expected output. No target defines that value: the lanes that skipped
-//! the branch contribute on one and are undefined on another.
+//! A rendezvous under a divergent branch therefore resolved over whichever
+//! lanes were still running, and the oracle issued that partial result as the
+//! expected output. No target defines that value: the lanes that skipped the
+//! branch contribute on one and are undefined on another.
 //!
-//! The rule already existed for `Barrier`. A collective is the same
-//! rendezvous, so it carries the same rule.
+//! The scope is the construct's own. A barrier synchronizes the workgroup, so
+//! its condition must agree across every lane of the workgroup. A subgroup
+//! collective reads only its own subgroup, so its condition must agree across
+//! that subgroup and may differ between subgroups: a workgroup whose subgroups
+//! each own one output, with the tail subgroups masked off, is the standard
+//! shape and is legal.
 #![cfg(feature = "subgroup-ops")]
 
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryOrdering, Node, Program};
 use vyre_reference::ReferenceRequest;
 
 const LANES: u32 = 4;
+
+/// Lanes in one simulated subgroup.
+const SUBGROUP_WIDTH: u32 = 32;
+
+/// Lanes of the workgroup that splits on a subgroup boundary: two subgroups.
+const SPLIT_LANES: u32 = SUBGROUP_WIDTH * 2;
 
 /// Where in the `If` the collective sits.
 ///
@@ -192,4 +202,112 @@ fn a_divergent_branch_without_a_rendezvous_is_accepted() {
     ReferenceRequest::standard(&program, &[])
         .outputs()
         .expect("Fix: a divergent branch with no peer rendezvous in it is a legal program");
+}
+
+/// WHY: a subgroup collective reads only its own subgroup, so holding it to
+/// workgroup uniformity refuses the standard shape where each subgroup owns
+/// one output and a tail workgroup masks the subgroups with no output to
+/// compute. That refusal reached production: the quantized grouped-affine
+/// linear layer is exactly this shape, and the oracle rejected it as a
+/// divergent collective.
+///
+/// The condition here splits the workgroup on a subgroup boundary, so every
+/// lane of a subgroup agrees and the subgroups disagree.
+///
+/// Does not catch a collective whose subgroup width differs from the
+/// simulator's, which no program can currently state.
+#[test]
+fn a_collective_diverging_only_between_subgroups_is_accepted() {
+    for (name, collective) in collectives() {
+        for place in Placement::ALL {
+            let program = subgroup_split_rendezvous(
+                vec![Node::store(
+                    "out",
+                    Expr::InvocationId { axis: 0 },
+                    collective.clone(),
+                )],
+                place,
+            );
+            ReferenceRequest::standard(&program, &[])
+                .outputs()
+                .expect(&format!(
+                    "Fix: `{name}` at {place:?} under a condition every lane of its subgroup \
+                     agrees on reads only its own subgroup and must be accepted"
+                ));
+        }
+    }
+}
+
+/// WHY: the acceptance above must not be a rule that accepts every guarded
+/// rendezvous. A barrier synchronizes the whole workgroup, so the same branch
+/// that is legal for a collective is a deadlock for a barrier and must still
+/// be refused, naming the barrier and the workgroup rather than the subgroup.
+///
+/// The refusal arrives from the IR validator rather than from the
+/// interpreter's dynamic rule, because a barrier under a non-uniform branch is
+/// visible in the program text and is rejected before a lane runs. What is
+/// asserted is therefore the refusal and what it names, not which owner
+/// produced it: an owner that stops refusing while the other still does leaves
+/// this test green, which the divergent-collective case above covers for the
+/// dynamic rule.
+#[test]
+fn a_barrier_diverging_only_between_subgroups_is_refused() {
+    for place in Placement::ALL {
+        let program = subgroup_split_rendezvous(
+            vec![
+                Node::Barrier {
+                    ordering: MemoryOrdering::SeqCst,
+                },
+                Node::store("out", Expr::InvocationId { axis: 0 }, Expr::u32(1)),
+            ],
+            place,
+        );
+        let error = ReferenceRequest::standard(&program, &[])
+            .outputs()
+            .expect_err(&format!(
+                "Fix: a barrier at {place:?} that only some subgroups reach holds the lanes that \
+                 did reach it for peers that never arrive, and must be refused"
+            ));
+        let text = format!("{error}");
+        assert!(
+            text.to_lowercase().contains("barrier"),
+            "Fix: the refusal must name the construct that cannot be reached by part of the \
+             workgroup; at {place:?} it reported {text}"
+        );
+        assert!(
+            text.contains("workgroup"),
+            "Fix: a barrier's scope is the workgroup, and the refusal must say so rather than \
+             report the subgroup a collective would; at {place:?} it reported {text}"
+        );
+    }
+}
+
+/// `if lane < SUBGROUP_WIDTH { <body> } else { out[lane] = 0 }` over a
+/// workgroup of two subgroups.
+///
+/// Every lane of a subgroup agrees on the condition and the two subgroups
+/// disagree, which is the one shape that separates a subgroup-scoped rule from
+/// a workgroup-scoped one. `placement` varies the arm and the nesting for the
+/// same reason it does in [`guarded_collective`].
+fn subgroup_split_rendezvous(body: Vec<Node>, placement: Placement) -> Program {
+    let lane = Expr::InvocationId { axis: 0 };
+    let mut rendezvous = body;
+    if placement.nested {
+        rendezvous = vec![Node::loop_for("i", Expr::u32(0), Expr::u32(1), rendezvous)];
+    }
+    let plain = vec![Node::store("out", lane.clone(), Expr::u32(0))];
+    let (then, otherwise) = if placement.otherwise {
+        (plain, rendezvous)
+    } else {
+        (rendezvous, plain)
+    };
+    Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(SPLIT_LANES)],
+        [SPLIT_LANES, 1, 1],
+        vec![Node::if_then_else(
+            Expr::lt(lane, Expr::u32(SUBGROUP_WIDTH)),
+            then,
+            otherwise,
+        )],
+    )
 }

@@ -75,34 +75,64 @@ pub(crate) fn live_collective_waiting_count(invocations: &[HashmapInvocation<'_>
         .count()
 }
 
-/// Reject a branch whose condition differs across the workgroup while its body
-/// can reach a rendezvous.
+/// Reject a branch whose condition differs across a rendezvous's own scope
+/// while its body can reach that rendezvous.
 ///
 /// Every lane that entered such a branch waits for peers that the diverged
-/// lanes never send. A barrier and a subgroup collective are the same defect:
-/// the collective releases once the diverged lane retires, so accepting it
-/// would have the oracle issue a reduction computed over a subset of the
-/// workgroup, which no target guarantees.
+/// lanes never send: the rendezvous releases once the diverged lane retires,
+/// so accepting it would have the oracle issue a result computed over a subset
+/// of the lanes the construct is defined over, which no target guarantees.
+///
+/// The scope is the construct's own, not the workgroup's in both cases. A
+/// barrier synchronizes the workgroup, so its condition must agree across
+/// every lane of the workgroup. A subgroup collective reads only its own
+/// subgroup, so its condition must agree across that subgroup and may differ
+/// between subgroups. Holding a collective to workgroup uniformity refuses the
+/// standard shape where each subgroup owns one output and the tail workgroup
+/// masks the subgroups that have none.
 pub(crate) fn verify_uniform_control_flow(
     invocations: &[HashmapInvocation<'_>],
 ) -> Result<(), ReferenceError> {
-    let mut observed = SmallVec::<[(usize, bool); 8]>::new();
+    let mut observed = SmallVec::<[(usize, usize, bool); 8]>::new();
     for invocation in invocations.iter().filter(|inv| !inv.done()) {
         for (id, value, rendezvous) in &invocation.uniform_checks {
-            if let Some((_, previous)) = observed.iter().find(|(seen_id, _)| seen_id == id) {
+            let scope = rendezvous_scope(*rendezvous, invocation.linear_local_index);
+            if let Some((_, _, previous)) = observed
+                .iter()
+                .find(|(seen_scope, seen_id, _)| *seen_scope == scope && seen_id == id)
+            {
                 if previous != value {
                     return Err(ReferenceError::new(format!(
-                        "program violates uniform-control-flow rule: {} appears inside an If whose condition differs across the workgroup. Fix: make the condition uniform or move {} outside the branch.",
+                        "program violates uniform-control-flow rule: {} appears inside an If whose condition differs across the {}. Fix: make the condition uniform or move {} outside the branch.",
                         rendezvous.describe(),
+                        rendezvous.scope_name(),
                         rendezvous.describe(),
                     )));
                 }
             } else {
-                observed.push((*id, *value));
+                observed.push((scope, *id, *value));
             }
         }
     }
     Ok(())
+}
+
+/// Which set of lanes a rendezvous of this kind agrees over, for the lane at
+/// `linear_local_index`.
+///
+/// A barrier's scope is the whole workgroup, so every lane reports the same
+/// one. A subgroup collective's scope is the subgroup the lane sits in.
+fn rendezvous_scope(
+    rendezvous: RendezvousKind,
+    #[cfg_attr(not(feature = "subgroup-ops"), allow(unused_variables))] linear_local_index: u32,
+) -> usize {
+    match rendezvous {
+        RendezvousKind::Barrier => 0,
+        #[cfg(feature = "subgroup-ops")]
+        RendezvousKind::SubgroupCollective => {
+            linear_local_index as usize / crate::execution::hashmap::subgroup::subgroup_width()
+        }
+    }
 }
 
 pub(crate) fn element_count(decl: &BufferDecl, byte_len: usize) -> Result<u32, ReferenceError> {

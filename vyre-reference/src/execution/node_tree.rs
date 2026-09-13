@@ -29,6 +29,15 @@ impl RendezvousKind {
             Self::SubgroupCollective => "a subgroup collective",
         }
     }
+
+    /// The set of lanes the construct's condition must agree over.
+    pub(crate) const fn scope_name(self) -> &'static str {
+        match self {
+            Self::Barrier => "workgroup",
+            #[cfg(feature = "subgroup-ops")]
+            Self::SubgroupCollective => "subgroup",
+        }
+    }
 }
 
 /// Which rendezvous a branch body can reach, at any depth, or `None`.
