@@ -937,7 +937,7 @@ macro_rules! resident_pipeline_launch {
 /// `gather` resolves the slots through the one staging primitive. Written out
 /// per backend they are the same text in each driver, and a backend that
 /// diverged there would stage a fused artifact's inter-module values by a
-/// second rule: the SPIR-V driver did, and seven operations read the Program's
+/// second rule: one driver did, and seven operations read the Program's
 /// host-input order instead of the target binding order.
 ///
 /// ```ignore
