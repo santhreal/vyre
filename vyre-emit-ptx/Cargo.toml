@@ -46,7 +46,9 @@ nvrtc = []
 
 [dev-dependencies]
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
-vyre-test-support.workspace = true
+# `ir-fixtures` carries the emitter-neutral float-cast refusal contract, which
+# names `DataType`.
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 # `vyre_test_support::spec_variant_tables`, shared by every suite that needs the
 # frozen operator variant space, names `vyre_spec` directly.
 vyre-spec.workspace = true

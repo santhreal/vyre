@@ -4,6 +4,7 @@ use vyre_lower::descriptor_builder::{
     binop_over_loads, body, cast_over_load, counted_loop_head, descriptor, effect, global_ro,
     global_rw, lit, op, slot, wait_only, SlotCount,
 };
+use vyre_test_support::float_cast_closure::float_cast_must_fail_closed;
 
 /// Build `literal -> Cast(target)` so the emitted module's 64-bit backing
 /// `Compose(vec2<u32>)` can be inspected for the high-word extension policy.
@@ -335,15 +336,9 @@ fn f32_to_non_u32_i32_int_cast_fails_closed() {
         DataType::Vec2U32,
         DataType::Vec4U32,
     ] {
-        let err = emit(&f32_to_int_cast_desc(target.clone(), DataType::U32)).expect_err(&format!(
-            "f32 -> {target:?} has no defined float conversion and must fail closed, not emit"
-        ));
-        let msg = format!("{err:?}");
-        assert!(
-            msg.contains("cast from f32 to")
-                && msg.contains("no defined conversion")
-                && msg.contains("Fix:"),
-            "f32 -> {target:?} must fail closed with the actionable float-cast message, got: {msg}"
+        float_cast_must_fail_closed(
+            &target,
+            emit(&f32_to_int_cast_desc(target.clone(), DataType::U32)),
         );
     }
 }

@@ -22,7 +22,7 @@ use crate::measure::{
     CandidateMeasurement, DeviceState, MeasurementEnvironment, MeasurementProtocol,
     MeasurementRecord, SampleEstimate,
 };
-use crate::mesh::{PartitionKind, RegionPartition, ShardAssignment};
+use crate::mesh::RegionPartition;
 use crate::request::{SearchBudget, SearchWork};
 use vyre_foundation::ir::DataType;
 use vyre_foundation::numeric::{NumericContract, NUMERIC_CONTRACT_VERSION};
@@ -71,18 +71,12 @@ fn payload(resources: Vec<ResourceRecord>) -> ArtifactPayload {
         topology: MeshTopologyPlan::single_device(
             Digest([0; 32]),
             DeviceSlot(0),
-            vec![RegionPartition {
-                node: ArtifactNodeId(0),
-                kind: PartitionKind::Replicated,
-                axis: None,
-                region_points: 1,
-                shards: vec![ShardAssignment {
-                    shard: 0,
-                    device: DeviceSlot(0),
-                    coordinate: vec![0],
-                    points: 1,
-                }],
-            }],
+            vec![RegionPartition::replicated_on(
+                ArtifactNodeId(0),
+                DeviceSlot(0),
+                vec![0],
+                1,
+            )],
         ),
         provenance: Provenance {
             source_graph: Digest([0; 32]),

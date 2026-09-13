@@ -1,5 +1,6 @@
 use super::*;
 use vyre_lower::descriptor_builder::{body, descriptor, lit, op};
+use vyre_test_support::float_cast_closure::float_cast_must_fail_closed;
 
 /// A single-cast kernel: seed one literal, cast it to `target`.
 fn cast_kernel(id: &str, seed: LiteralValue, target: DataType) -> KernelDescriptor {
@@ -218,16 +219,7 @@ fn f32_cast_kernel(target: DataType) -> KernelDescriptor {
 #[test]
 fn f32_to_narrow_int_cast_fails_closed() {
     for target in [DataType::U8, DataType::U16, DataType::I8, DataType::I16] {
-        let err = emit(&f32_cast_kernel(target.clone())).expect_err(&format!(
-            "f32 -> {target:?} has no defined float conversion and must fail closed, not emit"
-        ));
-        let msg = format!("{err:?}");
-        assert!(
-            msg.contains("cast from f32 to")
-                && msg.contains("no defined conversion")
-                && msg.contains("Fix:"),
-            "f32 -> {target:?} must fail closed with the actionable float-cast message, got: {msg}"
-        );
+        float_cast_must_fail_closed(&target, emit(&f32_cast_kernel(target.clone())));
     }
 }
 

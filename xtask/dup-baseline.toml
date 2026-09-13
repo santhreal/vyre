@@ -108,18 +108,18 @@ total_lines = 34925
 
 [[crate]]
 name = "vyre-emit-metal"
-duplicate_lines = 9
-total_lines = 866
+duplicate_lines = 0
+total_lines = 906
 
 [[crate]]
 name = "vyre-emit-naga"
-duplicate_lines = 60
-total_lines = 10982
+duplicate_lines = 48
+total_lines = 10984
 
 [[crate]]
 name = "vyre-emit-ptx"
-duplicate_lines = 21
-total_lines = 13149
+duplicate_lines = 0
+total_lines = 13745
 
 [[crate]]
 name = "vyre-emit-spirv"

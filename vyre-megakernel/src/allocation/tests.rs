@@ -22,7 +22,7 @@ use super::{
     ValueLiveness,
 };
 use crate::identity::{ArtifactNodeId, ArtifactValueId, FusionGroupId};
-use crate::mesh::{MeshTopologyPlan, PartitionKind, RegionPartition, ShardAssignment};
+use crate::mesh::{MeshTopologyPlan, RegionPartition};
 use crate::schema::ResourceLifetime;
 use crate::{DeviceFacts, Digest};
 use vyre_foundation::validate::BackendCapabilities;
@@ -146,17 +146,8 @@ fn topology(nodes: u32) -> MeshTopologyPlan {
         Digest([0; 32]),
         DeviceSlot(0),
         (0..nodes)
-            .map(|node| RegionPartition {
-                node: ArtifactNodeId(node),
-                kind: PartitionKind::Replicated,
-                axis: None,
-                region_points: 1,
-                shards: vec![ShardAssignment {
-                    shard: 0,
-                    device: DeviceSlot(0),
-                    coordinate: vec![0],
-                    points: 1,
-                }],
+            .map(|node| {
+                RegionPartition::replicated_on(ArtifactNodeId(node), DeviceSlot(0), vec![0], 1)
             })
             .collect(),
     )

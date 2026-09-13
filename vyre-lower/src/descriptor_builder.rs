@@ -410,6 +410,24 @@ pub fn cast_over_load(
         .build()
 }
 
+/// A body that copies one element from slot 0 to slot 1.
+///
+/// One load at index zero and one store of what it loaded: the smallest body
+/// that reaches memory in both directions, and the one every emitter smoke
+/// test builds to observe how a binding, an address space or a narrow element
+/// type is written. The slots and the dispatch stay with the caller, because
+/// what those tests vary is the binding, not the body.
+#[must_use]
+pub fn load_store_copy() -> KernelBodyBuilder {
+    body()
+        .ops([
+            lit(0, 0),
+            op(KernelOpKind::LoadGlobal, [0, 0], 1),
+            effect(KernelOpKind::StoreGlobal, [1, 0, 1]),
+        ])
+        .literal(LiteralValue::U32(0))
+}
+
 /// A column walk over a tile of `element_count` U32 elements: lane `t`
 /// addresses element `t * 32`, so every lane lands in the same bank.
 #[must_use]

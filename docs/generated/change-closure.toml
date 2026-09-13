@@ -33779,7 +33779,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "TransferOrigin"
 variant_name = "Exchange"
-declaration_site = "vyre-megakernel/src/mesh/plan.rs:117"
+declaration_site = "vyre-megakernel/src/mesh/plan.rs:146"
 constructors = ["TransferOrigin::Exchange"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)"
@@ -33789,7 +33789,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "TransferOrigin"
 variant_name = "Handoff"
-declaration_site = "vyre-megakernel/src/mesh/plan.rs:119"
+declaration_site = "vyre-megakernel/src/mesh/plan.rs:148"
 constructors = ["TransferOrigin::Handoff"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)"
@@ -33799,7 +33799,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "TransferOrigin"
 variant_name = "Routing"
-declaration_site = "vyre-megakernel/src/mesh/plan.rs:126"
+declaration_site = "vyre-megakernel/src/mesh/plan.rs:155"
 constructors = ["TransferOrigin::Routing"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)"

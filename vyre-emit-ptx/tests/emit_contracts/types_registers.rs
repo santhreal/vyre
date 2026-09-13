@@ -1,7 +1,7 @@
 //! Test: types registers.
 use super::*;
 use vyre_lower::descriptor_builder::{
-    body, descriptor, effect, global_ro, global_wo, lit, op, SlotCount,
+    body, descriptor, global_ro, global_wo, lit, load_store_copy, op, SlotCount,
 };
 
 #[test]
@@ -45,15 +45,7 @@ fn narrow_global_copy_kernel(element_type: DataType) -> KernelDescriptor {
             global_ro(0, element_type.clone(), "input").with_count(8),
             global_wo(1, element_type, "output").with_count(8),
         ])
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
-                    effect(KernelOpKind::StoreGlobal, [1, 0, 1]),
-                ])
-                .literal(LiteralValue::U32(0)),
-        )
+        .body(load_store_copy())
         .build()
 }
 

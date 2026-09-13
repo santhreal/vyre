@@ -20,30 +20,9 @@ use proptest::prelude::*;
 use vyre_foundation::ir::DataType;
 use vyre_lower::descriptor_builder::{body, descriptor, shared_rw};
 
-/// `.shared .align 4 .b8 <symbol>[<bytes>];`
-fn shared_declarations(ptx: &str) -> Vec<(String, u32)> {
-    ptx.lines()
-        .filter_map(|line| {
-            let rest = line.trim().strip_prefix(".shared .align 4 .b8 ")?;
-            let (symbol, rest) = rest.split_once('[')?;
-            let bytes = rest.strip_suffix("];")?;
-            Some((
-                symbol.to_string(),
-                bytes
-                    .parse()
-                    .expect("Fix: emit a decimal byte length in a shared declaration"),
-            ))
-        })
-        .collect()
-}
-
-/// Text from the zero prologue up to the barrier that closes it.
-fn zero_prologue(ptx: &str) -> Option<&str> {
-    let start = ptx.find("    // Workgroup memory holds zero at entry.\n")?;
-    let tail = &ptx[start..];
-    let end = tail.find("    bar.sync 0;\n")?;
-    Some(&tail[..end])
-}
+#[path = "ptx_text/text.rs"]
+mod ptx_text;
+use ptx_text::{shared_declarations, zero_prologue};
 
 /// The scalar types this emitter can size, with their element widths.
 fn sizable_scalars() -> Vec<(DataType, u32)> {

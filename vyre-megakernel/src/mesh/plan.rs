@@ -104,6 +104,35 @@ pub struct RegionPartition {
     pub shards: Vec<ShardAssignment>,
 }
 
+impl RegionPartition {
+    /// One region held whole on one device.
+    ///
+    /// Replication is the placement that cuts nothing: no axis is split, the
+    /// region has one shard, and that shard computes every point of it. The
+    /// single-device placement states this for every region, and it is the
+    /// shape a schedule falls back to whenever a region cannot be cut.
+    #[must_use]
+    pub fn replicated_on(
+        node: ArtifactNodeId,
+        device: DeviceSlot,
+        coordinate: Vec<u32>,
+        points: u64,
+    ) -> Self {
+        Self {
+            node,
+            kind: PartitionKind::Replicated,
+            axis: None,
+            region_points: points,
+            shards: vec![ShardAssignment {
+                shard: 0,
+                device,
+                coordinate,
+                points,
+            }],
+        }
+    }
+}
+
 /// What one transfer carries.
 ///
 /// A stated exchange is named by its index in the logical exchange list. A

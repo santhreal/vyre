@@ -74,17 +74,13 @@ fn single_device(
     let partitions = logical
         .regions()
         .iter()
-        .map(|region| RegionPartition {
-            node: ArtifactNodeId(region.node.0),
-            kind: PartitionKind::Replicated,
-            axis: None,
-            region_points: region.max_points,
-            shards: vec![ShardAssignment {
-                shard: 0,
-                device: device.slot,
-                coordinate: device.coordinate.clone(),
-                points: region.max_points,
-            }],
+        .map(|region| {
+            RegionPartition::replicated_on(
+                ArtifactNodeId(region.node.0),
+                device.slot,
+                device.coordinate.clone(),
+                region.max_points,
+            )
         })
         .collect();
     let plan = MeshTopologyPlan::single_device(mesh.authentication(), device.slot, partitions);

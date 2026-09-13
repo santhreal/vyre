@@ -5,8 +5,8 @@
 use vyre_emit_metal::*;
 use vyre_foundation::ir::{DataType, Expr, Node, Program};
 use vyre_lower::descriptor_builder::{
-    body, descriptor, effect, global_ro, global_rw, lit, op, shared_rw, store_literal_kernel,
-    SlotCount,
+    body, descriptor, effect, global_ro, global_rw, lit, load_store_copy, shared_rw,
+    store_literal_kernel, SlotCount,
 };
 use vyre_lower::{BindingVisibility, KernelDescriptor, KernelOpKind, LiteralValue, MemoryClass};
 
@@ -172,15 +172,7 @@ fn readonly_binding_emits_const_device_pointer() {
             global_rw(1, DataType::U32, "output").with_count(16),
         ])
         .dispatch(16, 1, 1)
-        .body(
-            body()
-                .ops([
-                    lit(0, 0),
-                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
-                    effect(KernelOpKind::StoreGlobal, [1, 0, 1]),
-                ])
-                .literal(LiteralValue::U32(0)),
-        )
+        .body(load_store_copy())
         .build();
     let msl = emit(&desc).expect("Fix: read-only + read-write kernel must emit MSL without error.");
     // Naga's MSL backend emits a read-only storage buffer as a CONST
