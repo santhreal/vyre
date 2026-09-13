@@ -66,6 +66,8 @@ mod select;
 /// Which facts a compile may specialize on, the guards that select one variant,
 /// and the authenticated set a consumer admits whole.
 pub mod specialization;
+/// The target bindings a module's launch stages bytes into.
+mod staged_input_slots;
 /// Target compiler facets over compiler-selected modules and canonical ABI.
 pub(crate) mod target;
 mod target_bindings;
@@ -84,8 +86,8 @@ pub use compile::{
 };
 pub use device_facts::DeviceFacts;
 pub use envelope::{
-    ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,
-    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    resource_bind_group, ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
+    TargetProfile, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
     ARTIFACT_ENVELOPE_SCHEMA_VERSION, TARGET_PAYLOAD_SCHEMA_VERSION,
 };
 pub use error::{
@@ -125,6 +127,7 @@ pub use schema::{
     PlanMeasurement, Provenance, ResourceAbiRecord, ResourceEnvelope, ResourceLifetime,
     ResourceNameCollision, ResourceRecord, SelectedPlan, ARTIFACT_SCHEMA_VERSION,
 };
+pub use staged_input_slots::{staged_input_slots, ArtifactInputSlot};
 pub use target::SelectedModule;
 pub use target::{
     attach_target, compile_selected_modules, EmittedTargetModule, ModuleNumericRecord,

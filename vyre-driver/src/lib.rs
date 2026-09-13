@@ -98,6 +98,8 @@ pub mod input_identity;
 pub mod materialize;
 /// Target payload admission against neutral artifacts.
 pub(crate) mod materialize_admission;
+/// Target-binding input staging shared by every materializer.
+pub(crate) mod materialize_input_slots;
 /// Materialized instance execution and resident submission paths.
 pub(crate) mod materialize_instance;
 /// Backend-neutral monotonic ordering helpers for staging hot paths.

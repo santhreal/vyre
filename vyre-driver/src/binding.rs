@@ -161,6 +161,48 @@ impl BindingPlan {
         self.validate_input_lengths(InputLengths::Owned(inputs))
     }
 
+    /// Verifies staged inputs named by the binding each one fills.
+    ///
+    /// A fused artifact stages the bindings its lowered descriptor declares,
+    /// which includes a buffer a previous module wrote and this module's
+    /// Program declares as consuming no host input. Those inputs are neither
+    /// in nor the same length as [`Self::input_indices`], so they are checked
+    /// against the binding each name resolves to.
+    ///
+    /// # Errors
+    ///
+    /// Returns when `names` and `inputs` differ in length, when a name matches
+    /// no binding in this plan, or when an input length violates the buffer
+    /// declaration it fills.
+    pub fn validate_named_inputs(
+        &self,
+        names: &[&str],
+        inputs: &[&[u8]],
+    ) -> Result<(), BackendError> {
+        if names.len() != inputs.len() {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: dispatch staged {} named binding(s) but received {} input buffer(s).",
+                    names.len(),
+                    inputs.len()
+                ),
+            });
+        }
+        for (name, input) in names.iter().zip(inputs) {
+            let binding = self
+                .bindings
+                .iter()
+                .find(|binding| &*binding.name == *name)
+                .ok_or_else(|| BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: staged binding `{name}` names no buffer in this Program's binding plan. Rebuild the target payload's resource bindings from the same Program the module was lowered from."
+                    ),
+                })?;
+            validate_input_len(binding, input.len(), false)?;
+        }
+        Ok(())
+    }
+
     /// Verifies borrowed dynamic input slices match the expected plan.
     ///
     /// # Errors

@@ -335,6 +335,10 @@ pub mod shape_prediction_contracts;
 #[path = "speculation_verdict_contracts.rs"]
 pub mod speculation_verdict_contracts;
 
+/// Integration tests from `tests/staged_module_input_gathering.rs`.
+#[path = "staged_module_input_gathering.rs"]
+pub mod staged_module_input_gathering;
+
 /// Integration tests from `tests/strategy_contracts.rs`.
 #[path = "strategy_contracts.rs"]
 pub mod strategy_contracts;

@@ -190,6 +190,23 @@ pub enum TargetResourceAccess {
     ReadWrite,
 }
 
+/// Resource group a lowered binding slot is published in, or `None` for a slot
+/// that is not host-bound.
+///
+/// A target payload records `(group, slot)` per canonical resource, and a
+/// materializer resolves a descriptor slot back to its resource through the same
+/// pair. Both sides read this, so a backend cannot look a binding up in a group
+/// the payload never published it under. Shared and scratch classes live in the
+/// workgroup address space and are never bound by a host descriptor.
+#[must_use]
+pub const fn resource_bind_group(memory_class: vyre_lower::MemoryClass) -> Option<u32> {
+    match memory_class {
+        vyre_lower::MemoryClass::Shared | vyre_lower::MemoryClass::Scratch => None,
+        vyre_lower::MemoryClass::Uniform => Some(1),
+        vyre_lower::MemoryClass::Global | vyre_lower::MemoryClass::Constant => Some(0),
+    }
+}
+
 /// Target binding metadata associated with one canonical neutral resource.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

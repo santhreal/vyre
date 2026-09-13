@@ -81,6 +81,10 @@ pub mod selection_cost_contract;
 #[path = "shared_tile_cost.rs"]
 pub mod shared_tile_cost;
 
+/// Integration tests from `tests/staged_input_slots_contract.rs`.
+#[path = "staged_input_slots_contract.rs"]
+pub mod staged_input_slots_contract;
+
 /// Integration tests from `tests/specialization_contract.rs`.
 #[path = "specialization_contract.rs"]
 pub mod specialization_contract;

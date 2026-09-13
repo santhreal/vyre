@@ -9,7 +9,7 @@ use vyre_driver::{
     TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, TargetPayload};
+use vyre_megakernel::{Artifact, ArtifactInputSlot, TargetPayload};
 
 use crate::{vulkan, SPIRV_BACKEND_ID};
 
@@ -50,10 +50,17 @@ impl ArtifactMaterializer for SpirvMaterializer {
                         "SPIR-V target module must begin with the SPIR-V magic word",
                     ));
                 }
+                let input_slots = vyre_megakernel::staged_input_slots(
+                    &admitted_module.image.descriptor,
+                    &admitted_module.resource_bindings,
+                    &admitted_module.program,
+                )
+                .map_err(|error| materialize::compile_error(SPIRV_BACKEND_ID, error))?;
                 Ok(SpirvExecutableModule {
                     program: admitted_module.program,
                     words,
                     config: admitted_module.config,
+                    input_slots,
                 })
             },
         )?;
@@ -71,6 +78,11 @@ struct SpirvExecutableModule {
     program: Arc<Program>,
     words: Vec<u32>,
     config: DispatchConfig,
+    /// Bindings this module's launch stages bytes into, in target binding
+    /// order. A fused artifact carries a value from one module to the next
+    /// through a buffer the reading module's Program declares as consuming no
+    /// host input, so the Program's input order is not this order.
+    input_slots: Vec<ArtifactInputSlot>,
 }
 
 struct SpirvArtifactInstance {
@@ -107,6 +119,20 @@ impl MaterializedInstance for SpirvArtifactInstance {
         "SPIR-V target module"
     }
 
+    /// Stage this module's inputs in target binding order.
+    ///
+    /// The default walks the Program's host-input order, which omits a buffer
+    /// a previous module wrote and this one reads.
+    fn gather<'a>(
+        &'a self,
+        module_index: usize,
+        module: &'a Self::Module,
+        _plan: &vyre_driver::BindingPlan,
+        state: &'a std::collections::BTreeMap<vyre_megakernel::ArtifactValueId, Vec<u8>>,
+    ) -> Result<Vec<&'a [u8]>, BackendError> {
+        materialize::gather_artifact_inputs(&self.core, module_index, &module.input_slots, state)
+    }
+
     fn dispatch(
         &self,
         module: &Self::Module,
@@ -114,11 +140,23 @@ impl MaterializedInstance for SpirvArtifactInstance {
         config: &DispatchConfig,
     ) -> Result<TimedDispatchResult, BackendError> {
         let started = Instant::now();
+        let input_names = module
+            .input_slots
+            .iter()
+            .map(|slot| slot.name.as_str())
+            .collect::<Vec<_>>();
         // SAFETY: `native` owns a live Vulkan device for the entire instance;
         // words were validated as aligned SPIR-V and Program metadata came
         // from the authenticated neutral artifact.
         let outputs = unsafe {
-            vulkan::dispatch_program(&self.native, &module.program, &module.words, inputs, config)
+            vulkan::dispatch_program(
+                &self.native,
+                &module.program,
+                &module.words,
+                inputs,
+                vulkan::InputOrder::Named(&input_names),
+                config,
+            )
         }?;
         Ok(TimedDispatchResult::host_timed(
             outputs,

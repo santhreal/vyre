@@ -25,6 +25,7 @@ use crate::{
 };
 
 pub use crate::materialize_admission::*;
+pub use crate::materialize_input_slots::*;
 pub use crate::materialize_instance::*;
 
 /// Build the shared "recompile the payload" rejection.

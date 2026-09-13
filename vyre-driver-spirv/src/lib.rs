@@ -24,6 +24,8 @@
 /// Canonical lowering and emitter adapter.
 pub(crate) mod backend;
 mod materializer;
+/// Descriptor bindings read out of an emitted SPIR-V module.
+mod module_bindings;
 mod target_compiler;
 /// Vulkan compute dispatch implementation.
 mod vulkan;
@@ -107,7 +109,16 @@ impl VyreBackend for SpirvBackendRegistration {
         // SAFETY: FFI to ash::vk. Handle lifetimes are documented at the
         // surrounding VulkanDevice construction site; the Drop impl owns
         // destruction.
-        unsafe { vulkan::dispatch_program(&self.device, program, &spv_words, inputs, config) }
+        unsafe {
+            vulkan::dispatch_program(
+                &self.device,
+                program,
+                &spv_words,
+                inputs,
+                vulkan::InputOrder::Plan,
+                config,
+            )
+        }
     }
 
     fn allocate_device_buffer(

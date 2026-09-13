@@ -155,11 +155,12 @@ pub(crate) fn selected_resource_bindings(
             )?;
             Ok(TargetResourceBinding {
                 resource,
-                group: if matches!(slot.memory_class, MemoryClass::Uniform) {
-                    1
-                } else {
-                    0
-                },
+                group: crate::envelope::resource_bind_group(slot.memory_class).ok_or_else(|| {
+                    TargetCompileError::InvalidArtifact(format!(
+                        "fusion group {} descriptor binding `{}` is in the workgroup address space and is not host-bound",
+                        module.group.0, slot.name
+                    ))
+                })?,
                 slot: slot.slot,
                 memory,
                 access,
