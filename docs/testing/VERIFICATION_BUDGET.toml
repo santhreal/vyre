@@ -44,7 +44,7 @@ disk_use_bytes = 2288940
 compile_units = 5
 link_units = 8
 duplicate_source_bytes = 0
-disk_use_bytes = 524456
+disk_use_bytes = 525108
 
 [tier.emitter]
 compile_units = 4
@@ -68,7 +68,7 @@ disk_use_bytes = 2725131
 compile_units = 32
 link_units = 55
 duplicate_source_bytes = 13845
-disk_use_bytes = 2900190
+disk_use_bytes = 2901108
 
 [tier.lowering]
 compile_units = 2
@@ -110,7 +110,7 @@ disk_use_bytes = 635953
 compile_units = 1
 link_units = 2
 duplicate_source_bytes = 0
-disk_use_bytes = 563475
+disk_use_bytes = 563480
 
 [tier.standalone-tooling]
 compile_units = 2

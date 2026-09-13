@@ -17,9 +17,10 @@ use crate::release::conformance_evidence_semantics::read_conformance_text;
 ///
 /// A conformance certificate records its executors under the ids the
 /// conformance runner writes, which are not these column names. So a reader of
-/// a certificate counts against [`RELEASE_BACKEND_COLUMNS::len`] rather than
-/// matching these strings: the count is the release claim, and the spelling
-/// belongs to the runner that produced the record.
+/// a certificate counts its executors against the length of
+/// [`RELEASE_BACKEND_COLUMNS`] rather than matching these strings: the count is
+/// the release claim, and the spelling belongs to the runner that produced the
+/// record.
 pub const RELEASE_BACKEND_COLUMNS: [&str; 3] = ["reference", "cuda", "wgpu"];
 
 /// Backend columns the matrix declares and release evidence does not judge.

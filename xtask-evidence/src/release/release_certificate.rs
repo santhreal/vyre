@@ -139,21 +139,20 @@ fn record(root: &Path, config: &Config, report: &mut Report) {
         }
         return;
     }
-    if let Err(message) = xtask::artifact_gate::write_recorded(
+    match xtask::artifact_gate::write_recorded(
         root,
         Path::new(ARTIFACT),
         MeasurementRecord::device(),
         &certificate,
     ) {
-        report.find(Finding::in_file(
+        Ok(()) => report.note(format!("recorded {ARTIFACT} from {}", merged.display())),
+        Err(message) => report.find(Finding::in_file(
             PathBuf::from(ARTIFACT),
             message,
             "Record the certificate from a checkout git can identify, on the host whose devices \
              proved it.",
-        ));
-        return;
+        )),
     }
-    report.note(format!("recorded {ARTIFACT} from {}", merged.display()));
 }
 
 /// Run the shard pool and return the merge it printed.
