@@ -5194,6 +5194,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Fixed
 
+- The reference oracle's race detector treats a release/acquire pair on an
+  atomic location as a synchronization edge, so a program that publishes a
+  payload through a released flag and reads it after acquiring that flag is no
+  longer reported as an unsynchronized access. The edge is credited only
+  through the publisher's accesses that precede the release, and only where
+  both declared memory scopes reach the other invocation, so a
+  workgroup-scoped handoff still reports a cross-workgroup race.
+  `MemoryAccessRecord` gained a `sequence` field stating where the access sits
+  in the exploration order.
 - The conformance runner exercises each backend through the route its
   registration declares. A backend that registers a target compiler and a
   materializer takes the production artifact route, as before; the reference

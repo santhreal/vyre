@@ -866,6 +866,7 @@ pub vyre_reference::MemoryAccessRecord::grid_phase: u64
 pub vyre_reference::MemoryAccessRecord::invocation: [u32; 3]
 pub vyre_reference::MemoryAccessRecord::kind: vyre_reference::MemoryAccessKind
 pub vyre_reference::MemoryAccessRecord::memory_scope: vyre_foundation::memory_model::scope::MemoryScope
+pub vyre_reference::MemoryAccessRecord::sequence: u64
 pub vyre_reference::MemoryAccessRecord::storage_domain: vyre_foundation::memory_model::storage::StorageDomain
 pub vyre_reference::MemoryAccessRecord::workgroup: [u32; 3]
 pub vyre_reference::OobReport::oob_atomics: u64
