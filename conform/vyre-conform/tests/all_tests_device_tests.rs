@@ -5,6 +5,10 @@
 //! binary for the whole set. A test that cannot share a process stays its own
 //! target and states why in `xtask/test-harness-isolation.toml`.
 
+/// Integration tests from `tests/backend_acquisition_runtime_sharing.rs`.
+#[path = "backend_acquisition_runtime_sharing.rs"]
+pub mod backend_acquisition_runtime_sharing;
+
 /// Integration tests from `tests/countless_readwrite_output_parity/mod.rs`.
 #[path = "countless_readwrite_output_parity/mod.rs"]
 pub mod countless_readwrite_output_parity;

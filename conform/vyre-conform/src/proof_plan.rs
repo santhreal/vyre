@@ -6,7 +6,9 @@ use crate::operation_selection::{
 };
 use crate::proof_options::{parse_proof_options, ProofOptions};
 use serde::{Deserialize, Serialize};
-use vyre_conform::backend_selection::{select_backends, semantic_execution_backends};
+use vyre_conform::backend_selection::{
+    select_backends, semantic_execution_backends, UnavailableBackend,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub(crate) struct ProofPlanSummary {
@@ -29,6 +31,26 @@ pub(crate) struct ProofSelectionSummary {
     pub(crate) universe_op_count: usize,
     pub(crate) selected_backend_count: usize,
     pub(crate) selected_op_count: usize,
+    /// Registered backends this host cannot acquire, and what refused each.
+    ///
+    /// A certificate covers the backends the host can run. Naming the rest, with
+    /// the refusal, is what keeps `selected_backend_count` from reading as the
+    /// whole registered set on a host that carries more registrations than
+    /// devices.
+    ///
+    /// A host that ran every registered backend omits the field rather than
+    /// writing an empty list, so its certificate is byte-identical to one
+    /// signed before this field existed and the signature over it still
+    /// verifies.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) unavailable_backends: Vec<UnavailableBackendRecord>,
+}
+
+/// One backend a run did not cover, and why.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub(crate) struct UnavailableBackendRecord {
+    pub(crate) id: String,
+    pub(crate) reason: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -68,10 +90,14 @@ pub(crate) fn emit_plan(args: impl IntoIterator<Item = String>) -> Result<(), St
         ));
     }
     let pair_count = backends.len().saturating_mul(prepared_entries.len());
+    // `plan` describes what a run would cover and acquires no device, so it
+    // names no unavailable backend: whether a host can run one is a fact the
+    // run that acquires it reports.
     let plan = proof_plan_summary(
         &all_backends,
         &all_entries,
         &backends,
+        &[],
         &prepared_entries,
         pair_count,
         &options,
@@ -103,6 +129,7 @@ pub(crate) fn proof_plan_summary(
     universe_backends: &[&'static vyre_driver::BackendRegistration],
     universe_entries: &[UnifiedEntry],
     backends: &[&'static vyre_driver::BackendRegistration],
+    unavailable: &[UnavailableBackend],
     entries: &[PreparedEntry],
     pair_count: usize,
     options: &ProofOptions,
@@ -140,6 +167,13 @@ pub(crate) fn proof_plan_summary(
         universe_op_count: universe_entries.len(),
         selected_backend_count: backends.len(),
         selected_op_count: entries.len(),
+        unavailable_backends: unavailable
+            .iter()
+            .map(|backend| UnavailableBackendRecord {
+                id: backend.id.to_string(),
+                reason: backend.reason.clone(),
+            })
+            .collect(),
     };
     ProofPlanSummary {
         backend_count: backends.len(),
@@ -167,6 +201,14 @@ pub(crate) fn hash_proof_plan(hasher: &mut blake3::Hasher, plan: &ProofPlanSumma
     hasher.update(&(plan.selection.universe_op_count as u64).to_le_bytes());
     hasher.update(&(plan.selection.selected_backend_count as u64).to_le_bytes());
     hasher.update(&(plan.selection.selected_op_count as u64).to_le_bytes());
+    // A certificate is a statement about one host, so what that host could not
+    // run is part of what it says. Leaving it out of the hash would let two
+    // certificates covering different backend sets sign the same bytes.
+    hasher.update(&(plan.selection.unavailable_backends.len() as u64).to_le_bytes());
+    for backend in &plan.selection.unavailable_backends {
+        hasher.update(backend.id.as_bytes());
+        hasher.update(backend.reason.as_bytes());
+    }
 }
 
 fn hash_optional_usize(hasher: &mut blake3::Hasher, value: Option<usize>) {

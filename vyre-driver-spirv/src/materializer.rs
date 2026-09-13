@@ -134,7 +134,7 @@ impl MaterializedInstance for SpirvArtifactInstance {
 }
 
 pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
-    let native = Arc::new(vulkan::VulkanDevice::acquire()?);
+    let native = vulkan::shared_device()?;
     Ok(Box::new(SpirvMaterializer {
         device: native,
         descriptor: MaterializerDevice::acquire(DeviceSpec {

@@ -118,46 +118,64 @@ pub(crate) fn prepare_entries_in_parallel(
     }
 }
 
-pub(crate) fn prove_backends_in_parallel(
+/// Prove every backend against the same prepared entries, one backend at a time.
+///
+/// Each backend's own shard workers still run concurrently; what is serialized
+/// is the crossing between backends. Two of them proving at once drive two
+/// vendor runtimes against one device from one process, and on an NVIDIA host
+/// the CUDA driver and the Vulkan ICD are the same vendor libraries: a run with
+/// CUDA and Vulkan bringing up at once took a SIGSEGV inside
+/// `vkEnumerateInstanceExtensionProperties` and produced no certificate and no
+/// output at all.
+///
+/// Serializing bring-up alone is not enough to make that crossing safe, because
+/// the two runtimes go on sharing the process for the whole run: descriptor
+/// tables, ICD load state, and one device's submission queues. Proving one
+/// backend at a time is what keeps a pair failure attributable to the backend
+/// that produced it.
+///
+/// The cost is wall time: the whole proof takes the sum of the backends instead
+/// of the slowest. What it buys is a verdict that means something, since a pair
+/// that fails only because another backend was mid-submission is a defect
+/// report about nothing.
+///
+/// Each backend still runs inside a scope of its own, so a panic below the
+/// worker scope is one backend's rows rather than the process.
+pub(crate) fn prove_backends_in_sequence(
     backends: &[&'static vyre_driver::BackendRegistration],
     prepared_entries: &[PreparedEntry],
 ) -> Vec<Vec<ConformanceResult>> {
-    std::thread::scope(|scope| {
-        let mut handles = Vec::with_capacity(backends.len());
-        for &backend in backends {
-            handles.push((
-                backend,
-                scope.spawn(move || prove_one_backend(backend, prepared_entries)),
-            ));
-        }
-
-        let mut results = Vec::with_capacity(handles.len());
-        for (backend, handle) in handles {
-            match handle.join() {
-                Ok(pairs) => results.push(pairs),
-                Err(payload) => {
-                    let message = format!(
-                        "backend `{}` proof worker panicked: {}. Fix: proof workers must return pair failures instead of unwinding.",
-                        backend.id,
-                        panic_message(payload)
-                    );
-                    results.push(
-                        prepared_entries
-                            .iter()
-                            .map(|entry| ConformanceResult {
-                                op_id: entry.id.into(),
-                                executor_id: backend.id.to_string(),
-                                passed: false,
-                                message: message.clone(),
-                                replay_capsule: None,
-                            })
-                            .collect(),
-                    );
-                }
+    let mut results = Vec::with_capacity(backends.len());
+    for &backend in backends {
+        let proved = std::thread::scope(|scope| {
+            scope
+                .spawn(move || prove_one_backend(backend, prepared_entries))
+                .join()
+        });
+        match proved {
+            Ok(pairs) => results.push(pairs),
+            Err(payload) => {
+                let message = format!(
+                    "backend `{}` proof worker panicked: {}. Fix: proof workers must return pair failures instead of unwinding.",
+                    backend.id,
+                    panic_message(payload)
+                );
+                results.push(
+                    prepared_entries
+                        .iter()
+                        .map(|entry| ConformanceResult {
+                            op_id: entry.id.into(),
+                            executor_id: backend.id.to_string(),
+                            passed: false,
+                            message: message.clone(),
+                            replay_capsule: None,
+                        })
+                        .collect(),
+                );
             }
         }
-        results
-    })
+    }
+    results
 }
 
 fn prove_one_backend(

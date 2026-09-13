@@ -56,12 +56,15 @@ pub struct SpirvBackendRegistration {
 impl SpirvBackendRegistration {
     /// Acquire a new SPIR-V backend by probing for a Vulkan compute device.
     ///
+    /// Every acquisition shares the process-wide Vulkan context, so the loader
+    /// and the logical device are created once however many times a caller
+    /// acquires this backend.
+    ///
     /// # Errors
     /// Returns [`BackendError`] when no Vulkan loader or compatible GPU is found.
     pub fn acquire() -> Result<Self, BackendError> {
-        let device = vulkan::VulkanDevice::acquire()?;
         Ok(Self {
-            device: Arc::new(device),
+            device: vulkan::shared_device()?,
         })
     }
 }

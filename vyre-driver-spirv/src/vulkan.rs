@@ -7,6 +7,8 @@
 
 use ash::vk;
 
+use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError};
+
 use vyre_driver::{BackendError, BindingPlan};
 use vyre_foundation::ir::{BufferAccess, Program};
 
@@ -21,12 +23,28 @@ pub(crate) struct VulkanDevice {
     device: ash::Device,
     physical_device: vk::PhysicalDevice,
     queue_family_index: u32,
-    queue: vk::Queue,
-    command_pool: vk::CommandPool,
+    /// Submission target. The Vulkan specification lists a queue as externally
+    /// synchronized, so the host serializes `vkQueueSubmit` on it.
+    queue: Mutex<vk::Queue>,
+    /// Allocation source for dispatch command buffers. A pool is externally
+    /// synchronized, and that covers allocating from it, freeing back to it,
+    /// and recording into any buffer allocated from it.
+    command_pool: Mutex<vk::CommandPool>,
     /// Memory type index that is host-visible and host-coherent.
     host_memory_type_index: u32,
     /// Device properties (for limits reporting).
     pub properties: vk::PhysicalDeviceProperties,
+}
+
+/// Take a lock over an externally synchronized Vulkan handle.
+///
+/// A panic under one of these guards leaks the command buffer being recorded
+/// and leaves every other handle untouched: the pool is still a valid pool and
+/// the queue is still a valid queue, so the poison flag records a leak rather
+/// than a corrupt object. Recovering the guard keeps one panicked dispatch from
+/// refusing every later dispatch in the process.
+fn guard<T>(lock: &Mutex<T>) -> MutexGuard<'_, T> {
+    lock.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 impl std::fmt::Debug for VulkanDevice {
@@ -185,8 +203,8 @@ impl VulkanDevice {
             device,
             physical_device,
             queue_family_index,
-            queue,
-            command_pool,
+            queue: Mutex::new(queue),
+            command_pool: Mutex::new(command_pool),
             host_memory_type_index,
             properties,
         })
@@ -247,18 +265,22 @@ impl VulkanDevice {
         }
     }
 
-    /// Record a compute dispatch and wait for completion.
-    unsafe fn dispatch_compute(
+    /// Allocate a command buffer and record one dispatch into it.
+    ///
+    /// Allocating from a pool and recording into a buffer allocated from that
+    /// pool are both host access to the pool, so one guard covers both.
+    unsafe fn record_dispatch(
         &self,
         pipeline: vk::Pipeline,
         pipeline_layout: vk::PipelineLayout,
         descriptor_set: vk::DescriptorSet,
         workgroups: [u32; 3],
-    ) -> Result<(), BackendError> {
+    ) -> Result<vk::CommandBuffer, BackendError> {
+        let pool = guard(&self.command_pool);
         let alloc_info = vk::CommandBufferAllocateInfo {
             s_type: vk::StructureType::COMMAND_BUFFER_ALLOCATE_INFO,
             p_next: std::ptr::null(),
-            command_pool: self.command_pool,
+            command_pool: *pool,
             level: vk::CommandBufferLevel::PRIMARY,
             command_buffer_count: 1,
             _marker: std::marker::PhantomData,
@@ -276,8 +298,8 @@ impl VulkanDevice {
             )
         })?;
 
-        // Helper: free the command buffer on any early-exit below. The fence is
-        // created later; its own cleanup guard is added at that point.
+        // Helper: free the command buffer on any early-exit below, under the
+        // pool guard this function already holds.
         let free_cb = |device: &ash::Device, pool: vk::CommandPool, cb: vk::CommandBuffer| {
             // SAFETY: cb was allocated from pool and is no longer submitted.
             unsafe { device.free_command_buffers(pool, &[cb]) };
@@ -293,7 +315,7 @@ impl VulkanDevice {
                 },
             )
         } {
-            free_cb(&self.device, self.command_pool, command_buffer);
+            free_cb(&self.device, *pool, command_buffer);
             return Err(BackendError::new(format!(
                 "Vulkan command buffer begin failed: {e}. Fix: check command buffer state."
             )));
@@ -317,11 +339,41 @@ impl VulkanDevice {
 
         // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
         if let Err(e) = unsafe { self.device.end_command_buffer(command_buffer) } {
-            free_cb(&self.device, self.command_pool, command_buffer);
+            free_cb(&self.device, *pool, command_buffer);
             return Err(BackendError::new(format!(
                 "Vulkan command buffer end failed: {e}. Fix: check recorded commands."
             )));
         }
+
+        Ok(command_buffer)
+    }
+
+    /// Return a recorded command buffer to the pool.
+    unsafe fn free_command_buffer(&self, command_buffer: vk::CommandBuffer) {
+        let pool = guard(&self.command_pool);
+        // SAFETY: the buffer was allocated from this pool by `record_dispatch`
+        // and its submission, if any, has completed or the device is lost.
+        unsafe { self.device.free_command_buffers(*pool, &[command_buffer]) };
+    }
+
+    /// Record a compute dispatch and wait for completion.
+    ///
+    /// One process-wide device serves every acquisition of this backend, so two
+    /// callers reach the pool and the queue at the same time and the guards are
+    /// what make that sound. The fence wait is outside both, so a dispatch
+    /// executing on the GPU does not stop another caller from recording and
+    /// submitting the next one.
+    unsafe fn dispatch_compute(
+        &self,
+        pipeline: vk::Pipeline,
+        pipeline_layout: vk::PipelineLayout,
+        descriptor_set: vk::DescriptorSet,
+        workgroups: [u32; 3],
+    ) -> Result<(), BackendError> {
+        // SAFETY: every handle is live and owned by this device; the call
+        // records into a buffer it allocates and frees on its own error paths.
+        let command_buffer =
+            unsafe { self.record_dispatch(pipeline, pipeline_layout, descriptor_set, workgroups) }?;
 
         // SAFETY: Fence creation is a standard Vulkan device operation, parameters are valid defaults.
         let fence = match unsafe {
@@ -330,52 +382,74 @@ impl VulkanDevice {
         } {
             Ok(f) => f,
             Err(e) => {
-                free_cb(&self.device, self.command_pool, command_buffer);
+                // SAFETY: the buffer is recorded but was never submitted.
+                unsafe { self.free_command_buffer(command_buffer) };
                 return Err(BackendError::new(format!(
                     "Vulkan fence creation failed: {e}. Fix: check device limits."
                 )));
             }
         };
 
-        // From here both `fence` and `command_buffer` must be released on any error path.
-        let cleanup =
-            |device: &ash::Device, pool: vk::CommandPool, f: vk::Fence, cb: vk::CommandBuffer| {
-                // SAFETY: fence and cb were created/allocated successfully and are owned here.
-                unsafe {
-                    device.destroy_fence(f, None);
-                    device.free_command_buffers(pool, &[cb]);
-                }
-            };
-
         let submit_info = vk::SubmitInfo {
             command_buffer_count: 1,
             p_command_buffers: &command_buffer,
             ..Default::default()
         };
-        // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
-        if let Err(e) = unsafe { self.device.queue_submit(self.queue, &[submit_info], fence) } {
-            cleanup(&self.device, self.command_pool, fence, command_buffer);
+        let submitted = {
+            let queue = guard(&self.queue);
+            // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
+            unsafe { self.device.queue_submit(*queue, &[submit_info], fence) }
+        };
+        if let Err(e) = submitted {
+            // SAFETY: the submission was rejected, so neither handle is in use.
+            unsafe {
+                self.device.destroy_fence(fence, None);
+                self.free_command_buffer(command_buffer);
+            }
             return Err(BackendError::new(format!(
                 "Vulkan queue submit failed: {e}. Fix: verify queue and command buffer state."
             )));
         }
 
         // SAFETY: The fence was created successfully and successfully submitted to the queue.
-        if let Err(e) = unsafe { self.device.wait_for_fences(&[fence], true, u64::MAX) } {
-            cleanup(&self.device, self.command_pool, fence, command_buffer);
-            return Err(BackendError::new(format!(
-                "Vulkan fence wait failed: {e}. Fix: check for device loss."
-            )));
-        }
-
-        // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
+        let waited = unsafe { self.device.wait_for_fences(&[fence], true, u64::MAX) };
+        // SAFETY: the wait either observed the fence signalled or reported a
+        // lost device, and a lost device releases every resource it held.
         unsafe {
             self.device.destroy_fence(fence, None);
-            self.device
-                .free_command_buffers(self.command_pool, &[command_buffer]);
+            self.free_command_buffer(command_buffer);
         }
+        waited.map_err(|e| {
+            BackendError::new(format!(
+                "Vulkan fence wait failed: {e}. Fix: check for device loss."
+            ))
+        })
+    }
+}
 
-        Ok(())
+/// One Vulkan context for the whole process.
+///
+/// Acquiring this backend used to dlopen the Vulkan loader, create an instance,
+/// and create a logical device every time. Conformance acquires a backend per
+/// case, twice per case for the compile-facts digest alone, so a 353-operation
+/// run opened more than a thousand loader-instance-device cycles across sixteen
+/// workers. Each live context holds the loader plus the driver's device nodes
+/// open, the process reached its descriptor limit, and `dlopen` of
+/// `libvulkan.so.1` then failed with `Too many open files`: 269 of 288 cases
+/// were refused for want of a Vulkan loader on a host with a working one, and
+/// the instance teardown took the wgpu backend's devices with it.
+///
+/// The same reasoning already governs the wgpu driver's process-wide instance.
+/// This context is never destroyed, which is the point: the ICD stays loaded
+/// for the life of the process instead of being unloaded under another backend.
+static SHARED: LazyLock<Result<Arc<VulkanDevice>, BackendError>> =
+    LazyLock::new(|| VulkanDevice::acquire().map(Arc::new));
+
+/// The Vulkan context every acquisition of this backend shares.
+pub(crate) fn shared_device() -> Result<Arc<VulkanDevice>, BackendError> {
+    match &*SHARED {
+        Ok(device) => Ok(Arc::clone(device)),
+        Err(error) => Err(error.clone()),
     }
 }
 
@@ -385,7 +459,8 @@ impl Drop for VulkanDevice {
         // handles created in `acquire`; Drop is the single owner of
         // both and runs once when the VulkanDevice is dropped.
         unsafe {
-            self.device.destroy_command_pool(self.command_pool, None);
+            self.device
+                .destroy_command_pool(*guard(&self.command_pool), None);
             self.device.destroy_device(None);
         }
     }

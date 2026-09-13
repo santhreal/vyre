@@ -9,7 +9,7 @@ use std::time::Instant;
 use vyre::ir::Program;
 use vyre_conform_spec::{hash_outputs, WorkerMode, WorkerReceipt, WorkerRequest, WorkerStatus};
 
-use crate::backend_selection::backend_registration;
+use crate::backend_selection::{backend_registration, target_facts_digest};
 use crate::oracle::OracleSession;
 use crate::production::{ProductionSession, CONFORMANCE_SCHEDULES};
 
@@ -265,11 +265,7 @@ fn execute_production(request: &WorkerRequest) -> Result<WorkerSuccess, String> 
         .submit(&inputs_borrowed)
         .map_err(|e| format!("production submit failed: {e}"))?;
 
-    let target_facts_blake3 = registration.acquire().ok().map(|handle| {
-        let facts = handle.device_profile().compile_facts();
-        let debug_str = format!("{facts:?}");
-        blake3::hash(debug_str.as_bytes()).to_hex().to_string()
-    });
+    let target_facts_blake3 = target_facts_digest(&lease.backend_id);
     Ok(WorkerSuccess {
         outputs: execution.outputs,
         artifact_blake3: Some(execution.artifact.to_hex().to_string()),

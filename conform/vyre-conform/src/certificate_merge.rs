@@ -3,7 +3,9 @@
 
 use crate::artifact_json::{read_prove_artifact_bounded, write_json_artifact};
 use crate::proof_options::next_option_value;
-use crate::proof_plan::{hash_proof_plan, ProofPlanSummary, ProofSelectionSummary};
+use crate::proof_plan::{
+    hash_proof_plan, ProofPlanSummary, ProofSelectionSummary, UnavailableBackendRecord,
+};
 use crate::prove_command::{LawRecord, ProveArtifact, ProveSignableBody};
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
@@ -57,6 +59,7 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
     let mut law_map = BTreeMap::<(String, String), LawRecord>::new();
     let mut universe_backend_count = 0usize;
     let mut universe_op_count = 0usize;
+    let mut unavailable_backends = BTreeMap::<String, UnavailableBackendRecord>::new();
     let mut merge_hasher = blake3::Hasher::new();
     merge_hasher.update(b"vyre-conform/proof-merge/v1");
 
@@ -80,6 +83,23 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
         universe_backend_count =
             universe_backend_count.max(shard.artifact.plan.selection.universe_backend_count);
         universe_op_count = universe_op_count.max(shard.artifact.plan.selection.universe_op_count);
+        // Shards of one proof come from one host, so they observe one
+        // availability set. A shard that disagrees was produced somewhere else,
+        // and merging it would let a certificate claim coverage no run had: the
+        // shard that could not acquire a backend contributes no pair for it, and
+        // nothing else in the merged body records the absence.
+        for backend in &shard.artifact.plan.selection.unavailable_backends {
+            if let Some(seen) = unavailable_backends.get(&backend.id) {
+                if seen != backend {
+                    return Err(format!(
+                        "merge refused `{path}`: backend `{}` is unavailable here for `{}` and for `{}` in another shard. Fix: merge shards proved on one host.",
+                        backend.id, backend.reason, seen.reason
+                    ));
+                }
+            } else {
+                unavailable_backends.insert(backend.id.clone(), backend.clone());
+            }
+        }
 
         if shard.artifact.pairs.len() != shard.artifact.plan.pair_count {
             return Err(format!(
@@ -152,6 +172,7 @@ pub(crate) fn merge_certificates(args: impl IntoIterator<Item = String>) -> Resu
             universe_op_count,
             selected_backend_count: unique_backends.len(),
             selected_op_count: unique_ops.len(),
+            unavailable_backends: unavailable_backends.into_values().collect(),
         },
     };
 

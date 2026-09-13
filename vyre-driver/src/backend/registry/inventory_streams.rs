@@ -56,6 +56,34 @@ pub struct BackendRegistration {
     pub materializer: Option<fn() -> Result<Box<dyn ArtifactMaterializer>, BackendError>>,
 }
 
+/// Hold the process-wide claim on vendor runtime initialization.
+///
+/// A backend factory brings up a vendor userspace runtime the first time it
+/// runs: the CUDA driver for one, the Vulkan loader and its ICD for another.
+/// Those runtimes share process-global state through the same vendor libraries
+/// — on an NVIDIA host `libcuda` and the Vulkan ICD are both
+/// `libnvidia-*`/`libGLX_nvidia` — and bringing two of them up at once is not
+/// supported by either. Proving every backend of a host runs one thread per
+/// backend, which did exactly that and took the process down with a SIGSEGV
+/// inside `vkEnumerateInstanceExtensionProperties`: no output, no error, no
+/// certificate, and nothing in the artifact to say which pair was running.
+///
+/// Serializing costs one bring-up per backend per process, which the work
+/// behind it dwarfs, and nothing after bring-up is held: the guard is dropped
+/// as the factory returns, so dispatch, compilation and submission stay
+/// concurrent.
+///
+/// The lock is never poisoned into a failure: a factory that panics while
+/// holding it leaves the vendor runtime in whatever state it reached, and the
+/// next acquisition's own error is a better account of that than a poison
+/// report from here.
+fn vendor_runtime_init() -> std::sync::MutexGuard<'static, ()> {
+    static VENDOR_RUNTIME_INIT: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    VENDOR_RUNTIME_INIT
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 impl BackendRegistration {
     /// Construct this registered backend through the shared driver boundary.
     ///
@@ -68,6 +96,7 @@ impl BackendRegistration {
     /// Returns the backend factory error when the concrete backend cannot
     /// initialize on this host.
     pub fn acquire(&self) -> Result<Box<dyn VyreBackend>, BackendError> {
+        let _serialized = vendor_runtime_init();
         (self.factory)().map(wrap_grid_sync_split)
     }
 
@@ -109,11 +138,14 @@ impl BackendRegistration {
     /// Returns an explicit unsupported-feature error when no native
     /// materializer is registered, or the concrete device acquisition error.
     pub fn materializer(&self) -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
-        self.materializer
+        let factory = self
+            .materializer
             .ok_or_else(|| BackendError::UnsupportedFeature {
                 name: "registered artifact materializer; Fix: link the backend's native materializer instead of recompiling a raw Program at dispatch".to_string(),
                 backend: self.id.to_string(),
-            })?()
+            })?;
+        let _serialized = vendor_runtime_init();
+        factory()
     }
 }
 

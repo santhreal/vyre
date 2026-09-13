@@ -8,12 +8,14 @@ use crate::operation_selection::{select_entries, unified_entries};
 use crate::proof_options::parse_proof_options;
 use crate::proof_plan::{hash_proof_plan, proof_plan_summary, ProofPlanSummary};
 use crate::proof_scheduler::{
-    prepare_entries_in_parallel, proof_worker_count, prove_backends_in_parallel,
+    prepare_entries_in_parallel, proof_worker_count, prove_backends_in_sequence,
 };
 use crate::proof_timing::{emit_proof_timing, ProofTimingReport};
 use ed25519_dalek::{Signer, SigningKey};
 use serde::{Deserialize, Serialize};
-use vyre_conform::backend_selection::{select_backends, semantic_execution_backends};
+use vyre_conform::backend_selection::{
+    partition_by_host_availability, select_backends, semantic_execution_backends,
+};
 use vyre_conform::law_proof::{prove_declared_laws, LawVerdict};
 use vyre_conform_spec::ConformanceResult;
 
@@ -136,8 +138,37 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
     // Every reference oracle is filtered out of `all_backends`, so a reference
     // backend cannot reach the proof: selection is where that is decided and
     // where the refusal is worded.
-    let backends = select_backends(&all_backends, &options.backend_filter)
+    let selected = select_backends(&all_backends, &options.backend_filter)
         .map_err(|reason| format!("prove refused to emit the certificate: {reason}"))?;
+    // A backend named by id is proved whatever the host says: the caller asked
+    // for it, and its acquisition refusal is the answer they came for. `all` is
+    // the set the host can run, because the `gpu` feature links the Metal and
+    // SPIR-V registrations on every platform and an `all` run on Linux
+    // otherwise wrote one failed pair per operation for a framework the machine
+    // does not have.
+    //
+    // `_live` holds every probed acquisition open until the run ends. Dropping
+    // one tears its vendor runtime back down, and a Vulkan ICD unloaded out from
+    // under the process-wide instance loses the devices every later route needs.
+    let (backends, _live, unavailable) = if options.backend_filter == "all" {
+        let (live, unavailable) = partition_by_host_availability(&selected);
+        let (backends, handles): (Vec<_>, Vec<_>) = live.into_iter().unzip();
+        (backends, handles, unavailable)
+    } else {
+        (selected, Vec::new(), Vec::new())
+    };
+    if backends.is_empty() {
+        let refused = unavailable
+            .iter()
+            .map(|backend| format!("  - {}: {}", backend.id, backend.reason))
+            .collect::<Vec<_>>()
+            .join("\n");
+        return Err(format!(
+            "prove refused to emit the certificate: no registered backend can be acquired on this \
+             host:\n{refused}\nFix: run on a host with one of these devices, or link a backend it \
+             has."
+        ));
+    }
     let all_entries = unified_entries();
     let entries = select_entries(&all_entries, &options.ops_filter, options.shard)?;
     let selected_op_count = entries.len();
@@ -149,7 +180,7 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
     let mut pairs = prepared.pairs;
     let mut any_failed = prepared.any_failed;
     let backend_started = std::time::Instant::now();
-    for backend_pairs in prove_backends_in_parallel(&backends, &prepared_entries) {
+    for backend_pairs in prove_backends_in_sequence(&backends, &prepared_entries) {
         for pair in backend_pairs {
             if !pair.passed {
                 any_failed = true;
@@ -191,6 +222,7 @@ pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String
         &all_backends,
         &all_entries,
         &backends,
+        &unavailable,
         &prepared_entries,
         pairs.len(),
         &options,

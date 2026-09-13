@@ -463,11 +463,8 @@ fn compare_f32_lanes(
 pub fn semantic_policy_for_registration(
     registration: &'static BackendRegistration,
 ) -> Result<SemanticExecutionPolicy, ProductionError> {
-    let target_facts = registration
-        .acquire()
-        .map_err(|error| ProductionError::Dispatch(error.to_string()))?
-        .device_profile()
-        .compile_facts();
+    let target_facts = crate::backend_selection::registered_target_facts(registration)
+        .map_err(|error| ProductionError::Dispatch(error.to_string()))?;
     Ok(SemanticExecutionPolicy::new(
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
         target_facts,

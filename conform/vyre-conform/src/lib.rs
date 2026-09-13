@@ -17,7 +17,10 @@ pub mod production;
 pub mod witness_plan;
 pub mod worker;
 
-pub use backend_selection::{backend_registration, select_backends, semantic_execution_backends};
+pub use backend_selection::{
+    backend_registration, registered_target_facts, select_backends, semantic_execution_backends,
+    target_facts_digest,
+};
 pub use bundle_cert::error::BundleCertError;
 pub use bundle_cert::issue::issue_bundle_cert;
 pub use bundle_cert::signature::verify_cert_signature_hex;

@@ -14,7 +14,7 @@ use vyre_conform_spec::{
 
 use vyre_foundation::failure_domain::reclaim_poisoned_mutex;
 
-use crate::backend_selection::backend_registration;
+use crate::backend_selection::target_facts_digest;
 use crate::worker::{current_binary_digest, current_environment_digest, DEFAULT_WORKER_SECRET};
 
 static LEASE_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -197,13 +197,13 @@ impl WorkerCoordinator {
         );
         let binary_digest = current_binary_digest();
         let env_digest = current_environment_digest();
-        let target_facts_digest = backend_registration(backend_id)
+        let target_facts_digest = crate::backend_selection::backend_registration(backend_id)
             .ok()
-            .and_then(|reg| reg.acquire().ok())
-            .map(|handle| {
-                let facts = handle.device_profile().compile_facts();
-                let debug_str = format!("{facts:?}");
-                blake3::hash(debug_str.as_bytes()).to_hex().to_string()
+            .and_then(|r| r.acquire().ok())
+            .map(|h| {
+                blake3::hash(format!("{:?}", h.device_profile().compile_facts()).as_bytes())
+                    .to_hex()
+                    .to_string()
             });
 
         let request = WorkerRequest::new_production(
@@ -262,14 +262,7 @@ impl WorkerCoordinator {
         let (ref_receipt, prod_receipt) = self.execute_case_pair(backend_id, case, budget);
         let expected_binary = current_binary_digest();
         let expected_env = current_environment_digest();
-        let expected_target_facts = backend_registration(backend_id)
-            .ok()
-            .and_then(|reg| reg.acquire().ok())
-            .map(|h| {
-                let facts = h.device_profile().compile_facts();
-                let debug_str = format!("{facts:?}");
-                blake3::hash(debug_str.as_bytes()).to_hex().to_string()
-            });
+        let expected_target_facts = target_facts_digest(backend_id);
 
         verify_receipts_for_certificate(
             &ref_receipt,
