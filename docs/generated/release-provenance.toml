@@ -1,5 +1,5 @@
 schema_version = 2
-bom_timestamp = "2026-09-13T02:52:12Z"
+bom_timestamp = "2026-09-13T02:53:44Z"
 rustc_version = "1.86.0 (05f9846f8 2025-03-31)"
 cargo_version = "1.86.0 (adf9b6ad1 2025-02-28)"
 target_triples = [
@@ -3919,119 +3919,119 @@ target_outputs = [
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/bench-release-axes.json"
-digest = "fcb4448fa7716612112cc014b2f68fb89993a20a846c39894dc848994ef00f01"
+digest = "8d4d7aa0985b02ca9985da6e5d157797452e6d2b45b522934509ac6105a61215"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/cpu-only-100x-proof.json"
-digest = "c317836301b367e87c03a51bc0f313c844ac95f743adecf5471df96155b8a4b9"
+digest = "fcf69c53c7d62eff9e0e839c695d80a90fd870b700613924dcb263189622ef9d"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/cuda-ptx-patterns.json"
-digest = "b42f13bd8948e6dd67e8d9c07db2e6a897326528ae73ccecd1f3007d42864361"
+digest = "0d9600c4daed688f3cd13c1d94dc22e9747b44e78a06f92e0f19e63754710b9f"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/cuda-release-suite.json"
-digest = "50009e6897b197e73e40744f6c0e2f11c3dfb21a0a804afb62aff583e85664b6"
+digest = "e81cd6471edff2027fe1fdd906e6d91f9c83d7dd2f121cf19f242f3080f5c087"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/dataflow-analysis-release.json"
-digest = "8f419b0f23d2269f3b8faae0ffd3dddbc301bec11a09c416581f4b1d1b8ef816"
+digest = "4b57dfad013c20bf5472e859c5f405aa0c601bfaada031a20ca758164b229d71"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/frontier-leaderboard.json"
-digest = "532b30ae8d4416de96f43fbc0bac1170efe58d3126edcf9d7b827f4de07eebbd"
+digest = "3fa3a098aed6403aa25b48c8aced7ec7688972b7ab27afd4a0f6ca66428bce1f"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/megakernel-condition-100x-proof.json"
-digest = "b7d45e6df0184a6d418511c2bd45a36deb30fc75228e2842ae53cd515a8b2f52"
+digest = "9f713a00bd8d57e760f831fc7bca9fd49d09ac08c242b25a70a5160d16108ea9"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/megakernel-condition-cuda.json"
-digest = "b7d45e6df0184a6d418511c2bd45a36deb30fc75228e2842ae53cd515a8b2f52"
+digest = "9f713a00bd8d57e760f831fc7bca9fd49d09ac08c242b25a70a5160d16108ea9"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/megakernel-latency-cuda.json"
-digest = "b7d45e6df0184a6d418511c2bd45a36deb30fc75228e2842ae53cd515a8b2f52"
+digest = "9f713a00bd8d57e760f831fc7bca9fd49d09ac08c242b25a70a5160d16108ea9"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/release-workload-matrix.json"
-digest = "ec69e04435e66daa0458b45c951170ee43217de484d88bb885deda04b866d628"
+digest = "ecab9b1bd380d9a758775b308a94589de082187acd5ccef60a8fe3f1372f97ff"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/resident-optimizer-pipeline.json"
-digest = "621f43d831ca7074a9e9ffc7fa74b7fc74cf6df8af4684a7aaed32b9268edc4c"
+digest = "2aff1f685adeb75d0cb96152caa24be8205d214e1f6716a3d93a1fedc0de7cfe"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-fallback-suite.json"
-digest = "0f53ff764ebb75c85f7947458d1f3b4a573f31d71672c86f3fc765183926f909"
+digest = "2021fa22069e2842604fd496b31995c9048fa324c01a9c4e17f74e7f0b9f3a6f"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-01-condition-eval.json"
-digest = "b2697e07bf0b59332f0db784328b0d4443ac4d105bd354a3043c5ba5c4b79d6b"
+digest = "942ee0db35add8da22bcb71ae7a7b1332d37ffa50f9e8963d0f414d0216cc5a0"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-02-string-bitmap-scatter.json"
-digest = "24e0be49ae505f7911d16ac126ba3486a69618af2ab3a94a812e82ebfe30bb0d"
+digest = "ef62fdf520e1c34084c0fe408414eb0ff1aefd607e6f4b939716f9d105a371ac"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-03-offset-count-aggregation.json"
-digest = "6612a871f14f2c274d9d98acf18f0eea62858f711532cb27532f4e234df5ef55"
+digest = "1694e15aa2f82c022de30be9c7a1d180d5643b45a30c5b73a929c9dd59ee3262"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-04-metadata-conditions.json"
-digest = "82e1be04391a180097a4aadefea55a91aa280ada669d8ed91e353c7caaa8ef44"
+digest = "83f251e186129b9c1a8513ea621b23e180fc6fae64dc5c85db6a21f4ba8bd26b"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-05-entropy-window.json"
-digest = "95e304848bbc3354a1ec9b6ff0b1d44e130a847413c9c5694384f7f2bebd05ca"
+digest = "ab5dfdb323120658f0bcbebe076af0f754fcdb5845a9d1a1de4b569459dc79ed"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-06-quantified-condition-loops.json"
-digest = "2aaf2cca541aa6facf4582067049a0ebd2d0550740ff3fc252e3076c4d284296"
+digest = "fdffae34f8b0d04c21ec86b11c94424ac0ea4a0693d5478c58ae154844feee60"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-07-alias-reaching-def.json"
-digest = "529b9d408df98eb7de2cd60b320c6e0ea88563c17546f0ce3cf565c9d7d0947d"
+digest = "d1a729a5a827e6977e9bb31d4b4ad899b9b1d60c161ec1987a1037dc075447de"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-08-ifds-witness.json"
-digest = "4a47a7bc9f13d725e34f28e89ceec9a4803de6217be26e9d3f04d01556af2f5f"
+digest = "6fe949637ba63f1f616c305062f9de80dc84e44aabd55b1ea5b12e7d84cf1da0"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-09-ast-motif-traversal.json"
-digest = "44ff844218c73cea9a6ab94e72b56821651442508c73c1a42d65d213989a28d0"
+digest = "d50019bc08ccf51c44c8aadaf71b24824ca4d3f3e4d61fed85398d30e244a63c"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-10-megakernel-queued-batches.json"
-digest = "0bd67e3d2363266b8db51122f716aa9de7f24fa64969b9ae84bbaa842340dbd3"
+digest = "2f16993ebc5610c8479141c49573c84b4b1adf9b86e87aeec44053d1bb3581b8"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-11-semantic-optimizer-impact.json"
-digest = "0c94c9ab022aa130f58b923ff88aeab8609acccdabf753241bb34434d87bf13d"
+digest = "42e3af8cafaf3ca9deb233f330184eebe37bc2545f9297dcfa9033d2e450650b"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-12-sparse-output-compaction.json"
-digest = "19d4696b6e6a07f42d9fa73651fe50507a3bdd2e4b55eeb7fa937d3dccc93db0"
+digest = "f6dfe4f484e9b9e8e483727ace2b191cf2bed701363861bb08fd472634e0ac45"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-13-callgraph-reachability.json"
-digest = "3d834152c4a51b89a7cabe71c56f9b99fad7e4ac048692624a48d316b64782fe"
+digest = "fa469fd40c8360bb7da9d5798d45962aac75254c8f8194abc759152a04e84e41"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-14-compound-fused-filter.json"
-digest = "0b3424ea15b4a48ec083e3746d2d638637efcb3d76e689a8136fb80ebdd6b631"
+digest = "16746f784f6a1122a78bdbd0c90fc903dbd65ff9b21ce69858a4976b262284f1"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-15-adaptive-routing.json"
-digest = "3528466829198de1bad55774435c001c89be4f0b4134abfb39e3faad7eb34365"
+digest = "3b6184f4a0d8f4dc1a35a3f69dd7ef540ebcfd1fd815c9e89603e3eca485ab36"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-16-quantized-linear.json"
-digest = "51ebdc925948739eec9a5c1732ecd230428a34981bc55341e1055418fe8379e7"
+digest = "88e323cf73509893b8b90b6ae4bcd3e5b8ece58d0de5a64d11a86ba05846b9c1"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/wgpu-workload-17-egraph-saturation.json"
-digest = "4015d01ed1dc6759f998d821c599f5e3697a7b907c23f18f32df36f8c9247e9e"
+digest = "fefed2a4bd945c196944ca1eb54994e3f8c90bf8fcd3fbd92b3edb39cfec014d"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/whole-app-dense-numerical-pipeline.json"
@@ -4051,71 +4051,71 @@ digest = "a38acc4f714598c00bbad98c47f37552f1fd7c944d8a398520d3d4701f792195"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-01-condition-eval.json"
-digest = "41c1e5e984ee55c91ca8880a58108b94387e9bcd916dd35f978ea1c1d09f2220"
+digest = "3ba8497dd733f71680bdc54627619fa4055e94c0ac0adaffe36fcfd61c3f0f5d"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json"
-digest = "35d912c61490f6d3018fdc065dc78f272fd551dfc9e8e177e450f757c13af36a"
+digest = "f723915aed1171119602565408f0aae78d0153a710445d9f11896f0dd552bf72"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-03-offset-count-aggregation.json"
-digest = "c073f574326debba8989df599165a5f35922f39bea57927de432b526dad05ccb"
+digest = "200cfd20b4f1ea2bd45643faa5ff76b4fcae0a54cdd74ef10ec005c49f1f116d"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-04-metadata-conditions.json"
-digest = "252882147a1de777e70d710f0003a372f6a8b4a1d3d7cba976768586a9e1e436"
+digest = "d1b9700ec0151a1302133219051cbe9cea59e2099a8a95c2e2d239ba5b95a385"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-05-entropy-window.json"
-digest = "1d799c1bb42131a4430ade0b981ee619dafdbba4b93937bc9c6ad95cfbf249d8"
+digest = "5c00124357430ba66f50f913894a148fbc29043bd98033d13eff87bd0f0b7a90"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-06-quantified-condition-loops.json"
-digest = "a09bf1e091073cfe5ff2d4341336bafe7ba91f4b6a77cab98f2657f428c5f7dd"
+digest = "9f4ff3161b41a98ad09b201b2c9ce532d90cf271a7f39a8c1901dafb44abf9be"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-07-alias-reaching-def.json"
-digest = "8f419b0f23d2269f3b8faae0ffd3dddbc301bec11a09c416581f4b1d1b8ef816"
+digest = "4b57dfad013c20bf5472e859c5f405aa0c601bfaada031a20ca758164b229d71"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-08-ifds-witness.json"
-digest = "8672b4988b17df0c0bcb7a0ffd48622e80fc55aa5dc4b868bbbb1f6345c19bdb"
+digest = "fe74ad9bfd92aa3c37b63b6905cb3d2846acf171d0aab198401b9c5a4a4a4589"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-09-ast-motif-traversal.json"
-digest = "2dd89138e20d000356149e3ef063bf5bc8a144739fb22c37d44d0caad00b25ac"
+digest = "ed082407a213949a85936a9d1cdf1a1c6705c717ae9982125d0438a2a8c8b2ee"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-10-megakernel-queued-batches.json"
-digest = "b7d45e6df0184a6d418511c2bd45a36deb30fc75228e2842ae53cd515a8b2f52"
+digest = "9f713a00bd8d57e760f831fc7bca9fd49d09ac08c242b25a70a5160d16108ea9"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json"
-digest = "93c205393240317e714cebeb185f59a2f3c2e6f838b36739a0d599065038a5c2"
+digest = "c7409bed98fb23b9c7698e9d85ab0bcc1cb4815d38a6a69db09c6bd5dd5c00ee"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-12-sparse-output-compaction.json"
-digest = "b7675e6336821542376b7e616a2665c5743f0857f9d4253bdf2a85f0d5d61a5c"
+digest = "fbe19a111b8eab079d2a93c3765d30c1781de9425f929ad62b8251fe3c2ce877"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-13-callgraph-reachability.json"
-digest = "17d7f0328c9849b6ec441c14f4d636d0499850ced8dc59b7d85eeedd6fa4bbd9"
+digest = "111fd31a0c3f80a51935368ccbbe53a8909f2a712e6d96327c2d5435b3dae688"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-14-compound-fused-filter.json"
-digest = "96ea1c0364d054d1b272049c015bb9af0c756da043987140a1c13873a7dc8132"
+digest = "628bcb0a75c81ef82a5eb88fdb807b64d59bfac7a3c4f2eb92174083ed71e2df"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-15-adaptive-routing.json"
-digest = "d7906c7f432a58f70098fe4bb965f725753c1593bfad41d93d39681c13020f81"
+digest = "01979847428e90bde5f5efbea8185f43be5f5390acc699ae2f6d8773738084b2"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-16-quantized-linear.json"
-digest = "f941b82182e1b8ea7de5ed22f12334bc81cc319f29ecfbc2f1e53475ed624768"
+digest = "18cc21563d36b268d64dc572f8fc3d810760e91fc44df962ec5b5902c81360e4"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/workload-17-egraph-saturation.json"
-digest = "29591964bf8cb7a97e86320ba131c49a8ed00894da4523f06792884d80a0d4ea"
+digest = "ed320ef8ecd4a9604a5c4ddc3dc94023edd64869dcce41983280309f8ec421b9"
 
 [[schemas]]
 path = "docs/generated/OP_SCHEMA.json"

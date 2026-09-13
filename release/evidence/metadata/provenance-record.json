@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"d1dfd72ef88f329f8804876243fa1594b00bd14c","commit_timestamp":"1789267932","parent_commit":"fde1c010d29bf22504f097338b4cd428eb4a1670","dirty":true,"source_fingerprint":"git:d1dfd72ef88f329f8804876243fa1594b00bd14c:dirty=true:worktree=74d22b0b27d1435b90325c7a0bc0c76bd8f0b0116452338241090e16a36f1609"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"9aa6f79517093234950d1fe007f7dd73f096fa88","commit_timestamp":"1789268024","parent_commit":"d1dfd72ef88f329f8804876243fa1594b00bd14c","dirty":false,"source_fingerprint":"git:9aa6f79517093234950d1fe007f7dd73f096fa88:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "_type": "https://in-toto.io/Statement/v1",
   "predicate": {
     "buildDefinition": {
