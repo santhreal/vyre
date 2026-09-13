@@ -277,14 +277,28 @@ pub(crate) fn check_recursion_depth(depth: usize) -> Result<(), ReferenceError> 
 /// Raising an enclosing evaluation's ceiling is correct rather than an escape:
 /// the outer run has to execute the nested program's declared work to finish,
 /// and that work is declared by the same constant extents.
-pub(crate) fn admit_declared_work(body: &[Node], invocations: u64) {
+///
+/// # Errors
+/// Refuses with `BudgetExhaustion` when the declared work passes what a `u64`
+/// counts. The product used to saturate, which set the ceiling to `u64::MAX`
+/// and left the run with no termination bound at all, so the one program that
+/// could not be bounded was the one admitted without a bound.
+pub(crate) fn admit_declared_work(body: &[Node], invocations: u64) -> Result<(), ReferenceError> {
     let Some(per_invocation) = declared_statements(body) else {
-        return;
+        return Ok(());
     };
     let declared = per_invocation
-        .saturating_mul(invocations)
-        .saturating_add(per_invocation)
-        .saturating_mul(DECLARED_WORK_HEADROOM);
+        .checked_mul(invocations)
+        .and_then(|work| work.checked_add(per_invocation))
+        .and_then(|work| work.checked_mul(DECLARED_WORK_HEADROOM))
+        .ok_or_else(|| {
+            ReferenceError::budget_exhaustion(format!(
+                "the program declares {per_invocation} steps per invocation over {invocations} \
+                 invocations, which passes the {} steps a run can count. Fix: dispatch the \
+                 program over a grid whose declared work fits a u64, or submit it in parts.",
+                u64::MAX
+            ))
+        })?;
     BUDGET.with(|budget| {
         if let Some((charged, ceiling, exact)) = budget.get() {
             if !exact && declared > ceiling {
@@ -292,6 +306,7 @@ pub(crate) fn admit_declared_work(body: &[Node], invocations: u64) {
             }
         }
     });
+    Ok(())
 }
 
 /// Steps one invocation of `body` charges at most, or `None` when a loop's trip
@@ -566,7 +581,7 @@ mod tests {
         let leaf = vec![Node::store("out", Expr::u32(0), Expr::u32(7))];
 
         let guard = arm(&program);
-        admit_declared_work(&leaf, 1);
+        admit_declared_work(&leaf, 1).expect("Fix: one invocation of one store is countable");
         let (_, ceiling, _) = BUDGET
             .with(Cell::get)
             .expect("Fix: the budget stays armed through admission");
@@ -578,7 +593,8 @@ mod tests {
         // One store per invocation over more invocations than the floor admits:
         // the smallest shape whose declared work exceeds it.
         let invocations = MAX_REFERENCE_STEPS + 1;
-        admit_declared_work(&leaf, invocations);
+        admit_declared_work(&leaf, invocations)
+            .expect("Fix: the floor plus one invocation is countable");
         let (_, raised, _) = BUDGET
             .with(Cell::get)
             .expect("Fix: the budget stays armed through admission");
@@ -594,7 +610,8 @@ mod tests {
             Expr::load("bound", Expr::u32(0)),
             leaf,
         )];
-        admit_declared_work(&data_derived, u64::MAX);
+        admit_declared_work(&data_derived, u64::MAX)
+            .expect("Fix: a body that declares nothing counts nothing to overflow");
         let (_, unchanged, _) = BUDGET
             .with(Cell::get)
             .expect("Fix: the budget stays armed through admission");
@@ -606,13 +623,73 @@ mod tests {
     }
 
     /// WHY: admission is a no-op without an armed budget, so an evaluator driven
-    /// directly by a unit test cannot arm one by accident.
+    /// directly by a unit test cannot arm one by accident. The invocation count
+    /// is the largest one whose declared work is still countable, so the case
+    /// proves the absent budget rather than an early refusal.
     #[test]
     fn admission_without_an_armed_budget_arms_nothing() {
-        admit_declared_work(&[Node::store("out", Expr::u32(0), Expr::u32(7))], u64::MAX);
+        admit_declared_work(
+            &[Node::store("out", Expr::u32(0), Expr::u32(7))],
+            u64::MAX / DECLARED_WORK_HEADROOM - 1,
+        )
+        .expect("Fix: work inside what a u64 counts is admitted");
         assert!(
             BUDGET.with(Cell::get).is_none(),
             "Fix: admission must not arm a budget nobody armed"
         );
+    }
+
+    /// WHY: the declared-work product used to saturate, so a dispatch whose
+    /// declared work passed `u64::MAX` set the ceiling TO `u64::MAX` and the run
+    /// that could not be bounded was the only one admitted without a bound. The
+    /// case drives the product past the end from each factor in turn --- the
+    /// invocation count, and the headroom multiply that only overflows after the
+    /// per-invocation multiply fits --- so removing any one `checked_` step goes
+    /// red. It asserts the ceiling is untouched as well as the refusal, because
+    /// a refusal that had already raised the ceiling leaves the next evaluation
+    /// on this thread unbounded.
+    #[test]
+    fn admission_refuses_declared_work_that_passes_what_a_run_can_count() {
+        let program = tiny_program();
+        // Two statements per invocation, so the per-invocation multiply is what
+        // overflows in the first case and the headroom multiply in the second.
+        let body = vec![
+            Node::store("out", Expr::u32(0), Expr::u32(7)),
+            Node::store("out", Expr::u32(1), Expr::u32(9)),
+        ];
+        let per_invocation =
+            declared_statements(&body).expect("Fix: a body of plain stores declares its work");
+
+        let guard = arm(&program);
+        let armed = BUDGET
+            .with(Cell::get)
+            .expect("Fix: the budget stays armed through a refusal");
+        // The first count wraps the per-invocation multiply to exactly zero, so
+        // a wrapping multiply reports countable work rather than a large one a
+        // later term catches; the second overflows that multiply; the third
+        // fits it and overflows the headroom multiply.
+        for invocations in [
+            u64::MAX / per_invocation + 1,
+            u64::MAX,
+            u64::MAX / per_invocation / DECLARED_WORK_HEADROOM + 1,
+        ] {
+            let refusal = admit_declared_work(&body, invocations)
+                .expect_err("Fix: declared work past u64::MAX must be refused, not saturated");
+            assert_eq!(
+                refusal.error_class(),
+                crate::ReferenceErrorClass::BudgetExhaustion,
+                "Fix: work no run can count is a budget refusal"
+            );
+            assert!(
+                refusal.to_string().contains(&invocations.to_string()),
+                "Fix: the refusal must name the invocation count it could not bound, got: {refusal}"
+            );
+            assert_eq!(
+                BUDGET.with(Cell::get),
+                Some(armed),
+                "Fix: a refused admission must leave the armed ceiling where it was"
+            );
+        }
+        drop(guard);
     }
 }

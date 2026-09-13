@@ -259,15 +259,36 @@ pub(crate) struct HashmapInvocationSnapshot {
     pub(crate) locals: HashmapLocalSnapshot,
 }
 
+/// Invocations one workgroup of `program` runs.
+///
+/// The single owner of that product. Dispatch geometry divides the grid by it
+/// and [`create_invocations`] allocates by it, and a product those two disagree
+/// on dispatches a grid the program does not describe, so both read it here.
+///
+/// # Errors
+/// Refuses when the extents multiply past what a `u32` counts. Validation
+/// refuses a zero extent but caps no product, so this is the only rule such a
+/// program meets.
+pub(crate) fn invocations_per_workgroup(program: &Program) -> Result<u32, ReferenceError> {
+    let [sx, sy, sz] = program.workgroup_size();
+    sx.checked_mul(sy)
+        .and_then(|count| count.checked_mul(sz))
+        .ok_or_else(|| {
+            ReferenceError::overflow(format!(
+                "workgroup size {sx}x{sy}x{sz} states more invocations per workgroup than a u32 \
+                 counts. Fix: state workgroup extents whose product is at most {}.",
+                u32::MAX
+            ))
+        })
+}
+
 pub(crate) fn create_invocations<'a>(
     program: &Program,
     workgroup: [u32; 3],
     entry: &'a [Node],
 ) -> Result<Vec<HashmapInvocation<'a>>, ReferenceError> {
+    let total = invocations_per_workgroup(program)?;
     let [sx, sy, sz] = program.workgroup_size();
-    let total = sx.checked_mul(sy).and_then(|c| c.checked_mul(sz)).ok_or_else(|| {
-        ReferenceError::new("workgroup invocation count overflows u32. Fix: reduce workgroup dimensions before reference execution.")
-    })?;
     let cap = usize::try_from(total).map_err(|_| {
         ReferenceError::new("workgroup invocation count exceeds host usize. Fix: reduce workgroup dimensions before reference execution.")
     })?;

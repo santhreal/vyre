@@ -338,11 +338,7 @@ pub(crate) fn run_hashmap_reference(
         ));
     }
     let [sx, sy, sz] = program.workgroup_size();
-    let invocations_per_workgroup = [sx, sy, sz]
-        .iter()
-        .copied()
-        .fold(1u32, u32::saturating_mul)
-        .max(1);
+    let invocations_per_workgroup = invocation::invocations_per_workgroup(program)?;
     let force_full_span = has_workgroup_buffer || program.stats().atomic_op_count > 0;
     let dispatch_elements = max_output_elements
         .max(program_graph_node_count.unwrap_or(0))
@@ -401,10 +397,17 @@ pub(crate) fn run_hashmap_reference(
     crate::execution::step_budget::admit_declared_work(
         entry,
         u64::from(workgroup_count_x)
-            .saturating_mul(u64::from(workgroup_count_y))
-            .saturating_mul(u64::from(workgroup_count_z))
-            .saturating_mul(u64::from(invocations_per_workgroup)),
-    );
+            .checked_mul(u64::from(workgroup_count_y))
+            .and_then(|count| count.checked_mul(u64::from(workgroup_count_z)))
+            .and_then(|count| count.checked_mul(u64::from(invocations_per_workgroup)))
+            .ok_or_else(|| {
+                ReferenceError::new(format!(
+                    "a {workgroup_count_x}x{workgroup_count_y}x{workgroup_count_z} grid of \
+                     {invocations_per_workgroup}-invocation workgroups states more invocations \
+                     than a u64 counts. Fix: dispatch the program over a smaller grid."
+                ))
+            })?,
+    )?;
     #[cfg(feature = "subgroup-ops")]
     let uses_subgroup_ops = vyre_foundation::program_caps::scan(program).subgroup_ops;
     // Canonical workgroup dispatch order (z,y,x-nested). A non-`Forward`
