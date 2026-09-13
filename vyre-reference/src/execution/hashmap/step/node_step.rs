@@ -402,10 +402,7 @@ pub(crate) fn step_nodes_frame<'a>(
             let tile_val = invocation.locals.local(tile.as_str()).ok_or_else(|| {
                 ReferenceError::new(format!("tile `{tile}` not found in scope for tile store"))
             })?;
-            let elements: std::sync::Arc<[Value]> = match tile_val {
-                Value::Array(elems) => elems,
-                single => std::sync::Arc::from([single]),
-            };
+            let elements = crate::execution::tile::to_elements(&tile_val);
             let target = buffer_mut(memory, buffer.as_str())?;
             crate::execution::tile::store_elements(target, &origin_coords, &elements)?;
         }
@@ -540,9 +537,23 @@ pub(crate) fn step_nodes_frame<'a>(
             for (input, val) in inputs.iter().zip(saved_inputs) {
                 let _ = invocation.locals.bind(input.as_str(), val);
             }
-            invocation
+            // A tile produced here used to carry no shape, so a matmul, reduce
+            // or elementwise step that consumed it refused for want of one. The
+            // result covers the broadcast target: the operand whose element
+            // count is the output length, whose extents it therefore has.
+            let out_shape = inputs.iter().find_map(|input| {
+                invocation
+                    .tile_shapes
+                    .get(input.as_str())
+                    .filter(|shape| shape.element_count() == max_len)
+                    .cloned()
+            });
+            let bound = invocation
                 .locals
                 .bind(out.as_str(), Value::array(out_elems))?;
+            if let Some(shape) = out_shape {
+                invocation.tile_shapes.insert(bound, shape);
+            }
         }
         Node::Opaque(extension) => {
             return Err(ReferenceError::new(format!(

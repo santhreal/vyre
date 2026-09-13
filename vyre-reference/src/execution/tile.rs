@@ -23,9 +23,92 @@ pub(crate) fn to_elements(val: &Value) -> std::sync::Arc<[Value]> {
     }
 }
 
+/// The origin coordinates a tile access of `rank` dimensions must state.
+///
+/// A rank-0 tile names one element, so its origin is the one global index of
+/// that element. Every other rank states one coordinate per dimension.
+const fn required_origin_rank(rank: usize) -> usize {
+    if rank == 0 {
+        1
+    } else {
+        rank
+    }
+}
+
+/// Refuse an origin that does not state one coordinate per tile dimension.
+///
+/// The missing coordinates used to read as zero, so a program that computed
+/// one coordinate too few accessed the tile at the start of the buffer and the
+/// oracle certified whatever was there. A coordinate the caller did not supply
+/// is an absent value, and an absent value is an error the oracle states.
+fn check_origin_rank(
+    origin_coords: &[u32],
+    tile_type: &Tile,
+    access: &str,
+) -> Result<(), ReferenceError> {
+    let required = required_origin_rank(tile_type.extents.len());
+    if origin_coords.len() == required {
+        return Ok(());
+    }
+    Err(ReferenceError::new(format!(
+        "tile {access} origin states {} coordinate(s) for a tile of {} dimension(s), which needs {required}. \
+         Fix: supply one origin coordinate per tile dimension.",
+        origin_coords.len(),
+        tile_type.extents.len()
+    )))
+}
+
+/// Put `value` in the tile slot the layout chose for it.
+///
+/// The slot lookup is a bounds check on the element vector, not a statement
+/// about the layout: a linear index outside the tile addresses no slot. What a
+/// layout gets wrong is covered by [`filled`], because a tile load places
+/// exactly one value per element, so a coordinate that lands on a slot another
+/// already took leaves some other slot with nothing in it.
+fn place(
+    elements: &mut [Option<Value>],
+    local_idx: usize,
+    value: Value,
+) -> Result<(), ReferenceError> {
+    let total = elements.len();
+    let slot = elements.get_mut(local_idx).ok_or_else(|| {
+        ReferenceError::new(format!(
+            "tile layout maps a coordinate to element {local_idx} of a tile holding {total}. \
+             Fix: state a layout whose linear index stays inside the tile extents."
+        ))
+    })?;
+    *slot = Some(value);
+    Ok(())
+}
+
+/// Every element of a loaded tile, or the first one the layout never reached.
+///
+/// A tile's elements used to start as `0.0` and take the loaded value only when
+/// the layout's linear index fell inside the tile, so a layout that does not
+/// cover the tile left a slot holding a float the buffer never supplied and
+/// every comparison downstream ran against it. `Layout::linear_index` folds
+/// coordinates it cannot map to element zero, which is such a layout.
+fn filled(elements: Vec<Option<Value>>) -> Result<Vec<Value>, ReferenceError> {
+    let total = elements.len();
+    elements
+        .into_iter()
+        .enumerate()
+        .map(|(slot, value)| {
+            value.ok_or_else(|| {
+                ReferenceError::new(format!(
+                    "tile layout leaves element {slot} of {total} with no value. \
+                     Fix: state a layout that maps a tile coordinate to every element."
+                ))
+            })
+        })
+        .collect()
+}
+
 /// Load tile elements from a backing buffer with layout translation.
 ///
 /// # Errors
+/// Refuses an origin that does not state one coordinate per tile dimension, and
+/// a layout that leaves an element unmapped or maps two coordinates to one.
 /// Propagates an out-of-bounds refusal from any element the tile reads.
 pub(crate) fn load_elements(
     target: &Buffer,
@@ -33,8 +116,9 @@ pub(crate) fn load_elements(
     tile_type: &Tile,
     layout: &Layout,
 ) -> Result<Vec<Value>, ReferenceError> {
+    check_origin_rank(origin_coords, tile_type, "load")?;
     let total_elements = tile_type.element_count();
-    let mut elements = vec![Value::Float(0.0); total_elements];
+    let mut elements: Vec<Option<Value>> = vec![None; total_elements];
 
     let mut strides = vec![1u32; tile_type.extents.len()];
     for i in (0..tile_type.extents.len().saturating_sub(1)).rev() {
@@ -42,33 +126,32 @@ pub(crate) fn load_elements(
     }
 
     if tile_type.extents.is_empty() {
-        let global_idx = origin_coords.first().copied().unwrap_or(0);
-        let val = oob::load(target, global_idx)?;
-        elements = vec![val];
+        let val = oob::load(target, origin_coords[0])?;
+        return Ok(vec![val]);
     } else if tile_type.extents.len() == 1 {
         let n = tile_type.extents[0];
-        let base = origin_coords.first().copied().unwrap_or(0);
+        let base = origin_coords[0];
         for i in 0..n {
-            let global_idx = base + i;
-            let val = oob::load(target, global_idx)?;
-            let local_idx = layout.linear_index(&[i], &tile_type.extents);
-            if local_idx < elements.len() {
-                elements[local_idx] = val;
-            }
+            let val = oob::load(target, base + i)?;
+            place(
+                &mut elements,
+                layout.linear_index(&[i], &tile_type.extents),
+                val,
+            )?;
         }
     } else if tile_type.extents.len() == 2 {
         let rows = tile_type.extents[0];
         let cols = tile_type.extents[1];
-        let r_base = origin_coords.first().copied().unwrap_or(0);
-        let c_base = origin_coords.get(1).copied().unwrap_or(0);
+        let r_base = origin_coords[0];
+        let c_base = origin_coords[1];
         for r in 0..rows {
             for c in 0..cols {
-                let global_idx = (r_base + r) * cols + (c_base + c);
-                let val = oob::load(target, global_idx)?;
-                let local_idx = layout.linear_index(&[r, c], &tile_type.extents);
-                if local_idx < elements.len() {
-                    elements[local_idx] = val;
-                }
+                let val = oob::load(target, (r_base + r) * cols + (c_base + c))?;
+                place(
+                    &mut elements,
+                    layout.linear_index(&[r, c], &tile_type.extents),
+                    val,
+                )?;
             }
         }
     } else {
@@ -76,32 +159,54 @@ pub(crate) fn load_elements(
             let coords = row_major_coords(idx as u32, &tile_type.extents);
             let mut global_idx = 0u32;
             for (i, &c) in coords.iter().enumerate() {
-                let base = origin_coords.get(i).copied().unwrap_or(0);
-                global_idx += (base + c) * strides[i];
+                global_idx += (origin_coords[i] + c) * strides[i];
             }
             let val = oob::load(target, global_idx)?;
-            let local_idx = layout.linear_index(&coords, &tile_type.extents);
-            if local_idx < elements.len() {
-                elements[local_idx] = val;
-            }
+            place(
+                &mut elements,
+                layout.linear_index(&coords, &tile_type.extents),
+                val,
+            )?;
         }
     }
-    Ok(elements)
+    filled(elements)
 }
 
 /// Store tile elements sequentially into a backing buffer starting at `origin_coords`.
 ///
+/// The write is one linear run from the first coordinate, so a single
+/// coordinate describes it in full. A later coordinate is admitted only at
+/// zero, which is the displacement the run already makes. A non-zero one asks
+/// for a displacement along an axis the run has no stride for, and used to be
+/// dropped: the elements landed where a load from the same origin does not read
+/// them. An empty origin states no destination at all, and used to write from
+/// index zero.
+///
 /// # Errors
+/// Refuses an origin that is empty or that displaces an axis after the first.
 /// Propagates an out-of-bounds refusal from any element the tile writes.
 pub(crate) fn store_elements(
     target: &mut Buffer,
     origin_coords: &[u32],
     elements: &[Value],
 ) -> Result<(), ReferenceError> {
-    let base = origin_coords.first().copied().unwrap_or(0);
+    let (base, rest) = origin_coords.split_first().ok_or_else(|| {
+        ReferenceError::new(
+            "tile store states no origin coordinate. \
+             Fix: supply the buffer index the tile's first element is written to."
+                .to_string(),
+        )
+    })?;
+    if let Some(axis) = rest.iter().position(|coord| *coord != 0) {
+        return Err(ReferenceError::new(format!(
+            "tile store origin displaces axis {} by {}, and the store writes one linear run from the first coordinate. \
+             Fix: store from an origin whose later coordinates are zero.",
+            axis + 1,
+            rest[axis]
+        )));
+    }
     for (i, elem) in elements.iter().enumerate() {
-        let global_idx = base + (i as u32);
-        oob::store(target, global_idx, elem)?;
+        oob::store(target, base + (i as u32), elem)?;
     }
     Ok(())
 }
