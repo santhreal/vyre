@@ -538,6 +538,11 @@ subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]
+name = "oracle-independence"
+subsets = ["contract-rules"]
+workflows = ["gates.yml"]
+
+[[gate]]
 name = "oracle-sweeps"
 subsets = ["contract-rules"]
 workflows = ["gates.yml"]

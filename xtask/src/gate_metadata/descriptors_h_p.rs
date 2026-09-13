@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with H through P.
-pub const GATES_H_P: [GateDescriptor; 63] = [
+pub const GATES_H_P: [GateDescriptor; 64] = [
     GateDescriptor {
         name: "heuristic-audit",
         help: "Enforce heuristic-audit contracts",
@@ -609,6 +609,18 @@ pub const GATES_H_P: [GateDescriptor; 63] = [
         prerequisites: &[],
         resource_class: ResourceClass::Process,
         proof: "xtask_registry::release::optimization_matrix::tests::optimization_matrix_detects_incomplete_catalog_entries",
+    },
+    GateDescriptor {
+        name: "oracle-independence",
+        help: "Prove the reference interpreter reads only the semantic half of vyre-foundation.  Derives the crate's public surface from its own source and fails on any oracle  reference to a module or macro that decides how a program runs.",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "oracle sources",
+        inputs: &[],
+        artifacts: &[],
+        prerequisites: &[],
+        resource_class: ResourceClass::Cpu,
+        proof: "crate::gates::oracle_independence::tests::the_forbidden_half_of_the_surface_is_not_empty",
     },
     GateDescriptor {
         name: "oracle-sweeps",

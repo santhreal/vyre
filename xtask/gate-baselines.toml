@@ -424,6 +424,10 @@ name = "optimization-matrix"
 findings = 0
 
 [[gate]]
+name = "oracle-independence"
+findings = 0
+
+[[gate]]
 name = "oracle-sweeps"
 findings = 0
 

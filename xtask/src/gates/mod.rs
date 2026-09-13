@@ -74,6 +74,7 @@ pub mod manifest_contract;
 pub mod metal_parity;
 pub mod module_layout;
 pub mod op_names;
+pub mod oracle_independence;
 pub mod oracle_sweeps;
 pub mod ownership;
 pub mod parity_testing;
@@ -213,6 +214,10 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("metal-parity", &metal_parity::MetalParity),
     ("module-layout", &module_layout::ModuleLayout),
     ("op-names", &op_names::OpNames),
+    (
+        "oracle-independence",
+        &oracle_independence::OracleIndependence,
+    ),
     ("oracle-sweeps", &oracle_sweeps::OracleSweeps),
     (
         "parity-testing-isolated",
