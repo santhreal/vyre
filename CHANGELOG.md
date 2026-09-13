@@ -9,6 +9,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Added
 
+- `vyre_foundation::composition::lesser_extent` yields the smaller of two
+  buffer extents, so a composition that reads one buffer and writes another
+  bounds its loop by both.
 - `vyre_driver::staged_input_gather!` implements the `core` accessor and the
   staged-input `gather` for a materialized instance whose module carries
   `input_slots`, so every driver resolves inter-module values in target binding

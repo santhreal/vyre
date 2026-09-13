@@ -1280,6 +1280,7 @@ pub macro vyre_driver::executable_module!
 pub macro vyre_driver::materializer_passthrough!
 pub macro vyre_driver::register_backend!
 pub macro vyre_driver::resident_pipeline_launch!
+pub macro vyre_driver::staged_input_gather!
 pub mod vyre_driver
 pub mod vyre_driver::accounting
 pub mod vyre_driver::allocation

@@ -1506,6 +1506,7 @@ pub fn vyre_foundation::composition::bounded_index(index: vyre_foundation::ir::E
 pub fn vyre_foundation::composition::bounded_index_when(in_range: vyre_foundation::ir::Expr, index: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::composition::duplicate_self_exclusive_regions(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<alloc::string::String>
 pub fn vyre_foundation::composition::is_anonymous_generator(generator: &str) -> bool
+pub fn vyre_foundation::composition::lesser_extent(left: vyre_foundation::ir::Expr, right: vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::composition::mark_self_exclusive_region(generator: &str) -> alloc::string::String
 pub fn vyre_foundation::composition::reparent_program_children(program: &vyre_foundation::ir::Program, parent_op_id: &str) -> alloc::vec::Vec<vyre_foundation::ir::Node>
 pub fn vyre_foundation::composition::self_exclusive_region_key(generator: &str) -> core::option::Option<&str>

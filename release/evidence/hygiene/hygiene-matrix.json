@@ -1,10 +1,10 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"dc22459d88a8a5896942b143326e4610b4664578","commit_timestamp":"1789304622","parent_commit":"66df41e10a714cc84ea889ee86dd178a3177003d","dirty":false,"source_fingerprint":"git:dc22459d88a8a5896942b143326e4610b4664578:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"150bddb4626afa2df5d4a2aa37d3211852bf62da","commit_timestamp":"1789340256","parent_commit":"b8445c4bd172cbcbab71634bee04b9c228bce332","dirty":true,"source_fingerprint":"git:150bddb4626afa2df5d4a2aa37d3211852bf62da:dirty=true:worktree=592c15ba31dc043a95ea336d0ada5be93930c0c3e811e040fee27e22f921deee"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4852,
+  "scanned_files": 4854,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -4618,7 +4618,7 @@
     },
     {
       "path": "vyre-test-support/src/registry_nets.rs",
-      "line": 489,
+      "line": 582,
       "pattern": "panic_macro",
       "owner_lane": "coordination",
       "surface": "test",
@@ -4628,7 +4628,7 @@
     },
     {
       "path": "vyre-test-support/src/registry_nets.rs",
-      "line": 493,
+      "line": 586,
       "pattern": "panic_macro",
       "owner_lane": "coordination",
       "surface": "test",
@@ -4638,7 +4638,7 @@
     },
     {
       "path": "vyre-test-support/src/registry_nets.rs",
-      "line": 506,
+      "line": 599,
       "pattern": "panic_macro",
       "owner_lane": "coordination",
       "surface": "test",
@@ -6628,7 +6628,7 @@
     },
     {
       "path": "xtask/src/artifact_gate.rs",
-      "line": 609,
+      "line": 671,
       "pattern": "documented_panic_contract",
       "owner_lane": "testing_evidence",
       "surface": "release_tooling",
@@ -9006,19 +9006,19 @@
     },
     {
       "path": "vyre-test-support/src/registry_nets.rs",
-      "line": 489,
+      "line": 582,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|| panic!(\"Fix: `{id}` must declare test inputs to pin a witness\")))("
     },
     {
       "path": "vyre-test-support/src/registry_nets.rs",
-      "line": 493,
+      "line": 586,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|| panic!(\"Fix: `{id}` must declare a neutral builder to pin a witness\"));"
     },
     {
       "path": "vyre-test-support/src/registry_nets.rs",
-      "line": 506,
+      "line": 599,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: reference run failed for `{id}` case {case}: {error}\")"
     },
@@ -10345,7 +10345,7 @@
     },
     {
       "path": "xtask/src/artifact_gate.rs",
-      "line": 609,
+      "line": 671,
       "pattern": "documented_panic_contract",
       "text": "let (lane_entries, lane_errors) = handle.join().expect("
     },
