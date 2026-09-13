@@ -173,12 +173,19 @@ fn source_tree_fingerprint_from_paths(workspace_root: &Path, paths: &[u8]) -> St
     hasher.finalize().to_hex().to_string()
 }
 
+/// Whether `path` names a tree the benchmarked runtime is never built from.
+///
+/// Generated documents, release and verification paperwork, assurance tooling,
+/// and tests are produced from the runtime rather than compiled into it. A
+/// document a crate does compile in, such as `docs/optimization`, is absent
+/// here and keys the measurement as any other source file does.
 fn source_tree_path_is_benchmark_provenance_ignored(path: &[u8]) -> bool {
     path == b"cargo_full"
         || path == b"cargo_full.cmd"
         || path == b"CHANGELOG.md"
         || path.starts_with(b".github/")
         || path.starts_with(b"docs/generated/")
+        || path.starts_with(b"docs/testing/")
         || path.starts_with(b"release/changes/")
         || path.starts_with(b"release/evidence/")
         || path.starts_with(b"scripts/")

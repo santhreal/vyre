@@ -191,3 +191,106 @@ fn a_hand_authored_document_still_changes_benchmark_identity() {
         "Fix: a hand-authored document must remain part of runtime source identity."
     );
 }
+
+/// Every document a crate compiles in keys the measurement.
+///
+/// WHY: the exclusion list is a set of prefixes, and each one added to stop a
+/// paperwork rewrite from invalidating a measurement can also drop a file the
+/// runtime is built from. A measurement keyed to a fingerprint that ignores a
+/// compiled-in table is a number attributed to the wrong binary. The set is
+/// read out of the workspace at run time, so a crate that starts including a
+/// document under an excluded prefix turns this red without anyone listing it.
+///
+/// What this does not catch: a file a crate opens at run time by path rather
+/// than compiling in. `include_str!` and `include_bytes!` are what the build
+/// records.
+#[test]
+fn every_compiled_in_document_keys_the_measurement() {
+    let root = vyre_test_support::monorepo::vyre_workspace_root();
+    let included = compiled_in_paths(&root);
+    assert!(
+        !included.is_empty(),
+        "Fix: the workspace compiles in at least one document; the scan found none, so it is \
+         reading the wrong tree at {}",
+        root.display()
+    );
+
+    let workspace = workspace();
+    for relative_path in &included {
+        let base = source_tree_fingerprint_at(workspace.path());
+        write_fixture(workspace.path(), relative_path, b"compiled-in content\n");
+        assert_ne!(
+            source_tree_fingerprint_at(workspace.path()),
+            base,
+            "Fix: `{relative_path}` is compiled into a crate, so it must key the measurement. \
+             Narrow the prefix that excludes it."
+        );
+        fs::remove_file(workspace.path().join(relative_path))
+            .expect("Fix: remove the compiled-in fixture.");
+    }
+}
+
+/// Workspace-relative paths a runtime crate compiles in with `include_str!` or
+/// `include_bytes!`, excluding a crate's own sources.
+///
+/// A source under the assurance tooling is skipped: the tooling is not linked
+/// into a benchmarked binary, so what it compiles in does not key a
+/// measurement either.
+fn compiled_in_paths(root: &Path) -> Vec<String> {
+    let mut found: Vec<String> = Vec::new();
+    for source in runtime_rust_sources(root) {
+        let text = fs::read_to_string(&source).unwrap_or_default();
+        let directory = source.parent().unwrap_or(root).to_path_buf();
+        for macro_name in ["include_str!(", "include_bytes!("] {
+            let mut rest = text.as_str();
+            while let Some(at) = rest.find(macro_name) {
+                rest = &rest[at + macro_name.len()..];
+                let Some(open) = rest.find('"') else { break };
+                let Some(close) = rest[open + 1..].find('"') else {
+                    break;
+                };
+                let literal = &rest[open + 1..open + 1 + close];
+                rest = &rest[open + 1 + close..];
+                let Ok(resolved) = directory.join(literal).canonicalize() else {
+                    continue;
+                };
+                let Ok(relative) = resolved.strip_prefix(root) else {
+                    continue;
+                };
+                let relative = relative.to_string_lossy().replace('\\', "/");
+                if relative.contains("/src/") || relative.starts_with("src/") {
+                    continue;
+                }
+                if !found.contains(&relative) {
+                    found.push(relative);
+                }
+            }
+        }
+    }
+    found.sort();
+    found
+}
+
+/// Every tracked `.rs` file that a benchmarked binary can be built from.
+fn runtime_rust_sources(root: &Path) -> Vec<std::path::PathBuf> {
+    let output = Command::new("git")
+        .args(["ls-files", "-z", "--", "*.rs"])
+        .current_dir(root)
+        .output()
+        .expect("Fix: list the workspace Rust sources.");
+    assert!(
+        output.status.success(),
+        "Fix: `git ls-files` failed in {}",
+        root.display()
+    );
+    output
+        .stdout
+        .split(|byte| *byte == 0)
+        .filter(|path| !path.is_empty())
+        .map(|path| String::from_utf8_lossy(path).replace('\\', "/"))
+        .filter(|relative| !relative.starts_with("xtask"))
+        .filter(|relative| !relative.starts_with("scripts/"))
+        .filter(|relative| !relative.contains("/tests/") && !relative.starts_with("tests/"))
+        .map(|relative| root.join(relative))
+        .collect()
+}
