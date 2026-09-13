@@ -71,11 +71,33 @@ pub(crate) fn run_by_name(program: &vyre::Program, named: &[(&str, Vec<u8>)]) ->
 }
 
 /// The dense token stream: types, starts, lengths, and how many are valid.
+#[derive(Clone)]
 pub(crate) struct DenseTokens {
     pub(crate) types: Vec<u8>,
     pub(crate) starts: Vec<u8>,
     pub(crate) lens: Vec<u8>,
     pub(crate) count: usize,
+}
+
+/// The dense stream for `source`, from cache when the chain has already run it.
+///
+/// The chain is five reference-interpreted programs and a pure function of the
+/// source, and the suites feed the same source to one extractor after another:
+/// the bounds suite alone asks for the same prefix once per extractor. Caching
+/// turns that into one chain run per distinct source.
+pub(crate) fn tokenize(source: &str) -> DenseTokens {
+    thread_local! {
+        static DENSE: std::cell::RefCell<std::collections::HashMap<String, DenseTokens>> =
+            std::cell::RefCell::new(std::collections::HashMap::new());
+    }
+    if let Some(cached) = DENSE.with(|cache| cache.borrow().get(source).cloned()) {
+        return cached;
+    }
+    let dense = tokenize_uncached(source);
+    DENSE.with(|cache| {
+        cache.borrow_mut().insert(source.to_string(), dense.clone());
+    });
+    dense
 }
 
 /// Run the five-stage Go tokenizer and return the dense, source-ordered stream.
@@ -85,7 +107,7 @@ pub(crate) struct DenseTokens {
 /// "the next token". The quote-parity pre-pass runs first because no single
 /// byte lane can tell an opening quote from a closing one. See the module docs
 /// on `go_lexer` for why each stage exists.
-pub(crate) fn tokenize(source: &str) -> DenseTokens {
+fn tokenize_uncached(source: &str) -> DenseTokens {
     let haystack_words = source.len().max(1);
 
     // Quote parity first: a `"` opens a literal only when an even number of

@@ -25,10 +25,12 @@ use wire_words::go::{pack_source as pack, run, tokenize, zeroed_u32_words as zer
 
 use vyre::ir::Expr;
 use vyre_libs::parsing::go::parse::ast_ops::{
-    go_extract_channel_receives, go_extract_channel_sends,
+    go_extract_channel_creations, go_extract_channel_receives, go_extract_channel_sends,
+    go_extract_defer_calls, go_extract_goroutine_calls,
 };
 use vyre_libs::parsing::go::parse::structure::{
-    go_extract_packages_and_imports, GO_SPAN_RECORD_WORDS,
+    go_extract_declarations, go_extract_packages_and_imports, GO_DECL_RECORD_WORDS,
+    GO_SPAN_RECORD_WORDS,
 };
 use vyre_spec::go_token::{TOK_ARROW, TOK_ASSIGN, TOK_IDENTIFIER, TOK_NEWLINE, TOK_STRING};
 
@@ -521,4 +523,218 @@ fn a_channel_arrow_is_a_single_token() {
         .map(|token| token.text)
         .collect();
     assert_eq!(arrows, vec!["<-"]);
+}
+
+// ---------------------------------------------------------------------------
+// Buffer bounds
+// ---------------------------------------------------------------------------
+
+/// Every extractor built from `vyre-libs-parsing`'s Go `parse` module.
+///
+/// The name is the tail of the operation id each extractor stamps on its
+/// program, which is what [`declared_go_extractor_op_ids`] reads back out of the
+/// module sources, so an extractor added without a probe here fails
+/// [`every_go_extractor_has_a_bounds_probe`] instead of passing unexercised.
+const GO_EXTRACTOR_BOUNDS_PROBES: &[(&str, fn(&str))] = &[
+    ("go_extract_packages_and_imports", |source| {
+        let tokens = tight_tokens(source);
+        let program = go_extract_packages_and_imports(
+            "tok_types",
+            "tok_starts",
+            "tok_lens",
+            "haystack",
+            Expr::u32(tokens.3 as u32),
+            "out_packages",
+            "out_package_counts",
+            "out_imports",
+            "out_import_counts",
+        );
+        let records = zeroed(
+            tokens
+                .3
+                .saturating_mul(GO_SPAN_RECORD_WORDS as usize)
+                .max(1),
+        );
+        let _ = run(
+            &program,
+            vec![
+                tokens.0,
+                tokens.1,
+                tokens.2,
+                pack(source),
+                records.clone(),
+                zeroed(1),
+                records,
+                zeroed(1),
+            ],
+        );
+    }),
+    ("go_extract_declarations", |source| {
+        run_span_extractor(go_extract_declarations, source, GO_DECL_RECORD_WORDS);
+    }),
+    ("go_extract_channel_sends", |source| {
+        run_span_extractor(go_extract_channel_sends, source, GO_SPAN_RECORD_WORDS);
+    }),
+    ("go_extract_channel_receives", |source| {
+        run_span_extractor(go_extract_channel_receives, source, GO_SPAN_RECORD_WORDS);
+    }),
+    ("go_extract_channel_creations", |source| {
+        run_span_extractor(go_extract_channel_creations, source, GO_SPAN_RECORD_WORDS);
+    }),
+    ("go_extract_goroutine_calls", |source| {
+        run_span_extractor(go_extract_goroutine_calls, source, GO_SPAN_RECORD_WORDS);
+    }),
+    ("go_extract_defer_calls", |source| {
+        run_span_extractor(go_extract_defer_calls, source, GO_SPAN_RECORD_WORDS);
+    }),
+];
+
+/// The dense token arrays cut to the tokens that exist.
+///
+/// The tokenizer hands back one slot per source byte with the tail unused, so an
+/// extractor that indexes one past the last token lands in that slack and reads
+/// a zero instead of leaving the buffer. A caller binding the stream it was
+/// given has no slack: the arrays are as long as the token count, and
+/// `clamped_by_extents` then makes the extent and the token count the same
+/// number. That is the binding these probes use, so a missing bound shows up as
+/// the out-of-bounds access it is on a device.
+fn tight_tokens(source: &str) -> (Vec<u8>, Vec<u8>, Vec<u8>, usize) {
+    let (mut kinds, mut starts, mut lens, count) = dense_arrays(source);
+    let bytes = count.max(1) * 4;
+    kinds.truncate(bytes);
+    starts.truncate(bytes);
+    lens.truncate(bytes);
+    (kinds, starts, lens, count)
+}
+
+/// Drive one of the six extractors that share the `(tokens, haystack) -> records`
+/// shape, discarding the records. The bounds probes want the execution, not the
+/// counts.
+fn run_span_extractor(
+    build: fn(&str, &str, &str, &str, Expr, &str, &str) -> vyre::Program,
+    source: &str,
+    record_words: u32,
+) {
+    let (kinds, starts, lens, count) = tight_tokens(source);
+    let program = build(
+        "tok_types",
+        "tok_starts",
+        "tok_lens",
+        "haystack",
+        Expr::u32(count as u32),
+        "out_records",
+        "out_counts",
+    );
+    let _ = run(
+        &program,
+        vec![
+            kinds,
+            starts,
+            lens,
+            pack(source),
+            zeroed(count.saturating_mul(record_words as usize).max(1)),
+            zeroed(1),
+        ],
+    );
+}
+
+/// The operation-id tail of every extractor the Go `parse` module defines.
+///
+/// Read out of the module sources rather than listed, so the set grows with the
+/// module. The op id is the identifier the extractor publishes, which is why it
+/// is the thing scanned for: a private helper that builds part of a program has
+/// none, and a new extractor cannot acquire one silently.
+fn declared_go_extractor_op_ids() -> Vec<String> {
+    const PREFIX: &str = "vyre-libs::parsing::go_extract_";
+    const SOURCES: &[&str] = &[
+        include_str!("../../vyre-libs-parsing/src/parsing/go/parse/ast_ops.rs"),
+        include_str!("../../vyre-libs-parsing/src/parsing/go/parse/structure.rs"),
+    ];
+    let mut names: Vec<String> = SOURCES
+        .iter()
+        .flat_map(|source| {
+            source.match_indices(PREFIX).map(move |(at, _)| {
+                let tail = &source[at + PREFIX.len()..];
+                let name: String = tail
+                    .chars()
+                    .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+                    .collect();
+                format!("go_extract_{name}")
+            })
+        })
+        .collect();
+    names.sort();
+    names.dedup();
+    names
+}
+
+/// Each Go extractor is exercised by a bounds probe.
+///
+/// The probe table is the coverage surface of the bounds test below. Without
+/// this check a seventh extractor would be added, indexed one token past its
+/// guard exactly as three of the existing six did, and the suite would stay
+/// green because nothing ran it.
+#[test]
+fn every_go_extractor_has_a_bounds_probe() {
+    let mut probed: Vec<String> = GO_EXTRACTOR_BOUNDS_PROBES
+        .iter()
+        .map(|(name, _)| (*name).to_string())
+        .collect();
+    probed.sort();
+    assert_eq!(
+        probed,
+        declared_go_extractor_op_ids(),
+        "every extractor the Go parse module publishes needs an entry in \
+         GO_EXTRACTOR_BOUNDS_PROBES"
+    );
+}
+
+/// No extractor reads past a token array or past the source bytes, at any
+/// position a token can end.
+///
+/// WHY: an extractor's match condition is one `Expr`, and `Expr::and` evaluates
+/// both operands, so a bound written as a conjunct beside a load does not stop
+/// that load. Three accesses ran past their buffer on that reasoning:
+/// `token_bytes_eq` compared a keyword against source bytes the token was too
+/// short to have, reaching past the haystack for any token within
+/// `keyword.len()` bytes of the end; `go_extract_declarations` read the token
+/// after a trailing `func`; and `go_extract_channel_sends` probed `t + 2` under
+/// a guard that only admitted `t + 1`. The reference interpreter reports each as
+/// an out-of-bounds access; a device does not, and reads whatever is there.
+///
+/// The cut positions are the token ends of the fixture, computed at run time, so
+/// each token in turn sits flush against the end of the haystack with no bytes
+/// behind it. That is the condition all three defects needed.
+///
+/// It asserts only that every access stays inside its buffer. A source cut short
+/// has no defined extraction count, so there is nothing else to assert here; the
+/// counts are pinned by the cases above.
+#[test]
+fn no_go_extractor_reads_past_a_buffer_at_any_token_end() {
+    let source = "package p\n\nimport (\n\t\"context\"\n)\n\ntype T interface {\n\tf()\n}\n\nfunc (t T) g(in <-chan int) {\n\tgo h()\n\tdefer h()\n\tc := make(chan int)\n\tc <- 1\n\tv := <-c\n}\n";
+    let dense = tokenize(source);
+    let starts = decode_u32_words(&dense.starts);
+    let lens = decode_u32_words(&dense.lens);
+    let mut cuts: Vec<usize> = (0..dense.count)
+        .map(|i| (starts[i] as usize + lens[i] as usize).min(source.len()))
+        .filter(|cut| *cut > 0 && source.is_char_boundary(*cut))
+        .collect();
+    cuts.sort_unstable();
+    cuts.dedup();
+    assert!(
+        cuts.len() > 20,
+        "the fixture must place many distinct tokens against the end; got {} cut positions",
+        cuts.len()
+    );
+
+    for cut in cuts {
+        for (name, probe) in GO_EXTRACTOR_BOUNDS_PROBES {
+            let prefix = &source[..cut];
+            let outcome = std::panic::catch_unwind(|| probe(prefix));
+            assert!(
+                outcome.is_ok(),
+                "{name} failed on the {cut}-byte prefix ending at a token boundary: {prefix:?}"
+            );
+        }
+    }
 }

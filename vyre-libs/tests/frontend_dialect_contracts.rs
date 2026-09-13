@@ -88,12 +88,20 @@ fn domain_neutral_schema_contracts_require_versions_and_visitors() {
         nodes: vec![
             ExternalSchemaNode {
                 op_name: "vyre-libs::generic::transform".to_string(),
-                fields: vec![ExternalField { name: "scale".to_string(), declared_member: FieldType::U32, raw_value: "4".to_string() }],
+                fields: vec![ExternalField {
+                    name: "scale".to_string(),
+                    declared_member: FieldType::U32,
+                    raw_value: "4".to_string(),
+                }],
                 bound_resources: vec!["input_buf".to_string(), "intermediate_buf".to_string()],
             },
             ExternalSchemaNode {
                 op_name: "vyre-libs::generic::reduce".to_string(),
-                fields: vec![ExternalField { name: "axis".to_string(), declared_member: FieldType::U32, raw_value: "0".to_string() }],
+                fields: vec![ExternalField {
+                    name: "axis".to_string(),
+                    declared_member: FieldType::U32,
+                    raw_value: "0".to_string(),
+                }],
                 bound_resources: vec!["intermediate_buf".to_string(), "output_buf".to_string()],
             },
         ],

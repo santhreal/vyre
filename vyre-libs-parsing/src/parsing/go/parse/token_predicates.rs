@@ -19,6 +19,15 @@ pub(super) fn token_len(tok_lens: &str, idx: Expr) -> Expr {
 }
 
 /// Compare a token's source bytes against a static byte string.
+///
+/// The length test and the per-byte tests are one `Expr`, and `Expr::and`
+/// evaluates both operands, so the byte loads run even for a token whose
+/// length already ruled the needle out. A token near the end of the source is
+/// exactly that case: `token_start + needle.len()` reaches past the haystack
+/// while the length conjunct is already false. The loads therefore go through
+/// the canonical clamp, which keeps the access in bounds on every backend; the
+/// clamped byte only ever reaches a conjunction the length test has already
+/// falsified, so the result is unchanged.
 pub(super) fn token_bytes_eq(
     haystack: &str,
     tok_starts: &str,
@@ -35,7 +44,7 @@ pub(super) fn token_bytes_eq(
             expr,
             Expr::eq(
                 Expr::bitand(
-                    Expr::load(
+                    vyre_primitives::ir_safe::clamped_load(
                         haystack,
                         Expr::add(
                             token_start(tok_starts, idx.clone()),
@@ -54,6 +63,22 @@ pub(super) fn token_bytes_eq(
 /// Test whether a token is an identifier.
 pub(super) fn token_is_ident(tok_types: &str, idx: Expr) -> Expr {
     token_type_eq(tok_types, idx, TOK_IDENTIFIER)
+}
+
+/// Clamp a token-array index to the token count.
+///
+/// A predicate over a token at `t + k` is an `Expr`, and `Expr::and` evaluates
+/// both operands, so writing the bound as a conjunct beside the predicate does
+/// not stop the predicate's loads. The clamp keeps those loads inside the token
+/// arrays; the caller supplies the value an out-of-range index must yield by
+/// conjoining the same `idx < num_tokens` test, whose result the clamped
+/// predicate cannot change.
+pub(super) fn clamped_token_index(idx: Expr, num_tokens: Expr) -> Expr {
+    Expr::select(
+        Expr::lt(idx.clone(), num_tokens.clone()),
+        idx,
+        Expr::saturating_sub(num_tokens, Expr::u32(1)),
+    )
 }
 
 /// Go keywords that can immediately precede a receive expression.

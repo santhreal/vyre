@@ -142,7 +142,7 @@ pub fn go_extract_packages_and_imports(
     // `num_tokens` is the caller's token count and reaches three forward scans
     // as their trip count, so it is clamped once here to the token array it
     // indexes.
-    let num_tokens = clamped_by_extents(num_tokens, tok_types, []);
+    let num_tokens = clamped_by_extents(num_tokens, tok_types, [tok_starts, tok_lens]);
     let t = Expr::logical_index(0);
     let body = vec![
         emit_keyword_span_record_nodes(
@@ -257,7 +257,7 @@ pub fn go_extract_declarations(
     out_decls: &str,
     out_decl_counts: &str,
 ) -> Program {
-    let num_tokens = clamped_by_extents(num_tokens, tok_types, []);
+    let num_tokens = clamped_by_extents(num_tokens, tok_types, [tok_starts, tok_lens]);
     let t = Expr::logical_index(0);
     let decl_span = GoDeclSpan {
         tok_types,
@@ -269,13 +269,22 @@ pub fn go_extract_declarations(
     };
     let body = vec![
         Node::if_then(
-            token_is_keyword(
-                haystack,
-                tok_types,
-                tok_starts,
-                tok_lens,
-                t.clone(),
-                b"func",
+            // `t + 1` is the token that carries the name, or opens a method
+            // receiver list. A `func` that is the last token has neither, so the
+            // branch is admitted only when that token exists; without the bound
+            // the probe below reads one past the token arrays. Both operands are
+            // safe to evaluate for every lane, which the non-short-circuiting
+            // `and` requires.
+            Expr::and(
+                Expr::lt(Expr::add(t.clone(), Expr::u32(1)), num_tokens.clone()),
+                token_is_keyword(
+                    haystack,
+                    tok_types,
+                    tok_starts,
+                    tok_lens,
+                    t.clone(),
+                    b"func",
+                ),
             ),
             vec![
                 Node::let_bind("decl_kind", Expr::u32(GO_DECL_FUNC)),
@@ -323,13 +332,20 @@ pub fn go_extract_declarations(
                         Node::assign("name_tok", Expr::add(Expr::var("recv_end"), Expr::u32(1))),
                     ],
                 ),
+                // The receiver scan above can leave `name_tok` one past the last
+                // token, when a method's receiver list closes on it. The bound is
+                // a separate `if_then` rather than a conjunct because the
+                // identifier test loads the token kind at that index.
                 Node::if_then(
-                    token_is_ident(tok_types, Expr::var("name_tok")),
-                    decl_span.nodes(
-                        Expr::add(Expr::var("name_tok"), Expr::u32(1)),
-                        Expr::var("decl_kind"),
-                        Expr::var("name_tok"),
-                    ),
+                    Expr::lt(Expr::var("name_tok"), num_tokens.clone()),
+                    vec![Node::if_then(
+                        token_is_ident(tok_types, Expr::var("name_tok")),
+                        decl_span.nodes(
+                            Expr::add(Expr::var("name_tok"), Expr::u32(1)),
+                            Expr::var("decl_kind"),
+                            Expr::var("name_tok"),
+                        ),
+                    )],
                 ),
             ],
         ),

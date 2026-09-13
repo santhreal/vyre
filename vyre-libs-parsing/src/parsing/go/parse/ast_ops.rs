@@ -4,8 +4,8 @@
 //! recording is written once.
 
 use crate::parsing::go::parse::token_predicates::{
-    emit_keyword_span_record_nodes, emit_span_record_nodes, token_is_chan_keyword,
-    token_is_keyword, token_is_receive_leading_keyword, token_type_eq,
+    clamped_token_index, emit_keyword_span_record_nodes, emit_span_record_nodes,
+    token_is_chan_keyword, token_is_keyword, token_is_receive_leading_keyword, token_type_eq,
 };
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -148,12 +148,20 @@ pub fn go_extract_channel_sends(
                         // parameter list. The arrow binds to `chan`, not to
                         // `in`, so the identifier before it is not a channel
                         // being sent to.
-                        Expr::not(token_is_chan_keyword(
-                            haystack,
-                            tok_types,
-                            tok_starts,
-                            tok_lens,
-                            after.clone(),
+                        //
+                        // This probe reaches `t + 2`, one further than the
+                        // guard above admits, so it carries its own bound. The
+                        // bound is a conjunct and the index is clamped: a
+                        // conjunct alone leaves the loads beside it running.
+                        Expr::not(Expr::and(
+                            Expr::lt(after.clone(), num_tokens.clone()),
+                            token_is_chan_keyword(
+                                haystack,
+                                tok_types,
+                                tok_starts,
+                                tok_lens,
+                                clamped_token_index(after.clone(), num_tokens.clone()),
+                            ),
                         )),
                         // `return <-ch` and friends are receives. Without this
                         // the keyword in front of the arrow reads as the

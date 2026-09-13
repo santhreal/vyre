@@ -203,6 +203,14 @@ pub fn go_lexer(
                         // rank increases across it, which is the same flag
                         // stream the parity test above reads.
                         Node::if_then(
+                            // The bound is a conjunct, and `Expr::and` evaluates
+                            // both sides, so it selects the RESULT and not the
+                            // access: the lookahead load runs at `scan + 1` even
+                            // when that is the element after the last. An
+                            // unterminated literal is the case that reaches it,
+                            // because nothing sets `string_done` before the scan
+                            // walks off the end. The index is folded inside the
+                            // buffer, where the conjunct discards what it found.
                             Expr::and(
                                 Expr::lt(
                                     Expr::add(Expr::var("scan"), Expr::u32(1)),
@@ -211,7 +219,10 @@ pub fn go_lexer(
                                 Expr::gt(
                                     Expr::load(
                                         quote_ranks,
-                                        Expr::add(Expr::var("scan"), Expr::u32(1)),
+                                        bounded_index(
+                                            Expr::add(Expr::var("scan"), Expr::u32(1)),
+                                            Expr::u32(haystack_len),
+                                        ),
                                     ),
                                     Expr::load(quote_ranks, Expr::var("scan")),
                                 ),
