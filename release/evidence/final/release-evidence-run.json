@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"4fcae889db3c71b9c9d121d8011c4928e739df0d","commit_timestamp":"1789269550","parent_commit":"228e092d722e4e5ce1963282833484c52bd427bb","dirty":false,"source_fingerprint":"git:4fcae889db3c71b9c9d121d8011c4928e739df0d:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"741a8d56c3bdd788bcd86f69c8723608fbd6a6c7","commit_timestamp":"1789270481","parent_commit":"b244c330bdaa27920a98a760d0947b894f705798","dirty":false,"source_fingerprint":"git:741a8d56c3bdd788bcd86f69c8723608fbd6a6c7:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 6,
   "total_commands": 15,
   "artifact_failures": 0,
@@ -1214,14 +1214,14 @@
     {
       "path": "release/evidence/final/expected-artifacts.json",
       "exists": true,
-      "bytes": 10091,
+      "bytes": 9562,
       "read_error": null,
       "owner_lane": "testing_evidence",
       "generator_command": "xtask release-evidence",
       "command_mode": "spawned",
-      "content_sha256": "dc5b847681efcc7f463ca8290bf26ca4a038bd2db5fae5cc3cf9cbf2722fba12",
-      "source_fingerprint": "release-evidence-source:v1:c8140f10591b7dcabad4b7fcb53b77825f9ec8af54487cae64431ac6acc507b0",
-      "freshness_fingerprint": "release-evidence-freshness:v1:3b955475852216c4a841e290a40d5a5de6b5ad9f054138395b1df0b6cd6a127f",
+      "content_sha256": "66a620fdb9a7f74ebf6566726d5c86f2567cea77c14628318477ad0bb55691c1",
+      "source_fingerprint": "release-evidence-source:v1:a85c4df99375a81bae464ee361795d078416bfa8c858f6871f5f4de495fd1ad0",
+      "freshness_fingerprint": "release-evidence-freshness:v1:14108d0e4ffd7173e949c8cf23e6dab276a5bfcde531edacb23077730aa8f796",
       "blockers": []
     }
   ],
@@ -1806,10 +1806,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask release-evidence",
         "command_mode": "spawned",
-        "bytes": 10091,
-        "content_sha256": "dc5b847681efcc7f463ca8290bf26ca4a038bd2db5fae5cc3cf9cbf2722fba12",
-        "source_fingerprint": "release-evidence-source:v1:c8140f10591b7dcabad4b7fcb53b77825f9ec8af54487cae64431ac6acc507b0",
-        "freshness_fingerprint": "release-evidence-freshness:v1:3b955475852216c4a841e290a40d5a5de6b5ad9f054138395b1df0b6cd6a127f",
+        "bytes": 9562,
+        "content_sha256": "66a620fdb9a7f74ebf6566726d5c86f2567cea77c14628318477ad0bb55691c1",
+        "source_fingerprint": "release-evidence-source:v1:a85c4df99375a81bae464ee361795d078416bfa8c858f6871f5f4de495fd1ad0",
+        "freshness_fingerprint": "release-evidence-freshness:v1:14108d0e4ffd7173e949c8cf23e6dab276a5bfcde531edacb23077730aa8f796",
         "blockers": []
       },
       {
