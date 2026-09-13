@@ -8,6 +8,20 @@ use std::path::Path;
 
 use crate::release::conformance_evidence_semantics::read_conformance_text;
 
+/// The backends release evidence must cover, as the op matrix names them.
+///
+/// Three readers spelled this set out: the two loops below and, three times,
+/// the literal `3` a row count was multiplied by. A fourth backend would have
+/// had to be added in five places, and the checks that were not updated would
+/// have kept passing against a smaller release surface.
+///
+/// A conformance certificate records its executors under the ids the
+/// conformance runner writes, which are not these column names. So a reader of
+/// a certificate counts against [`RELEASE_BACKEND_COLUMNS::len`] rather than
+/// matching these strings: the count is the release claim, and the spelling
+/// belongs to the runner that produced the record.
+pub const RELEASE_BACKEND_COLUMNS: [&str; 3] = ["reference", "cuda", "wgpu"];
+
 /// What `docs/optimization/OP_MATRIX.toml` requires of a release.
 #[derive(Default)]
 pub struct OpMatrixCatalog {
@@ -110,7 +124,7 @@ pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog 
             .get("family")
             .and_then(toml::Value::as_str)
             .unwrap_or("<unknown>");
-        for backend in ["reference", "cuda", "wgpu"] {
+        for backend in RELEASE_BACKEND_COLUMNS {
             if row.get(backend).and_then(toml::Value::as_str) == Some("blocked_release") {
                 blocked_release_rows.push(format!("{family}:{backend}"));
             }
@@ -135,7 +149,7 @@ pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog 
                 if !required_ops.insert(op.to_string()) {
                     duplicate_required_op_rows.insert(op.to_string());
                 }
-                for backend in ["reference", "cuda", "wgpu"] {
+                for backend in RELEASE_BACKEND_COLUMNS {
                     match row.get(backend).and_then(toml::Value::as_str) {
                         Some("blocked_release") => {}
                         Some(status) if !status.trim().is_empty() => {
@@ -232,17 +246,20 @@ pub fn evaluate_op_matrix_coverage(
     }
     let supported_release_backend_row_count =
         count_supported_release_backend_rows(&catalog.release_backend_rows);
-    let expected_supported_rows = catalog_required_op_count.saturating_mul(3);
+    let expected_supported_rows =
+        catalog_required_op_count.saturating_mul(RELEASE_BACKEND_COLUMNS.len());
     if supported_release_backend_row_count != expected_supported_rows {
         blockers.push(format!(
             "OP_MATRIX declares {supported_release_backend_row_count} supported release backend row(s), expected {expected_supported_rows}"
         ));
     }
-    let expected_release_backend_rows = catalog_required_op_count.saturating_mul(3);
+    let expected_release_backend_rows =
+        catalog_required_op_count.saturating_mul(RELEASE_BACKEND_COLUMNS.len());
     if catalog.release_backend_rows.len() < expected_release_backend_rows {
         blockers.push(format!(
-            "OP_MATRIX declares {} release backend row(s), expected {expected_release_backend_rows} for reference/cuda/wgpu coverage",
-            catalog.release_backend_rows.len()
+            "OP_MATRIX declares {} release backend row(s), expected {expected_release_backend_rows} for {} coverage",
+            catalog.release_backend_rows.len(),
+            RELEASE_BACKEND_COLUMNS.join("/")
         ));
     }
     OpMatrixCoverage {

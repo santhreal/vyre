@@ -316,17 +316,45 @@ fn judge(certificate: &Value) -> Vec<Finding> {
         _ => {}
     }
 
+    let planned_backends = certificate
+        .pointer("/plan/backend_count")
+        .and_then(Value::as_u64);
     match (
         certificate
             .pointer("/plan/selection/selected_backend_count")
             .and_then(Value::as_u64),
-        certificate
-            .pointer("/plan/backend_count")
-            .and_then(Value::as_u64),
+        planned_backends,
     ) {
         (Some(selected), Some(planned)) if selected != planned => require(
             format!("the certificate selected {selected} backend(s) and plans {planned}"),
             "Reprove the shards on a host that acquires every backend the selection names.",
+        ),
+        _ => {}
+    }
+
+    let unavailable = certificate
+        .pointer("/plan/selection/unavailable_backends")
+        .and_then(Value::as_array)
+        .map_or(0, Vec::len) as u64;
+    match (
+        certificate
+            .pointer("/plan/selection/universe_backend_count")
+            .and_then(Value::as_u64),
+        planned_backends,
+    ) {
+        (Some(universe), Some(planned)) if universe != planned + unavailable => require(
+            format!(
+                "the certificate registers {universe} backend(s), proved {planned} and names \
+                 {unavailable} it could not acquire, so {} are unaccounted for",
+                universe.saturating_sub(planned + unavailable)
+            ),
+            "Reprove the shards; a backend that was neither proved nor recorded as unacquirable \
+             is one the certificate is silent about.",
+        ),
+        (None, _) => require(
+            "the certificate states no registered backend count".to_string(),
+            "Reprove the shards with the current conformance binary so the selection states the \
+             universe it chose from.",
         ),
         _ => {}
     }
@@ -380,26 +408,47 @@ fn judge(certificate: &Value) -> Vec<Finding> {
         }
     }
 
+    let mut executors: Vec<&str> = pairs
+        .iter()
+        .filter_map(|pair| pair.pointer("/executor_id").and_then(Value::as_str))
+        .collect();
+    executors.sort_unstable();
+    executors.dedup();
+    match planned_backends {
+        Some(planned) if executors.len() as u64 != planned => require(
+            format!(
+                "the certificate plans {planned} backend(s) and its pairs name {}: {}",
+                executors.len(),
+                executors.join(", ")
+            ),
+            "Reprove the shards; a merge that dropped one backend's pairs states a plan it did \
+             not carry.",
+        ),
+        _ => {}
+    }
+
     if let Some(unavailable) = certificate
         .pointer("/plan/selection/unavailable_backends")
         .and_then(Value::as_array)
     {
         for backend in unavailable {
-            require(
-                format!(
-                    "release evidence covers every registered backend, and `{}` was not acquired: \
-                     {}",
-                    backend
-                        .pointer("/id")
-                        .and_then(Value::as_str)
-                        .unwrap_or("<unnamed>"),
-                    backend
-                        .pointer("/reason")
-                        .and_then(Value::as_str)
-                        .unwrap_or("<no reason>")
-                ),
-                "Prove the release certificate on a host that acquires every registered backend.",
-            );
+            let id = backend.pointer("/id").and_then(Value::as_str);
+            let reason = backend
+                .pointer("/reason")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|reason| !reason.is_empty());
+            if id.is_none() || reason.is_none() {
+                require(
+                    format!(
+                        "an unacquired backend is recorded as id `{}` with refusal `{}`",
+                        id.unwrap_or("<unnamed>"),
+                        reason.unwrap_or("<none>")
+                    ),
+                    "Reprove the shards with the current conformance binary so each backend the \
+                     host could not acquire names itself and what refused it.",
+                );
+            }
         }
     }
     findings
@@ -409,18 +458,39 @@ fn judge(certificate: &Value) -> Vec<Finding> {
 mod tests {
     use super::*;
 
+    /// Executor ids one release merge carries, as the conformance runner
+    /// writes them.
+    ///
+    /// The gate counts executors instead of matching these strings, because
+    /// the op matrix names the oracle column `reference` and the runner writes
+    /// `cpu-ref`. The fixture uses the runner's spelling so a real merge and
+    /// this body differ in nothing the gate reads.
+    const EXECUTORS: [&str; 3] = ["cpu-ref", "cuda", "wgpu"];
+
     /// One certificate body that passes every judgement.
     fn merged(pairs: Value) -> Value {
-        let count = pairs.as_array().map_or(0, Vec::len);
+        let rows = pairs.as_array().map_or(0, Vec::len);
+        let mut executors: Vec<&str> = pairs
+            .as_array()
+            .map(|pairs| {
+                pairs
+                    .iter()
+                    .filter_map(|pair| pair.pointer("/executor_id").and_then(Value::as_str))
+                    .collect()
+            })
+            .unwrap_or_default();
+        executors.sort_unstable();
+        executors.dedup();
+        let backends = executors.len().max(1);
         serde_json::json!({
             "wire_format_version": 1,
             "program_hash": "00",
             "backend_id": MERGED_BACKEND_ID,
             "plan": {
-                "backend_count": 3,
-                "op_count": count,
-                "pair_count": count,
-                "witness_case_count": count,
+                "backend_count": backends,
+                "op_count": rows,
+                "pair_count": rows,
+                "witness_case_count": rows,
                 "catalog_hash": "00",
                 "execution_hash": "00",
                 "selection": {
@@ -428,10 +498,10 @@ mod tests {
                     "ops_filter": MERGED_BACKEND_ID,
                     "shard_index": Value::Null,
                     "shard_count": 64,
-                    "universe_backend_count": 3,
-                    "universe_op_count": count,
-                    "selected_backend_count": 3,
-                    "selected_op_count": count
+                    "universe_backend_count": backends,
+                    "universe_op_count": rows,
+                    "selected_backend_count": backends,
+                    "selected_op_count": rows
                 }
             },
             "signature": "00",
@@ -440,11 +510,22 @@ mod tests {
         })
     }
 
-    /// One proved pair with the stated outcome.
-    fn pair(op_id: &str, passed: bool) -> Value {
+    /// The pairs a release merge carries: every operation on every executor.
+    fn release_pairs(ops: &[(&str, bool)]) -> Value {
+        let mut pairs = Vec::with_capacity(ops.len() * EXECUTORS.len());
+        for executor in EXECUTORS {
+            for (op_id, passed) in ops {
+                pairs.push(pair_on(executor, op_id, *passed));
+            }
+        }
+        Value::Array(pairs)
+    }
+
+    /// One proved pair with the stated outcome on the stated executor.
+    fn pair_on(executor: &str, op_id: &str, passed: bool) -> Value {
         serde_json::json!({
             "op_id": op_id,
-            "executor_id": "cuda",
+            "executor_id": executor,
             "passed": passed,
             "message": "1 witness case(s) matched"
         })
@@ -464,7 +545,7 @@ mod tests {
     /// path away.
     #[test]
     fn one_shard_recorded_as_the_merge_is_a_finding() {
-        let mut certificate = merged(serde_json::json!([pair("vyre::add", true)]));
+        let mut certificate = merged(release_pairs(&[("vyre::add", true)]));
         certificate["plan"]["selection"]["shard_index"] = serde_json::json!(7);
         certificate["backend_id"] = serde_json::json!("cuda");
         let rendered = reported(&certificate);
@@ -484,7 +565,7 @@ mod tests {
     #[test]
     fn a_failed_pair_is_a_finding_that_names_the_operation() {
         let certificate =
-            merged(serde_json::json!([pair("vyre::add", true), pair("vyre::mul", false)]));
+            merged(release_pairs(&[("vyre::add", true), ("vyre::mul", false)]));
         let rendered = reported(&certificate);
         assert!(
             rendered.contains("vyre::mul") && rendered.contains("did not conform"),
@@ -501,28 +582,78 @@ mod tests {
     /// reads as a complete run.
     #[test]
     fn a_plan_that_counts_more_pairs_than_the_body_carries_is_a_finding() {
-        let mut certificate = merged(serde_json::json!([pair("vyre::add", true)]));
+        let mut certificate = merged(release_pairs(&[("vyre::add", true)]));
         certificate["plan"]["pair_count"] = serde_json::json!(1077);
         let rendered = reported(&certificate);
         assert!(
-            rendered.contains("plans 1077 pair(s) and carries 1"),
+            rendered.contains("plans 1077 pair(s) and carries 3"),
             "Fix: the finding must name both counts, got {rendered}"
         );
     }
 
-    /// WHY: a host that could not acquire a backend still merges a certificate,
-    /// and `selected_backend_count` then names fewer backends than the release
-    /// claim covers.
+    /// WHY: a backend the host could not acquire is a property of the host, not
+    /// a defect in the record: the `gpu` feature links the Metal and SPIR-V
+    /// registrations on every platform so that naming one gives a refusal
+    /// instead of `unknown backend`. The certificate states which backends it
+    /// covers and why it covers no more, so an unacquirable backend that names
+    /// its refusal is complete evidence, not a finding.
     #[test]
-    fn a_backend_the_run_could_not_acquire_is_a_finding() {
-        let mut certificate = merged(serde_json::json!([pair("vyre::add", true)]));
+    fn a_backend_the_run_could_not_acquire_is_recorded_without_a_finding() {
+        let mut certificate = merged(release_pairs(&[("vyre::add", true)]));
+        certificate["plan"]["selection"]["universe_backend_count"] = serde_json::json!(4);
         certificate["plan"]["selection"]["unavailable_backends"] = serde_json::json!([
-            {"id": "metal", "reason": "no Metal device on this host"}
+            {"id": "metal", "reason": "unsupported feature `Apple Metal.framework native runtime`"}
         ]);
+        assert_eq!(reported(&certificate), "");
+    }
+
+    /// WHY: an unacquired backend with no refusal states that something was
+    /// missing and not what refused it, which is the same as not recording it.
+    #[test]
+    fn an_unacquired_backend_with_no_stated_refusal_is_a_finding() {
+        let mut certificate = merged(release_pairs(&[("vyre::add", true)]));
+        certificate["plan"]["selection"]["universe_backend_count"] = serde_json::json!(4);
+        certificate["plan"]["selection"]["unavailable_backends"] =
+            serde_json::json!([{"id": "metal", "reason": "   "}]);
         let rendered = reported(&certificate);
         assert!(
-            rendered.contains("metal") && rendered.contains("no Metal device on this host"),
-            "Fix: the finding must name the backend and the refusal, got {rendered}"
+            rendered.contains("metal") && rendered.contains("refusal `<none>`"),
+            "Fix: an unstated refusal must be a finding naming the backend, got {rendered}"
+        );
+    }
+
+    /// WHY: a registered backend that is neither proved nor recorded as
+    /// unacquirable is one the certificate is silent about, and silence reads
+    /// as coverage. Every count in such a body agrees with every other: the
+    /// plan, the selection and the pairs all say three, and the registered
+    /// universe says four.
+    #[test]
+    fn a_registered_backend_that_is_neither_proved_nor_refused_is_a_finding() {
+        let mut certificate = merged(release_pairs(&[("vyre::add", true)]));
+        certificate["plan"]["selection"]["universe_backend_count"] = serde_json::json!(4);
+        let rendered = reported(&certificate);
+        assert!(
+            rendered.contains("registers 4 backend(s), proved 3 and names 0")
+                && rendered.contains("1 are unaccounted for"),
+            "Fix: an unaccounted backend must be a finding naming the counts, got {rendered}"
+        );
+    }
+
+    /// WHY: a merge that dropped one backend's pairs keeps the plan the shards
+    /// stated, so the counts agree and the body carries two backends' rows
+    /// under a three-backend plan.
+    #[test]
+    fn a_plan_naming_more_backends_than_the_pairs_carry_is_a_finding() {
+        let mut certificate = merged(release_pairs(&[("vyre::add", true)]));
+        certificate["pairs"] = Value::Array(vec![
+            pair_on("cuda", "vyre::add", true),
+            pair_on("wgpu", "vyre::add", true),
+        ]);
+        certificate["plan"]["pair_count"] = serde_json::json!(2);
+        let rendered = reported(&certificate);
+        assert!(
+            rendered.contains("plans 3 backend(s) and its pairs name 2: cuda, wgpu"),
+            "Fix: the finding must name the plan, the count and the executors, got {rendered}"
         );
     }
 
@@ -604,8 +735,7 @@ mod tests {
     /// indistinguishable from noise the gate always emits.
     #[test]
     fn a_merged_certificate_with_every_pair_passing_is_silent() {
-        let certificate =
-            merged(serde_json::json!([pair("vyre::add", true), pair("vyre::mul", true)]));
+        let certificate = merged(release_pairs(&[("vyre::add", true), ("vyre::mul", true)]));
         assert_eq!(reported(&certificate), "");
     }
 

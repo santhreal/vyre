@@ -134,7 +134,9 @@ pub(crate) fn check_backend_conformance_report(
             requirement.id
         ));
     }
-    let expected_release_backend_rows = catalog_required_op_count.saturating_mul(3);
+    let expected_release_backend_rows = catalog_required_op_count.saturating_mul(
+        xtask::release::conformance_op_matrix::RELEASE_BACKEND_COLUMNS.len() as u64,
+    );
     if release_backend_row_count < expected_release_backend_rows
         || missing_release_backend_rows != 0
     {

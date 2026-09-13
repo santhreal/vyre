@@ -123,7 +123,9 @@ pub fn inspect_conformance_matrix(context: &str, matrix: &Value, failures: &mut 
         ));
     }
     let release_backend_rows = u64_field(matrix, "release_backend_row_count", 0);
-    let expected_release_backend_rows = catalog_required.saturating_mul(3);
+    let expected_release_backend_rows = catalog_required.saturating_mul(
+        crate::release::conformance_op_matrix::RELEASE_BACKEND_COLUMNS.len() as u64,
+    );
     let missing_release_backend_rows =
         array_len(matrix, "missing_release_backend_rows", usize::MAX);
     if release_backend_rows < expected_release_backend_rows || missing_release_backend_rows != 0 {
