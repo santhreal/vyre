@@ -181,20 +181,34 @@ impl VyreBackend for SpirvBackendRegistration {
         self.device.properties.limits.max_storage_buffer_range as u64
     }
 
-    /// The Vulkan compute path probes four limits and claims nothing else.
+    /// Workgroup-scoped scratch a Vulkan compute pipeline may declare.
     ///
-    /// Every remaining field restated `DeviceProfile::conservative`, which is the
-    /// driver's own owner for "this backend has not probed that capability". The
-    /// copy meant a new capability field had to be answered here by hand, and the
-    /// answer was always the conservative one.
-    fn device_profile(&self) -> vyre_driver::DeviceProfile {
-        vyre_driver::DeviceProfile {
-            max_workgroup_size: self.max_workgroup_size(),
-            max_invocations_per_workgroup: self.max_compute_invocations_per_workgroup(),
-            max_shared_memory_bytes: self.device.properties.limits.max_compute_shared_memory_size,
-            max_storage_buffer_binding_size: self.max_storage_buffer_bytes(),
-            ..vyre_driver::DeviceProfile::conservative(self.id())
-        }
+    /// The limit was read into the profile and the flag derived from it was
+    /// not, because the profile was spelled as a struct literal over
+    /// `DeviceProfile::conservative`: `has_shared_memory` stayed false beside a
+    /// 48 KiB budget. The compiler refuses a program that declares workgroup
+    /// scratch against a device reporting no shared memory, so 39 operations
+    /// were refused as `program declares workgroup-scoped scratch but the
+    /// device reports no shared memory` on an RTX 4090. Reporting the budget
+    /// here is what makes the flag follow it, since the neutral profile derives
+    /// one from the other.
+    fn max_shared_memory_bytes(&self) -> u32 {
+        self.device.properties.limits.max_compute_shared_memory_size
+    }
+
+    /// Whether this device runs the subgroup operations the emitter produces.
+    ///
+    /// The instance asked for Vulkan 1.0, which makes subgroup properties
+    /// unqueryable, so the backend reported none and the validator refused
+    /// seven subgroup operations before emission on a device whose warps are
+    /// 32 lanes wide. The probe reports a width only when the compute stage
+    /// supports the whole `GroupNonUniform*` family naga emits.
+    fn supports_subgroup_ops(&self) -> bool {
+        self.device.subgroup.is_some()
+    }
+
+    fn subgroup_size(&self) -> Option<u32> {
+        self.device.subgroup
     }
 }
 

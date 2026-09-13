@@ -34,6 +34,66 @@ pub(crate) struct VulkanDevice {
     host_memory_type_index: u32,
     /// Device properties (for limits reporting).
     pub properties: vk::PhysicalDeviceProperties,
+    /// Subgroup width, when the device runs the subgroup operations this
+    /// backend emits in a compute shader. `None` means it does not, or that
+    /// the loader is too old to say.
+    pub subgroup: Option<u32>,
+}
+
+/// Subgroup operations a program reaching this backend can use.
+///
+/// Emission goes through naga, which lowers a subgroup expression to the
+/// `GroupNonUniform*` instruction family: ballot, broadcast, shuffle, and the
+/// arithmetic reductions. A device that runs only some of them runs only some
+/// of the programs, and a partial promise is what produces a dispatch failure
+/// instead of a refusal, so the whole set is required.
+const REQUIRED_SUBGROUP_OPERATIONS: vk::SubgroupFeatureFlags = vk::SubgroupFeatureFlags::from_raw(
+    vk::SubgroupFeatureFlags::BASIC.as_raw()
+        | vk::SubgroupFeatureFlags::VOTE.as_raw()
+        | vk::SubgroupFeatureFlags::ARITHMETIC.as_raw()
+        | vk::SubgroupFeatureFlags::BALLOT.as_raw()
+        | vk::SubgroupFeatureFlags::SHUFFLE.as_raw()
+        | vk::SubgroupFeatureFlags::SHUFFLE_RELATIVE.as_raw(),
+);
+
+/// Read the device's subgroup width, or `None` when it cannot run the subgroup
+/// operations this backend emits.
+///
+/// The properties are core Vulkan 1.1, so a 1.0 loader or a 1.0 device answers
+/// `None` and the backend reports no subgroup support rather than guessing a
+/// width. A width that is not a power of two, or is 1, is also `None`: a
+/// single-lane subgroup runs a ballot as an answer about one invocation, which
+/// is not the collective the program asked for.
+fn probe_subgroup(
+    instance: &ash::Instance,
+    physical_device: vk::PhysicalDevice,
+    api_version: u32,
+    properties: vk::PhysicalDeviceProperties,
+) -> Option<u32> {
+    if api_version < vk::API_VERSION_1_1 || properties.api_version < vk::API_VERSION_1_1 {
+        return None;
+    }
+    let mut subgroup = vk::PhysicalDeviceSubgroupProperties::default();
+    let mut chained = vk::PhysicalDeviceProperties2::default().push_next(&mut subgroup);
+    // SAFETY: `physical_device` is a live handle bound to `instance`, and the
+    // chained structures live on this stack frame until the call returns. The
+    // entry point is core in the 1.1 instance this ran against.
+    unsafe { instance.get_physical_device_properties2(physical_device, &mut chained) };
+
+    if !subgroup
+        .supported_stages
+        .contains(vk::ShaderStageFlags::COMPUTE)
+    {
+        return None;
+    }
+    if !subgroup
+        .supported_operations
+        .contains(REQUIRED_SUBGROUP_OPERATIONS)
+    {
+        return None;
+    }
+    let size = subgroup.subgroup_size;
+    (size > 1 && size.is_power_of_two()).then_some(size)
 }
 
 /// Take a lock over an externally synchronized Vulkan handle.
@@ -69,8 +129,26 @@ impl VulkanDevice {
             ))
         })?;
 
+        // Subgroup properties are core Vulkan 1.1. Asking for 1.0 makes them
+        // unqueryable, and a backend that cannot read them reports no subgroup
+        // support: seven subgroup operations were refused before reaching the
+        // emitter, on a device whose warps are 32 lanes wide. A loader that
+        // only offers 1.0 still gets 1.0, and the backend then reports the
+        // truth for that loader rather than claiming a version it does not have.
+        //
+        // SAFETY: reading the loader's instance version takes no handle and no
+        // allocation; a loader predating the entry point reports none.
+        let instance_version = unsafe { entry.try_enumerate_instance_version() }
+            .ok()
+            .flatten()
+            .unwrap_or(vk::API_VERSION_1_0);
+        let api_version = if instance_version >= vk::API_VERSION_1_1 {
+            vk::API_VERSION_1_1
+        } else {
+            vk::API_VERSION_1_0
+        };
         let app_info = vk::ApplicationInfo {
-            api_version: vk::API_VERSION_1_0,
+            api_version,
             ..Default::default()
         };
         let create_info = vk::InstanceCreateInfo {
@@ -130,6 +208,8 @@ impl VulkanDevice {
                 "No Vulkan physical GPU device with a compute queue was found. Fix: repair the Vulkan GPU driver or select the CUDA/WGPU backend; software CPU Vulkan implementations are not production dispatch backends.".to_string(),
             )
         })?;
+
+        let subgroup = probe_subgroup(&instance, physical_device, api_version, properties);
 
         let queue_priority = 1.0f32;
         let queue_create_info = vk::DeviceQueueCreateInfo {
@@ -207,6 +287,7 @@ impl VulkanDevice {
             command_pool: Mutex::new(command_pool),
             host_memory_type_index,
             properties,
+            subgroup,
         })
     }
 

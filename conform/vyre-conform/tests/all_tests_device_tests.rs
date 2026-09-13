@@ -13,6 +13,10 @@ pub mod backend_acquisition_runtime_sharing;
 #[path = "countless_readwrite_output_parity/mod.rs"]
 pub mod countless_readwrite_output_parity;
 
+/// Integration tests from `tests/device_profile_derived_facts.rs`.
+#[path = "device_profile_derived_facts.rs"]
+pub mod device_profile_derived_facts;
+
 /// Integration tests from `tests/lens_parity_device.rs`.
 #[path = "lens_parity_device.rs"]
 pub mod lens_parity_device;
