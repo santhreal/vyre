@@ -9775,6 +9775,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   It builds both passes itself, so a fusion failure is a defect in the builder
   rather than a caller error, and the crate carried it as an undocumented
   panic.
+- The benchmark source-tree fingerprint excludes `docs/testing/`. Raising a
+  verification-budget ceiling invalidated every recorded measurement in the
+  tree.
 - The lane that holds the tree to -D warnings linked every target of every
   crate, which writes over 100 GiB of test executables and kills a hosted
   runner mid-compile. Warnings are produced by rustc's analysis phase, so the
