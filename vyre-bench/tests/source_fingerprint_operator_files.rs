@@ -139,8 +139,11 @@ fn operator_like_source_names_and_runtime_changes_still_invalidate_identity() {
 /// the tree. A generated document, the release paperwork it lands beside, the
 /// assurance tooling that writes it, and the tests are each produced from the
 /// runtime rather than read by it, so rewriting one invalidated every artifact
-/// on disk and forced a whole re-measurement for a file no kernel reads. Each
-/// prefix gets a case, so dropping one from the predicate turns this red.
+/// on disk and forced a whole re-measurement for a file no kernel reads.
+///
+/// The cases are read out of the predicate's own source at run time rather
+/// than listed here, so a prefix added to the predicate and never exercised,
+/// or one dropped from it, turns this red.
 ///
 /// What this does not catch: a path outside every prefix that the runtime also
 /// never reads. The fingerprint counts it, which is the safe direction.
@@ -148,27 +151,66 @@ fn operator_like_source_names_and_runtime_changes_still_invalidate_identity() {
 fn trees_the_runtime_never_reads_do_not_change_benchmark_identity() {
     let workspace = workspace();
     let base = source_tree_fingerprint_at(workspace.path());
-    let excluded = [
-        "CHANGELOG.md",
-        "docs/generated/op-inventory.toml",
-        "release/changes/unreleased/a-fix.toml",
-        "release/evidence/benchmarks/workload-01.json",
-        ".github/workflows/ci.yml",
-        "scripts/release.sh",
-        "xtask/src/main.rs",
-        "xtask-evidence/src/lib.rs",
-        "vyre-crate/tests/all_tests.rs",
-        "vyre-crate/src/feature_tests.rs",
-    ];
+    let mut excluded: Vec<String> = predicate_literals()
+        .into_iter()
+        .map(|literal| {
+            if literal.ends_with('/') {
+                format!("{literal}excluded-fixture.toml")
+            } else {
+                literal
+            }
+        })
+        .collect();
+    assert!(
+        excluded.len() >= 8,
+        "Fix: only {} exclusion(s) were recovered from the predicate source; the parse no longer \
+         finds them and the cases below prove nothing",
+        excluded.len()
+    );
+    excluded.extend(
+        [
+            "AGENTS.md",
+            "vyre-crate/tests/all_tests.rs",
+            "vyre-crate/src/feature_tests.rs",
+        ]
+        .map(str::to_string),
+    );
 
     for relative_path in excluded {
-        write_fixture(workspace.path(), relative_path, b"generated content\n");
+        write_fixture(workspace.path(), &relative_path, b"generated content\n");
         assert_eq!(
             source_tree_fingerprint_at(workspace.path()),
             base,
             "Fix: `{relative_path}` must not alter runtime source identity."
         );
     }
+}
+
+/// The path literals `source_tree_path_is_benchmark_provenance_ignored` matches
+/// on, read out of its own source.
+///
+/// A byte-string literal in that function is either a whole path or a prefix
+/// ending in `/`. Recovering them here is what keeps the case list above equal
+/// to the predicate instead of a copy that drifts from it.
+fn predicate_literals() -> Vec<String> {
+    let source = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/probes/git.rs"))
+        .expect("Fix: the predicate source must be readable");
+    let start = source
+        .find("fn source_tree_path_is_benchmark_provenance_ignored")
+        .expect("Fix: the predicate must still be named that");
+    let body = &source[start..];
+    let end = body
+        .find("\n}\n")
+        .expect("Fix: the predicate must be closed");
+    let mut literals = Vec::new();
+    let mut rest = &body[..end];
+    while let Some(open) = rest.find("b\"") {
+        rest = &rest[open + 2..];
+        let close = rest.find('"').expect("Fix: an unterminated byte string");
+        literals.push(rest[..close].to_string());
+        rest = &rest[close + 1..];
+    }
+    literals
 }
 
 /// A hand-authored document under `docs/` is still runtime source identity.

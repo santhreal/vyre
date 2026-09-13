@@ -159585,7 +159585,7 @@ seam = "runtime"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre"
 stability = "internal"
-exported_item_count = 2864
+exported_item_count = 2865
 
   [[package.item]]
   path = "impl bytemuck::pod::Pod for vyre_runtime::resident_work_queue::planner::ResidentWorkItem"
@@ -164608,6 +164608,13 @@ exported_item_count = 2864
 
   [[package.item]]
   path = "vyre_runtime::artifact_admission::ResourceIngestionError::MissingResource::entry_name: alloc::string::String"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_runtime::artifact_admission::ResourceIngestionError::MissingResource::resource_name: alloc::string::String"
   kind = "field"
   stability = "internal"
   feature = "unconditional"
