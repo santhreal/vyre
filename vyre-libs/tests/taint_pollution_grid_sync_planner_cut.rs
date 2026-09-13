@@ -1,20 +1,20 @@
-//! WHY: a whole-grid fence is a launch boundary, not an instruction, and until
-//! the planner cut existed the only place that fact was enforced was the WGSL
-//! emitter, which refused. `taint_pollution` is the shape that hits it: program
-//! fusion inserts `MemoryOrdering::GridSync` between the divergent writer arm and
-//! the arm that reads what it wrote, so the fence lives INSIDE one node's body.
-//! A single-node graph has no fusion pair to reject, so
-//! `legality::analyze_fusion_pair` never sees it, and every wgpu compile of this
-//! op failed at emit.
+//! WHY: a whole-grid fence is a launch boundary, not an instruction.
+//! `taint_pollution` is the shape that states it: program fusion inserts
+//! `MemoryOrdering::GridSync` between the divergent writer arm and the arm that
+//! reads what it wrote, so the fence lives INSIDE one node's body. A single-node
+//! graph has no fusion pair to reject, so `legality::analyze_fusion_pair` never
+//! sees it, and the fence reaches an emitter that has no instruction for it.
 //!
-//! The class this closes is a fence surviving into any backend that has no
-//! instruction for it. The assertions are on the whole route, not on the split
-//! function: the fence is present in the built program, the emitter still refuses
-//! the whole program, request validation cuts it into more than one node, and
-//! every node that results emits and validates as its own WGSL module.
+//! The class this closes is a fence surviving into a backend as an instruction.
+//! Two routes remove it, and both are asserted on the whole route rather than on
+//! a single function. The emitter turns the fence into a launch boundary: the
+//! fenced descriptor emits one compute entry point per dispatch segment, named in
+//! submission order. The planner cut removes it earlier: request validation
+//! splits the program into more than one node, each fence-free, each emitting and
+//! validating as its own WGSL module.
 //!
-//! What it does not catch: whether the two dispatches are ordered correctly at
-//! run time. That is the retained-succession contract, covered by the megakernel
+//! What it does not catch: whether the dispatches are ordered correctly at run
+//! time. That is the retained-succession contract, covered by the megakernel
 //! dependency and fusion-legality suites.
 
 #![cfg(feature = "security")]
@@ -70,7 +70,9 @@ fn validated(program: Program) -> ValidatedCompileRequest {
     .expect("a whole-grid fence must be cut, not rejected")
 }
 
-fn emit_wgsl(program: &Program) -> Result<naga::Module, String> {
+/// The segment entry points and the WGSL module `program`'s first schedule phase
+/// lowers to.
+fn lower_and_emit(program: &Program) -> Result<(Vec<String>, naga::Module), String> {
     let graph = ProgramGraph::from_program("taint_pollution_emit", program.clone())
         .map_err(|error| format!("{error:?}"))?;
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
@@ -83,7 +85,14 @@ fn emit_wgsl(program: &Program) -> Result<naga::Module, String> {
         .id;
     let lowered = vyre_lower::lower_scheduled(program, &schedule, phase)
         .map_err(|error| format!("{error:?}"))?;
-    vyre_emit_naga::emit(lowered.descriptor()).map_err(|error| format!("{error}"))
+    let segments = vyre_emit_naga::grid_segment_entry_points(lowered.descriptor())
+        .map_err(|error| format!("{error}"))?;
+    let module = vyre_emit_naga::emit(lowered.descriptor()).map_err(|error| format!("{error}"))?;
+    Ok((segments, module))
+}
+
+fn emit_wgsl(program: &Program) -> Result<naga::Module, String> {
+    lower_and_emit(program).map(|(_, module)| module)
 }
 
 /// The premise. If fusion stops inserting the fence this whole file is vacuous,
@@ -96,22 +105,34 @@ fn taint_pollution_carries_a_whole_grid_fence() {
     );
 }
 
-/// The pre-cut behavior, kept as a live assertion. WGSL has no whole-grid barrier
-/// and wgpu has no cooperative launch, so lowering the unsplit program must stay a
-/// refusal. If this ever starts succeeding, the emitter has silently downgraded
-/// the fence to a workgroup barrier and the kernel runs unsynchronized.
+/// WGSL has no whole-grid barrier and wgpu has no cooperative launch, so the
+/// fence must never lower to an instruction inside one entry point. It lowers to a
+/// launch boundary: the fenced descriptor emits one compute entry point per
+/// dispatch segment, and a dispatch layer submits them in that order. If this ever
+/// collapses to a single entry point, the fence has been downgraded to a workgroup
+/// barrier and the kernel runs with no cross-workgroup synchronization at all.
 #[test]
-fn the_unsplit_program_is_still_refused_by_the_wgsl_emitter() {
-    let error = emit_wgsl(&taint_pollution_program())
-        .expect_err("a whole-grid fence must never lower to a WGSL barrier");
+fn the_unsplit_program_emits_one_entry_point_per_dispatch_segment() {
+    let (segments, module) = lower_and_emit(&taint_pollution_program())
+        .expect("a fenced descriptor must emit as ordered dispatch segments");
     assert!(
-        error.contains("grid synchronization"),
-        "the refusal must name whole-grid synchronization as the reason: {error}"
+        segments.len() > 1,
+        "a whole-grid fence must become a launch boundary, got {} segment",
+        segments.len()
+    );
+    let emitted: Vec<&str> = module
+        .entry_points
+        .iter()
+        .map(|entry| entry.name.as_str())
+        .collect();
+    assert_eq!(
+        emitted, segments,
+        "the emitted entry points must be the dispatch segments a caller submits, in order"
     );
 }
 
-/// The acceptance: the planner cut turns the refusal into two dispatches, and
-/// each one is a WGSL module the validator accepts.
+/// The planner cut removes the fence before device admission, so every node it
+/// yields is a fence-free WGSL module the validator accepts.
 #[test]
 fn the_planner_cut_yields_more_than_one_emittable_module() {
     let request = validated(taint_pollution_program());
