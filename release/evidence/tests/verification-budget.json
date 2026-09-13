@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"741a8d56c3bdd788bcd86f69c8723608fbd6a6c7","commit_timestamp":"1789270481","parent_commit":"b244c330bdaa27920a98a760d0947b894f705798","dirty":false,"source_fingerprint":"git:741a8d56c3bdd788bcd86f69c8723608fbd6a6c7:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"4092f6b8934cd61bc6fd5c148b4e1693481088e0","commit_timestamp":"1789282846","parent_commit":"d8d33f3ea7a98b703b7e21193f7e7968f134fc53","dirty":true,"source_fingerprint":"git:4092f6b8934cd61bc6fd5c148b4e1693481088e0:dirty=true:worktree=07fe6e0d5452c2b11240eaf97a60267282e15be7f83ce86d07703b74c20f297f"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "tiers": [
     {
@@ -183,7 +183,7 @@
       "compile_units": 1,
       "link_units": 2,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 529237
+      "disk_use_bytes": 536994
     },
     {
       "tier": "standalone-tooling",
@@ -219,7 +219,7 @@
       "compile_units": 9,
       "link_units": 20,
       "duplicate_source_bytes": 1172,
-      "disk_use_bytes": 1018561
+      "disk_use_bytes": 1024267
     }
   ],
   "shared_contracts": [

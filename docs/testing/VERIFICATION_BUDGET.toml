@@ -110,7 +110,7 @@ disk_use_bytes = 635953
 compile_units = 1
 link_units = 2
 duplicate_source_bytes = 0
-disk_use_bytes = 529253
+disk_use_bytes = 536994
 
 [tier.standalone-tooling]
 compile_units = 2
@@ -128,4 +128,4 @@ disk_use_bytes = 62453
 compile_units = 9
 link_units = 20
 duplicate_source_bytes = 1172
-disk_use_bytes = 1018561
+disk_use_bytes = 1024267

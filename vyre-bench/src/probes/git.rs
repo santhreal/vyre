@@ -323,10 +323,7 @@ mod benchmark_provenance_rules {
     /// `every_compiled_in_document_keys_the_measurement` answers.
     #[test]
     fn every_rule_excludes_the_tree_it_names() {
-        assert!(
-            !BENCHMARK_PROVENANCE_IGNORED.is_empty(),
-            "Fix: the table is the member list and it is empty"
-        );
+        let mut checked = 0usize;
         for rule in BENCHMARK_PROVENANCE_IGNORED {
             let path = rule.sample_path();
             assert!(
@@ -334,7 +331,12 @@ mod benchmark_provenance_rules {
                 "Fix: `{}` is in the table and the predicate counts it",
                 String::from_utf8_lossy(&path)
             );
+            checked += 1;
         }
+        assert!(
+            checked > 0,
+            "Fix: the table is the member list and it is empty"
+        );
     }
 
     /// A runtime source file under no rule keys the measurement.
