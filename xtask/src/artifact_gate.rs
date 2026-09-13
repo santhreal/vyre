@@ -355,6 +355,12 @@ pub fn settle_inspection(ctx: &GateCtx, gate: &str, inspection: Inspection) -> R
 /// `parse` returns `Ok(None)` when the caller asked for the option list, which
 /// is the one case that is neither a configuration nor an error.
 ///
+/// `--write` is the runner's own flag and reaches `parse` stripped. `GateCtx`
+/// already reduced it to `GateCtx::write`, so a gate that also had to name it
+/// in its own flag match rejected `--write` the moment it forgot to, which is
+/// how the first `--write` of this gate family reported an unknown flag
+/// instead of measuring.
+///
 /// A measured artifact cannot be settled by comparison the way a projection
 /// can: running the measurement again produces different numbers, so these
 /// gates write under their own provenance and audit the committed body against
@@ -373,7 +379,13 @@ pub fn settle_measured<Config>(
         report.produced(*path);
     }
     report.cover_complete(coverage, owned.len());
-    let config = match parse(&ctx.args) {
+    let flags: Vec<String> = ctx
+        .args
+        .iter()
+        .filter(|argument| *argument != "--write")
+        .cloned()
+        .collect();
+    let config = match parse(&flags) {
         Ok(Some(config)) => config,
         Ok(None) => {
             for line in usage {
@@ -1036,6 +1048,89 @@ mod tests {
     use std::process::Command;
 
     const ARTIFACT: &str = "release/evidence/metadata/matrix.json";
+
+    /// `--write` must not reach a gate's own flag parser.
+    ///
+    /// `GateCtx` reduces `--write` to a boolean and leaves the token in
+    /// `args`, so each measured gate had to name it in its own match or reject
+    /// it. Two of the three did; the third reported
+    /// `` `--write` is not a flag this gate reads `` and recorded nothing,
+    /// which is the release path. Stripping it here closes that for every gate
+    /// in the family, including ones added later.
+    #[test]
+    fn the_measured_preamble_strips_the_runner_write_flag_before_parsing() {
+        let mut seen = Vec::new();
+        let report = settle_measured(
+            &GateCtx::new(PathBuf::from("."), vec!["--write".to_string()]),
+            &[ARTIFACT],
+            "matrices",
+            &["usage: metadata-matrix [--write]"],
+            |flags| {
+                seen.extend(flags.iter().cloned());
+                match flags.first() {
+                    Some(flag) => Err(format!("`{flag}` is not a flag this gate reads")),
+                    None => Ok(Some(())),
+                }
+            },
+            |_, (), report| report.note("measured"),
+            |_, (), report| report.note("audited"),
+        );
+
+        assert!(
+            seen.is_empty(),
+            "Fix: the parser must see no runner flag; saw={seen:?}"
+        );
+        assert!(
+            report.findings.is_empty(),
+            "Fix: `--write` alone must measure; findings={:?}",
+            report.findings
+        );
+        assert!(
+            report.notes.iter().any(|note| note == "measured"),
+            "Fix: `--write` must take the measure branch; notes={:?}",
+            report.notes
+        );
+    }
+
+    /// A gate flag after `--write` must still reach the gate's parser.
+    ///
+    /// Removing the token must not consume what follows it: `--write --backend
+    /// wgpu` once had `wgpu` read as a command because the runner's flag and
+    /// its neighbour were counted together.
+    #[test]
+    fn the_measured_preamble_keeps_a_gate_flag_that_follows_the_write_flag() {
+        let mut seen = Vec::new();
+        let report = settle_measured(
+            &GateCtx::new(
+                PathBuf::from("."),
+                vec![
+                    "--write".to_string(),
+                    "--backend".to_string(),
+                    "wgpu".to_string(),
+                ],
+            ),
+            &[ARTIFACT],
+            "matrices",
+            &["usage: metadata-matrix [--write] [--backend NAME]"],
+            |flags| {
+                seen.extend(flags.iter().cloned());
+                Ok(Some(()))
+            },
+            |_, (), report| report.note("measured"),
+            |_, (), report| report.note("audited"),
+        );
+
+        assert_eq!(
+            seen,
+            vec!["--backend".to_string(), "wgpu".to_string()],
+            "Fix: only the runner flag may be stripped."
+        );
+        assert!(
+            report.findings.is_empty(),
+            "Fix: the gate flag must parse; findings={:?}",
+            report.findings
+        );
+    }
 
     #[test]
     fn the_recorder_refuses_an_artifact_whose_tree_has_no_source_fingerprint() {

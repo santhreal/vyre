@@ -122,9 +122,6 @@ pub(super) fn parse_args(args: &[String]) -> Result<Option<Config>, String> {
                 workload_suite_only = true;
                 index += 1;
             }
-            "--write" => {
-                index += 1;
-            }
             "--help" | "-h" => return Ok(None),
             other => return Err(format!("Fix: unknown release-benchmarks option `{other}`.")),
         }
@@ -194,15 +191,15 @@ mod tests {
     ///
     /// The parser used to start at index 2 while `GateCtx.args` starts at the
     /// first flag, so the two leading flags were skipped and their values were
-    /// read as commands. `--write --backend cuda` reported `cuda` as an unknown
-    /// option; a lone `--write` fell off the end and silently took the default
-    /// backend, which is why the gate looked usable.
+    /// read as commands. `--backend cuda` reported `cuda` as an unknown option.
+    /// `--write` reaches this parser stripped, and
+    /// `xtask::artifact_gate::settle_measured` owns that removal.
     #[test]
     fn every_flag_is_reachable_from_the_first_argument() {
-        let written = config(&["--write", "--backend", "wgpu"]);
-        assert_eq!(written.backend, "wgpu");
+        let leading = config(&["--backend", "wgpu"]);
+        assert_eq!(leading.backend, "wgpu");
 
-        let defaulted = config(&["--write"]);
+        let defaulted = config(&[]);
         assert_eq!(defaulted.backend, "cuda");
 
         let selected = config(&["--only", "condition-eval", "--measured-samples", "30"]);
