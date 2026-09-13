@@ -5,7 +5,7 @@ use super::super::{
     invocation::HashmapInvocation,
     memory::{buffer_mut, HashmapMemory},
     note_buffer_access,
-    sync::{contains_barrier, node_id},
+    sync::{contains_rendezvous, node_id},
 };
 use super::eval_to_index;
 use crate::execution::async_transfer::{self, AsyncTransfer};
@@ -114,8 +114,12 @@ pub(crate) fn step_nodes_frame<'a>(
                 snapshots,
             )?
             .truthy();
-            if contains_barrier(then) || contains_barrier(otherwise) {
-                invocation.uniform_checks.push((node_id(node), cond_value));
+            if let Some(rendezvous) =
+                contains_rendezvous(then).or_else(|| contains_rendezvous(otherwise))
+            {
+                invocation
+                    .uniform_checks
+                    .push((node_id(node), cond_value, rendezvous));
             }
             let branch = if cond_value { then } else { otherwise };
             invocation.locals.push_scope();

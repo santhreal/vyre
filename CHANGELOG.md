@@ -5194,6 +5194,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Fixed
 
+- The reference oracle refuses a subgroup collective reached from a branch
+  whose condition is not workgroup-uniform. The rule already covered `Barrier`;
+  a collective released once the lanes that skipped the branch retired, so the
+  oracle issued a reduction over whichever lanes were still running as the
+  expected output.
+- `vyre-reference` builds and tests with `--no-default-features`. The lane
+  index carried a dead-code expectation that no longer held, the `Value` import
+  in the step module was unconditional, and a subgroup shuffle test ran on a
+  feature set whose validator refuses subgroup expressions.
 - The reference oracle's race detector treats a release/acquire pair on an
   atomic location as a synchronization edge, so a program that publishes a
   payload through a released flag and reads it after acquiring that flag is no

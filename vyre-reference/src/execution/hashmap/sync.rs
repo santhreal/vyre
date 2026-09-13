@@ -10,7 +10,7 @@ use vyre_foundation::ir::BufferDecl;
 
 #[cfg(feature = "subgroup-ops")]
 pub(crate) use crate::execution::node_tree::node_reads_peer_lanes;
-pub(crate) use crate::execution::node_tree::{contains_barrier, node_id};
+pub(crate) use crate::execution::node_tree::{contains_rendezvous, node_id, RendezvousKind};
 
 pub(crate) fn release_barrier_if_ready(invocations: &mut [HashmapInvocation<'_>]) -> bool {
     let active = invocations.iter().filter(|inv| !inv.done()).count();
@@ -75,15 +75,27 @@ pub(crate) fn live_collective_waiting_count(invocations: &[HashmapInvocation<'_>
         .count()
 }
 
+/// Reject a branch whose condition differs across the workgroup while its body
+/// can reach a rendezvous.
+///
+/// Every lane that entered such a branch waits for peers that the diverged
+/// lanes never send. A barrier and a subgroup collective are the same defect:
+/// the collective releases once the diverged lane retires, so accepting it
+/// would have the oracle issue a reduction computed over a subset of the
+/// workgroup, which no target guarantees.
 pub(crate) fn verify_uniform_control_flow(
     invocations: &[HashmapInvocation<'_>],
 ) -> Result<(), ReferenceError> {
     let mut observed = SmallVec::<[(usize, bool); 8]>::new();
     for invocation in invocations.iter().filter(|inv| !inv.done()) {
-        for (id, value) in &invocation.uniform_checks {
+        for (id, value, rendezvous) in &invocation.uniform_checks {
             if let Some((_, previous)) = observed.iter().find(|(seen_id, _)| seen_id == id) {
                 if previous != value {
-                    return Err(ReferenceError::new("program violates uniform-control-flow rule: Barrier appears inside an If whose condition differs across the workgroup. Fix: make the condition uniform or move Barrier outside the branch."));
+                    return Err(ReferenceError::new(format!(
+                        "program violates uniform-control-flow rule: {} appears inside an If whose condition differs across the workgroup. Fix: make the condition uniform or move {} outside the branch.",
+                        rendezvous.describe(),
+                        rendezvous.describe(),
+                    )));
                 }
             } else {
                 observed.push((*id, *value));

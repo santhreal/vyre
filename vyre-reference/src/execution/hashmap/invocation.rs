@@ -9,7 +9,7 @@ use super::{
     step::step_round_robin,
     sync::{
         live_collective_waiting_count, live_waiting_count, release_barrier_if_ready,
-        release_collective_rendezvous, verify_uniform_control_flow,
+        release_collective_rendezvous, verify_uniform_control_flow, RendezvousKind,
     },
 };
 use crate::execution::async_transfer::{AsyncTransfer, PendingAsyncTransfers};
@@ -141,18 +141,19 @@ impl HashmapLocalSnapshot {
 
 pub(crate) struct HashmapInvocation<'a> {
     pub(crate) ids: InvocationIds,
-    #[cfg_attr(
-        not(feature = "subgroup-ops"),
-        expect(
-            dead_code,
-            reason = "the lane index is read only by the subgroup reductions, so the field has no reader without that feature"
-        )
-    )]
+    /// Position of this lane within its workgroup, in the linear order the
+    /// dispatch assigns.
+    ///
+    /// `is_leader` reads it whatever the feature set, and the subgroup
+    /// collectives read it as lane identity.
     pub(crate) linear_local_index: u32,
     pub(crate) locals: HashmapLocals,
     pub(crate) returned: bool,
     pub(crate) waiting_at_barrier: bool,
-    pub(crate) uniform_checks: Vec<(usize, bool)>,
+    /// Branch conditions this lane evaluated whose body can reach a
+    /// rendezvous, keyed by `If` node identity, with the rendezvous kind for
+    /// the diagnostic.
+    pub(crate) uniform_checks: Vec<(usize, bool, RendezvousKind)>,
     /// Set when this lane reached a `MemoryOrdering::GridSync` fence.
     ///
     /// A workgroup barrier is released by the lanes of one workgroup, so

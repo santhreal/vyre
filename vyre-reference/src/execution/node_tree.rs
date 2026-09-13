@@ -3,9 +3,51 @@
 use vyre_foundation::ir::Node;
 use vyre_foundation::visit::any_descendant;
 
-/// Whether any statement in `nodes` may reach a `Barrier`, at any depth.
-pub(crate) fn contains_barrier(nodes: &[Node]) -> bool {
-    nodes.iter().any(node_contains_barrier)
+/// What kind of workgroup rendezvous a branch body can reach.
+///
+/// A lane that enters a branch containing one of these waits for peers that a
+/// diverged lane never sends. The two are one defect class and differ only in
+/// what the diagnostic names.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum RendezvousKind {
+    /// `Node::Barrier` or `Node::LogicalBarrier`.
+    Barrier,
+    /// A statement whose own operands read peer lanes.
+    ///
+    /// Only reachable with `subgroup-ops`, which is what defines the
+    /// collective expressions in the first place.
+    #[cfg(feature = "subgroup-ops")]
+    SubgroupCollective,
+}
+
+impl RendezvousKind {
+    /// The construct as it is named in a diagnostic.
+    pub(crate) const fn describe(self) -> &'static str {
+        match self {
+            Self::Barrier => "Barrier",
+            #[cfg(feature = "subgroup-ops")]
+            Self::SubgroupCollective => "a subgroup collective",
+        }
+    }
+}
+
+/// Which rendezvous a branch body can reach, at any depth, or `None`.
+///
+/// A barrier is reported ahead of a collective when a body contains both,
+/// because the two carry the same rule and only the wording differs.
+pub(crate) fn contains_rendezvous(nodes: &[Node]) -> Option<RendezvousKind> {
+    if nodes.iter().any(node_contains_barrier) {
+        return Some(RendezvousKind::Barrier);
+    }
+    #[cfg(feature = "subgroup-ops")]
+    if nodes.iter().any(|node| {
+        any_descendant(node, &mut |candidate: &Node| {
+            node_reads_peer_lanes(candidate)
+        })
+    }) {
+        return Some(RendezvousKind::SubgroupCollective);
+    }
+    None
 }
 
 /// True when `node` or anything under it is a barrier.

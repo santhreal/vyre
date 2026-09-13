@@ -7,7 +7,9 @@ pub(crate) use node_step::{eval_call, step_loop_frame, step_nodes_frame};
 use super::invocation::HashmapInvocationSnapshot;
 use super::{invocation::HashmapInvocation, memory::HashmapMemory};
 use crate::ReferenceError;
-use crate::{value::Value, workgroup::Frame};
+#[cfg(feature = "subgroup-ops")]
+use crate::value::Value;
+use crate::workgroup::Frame;
 
 pub(crate) fn step_round_robin(
     memory: &mut HashmapMemory,

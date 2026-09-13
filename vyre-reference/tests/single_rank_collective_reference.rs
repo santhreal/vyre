@@ -62,6 +62,9 @@ fn collective_shape(kind: u32, group: CommGroup, root: u32) -> Node {
     }
 }
 
+/// Without `subgroup-ops` the IR validator refuses a subgroup expression
+/// outright, so this asserts nothing about the oracle on that feature set.
+#[cfg(feature = "subgroup-ops")]
 #[test]
 fn subgroup_shuffle_observes_branch_assigned_source_lane_after_empty_peer_branch() {
     let lane = Expr::LocalId { axis: 0 };
