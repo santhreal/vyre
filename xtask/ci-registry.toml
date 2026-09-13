@@ -628,6 +628,11 @@ subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "gpu-parity.yml", "release-evidence.yml"]
 
 [[gate]]
+name = "release-certificate"
+subsets = ["prepublish", "release-evidence"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
 name = "release-conformance"
 subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "gpu-parity.yml", "release-evidence.yml"]
@@ -780,6 +785,11 @@ workflows = ["gates.yml", "release-evidence.yml"]
 [[gate]]
 name = "whats-similar"
 subsets = ["prepublish"]
+workflows = ["gates.yml", "release-evidence.yml"]
+
+[[gate]]
+name = "whole-app-evidence"
+subsets = ["prepublish", "release-evidence"]
 workflows = ["gates.yml", "release-evidence.yml"]
 
 [[gate]]

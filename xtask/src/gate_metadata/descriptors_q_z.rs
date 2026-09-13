@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with Q through Z.
-pub const GATES_Q_Z: [GateDescriptor; 40] = [
+pub const GATES_Q_Z: [GateDescriptor; 42] = [
     GateDescriptor {
         name: "readback-ring",
         help: "Enforce readback-ring contracts",
@@ -49,6 +49,24 @@ pub const GATES_Q_Z: [GateDescriptor; 40] = [
         prerequisites: &[],
         resource_class: ResourceClass::Device,
         proof: "xtask_evidence::bench::release_benchmarks::run::tests::authoritative_descriptor_declares_exact_release_benchmarks_artifacts",
+    },
+    GateDescriptor {
+        name: "release-certificate",
+        help: "Hold the merged all-backend conformance certificate under \
+        release/evidence/conformance/ to the key it carries and the plan it states. Proves the \
+        signature covers the body, that the certificate is the merge of every shard rather than \
+        one shard, that the planned pair count is the count it carries, that every proved pair \
+        conformed, and that the run acquired every registered backend. `--write` proves and \
+        merges the release conformance shards and records the merge under the provenance of that \
+        run; `--from PATH` records an already merged certificate instead of proving one.",
+        package: "xtask-evidence",
+        areas: &["prepublish", "release-evidence"],
+        subject: "release evidence matrices",
+        inputs: &["scripts/prove-release-shards.sh"],
+        artifacts: &["release/evidence/conformance/release-all-backends-certificate.json"],
+        prerequisites: &[],
+        resource_class: ResourceClass::Device,
+        proof: "xtask_evidence::release::release_certificate::tests::a_failed_pair_is_a_finding_that_names_the_operation",
     },
     GateDescriptor {
         name: "release-conformance",
@@ -465,6 +483,26 @@ pub const GATES_Q_Z: [GateDescriptor; 40] = [
         prerequisites: &[],
         resource_class: ResourceClass::Process,
         proof: "xtask_registry::gates::whats_similar::query::tests::a_skip_class_over_its_ceiling_is_a_finding",
+    },
+    GateDescriptor {
+        name: "whole-app-evidence",
+        help: "Hold every committed whole-application record to the contract its own type states; \
+        --write measures each registered application domain on this host's dispatch device and \
+        records the domain matrix and all three per-domain files under one provenance stamp. \
+        Proves the matrix carries the current schema, one record per registered domain, and the \
+        readiness gaps and status its own records derive, and that each per-domain file states \
+        every required field, is neither stale nor partial, passed through the production route, \
+        states either a native baseline comparison or the reason it has none, and holds a record \
+        the matrix holds. `--backend ID` names the dispatch backend to acquire and \
+        `--measured-samples N` sets the samples behind each latency distribution.",
+        package: "xtask-evidence",
+        areas: &["prepublish", "release-evidence"],
+        subject: "release evidence matrices",
+        inputs: &[],
+        artifacts: crate::artifact_paths::WHOLE_APP_EVIDENCE_ARTIFACTS,
+        prerequisites: &[],
+        resource_class: ResourceClass::Device,
+        proof: "xtask_evidence::bench::whole_app_evidence::tests::a_status_the_records_do_not_derive_is_a_finding",
     },
     GateDescriptor {
         name: "wire-determinism",

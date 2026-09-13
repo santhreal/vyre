@@ -28,7 +28,12 @@ pub struct WholeApplicationDomainMatrixRecord {
 
 impl WholeApplicationDomainMatrixRecord {
     /// Status a matrix with these records and gaps states.
-    fn derive_status(records: &[WholeApplicationRecord], readiness_gaps: &[String]) -> String {
+    ///
+    /// The gate that owns the recorded matrix reads the status back and asks
+    /// this function what it should have been, rather than restating the three
+    /// cases where a second copy could disagree with the writer.
+    #[must_use]
+    pub fn derive_status(records: &[WholeApplicationRecord], readiness_gaps: &[String]) -> String {
         if records.is_empty() {
             "no_records".to_string()
         } else if readiness_gaps.is_empty() {

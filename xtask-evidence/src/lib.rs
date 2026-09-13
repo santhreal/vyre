@@ -30,6 +30,10 @@ pub static GATES: &[(&str, &'static dyn xtask::gate::GateBehavior)] = &[
         &bench::release_benchmarks::ReleaseBenchmarksGate,
     ),
     (
+        "release-certificate",
+        &release::release_certificate::ReleaseCertificateGate,
+    ),
+    (
         "release-evidence",
         &release::release_evidence::ReleaseEvidenceGate,
     ),
@@ -40,6 +44,10 @@ pub static GATES: &[(&str, &'static dyn xtask::gate::GateBehavior)] = &[
     (
         "vyre-release-gate",
         &release::vyre_release_gate::VyreReleaseGate,
+    ),
+    (
+        "whole-app-evidence",
+        &bench::whole_app_evidence::WholeAppEvidenceGate,
     ),
 ];
 

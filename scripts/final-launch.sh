@@ -113,10 +113,12 @@ export VYRE_RELEASE_BACKEND="${VYRE_RELEASE_BACKEND:-all}"
 export VYRE_RELEASE_SHARDS="${VYRE_RELEASE_SHARDS:-64}"
 export VYRE_RELEASE_FEATURES="${VYRE_RELEASE_FEATURES:-gpu}"
 export VYRE_RELEASE_CERT_DIR="${VYRE_RELEASE_CERT_DIR:-.internals/certs/release-shards}"
-release_conformance_certificate="$(scripts/prove-release-shards.sh)"
+# `release-certificate --write` runs scripts/prove-release-shards.sh, holds the
+# merge it prints to the key it carries and the plan it states, and records it
+# under the provenance of this run. A `cp` of the merge into the evidence tree
+# left the committed certificate carrying no provenance head at all.
+./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- release-certificate --write
 release_conformance_evidence="release/evidence/conformance/release-all-backends-certificate.json"
-mkdir -p "$(dirname "$release_conformance_evidence")"
-cp "$release_conformance_certificate" "$release_conformance_evidence"
 if [[ ! -s "$release_conformance_evidence" ]]; then
     printf 'Fix: release conformance certificate evidence was not written: %s\n' "$release_conformance_evidence" >&2
     exit 1

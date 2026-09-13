@@ -66,3 +66,14 @@ pub const RELEASE_BENCHMARKS_ARTIFACTS: &[&str] = &[
     "release/evidence/optimization/optimizer-impact-cuda.json",
     "release/evidence/optimization/pass-family-benchmark-manifest.json",
 ];
+
+/// Exact whole-application records written and audited by `whole-app-evidence`.
+///
+/// The matrix comes first because the producer records it first, and every
+/// per-domain file after it holds one record the matrix also holds.
+pub const WHOLE_APP_EVIDENCE_ARTIFACTS: &[&str] = &[
+    "release/evidence/benchmarks/whole-application-domain-matrix.json",
+    "release/evidence/benchmarks/whole-app-dense-numerical-pipeline.json",
+    "release/evidence/benchmarks/whole-app-irregular-stateful-traversal.json",
+    "release/evidence/benchmarks/whole-app-interactive-event-pipeline.json",
+];

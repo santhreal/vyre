@@ -1,9 +1,3 @@
-/// What the caller asked for: a measurement run, or the option list.
-pub(super) enum Parsed {
-    Run(Config),
-    Usage,
-}
-
 /// The option list, one line per note.
 ///
 /// A gate never prints. `--help` used to write these lines on stdout and exit,
@@ -49,7 +43,7 @@ pub(super) struct Config {
 /// invocation that passed one option reported the third token as unknown, so
 /// `--write --backend cuda` rejected `cuda` and no option was reachable at all. A
 /// bare `--write` still measured, which is why the break stayed hidden.
-pub(super) fn parse_args(args: &[String]) -> Result<Parsed, String> {
+pub(super) fn parse_args(args: &[String]) -> Result<Option<Config>, String> {
     let mut backend = "cuda".to_string();
     let mut only = None;
     let mut measured_samples = Some(30usize);
@@ -131,11 +125,11 @@ pub(super) fn parse_args(args: &[String]) -> Result<Parsed, String> {
             "--write" => {
                 index += 1;
             }
-            "--help" | "-h" => return Ok(Parsed::Usage),
+            "--help" | "-h" => return Ok(None),
             other => return Err(format!("Fix: unknown release-benchmarks option `{other}`.")),
         }
     }
-    Ok(Parsed::Run(Config {
+    Ok(Some(Config {
         backend,
         only,
         measured_samples,
@@ -160,8 +154,8 @@ mod tests {
     /// The configuration a flag list parses to, or a panic naming the flags.
     fn config(extra: &[&str]) -> Config {
         match parse_args(&args(extra)) {
-            Ok(Parsed::Run(config)) => config,
-            Ok(Parsed::Usage) => panic!("Fix: {extra:?} must parse as a run, not as usage."),
+            Ok(Some(config)) => config,
+            Ok(None) => panic!("Fix: {extra:?} must parse as a run, not as usage."),
             Err(error) => panic!("Fix: {extra:?} must parse: {error}"),
         }
     }
@@ -231,7 +225,7 @@ mod tests {
     fn help_parses_as_usage_rather_than_printing() {
         for flag in ["--help", "-h"] {
             assert!(
-                matches!(parse_args(&args(&[flag])), Ok(Parsed::Usage)),
+                matches!(parse_args(&args(&[flag])), Ok(None)),
                 "Fix: `{flag}` must return the usage outcome."
             );
         }

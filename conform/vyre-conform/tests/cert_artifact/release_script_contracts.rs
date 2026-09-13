@@ -26,13 +26,23 @@ fn release_scripts_make_sharded_conformance_certificate_load_bearing() {
     // `prove-release-shards.sh` already carries at lines 5 to 8 and then checked
     // that the merged certificate was non-empty, which the merge step and the
     // certificate suite in this crate both assert.
+    //
+    // The merge reaches release evidence through `release-certificate --write`,
+    // which runs this script and records what it printed under the provenance
+    // of that run. Copying the merge into the evidence tree left the committed
+    // certificate with no provenance head and no gate that declared it, so a
+    // `cp` here is the defect this assertion exists to catch.
     let final_launch = std::fs::read_to_string(repo.join("scripts/final-launch.sh"))
         .expect("Fix: final launch script must be readable");
     assert!(
-        final_launch.contains("scripts/prove-release-shards.sh")
+        final_launch.contains("release-certificate --write")
             && final_launch.contains("release/evidence/conformance/release-all-backends-certificate.json")
             && final_launch.contains("prove sharded all-backend conformance certificate"),
-        "Fix: final launch must make the merged sharded certificate load-bearing release evidence before publish."
+        "Fix: final launch must make the merged sharded certificate load-bearing release evidence before publish, through the gate that owns the path."
+    );
+    assert!(
+        !final_launch.contains("cp \"$release_conformance_certificate\""),
+        "Fix: the merged certificate must be recorded by its owning gate, not copied into the evidence tree without a provenance head."
     );
 }
 

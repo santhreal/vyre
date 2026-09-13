@@ -55,6 +55,12 @@ jobs:
       - name: Backend conformance artifacts
         run: ./cargo_full run -p xtask -- release-conformance --write
 
+      - name: Merged all-backend conformance certificate
+        run: ./cargo_full run -p xtask -- release-certificate --write
+
+      - name: Whole-application evidence records
+        run: ./cargo_full run -p xtask -- whole-app-evidence --measured-samples 30 --write
+
       - name: Release benchmark artifacts
         run: |
           ./cargo_full run -p xtask -- release-benchmarks --backend cuda --measured-samples 30 --write

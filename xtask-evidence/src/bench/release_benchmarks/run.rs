@@ -5,7 +5,7 @@ use std::path::Path;
 use serde_json::Value;
 use xtask::gate::{Finding, GateCtx, GateError, Report};
 
-use super::args::{parse_args, Config, Parsed, USAGE};
+use super::args::{parse_args, Config, USAGE};
 use super::artifact_metrics::read_text_bounded;
 use super::cpu_sota_proof::write_cpu_100x_proof;
 use super::evidence_schema::{
@@ -33,33 +33,15 @@ impl xtask::gate::GateBehavior for ReleaseBenchmarksGate {
     }
 
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        let mut report = Report::clean();
-        for path in xtask::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS {
-            report.produced(*path);
-        }
-        report.cover_complete(
+        Ok(xtask::artifact_gate::settle_measured(
+            ctx,
+            xtask::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS,
             "release benchmark suites",
-            xtask::artifact_paths::RELEASE_BENCHMARKS_ARTIFACTS.len(),
-        );
-        let config = match parse_args(&ctx.args) {
-            Ok(Parsed::Run(config)) => config,
-            Ok(Parsed::Usage) => {
-                for line in USAGE {
-                    report.note(*line);
-                }
-                return Ok(report);
-            }
-            Err(message) => {
-                report.find(Finding::new(message, "Correct the flags and rerun."));
-                return Ok(report);
-            }
-        };
-        if ctx.write {
-            measure(&ctx.root, &config, &mut report);
-        } else {
-            audit(&ctx.root, &config, &mut report);
-        }
-        Ok(report)
+            USAGE,
+            parse_args,
+            measure,
+            audit,
+        ))
     }
 }
 

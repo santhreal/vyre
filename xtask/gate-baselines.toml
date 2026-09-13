@@ -496,6 +496,10 @@ name = "release-benchmarks"
 findings = 0
 
 [[gate]]
+name = "release-certificate"
+findings = 0
+
+[[gate]]
 name = "release-conformance"
 findings = 0
 
@@ -617,6 +621,10 @@ findings = 0
 
 [[gate]]
 name = "whats-similar"
+findings = 0
+
+[[gate]]
+name = "whole-app-evidence"
 findings = 0
 
 [[gate]]

@@ -344,6 +344,56 @@ pub fn settle_inspection(ctx: &GateCtx, gate: &str, inspection: Inspection) -> R
     }
 }
 
+/// Run one gate that measures the artifacts it owns, or audits the recorded set.
+///
+/// Three gates spelled the same preamble: declare every owned path, state the
+/// coverage, parse the flags, answer `--help` with the usage lines, report a
+/// bad flag as a finding, then branch on `--write` between measuring and
+/// auditing. Only the paths, the coverage subject, the usage lines and the two
+/// bodies differ, so those are the arguments and the rest is here.
+///
+/// `parse` returns `Ok(None)` when the caller asked for the option list, which
+/// is the one case that is neither a configuration nor an error.
+///
+/// A measured artifact cannot be settled by comparison the way a projection
+/// can: running the measurement again produces different numbers, so these
+/// gates write under their own provenance and audit the committed body against
+/// the contract it states. That is why this is not [`settle_inspection`].
+pub fn settle_measured<Config>(
+    ctx: &GateCtx,
+    owned: &[&str],
+    coverage: &str,
+    usage: &'static [&'static str],
+    parse: impl FnOnce(&[String]) -> Result<Option<Config>, String>,
+    measure: impl FnOnce(&Path, &Config, &mut Report),
+    audit: impl FnOnce(&Path, &Config, &mut Report),
+) -> Report {
+    let mut report = Report::clean();
+    for path in owned {
+        report.produced(*path);
+    }
+    report.cover_complete(coverage, owned.len());
+    let config = match parse(&ctx.args) {
+        Ok(Some(config)) => config,
+        Ok(None) => {
+            for line in usage {
+                report.note(*line);
+            }
+            return report;
+        }
+        Err(message) => {
+            report.find(Finding::new(message, "Correct the flags and rerun."));
+            return report;
+        }
+    };
+    if ctx.write {
+        measure(&ctx.root, &config, &mut report);
+    } else {
+        audit(&ctx.root, &config, &mut report);
+    }
+    report
+}
+
 /// Exact state of one workspace directory entry.
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum SnapshotEntry {
