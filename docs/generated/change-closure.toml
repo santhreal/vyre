@@ -246,7 +246,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "AddressSpace"
 variant_name = "Constant"
-declaration_site = "vyre-megakernel/src/allocation/mod.rs:51"
+declaration_site = "vyre-megakernel/src/allocation/mod.rs:73"
 constructors = ["AddressSpace::Constant"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)"
@@ -256,7 +256,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "AddressSpace"
 variant_name = "Device"
-declaration_site = "vyre-megakernel/src/allocation/mod.rs:49"
+declaration_site = "vyre-megakernel/src/allocation/mod.rs:71"
 constructors = ["AddressSpace::Device"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)"
@@ -10353,7 +10353,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldValue"
 variant_name = "Bool"
-declaration_site = "vyre-foundation/src/dialect/member.rs:259"
+declaration_site = "vyre-foundation/src/dialect/member.rs:256"
 constructors = ["FieldValue::Bool"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq)"
@@ -10363,7 +10363,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldValue"
 variant_name = "Buffer"
-declaration_site = "vyre-foundation/src/dialect/member.rs:265"
+declaration_site = "vyre-foundation/src/dialect/member.rs:262"
 constructors = ["FieldValue::Buffer"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq)"
@@ -10373,7 +10373,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldValue"
 variant_name = "Bytes"
-declaration_site = "vyre-foundation/src/dialect/member.rs:263"
+declaration_site = "vyre-foundation/src/dialect/member.rs:260"
 constructors = ["FieldValue::Bytes"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq)"
@@ -10383,7 +10383,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldValue"
 variant_name = "F32"
-declaration_site = "vyre-foundation/src/dialect/member.rs:255"
+declaration_site = "vyre-foundation/src/dialect/member.rs:252"
 constructors = ["FieldValue::F32"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq)"
@@ -10393,7 +10393,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldValue"
 variant_name = "F64"
-declaration_site = "vyre-foundation/src/dialect/member.rs:257"
+declaration_site = "vyre-foundation/src/dialect/member.rs:254"
 constructors = ["FieldValue::F64"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq)"
@@ -10403,7 +10403,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldValue"
 variant_name = "I32"
-declaration_site = "vyre-foundation/src/dialect/member.rs:249"
+declaration_site = "vyre-foundation/src/dialect/member.rs:246"
 constructors = ["FieldValue::I32"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq)"
@@ -10413,7 +10413,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldValue"
 variant_name = "I64"
-declaration_site = "vyre-foundation/src/dialect/member.rs:253"
+declaration_site = "vyre-foundation/src/dialect/member.rs:250"
 constructors = ["FieldValue::I64"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq)"
@@ -10423,7 +10423,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldValue"
 variant_name = "String"
-declaration_site = "vyre-foundation/src/dialect/member.rs:261"
+declaration_site = "vyre-foundation/src/dialect/member.rs:258"
 constructors = ["FieldValue::String"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq)"
@@ -10433,7 +10433,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldValue"
 variant_name = "U32"
-declaration_site = "vyre-foundation/src/dialect/member.rs:247"
+declaration_site = "vyre-foundation/src/dialect/member.rs:244"
 constructors = ["FieldValue::U32"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq)"
@@ -10443,7 +10443,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "FieldValue"
 variant_name = "U64"
-declaration_site = "vyre-foundation/src/dialect/member.rs:251"
+declaration_site = "vyre-foundation/src/dialect/member.rs:248"
 constructors = ["FieldValue::U64"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq)"
@@ -23144,7 +23144,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "RaceFinding"
 variant_name = "ScheduleDisagreement"
-declaration_site = "vyre-reference/src/interleaving.rs:123"
+declaration_site = "vyre-reference/src/interleaving.rs:125"
 constructors = ["RaceFinding::ScheduleDisagreement"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -23154,7 +23154,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "RaceFinding"
 variant_name = "UnsynchronizedAccess"
-declaration_site = "vyre-reference/src/interleaving.rs:132"
+declaration_site = "vyre-reference/src/interleaving.rs:134"
 constructors = ["RaceFinding::UnsynchronizedAccess"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -24212,7 +24212,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "RegionOwner"
 variant_name = "Artifact"
-declaration_site = "vyre-megakernel/src/allocation/mod.rs:78"
+declaration_site = "vyre-megakernel/src/allocation/mod.rs:100"
 constructors = ["RegionOwner::Artifact"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)"
@@ -24222,7 +24222,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "RegionOwner"
 variant_name = "Caller"
-declaration_site = "vyre-megakernel/src/allocation/mod.rs:80"
+declaration_site = "vyre-megakernel/src/allocation/mod.rs:102"
 constructors = ["RegionOwner::Caller"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)"
@@ -24365,6 +24365,24 @@ declaration_site = "vyre-foundation/src/execution_plan/fusion/alpha_rename.rs:35
 constructors = ["RenameScope::MultiplyDeclared"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy)"
+disposition = "implemented"
+
+[[closure]]
+type_name = "RendezvousKind"
+variant_name = "Barrier"
+declaration_site = "vyre-reference/src/execution/node_tree.rs:13"
+constructors = ["RendezvousKind::Barrier"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
+disposition = "implemented"
+
+[[closure]]
+type_name = "RendezvousKind"
+variant_name = "SubgroupCollective"
+declaration_site = "vyre-reference/src/execution/node_tree.rs:15"
+constructors = ["RendezvousKind::SubgroupCollective"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
 disposition = "implemented"
 
 [[closure]]
@@ -25320,7 +25338,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "AccessMismatch"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:631"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:635"
 constructors = ["ResourceIngestionError::AccessMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -25330,7 +25348,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "AllocationFailed"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:683"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:687"
 constructors = ["ResourceIngestionError::AllocationFailed"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -25340,7 +25358,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "ByteCountMismatch"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:611"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:615"
 constructors = ["ResourceIngestionError::ByteCountMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -25350,7 +25368,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "DataLengthMismatch"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:675"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:679"
 constructors = ["ResourceIngestionError::DataLengthMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -25360,7 +25378,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "DtypeMismatch"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:591"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:595"
 constructors = ["ResourceIngestionError::DtypeMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -25370,7 +25388,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "DuplicateConflictingResource"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:661"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:665"
 constructors = ["ResourceIngestionError::DuplicateConflictingResource"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -25380,7 +25398,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "ElementCountMismatch"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:601"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:605"
 constructors = ["ResourceIngestionError::ElementCountMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -25390,7 +25408,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "GenerationMismatch"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:641"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:645"
 constructors = ["ResourceIngestionError::GenerationMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -25400,7 +25418,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "IdentityMismatch"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:651"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:655"
 constructors = ["ResourceIngestionError::IdentityMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -25410,7 +25428,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "Io"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:667"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:671"
 constructors = ["ResourceIngestionError::Io"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -25420,7 +25438,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "LifetimeMismatch"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:621"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:625"
 constructors = ["ResourceIngestionError::LifetimeMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -25440,7 +25458,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "PayloadNotPrepared"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:691"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:695"
 constructors = ["ResourceIngestionError::PayloadNotPrepared"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -25450,7 +25468,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "UnknownValue"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:585"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:589"
 constructors = ["ResourceIngestionError::UnknownValue"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -25460,7 +25478,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "UploadFailed"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:697"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:701"
 constructors = ["ResourceIngestionError::UploadFailed"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -25470,7 +25488,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceIngestionError"
 variant_name = "WorkspaceOwnedCollision"
-declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:579"
+declaration_site = "vyre-runtime/src/artifact_admission/ingestion.rs:583"
 constructors = ["ResourceIngestionError::WorkspaceOwnedCollision"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, PartialEq, Eq, Error)"
@@ -30085,7 +30103,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaTranslationError"
 variant_name = "DuplicateField"
-declaration_site = "vyre-foundation/src/dialect/schema.rs:453"
+declaration_site = "vyre-foundation/src/dialect/schema.rs:452"
 constructors = ["SchemaTranslationError::DuplicateField"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
@@ -30095,7 +30113,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaTranslationError"
 variant_name = "IncompatibleFieldMember"
-declaration_site = "vyre-foundation/src/dialect/schema.rs:559"
+declaration_site = "vyre-foundation/src/dialect/schema.rs:558"
 constructors = ["SchemaTranslationError::IncompatibleFieldMember"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
@@ -30105,7 +30123,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaTranslationError"
 variant_name = "IncompatibleIdentity"
-declaration_site = "vyre-foundation/src/dialect/schema.rs:485"
+declaration_site = "vyre-foundation/src/dialect/schema.rs:484"
 constructors = ["SchemaTranslationError::IncompatibleIdentity"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
@@ -30115,7 +30133,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaTranslationError"
 variant_name = "IncompatibleLayout"
-declaration_site = "vyre-foundation/src/dialect/schema.rs:547"
+declaration_site = "vyre-foundation/src/dialect/schema.rs:546"
 constructors = ["SchemaTranslationError::IncompatibleLayout"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
@@ -30125,7 +30143,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaTranslationError"
 variant_name = "IncompleteResourceRoster"
-declaration_site = "vyre-foundation/src/dialect/schema.rs:473"
+declaration_site = "vyre-foundation/src/dialect/schema.rs:472"
 constructors = ["SchemaTranslationError::IncompleteResourceRoster"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
@@ -30135,7 +30153,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaTranslationError"
 variant_name = "MissingRequiredField"
-declaration_site = "vyre-foundation/src/dialect/schema.rs:463"
+declaration_site = "vyre-foundation/src/dialect/schema.rs:462"
 constructors = ["SchemaTranslationError::MissingRequiredField"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
@@ -30145,7 +30163,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaTranslationError"
 variant_name = "OverflowingField"
-declaration_site = "vyre-foundation/src/dialect/schema.rs:507"
+declaration_site = "vyre-foundation/src/dialect/schema.rs:506"
 constructors = ["SchemaTranslationError::OverflowingField"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
@@ -30155,7 +30173,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaTranslationError"
 variant_name = "OverflowingLayout"
-declaration_site = "vyre-foundation/src/dialect/schema.rs:523"
+declaration_site = "vyre-foundation/src/dialect/schema.rs:522"
 constructors = ["SchemaTranslationError::OverflowingLayout"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
@@ -30165,7 +30183,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaTranslationError"
 variant_name = "UnknownField"
-declaration_site = "vyre-foundation/src/dialect/schema.rs:443"
+declaration_site = "vyre-foundation/src/dialect/schema.rs:442"
 constructors = ["SchemaTranslationError::UnknownField"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
@@ -30175,7 +30193,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaTranslationError"
 variant_name = "UnknownMemberTag"
-declaration_site = "vyre-foundation/src/dialect/schema.rs:573"
+declaration_site = "vyre-foundation/src/dialect/schema.rs:572"
 constructors = ["SchemaTranslationError::UnknownMemberTag"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
@@ -30185,7 +30203,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaTranslationError"
 variant_name = "UnmappedNode"
-declaration_site = "vyre-foundation/src/dialect/schema.rs:499"
+declaration_site = "vyre-foundation/src/dialect/schema.rs:498"
 constructors = ["SchemaTranslationError::UnmappedNode"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
@@ -30195,7 +30213,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaTranslationError"
 variant_name = "UnusedLayout"
-declaration_site = "vyre-foundation/src/dialect/schema.rs:539"
+declaration_site = "vyre-foundation/src/dialect/schema.rs:538"
 constructors = ["SchemaTranslationError::UnusedLayout"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
@@ -30205,7 +30223,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaTranslationError"
 variant_name = "UnusedResource"
-declaration_site = "vyre-foundation/src/dialect/schema.rs:531"
+declaration_site = "vyre-foundation/src/dialect/schema.rs:530"
 constructors = ["SchemaTranslationError::UnusedResource"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"

@@ -5194,6 +5194,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Fixed
 
+- Every declared feature selection compiles. `vyre-libs-security`'s `predicate`
+  builds its programs from the label primitives and now enables `label`,
+  `vyre-test-support`'s `driver-contracts` names `Program` in the dispatch
+  signature and now enables `vyre-foundation`, and `vyre-libs-nn`'s
+  `EMPTY_RMS_FIX` is compiled for `nn-norm`, its only consumer, rather than
+  for every build of the shared RMS module.
 - The reference oracle refuses a subgroup collective reached from a branch
   whose condition is not workgroup-uniform. The rule already covered `Barrier`;
   a collective released once the lanes that skipped the branch retired, so the

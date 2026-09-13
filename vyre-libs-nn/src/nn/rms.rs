@@ -2,6 +2,11 @@
 
 use vyre_foundation::ir::{Expr, UnOp};
 
+/// Corrective action for an empty `rms_norm`.
+///
+/// The normalization layer is its only consumer, and this module also compiles
+/// for `nn-linear`, which builds the expressions below and reports nothing.
+#[cfg(feature = "nn-norm")]
 pub(crate) const EMPTY_RMS_FIX: &str =
     "Fix: rms_norm n=0 is invalid; pass at least one element or bypass normalization.";
 

@@ -58,8 +58,9 @@ semantic-parity = ["semantic-requests", "parity-oracles", "dep:vyre-primitives"]
 # The backend-neutral driver registry contract. `vyre-driver` is the driver
 # boundary crate, not a concrete backend, so a driver crate enabling this joins
 # no sibling backend to its dev graph. Nothing else here needs it, so it is not
-# folded into `ir-fixtures`.
-driver-contracts = ["dep:vyre-driver"]
+# folded into `ir-fixtures`. `vyre-foundation` comes with it because the
+# `VyreBackend` dispatch signature names `Program`; the IR fixtures stay out.
+driver-contracts = ["dep:vyre-driver", "dep:vyre-foundation"]
 # The driver contracts that also compile an artifact: the fixture instance, the
 # resident overlap property, and the registered-target-compiler contract. Adds
 # the artifact fixtures to `driver-contracts`, because a payload contract is

@@ -23,7 +23,8 @@ workspace = true
 [features]
 default = ["security"]
 security = ["predicate", "label"]
-predicate = []
+# The predicate programs are built out of the label primitives.
+predicate = ["label"]
 label = []
 
 [dependencies]
