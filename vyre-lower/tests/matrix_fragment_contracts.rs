@@ -399,46 +399,8 @@ fn tile_matmul_lowering_proves_bitwise_fragment_packing() {
 }
 
 #[test]
-fn contraction_candidate_analysis_covers_all_supported_strategies() {
-    use vyre_foundation::ir::{Layout, Residency};
-    use vyre_lower::analyses::contraction_candidates::{analyze, ContractionStrategy};
-    use vyre_lower::lower;
-    use vyre_test_support::tile_programs::fragment_matmul_program;
-
-    let prog = fragment_matmul_program(Residency::Subgroup, Layout::RowMajor);
-
-    let desc = lower(&prog).expect("tile matmul program must lower");
-    let plan = analyze(&desc);
-
-    assert!(plan.candidate_count() >= 3);
-    let has_scalar = plan
-        .candidates
-        .iter()
-        .any(|c| matches!(c.strategy, ContractionStrategy::Scalar));
-    let has_simt = plan
-        .candidates
-        .iter()
-        .any(|c| matches!(c.strategy, ContractionStrategy::SimtTiled { .. }));
-    let has_mma = plan
-        .candidates
-        .iter()
-        .any(|c| matches!(c.strategy, ContractionStrategy::MatrixInstruction { .. }));
-
-    assert!(
-        has_scalar,
-        "Fix: contraction plan must include scalar baseline"
-    );
-    assert!(
-        has_simt,
-        "Fix: contraction plan must include SIMT tiled candidate"
-    );
-    assert!(has_mma, "Fix: contraction plan must include MMA candidate");
-}
-
-#[test]
-fn contraction_shape_and_dtype_space_is_covered_without_gaps() {
+fn a_tile_matmul_lowers_and_verifies_for_every_supported_element_type() {
     use vyre_foundation::ir::{DataType, Layout, Residency};
-    use vyre_lower::analyses::contraction_candidates::analyze;
     use vyre_lower::{lower, verify};
     use vyre_test_support::tile_programs::{tile_matmul_program, TileOperand};
 
@@ -483,10 +445,8 @@ fn contraction_shape_and_dtype_space_is_covered_without_gaps() {
             panic!("Fix: {dtype:?} 2x2 tile matmul descriptor must verify: {e:?}")
         });
 
-        let plan = analyze(&desc);
-        assert!(
-            plan.candidate_count() > 0,
-            "Fix: every supported dtype {dtype:?} must have at least one contraction candidate"
-        );
+        // The candidate set each element type states is asserted in
+        // `contraction_candidate_derivation`; this case owns the lowering and
+        // verification of the descriptor it reads.
     }
 }

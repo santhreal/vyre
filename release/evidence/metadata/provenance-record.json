@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"4a88e4a6873c66f6f5c1d2ccd8b37b1a818b7884","commit_timestamp":"1789277072","parent_commit":"0aa99e1d2a3905fc38cccfc33564ab2e41bf2279","dirty":false,"source_fingerprint":"git:4a88e4a6873c66f6f5c1d2ccd8b37b1a818b7884:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"d7c21b38c7c0a55a6cb99ffe2cbd48d60204a295","commit_timestamp":"1789301364","parent_commit":"f8f88940ad99ea3fcab9afd2d0a95fe21e03f6e4","dirty":true,"source_fingerprint":"git:d7c21b38c7c0a55a6cb99ffe2cbd48d60204a295:dirty=true:worktree=5fa711676d920eec62768ade0a89b332ac7a181da7165d1509c822e1f086af17"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "_type": "https://in-toto.io/Statement/v1",
   "predicate": {
     "buildDefinition": {
@@ -2913,7 +2913,7 @@
         },
         {
           "digest": {
-            "sha256": "751bcaf290c79d14ae3808034b60bf071e949214bf6453f8c996423205efa3f2"
+            "sha256": "a0cf5e23433dae05edf8a0b36989891211d90dac8526362bf66e05b4e56e0c60"
           },
           "name": "docs/generated/change-closure.toml"
         },
@@ -2955,7 +2955,7 @@
         },
         {
           "digest": {
-            "sha256": "12d566d1cba3aaba4fe7998a34692024332344ba68953f7a587e1c53e0898a8a"
+            "sha256": "4ade6a35a2065ee74213b3dde6f770f102fb33c98682fbebf446676533941cde"
           },
           "name": "docs/generated/platform-support-matrix.toml"
         }
@@ -2975,7 +2975,7 @@
   "subject": [
     {
       "digest": {
-        "blake3": "399077032dd9cff6ba61d91347ed59ff3c9da13b5d845dd98e39866d0944a8dd"
+        "blake3": "fe2bdb5c5f87f393c28d23b18578590f1a79a1b3f14d7b791bd9fae21409d0c8"
       },
       "name": "vyre-release-archive"
     }
