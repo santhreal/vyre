@@ -463,12 +463,8 @@ mod tests {
 
     #[test]
     fn every_recorded_item_is_published_by_the_crate() {
-        let tree = Tree::open(
-            Path::new(env!("CARGO_MANIFEST_DIR"))
-                .parent()
-                .expect("Fix: the xtask package must sit one level under the workspace root."),
-        )
-        .expect("Fix: run this test inside a checkout.");
+        let tree = Tree::open(&structure_gate::workspace_root())
+            .expect("Fix: run this test inside a checkout.");
         let surface = foundation_surface(&tree).expect("Fix: the foundation surface must derive.");
         let stale: Vec<&&str> = SPECIFICATION_SURFACE
             .iter()
@@ -482,12 +478,8 @@ mod tests {
 
     #[test]
     fn the_forbidden_half_of_the_surface_is_not_empty() {
-        let tree = Tree::open(
-            Path::new(env!("CARGO_MANIFEST_DIR"))
-                .parent()
-                .expect("Fix: the xtask package must sit one level under the workspace root."),
-        )
-        .expect("Fix: run this test inside a checkout.");
+        let tree = Tree::open(&structure_gate::workspace_root())
+            .expect("Fix: run this test inside a checkout.");
         let surface = foundation_surface(&tree).expect("Fix: the foundation surface must derive.");
         let permitted: BTreeSet<&str> = SPECIFICATION_SURFACE.iter().copied().collect();
         for transform in [
