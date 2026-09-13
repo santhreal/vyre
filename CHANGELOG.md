@@ -8663,6 +8663,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   scripts that carried them are deleted. A workflow step may no longer name a
   script by glob, which is how a deleted assertion used to stay in a workflow
   that still read as coverage.
+- `xtask release-evidence --write` records the digest of the registry it
+  writes, so one run settles instead of reporting its own output as stale until
+  a second and third.
 - The crate ownership registry stores every declared directory slash-separated,
   so a row written with backslashes owns its own directory and not only the
   files beneath it.
