@@ -107,6 +107,8 @@ mod tests {
             backend_support,
             target_facets: vec!["simd".to_string()],
             laws: vec!["commutative".to_string()],
+            transform_decision: "not-recorded".to_string(),
+            absence_class: Some("law-unrecorded".to_string()),
             composition_chain: Vec::new(),
         };
 

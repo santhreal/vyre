@@ -216,6 +216,86 @@ fn schema_rows_cover_every_required_operation_contract() {
         assert!(operation["composition_chain"].is_array());
     }
 }
+
+/// Every projected row states which of the four meanings its absence carries,
+/// in the vocabulary `vyre_spec` owns.
+///
+/// An empty `laws` array used to be the whole record, and it read the same for
+/// an operation no rewrite is legal for, one whose laws all hold under a guard,
+/// one whose algebra was never characterized, and one nobody decided about.
+/// A synthesis pass reading the catalog could not tell which, so it either
+/// skipped every one of them or searched all of them.
+///
+/// The permitted values are enumerated from `AbsenceClass::ALL` rather than
+/// written here, so a fifth meaning added to the partition fails this test
+/// until the projection and its readers place it.
+#[test]
+fn every_projected_operation_states_why_a_law_is_absent() {
+    // The join between the decision a registration states and the meaning its
+    // absence carries, in one place. Reading it here rather than recomputing it
+    // is the point: a projection that recorded the two independently could
+    // report `no-transform` beside `uncharacterized` and nobody would see it.
+    let expected_class: BTreeMap<&str, Option<&str>> = BTreeMap::from([
+        ("no-transform", Some("no-legal-rewrite")),
+        ("opaque", Some("uncharacterized")),
+        ("not-recorded", Some("law-unrecorded")),
+    ]);
+    let classes: BTreeSet<&str> = vyre_spec::AbsenceClass::ALL
+        .iter()
+        .map(|class| class.name())
+        .collect();
+    assert_eq!(
+        classes.len(),
+        4,
+        "Fix: the absence partition changed; place the new meaning in the projection and here"
+    );
+
+    let schema = read_schema();
+    let operations = schema["operations"]
+        .as_array()
+        .expect("Fix: operations must be an array");
+    assert!(!operations.is_empty(), "Fix: the projection covers nothing");
+
+    let mut seen: BTreeSet<&str> = BTreeSet::new();
+    for operation in operations {
+        let id = operation["id"].as_str().expect("Fix: op id must be text");
+        let decision = operation["transform_decision"]
+            .as_str()
+            .unwrap_or_else(|| panic!("Fix: `{id}` records no transform decision"));
+        let class = operation["absence_class"].as_str();
+        if let Some(class) = class {
+            assert!(
+                classes.contains(class),
+                "Fix: `{id}` records the absence class `{class}`, which is not one of {classes:?}"
+            );
+            seen.insert(class);
+        }
+        // `guarded-laws` is the one decision whose class depends on the laws
+        // themselves: none when an unconditional one is proven, `guarded-only`
+        // when every proven law carries a guard, `law-unrecorded` when no law
+        // carries executable proof at all.
+        if decision == "guarded-laws" {
+            assert!(
+                matches!(class, None | Some("guarded-only") | Some("law-unrecorded")),
+                "Fix: `{id}` records laws, so its absence class cannot be {class:?}"
+            );
+            continue;
+        }
+        assert_eq!(
+            Some(class),
+            expected_class.get(decision).copied(),
+            "Fix: `{id}` records the decision `{decision}` beside the absence class {class:?}, \
+             which is not the meaning that decision carries"
+        );
+    }
+
+    assert!(
+        seen.len() > 1,
+        "Fix: the projection collapsed to {seen:?}; a partition that reports one value is the \
+         conflation it replaced"
+    );
+}
+
 /// Every operation id names a crate that exists.
 ///
 /// WHY: `vyre-driver` registered `core.indirect_dispatch`, `io.dma_from_nvme`,

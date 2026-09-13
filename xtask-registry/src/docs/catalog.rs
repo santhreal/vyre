@@ -102,6 +102,8 @@ mod tests {
             backend_support: BTreeMap::new(),
             target_facets: Vec::new(),
             laws: Vec::new(),
+            transform_decision: "not-recorded".to_string(),
+            absence_class: Some("law-unrecorded".to_string()),
             composition_chain: Vec::new(),
         };
         ops.push(record);

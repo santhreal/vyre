@@ -336,6 +336,11 @@ fn divergences(schema: &OperationSchema, expected: &OperationSchema) -> Vec<Stri
             ("target facets", op.target_facets != current.target_facets),
             ("laws", op.laws != current.laws),
             (
+                "transform decision",
+                op.transform_decision != current.transform_decision,
+            ),
+            ("absence class", op.absence_class != current.absence_class),
+            (
                 "composition chain",
                 op.composition_chain != current.composition_chain,
             ),
@@ -395,6 +400,8 @@ mod tests {
             backend_support: BTreeMap::new(),
             target_facets: Vec::new(),
             laws: Vec::new(),
+            transform_decision: "not-recorded".to_string(),
+            absence_class: Some("law-unrecorded".to_string()),
             composition_chain: Vec::new(),
         }
     }

@@ -1,5 +1,5 @@
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "authority": "canonical OperationRegistration records and effective neutral schedule constraints joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows",
   "operation_count": 358,
   "tier_counts": {
@@ -125,6 +125,8 @@
         "commutative",
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -214,6 +216,8 @@
       "laws": [
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -310,6 +314,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -397,6 +403,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -493,6 +501,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -576,6 +586,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -672,6 +684,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -761,6 +775,8 @@
       "laws": [
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -859,6 +875,8 @@
       "laws": [
         "commutative"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -964,6 +982,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -1060,6 +1080,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -1149,6 +1171,8 @@
       "laws": [
         "involution"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -1249,6 +1273,8 @@
         "commutative",
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -1338,6 +1364,8 @@
       "laws": [
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -1427,6 +1455,8 @@
       "laws": [
         "bounded"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -1522,6 +1552,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -1600,6 +1632,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -1699,6 +1733,8 @@
         "associative",
         "commutative"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -1795,6 +1831,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -1882,6 +1920,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -1982,6 +2022,8 @@
         "commutative",
         "self-inverse"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -2071,6 +2113,8 @@
       "laws": [
         "self-inverse"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "guarded-only",
       "composition_chain": [
         {
           "depth": 0,
@@ -2151,6 +2195,8 @@
       "laws": [
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -2238,6 +2284,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -2339,6 +2387,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -2449,6 +2499,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -2545,6 +2597,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -2661,6 +2715,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -2756,6 +2812,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -2852,6 +2910,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -2966,6 +3026,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -3062,6 +3124,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -3158,6 +3222,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -3254,6 +3320,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -3350,6 +3418,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -3437,6 +3507,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -3539,6 +3611,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -3676,6 +3750,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -3810,6 +3886,8 @@
       "laws": [
         "inverse-of"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -3942,6 +4020,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -4076,6 +4156,8 @@
       "laws": [
         "monotonic"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -4219,6 +4301,8 @@
       "laws": [
         "monotonic"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -4353,6 +4437,8 @@
       "laws": [
         "bounded"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -4476,6 +4562,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -4599,6 +4687,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -4718,6 +4808,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -4841,6 +4933,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -4948,6 +5042,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -5062,6 +5158,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -5163,6 +5261,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -5259,6 +5359,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -5346,6 +5448,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -5445,6 +5549,8 @@
         "associative",
         "identity"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "guarded-only",
       "composition_chain": [
         {
           "depth": 0,
@@ -5577,6 +5683,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -5682,6 +5790,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -5850,6 +5960,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -6051,6 +6163,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -6157,6 +6271,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -6262,6 +6378,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -6394,6 +6512,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -6534,6 +6654,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -6668,6 +6790,8 @@
       "laws": [
         "distributive"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -6778,6 +6902,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -6873,6 +6999,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -6960,6 +7088,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -7047,6 +7177,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -7146,6 +7278,8 @@
       "laws": [
         "monotonic"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -7233,6 +7367,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -7338,6 +7474,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -7749,6 +7887,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -7845,6 +7985,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -7972,6 +8114,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -8059,6 +8203,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -8146,6 +8292,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -8233,6 +8381,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -8320,6 +8470,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -8407,6 +8559,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -8497,6 +8651,8 @@
       "laws": [
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -8586,6 +8742,8 @@
       "laws": [
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -8687,6 +8845,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -8797,6 +8957,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -8893,6 +9055,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -8989,6 +9153,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -9139,6 +9305,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -9260,6 +9428,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -9356,6 +9526,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -9452,6 +9624,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -9548,6 +9722,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -9644,6 +9820,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -9740,6 +9918,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -9827,6 +10007,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -9941,6 +10123,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -10109,6 +10293,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -10201,6 +10387,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -10301,6 +10489,8 @@
         "commutative",
         "identity"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -10401,6 +10591,8 @@
         "commutative",
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -10506,6 +10698,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -10604,6 +10798,8 @@
       "laws": [
         "custom"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -10706,6 +10902,8 @@
         "idempotent",
         "identity"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -10808,6 +11006,8 @@
         "idempotent",
         "left-absorbing"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -10909,6 +11109,8 @@
         "commutative",
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -11009,6 +11211,8 @@
         "commutative",
         "self-inverse"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -11087,6 +11291,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -11183,6 +11389,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -11306,6 +11514,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -11407,6 +11617,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -11512,6 +11724,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -11599,6 +11813,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -11704,6 +11920,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -11791,6 +12009,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -11896,6 +12116,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -11992,6 +12214,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -12079,6 +12303,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -12184,6 +12410,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -12290,6 +12518,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -12368,6 +12598,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -12455,6 +12687,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -12583,6 +12817,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -12710,6 +12946,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -12806,6 +13044,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -12893,6 +13133,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -12988,6 +13230,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -13075,6 +13319,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -13180,6 +13426,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -13276,6 +13524,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -13399,6 +13649,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -13486,6 +13738,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -13597,6 +13851,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -13684,6 +13940,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -13780,6 +14038,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -13885,6 +14145,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -13990,6 +14252,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -14113,6 +14377,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -14232,6 +14498,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -14324,6 +14592,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -14402,6 +14672,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -14498,6 +14770,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -14594,6 +14868,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -14681,6 +14957,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -14777,6 +15055,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -14891,6 +15171,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -15005,6 +15287,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -15110,6 +15394,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -15224,6 +15510,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -15320,6 +15608,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -15425,6 +15715,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -15512,6 +15804,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -15608,6 +15902,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -15704,6 +16000,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -15828,6 +16126,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -15933,6 +16233,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -16038,6 +16340,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -16141,6 +16445,8 @@
       "laws": [
         "distributive"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -16264,6 +16570,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -16366,6 +16674,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -16525,6 +16835,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -16617,6 +16929,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -16704,6 +17018,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -16813,6 +17129,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -16927,6 +17245,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -17046,6 +17366,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -17189,6 +17511,8 @@
       "laws": [
         "associative"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "guarded-only",
       "composition_chain": [
         {
           "depth": 0,
@@ -17330,6 +17654,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -17472,6 +17798,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -17568,6 +17896,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -17655,6 +17985,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -17760,6 +18092,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -17865,6 +18199,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -17997,6 +18333,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -18112,6 +18450,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -18232,6 +18572,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -18337,6 +18679,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -18433,6 +18777,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -18538,6 +18884,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -18673,6 +19021,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -18796,6 +19146,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -18919,6 +19271,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -19025,6 +19379,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -19162,6 +19518,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -19264,6 +19622,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -19369,6 +19729,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -19513,6 +19875,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -19629,6 +19993,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -19721,6 +20087,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -19817,6 +20185,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -19922,6 +20292,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -20033,6 +20405,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -20157,6 +20531,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -20262,6 +20638,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -20367,6 +20745,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -20472,6 +20852,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -20591,6 +20973,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -20678,6 +21062,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -20774,6 +21160,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -20906,6 +21294,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -21021,6 +21411,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -21126,6 +21518,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -21249,6 +21643,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -21372,6 +21768,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -21503,6 +21901,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -21628,6 +22028,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -21738,6 +22140,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -21848,6 +22252,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -21953,6 +22359,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -22049,6 +22457,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -22145,6 +22555,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -22241,6 +22653,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -22328,6 +22742,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -22406,6 +22822,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -22493,6 +22911,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -22589,6 +23009,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -22694,6 +23116,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -22799,6 +23223,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -22928,6 +23354,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -23024,6 +23452,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -23111,6 +23541,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -23216,6 +23648,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -23335,6 +23769,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -23440,6 +23876,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -23579,6 +24017,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -23675,6 +24115,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -23780,6 +24222,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -23885,6 +24329,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -23990,6 +24436,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -24077,6 +24525,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -24187,6 +24637,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -24292,6 +24744,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -24379,6 +24833,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -24480,6 +24936,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -24576,6 +25034,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -24681,6 +25141,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -24804,6 +25266,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -24941,6 +25405,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -25066,6 +25532,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -25158,6 +25626,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -25245,6 +25715,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -25332,6 +25804,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -25419,6 +25893,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -25556,6 +26032,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -25675,6 +26153,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -25794,6 +26274,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -25913,6 +26395,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -26032,6 +26516,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -26151,6 +26637,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -26279,6 +26767,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -26366,6 +26856,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -26472,6 +26964,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -26568,6 +27062,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -26664,6 +27160,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -26770,6 +27268,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -26902,6 +27402,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -27045,6 +27547,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -27174,6 +27678,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -27276,6 +27782,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -27410,6 +27918,8 @@
       "laws": [
         "inverse-of"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -27549,6 +28059,8 @@
       "laws": [
         "monotonic"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -27693,6 +28205,8 @@
       "laws": [
         "distributive"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -27787,6 +28301,8 @@
       "laws": [
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -27886,6 +28402,8 @@
       "laws": [
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -27985,6 +28503,8 @@
       "laws": [
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -28084,6 +28604,8 @@
       "laws": [
         "absorbing"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -28183,6 +28705,8 @@
       "laws": [
         "identity"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -28322,6 +28846,8 @@
       "laws": [
         "monotonic"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -28466,6 +28992,8 @@
       "laws": [
         "complement"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -28563,6 +29091,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -28664,6 +29194,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -28751,6 +29283,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -28865,6 +29399,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -28984,6 +29520,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -29094,6 +29632,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -29213,6 +29753,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -29314,6 +29856,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -29424,6 +29968,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -29516,6 +30062,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -29626,6 +30174,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -29718,6 +30268,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -29814,6 +30366,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -29907,6 +30461,8 @@
         "distributive",
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -30000,6 +30556,8 @@
         "idempotent",
         "lattice-absorption"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -30090,6 +30648,8 @@
         "associative",
         "bounded"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "guarded-only",
       "composition_chain": [
         {
           "depth": 0,
@@ -30180,6 +30740,8 @@
         "bounded",
         "monotonic"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -30278,6 +30840,8 @@
       "laws": [
         "monotonic"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -30378,6 +30942,8 @@
         "commutative",
         "identity"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -30470,6 +31036,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -30563,6 +31131,8 @@
         "idempotent",
         "identity"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -30655,6 +31225,8 @@
         "commutative",
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -30760,6 +31332,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -30852,6 +31426,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -30939,6 +31515,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -31037,6 +31615,8 @@
       "laws": [
         "inverse-of"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": "law-unrecorded",
       "composition_chain": [
         {
           "depth": 0,
@@ -31133,6 +31713,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -31224,6 +31806,8 @@
         "commutative",
         "identity"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -31311,6 +31895,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -31413,6 +31999,8 @@
         "idempotent",
         "identity"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -31515,6 +32103,8 @@
         "idempotent",
         "identity"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -31616,6 +32206,8 @@
         "commutative",
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -31717,6 +32309,8 @@
         "commutative",
         "idempotent"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -31817,6 +32411,8 @@
         "commutative",
         "identity"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -31917,6 +32513,8 @@
         "commutative",
         "identity"
       ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -32004,6 +32602,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -32199,6 +32799,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -32370,6 +32972,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -32507,6 +33111,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -32608,6 +33214,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -32745,6 +33353,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -32882,6 +33492,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -33055,6 +33667,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -33280,6 +33894,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -33416,6 +34032,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -33535,6 +34153,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -33637,6 +34257,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -33743,6 +34365,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -33844,6 +34468,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -33990,6 +34616,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -34091,6 +34719,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -34201,6 +34831,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -34312,6 +34944,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -34449,6 +35083,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -34550,6 +35186,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -34723,6 +35361,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -34849,6 +35489,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -34950,6 +35592,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -35042,6 +35686,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -35138,6 +35784,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -35225,6 +35873,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -35349,6 +35999,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -35456,6 +36108,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -35543,6 +36197,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -35639,6 +36295,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -35726,6 +36384,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -35818,6 +36478,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -35901,6 +36563,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -35988,6 +36652,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -36089,6 +36755,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -36190,6 +36858,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -36282,6 +36952,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -36383,6 +37055,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -36475,6 +37149,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -36553,6 +37229,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -36645,6 +37323,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -36769,6 +37449,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -36852,6 +37534,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -36944,6 +37628,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -37036,6 +37722,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -37132,6 +37820,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -37224,6 +37914,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -37316,6 +38008,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -37426,6 +38120,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -37518,6 +38214,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -37605,6 +38303,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -37710,6 +38410,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -37797,6 +38499,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -37884,6 +38588,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -37971,6 +38677,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,
@@ -38058,6 +38766,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -38145,6 +38855,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -38241,6 +38953,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "no-transform",
+      "absence_class": "no-legal-rewrite",
       "composition_chain": [
         {
           "depth": 0,
@@ -38328,6 +39042,8 @@
         "wgpu"
       ],
       "laws": [],
+      "transform_decision": "opaque",
+      "absence_class": "uncharacterized",
       "composition_chain": [
         {
           "depth": 0,

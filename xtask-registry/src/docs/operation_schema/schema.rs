@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 /// fails when the two drift. That drift shipped once already, with the generator
 /// on 3 and the checker still demanding 2, back when the checker was a Python
 /// script whose number could only be compared as text.
-pub(crate) const SCHEMA_VERSION: u32 = 5;
+pub(crate) const SCHEMA_VERSION: u32 = 6;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub(crate) struct OperationSchema {
@@ -35,6 +35,16 @@ pub(crate) struct OperationRecord {
     pub(crate) backend_support: BTreeMap<String, BackendSupport>,
     pub(crate) target_facets: Vec<String>,
     pub(crate) laws: Vec<String>,
+    /// Which transform decision the operation's contract record states:
+    /// `guarded-laws`, `no-transform`, `opaque`, or `not-recorded`.
+    pub(crate) transform_decision: String,
+    /// Which meaning an absent unconditional law carries, or `None` when the
+    /// operation records one with executable proof evidence.
+    ///
+    /// Projecting it is what separates the four meanings a reader of this
+    /// document used to have to guess from an empty `laws` array: no legal
+    /// rewrite, guarded only, uncharacterized, and nothing recorded at all.
+    pub(crate) absence_class: Option<String>,
     pub(crate) composition_chain: Vec<CompositionStep>,
 }
 

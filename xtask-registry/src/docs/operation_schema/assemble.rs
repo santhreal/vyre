@@ -30,6 +30,7 @@ struct LiveEntry {
     has_expected: bool,
     tolerance_ulp: u32,
     recorded_constraints: vyre_foundation::GeometryRequirements,
+    contract: vyre_spec::SemanticContractRecord,
 }
 
 impl LiveEntry {
@@ -90,6 +91,7 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
             tolerance_ulp: entry.ulp_budget().unwrap_or(0),
             recorded_constraints: entry.geometry_requirements,
             laws: entry.laws,
+            contract: entry.contract_record(),
         })
         .collect::<Vec<_>>();
     let all_ids: BTreeSet<&str> = live.iter().map(|entry| entry.id).collect();
@@ -227,6 +229,11 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
                 .into_iter()
                 .collect(),
             laws,
+            transform_decision: entry.contract.state_name().to_string(),
+            absence_class: entry
+                .contract
+                .absence_class()
+                .map(|class| class.name().to_string()),
             composition_chain,
         });
     }
