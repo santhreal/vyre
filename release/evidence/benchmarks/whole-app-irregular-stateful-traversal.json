@@ -1,4 +1,5 @@
 {
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"58fb8036c7c40fcff1ee93dd37574be2b6b53776","commit_timestamp":"1789308676","parent_commit":"c7f59aa8216b3d61d4143dd6094ef73f335a5cc6","dirty":false,"source_fingerprint":"git:58fb8036c7c40fcff1ee93dd37574be2b6b53776:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
   "schema_version": "vyre.whole-application-record.v2",
   "workload_id": "workload.whole_app.irregular_stateful_traversal",
   "workload_name": "Irregular CSR Sparse Graph Frontier Traversal & Stateful Accumulator",
@@ -8,10 +9,10 @@
   "compile_request_validated": true,
   "production_route": {
     "backend_id": "cuda",
-    "device_id": "NVIDIA GeForce RTX 3080 Ti",
+    "device_id": "NVIDIA GeForce RTX 4090",
     "device_generation": 2,
-    "artifact_digest": "f3052f5f5197dba23e3eacd37b07907c4c529d1e4f30d41eac23572c99405319",
-    "target_payload_digest": "84eebc0fcfc8c80ee4079245b77dfb24cf8b1270324b5120412bd0df439f5e99",
+    "artifact_digest": "8040a44b51008cdf944e697cab579ea445451bd9350b8676e98b1ef5160fe1a3",
+    "target_payload_digest": "3f01cde1a849de9b6f614dd8ef2eb4b92e8932d7768fb7323ad8bd402e414c97",
     "bound_resource_count": 7,
     "completed_submissions": 31
   },
@@ -23,30 +24,30 @@
     "candidate_digest": "5fdbac95abd53af907b57e5f57db7f0c1396f498b397151adb03212867ebd333",
     "parity_status": "matched_exact_bytes"
   },
-  "compile_time_ns": 816977,
-  "load_time_ns": 11749689,
+  "compile_time_ns": 12862951,
+  "load_time_ns": 7644218,
   "measured_samples": 30,
-  "p50_latency_ns": 50119,
-  "p99_latency_ns": 56245,
-  "device_p50_latency_ns": 11104,
+  "p50_latency_ns": 172678,
+  "p99_latency_ns": 190623,
+  "device_p50_latency_ns": 9280,
   "throughput": {
     "gflops": null,
-    "gb_per_sec": 0.5720784532811908,
-    "items_per_sec": 20431373.3314711
+    "gb_per_sec": 0.16604315546855997,
+    "items_per_sec": 5930112.695305713
   },
   "peak_bytes": 24576,
   "resident_bytes": 8192,
   "cold_state": {
-    "latency_ns": 81128,
+    "latency_ns": 256337,
     "memory_bytes": null,
     "is_cold_start": true,
-    "warmup_ratio": 1.6187074762066282
+    "warmup_ratio": 1.4844797831802545
   },
   "warm_state": {
-    "latency_ns": 50119,
+    "latency_ns": 172678,
     "memory_bytes": null,
     "is_cold_start": false,
-    "warmup_ratio": 1.6187074762066282
+    "warmup_ratio": 1.4844797831802545
   },
   "selected_schedule_id": "schedule.70cdcebfa380d32923c0e4d22c83df0ca7848d91ab48123cc52aaf51c7a18900",
   "input_digest": "42ded5eeca877f23b336768be0ba5082190d3e6dcae7037bf8ee9db2d31abb1d",
@@ -55,6 +56,6 @@
     "baseline_name": "NVIDIA CUB 2.1.0 / cuSPARSE 12.3.0 SpMV Scatter Pipeline",
     "reason": "no version-pinned native baseline `native.cub.spmv_segmented_scatter_v2_1_0` is vendored. Fix: vendor the pinned native kernel and register it before claiming a comparison against it."
   },
-  "host_environment": "x86_64-linux / cuda / NVIDIA GeForce RTX 3080 Ti",
-  "recorded_at_utc": "2026-09-10T09:07:29Z"
+  "host_environment": "x86_64-linux / cuda / NVIDIA GeForce RTX 4090",
+  "recorded_at_utc": "2026-09-13T14:11:37Z"
 }
