@@ -1419,6 +1419,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `apply_cross_scope_cse`, `apply_cross_scope_cse_with_lookup`,
   `build_canonical_id_program`, `build_canonical_delta_compact_program` and
   `build_structural_hash_program` keep the path the documentation always named.
+- The wgpu and SPIR-V drivers stage a fused artifact's module inputs through
+  vyre_driver::staged_input_gather!, so every backend resolves target bindings
+  by one rule.
 - An artifact framed under an earlier schema is refused with a version-skew
   diagnostic before its body is read.
 - The strict-float witness programs and the atomic-reduction fixture have one
@@ -4420,6 +4423,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   instead of one fused loop, and orders the operands of each scaled product to
   match the chunked form, which changes its emitted representation without
   changing any value it computes.
+- The lock that serializes vendor runtime bring-up is held by a named type
+  implementing StateOwnerRecovery, which reports the device-context failure
+  domain and restart-from-canonical-input recovery.
 - The workspace version is 0.8.0. The 0.7 line's public API is not preserved:
   modules moved, constructors gained fields, enums gained and lost variants,
   and several functions and features were removed as duplicated surfaces were
@@ -5879,6 +5885,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   both hardware acquisitions and both slipped through. The roster now covers
   BackendRegistration and DeviceHandle owners, and constructor stems match
   acquire_ordinal without matching a helper that merely names the type.
+- The device-test-gating gate reads required-features from each [[test]] entry,
+  so a device test that is a module of a harness target the manifest admits is
+  no longer reported as reaching hardware with nothing admitting it.
 - xtask gates --help ran every registered gate instead of printing usage, and
   so did lego-audit --help and gates --subset <name> --help. The runner now
   answers a help request anywhere on its command line, except as the value of
@@ -9604,6 +9613,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   registered gate in no subset, and a lowered floor whose doc comment records
   no measured count. The rules are derived from the registry and the baseline
   file at run time, so a new gate is covered without being listed anywhere.
+- The Go extractor bounds-probe roster is walked out of the parse module tree
+  at run time, so an extractor added in a new file or a file split into a
+  directory joins the probe coverage check.
 - The CUDA release memory floor is derived from the registered benchmark
   catalog instead of asserted as a device class. It was a flat 16384 MiB
   restated at several call sites while the largest registered workload declares
@@ -9669,6 +9681,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Module layout and file naming rules moved out of the structure gate crate
   root into their own module, bringing the root back under the per-file line
   cap the workspace holds every file to.
+- The libs example template imports check_tensors, check_same_shape,
+  checked_element_count and BuildOptions from vyre_libs::builder, which is
+  where the builder feature publishes them.
 - vyre-registry-link enables every domain of vyre-primitives instead of the
   hardware domain alone. Linking one domain left the operation registry partial
   in every binary that reads it: the release conformance run covered 356 of 359
