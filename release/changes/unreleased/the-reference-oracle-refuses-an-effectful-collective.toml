@@ -1,0 +1,15 @@
+category = "Fixed"
+text = """
+The reference oracle refuses a subgroup collective whose argument writes \
+memory instead of evaluating that argument once per lane per lane. A \
+collective gathers every lane in the subgroup and every lane reaches the \
+collective, so the argument ran width times per lane. Buffer bytes sit behind \
+a shared handle, so a 32-lane `subgroupAdd(atomicAdd(counter, 1))` committed \
+1024 times where a device commits 32, and each lane received a different \
+reduction (496, 1520, 2544, ...) where every lane of a subgroup reads the same \
+sum. How many commits land is a property of how the interpreter gathers lanes \
+rather than of the program, so the request returns an incomplete-dispatch \
+refusal and no expected output, in strict and diagnostic permissive mode \
+alike. A pure argument is unaffected, and the lane gather no longer copies \
+both buffer maps once per lane because the copy isolated nothing.
+"""

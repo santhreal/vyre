@@ -43,6 +43,10 @@ pub mod atomic_property_contracts;
 #[path = "byte_prefix_property_contracts.rs"]
 pub mod byte_prefix_property_contracts;
 
+/// Integration tests from `tests/collective_argument_effects.rs`.
+#[path = "collective_argument_effects.rs"]
+pub mod collective_argument_effects;
+
 /// Integration tests from `tests/collective_in_divergent_control_flow.rs`.
 #[path = "collective_in_divergent_control_flow.rs"]
 pub mod collective_in_divergent_control_flow;

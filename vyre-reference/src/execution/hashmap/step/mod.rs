@@ -114,22 +114,60 @@ pub(crate) fn eval_to_index(
     })
 }
 
+/// Refuse a collective argument that writes memory.
+///
+/// A lane that reaches a collective evaluates the argument for every lane in
+/// its subgroup, and every lane in the subgroup reaches the collective, so the
+/// argument is evaluated `width * width` times. Buffer bytes live behind a
+/// shared handle, so an atomic in the argument commits every one of those
+/// times where the device commits once per lane: a 32-lane
+/// `subgroupAdd(atomicAdd(counter, 1))` left `counter` at 1024 and handed each
+/// lane a different reduction, where the device leaves it at 32 and every lane
+/// reads the same sum. How many commits land is a property of how this
+/// interpreter gathers lanes rather than of the program, so there is no
+/// expected output to issue and the oracle refuses instead of inventing one.
+#[cfg(feature = "subgroup-ops")]
+fn refuse_effectful_collective_argument(
+    expr: &vyre_foundation::ir::Expr,
+) -> Result<(), ReferenceError> {
+    // Children come from foundation's single `expr_children` owner, so a new
+    // operand-carrying variant is searched without a second traversal here,
+    // and the walk is an explicit worklist rather than recursion. A new
+    // memory-writing variant is still refused: `eval_expr` has no arm for it
+    // and its catch-all errors, so the fail-closed direction does not depend
+    // on this predicate naming it.
+    if !vyre_foundation::visit::any_subexpr(expr, &mut |sub| {
+        matches!(sub, vyre_foundation::ir::Expr::Atomic { .. })
+    }) {
+        return Ok(());
+    }
+    Err(ReferenceError::incomplete_dispatch_semantics(
+        "a subgroup collective argument writes memory through an atomic. The collective gathers \
+         every lane in the subgroup and every lane reaches it, so the argument would commit once \
+         per lane per lane rather than once per lane, and which commits land is a property of \
+         the gather rather than of the program. Fix: bind the atomic with a Let before the \
+         collective and pass the bound variable as the argument.",
+    ))
+}
+
 #[cfg(feature = "subgroup-ops")]
 pub(crate) fn eval_expr_snapshot(
     expr: &vyre_foundation::ir::Expr,
     snapshot: &HashmapInvocationSnapshot,
     snapshots: &[HashmapInvocationSnapshot],
-    memory: &HashmapMemory,
+    memory: &mut HashmapMemory,
 ) -> Result<Value, ReferenceError> {
+    refuse_effectful_collective_argument(expr)?;
     let empty_entry: &[vyre_foundation::ir::Node] = &[];
     let mut invocation =
         HashmapInvocation::new(snapshot.ids, snapshot.linear_local_index, empty_entry);
     invocation.locals.locals = snapshot.locals.locals.clone();
-    let mut snapshot_memory = HashmapMemory {
-        storage: memory.storage.clone(),
-        workgroup: memory.workgroup.clone(),
-    };
-    super::eval_expr(expr, &mut invocation, &mut snapshot_memory, snapshots)
+    // The argument cannot write, so evaluating it against the live memory is
+    // byte-identical to evaluating it against a copy. The copy this used to
+    // take allocated both buffer maps once per lane per collective and
+    // isolated nothing: buffer bytes sit behind a shared handle, so every
+    // write reached the original anyway.
+    super::eval_expr(expr, &mut invocation, memory, snapshots)
 }
 
 /// Capture every lane's locals for cross-lane collective evaluation, INDEXED BY LANE.
