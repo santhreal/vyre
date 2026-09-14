@@ -947,6 +947,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The crate ownership registry declares publication classes for all workspace
   packages, and a generated supported-API manifest classifies exported public
   API items by stability, feature, and wire compatibility.
+- The baseline suite recomputes every pinned native baseline digest from the
+  harness source the registry entry names, and rejects a workload pinning a
+  baseline id no entry defines, a compiled architecture that contradicts the
+  declared target, and a toolchain that disagrees with the cell it is keyed to.
 - `docs/lego-block-rule.md` is back, rewritten against source. It owns the four
   things nothing else states: the discovery step, the Category A and Category C
   placement test, the promotion criteria, and the Gate 1 budget in prose. The
@@ -959,6 +963,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   workspace does not ship, and the worked example names the primitive that
   survived it. `gate1` states the countable half and points at the policy for
   the rest, instead of recording that the policy was deleted.
+- The `domain-vocabulary` gate rejects a published item below the composition
+  layers that names a consumer-domain concept listed in
+  `docs/DOMAIN_VOCABULARY.toml`, and a mechanism one crate publishes an owner
+  for from two modules.
 - `vyre::visit` exports the IR traversal module. `Expr` and `Node` are
   `#[non_exhaustive]`, so a caller outside `vyre-foundation` cannot match them
   exhaustively; the facade published both types and no way to descend through
@@ -5173,6 +5181,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `element_zero`, `shape`, `tensor_ref`, `attribution`, `descriptor`, `outputs`
   and `signatures`, are reachable only through `plumbing::host`,
   `plumbing::operand`, `plumbing::program` and `plumbing::registration`.
+- `vyre_runtime::paged_resource::PagedResidencyPlanner` and
+  `PagingCandidateStrategy` are deleted. The selector returned its
+  `device_supports_paging` argument as a two-arm enum, and the caller holding
+  the device capability decides what to run instead.
 - `vyre_foundation::execution_plan::StrategyPlan` and the `FusionStrategy`,
   `DispatchStrategy`, `AutotuneStrategy`, `ProvenanceStrategy`,
   `LayoutStrategy`, `ConformanceStrength` and `ReadbackStrategy` types are
@@ -5911,6 +5923,20 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   buffer reference at dispatch time. The scan now reads the canonical node
   buffer references, and a segment carrying an extension node keeps every
   declaration instead of trusting an incomplete set.
+- A grid-sync segment launches the grid its own pass covers instead of the grid
+  stated for the whole program, and the width is inferred from the buffers the
+  segment references rather than the widest one it declares. A segment inherits
+  the whole program's buffer table so one resident resource slice binds to
+  every segment, so both the split and the launch analysis read the
+  1048576-element input beside a 4096-element block-total buffer. Profiled on
+  an RTX 4090, all five kernels of the 1048576-element inclusive `u32` scan
+  launched 4096 workgroups of 256, so the two block-total passes ran 1048576
+  lanes over a 4096-element domain. The five kernels now launch 4096, 16, 1, 16
+  and 4096 workgroups, and their total device time falls from 62.8 us to 40.4
+  us; the block-total pass alone falls from 22.2 us to 3.2 us. A pass whose
+  result depends on how many invocations ran keeps its full input span, and the
+  block shape carries forward unchanged because the compiled module declares
+  it.
 - A hardware intrinsic fixture states only the buffers a caller supplies, so
   the reference interpreter receives the input list a device artifact would
   accept.
@@ -6187,6 +6213,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   members it judges by the presence of a `tests` directory rather than the test
   files the tree supplies. Each now reads content, so an empty directory left
   behind by a move stops the run instead of shrinking the set that is judged.
+- Every pinned native baseline records the digest of the harness source it
+  names; the six recorded digests matched no file on disk, and one was the
+  digest of the empty string.
 - A cached pipeline outlived the emitter that produced it. The wgpu early
   pipeline cache and the CUDA PTX source cache, including its on-disk half,
   keyed each entry on the program, the adapter and a lowering label that a
@@ -9580,6 +9609,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The artifact topology contract asserts the selected execution topology by
   value and reads it back from the lowered target module bundle, so a lowering
   that drops the topology onto the sequential baseline fails.
+- The representative benchmark workloads and the pinned baseline registry
+  declare `sm_89` and `nvcc 12.0`, the architecture and toolchain the
+  measurements are taken on, instead of an `sm_90a` no cell could be measured
+  against. The CUB baselines pin 2.0.1 and the cuSPARSE baseline pins 12.0.1,
+  the versions the measuring toolkit provides.
 - The criterion regression gate reported its threshold check as a median change
   while reading the upper bound of the confidence interval. It now prints both
   and names the bound it gates on. The threshold is unchanged.

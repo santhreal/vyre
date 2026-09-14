@@ -1,0 +1,4 @@
+category = "Added"
+text = """
+The `domain-vocabulary` gate rejects a published item below the composition layers that names a consumer-domain concept listed in `docs/DOMAIN_VOCABULARY.toml`, and a mechanism one crate publishes an owner for from two modules.
+"""

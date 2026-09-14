@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"0372561e8aabf1e6370c4d84e03064f4981a5a3e","commit_timestamp":"1789407657","parent_commit":"1eed912175dbbb6fe7188bd51d61ff04d9906342","dirty":true,"source_fingerprint":"git:0372561e8aabf1e6370c4d84e03064f4981a5a3e:dirty=true:worktree=a0ae3a454ec4f6236e81a6e8f14cad5a736c468abfa99c56525101a0c3b87938"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"560d6f1796fd6d6e9d3c86a4ddbd5e3d5ce42b88","commit_timestamp":"1789408273","parent_commit":"6fcfc8ac5b44f914c16aa63e02b1463df4354578","dirty":true,"source_fingerprint":"git:560d6f1796fd6d6e9d3c86a4ddbd5e3d5ce42b88:dirty=true:worktree=e8ed981b05e5f1a88248a6f128a6cc495832e43d8d123228b6cbd5b7d3fe4978"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "_type": "https://in-toto.io/Statement/v1",
   "predicate": {
     "buildDefinition": {
@@ -2931,7 +2931,7 @@
         },
         {
           "digest": {
-            "sha256": "042cfa04d94179fd7a94e6df345c393457fc7f94a460fc215b5287758b8b0998"
+            "sha256": "35e2344e1cb6d69cf06cb3f1b3e35018ed9c5874bcfd846d2c22224f07f0221b"
           },
           "name": "docs/generated/engineering-scorecard.toml"
         },
@@ -2975,7 +2975,7 @@
   "subject": [
     {
       "digest": {
-        "blake3": "5cb82eccff9aaa72c4230e10128478077460e00181ebf8f69079437ef5e6d8b8"
+        "blake3": "ffe2c78fc26209f76cd6cf2bf5d6cacafe8345b65f59a28cfa21f9454684696d"
       },
       "name": "vyre-release-archive"
     }

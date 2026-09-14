@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"0372561e8aabf1e6370c4d84e03064f4981a5a3e","commit_timestamp":"1789407657","parent_commit":"1eed912175dbbb6fe7188bd51d61ff04d9906342","dirty":true,"source_fingerprint":"git:0372561e8aabf1e6370c4d84e03064f4981a5a3e:dirty=true:worktree=a0ae3a454ec4f6236e81a6e8f14cad5a736c468abfa99c56525101a0c3b87938"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"560d6f1796fd6d6e9d3c86a4ddbd5e3d5ce42b88","commit_timestamp":"1789408273","parent_commit":"6fcfc8ac5b44f914c16aa63e02b1463df4354578","dirty":true,"source_fingerprint":"git:560d6f1796fd6d6e9d3c86a4ddbd5e3d5ce42b88:dirty=true:worktree=e8ed981b05e5f1a88248a6f128a6cc495832e43d8d123228b6cbd5b7d3fe4978"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "bomFormat": "CycloneDX",
   "components": [
     {
@@ -9111,7 +9111,7 @@
       "type": "framework",
       "version": "0.8.0"
     },
-    "timestamp": "2026-09-14T17:40:57Z",
+    "timestamp": "2026-09-14T17:51:13Z",
     "tools": [
       {
         "name": "xtask-release-provenance",
