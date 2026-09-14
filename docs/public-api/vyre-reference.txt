@@ -843,8 +843,8 @@ pub vyre_reference::DeterministicSchedulePolicy::Forward
 pub vyre_reference::DeterministicSchedulePolicy::LaneReversed
 pub vyre_reference::DeterministicSchedulePolicy::LaneRotated(u32)
 pub vyre_reference::DiagnosticPermissiveReport::oob_report: vyre_reference::OobReport
-pub vyre_reference::DiagnosticPermissiveReport::output_digest: alloc::string::String
 pub vyre_reference::DiagnosticPermissiveReport::recorded_anomalies: alloc::vec::Vec<alloc::string::String>
+pub vyre_reference::DiagnosticPermissiveReport::run_digest: alloc::string::String
 pub vyre_reference::DiagnosticPermissiveReport::steps_executed: u64
 pub vyre_reference::ExactResourceAbi::declared_buffers: &'a [vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl]
 pub vyre_reference::ExactResourceAbi::inputs: &'a [vyre_reference::value::Value]

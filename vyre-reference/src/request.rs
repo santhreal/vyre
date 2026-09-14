@@ -419,7 +419,7 @@ impl<'a> ReferenceRequest<'a> {
             ));
         }
         Ok(DiagnosticPermissiveReport {
-            output_digest: output_digest(&outputs),
+            run_digest: permissive_run_digest(&outputs),
             oob_report: oob,
             steps_executed: steps,
             recorded_anomalies: anomalies,
@@ -489,14 +489,23 @@ pub struct StrictExecutionResult {
     pub certificate: ReferenceCertificate,
 }
 
-/// Digest of the bytes a permissive run produced.
+/// Label the permissive run digest is taken under.
 ///
-/// A digest is the whole record of what permissive mode observed. It is enough
-/// to tell two permissive runs apart and not enough to grade a device against,
-/// because the bytes it summarizes were computed while out-of-bounds accesses
-/// were being absorbed rather than refused.
-fn output_digest(outputs: &[Value]) -> String {
+/// Mixed in before any output byte, so the value is not a hash of the output
+/// bytes and cannot be reproduced from a device's outputs.
+const PERMISSIVE_DIGEST_LABEL: &[u8] = b"vyre-reference-permissive-run-v1";
+
+/// Digest identifying one permissive run.
+///
+/// The digest records what permissive mode observed, so two permissive runs of
+/// one program are comparable. It must not be comparable with a device, and an
+/// unlabeled hash of the output bytes was: a caller hashed a device's outputs
+/// the same way and compared, which grades that device against a mode that
+/// issues no expected output. The label above is hashed first, so the only
+/// value this equals is another permissive digest of the same bytes.
+fn permissive_run_digest(outputs: &[Value]) -> String {
     let mut hasher = blake3::Hasher::new();
+    hasher.update(PERMISSIVE_DIGEST_LABEL);
     hasher.update(&(outputs.len() as u64).to_le_bytes());
     for output in outputs {
         let bytes = output.to_bytes();
@@ -512,14 +521,82 @@ fn output_digest(outputs: &[Value]) -> String {
 /// property of this type rather than of a check inside it: there is no output
 /// value and no certificate anywhere in the report, so no caller can extract
 /// one, mistake one for a graded result, or reach one by ignoring a `Result`.
+/// The one digest it carries is labelled, so it does not become an expected
+/// output by being compared against a hash of a device's outputs.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DiagnosticPermissiveReport {
-    /// Digest of the bytes the run produced under absorption.
-    pub output_digest: String,
+    /// Digest identifying this permissive run, comparable only with another
+    /// permissive digest.
+    pub run_digest: String,
     /// Tally of out-of-bounds accesses absorbed.
     pub oob_report: OobReport,
     /// Steps executed.
     pub steps_executed: u64,
     /// Recorded anomaly diagnostics.
     pub recorded_anomalies: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{permissive_run_digest, Value, PERMISSIVE_DIGEST_LABEL};
+
+    /// The unlabeled digest this used to publish, recomputed here.
+    ///
+    /// A caller with a device's outputs can compute exactly this, so a
+    /// permissive report carrying it hands out an expected output.
+    fn digest_without_the_label(outputs: &[Value]) -> String {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(&(outputs.len() as u64).to_le_bytes());
+        for output in outputs {
+            let bytes = output.to_bytes();
+            hasher.update(&(bytes.len() as u64).to_le_bytes());
+            hasher.update(&bytes);
+        }
+        hasher.finalize().to_hex().to_string()
+    }
+
+    /// WHY: closes the class where permissive mode issues an expected output
+    /// in digest form. The mode may record what it observed and must not hand
+    /// back anything a device is graded against, and a plain hash of the
+    /// output bytes is graded against a device by hashing that device's
+    /// outputs the same way. The label makes the published value unreachable
+    /// from the bytes alone.
+    ///
+    /// What this does NOT catch: a caller that reimplements the labelled
+    /// digest. The label is published in this source, so the refusal is a
+    /// contract about what the report offers rather than a secret.
+    #[test]
+    fn the_permissive_digest_is_not_a_hash_of_the_output_bytes() {
+        let outputs = vec![
+            Value::from(0xDEAD_BEEFu32.to_le_bytes().to_vec()),
+            Value::U32(7),
+        ];
+        assert_ne!(
+            permissive_run_digest(&outputs),
+            digest_without_the_label(&outputs),
+            "Fix: hash PERMISSIVE_DIGEST_LABEL before the outputs. Equal to a plain hash of the \
+             output bytes, the permissive digest grades a device and is an expected output."
+        );
+    }
+
+    /// The label has to reach the hash, not merely exist beside it.
+    #[test]
+    fn the_label_is_not_empty() {
+        assert!(
+            !PERMISSIVE_DIGEST_LABEL.is_empty(),
+            "Fix: an empty label domain-separates nothing and the digest is again a plain hash \
+             of the output bytes."
+        );
+    }
+
+    /// Different bytes still produce different digests, so the label did not
+    /// flatten the digest into a constant.
+    #[test]
+    fn the_digest_still_distinguishes_two_runs() {
+        assert_ne!(
+            permissive_run_digest(&[Value::U32(1)]),
+            permissive_run_digest(&[Value::U32(2)]),
+            "Fix: the digest must identify the run it summarizes"
+        );
+    }
 }

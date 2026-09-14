@@ -292,10 +292,23 @@ fn permissive_mode_cannot_issue_expected_output_or_certificate() {
         );
     }
     assert_eq!(
-        report.output_digest.len(),
+        report.run_digest.len(),
         64,
-        "Fix: a permissive report must summarize its bytes as a digest, got: {}",
-        report.output_digest
+        "Fix: a permissive report must summarize its run as a digest, got: {}",
+        report.run_digest
+    );
+    // The digest is labelled, so it is not a hash of the output bytes and a
+    // device's outputs cannot reproduce it. `request::tests` owns that
+    // assertion, where the label and the digest function are both in scope.
+    // Two permissive runs of one program still agree, so the digest keeps the
+    // diagnostic use the label is meant to preserve.
+    assert_eq!(
+        report.run_digest,
+        ReferenceRequest::new(&program, &inputs, ReferenceBudget::standard())
+            .execute_permissive()
+            .expect("permissive execution succeeds")
+            .run_digest,
+        "Fix: the permissive digest must identify the run, so two runs of one program agree"
     );
     assert_eq!(report.oob_report.total(), 0);
 }
