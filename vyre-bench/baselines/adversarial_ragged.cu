@@ -1,6 +1,6 @@
 // NVIDIA CUB Segmented Reduce Adversarial Ragged Reduction baseline.
 //
-// Pinned External Baseline: CUB v2.1.0 (DeviceSegmentedReduce)
+// Pinned External Baseline: CUB v2.0.1 (DeviceSegmentedReduce)
 // Measures power-law distributed segmented reduction with extreme warp divergence.
 
 #include <cub/cub.cuh>

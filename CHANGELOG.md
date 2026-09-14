@@ -13,6 +13,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   layers that names a consumer-domain concept listed in
   `docs/DOMAIN_VOCABULARY.toml`, and a mechanism one crate publishes an owner
   for from two modules.
+- The baseline suite recomputes every pinned native baseline digest from the
+  harness source the registry entry names, and rejects a workload pinning a
+  baseline id no entry defines, a compiled architecture that contradicts the
+  declared target, and a toolchain that disagrees with the cell it is keyed to.
 - Adaptive traversal publishes the nine buffer names one step binds as
   `AdaptiveTraversalBuffers::CANONICAL`, with canonical names for the
   active-source queue and its resident length.
@@ -5255,6 +5259,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   driver cache tests.
 
 ### Fixed
+
+- Every pinned native baseline records the digest of the harness source it
+  names; the six recorded digests matched no file on disk, and one was the
+  digest of the empty string.
+- The representative benchmark workloads and the pinned baseline registry
+  declare `sm_89` and `nvcc 12.0`, the architecture and toolchain the
+  measurements are taken on, instead of an `sm_90a` no cell could be measured
+  against. The CUB baselines pin 2.0.1 and the cuSPARSE baseline pins 12.0.1,
+  the versions the measuring toolkit provides.
 
 - The conformance runner exercises each backend through the route its
   registration declares. A backend that registers a target compiler and a

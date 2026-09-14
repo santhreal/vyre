@@ -1,6 +1,6 @@
 // NVIDIA cuSPARSE CSR SpMV baseline.
 //
-// Pinned External Baseline: cuSPARSE v12.3.0
+// Pinned External Baseline: cuSPARSE v12.0.1
 // Measures compressed sparse row matrix-vector multiplication (1M rows x 1M cols, 10M nonzeros).
 
 #include <cuda_runtime.h>

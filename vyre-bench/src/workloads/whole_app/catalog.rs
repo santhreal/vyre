@@ -27,7 +27,7 @@ pub fn dense_numerical_pipeline() -> WholeApplicationWorkload {
             dtype: "u32_f32",
             shapes: "[1024, 1024] -> [1024, 1024] -> [1024, 1024]",
             raggedness: "uniform_contiguous",
-            target: "sm_90a_sm_86",
+            target: "sm_89_sm_86",
             objective: "minimize_p50_latency",
         }),
         build_graph_and_inputs: || {
@@ -204,7 +204,7 @@ pub fn irregular_stateful_traversal() -> WholeApplicationWorkload {
             dtype: "u32",
             shapes: "vertices=1024,edges=4096",
             raggedness: "csr_ragged_irregular",
-            target: "sm_90a_sm_86",
+            target: "sm_89_sm_86",
             objective: "minimize_p50_latency",
         }),
         build_graph_and_inputs: || {
@@ -377,7 +377,7 @@ pub fn interactive_event_pipeline() -> WholeApplicationWorkload {
             dtype: "u32_rgba8",
             shapes: "tiles=512,pixels_per_tile=64",
             raggedness: "uniform_contiguous",
-            target: "sm_90a_sm_86",
+            target: "sm_89_sm_86",
             objective: "minimize_p99_latency",
         }),
         build_graph_and_inputs: || {

@@ -94,6 +94,9 @@ vyre-emit-naga = { path = "../vyre-emit-naga" }
 vyre-emit-spirv = { path = "../vyre-emit-spirv" }
 syn.workspace = true
 tempfile.workspace = true
+# The baseline suite recomputes each pinned harness digest from the file on disk.
+sha2.workspace = true
+hex.workspace = true
 # The registry-closure gate and the shared fixture readers the suites read.
 vyre-test-support = { workspace = true }
 

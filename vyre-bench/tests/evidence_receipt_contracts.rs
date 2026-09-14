@@ -985,7 +985,7 @@ fn compiler_source_crates_name_zero_workload_or_expert_baselines() {
 
     // Pinned native baseline IDs
     corpus_identifiers.push("native.graph_pipeline.v1_0_0".to_string());
-    corpus_identifiers.push("native.cub.segmented_reduce_v2_1_0".to_string());
+    corpus_identifiers.push("native.cub.segmented_reduce_v2_0_1".to_string());
     corpus_identifiers.push("native.cutlass.gemm_v3_5_0".to_string());
     corpus_identifiers.push("native.flash_attention.v2_5_8".to_string());
     corpus_identifiers.push("native.mkl.gemm_f32_v2024_1".to_string());

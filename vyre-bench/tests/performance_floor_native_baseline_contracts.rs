@@ -12,6 +12,9 @@
 //!    fails when a field is missing.
 //! 5. Representative complete graphs and adversarial kernel-sized regions are covered
 //!    and mapped to pinned external native baselines.
+//! 6. Every pinned baseline digest is recomputed from the harness source it names, and
+//!    each workload's pinned baseline id, compiled architecture, declared target, and
+//!    toolchain agree, so a declared cell is one the fleet can measure.
 
 use std::collections::BTreeSet;
 
@@ -620,5 +623,143 @@ fn test_representative_workloads_and_pinned_native_baselines_manifest_contract()
             "source_sha256 must be a 64-char hex digest"
         );
         assert!(!flags.is_empty(), "compilation_flags must not be empty");
+    }
+}
+
+/// Read the pinned baseline registry from disk as a table array.
+///
+/// The registry is the single source of the entry list, so a baseline added to it is
+/// covered by the contracts below without editing this file.
+fn pinned_baseline_registry() -> Vec<toml::Value> {
+    let text = std::fs::read_to_string(baselines_dir().join("native_baselines.toml"))
+        .expect("native_baselines.toml must be readable");
+    toml::from_str::<toml::Value>(&text)
+        .expect("native_baselines.toml must be valid TOML")
+        .get("baseline")
+        .and_then(|v| v.as_array())
+        .expect("native_baselines.toml must contain [[baseline]] entries")
+        .clone()
+}
+
+fn baselines_dir() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("baselines")
+}
+
+fn registry_str<'a>(entry: &'a toml::Value, field: &str) -> &'a str {
+    entry
+        .get(field)
+        .and_then(|v| v.as_str())
+        .unwrap_or_else(|| panic!("baseline entry must record `{field}`"))
+}
+
+/// WHY: every `source_sha256` in the registry was a placeholder that matched no file on
+/// disk, and one was the digest of the empty string. The only contract over the field
+/// checked that it was 64 hex characters, so a digest that was never compared against
+/// its `source_file` pinned nothing: a harness could be edited, retargeted, or swapped
+/// and the recorded evidence would not move.
+///
+/// This recomputes the digest from the file the entry names, for every entry the
+/// registry declares, so a new baseline fails until its digest is real.
+///
+/// It does not prove the harness compiles, nor that the pinned upstream version is
+/// installed on the measuring host; a measurement run under `--features cuda` covers
+/// both, and an entry whose library is absent stays unmeasured rather than estimated.
+#[test]
+fn test_every_pinned_baseline_digest_matches_its_source_file() {
+    use sha2::Digest;
+
+    let entries = pinned_baseline_registry();
+    assert!(
+        entries.len() >= 6,
+        "native_baselines.toml must define at least 6 pinned native baselines"
+    );
+
+    for entry in &entries {
+        let id = registry_str(entry, "id");
+        let source_file = registry_str(entry, "source_file");
+        let recorded = registry_str(entry, "source_sha256");
+
+        let path = baselines_dir().join(source_file);
+        let bytes = std::fs::read(&path).unwrap_or_else(|e| {
+            panic!("baseline `{id}` names source_file `{source_file}` which is unreadable: {e}")
+        });
+        let actual = hex::encode(sha2::Sha256::digest(&bytes));
+
+        assert_eq!(
+            recorded, actual,
+            "baseline `{id}` records source_sha256 {recorded} but `{source_file}` \
+             hashes to {actual}; re-record the digest from the file it pins"
+        );
+    }
+}
+
+/// WHY: the six representative workloads declared `sm_90a` while every entry in the
+/// registry compiled with `-arch=sm_90a` against a fleet whose only benchmark device is
+/// `sm_89`, so no cell could ever be measured and each baseline measurement stayed
+/// `None` while the suite passed. A declared target that contradicts the compilation
+/// flag, or a workload that pins a baseline id no entry defines, is the same defect:
+/// evidence that cannot be produced and nothing that says so.
+///
+/// Both rules are derived from the registry and the workload list at run time, so a new
+/// workload or entry is covered without editing this file.
+///
+/// It does not check that any host in the fleet has the declared architecture; that is
+/// a property of the measuring host, not of the declaration.
+#[test]
+fn test_pinned_baseline_references_and_declared_target_are_coherent() {
+    let entries = pinned_baseline_registry();
+
+    let declared_ids: BTreeSet<&str> = entries
+        .iter()
+        .map(|entry| registry_str(entry, "id"))
+        .collect();
+
+    for wl in &WorkloadSpecification::all_representative_workloads() {
+        assert!(
+            declared_ids.contains(wl.pinned_native_baseline_id.as_str()),
+            "workload `{}` pins native baseline `{}`, which no registry entry defines; \
+             declared entries: {:?}",
+            wl.id,
+            wl.pinned_native_baseline_id,
+            declared_ids
+        );
+    }
+
+    for entry in &entries {
+        let id = registry_str(entry, "id");
+        let flags: Vec<&str> = entry
+            .get("compilation_flags")
+            .and_then(|v| v.as_array())
+            .expect("compilation_flags required")
+            .iter()
+            .map(|v| v.as_str().expect("compilation flag must be a string"))
+            .collect();
+
+        let arch = flags
+            .iter()
+            .find_map(|f| f.strip_prefix("-arch="))
+            .unwrap_or_else(|| panic!("baseline `{id}` must compile for an explicit -arch"));
+
+        let conditions = entry
+            .get("equality_conditions")
+            .expect("equality_conditions required");
+        let target = registry_str(conditions, "target");
+
+        assert_eq!(
+            arch, target,
+            "baseline `{id}` compiles for {arch} but declares target {target}; \
+             a cell whose flag and target disagree can never be measured"
+        );
+
+        // `nvcc 12.0` must agree with the `nvcc_12.0_-O3` the cell equality records,
+        // so a toolchain bump cannot leave the comparison keyed to the old compiler.
+        let toolchain = registry_str(entry, "toolchain");
+        let expected_prefix = toolchain.replace(' ', "_");
+        let toolchain_and_flags = registry_str(conditions, "toolchain_and_flags");
+        assert!(
+            toolchain_and_flags.starts_with(&expected_prefix),
+            "baseline `{id}` builds with `{toolchain}` but keys its cell to \
+             `{toolchain_and_flags}`, which does not start with `{expected_prefix}`"
+        );
     }
 }
