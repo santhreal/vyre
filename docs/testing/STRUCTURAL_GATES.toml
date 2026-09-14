@@ -850,7 +850,7 @@ declaration. The emitter module set is read at run time.
 
 [[gate]]
 file = "vyre-lower/tests/physical_kernel_ir_policy_boundary.rs"
-tests = ["no_physical_kernel_ir_type_reuses_a_semantic_policy_type", "no_backend_name_appears_in_shared_legalization_paths"]
+tests = ["no_physical_kernel_ir_type_names_a_schedule_owner_type", "no_backend_name_appears_as_a_literal_in_lowering"]
 reason = """
 Assert that no physical-kernel-IR type reuses a semantic policy type and that no
 backend name appears in a shared legalization or capability path. Both are

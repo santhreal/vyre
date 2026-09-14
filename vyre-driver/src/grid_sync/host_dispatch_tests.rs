@@ -315,10 +315,16 @@ impl VyreBackend for GeometryRecordingBackend {
         config: &DispatchConfig,
         outputs: &mut OutputBuffers,
     ) -> Result<(), BackendError> {
-        self.seen
-            .lock()
-            .expect("geometry record")
-            .push((config.launch_grid(), config.launch_workgroup()));
+        // The recorded geometry is the whole assertion, and a panicking
+        // dispatch on another lane poisons it. Reclaiming keeps the record
+        // readable so the test reports the geometry it saw rather than a
+        // poison from an unrelated lane.
+        vyre_foundation::failure_domain::reclaim_poisoned_mutex(
+            &self.seen,
+            "vyre-driver::grid_sync::host_dispatch_tests::GeometryRecordingBackend",
+            "recorded launch geometry",
+        )
+        .push((config.launch_grid(), config.launch_workgroup()));
         if outputs.is_empty() {
             outputs.push(Vec::new());
         }

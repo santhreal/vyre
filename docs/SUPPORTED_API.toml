@@ -151753,14 +151753,14 @@ exported_item_count = 1133
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_reference::DiagnosticPermissiveReport::output_digest: alloc::string::String"
+  path = "vyre_reference::DiagnosticPermissiveReport::recorded_anomalies: alloc::vec::Vec<alloc::string::String>"
   kind = "field"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_reference::DiagnosticPermissiveReport::recorded_anomalies: alloc::vec::Vec<alloc::string::String>"
+  path = "vyre_reference::DiagnosticPermissiveReport::run_digest: alloc::string::String"
   kind = "field"
   stability = "extension"
   feature = "unconditional"

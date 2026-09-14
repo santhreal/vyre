@@ -1,10 +1,10 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"908172a2b7c535d690f0c4dc2a234a43b0e39699","commit_timestamp":"1789370872","parent_commit":"780f9ed27f41773b7128f3ea8ad552324771803f","dirty":false,"source_fingerprint":"git:908172a2b7c535d690f0c4dc2a234a43b0e39699:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"6c1dfae77c445ebdc033229a738876896df8b7ed","commit_timestamp":"1789415457","parent_commit":"51dfc979840dfb74ef9bb71849052fcc83ea8529","dirty":true,"source_fingerprint":"git:6c1dfae77c445ebdc033229a738876896df8b7ed:dirty=true:worktree=c288c7f2ff19ba8944b575a783e7816c45c055e32a1ea4fe1586387b6f21f0f1"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4854,
+  "scanned_files": 4850,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -1550,12 +1550,12 @@
       },
       {
         "file": "vyre-lower/tests/physical_kernel_ir_policy_boundary.rs",
-        "test": "no_physical_kernel_ir_type_reuses_a_semantic_policy_type",
+        "test": "no_physical_kernel_ir_type_names_a_schedule_owner_type",
         "reason": "Assert that no physical-kernel-IR type reuses a semantic policy type and that no\nbackend name appears in a shared legalization or capability path. Both are\nproperties of declarations: a reused type compiles and runs, and a backend name\nin a shared path only shows up as a wrong decision on some other backend\nlater."
       },
       {
         "file": "vyre-lower/tests/physical_kernel_ir_policy_boundary.rs",
-        "test": "no_backend_name_appears_in_shared_legalization_paths",
+        "test": "no_backend_name_appears_as_a_literal_in_lowering",
         "reason": "Assert that no physical-kernel-IR type reuses a semantic policy type and that no\nbackend name appears in a shared legalization or capability path. Both are\nproperties of declarations: a reused type compiles and runs, and a backend name\nin a shared path only shows up as a wrong decision on some other backend\nlater."
       },
       {
@@ -5388,7 +5388,7 @@
     },
     {
       "path": "vyre/tests/facade_boundary.rs",
-      "line": 185,
+      "line": 184,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5398,7 +5398,7 @@
     },
     {
       "path": "vyre/tests/facade_boundary.rs",
-      "line": 205,
+      "line": 204,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5978,7 +5978,7 @@
     },
     {
       "path": "vyre-lower/tests/physical_kernel_ir_policy_boundary.rs",
-      "line": 37,
+      "line": 223,
       "pattern": "source_inspection_test",
       "owner_lane": "lower_emit",
       "surface": "test",
@@ -5988,7 +5988,7 @@
     },
     {
       "path": "vyre-lower/tests/physical_kernel_ir_policy_boundary.rs",
-      "line": 84,
+      "line": 265,
       "pattern": "source_inspection_test",
       "owner_lane": "lower_emit",
       "surface": "test",
@@ -6068,7 +6068,7 @@
     },
     {
       "path": "vyre-runtime/tests/generic_runtime_contracts.rs",
-      "line": 360,
+      "line": 350,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -9477,14 +9477,14 @@
     },
     {
       "path": "vyre/tests/facade_boundary.rs",
-      "line": 185,
+      "line": 184,
       "pattern": "source_inspection_test",
       "text": "test `facade_exposes_zero_internal_implementation_symbols` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "facade_exposes_zero_internal_implementation_symbols"
     },
     {
       "path": "vyre/tests/facade_boundary.rs",
-      "line": 205,
+      "line": 204,
       "pattern": "source_inspection_test",
       "text": "test `facade_compiler_module_is_curated_not_whole_crate_alias` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "facade_compiler_module_is_curated_not_whole_crate_alias"
@@ -9890,17 +9890,17 @@
     },
     {
       "path": "vyre-lower/tests/physical_kernel_ir_policy_boundary.rs",
-      "line": 37,
+      "line": 223,
       "pattern": "source_inspection_test",
-      "text": "test `no_physical_kernel_ir_type_reuses_a_semantic_policy_type` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "no_physical_kernel_ir_type_reuses_a_semantic_policy_type"
+      "text": "test `no_physical_kernel_ir_type_names_a_schedule_owner_type` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "no_physical_kernel_ir_type_names_a_schedule_owner_type"
     },
     {
       "path": "vyre-lower/tests/physical_kernel_ir_policy_boundary.rs",
-      "line": 84,
+      "line": 265,
       "pattern": "source_inspection_test",
-      "text": "test `no_backend_name_appears_in_shared_legalization_paths` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
-      "test": "no_backend_name_appears_in_shared_legalization_paths"
+      "text": "test `no_backend_name_appears_as_a_literal_in_lowering` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
+      "test": "no_backend_name_appears_as_a_literal_in_lowering"
     },
     {
       "path": "vyre-megakernel/tests/compile_objective.rs",
@@ -9953,7 +9953,7 @@
     },
     {
       "path": "vyre-runtime/tests/generic_runtime_contracts.rs",
-      "line": 360,
+      "line": 350,
       "pattern": "source_inspection_test",
       "text": "test `proof_runtime_public_surface_contains_no_model_concepts` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "proof_runtime_public_surface_contains_no_model_concepts"

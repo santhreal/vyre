@@ -538,7 +538,7 @@ pub struct DiagnosticPermissiveReport {
 
 #[cfg(test)]
 mod tests {
-    use super::{permissive_run_digest, Value, PERMISSIVE_DIGEST_LABEL};
+    use super::{permissive_run_digest, Value};
 
     /// The unlabeled digest this used to publish, recomputed here.
     ///
@@ -576,16 +576,6 @@ mod tests {
             digest_without_the_label(&outputs),
             "Fix: hash PERMISSIVE_DIGEST_LABEL before the outputs. Equal to a plain hash of the \
              output bytes, the permissive digest grades a device and is an expected output."
-        );
-    }
-
-    /// The label has to reach the hash, not merely exist beside it.
-    #[test]
-    fn the_label_is_not_empty() {
-        assert!(
-            !PERMISSIVE_DIGEST_LABEL.is_empty(),
-            "Fix: an empty label domain-separates nothing and the digest is again a plain hash \
-             of the output bytes."
         );
     }
 

@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"29516fdeda20f6cd90e23896e77f7021417eca6e","commit_timestamp":"1789353008","parent_commit":"5522d41c3b226cab9f40e3464bd67ae19eef041a","dirty":false,"source_fingerprint":"git:29516fdeda20f6cd90e23896e77f7021417eca6e:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"6c1dfae77c445ebdc033229a738876896df8b7ed","commit_timestamp":"1789415457","parent_commit":"51dfc979840dfb74ef9bb71849052fcc83ea8529","dirty":true,"source_fingerprint":"git:6c1dfae77c445ebdc033229a738876896df8b7ed:dirty=true:worktree=c288c7f2ff19ba8944b575a783e7816c45c055e32a1ea4fe1586387b6f21f0f1"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "tiers": [
     {
@@ -10,7 +10,7 @@
       "compile_units": 6,
       "link_units": 7,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 549688
+      "disk_use_bytes": 548785
     },
     {
       "tier": "compiler-boundary",
@@ -20,7 +20,7 @@
       "compile_units": 1,
       "link_units": 2,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 453985
+      "disk_use_bytes": 454086
     },
     {
       "tier": "concrete-backend",
@@ -45,7 +45,7 @@
       "compile_units": 5,
       "link_units": 8,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 525108
+      "disk_use_bytes": 525100
     },
     {
       "tier": "emitter",
@@ -68,7 +68,7 @@
       "compile_units": 1,
       "link_units": 2,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 77197
+      "disk_use_bytes": 77174
     },
     {
       "tier": "foundation",
@@ -80,7 +80,7 @@
       "compile_units": 3,
       "link_units": 6,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 2725131
+      "disk_use_bytes": 2724677
     },
     {
       "tier": "libraries",
@@ -122,7 +122,7 @@
       "compile_units": 2,
       "link_units": 3,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 259496
+      "disk_use_bytes": 265256
     },
     {
       "tier": "packaging",
@@ -173,7 +173,7 @@
       "compile_units": 2,
       "link_units": 4,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 635953
+      "disk_use_bytes": 632237
     },
     {
       "tier": "semantics",
@@ -183,7 +183,7 @@
       "compile_units": 1,
       "link_units": 2,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 563480
+      "disk_use_bytes": 574472
     },
     {
       "tier": "standalone-tooling",
@@ -194,7 +194,7 @@
       "compile_units": 2,
       "link_units": 5,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 163700
+      "disk_use_bytes": 163481
     },
     {
       "tier": "test-tooling",
@@ -204,7 +204,7 @@
       "compile_units": 3,
       "link_units": 4,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 64330
+      "disk_use_bytes": 64267
     },
     {
       "tier": "tooling",
@@ -219,7 +219,7 @@
       "compile_units": 9,
       "link_units": 20,
       "duplicate_source_bytes": 1172,
-      "disk_use_bytes": 1024796
+      "disk_use_bytes": 1034831
     }
   ],
   "shared_contracts": [
