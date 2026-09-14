@@ -108,7 +108,6 @@ impl vyre_runtime::artifact_admission::TypedResource
 impl vyre_runtime::artifact_admission::TypedResourceDataset
 impl vyre_runtime::atomic_recovery::SupervisedRestartBudget
 impl vyre_runtime::paged_resource::BlockTableSpec
-impl vyre_runtime::paged_resource::PagedResidencyPlanner
 impl vyre_runtime::paged_resource::PagedResourceBinding
 impl vyre_runtime::paged_resource::PagedResourceSpec
 impl vyre_runtime::persistent_executor::PersistentExecutor
@@ -486,7 +485,6 @@ pub enum vyre_runtime::artifact_admission::RetainedSessionPhase
 pub enum vyre_runtime::artifact_admission::RetainedSessionTransition
 pub enum vyre_runtime::atomic_recovery::GuardedState<T>
 pub enum vyre_runtime::paged_resource::PagedResidencyError
-pub enum vyre_runtime::paged_resource::PagingCandidateStrategy
 pub enum vyre_runtime::pipeline_cache::InMemoryEvictionReason
 pub enum vyre_runtime::replay::ReplayFailureClass
 pub enum vyre_runtime::resident_work_queue::RingSlotTransition
@@ -713,7 +711,6 @@ pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::recovery_class(&s
 pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::remaining_restarts(&self) -> u32
 pub fn vyre_runtime::atomic_recovery::SupervisedRestartBudget::reset(&self)
 pub fn vyre_runtime::paged_resource::BlockTableSpec::required_table_bytes(&self) -> usize
-pub fn vyre_runtime::paged_resource::PagedResidencyPlanner::select_strategy(device_supports_paging: bool, max_capacity_units: u32) -> vyre_runtime::paged_resource::PagingCandidateStrategy
 pub fn vyre_runtime::paged_resource::PagedResourceBinding::complete_execution(&mut self, completed_ticket: u64)
 pub fn vyre_runtime::paged_resource::PagedResourceBinding::mark_in_flight(&mut self, ticket: u64)
 pub fn vyre_runtime::paged_resource::PagedResourceBinding::validate(&self, table_byte_len: usize, primary_byte_len: usize, secondary_byte_len: usize) -> core::result::Result<(), vyre_runtime::paged_resource::PagedResidencyError>
@@ -1384,7 +1381,6 @@ pub struct vyre_runtime::atomic_recovery::PrepareCommitJournal<K: core::cmp::Ord
 pub struct vyre_runtime::atomic_recovery::PrepareTicket
 pub struct vyre_runtime::atomic_recovery::SupervisedRestartBudget
 pub struct vyre_runtime::paged_resource::BlockTableSpec
-pub struct vyre_runtime::paged_resource::PagedResidencyPlanner
 pub struct vyre_runtime::paged_resource::PagedResourceBinding
 pub struct vyre_runtime::paged_resource::PagedResourceSpec
 pub struct vyre_runtime::persistent_executor::PersistentExecutor
@@ -1926,9 +1922,6 @@ pub vyre_runtime::paged_resource::PagedResourceSpec::channels: u32
 pub vyre_runtime::paged_resource::PagedResourceSpec::dtype: vyre_spec::data_type::DataType
 pub vyre_runtime::paged_resource::PagedResourceSpec::unit_dim: u32
 pub vyre_runtime::paged_resource::PagedResourceSpec::units_per_block: u32
-pub vyre_runtime::paged_resource::PagingCandidateStrategy::ExplicitContiguousFallback
-pub vyre_runtime::paged_resource::PagingCandidateStrategy::ExplicitContiguousFallback::max_capacity_units: u32
-pub vyre_runtime::paged_resource::PagingCandidateStrategy::PagedAddressing
 pub vyre_runtime::persistent_executor::ResidentQueueCompletion::device_ns: core::option::Option<u64>
 pub vyre_runtime::persistent_executor::ResidentQueueCompletion::state: vyre_runtime::persistent_executor::ResidentQueueState
 pub vyre_runtime::persistent_executor::ResidentQueueState::control: alloc::vec::Vec<u8>

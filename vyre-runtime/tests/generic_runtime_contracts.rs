@@ -14,8 +14,7 @@ use std::fs;
 use vyre_driver::{PeerAccessCapability, PeerLinkKind, PeerTopology, ResidentOwner, Resource};
 use vyre_foundation::ir::DataType;
 use vyre_runtime::paged_resource::{
-    BlockTableSpec, PagedResidencyError, PagedResidencyPlanner, PagedResourceBinding,
-    PagedResourceSpec, PagingCandidateStrategy,
+    BlockTableSpec, PagedResidencyError, PagedResourceBinding, PagedResourceSpec,
 };
 use vyre_runtime::resource_residency::{StateId, StateLease};
 use vyre_runtime::retained_page_cache::{
@@ -140,7 +139,7 @@ fn proof_retained_page_cache_adversarial_limits_and_isolation() {
 // -----------------------------------------------------------------------------
 
 #[test]
-fn proof_paged_residency_validation_and_candidate_planning() {
+fn proof_paged_resource_binding_validates_table_and_slab_capacity() {
     let slab_spec = PagedResourceSpec {
         blocks: 8,
         channels: 4,
@@ -179,15 +178,6 @@ fn proof_paged_residency_validation_and_candidate_planning() {
     // Insufficient table capacity fails
     let err = binding.validate(32, slab_half, slab_half).unwrap_err();
     assert!(matches!(err, PagedResidencyError::CapacityMismatch { .. }));
-
-    // Strategy selection: device without paging chooses explicit contiguous candidate
-    let strategy = PagedResidencyPlanner::select_strategy(false, 4096);
-    assert_eq!(
-        strategy,
-        PagingCandidateStrategy::ExplicitContiguousFallback {
-            max_capacity_units: 4096
-        }
-    );
 }
 
 // -----------------------------------------------------------------------------

@@ -11,8 +11,9 @@
 //! - Validates buffer memory alignment (e.g. 64-byte boundary).
 //! - Validates device ownership, state lease generation, and lifetime.
 //! - Tracks async completion events so pages are not released or recycled while in flight.
-//! - If paging is unsupported on a given device, rejects or provides an explicit
-//!   contiguous cache candidate; **never triggers an implicit host execution path**.
+//! - Rejects a device whose materializer does not support paged addressing, and never
+//!   substitutes a host execution path for it. Choosing what to run instead belongs to the
+//!   caller that holds the device capability, not to this binding.
 
 use thiserror::Error;
 use vyre_driver::Resource;
@@ -86,18 +87,6 @@ pub enum PagedResidencyError {
     /// Backend driver error.
     #[error("backend error: {0}")]
     BackendError(String),
-}
-
-/// Fallback candidate strategy when paged addressing is unsupported.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PagingCandidateStrategy {
-    /// Native paged addressing with physical page table and cache pool.
-    PagedAddressing,
-    /// Explicit contiguous buffer candidate (never implicit host execution).
-    ExplicitContiguousFallback {
-        /// Max context units reserved in contiguous buffer.
-        max_capacity_units: u32,
-    },
 }
 
 /// Geometry specification for a paged resource slab allocation.
@@ -228,24 +217,6 @@ impl PagedResourceBinding {
     }
 }
 
-/// Selector for paged vs contiguous candidate strategies.
-pub struct PagedResidencyPlanner;
-
-impl PagedResidencyPlanner {
-    /// Select execution candidate strategy based on device capabilities.
-    #[must_use]
-    pub fn select_strategy(
-        device_supports_paging: bool,
-        max_capacity_units: u32,
-    ) -> PagingCandidateStrategy {
-        if device_supports_paging {
-            PagingCandidateStrategy::PagedAddressing
-        } else {
-            PagingCandidateStrategy::ExplicitContiguousFallback { max_capacity_units }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -304,19 +275,5 @@ mod tests {
         assert!(matches!(err, PagedResidencyError::CapacityMismatch { .. }));
 
         assert!(binding.validate(16, 8192, 8192).is_ok());
-    }
-
-    #[test]
-    fn planner_selects_explicit_contiguous_fallback_without_host_execution() {
-        let paged_strategy = PagedResidencyPlanner::select_strategy(true, 2048);
-        assert_eq!(paged_strategy, PagingCandidateStrategy::PagedAddressing);
-
-        let fallback_strategy = PagedResidencyPlanner::select_strategy(false, 2048);
-        assert_eq!(
-            fallback_strategy,
-            PagingCandidateStrategy::ExplicitContiguousFallback {
-                max_capacity_units: 2048,
-            }
-        );
     }
 }

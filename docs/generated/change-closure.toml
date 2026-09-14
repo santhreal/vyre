@@ -19394,7 +19394,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PagedResidencyError"
 variant_name = "BackendError"
-declaration_site = "vyre-runtime/src/paged_resource.rs:86"
+declaration_site = "vyre-runtime/src/paged_resource.rs:87"
 constructors = ["PagedResidencyError::BackendError"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -19404,7 +19404,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PagedResidencyError"
 variant_name = "CapacityMismatch"
-declaration_site = "vyre-runtime/src/paged_resource.rs:37"
+declaration_site = "vyre-runtime/src/paged_resource.rs:38"
 constructors = ["PagedResidencyError::CapacityMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -19414,7 +19414,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PagedResidencyError"
 variant_name = "DeviceOwnershipMismatch"
-declaration_site = "vyre-runtime/src/paged_resource.rs:61"
+declaration_site = "vyre-runtime/src/paged_resource.rs:62"
 constructors = ["PagedResidencyError::DeviceOwnershipMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -19424,7 +19424,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PagedResidencyError"
 variant_name = "MisalignedBuffer"
-declaration_site = "vyre-runtime/src/paged_resource.rs:49"
+declaration_site = "vyre-runtime/src/paged_resource.rs:50"
 constructors = ["PagedResidencyError::MisalignedBuffer"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -19434,7 +19434,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PagedResidencyError"
 variant_name = "ResidencyError"
-declaration_site = "vyre-runtime/src/paged_resource.rs:83"
+declaration_site = "vyre-runtime/src/paged_resource.rs:84"
 constructors = ["PagedResidencyError::ResidencyError"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -19444,7 +19444,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PagedResidencyError"
 variant_name = "StaleLeaseGeneration"
-declaration_site = "vyre-runtime/src/paged_resource.rs:73"
+declaration_site = "vyre-runtime/src/paged_resource.rs:74"
 constructors = ["PagedResidencyError::StaleLeaseGeneration"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -19454,30 +19454,10 @@ disposition = "implemented"
 [[closure]]
 type_name = "PagedResidencyError"
 variant_name = "UnsupportedPaging"
-declaration_site = "vyre-runtime/src/paged_resource.rs:29"
+declaration_site = "vyre-runtime/src/paged_resource.rs:30"
 constructors = ["PagedResidencyError::UnsupportedPaging"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
-public_api_entry = "docs/public-api/vyre-runtime.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "PagingCandidateStrategy"
-variant_name = "ExplicitContiguousFallback"
-declaration_site = "vyre-runtime/src/paged_resource.rs:96"
-constructors = ["PagingCandidateStrategy::ExplicitContiguousFallback"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
-public_api_entry = "docs/public-api/vyre-runtime.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "PagingCandidateStrategy"
-variant_name = "PagedAddressing"
-declaration_site = "vyre-runtime/src/paged_resource.rs:94"
-constructors = ["PagingCandidateStrategy::PagedAddressing"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
 public_api_entry = "docs/public-api/vyre-runtime.txt"
 disposition = "implemented"
 
@@ -20145,7 +20125,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerAccessCapability"
 variant_name = "DirectPeerMemory"
-declaration_site = "vyre-driver/src/peer_transfer.rs:56"
+declaration_site = "vyre-driver/src/peer_transfer.rs:57"
 constructors = ["PeerAccessCapability::DirectPeerMemory"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash)"
@@ -20155,7 +20135,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerAccessCapability"
 variant_name = "PeerDisabled"
-declaration_site = "vyre-driver/src/peer_transfer.rs:65"
+declaration_site = "vyre-driver/src/peer_transfer.rs:66"
 constructors = ["PeerAccessCapability::PeerDisabled"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash)"
@@ -20165,7 +20145,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerAccessCapability"
 variant_name = "StagedHostTransfer"
-declaration_site = "vyre-driver/src/peer_transfer.rs:63"
+declaration_site = "vyre-driver/src/peer_transfer.rs:64"
 constructors = ["PeerAccessCapability::StagedHostTransfer"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash)"
@@ -20175,7 +20155,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerAccessCapability"
 variant_name = "Unreachable"
-declaration_site = "vyre-driver/src/peer_transfer.rs:67"
+declaration_site = "vyre-driver/src/peer_transfer.rs:68"
 constructors = ["PeerAccessCapability::Unreachable"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash)"
@@ -20185,7 +20165,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerLinkKind"
 variant_name = "HostStaged"
-declaration_site = "vyre-driver/src/peer_transfer.rs:47"
+declaration_site = "vyre-driver/src/peer_transfer.rs:48"
 constructors = ["PeerLinkKind::HostStaged"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash)"
@@ -20195,7 +20175,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerLinkKind"
 variant_name = "NVLink"
-declaration_site = "vyre-driver/src/peer_transfer.rs:33"
+declaration_site = "vyre-driver/src/peer_transfer.rs:34"
 constructors = ["PeerLinkKind::NVLink"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash)"
@@ -20205,7 +20185,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerLinkKind"
 variant_name = "None"
-declaration_site = "vyre-driver/src/peer_transfer.rs:49"
+declaration_site = "vyre-driver/src/peer_transfer.rs:50"
 constructors = ["PeerLinkKind::None"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash)"
@@ -20215,7 +20195,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerLinkKind"
 variant_name = "PCIe"
-declaration_site = "vyre-driver/src/peer_transfer.rs:40"
+declaration_site = "vyre-driver/src/peer_transfer.rs:41"
 constructors = ["PeerLinkKind::PCIe"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash)"
@@ -20225,7 +20205,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerTransferError"
 variant_name = "AccountingOverflow"
-declaration_site = "vyre-driver/src/peer_transfer.rs:199"
+declaration_site = "vyre-driver/src/peer_transfer.rs:200"
 constructors = ["PeerTransferError::AccountingOverflow"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -20235,7 +20215,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerTransferError"
 variant_name = "AsymmetricAccessViolation"
-declaration_site = "vyre-driver/src/peer_transfer.rs:174"
+declaration_site = "vyre-driver/src/peer_transfer.rs:175"
 constructors = ["PeerTransferError::AsymmetricAccessViolation"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -20245,7 +20225,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerTransferError"
 variant_name = "Cancelled"
-declaration_site = "vyre-driver/src/peer_transfer.rs:202"
+declaration_site = "vyre-driver/src/peer_transfer.rs:203"
 constructors = ["PeerTransferError::Cancelled"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -20255,7 +20235,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerTransferError"
 variant_name = "DeviceOutOfBounds"
-declaration_site = "vyre-driver/src/peer_transfer.rs:158"
+declaration_site = "vyre-driver/src/peer_transfer.rs:159"
 constructors = ["PeerTransferError::DeviceOutOfBounds"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -20265,7 +20245,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerTransferError"
 variant_name = "StaleDeviceGeneration"
-declaration_site = "vyre-driver/src/peer_transfer.rs:184"
+declaration_site = "vyre-driver/src/peer_transfer.rs:185"
 constructors = ["PeerTransferError::StaleDeviceGeneration"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -20275,7 +20255,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerTransferError"
 variant_name = "UnreachablePeer"
-declaration_site = "vyre-driver/src/peer_transfer.rs:166"
+declaration_site = "vyre-driver/src/peer_transfer.rs:167"
 constructors = ["PeerTransferError::UnreachablePeer"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -20285,7 +20265,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PeerTransferError"
 variant_name = "ZeroByteTransfer"
-declaration_site = "vyre-driver/src/peer_transfer.rs:196"
+declaration_site = "vyre-driver/src/peer_transfer.rs:197"
 constructors = ["PeerTransferError::ZeroByteTransfer"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"

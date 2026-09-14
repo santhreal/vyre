@@ -1,0 +1,81 @@
+# Consumer-domain vocabulary that stays out of published compiler, backend, and runtime
+# surfaces.
+#
+# A term listed here names a concept that belongs to one consumer domain: a model family, a
+# serving technique, or a text-processing stage. Published below the composition layers, such a
+# name makes every other consumer a special case of the first one that arrived, and the
+# mechanism it stands for stops being nameable on its own.
+#
+# `segments` are identifier segments, matched against the split words of a published item path,
+# so `expert` matches `ExpertQueue` and `route_expert` but not `expertise`. `mechanism` states
+# what to publish instead. The `domain-vocabulary` gate reads this file; it holds no term list of
+# its own.
+
+schema_version = 1
+
+# Layers whose purpose is to compose or verify domain behavior. A layer absent from this list is
+# in scope, so a new layer is checked until a decision for it is recorded here.
+
+[[exempt_layer]]
+name = "libraries"
+reason = "Compositions are where a consumer domain is expressed, from IR the layers below publish."
+
+[[exempt_layer]]
+name = "conformance"
+reason = "Parity harnesses name the workload they join to an oracle result."
+
+[[exempt_layer]]
+name = "tooling"
+reason = "Gates, benchmarks, and generators read the whole workspace, including this file."
+
+[[exempt_layer]]
+name = "test-tooling"
+reason = "Fixtures construct domain inputs and are private to the workspace."
+
+[[exempt_layer]]
+name = "standalone-tooling"
+reason = "Source-structure gates read the tree and publish no consumer surface."
+
+[[term]]
+segments = ["expert"]
+mechanism = "publish the routed shard: a shard selected by a routing decision, named for the routing"
+
+[[term]]
+segments = ["moe"]
+mechanism = "compose routed shards in the libraries layer"
+
+[[term]]
+segments = ["mtp"]
+mechanism = "publish the speculative step and its acceptance test"
+
+[[term]]
+segments = ["tokenizer"]
+mechanism = "compose text encoding in the libraries layer over published primitives"
+
+[[term]]
+segments = ["detokenize"]
+mechanism = "compose text decoding in the libraries layer over published primitives"
+
+[[term]]
+segments = ["kv", "cache"]
+mechanism = "publish retained read-write state, keyed by the residency contract that owns it"
+
+[[term]]
+segments = ["kv", "rollback"]
+mechanism = "publish the retained-state transaction that rolls back"
+
+[[term]]
+segments = ["prefix", "cache"]
+mechanism = "publish the retained page cache"
+
+[[term]]
+segments = ["paged", "attention"]
+mechanism = "publish retained page residency, which any workload over paged state reads"
+
+[[term]]
+segments = ["attention"]
+mechanism = "compose attention in the libraries layer from published primitives"
+
+[[term]]
+segments = ["lora"]
+mechanism = "compose a low-rank update in the libraries layer"

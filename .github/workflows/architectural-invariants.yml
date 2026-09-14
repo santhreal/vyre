@@ -42,6 +42,9 @@ jobs:
       - name: Verify every published document reference resolves
         run: ./cargo_full run -q -p xtask --bin xtask -- docs-references
 
+      - name: Verify published vocabulary stays out of non-composition layers
+        run: ./cargo_full run -q -p xtask --bin xtask -- domain-vocabulary
+
       - name: Verify architecture behavior contracts
         run: ./cargo_full test -p xtask --test tree_contracts
 

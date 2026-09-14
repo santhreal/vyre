@@ -164,6 +164,10 @@ name = "docs-register"
 findings = 0
 
 [[gate]]
+name = "domain-vocabulary"
+findings = 0
+
+[[gate]]
 name = "dup-scan"
 findings = 0
 

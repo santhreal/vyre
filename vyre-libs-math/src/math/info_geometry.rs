@@ -19,14 +19,6 @@
 //!   `2 · arccos(coeff)` host-side.
 //! - `amari_alpha_step` witness in `vyre-reference`  -  host-side α-connection interpolation,
 //!   useful for distribution-aware loss design.
-//!
-//! # Why this primitive is dual-use
-//!
-//! | Consumer | Use |
-//! |---|---|
-//! | future `vyre-libs::ml::distribution` | distribution-aware loss functions |
-//! | future `vyre-libs::ml::moe` | mixture-of-experts routing on the simplex |
-//! | future `vyre-libs::ml::calibration` | model calibration via natural distance |
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 

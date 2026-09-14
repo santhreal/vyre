@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with A through G.
-pub const GATES_A_G: [GateDescriptor; 56] = [
+pub const GATES_A_G: [GateDescriptor; 57] = [
     GateDescriptor {
         name: "abstraction-gate",
         help: "Enforce registered building-block boundaries",
@@ -560,6 +560,18 @@ pub const GATES_A_G: [GateDescriptor; 56] = [
         prerequisites: &["testing-guides"],
         resource_class: ResourceClass::Cpu,
         proof: "crate::docs::docs_register::tests::a_root_page_row_naming_no_page_is_reported",
+    },
+    GateDescriptor {
+        name: "domain-vocabulary",
+        help: "Enforce domain-vocabulary contracts",
+        package: "xtask",
+        areas: &["contract-rules"],
+        subject: "published items across non-composition crates",
+        inputs: &["docs/DOMAIN_VOCABULARY.toml"],
+        artifacts: &[],
+        prerequisites: &[],
+        resource_class: ResourceClass::Io,
+        proof: "crate::gates::domain_vocabulary::tests::a_routed_shard_renamed_for_one_model_family_is_a_finding",
     },
     GateDescriptor {
         name: "dup-scan",

@@ -9,6 +9,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Added
 
+- The `domain-vocabulary` gate rejects a published item below the composition
+  layers that names a consumer-domain concept listed in
+  `docs/DOMAIN_VOCABULARY.toml`, and a mechanism one crate publishes an owner
+  for from two modules.
 - Adaptive traversal publishes the nine buffer names one step binds as
   `AdaptiveTraversalBuffers::CANONICAL`, with canonical names for the
   active-source queue and its resident length.
@@ -4763,6 +4767,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Removed
 
+- `vyre_runtime::paged_resource::PagedResidencyPlanner` and
+  `PagingCandidateStrategy` are deleted. The selector returned its
+  `device_supports_paging` argument as a two-arm enum, and the caller holding
+  the device capability decides what to run instead.
 - The Mac benchmark bundle no longer carries a `cpu-ref` backend report or a
   `cpu-ref-vs-metal` comparison. A bundle records one timed report per backend
   and one comparison per pair, so listing the host evaluator measured

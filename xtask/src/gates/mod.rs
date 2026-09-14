@@ -28,6 +28,7 @@ pub mod device_test_gating;
 pub mod dispatch_surface;
 pub mod doc_contract;
 pub mod docs_references;
+pub mod domain_vocabulary;
 pub mod dup_scan;
 pub mod evidence_attribution;
 pub mod evidence_paths;
@@ -155,6 +156,7 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("contract-in-source", &doc_contract::ContractInSource),
     ("doc-claims", &doc_contract::DocClaims),
     ("docs-references", &docs_references::DocsReferences),
+    ("domain-vocabulary", &domain_vocabulary::DomainVocabulary),
     ("dup-scan", &dup_scan::DupScan),
     (
         "evidence-attribution",

@@ -213,6 +213,11 @@ subsets = ["docs"]
 workflows = ["gates.yml"]
 
 [[gate]]
+name = "domain-vocabulary"
+subsets = ["contract-rules"]
+workflows = ["architectural-invariants.yml", "gates.yml"]
+
+[[gate]]
 name = "dup-scan"
 subsets = ["contract-rules"]
 workflows = ["gates.yml"]

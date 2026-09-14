@@ -77,6 +77,38 @@ graph.
   wrapper. It has no workspace dependency, so a harness binary links the
   counter without linking a test tree.
 
+## Published vocabulary
+
+`docs/DOMAIN_VOCABULARY.toml` lists the consumer-domain terms that stay out of
+published items below the composition layers, and states the mechanism to
+publish for each one. A term names a model family, a serving technique, or a
+text-processing stage: `expert`, `moe`, `mtp`, `tokenizer`, `detokenize`,
+`kv_cache`, `kv_rollback`, `prefix_cache`, `paged_attention`, `attention`,
+`lora`.
+
+`xtask domain-vocabulary` matches each term against the identifier segments of
+every item in `docs/public-api/`, so `expert` matches `ExpertQueue` and
+`route_expert` and not `expertise`. Scope comes from the layer rows: a layer is
+checked unless the contract records it exempt with a reason, which puts a layer
+added later in scope until a decision for it is recorded. The exempt layers are
+`libraries`, `conformance`, `tooling`, `test-tooling`, and
+`standalone-tooling`. A crate may publish the terms its own package name
+contains and no others, which is how `vyre-safetensors` names the container
+format it maps into transfer descriptors.
+
+The runtime publishes retained page caches, routed work queues, tenancy
+quotas, and transfer admission. A consumer composes a model family from those
+in the `libraries` layer, where `vyre-libs-nn` names experts and attention.
+
+The same gate rejects a second owner of one mechanism. A type name is the
+mechanism's name, so one crate publishing it from two modules is a finding:
+`expert_scheduling::WorkQueue` beside `resident_work_queue::WorkQueue`
+publishes one name over two schedulers. The owner set comes from the snapshot
+rather than a roster of mechanisms, and an associated item is excluded, since a
+parent segment starting uppercase names a type and not a module. Sibling
+modules publishing distinct names stay legal: the runtime owns a resident
+queue, a routed queue, and a replay queue at once.
+
 ## Publication classes
 
 Every workspace member declares one publication class in `docs/CRATE_OWNERSHIP.toml` and in its manifest under `[package.metadata.vyre.publication_class]`.

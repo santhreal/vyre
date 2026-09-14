@@ -159235,7 +159235,7 @@ seam = "runtime"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre"
 stability = "internal"
-exported_item_count = 2840
+exported_item_count = 2833
 
   [[package.item]]
   path = "impl bytemuck::pod::Pod for vyre_runtime::resident_work_queue::planner::ResidentWorkItem"
@@ -159918,13 +159918,6 @@ exported_item_count = 2840
 
   [[package.item]]
   path = "impl vyre_runtime::paged_resource::BlockTableSpec"
-  kind = "impl"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl vyre_runtime::paged_resource::PagedResidencyPlanner"
   kind = "impl"
   stability = "internal"
   feature = "unconditional"
@@ -165531,20 +165524,6 @@ exported_item_count = 2840
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_runtime::paged_resource::PagedResidencyPlanner"
-  kind = "struct"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::paged_resource::PagedResidencyPlanner::select_strategy(device_supports_paging: bool, max_capacity_units: u32) -> vyre_runtime::paged_resource::PagingCandidateStrategy"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_runtime::paged_resource::PagedResourceBinding"
   kind = "struct"
   stability = "internal"
@@ -165680,34 +165659,6 @@ exported_item_count = 2840
   [[package.item]]
   path = "vyre_runtime::paged_resource::PagedResourceSpec::units_per_block: u32"
   kind = "field"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::paged_resource::PagingCandidateStrategy"
-  kind = "enum"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::paged_resource::PagingCandidateStrategy::ExplicitContiguousFallback"
-  kind = "variant"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::paged_resource::PagingCandidateStrategy::ExplicitContiguousFallback::max_capacity_units: u32"
-  kind = "field"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::paged_resource::PagingCandidateStrategy::PagedAddressing"
-  kind = "variant"
   stability = "internal"
   feature = "unconditional"
   wire_compatibility = "api-only"

@@ -2,9 +2,10 @@
 //!
 //! # Architecture
 //!
-//! Multi-device workflows (such as Mixture-of-Experts all-to-all token exchange,
-//! tensor-parallel key/value distribution, and sharded graph frontier merges) require
-//! explicit understanding of device-to-device connectivity.
+//! Multi-device workflows require explicit device-to-device connectivity: an
+//! all-to-all exchange between routed shards, a distribution of retained
+//! read-write state across devices, and a merge of sharded graph frontiers all
+//! read it before they move bytes.
 //!
 //! This module owns the backend-neutral capability contract:
 //! - **Topology & Link Types**: NVLink, PCIe, Host-staged, or Unreachable.
