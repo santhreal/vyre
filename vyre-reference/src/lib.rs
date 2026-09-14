@@ -20,9 +20,13 @@
 //!
 //! Four dependencies remain, and none of them is a program rewrite.
 //!
-//! - The `ir` types themselves. An oracle for a program has to read the same
-//!   `Program`, `Node`, `Expr` and `BufferDecl` the compiler reads. What it
-//!   does not share is what they mean: every semantic arm is evaluated here.
+//! - The `ir` types themselves, and `visit::expr_children` /
+//!   `visit::any_subexpr` over them. An oracle for a program has to read the
+//!   same `Program`, `Node`, `Expr` and `BufferDecl` the compiler reads, and
+//!   the operands of an `Expr` are one fact about those types rather than a
+//!   second opinion on them: a walk that re-derived its own child list would
+//!   classify a new variant as a leaf. What it does not share is what they
+//!   mean: every semantic arm is evaluated here.
 //! - `Program::reconcile_runnable_top_level`, applied by
 //!   `execution::program_for_interpreter` when the submitted program is not
 //!   top-level `Region`-wrapped. It re-applies the wrapper `Program::wrapped`
