@@ -14,7 +14,7 @@
 //! broadcast into a 3-pass Blelloch-style chain:
 //!
 //! ```text
-//!   Pass A: per-block local Hillis-Steele scan.
+//!   Pass A: per-block local work-efficient Blelloch scan.
 //!           writes per-element partials and per-block totals.
 //!   GridSync barrier (substrate splits the dispatch here).
 //!   Pass B: scan of per-block totals.
