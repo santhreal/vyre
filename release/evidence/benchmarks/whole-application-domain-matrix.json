@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"58fb8036c7c40fcff1ee93dd37574be2b6b53776","commit_timestamp":"1789308676","parent_commit":"c7f59aa8216b3d61d4143dd6094ef73f335a5cc6","dirty":false,"source_fingerprint":"git:58fb8036c7c40fcff1ee93dd37574be2b6b53776:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"7956027ba7cacd6f64c915fdfbb8b12fd84c9eb7","commit_timestamp":"1789353100","parent_commit":"29516fdeda20f6cd90e23896e77f7021417eca6e","dirty":false,"source_fingerprint":"git:7956027ba7cacd6f64c915fdfbb8b12fd84c9eb7:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
   "schema_version": "vyre.whole-application-record.v2",
   "total_workloads": 3,
   "covered_domains": 3,
@@ -29,30 +29,30 @@
         "candidate_digest": "d304e2d6380eab46aae93d2bf6c42612fed16c6371ab0c080c80d60d65c3425f",
         "parity_status": "matched_exact_bytes"
       },
-      "compile_time_ns": 14333096,
-      "load_time_ns": 8437479,
+      "compile_time_ns": 14785052,
+      "load_time_ns": 9542246,
       "measured_samples": 30,
-      "p50_latency_ns": 177347,
-      "p99_latency_ns": 233911,
-      "device_p50_latency_ns": 9184,
+      "p50_latency_ns": 181868,
+      "p99_latency_ns": 211983,
+      "device_p50_latency_ns": 9472,
       "throughput": {
         "gflops": null,
-        "gb_per_sec": 0.1616717508613058,
-        "items_per_sec": 5773991.102189492
+        "gb_per_sec": 0.15765280313194185,
+        "items_per_sec": 5630457.254712209
       },
       "peak_bytes": 24576,
       "resident_bytes": 8192,
       "cold_state": {
-        "latency_ns": 455674,
+        "latency_ns": 453114,
         "memory_bytes": null,
         "is_cold_start": true,
-        "warmup_ratio": 2.56939220849521
+        "warmup_ratio": 2.4914443442496754
       },
       "warm_state": {
-        "latency_ns": 177347,
+        "latency_ns": 181868,
         "memory_bytes": null,
         "is_cold_start": false,
-        "warmup_ratio": 2.56939220849521
+        "warmup_ratio": 2.4914443442496754
       },
       "selected_schedule_id": "schedule.78c4cda327393710f77fcf6644ffc1c90dbaf01f3b36fd5986c211dedc0b29f8",
       "input_digest": "c6881785ac48221a06d37de95ac5c9bb4b3fda514590e9798b189e76e3a2997d",
@@ -62,7 +62,7 @@
         "reason": "no version-pinned native baseline `native.cutlass.gemm_norm_residual_v3_5_0` is vendored. Fix: vendor the pinned native kernel and register it before claiming a comparison against it."
       },
       "host_environment": "x86_64-linux / cuda / NVIDIA GeForce RTX 4090",
-      "recorded_at_utc": "2026-09-13T14:11:37Z"
+      "recorded_at_utc": "2026-09-14T02:45:46Z"
     },
     {
       "schema_version": "vyre.whole-application-record.v2",
@@ -89,30 +89,30 @@
         "candidate_digest": "5fdbac95abd53af907b57e5f57db7f0c1396f498b397151adb03212867ebd333",
         "parity_status": "matched_exact_bytes"
       },
-      "compile_time_ns": 12862951,
-      "load_time_ns": 7644218,
+      "compile_time_ns": 13222714,
+      "load_time_ns": 8292873,
       "measured_samples": 30,
-      "p50_latency_ns": 172678,
-      "p99_latency_ns": 190623,
-      "device_p50_latency_ns": 9280,
+      "p50_latency_ns": 176132,
+      "p99_latency_ns": 194874,
+      "device_p50_latency_ns": 9248,
       "throughput": {
         "gflops": null,
-        "gb_per_sec": 0.16604315546855997,
-        "items_per_sec": 5930112.695305713
+        "gb_per_sec": 0.16278700065859697,
+        "items_per_sec": 5813821.452092749
       },
       "peak_bytes": 24576,
       "resident_bytes": 8192,
       "cold_state": {
-        "latency_ns": 256337,
+        "latency_ns": 265067,
         "memory_bytes": null,
         "is_cold_start": true,
-        "warmup_ratio": 1.4844797831802545
+        "warmup_ratio": 1.5049337996502623
       },
       "warm_state": {
-        "latency_ns": 172678,
+        "latency_ns": 176132,
         "memory_bytes": null,
         "is_cold_start": false,
-        "warmup_ratio": 1.4844797831802545
+        "warmup_ratio": 1.5049337996502623
       },
       "selected_schedule_id": "schedule.70cdcebfa380d32923c0e4d22c83df0ca7848d91ab48123cc52aaf51c7a18900",
       "input_digest": "42ded5eeca877f23b336768be0ba5082190d3e6dcae7037bf8ee9db2d31abb1d",
@@ -122,7 +122,7 @@
         "reason": "no version-pinned native baseline `native.cub.spmv_segmented_scatter_v2_1_0` is vendored. Fix: vendor the pinned native kernel and register it before claiming a comparison against it."
       },
       "host_environment": "x86_64-linux / cuda / NVIDIA GeForce RTX 4090",
-      "recorded_at_utc": "2026-09-13T14:11:37Z"
+      "recorded_at_utc": "2026-09-14T02:45:46Z"
     },
     {
       "schema_version": "vyre.whole-application-record.v2",
@@ -149,30 +149,30 @@
         "candidate_digest": "dfb67354d133ebe5364a19155c163243b07e3756187e45bb822fd315f14aaab4",
         "parity_status": "matched_exact_bytes"
       },
-      "compile_time_ns": 12492054,
-      "load_time_ns": 6675860,
+      "compile_time_ns": 12818450,
+      "load_time_ns": 7249822,
       "measured_samples": 30,
-      "p50_latency_ns": 156035,
-      "p99_latency_ns": 173722,
-      "device_p50_latency_ns": 9952,
+      "p50_latency_ns": 160729,
+      "p99_latency_ns": 180479,
+      "device_p50_latency_ns": 10080,
       "throughput": {
         "gflops": null,
-        "gb_per_sec": 0.07875156214951774,
-        "items_per_sec": 3281315.089563239
+        "gb_per_sec": 0.07645166709181293,
+        "items_per_sec": 3185486.128825539
       },
       "peak_bytes": 10240,
       "resident_bytes": 4096,
       "cold_state": {
-        "latency_ns": 243308,
+        "latency_ns": 252141,
         "memory_bytes": null,
         "is_cold_start": true,
-        "warmup_ratio": 1.5593168199442433
+        "warmup_ratio": 1.568733707047266
       },
       "warm_state": {
-        "latency_ns": 156035,
+        "latency_ns": 160729,
         "memory_bytes": null,
         "is_cold_start": false,
-        "warmup_ratio": 1.5593168199442433
+        "warmup_ratio": 1.568733707047266
       },
       "selected_schedule_id": "schedule.c5463fc4bc40350a351858482c7b3812d171b0c4692565b2ca8fb8c7f4a3f19c",
       "input_digest": "8376a12b2fb33d0dbfc8c4ba0838f2b7d8bb6f29ed2d2dcd254c9da0d245d765",
@@ -182,7 +182,7 @@
         "reason": "no version-pinned native baseline `native.skia.composite_raster_blend_v1_2_0` is vendored. Fix: vendor the pinned native kernel and register it before claiming a comparison against it."
       },
       "host_environment": "x86_64-linux / cuda / NVIDIA GeForce RTX 4090",
-      "recorded_at_utc": "2026-09-13T14:11:37Z"
+      "recorded_at_utc": "2026-09-14T02:45:46Z"
     }
   ],
   "backend_id": "cuda",
@@ -191,5 +191,5 @@
     "equality_conditions",
     "native_baseline_comparison"
   ],
-  "generated_at_utc": "2026-09-13T14:11:37Z"
+  "generated_at_utc": "2026-09-14T02:45:46Z"
 }

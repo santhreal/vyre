@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"58fb8036c7c40fcff1ee93dd37574be2b6b53776","commit_timestamp":"1789308676","parent_commit":"c7f59aa8216b3d61d4143dd6094ef73f335a5cc6","dirty":false,"source_fingerprint":"git:58fb8036c7c40fcff1ee93dd37574be2b6b53776:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"7956027ba7cacd6f64c915fdfbb8b12fd84c9eb7","commit_timestamp":"1789353100","parent_commit":"29516fdeda20f6cd90e23896e77f7021417eca6e","dirty":false,"source_fingerprint":"git:7956027ba7cacd6f64c915fdfbb8b12fd84c9eb7:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
   "schema_version": "vyre.whole-application-record.v2",
   "workload_id": "workload.whole_app.interactive_event_pipeline",
   "workload_name": "Latency-Sensitive Interactive UI Layout & Multi-Layer Composite Raster",
@@ -24,30 +24,30 @@
     "candidate_digest": "dfb67354d133ebe5364a19155c163243b07e3756187e45bb822fd315f14aaab4",
     "parity_status": "matched_exact_bytes"
   },
-  "compile_time_ns": 12492054,
-  "load_time_ns": 6675860,
+  "compile_time_ns": 12818450,
+  "load_time_ns": 7249822,
   "measured_samples": 30,
-  "p50_latency_ns": 156035,
-  "p99_latency_ns": 173722,
-  "device_p50_latency_ns": 9952,
+  "p50_latency_ns": 160729,
+  "p99_latency_ns": 180479,
+  "device_p50_latency_ns": 10080,
   "throughput": {
     "gflops": null,
-    "gb_per_sec": 0.07875156214951774,
-    "items_per_sec": 3281315.089563239
+    "gb_per_sec": 0.07645166709181293,
+    "items_per_sec": 3185486.128825539
   },
   "peak_bytes": 10240,
   "resident_bytes": 4096,
   "cold_state": {
-    "latency_ns": 243308,
+    "latency_ns": 252141,
     "memory_bytes": null,
     "is_cold_start": true,
-    "warmup_ratio": 1.5593168199442433
+    "warmup_ratio": 1.568733707047266
   },
   "warm_state": {
-    "latency_ns": 156035,
+    "latency_ns": 160729,
     "memory_bytes": null,
     "is_cold_start": false,
-    "warmup_ratio": 1.5593168199442433
+    "warmup_ratio": 1.568733707047266
   },
   "selected_schedule_id": "schedule.c5463fc4bc40350a351858482c7b3812d171b0c4692565b2ca8fb8c7f4a3f19c",
   "input_digest": "8376a12b2fb33d0dbfc8c4ba0838f2b7d8bb6f29ed2d2dcd254c9da0d245d765",
@@ -57,5 +57,5 @@
     "reason": "no version-pinned native baseline `native.skia.composite_raster_blend_v1_2_0` is vendored. Fix: vendor the pinned native kernel and register it before claiming a comparison against it."
   },
   "host_environment": "x86_64-linux / cuda / NVIDIA GeForce RTX 4090",
-  "recorded_at_utc": "2026-09-13T14:11:37Z"
+  "recorded_at_utc": "2026-09-14T02:45:46Z"
 }
