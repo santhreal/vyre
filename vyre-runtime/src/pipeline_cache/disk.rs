@@ -473,7 +473,13 @@ mod tests {
         );
     }
 
+    // WHY not under miri: the cap is 64 MiB, and the reader stops one byte
+    // past it, so the assertion is only reachable by moving 64 MiB through
+    // `read_to_end`. Miri interprets every one of those bytes and does not
+    // finish inside any CI budget. The body executes no `unsafe`, so miri has
+    // nothing here to falsify; every non-miri run still asserts the cap.
     #[test]
+    #[cfg_attr(miri, ignore = "moves 64 MiB through an interpreter")]
     fn cache_blob_reader_rejects_oversized_encoded_blob() {
         let oversized = std::io::repeat(0).take(MAX_ENCODED_PIPELINE_BLOB_BYTES + 1);
 
