@@ -311,6 +311,24 @@ where
     let mut segment_config = config.clone();
     segment_config.fixpoint_iterations = Some(1);
 
+    // A launch geometry stated for the whole program states the whole
+    // program's grid, and a segment covers one pass of it. Submitting that
+    // grid for every segment launches the widest pass's grid over the
+    // narrowest pass's domain: the block-total passes of a 1048576-element
+    // scan inherit 4096 workgroups for a 4096-element domain, 256 times the
+    // lanes that read a buffer they name. Each segment's grid is inferred from
+    // the segment instead, through the same analysis a below-admission
+    // dispatch uses, which keeps a pass whose result depends on how many
+    // invocations ran at its full input span.
+    //
+    // The block shape carries forward unchanged: the compiled module declares
+    // it, and a launch at another width runs a kernel nobody compiled.
+    if let Some(workgroup) = segment_config.launch_workgroup() {
+        segment_config.workgroup_override = Some(workgroup);
+    }
+    segment_config.launch = None;
+    segment_config.grid_override = None;
+
     // Adaptive convergence: `iterations` is an UPPER bound (the worst-case hop
     // depth, one hop per whole-sequence pass). The segment sequence is a
     // deterministic function of its live buffers, so once a full pass leaves

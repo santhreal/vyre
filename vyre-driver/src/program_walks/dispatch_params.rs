@@ -21,23 +21,57 @@ pub fn dispatch_element_count(bindings: &[Binding]) -> u32 {
 /// source. This is the same narrowing target lowering applies, through the same
 /// analysis, so a below-admission dispatch and a compiled artifact agree on the
 /// span without either caller publishing a grid.
+///
+/// The widest binding is taken over the buffers the program references, not
+/// over every buffer the plan declares. A grid-sync segment carries the whole
+/// program's buffer table so one resident resource slice binds to every
+/// segment, so the pass that scans a 4096-element block-total buffer declares
+/// the 1048576-element input beside it and launched one lane per input element,
+/// 256 times its own domain. A buffer no statement of the program names is
+/// touched by no lane, so its declared width states nothing about how many
+/// lanes this program needs.
 #[must_use]
 pub fn dispatch_element_count_for_program(program: &Program, bindings: &[Binding]) -> u32 {
     let full_span = vyre_foundation::launch_covers_full_input_span(program);
-    let count = dispatch_element_count_inner(bindings, full_span);
+    let referenced = vyre_foundation::visit::referenced_buffers(program);
+    let names = |binding: &Binding| referenced.iter().any(|name| name.as_ref() == &*binding.name);
+    let count = match dispatch_element_count_over(bindings, full_span, &names) {
+        // A plan whose names never meet the program's carries no narrowing, so
+        // the whole plan decides it as it did before.
+        0 => dispatch_element_count_inner(bindings, full_span),
+        narrowed => narrowed,
+    };
     vyre_foundation::admitted_logical_span(program, count)
 }
 
 fn dispatch_element_count_inner(bindings: &[Binding], force_full_span: bool) -> u32 {
+    dispatch_element_count_over(bindings, force_full_span, &|_| true)
+}
+
+/// The dispatch width over the bindings `named` admits.
+///
+/// Returns 0 when `named` admits no binding, which is the one answer the
+/// policy below never produces, so a caller can tell an empty selection from a
+/// width and decide it on the whole plan instead.
+fn dispatch_element_count_over(
+    bindings: &[Binding],
+    force_full_span: bool,
+    named: &dyn Fn(&Binding) -> bool,
+) -> u32 {
     // Single pass over bindings: collect every fact the dispatch
     // policy needs (any-shared / max non-shared / max output) in one
     // scan. Previously up to three independent .iter() passes
     // traversed the same slice  -  for launch shapes that carry 60+
     // bindings each pass is real work.
+    let mut any_named = false;
     let mut any_shared = false;
     let mut max_non_shared: u32 = 0;
     let mut max_output: u32 = 0;
     for binding in bindings {
+        if !named(binding) {
+            continue;
+        }
+        any_named = true;
         if binding.role == BindingRole::Shared {
             any_shared = true;
             continue;
@@ -50,6 +84,9 @@ fn dispatch_element_count_inner(bindings: &[Binding], force_full_span: bool) -> 
         {
             max_output = binding.element_count;
         }
+    }
+    if !any_named {
+        return 0;
     }
     if any_shared || force_full_span {
         return max_non_shared.max(1);

@@ -287,6 +287,114 @@ fn split_via_closure_entry_matches_backend_entry_on_the_same_grid_sync_program()
     assert_eq!(via_outputs, vec![vec![6u8, 0, 0, 0]]);
 }
 
+/// Records the launch geometry every segment dispatch receives.
+struct GeometryRecordingBackend {
+    seen: std::sync::Mutex<Vec<(Option<[u32; 3]>, Option<[u32; 3]>)>>,
+}
+
+impl crate::backend::sealed::Sealed for GeometryRecordingBackend {}
+
+impl VyreBackend for GeometryRecordingBackend {
+    fn id(&self) -> &'static str {
+        "grid-sync-geometry-recording"
+    }
+
+    fn dispatch_borrowed(
+        &self,
+        _program: &Program,
+        _inputs: &[&[u8]],
+        _config: &DispatchConfig,
+    ) -> Result<Vec<Vec<u8>>, BackendError> {
+        unreachable!("test uses dispatch_borrowed_into")
+    }
+
+    fn dispatch_borrowed_into(
+        &self,
+        _program: &Program,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+        outputs: &mut OutputBuffers,
+    ) -> Result<(), BackendError> {
+        self.seen
+            .lock()
+            .expect("geometry record")
+            .push((config.launch_grid(), config.launch_workgroup()));
+        if outputs.is_empty() {
+            outputs.push(Vec::new());
+        }
+        outputs[0].clear();
+        outputs[0].extend_from_slice(inputs[0]);
+        Ok(())
+    }
+}
+
+/// WHY: a launch geometry stated for the whole program states the whole
+/// program's grid, and a segment covers one pass of it. Cloning the caller's
+/// config into every segment submitted the widest pass's grid over the
+/// narrowest pass's domain: profiled on an RTX 4090, all five kernels of a
+/// 1048576-element inclusive scan launched 4096 workgroups of 256, so the two
+/// block-total passes ran 1048576 lanes over a 4096-element domain, 256 times
+/// the lanes that read a buffer they name. Only the grid is inherited-wrong;
+/// the block shape has to carry forward, because the compiled module declares
+/// it and a launch at another width runs a kernel nobody compiled.
+///
+/// Both authorities are covered: a frozen `LaunchDirective` and a caller's
+/// `grid_override` reach the dispatch through the same `launch_grid()`, and a
+/// fix that cleared one and not the other would leave the defect on that path.
+#[test]
+fn no_segment_inherits_the_whole_program_grid() {
+    let program = grid_sync_chain(&["a", "b"]);
+    let workgroup = program.workgroup_size();
+    let whole_program_grid = [4096, 1, 1];
+    let inputs: [&[u8]; 1] = [[0u8, 0, 0, 0].as_slice()];
+
+    let frozen = DispatchConfig {
+        launch: Some(
+            crate::launch_directive::LaunchDirective::stated(workgroup, whole_program_grid, 0)
+                .expect("a stated launch with positive extents"),
+        ),
+        ..DispatchConfig::default()
+    };
+    let overridden = DispatchConfig {
+        grid_override: Some(whole_program_grid),
+        workgroup_override: Some(workgroup),
+        ..DispatchConfig::default()
+    };
+
+    for (authority, config) in [("frozen launch", frozen), ("grid override", overridden)] {
+        assert_eq!(
+            config.launch_grid(),
+            Some(whole_program_grid),
+            "{authority}: the caller states the whole program's grid, or this run proves nothing"
+        );
+
+        let backend = GeometryRecordingBackend {
+            seen: std::sync::Mutex::new(Vec::new()),
+        };
+        let mut outputs = vec![Vec::new()];
+        dispatch_with_grid_sync_split_into(&backend, &program, &inputs, &config, &mut outputs)
+            .expect("split dispatch");
+
+        let seen = backend.seen.lock().expect("geometry record").clone();
+        assert!(
+            seen.len() > 1,
+            "{authority}: this contract reads per-segment geometry, and a chain that did not \
+             split carries one"
+        );
+        for (index, (grid, block)) in seen.iter().enumerate() {
+            assert_eq!(
+                *grid, None,
+                "{authority}: segment {index} was handed the whole program's grid {grid:?}, so \
+                 it launches every pass at the widest pass's width"
+            );
+            assert_eq!(
+                *block, Some(workgroup),
+                "{authority}: segment {index} lost the block shape the compiled module declares"
+            );
+        }
+    }
+}
+
 struct OwnedFinalReserveBackend {
     calls: AtomicUsize,
 }

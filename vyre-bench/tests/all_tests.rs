@@ -233,3 +233,7 @@ pub mod throughput_consistency;
 /// Integration tests from `tests/performance_floor_native_baseline_contracts.rs`.
 #[path = "performance_floor_native_baseline_contracts.rs"]
 pub mod performance_floor_native_baseline_contracts;
+
+/// Integration tests from `tests/grid_sync_segment_launch_width.rs`.
+#[path = "grid_sync_segment_launch_width.rs"]
+pub mod grid_sync_segment_launch_width;

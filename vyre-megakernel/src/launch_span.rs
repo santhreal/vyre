@@ -35,12 +35,21 @@ pub(crate) fn required_coverage(program: &Program) -> u64 {
     ))
 }
 
-/// Widest logical point count `program` declares outside workgroup scope.
+/// Widest logical point count `program` declares outside workgroup scope and
+/// names in a statement.
 ///
 /// Workgroup scratch is one allocation per group rather than a domain, so its
 /// count states nothing about how many invocations run. A declaration whose
 /// count is resolved per dispatch contributes zero and leaves the region domain
 /// in force.
+///
+/// A buffer the program declares but no statement of it names is touched by no
+/// invocation, so its count states nothing about how many run either. A
+/// grid-sync segment is the case that separates the two: every segment carries
+/// the whole program's buffer table so one resident resource slice binds to all
+/// of them, so the pass that scans a 4096-element block-total buffer declares
+/// the 1048576-element input beside it and required a launch covering every
+/// element of an input it never reads.
 ///
 /// A declaration states elements and a launch covers logical points, and the
 /// two differ wherever the program packs several points into one element. The
@@ -49,22 +58,34 @@ pub(crate) fn required_coverage(program: &Program) -> u64 {
 /// `vyre_foundation::logical_points_per_element` reads that factor out of the
 /// program's own index arithmetic.
 fn declared_span(program: &Program) -> u32 {
-    program
-        .buffers()
-        .iter()
-        .filter(|buffer| {
-            buffer.kind() != MemoryKind::Shared && buffer.access() != BufferAccess::Workgroup
-        })
-        .map(|buffer| {
-            buffer
-                .count()
-                .saturating_mul(vyre_foundation::logical_points_per_element(
-                    program,
-                    buffer.name(),
-                ))
-        })
-        .max()
-        .unwrap_or(0)
+    let referenced = vyre_foundation::visit::referenced_buffers(program);
+    let span = |named: bool| {
+        program
+            .buffers()
+            .iter()
+            .filter(|buffer| {
+                buffer.kind() != MemoryKind::Shared && buffer.access() != BufferAccess::Workgroup
+            })
+            .filter(|buffer| {
+                !named || referenced.iter().any(|name| name.as_ref() == buffer.name())
+            })
+            .map(|buffer| {
+                buffer
+                    .count()
+                    .saturating_mul(vyre_foundation::logical_points_per_element(
+                        program,
+                        buffer.name(),
+                    ))
+            })
+            .max()
+            .unwrap_or(0)
+    };
+    match span(true) {
+        // A program that names none of its own declarations states no narrowing,
+        // so the whole table decides it as it did before.
+        0 => span(false),
+        named => named,
+    }
 }
 
 /// Reject a launch record covering fewer logical points than its program needs.
@@ -201,6 +222,66 @@ mod tests {
     fn an_atomic_reduction_requires_its_whole_input_span() {
         assert_eq!(required_coverage(&atomic_sum(4096)), 4096);
         assert_eq!(required_coverage(&atomic_sum(17)), 17);
+    }
+
+    /// An atomic reduction over `domain` elements that also declares an
+    /// `inherited` element buffer, named by a statement only when `reads` is
+    /// set. This is the shape a grid-sync split produces: every segment carries
+    /// the whole program's buffer table so one resident resource slice binds to
+    /// all of them, and a segment references its own slice of it.
+    fn inherited_table(domain: u32, inherited: u32, reads: bool) -> Program {
+        let mut body = vec![
+            Node::let_bind("idx", Expr::gid_x()),
+            Node::if_then(
+                Expr::lt(Expr::var("idx"), Expr::u32(domain)),
+                vec![Node::let_bind(
+                    "prior",
+                    Expr::atomic_add(
+                        "sum",
+                        Expr::u32(0),
+                        Expr::load("values", Expr::var("idx")),
+                    ),
+                )],
+            ),
+        ];
+        if reads {
+            body.push(Node::let_bind(
+                "carried",
+                Expr::load("inherited", Expr::u32(0)),
+            ));
+        }
+        Program::wrapped(
+            vec![
+                BufferDecl::storage("sum", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+                BufferDecl::read("values", 1, DataType::U32).with_count(domain),
+                BufferDecl::read("inherited", 2, DataType::U32).with_count(inherited),
+            ],
+            [32, 1, 1],
+            body,
+        )
+    }
+
+    /// WHY: a grid-sync segment inherits the whole program's buffer table, so
+    /// the pass that reduces a 4096-element block-total buffer declares the
+    /// 1048576-element input beside it. Coverage read off the widest
+    /// declaration required every segment to launch the input's span, 256 times
+    /// its own domain, and the segment spends that width on lanes that read no
+    /// buffer it names. A buffer no statement names is touched by no
+    /// invocation, so its count states nothing about how many run.
+    #[test]
+    fn coverage_ignores_a_declaration_no_statement_names() {
+        assert_eq!(required_coverage(&inherited_table(4096, 1 << 20, false)), 4096);
+    }
+
+    /// WHY: the filter above has to admit what the program does name, or a
+    /// segment that genuinely reads the wide buffer is launched too narrow and
+    /// leaves most of it unread. Same two declarations, one statement apart.
+    #[test]
+    fn coverage_keeps_a_declaration_a_statement_does_name() {
+        assert_eq!(
+            required_coverage(&inherited_table(4096, 1 << 20, true)),
+            1 << 20
+        );
     }
 
     /// WHY: a program the guards bound has a domain the region already states,

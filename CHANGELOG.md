@@ -5260,6 +5260,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Fixed
 
+- A grid-sync segment launches the grid its own pass covers instead of the grid
+  stated for the whole program, and the width is inferred from the buffers the
+  segment references rather than the widest one it declares, which takes the
+  five kernels of the 1048576-element inclusive `u32` scan on an RTX 4090 from
+  4096 workgroups each to 4096, 16, 1, 16 and 4096, and their total device time
+  from 62.8 us to 40.4 us.
 - Every pinned native baseline records the digest of the harness source it
   names; the six recorded digests matched no file on disk, and one was the
   digest of the empty string.
