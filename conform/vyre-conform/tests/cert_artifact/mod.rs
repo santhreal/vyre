@@ -41,8 +41,7 @@ fn write_signed_shard(
 ) {
     let pairs_vec: Vec<ConformanceResult> =
         serde_json::from_value(pairs.clone()).expect("pairs deserialize");
-    let laws_vec: Vec<LawRecord> =
-        serde_json::from_value(laws.clone()).expect("laws deserialize");
+    let laws_vec: Vec<LawRecord> = serde_json::from_value(laws.clone()).expect("laws deserialize");
     let plan = ProofPlanSummary {
         backend_count: 1,
         op_count: pairs_vec.len(),

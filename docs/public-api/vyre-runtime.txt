@@ -281,7 +281,6 @@ pub const fn vyre_runtime::resident_work_queue::planner::ResidentQueueCapabiliti
 pub const fn vyre_runtime::resident_work_queue::planner::ResidentQueueCapabilities::unsupported() -> Self
 pub const fn vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::launch_request(&self, queue_len: u32, max_workgroup_size_x: u32, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> vyre_runtime::resident_work_queue::policy::ResidentLaunchRequest
 pub const fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::default_worker_count(&self) -> u32
-pub const fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::default_worker_groups_from_limits(&self, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32
 pub const fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::dispatch_grid_for(&self, worker_count: u32, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3]
 pub const fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::from_scheduling(scheduling: vyre_foundation::execution_plan::policy::SchedulingPolicy) -> Self
 pub const fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::padded_slot_count(&self, slot_count: u32, workgroup_size_x: u32) -> u32
@@ -905,16 +904,15 @@ pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::launch_r
 pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::launch_request_for_tasks(&self, tasks: &[vyre_runtime::resident_work_queue::task::TaskWorkItem], max_workgroup_size_x: u32, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> core::result::Result<vyre_runtime::resident_work_queue::policy::ResidentLaunchRequest, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueConfig::validate(&self) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::planner::ResidentQueueTelemetry::default() -> Self
-pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::calculate_optimal_grid(&self, request: vyre_runtime::resident_work_queue::planner::ResidentGridRequest, limits: vyre_runtime::resident_work_queue::planner::ResidentGridLimits) -> core::result::Result<vyre_runtime::resident_work_queue::planner::ResidentGridPlan, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::default() -> Self
 pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::geometry_from_slots(&self, slot_count: u32, worker_count: u32, max_workgroup_size_x: u32) -> vyre_runtime::resident_work_queue::planner::ResidentLaunchGeometry
+pub fn vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::resolve_grid(&self, request: vyre_runtime::resident_work_queue::planner::ResidentGridRequest, limits: vyre_runtime::resident_work_queue::planner::ResidentGridLimits) -> core::result::Result<vyre_runtime::resident_work_queue::planner::ResidentGridPlan, vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::resident_work_queue::planner::build_bellman_tn_order_program(buffers: vyre_libs_math::math::bellman_shortest_path::BellmanBuffers<'_>, extents: vyre_libs_math::math::bellman_shortest_path::BellmanExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::build_kfac_autotune_step_program(blocks_out: &str, blocks_in: &str, scratch: &str, num_blocks: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::build_persistent_fixpoint_program(transfer_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, current: &str, next: &str, changed: &str, words: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::build_scallop_provenance_wide_program(state: &str, next: &str, join_rules: &str, changed: &str, n: u32, w: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::build_sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_runtime::resident_work_queue::planner::build_sinkhorn_full_clustering_program(buffers: vyre_libs_math::math::sinkhorn_iterate::SinkhornBuffers<'_>, extents: vyre_libs_math::math::sinkhorn_iterate::SinkhornExtents) -> vyre_foundation::ir_inner::model::program::definition::Program
-pub fn vyre_runtime::resident_work_queue::planner::default_worker_groups_from_limits(max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32
 pub fn vyre_runtime::resident_work_queue::planner::dispatch_grid_for(worker_count: u32, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3]
 pub fn vyre_runtime::resident_work_queue::planner::elide_value_flow_barriers(program: vyre_foundation::ir_inner::model::program::definition::Program) -> (vyre_foundation::ir_inner::model::program::definition::Program, vyre_runtime::resident_work_queue::planner::BarrierElisionReport)
 pub fn vyre_runtime::resident_work_queue::planner::padded_slot_count(slot_count: u32, workgroup_size_x: u32) -> u32
@@ -1131,7 +1129,7 @@ pub fn vyre_runtime::resource_transfer::ResourceTransferLifecycleEngine::initiat
 pub fn vyre_runtime::resource_transfer::ResourceTransferLifecycleEngine::is_dispatch_visible(&self, resource_name: &str) -> bool
 pub fn vyre_runtime::resource_transfer::ResourceTransferLifecycleEngine::new(caps: vyre_runtime::resource_transfer::DeviceTransferCapabilities, device_generation: u64) -> Self
 pub fn vyre_runtime::resource_transfer::ResourceTransferLifecycleEngine::progress_transfer(&mut self, resource_name: &str, bytes: u64) -> core::result::Result<(), vyre_runtime::resource_transfer::ResourceTransferError>
-pub fn vyre_runtime::resource_transfer::select_transfer_path(caps: &vyre_runtime::resource_transfer::DeviceTransferCapabilities, file_offset: u64, fs_supports_direct: bool) -> vyre_runtime::resource_transfer::PathSelectionDecision
+pub fn vyre_runtime::resource_transfer::admissible_transfer_path(caps: &vyre_runtime::resource_transfer::DeviceTransferCapabilities, file_offset: u64, fs_supports_direct: bool) -> vyre_runtime::resource_transfer::AdmissibleTransferPath
 pub fn vyre_runtime::retained_page_cache::RetainedPageCache::begin_generation_rebuild(&self) -> core::result::Result<(), vyre_runtime::retained_page_cache::RetainedPageCacheError>
 pub fn vyre_runtime::retained_page_cache::RetainedPageCache::complete_generation_rebuild(&self, new_generation: u64)
 pub fn vyre_runtime::retained_page_cache::RetainedPageCache::complete_in_flight(&self, page_ids: &[u32]) -> core::result::Result<(), vyre_runtime::retained_page_cache::RetainedPageCacheError>
@@ -1498,8 +1496,8 @@ pub struct vyre_runtime::resource_residency::ResourceSetKey
 pub struct vyre_runtime::resource_residency::ResourceSetLease
 pub struct vyre_runtime::resource_residency::StateId(pub u64)
 pub struct vyre_runtime::resource_residency::StateLease
+pub struct vyre_runtime::resource_transfer::AdmissibleTransferPath
 pub struct vyre_runtime::resource_transfer::DeviceTransferCapabilities
-pub struct vyre_runtime::resource_transfer::PathSelectionDecision
 pub struct vyre_runtime::resource_transfer::ResourceTransferDescriptor
 pub struct vyre_runtime::resource_transfer::ResourceTransferLifecycleEngine
 pub struct vyre_runtime::retained_page_cache::RetainedMatchResult
@@ -2610,13 +2608,13 @@ pub vyre_runtime::resource_residency::ResourceSetLease::key: vyre_runtime::resou
 pub vyre_runtime::resource_residency::ResourceSetLease::status: vyre_runtime::resource_residency::ResourceAdmissionStatus
 pub vyre_runtime::resource_residency::StateLease::generation: u64
 pub vyre_runtime::resource_residency::StateLease::id: vyre_runtime::resource_residency::StateId
+pub vyre_runtime::resource_transfer::AdmissibleTransferPath::is_zero_copy: bool
+pub vyre_runtime::resource_transfer::AdmissibleTransferPath::path: vyre_runtime::resource_transfer::ResourceTransferPath
+pub vyre_runtime::resource_transfer::AdmissibleTransferPath::reason: &'static str
 pub vyre_runtime::resource_transfer::DeviceTransferCapabilities::max_transfer_queue_depth: usize
 pub vyre_runtime::resource_transfer::DeviceTransferCapabilities::required_direct_alignment_bytes: u64
 pub vyre_runtime::resource_transfer::DeviceTransferCapabilities::supports_direct_storage: bool
 pub vyre_runtime::resource_transfer::DeviceTransferCapabilities::supports_pinned_host_memory: bool
-pub vyre_runtime::resource_transfer::PathSelectionDecision::is_zero_copy: bool
-pub vyre_runtime::resource_transfer::PathSelectionDecision::reason: &'static str
-pub vyre_runtime::resource_transfer::PathSelectionDecision::selected_path: vyre_runtime::resource_transfer::ResourceTransferPath
 pub vyre_runtime::resource_transfer::ResourceTransferDescriptor::content_digest: [u8; 32]
 pub vyre_runtime::resource_transfer::ResourceTransferDescriptor::destination_resource: alloc::string::String
 pub vyre_runtime::resource_transfer::ResourceTransferDescriptor::device_generation: u64

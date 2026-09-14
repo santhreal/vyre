@@ -86,9 +86,18 @@ const CORE_MEASURED: &[(&str, usize)] = &[
     ("vyre-runtime/src/replay/mod.rs", 549),
     ("vyre-libs-pattern/src/pattern/region.rs", 129),
     ("vyre-libs-pattern/src/pattern/dfa_compile/compile.rs", 112),
-    ("vyre-libs-parsing/src/parsing/go/parse/structure/decl_span.rs", 114),
-    ("vyre-libs-parsing/src/parsing/go/parse/structure/declarations.rs", 167),
-    ("vyre-libs-parsing/src/parsing/go/parse/structure/packages.rs", 131),
+    (
+        "vyre-libs-parsing/src/parsing/go/parse/structure/decl_span.rs",
+        114,
+    ),
+    (
+        "vyre-libs-parsing/src/parsing/go/parse/structure/declarations.rs",
+        167,
+    ),
+    (
+        "vyre-libs-parsing/src/parsing/go/parse/structure/packages.rs",
+        131,
+    ),
     ("vyre-foundation/src/ir_inner/model/expr/mod.rs", 539),
     ("vyre-foundation/src/optimizer/mod.rs", 970),
     ("vyre-foundation/src/execution_plan/mod.rs", 740),

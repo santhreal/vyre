@@ -521,7 +521,10 @@ mod tests {
     fn the_accounted_backend_columns_read_without_an_error() {
         let catalog = read_matrix("");
         assert!(catalog.errors.is_empty(), "{:?}", catalog.errors);
-        assert_eq!(catalog.release_backend_rows.len(), RELEASE_BACKEND_COLUMNS.len());
+        assert_eq!(
+            catalog.release_backend_rows.len(),
+            RELEASE_BACKEND_COLUMNS.len()
+        );
     }
 
     /// WHY: a status value the matrix does not declare is not a backend cell,

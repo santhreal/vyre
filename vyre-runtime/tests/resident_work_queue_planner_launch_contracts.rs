@@ -64,10 +64,36 @@ fn megakernel_helpers_delegate_to_shared_scheduling_policy() {
         dispatch_grid_for(64, 300, 256),
         policy.dispatch_grid_for(64, 300, 256)
     );
-    assert_eq!(
-        default_worker_groups_from_limits(65_536, 4_096),
-        policy.default_worker_groups_from_limits(65_536, 4_096)
+}
+
+/// WHY: the resident planner answered a zero worker count by deriving one from
+/// adapter occupancy, so a launch ran a worker grid no artifact identity
+/// covers. The count is a schedule decision, and a request that states none is
+/// refused rather than filled in.
+#[test]
+fn resident_grid_refuses_an_unstated_worker_count() {
+    let limits = ResidentGridLimits::new(256, 65_536, 4_096);
+    let error = ResidentGridPlan::recommend(ResidentGridRequest::new(4_096, 0), limits)
+        .expect_err("Fix: a request stating no worker count must be refused");
+    assert!(
+        error.to_string().contains("states no worker count"),
+        "Fix: the refusal must name the missing worker count: {error}"
     );
+}
+
+/// WHY: clamping a stated count to what the adapter admits is realization;
+/// replacing it with a derived one is selection. A stated count under the
+/// ceiling survives unchanged, and one above it clamps to the ceiling instead
+/// of being re-derived from occupancy.
+#[test]
+fn resident_grid_realizes_the_stated_worker_count() {
+    let limits = ResidentGridLimits::new(256, 64, 4_096);
+    let under = ResidentGridPlan::recommend(ResidentGridRequest::new(4_096, 8), limits)
+        .expect("Fix: a stated worker count under the ceiling must be realized");
+    assert_eq!(under.worker_groups, 8);
+    let over = ResidentGridPlan::recommend(ResidentGridRequest::new(4_096, 4_096), limits)
+        .expect("Fix: a stated worker count above the ceiling must clamp to it");
+    assert_eq!(over.worker_groups, 64);
 }
 
 #[test]

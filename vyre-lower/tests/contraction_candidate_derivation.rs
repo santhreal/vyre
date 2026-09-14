@@ -26,8 +26,8 @@ use vyre_lower::analyses::contraction_candidates::{
     analyze, ContractionCandidate, ContractionStrategy, MatrixInstructionSource,
     SCALAR_OPERAND_LOADS_PER_FMA,
 };
-use vyre_lower::{MatrixMmaElement, MatrixMmaLayout, MatrixTileShape};
 use vyre_lower::lower;
+use vyre_lower::{MatrixMmaElement, MatrixMmaLayout, MatrixTileShape};
 use vyre_test_support::tile_programs::{fragment_matmul_program, tile_matmul_program, TileOperand};
 
 fn matrix_candidate(candidates: &[ContractionCandidate]) -> Option<&ContractionCandidate> {
@@ -92,7 +92,8 @@ fn matrix_candidate_follows_a_second_declared_product_rather_than_the_first() {
     let desc = lower(&prog).expect("tile matmul program must lower");
     let plan = analyze(&desc);
 
-    let candidate = matrix_candidate(&plan.candidates).expect("declared product states a candidate");
+    let candidate =
+        matrix_candidate(&plan.candidates).expect("declared product states a candidate");
     let ContractionStrategy::MatrixInstruction { left_layout, .. } = candidate.strategy else {
         unreachable!("filtered to the matrix variant")
     };
@@ -152,7 +153,9 @@ fn matrix_extents_follow_each_declared_product_rather_than_one_fixed_shape() {
             "Fix: the candidate must carry the extents this program declared, not a fixed shape"
         );
         assert!(
-            candidate.contraction_id.ends_with(&format!("_mma_m{m}n{n}k{k}")),
+            candidate
+                .contraction_id
+                .ends_with(&format!("_mma_m{m}n{n}k{k}")),
             "Fix: candidate id `{}` does not name the declared extents m{m} n{n} k{k}",
             candidate.contraction_id
         );
@@ -384,12 +387,8 @@ fn every_matrix_fragment_element_maps_to_a_bound_dtype() {
             MatrixMmaElement::TF32 | MatrixMmaElement::F32 => DataType::F32,
         };
         assert!(
-            matches!(
-                dtype,
-                DataType::F16 | DataType::BF16 | DataType::F32
-            ),
+            matches!(dtype, DataType::F16 | DataType::BF16 | DataType::F32),
             "Fix: fragment element {element:?} has no host element type decision"
         );
     }
 }
-

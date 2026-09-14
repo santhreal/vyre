@@ -241,10 +241,8 @@ fn audit_matrix(matrix: &WholeApplicationDomainMatrixRecord, report: &mut Report
              measured in the same run.",
         ));
     }
-    let status = WholeApplicationDomainMatrixRecord::derive_status(
-        &matrix.records,
-        &matrix.readiness_gaps,
-    );
+    let status =
+        WholeApplicationDomainMatrixRecord::derive_status(&matrix.records, &matrix.readiness_gaps);
     if matrix.status != status {
         report.find(Finding::in_file(
             std::path::PathBuf::from(MATRIX_ARTIFACT),
@@ -486,11 +484,10 @@ mod tests {
     #[test]
     fn the_committed_matrix_gaps_are_the_ones_its_records_state() {
         let root = xtask::checkout::checkout_root();
-        let matrix: WholeApplicationDomainMatrixRecord =
-            match read_record(&root, MATRIX_ARTIFACT) {
-                Ok(matrix) => matrix,
-                Err(_) => return,
-            };
+        let matrix: WholeApplicationDomainMatrixRecord = match read_record(&root, MATRIX_ARTIFACT) {
+            Ok(matrix) => matrix,
+            Err(_) => return,
+        };
         assert_eq!(matrix.readiness_gaps, derived_gaps(&matrix.records));
     }
 

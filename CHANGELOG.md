@@ -1469,6 +1469,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   attaches to the operand and is lost when the load is hoisted into a `let`.
   The rule and both node-level messages now name every legal source and the
   spelling that keeps it.
+- `vyre_runtime::resource_transfer::select_transfer_path` is now
+  `admissible_transfer_path` and returns `AdmissibleTransferPath` with a `path`
+  field, stating the most capable transfer the device, filesystem and offset
+  alignment admit rather than a ranked choice.
 - One lane of `grid_stride_tree_sum_u32` pass 1 now reduces 32 elements instead
   of one, so the workgroup tree runs once per span of the input rather than
   once per tile: the reduction measures 27296 ns at one element per lane and
@@ -4783,6 +4787,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The use-path classifier no longer special-cases a test_helpers file stem. No
   file in the tree carries that name, and the shape it described is one the
   tree rejects.
+- The device cost projection that chose a vector pack width and an unroll depth
+  from adapter facts is gone, together with the `SchedulingPolicy` selectors
+  behind it; no executor consumed the projection and both dimensions belong to
+  the selected schedule.
 - vyre-driver::shadow is deleted. It let a driver run a program on the
   reference interpreter beside the device, which put a host execution path
   inside a shipped crate. AccuracyStrategy::{Direct, ShadowReference} is now
@@ -6074,6 +6082,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   now index their global writes by a grid-varying id or confine them to the
   first workgroup, so a multi-workgroup launch no longer repeats the same
   writes in every workgroup.
+- The schedule-ownership gate reports a function outside the compiler boundary
+  whose own name states a choice, so a selector that returns a bare scalar from
+  an unwrapped device limit no longer passes a rule that judges types.
 - A backend that lowers a whole-grid barrier is no longer routed through the
   host split. `VyreBackend::supports_grid_sync` and
   `VyreBackend::cooperative_grid_sync_fits` are two halves of one answer, and
@@ -6435,6 +6446,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A resident CUDA dispatch of a grid-sync program whose grid exceeds
   cooperative thread residency now takes the segmented route instead of failing
   the launch.
+- A resident worker-grid request that states no worker count is refused instead
+  of answered with a count derived from adapter occupancy, and a stated count
+  is only clamped to what the adapter admits.
 - A CUDA resident dispatch no longer zero-fills a bound read-write output
   before launch, so a value one dispatch leaves on the device is readable by
   the next.

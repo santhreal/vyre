@@ -20,7 +20,7 @@
 //! extent-typed fields of a selected phase, both read from source at run time. A
 //! field added to either turns this gate red until its owner is recorded.
 //!
-//! Three rules over one call graph:
+//! Four rules over one call graph:
 //!
 //! 1. A function outside the compiler boundary that constructs a decision value
 //!    is a finding unless it, or a caller within three levels, receives one.
@@ -37,6 +37,20 @@
 //!    report device facts. Mapping what the hardware grants onto a launch shape
 //!    is a cost model, whatever the body does with the facts, and there is one
 //!    cost model.
+//!
+//! 4. A function outside the compiler boundary whose own name states a choice
+//!    over device facts is a finding under the same call-graph exemption. The
+//!    first three rules judge types, and a selector that returns a bare scalar
+//!    from an unwrapped limit has no type to judge. Its name states the act and
+//!    its parameters state the material, and a body that chooses over what the
+//!    hardware grants is a cost model whatever it returns. A verb alone is not
+//!    enough: a retention set, a sampling body and a contraction order all
+//!    select, and what they select is data.
+//!
+//! A device fact reaches rule 3 and rule 4 by type or by field name. The field
+//! names are read off the declarations of the capability, limit and measurement
+//! records themselves, so unwrapping one into scalar parameters carries the fact
+//! into the signature instead of out of it.
 //!
 //! A macro body is opaque to the walk except for `vec!`, whose elements are
 //! parsed and visited. `matches!` stays opaque on purpose: its second argument
@@ -90,6 +104,7 @@ impl crate::gate::GateBehavior for ScheduleOwnership {
         let (decisions, unclassified) = decision_types(&tree)?;
         let geometry = geometry_fields(&tree)?;
         let setters = geometry_setters(&tree)?;
+        let facts = device_fact_fields(&tree)?;
         let mut report = Report::clean();
         report.note(format!(
             "{} decision types derived from the plan dimensions and the neutral schedule: {}",
@@ -105,6 +120,10 @@ impl crate::gate::GateBehavior for ScheduleOwnership {
             joined(&setters)
         ));
         report.note(format!(
+            "{} device-fact field names derived from the records that declare them",
+            facts.len()
+        ));
+        report.note(format!(
             "{} owns selection; {} other layers receive it",
             registry.owner_package, registry.other_layers
         ));
@@ -115,6 +134,7 @@ impl crate::gate::GateBehavior for ScheduleOwnership {
             decisions,
             geometry,
             setters,
+            device_fact_fields: facts,
         };
         let mut judged = 0_usize;
         for path in tree.all_rust() {
@@ -152,7 +172,23 @@ struct Rules {
     geometry: BTreeSet<String>,
     /// IR methods that write a launch extent into a program.
     setters: BTreeSet<String>,
+    /// Field names declared by the device-fact records themselves.
+    device_fact_fields: BTreeSet<String>,
 }
+
+/// Type-name stems a device capability, limit or measurement record carries.
+///
+/// `DeviceProfile` is spelled out rather than left as `Profile`, because an
+/// `OptimizerProfile` states how hard to optimize and grants nothing. A body
+/// that reads one is not ranking a shape against hardware.
+const DEVICE_FACT_STEMS: &[&str] = &[
+    "Caps",
+    "Capabilities",
+    "Limits",
+    "Facts",
+    "DeviceProfile",
+    "Measurement",
+];
 
 impl Rules {
     /// Whether a signature names a decision type.
@@ -179,24 +215,40 @@ impl Rules {
         self.setters.contains(method)
     }
 
-    /// Whether a signature takes a device capability record.
+    /// Whether a signature holds a device capability record.
     ///
     /// The stems are the shapes a capability record is spelled with in this
     /// tree. A crate that chooses a launch shape from what the hardware grants
     /// has a cost model; a crate that states the shape of its own program from
     /// its own problem size is declaring a search input.
-    fn signature_takes_device_facts(&self, signature: &str) -> bool {
-        const DEVICE_FACT_STEMS: &[&str] = &[
-            "Caps",
-            "Capabilities",
-            "Limits",
-            "Facts",
-            "Profile",
-            "Measurement",
-        ];
+    ///
+    /// Holding the record is what rule 3 judges, and it is deliberately not the
+    /// same test as naming one of its fields. A body handed the whole record can
+    /// rank any shape against any limit in it. A body handed one limit can only
+    /// clamp against that limit, which is what the ring arithmetic here does,
+    /// and reading a ceiling is not ranking against it.
+    fn signature_holds_device_record(&self, signature: &str) -> bool {
         DEVICE_FACT_STEMS
             .iter()
             .any(|stem| signature.contains(stem))
+    }
+
+    /// Whether a signature names a device fact at all, by type or by field.
+    ///
+    /// The field names matter as much as the type to a body that states a
+    /// choice. `select_vector_pack_bits` took `&AdapterCaps` and was judged on
+    /// the type; `default_worker_groups_from_limits` took two of the same
+    /// record's fields unwrapped into `u32` parameters and held the same facts
+    /// invisibly. The names are read off the declarations of the records
+    /// themselves, so unwrapping one carries the fact into the signature rather
+    /// than out of it.
+    fn signature_names_device_fact(&self, signature: &str) -> bool {
+        if self.signature_holds_device_record(signature) {
+            return true;
+        }
+        self.device_fact_fields
+            .iter()
+            .any(|field| signature.contains(field.as_str()))
     }
 
     /// Whether a return type is geometry.
@@ -325,6 +377,43 @@ const PROVENANCE_TERMS: &[&str] = &[
     "pruned",
     "measurement",
 ];
+
+/// Verbs a function name uses to state that it chose something.
+///
+/// Three selectors sat outside the compiler boundary for as long as the rules
+/// above were typed: `select_vector_pack_bits` and `select_unroll_depth` read a
+/// capability record and returned a bare `u32`, and
+/// `default_worker_groups_from_limits` took the same record's fields unwrapped
+/// into two `u32` parameters. A typed rule cannot see any of them. A `u32` is
+/// not a shape, an unwrapped limit is not a record, and `vector_pack_bits` is
+/// not spelled the way the phase field it duplicates is, so all three evaded a
+/// walk that judges types.
+///
+/// What gave them away is their own names, read together with what they take.
+/// A verb alone is not a schedule choice: a submodular retention set, a nucleus
+/// sampling body and a tensor-network contraction order all select, and what
+/// they select is data. The rule fires on a stated choice whose material is
+/// device facts, which is the one thing no domain algorithm selects over.
+///
+/// `optimal` is here because a function that claims the best shape ranked the
+/// alternatives, and ranking is the cost model's.
+const SELECTION_VERBS: &[&str] = &[
+    "select_",
+    "choose_",
+    "chosen_",
+    "pick_",
+    "decide_",
+    "optimal",
+    "_from_limits",
+    "_from_caps",
+    "_from_profile",
+    "_from_signature",
+];
+
+/// Whether a function name states that the body chose something.
+fn states_a_choice(name: &str) -> bool {
+    SELECTION_VERBS.iter().any(|verb| name.contains(verb))
+}
 
 /// Where the plan and the neutral schedule are declared.
 const PLAN_FILE: &str = "vyre-megakernel/src/schema/plan.rs";
@@ -459,6 +548,82 @@ fn geometry_fields(tree: &Tree) -> Result<BTreeSet<String>, GateError> {
         ));
     }
     Ok(geometry)
+}
+
+/// Field names the device-fact records declare, read from the whole tree.
+///
+/// A capability record unwrapped into scalar parameters carries the same facts
+/// under the same names, so the names are what a rule can follow. Only names
+/// long enough to be a fact are kept: a two-letter field is a coincidence
+/// waiting to match an unrelated signature.
+fn device_fact_fields(tree: &Tree) -> Result<BTreeSet<String>, GateError> {
+    let mut fields = BTreeSet::new();
+    for path in tree.all_rust() {
+        if is_test_path(&path) {
+            continue;
+        }
+        let text = tree.read(&path)?;
+        let Ok(file) = syn::parse_file(&text) else {
+            continue;
+        };
+        collect_device_fact_fields(&file.items, &mut fields);
+    }
+    if fields.is_empty() {
+        return Err(GateError::new(
+            "no device-fact record declares a field, so an unwrapped limit is invisible",
+            "keep the adapter capability and grid limit records declared as named structs",
+        ));
+    }
+    Ok(fields)
+}
+
+/// Field names of every struct whose own name carries a device-fact stem.
+///
+/// Only a field whose name states a bound is kept. A record of what the
+/// hardware grants is spelled as a ceiling, a floor or an ideal: every fact the
+/// three removed selectors read was `max_compute_workgroups_per_dimension`,
+/// `l2_cache_bytes`, `regs_per_thread_max` or `ideal_vector_pack_bits`. Keeping
+/// every field of every such record instead collected 359 names, among them
+/// `selected` and `candidates`, and a sampling body that names a candidate
+/// count is not reading hardware.
+fn collect_device_fact_fields(items: &[syn::Item], out: &mut BTreeSet<String>) {
+    for item in items {
+        match item {
+            syn::Item::Struct(declared) => {
+                let name = declared.ident.to_string();
+                if !DEVICE_FACT_STEMS.iter().any(|stem| name.contains(stem)) {
+                    continue;
+                }
+                for field in &declared.fields {
+                    let Some(ident) = field.ident.as_ref() else {
+                        continue;
+                    };
+                    let field = ident.to_string();
+                    if states_a_bound(&field) {
+                        out.insert(field);
+                    }
+                }
+            }
+            syn::Item::Mod(module) => {
+                if let Some((_, items)) = module.content.as_ref() {
+                    collect_device_fact_fields(items, out);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Whether a field name states a bound the hardware sets.
+///
+/// A ceiling, a floor, an ideal, a byte size or a bit width. The shape of the
+/// name, not a roster of the facts: a limit added to a capability record
+/// tomorrow is followed the day it lands.
+fn states_a_bound(field: &str) -> bool {
+    const PREFIXES: &[&str] = &["max_", "min_", "ideal_", "preferred_"];
+    const SUFFIXES: &[&str] = &["_max", "_min", "_bytes", "_bits"];
+    PREFIXES.iter().any(|prefix| field.starts_with(prefix))
+        || SUFFIXES.iter().any(|suffix| field.ends_with(suffix))
 }
 
 /// Whether a declared field carries geometry.
@@ -731,7 +896,7 @@ impl<'ast> syn::visit::Visit<'ast> for Walker<'_> {
     fn visit_expr_method_call(&mut self, expr: &'ast syn::ExprMethodCall) {
         let method = expr.method.to_string();
         let writes_a_chosen_extent = expr.args.iter().any(states_extent)
-            || self.rules.signature_takes_device_facts(&self.signature());
+            || self.rules.signature_holds_device_record(&self.signature());
         if self.rules.is_geometry_setter(&method)
             && self.rewrites_a_received_program(expr)
             && writes_a_chosen_extent
@@ -978,7 +1143,7 @@ fn findings(
                 ),
             ));
         }
-        let ranks_hardware = rules.signature_takes_device_facts(&record.signature)
+        let ranks_hardware = rules.signature_holds_device_record(&record.signature)
             && !registry.is_device_layer(crate_directory);
         if let (true, true, false) = (record.returns_geometry, ranks_hardware, realizes) {
             findings.push(Finding::at(
@@ -992,6 +1157,25 @@ fn findings(
                 format!(
                     "report the device limit as a fact and let `{owner}` rank shapes against it; \
                      one cost model orders every candidate"
+                ),
+            ));
+        }
+        let states_hardware_choice = states_a_choice(&record.name)
+            && rules.signature_names_device_fact(&record.signature)
+            && !registry.is_device_layer(crate_directory);
+        if states_hardware_choice && !realizes {
+            findings.push(Finding::at(
+                path.to_path_buf(),
+                record.line,
+                format!(
+                    "`{crate_directory}` is in the `{layer}` layer and `{}` states a choice over \
+                     device facts without receiving one, so it selects execution on a second \
+                     route",
+                    record.name
+                ),
+                format!(
+                    "name the body for the fact it reports and let `{owner}` choose; a scalar \
+                     return and an unwrapped limit hide a selector from every typed rule"
                 ),
             ));
         }
@@ -1056,6 +1240,16 @@ mod tests {
                 .into_iter()
                 .map(str::to_string)
                 .collect(),
+            device_fact_fields: [
+                "max_compute_workgroups_per_dimension",
+                "max_compute_invocations_per_workgroup",
+                "max_workgroup_size_x",
+                "regs_per_thread_max",
+                "l2_cache_bytes",
+            ]
+            .into_iter()
+            .map(str::to_string)
+            .collect(),
         }
     }
 
@@ -1432,6 +1626,100 @@ mod tests {
             forwarding_receiver.is_empty(),
             "forwarding a received decision without naming a variant is realization: {}",
             Finding::messages(&forwarding_receiver)
+        );
+    }
+
+    /// WHY: the three selectors this rule was written for, verbatim in the
+    /// shapes that evaded the typed rules. `select_vector_pack_bits` and
+    /// `select_unroll_depth` return a bare `u32` the geometry test does not
+    /// recognize, and one of them spells a dimension the phase already records
+    /// under another name. `default_worker_groups_from_limits` and
+    /// `calculate_optimal_grid` take the capability record's fields unwrapped
+    /// into plain `u32` parameters, so no device-fact type appears in their
+    /// signatures at all and the fact is followed by field name instead.
+    #[test]
+    fn a_stated_choice_over_device_facts_is_a_finding_whatever_it_returns() {
+        for source in [
+            "fn select_vector_pack_bits(element_bits: u32, caps: &AdapterCaps) -> u32 {\n    if caps.l2_cache_bytes >= 33_554_432 { 128 } else { 64 }\n}\n",
+            "fn select_unroll_depth(trip_count: Option<u32>, caps: &AdapterCaps) -> u32 {\n    if caps.regs_per_thread_max >= 128 { 8 } else { 4 }\n}\n",
+            "fn default_worker_groups_from_limits(max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32 {\n    let occupancy = max_compute_workgroups_per_dimension / 256;\n    if max_compute_invocations_per_workgroup >= 4096 { 64 } else { occupancy }\n}\n",
+            "fn calculate_optimal_grid(queue_len: u32, max_workgroup_size_x: u32) -> u32 {\n    queue_len / max_workgroup_size_x\n}\n",
+        ] {
+            let reported = judge(source);
+            assert!(
+                reported
+                    .iter()
+                    .any(|finding| finding.message.contains("states a choice over")),
+                "a stated choice over device facts must be reported: {source} gave {}",
+                Finding::messages(&reported)
+            );
+        }
+    }
+
+    /// WHY: the rule fires on a stated choice whose material is device facts,
+    /// so it must leave two neighbouring shapes alone. A body that selects data
+    /// is a domain algorithm however emphatically it is named, and a body that
+    /// clamps a received count to a reported limit is realizing that limit. Both
+    /// were reported by a verb-only rule, which would have renamed a submodular
+    /// retention set and a contraction-order solver around a gate.
+    #[test]
+    fn a_data_selector_and_a_clamp_are_not_schedule_choices() {
+        for source in [
+            "fn select_retention_set(values: &[f32], budget: usize) -> Vec<usize> {\n    (0..budget).filter(|index| values[*index] > 0.0).collect()\n}\n",
+            "fn optimal_fusion_order(costs: &[u64]) -> Vec<usize> {\n    let mut order: Vec<usize> = (0..costs.len()).collect();\n    order.sort_by_key(|index| costs[*index]);\n    order\n}\n",
+            "fn worker_workgroup_size(worker_count: u32, max_workgroup_size_x: u32) -> u32 {\n    if worker_count > max_workgroup_size_x { max_workgroup_size_x } else { worker_count }\n}\n",
+            "fn padded_slot_count(slot_count: u32, workgroup_size_x: u32) -> u32 {\n    slot_count.next_multiple_of(workgroup_size_x)\n}\n",
+        ] {
+            let reported = judge(source);
+            assert!(
+                !reported
+                    .iter()
+                    .any(|finding| finding.message.contains("states a choice over")),
+                "selecting data or clamping a count is not a schedule choice: {source} gave {}",
+                Finding::messages(&reported)
+            );
+        }
+    }
+
+    /// WHY: the call-graph exemption binds this rule too. A body named for a
+    /// choice that receives the selected schedule is realizing what it was
+    /// handed, and reporting it would force the owner's own realization helpers
+    /// to be renamed around a gate.
+    #[test]
+    fn a_stated_choice_that_receives_a_decision_is_realization() {
+        let reported = judge(
+            "fn select_phase_grid(schedule: &SelectedSchedule, caps: &AdapterCaps) -> [u32; 3] {\n    schedule.phases[0].grid\n}\n",
+        );
+        assert!(
+            reported.is_empty(),
+            "a stated choice that receives the schedule realizes it: {}",
+            Finding::messages(&reported)
+        );
+    }
+
+    /// WHY: an unwrapped limit is the evasion route the field-name derivation
+    /// exists for. The same stated choice is invisible when its parameters carry
+    /// no fact, and reported the moment one of them does, so the rule follows
+    /// the material rather than the spelling of a type.
+    #[test]
+    fn an_unwrapped_limit_carries_the_fact_into_the_signature() {
+        let without = judge(
+            "fn select_tile_width(problem_size: u32, element_bits: u32) -> u32 {\n    if problem_size > 4096 { 256 } else { 64 }\n}\n",
+        );
+        assert!(
+            without.is_empty(),
+            "a stated choice over its own problem size is a search input: {}",
+            Finding::messages(&without)
+        );
+
+        let with = judge(
+            "fn select_tile_width(problem_size: u32, l2_cache_bytes: u32) -> u32 {\n    if l2_cache_bytes > 4096 { 256 } else { 64 }\n}\n",
+        );
+        assert!(
+            with.iter()
+                .any(|finding| finding.message.contains("states a choice over")),
+            "an unwrapped cache size is a device fact: {}",
+            Finding::messages(&with)
         );
     }
 }

@@ -3,10 +3,12 @@ use vyre_foundation::execution_plan::SchedulingPolicy;
 
 use super::{ResidentGridLimits, ResidentGridPlan, ResidentGridRequest, ResidentLaunchGeometry};
 
-/// Shared worker-grid sizing policy for megakernel dispatch.
+/// Worker-grid realization for megakernel dispatch.
 ///
-/// This is the host-side policy surface for persistent worker counts,
-/// workgroup width, slot padding, and backend grid geometry.
+/// Every value here is arithmetic over a count the caller states and a limit the
+/// adapter reports: workgroup width, slot padding, and the backend grid. Which
+/// worker count to run is a schedule decision `vyre-megakernel` records in the
+/// artifact, and this policy realizes it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ResidentSizingPolicy {
     scheduling: SchedulingPolicy,
@@ -65,46 +67,33 @@ impl ResidentSizingPolicy {
             .dispatch_grid_for(worker_count, queue_len, max_workgroup_size_x)
     }
 
-    /// Compute a persistent-worker ceiling from adapter limits.
-    #[must_use]
-    pub const fn default_worker_groups_from_limits(
-        &self,
-        max_compute_workgroups_per_dimension: u32,
-        max_compute_invocations_per_workgroup: u32,
-    ) -> u32 {
-        self.scheduling.default_worker_groups_from_limits(
-            max_compute_workgroups_per_dimension,
-            max_compute_invocations_per_workgroup,
-        )
-    }
-
     /// Resolve worker groups, workgroup width, slot padding, and dispatch grid.
+    ///
+    /// `request.requested_worker_groups` is the count the selected schedule
+    /// states, clamped to what the adapter admits. A zero count is rejected
+    /// rather than replaced: deriving one from occupancy here would run a
+    /// worker grid no artifact identity covers.
     ///
     /// # Errors
     ///
-    /// Returns [`BackendError`] when adapter limits are malformed.
-    pub fn calculate_optimal_grid(
+    /// Returns [`BackendError`] when adapter limits are malformed or the request
+    /// states no worker count.
+    pub fn resolve_grid(
         &self,
         request: ResidentGridRequest,
         limits: ResidentGridLimits,
     ) -> Result<ResidentGridPlan, BackendError> {
         limits.validate()?;
 
-        let occupancy_worker_groups = self
-            .default_worker_groups_from_limits(
-                limits.max_compute_workgroups_per_dimension,
-                limits.max_compute_invocations_per_workgroup,
-            )
-            .min(limits.max_compute_workgroups_per_dimension);
-
-        let worker_groups = if request.requested_worker_groups == 0 {
-            occupancy_worker_groups
-        } else {
-            request
-                .requested_worker_groups
-                .min(limits.max_compute_workgroups_per_dimension)
+        if request.requested_worker_groups == 0 {
+            return Err(BackendError::new(
+                "resident worker-grid request states no worker count. Fix: pass the worker-group count the selected schedule records.",
+            ));
         }
-        .max(1);
+        let worker_groups = request
+            .requested_worker_groups
+            .min(limits.max_compute_workgroups_per_dimension)
+            .max(1);
 
         let geometry = self.geometry_from_slots(
             request.queue_len.max(1),

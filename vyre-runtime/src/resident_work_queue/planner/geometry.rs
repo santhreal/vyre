@@ -77,19 +77,3 @@ pub fn dispatch_grid_for(worker_count: u32, queue_len: u32, max_workgroup_size_x
         max_workgroup_size_x,
     )
 }
-
-/// Compute a persistent-worker ceiling from adapter limits.
-///
-/// This is the single host-side policy used by runtime batch dispatchers and
-/// direct megakernel dispatch. Callers can still clamp further through
-/// `ResidentQueueConfig::worker_count`, but occupancy heuristics live here.
-#[must_use]
-pub fn default_worker_groups_from_limits(
-    max_compute_workgroups_per_dimension: u32,
-    max_compute_invocations_per_workgroup: u32,
-) -> u32 {
-    ResidentSizingPolicy::standard().default_worker_groups_from_limits(
-        max_compute_workgroups_per_dimension,
-        max_compute_invocations_per_workgroup,
-    )
-}

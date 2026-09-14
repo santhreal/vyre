@@ -67,24 +67,15 @@ fn fused_core() -> InstanceCore {
             device: "fixture-0".to_string(),
             generation: 1,
         },
-        values: BTreeMap::from([
-            ("seed".to_string(), SEED),
-            ("carried".to_string(), CARRIED),
-        ]),
+        values: BTreeMap::from([("seed".to_string(), SEED), ("carried".to_string(), CARRIED)]),
         outputs: BTreeSet::new(),
         retained: BTreeSet::from([CARRIED]),
         messages: NEUTRAL_MESSAGES,
         module_inputs: vec![vec![SEED, CARRIED], vec![SEED, CARRIED]],
         module_outputs: vec![vec![CARRIED], Vec::new()],
         module_named_resources: vec![
-            BTreeMap::from([
-                ("seed".to_string(), SEED),
-                ("carried".to_string(), CARRIED),
-            ]),
-            BTreeMap::from([
-                ("seed".to_string(), SEED),
-                ("carried".to_string(), CARRIED),
-            ]),
+            BTreeMap::from([("seed".to_string(), SEED), ("carried".to_string(), CARRIED)]),
+            BTreeMap::from([("seed".to_string(), SEED), ("carried".to_string(), CARRIED)]),
         ],
         module_buffer_slots: vec![
             BTreeMap::from([
@@ -198,7 +189,10 @@ fn a_value_longer_than_its_static_declaration_is_refused() {
 fn a_runtime_sized_slot_accepts_a_value_of_any_length() {
     let core = fused_core();
     let state = BTreeMap::from([(SEED, seed_bytes()), (CARRIED, carried_bytes())]);
-    let slots = vec![input_slot("seed", 0, Some(2)), input_slot("carried", 1, None)];
+    let slots = vec![
+        input_slot("seed", 0, Some(2)),
+        input_slot("carried", 1, None),
+    ];
 
     let inputs = gather_artifact_inputs(&core, 1, &slots, &state)
         .expect("Fix: a runtime-sized staged slot must accept its bound value");

@@ -1,9 +1,7 @@
 //! Configuration, access records, and the findings a race exploration reports.
 
 use rustc_hash::FxHashMap;
-use vyre_foundation::ir::{
-    AsyncTransactionLifecycle, AtomicOrdering, MemoryScope, StorageDomain,
-};
+use vyre_foundation::ir::{AsyncTransactionLifecycle, AtomicOrdering, MemoryScope, StorageDomain};
 
 /// Configuration for bounded interleaving exploration.
 #[derive(Clone, Debug)]

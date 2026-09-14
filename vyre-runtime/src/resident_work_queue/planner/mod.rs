@@ -15,8 +15,7 @@ pub use caps::{
 };
 pub use config::{ResidentQueueConfig, ResidentWorkloadHints};
 pub use geometry::{
-    default_worker_groups_from_limits, dispatch_grid_for, padded_slot_count, worker_workgroup_size,
-    ResidentLaunchGeometry,
+    dispatch_grid_for, padded_slot_count, worker_workgroup_size, ResidentLaunchGeometry,
 };
 pub use grid::{ResidentGridLimits, ResidentGridPlan, ResidentGridRequest};
 #[cfg(feature = "libs-compositions")]

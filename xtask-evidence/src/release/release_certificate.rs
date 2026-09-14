@@ -245,8 +245,8 @@ fn audit(root: &Path, _config: &Config, report: &mut Report) {
 
 /// Read one certificate body as the object this gate reads fields out of.
 fn parse(text: &str) -> Result<Value, String> {
-    let value: Value = serde_json::from_str(text)
-        .map_err(|error| format!("is not a JSON document: {error}"))?;
+    let value: Value =
+        serde_json::from_str(text).map_err(|error| format!("is not a JSON document: {error}"))?;
     if value.is_object() {
         Ok(value)
     } else {
@@ -563,8 +563,7 @@ mod tests {
     /// evidence that the operation conformed.
     #[test]
     fn a_failed_pair_is_a_finding_that_names_the_operation() {
-        let certificate =
-            merged(release_pairs(&[("vyre::add", true), ("vyre::mul", false)]));
+        let certificate = merged(release_pairs(&[("vyre::add", true), ("vyre::mul", false)]));
         let rendered = reported(&certificate);
         assert!(
             rendered.contains("vyre::mul") && rendered.contains("did not conform"),

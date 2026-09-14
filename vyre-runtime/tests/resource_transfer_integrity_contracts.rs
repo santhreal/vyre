@@ -9,7 +9,7 @@
 //! - No resource becomes dispatch-visible before validation and transfer completion.
 
 use vyre_runtime::resource_transfer::{
-    select_transfer_path, DeviceTransferCapabilities, ResourceTransferDescriptor,
+    admissible_transfer_path, DeviceTransferCapabilities, ResourceTransferDescriptor,
     ResourceTransferError, ResourceTransferLifecycleEngine, ResourceTransferPath,
 };
 
@@ -23,25 +23,22 @@ fn path_selection_proves_unsupported_direct_transfer_never_masquerades_as_zero_c
     };
 
     // 1. Aligned 4KB offset with filesystem support -> DirectStorage + zero-copy
-    let decision_direct = select_transfer_path(&direct_caps, 8192, true);
-    assert_eq!(
-        decision_direct.selected_path,
-        ResourceTransferPath::DirectStorage
-    );
+    let decision_direct = admissible_transfer_path(&direct_caps, 8192, true);
+    assert_eq!(decision_direct.path, ResourceTransferPath::DirectStorage);
     assert!(decision_direct.is_zero_copy);
 
     // 2. Unaligned offset (e.g. 100 bytes) -> Falls back to RegisteredHostMemory + NOT zero-copy
-    let decision_unaligned = select_transfer_path(&direct_caps, 100, true);
+    let decision_unaligned = admissible_transfer_path(&direct_caps, 100, true);
     assert_eq!(
-        decision_unaligned.selected_path,
+        decision_unaligned.path,
         ResourceTransferPath::RegisteredHostMemory
     );
     assert!(!decision_unaligned.is_zero_copy); // Never masquerades as zero-copy!
 
     // 3. Filesystem does not support direct NVMe storage -> Falls back to RegisteredHostMemory + NOT zero-copy
-    let decision_no_fs = select_transfer_path(&direct_caps, 4096, false);
+    let decision_no_fs = admissible_transfer_path(&direct_caps, 4096, false);
     assert_eq!(
-        decision_no_fs.selected_path,
+        decision_no_fs.path,
         ResourceTransferPath::RegisteredHostMemory
     );
     assert!(!decision_no_fs.is_zero_copy);
@@ -53,9 +50,9 @@ fn path_selection_proves_unsupported_direct_transfer_never_masquerades_as_zero_c
         required_direct_alignment_bytes: 4096,
         max_transfer_queue_depth: 32,
     };
-    let decision_no_direct = select_transfer_path(&no_direct_caps, 4096, true);
+    let decision_no_direct = admissible_transfer_path(&no_direct_caps, 4096, true);
     assert_eq!(
-        decision_no_direct.selected_path,
+        decision_no_direct.path,
         ResourceTransferPath::RegisteredHostMemory
     );
     assert!(!decision_no_direct.is_zero_copy);

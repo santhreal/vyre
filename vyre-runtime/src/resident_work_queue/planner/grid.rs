@@ -164,7 +164,7 @@ fn cached_grid_plan(
         return Ok(plan);
     }
 
-    let plan = ResidentSizingPolicy::standard().calculate_optimal_grid(request, limits)?;
+    let plan = ResidentSizingPolicy::standard().resolve_grid(request, limits)?;
     PLANNER_CACHE.with(|cache| {
         cache.borrow_mut().insert_grid_plan((request, limits), plan);
     });
@@ -236,7 +236,7 @@ impl ResidentGridLimits {
 pub struct ResidentGridRequest {
     /// Logical ring slots or work items queued for this launch.
     pub queue_len: u32,
-    /// Caller-requested worker workgroup ceiling. Zero means derive from occupancy.
+    /// Worker workgroup count the selected schedule states for this launch.
     pub requested_worker_groups: u32,
 }
 
@@ -265,7 +265,8 @@ impl ResidentGridPlan {
     ///
     /// # Errors
     ///
-    /// Returns [`BackendError`] when adapter limits are malformed.
+    /// Returns [`BackendError`] when adapter limits are malformed or the request
+    /// states no worker count.
     pub fn recommend(
         request: ResidentGridRequest,
         limits: ResidentGridLimits,
@@ -285,7 +286,7 @@ mod tests {
     }
 
     fn request(queue_len: u32) -> ResidentGridRequest {
-        ResidentGridRequest::new(queue_len, 0)
+        ResidentGridRequest::new(queue_len, 1)
     }
 
     fn geometry(slot_count: u32) -> ResidentLaunchGeometry {

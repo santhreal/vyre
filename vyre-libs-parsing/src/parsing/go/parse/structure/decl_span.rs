@@ -1,8 +1,6 @@
 //! The brace-balanced declaration span every Go declaration kind shares.
 
-use crate::parsing::go::parse::token_predicates::{
-    token_len, token_start, token_type_eq,
-};
+use crate::parsing::go::parse::token_predicates::{token_len, token_start, token_type_eq};
 use vyre_foundation::ir::{Expr, Node};
 use vyre_spec::go_token::{TOK_LBRACE, TOK_RBRACE};
 

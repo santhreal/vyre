@@ -1,8 +1,8 @@
 //! Typed resource transfers, residency composition, transfer lifetime, and integrity contracts.
 //!
 //! Bridges authenticated resource byte ranges and container identities with
-//! artifact residency. Selects direct storage, registered host memory, or staged upload
-//! paths from concrete device, filesystem, and driver capabilities.
+//! Reports the most capable of direct storage, registered host memory, and
+//! staged upload that concrete device, filesystem, and driver capabilities admit.
 //!
 //! Unsupported direct storage never masquerades as zero-copy.
 //! No resource becomes dispatch-visible before validation and transfer completion.
@@ -33,7 +33,7 @@ impl Default for DeviceTransferCapabilities {
     }
 }
 
-/// Selected physical transfer path for a resource byte range.
+/// Physical transfer path for a resource byte range.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ResourceTransferPath {
     /// Direct DMA from storage / NVMe to device memory (zero host bounce).
@@ -44,54 +44,58 @@ pub enum ResourceTransferPath {
     StagedUpload,
 }
 
-/// Decision output for path selection.
+/// What the device, filesystem and alignment admit for one transfer.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct PathSelectionDecision {
-    /// Selected transfer path.
-    pub selected_path: ResourceTransferPath,
+pub struct AdmissibleTransferPath {
+    /// Most capable admissible path.
+    pub path: ResourceTransferPath,
     /// Whether the transfer is genuinely zero-copy without host staging.
     pub is_zero_copy: bool,
-    /// Human-readable rationale for diagnostic tracing.
+    /// Which fact admitted this path, for diagnostic tracing.
     pub reason: &'static str,
 }
 
-/// Select transfer path from device capabilities, file alignment, and filesystem support.
+/// The most capable transfer path the device, filesystem and alignment admit.
 ///
-/// WHY: Unsupported direct transfer never masquerades as zero-copy. If direct storage
-/// is unavailable or alignment requirements are not met, fallback path is chosen and
-/// `is_zero_copy` is explicitly false.
+/// This ranks nothing. Direct storage requires device support, filesystem
+/// support and an aligned offset; without all three it is not available, and
+/// the next admissible path is reported with `is_zero_copy` false. Two of the
+/// three facts arrive only at load time, so no compiled artifact can state the
+/// answer: a resource's offset inside its container and whether the filesystem
+/// under it admits direct reads are properties of the run.
+///
+/// WHY: unsupported direct transfer never masquerades as zero-copy.
 #[must_use]
-pub fn select_transfer_path(
+pub fn admissible_transfer_path(
     caps: &DeviceTransferCapabilities,
     file_offset: u64,
     fs_supports_direct: bool,
-) -> PathSelectionDecision {
+) -> AdmissibleTransferPath {
     if caps.supports_direct_storage && fs_supports_direct {
         let is_aligned = (file_offset % caps.required_direct_alignment_bytes) == 0;
         if is_aligned {
-            return PathSelectionDecision {
-                selected_path: ResourceTransferPath::DirectStorage,
+            return AdmissibleTransferPath {
+                path: ResourceTransferPath::DirectStorage,
                 is_zero_copy: true,
                 reason: "direct storage supported by device, filesystem, and 4KB alignment",
             };
-        } else {
-            return PathSelectionDecision {
-                selected_path: ResourceTransferPath::RegisteredHostMemory,
-                is_zero_copy: false,
-                reason: "file offset is not 4KB aligned; falling back to pinned host staging",
-            };
         }
+        return AdmissibleTransferPath {
+            path: ResourceTransferPath::RegisteredHostMemory,
+            is_zero_copy: false,
+            reason: "file offset is not 4KB aligned; falling back to pinned host staging",
+        };
     }
 
     if caps.supports_pinned_host_memory {
-        PathSelectionDecision {
-            selected_path: ResourceTransferPath::RegisteredHostMemory,
+        AdmissibleTransferPath {
+            path: ResourceTransferPath::RegisteredHostMemory,
             is_zero_copy: false,
             reason: "direct storage unavailable; using registered host memory staging",
         }
     } else {
-        PathSelectionDecision {
-            selected_path: ResourceTransferPath::StagedUpload,
+        AdmissibleTransferPath {
+            path: ResourceTransferPath::StagedUpload,
             is_zero_copy: false,
             reason: "using standard staged buffer upload",
         }

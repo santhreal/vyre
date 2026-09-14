@@ -51,13 +51,10 @@ fn fused_program() -> Program {
 /// A descriptor binding layout over `slots`, with the body a lowering of the
 /// empty program produces.
 fn descriptor_over(slots: Vec<BindingSlot>) -> KernelDescriptor {
-    let mut descriptor = vyre_lower::lower_physical(&Program::wrapped(
-        Vec::new(),
-        [1, 1, 1],
-        Vec::new(),
-    ))
-    .expect("Fix: the empty fixture program must lower")
-    .into_descriptor();
+    let mut descriptor =
+        vyre_lower::lower_physical(&Program::wrapped(Vec::new(), [1, 1, 1], Vec::new()))
+            .expect("Fix: the empty fixture program must lower")
+            .into_descriptor();
     descriptor.bindings.slots = slots;
     descriptor
 }
@@ -172,8 +169,12 @@ fn the_backend_owned_trap_sidecar_is_not_staged() {
         Some(4),
     ));
 
-    let staged = staged_input_slots(&descriptor_over(slots), &reader_bindings(), &fused_program())
-        .expect("Fix: a trapping module must derive its staged bindings");
+    let staged = staged_input_slots(
+        &descriptor_over(slots),
+        &reader_bindings(),
+        &fused_program(),
+    )
+    .expect("Fix: a trapping module must derive its staged bindings");
 
     assert!(
         staged
@@ -202,8 +203,12 @@ fn workgroup_class_bindings_are_not_staged() {
         slots.push(workgroup);
     }
 
-    let staged = staged_input_slots(&descriptor_over(slots), &reader_bindings(), &fused_program())
-        .expect("Fix: a module with workgroup storage must derive its staged bindings");
+    let staged = staged_input_slots(
+        &descriptor_over(slots),
+        &reader_bindings(),
+        &fused_program(),
+    )
+    .expect("Fix: a module with workgroup storage must derive its staged bindings");
 
     assert_eq!(
         staged
@@ -248,8 +253,12 @@ fn a_host_bound_slot_with_no_canonical_metadata_is_refused() {
         .filter(|binding| binding.slot != 1)
         .collect::<Vec<_>>();
 
-    let error = staged_input_slots(&descriptor_over(reader_slots()), &bindings, &fused_program())
-        .expect_err("Fix: a slot with no canonical directional metadata must be refused");
+    let error = staged_input_slots(
+        &descriptor_over(reader_slots()),
+        &bindings,
+        &fused_program(),
+    )
+    .expect_err("Fix: a slot with no canonical directional metadata must be refused");
 
     let TargetCompileError::InvalidArtifact(message) = error else {
         panic!("Fix: an unresolvable binding must report an invalid artifact, found {error:?}");
@@ -268,8 +277,12 @@ fn a_staged_slot_naming_no_program_buffer_is_refused() {
     let mut slots = reader_slots();
     slots[1].name = "absent".to_string();
 
-    let error = staged_input_slots(&descriptor_over(slots), &reader_bindings(), &fused_program())
-        .expect_err("Fix: a slot naming no Program buffer must be refused");
+    let error = staged_input_slots(
+        &descriptor_over(slots),
+        &reader_bindings(),
+        &fused_program(),
+    )
+    .expect_err("Fix: a slot naming no Program buffer must be refused");
 
     let TargetCompileError::InvalidArtifact(message) = error else {
         panic!("Fix: an unresolvable buffer must report an invalid artifact, found {error:?}");

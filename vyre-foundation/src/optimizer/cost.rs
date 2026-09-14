@@ -46,7 +46,6 @@
 
 use super::is_invocation_id_eq_constant;
 use crate::ir::{Expr, Node, Program};
-use crate::optimizer::AdapterCaps;
 use crate::visit::{expr_children, for_each_descendant};
 
 /// A frozen snapshot of the cost dimensions tracked by the optimizer's
@@ -78,22 +77,6 @@ pub struct CostCertificate {
     pub divergence_score: u64,
 }
 
-/// Device-aware cost projection used by extraction/autotune callers that need
-/// the neutral Tier-B device profile to affect variant scoring.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct DeviceCostEstimate {
-    /// Base device-independent certificate.
-    pub base: CostCertificate,
-    /// Profile-selected vector pack width in bits.
-    pub vector_pack_bits: u32,
-    /// Profile-selected unroll depth.
-    pub unroll_depth: u32,
-    /// Profile-selected workgroup tile.
-    pub workgroup_tile: [u32; 3],
-    /// Scalar score; lower is cheaper.
-    pub score: u64,
-}
-
 impl CostCertificate {
     /// Compute the cost certificate of `program`. Reads cached `ProgramStats`
     /// (constant-time after the first call per Program) and walks the entry
@@ -123,52 +106,6 @@ impl CostCertificate {
             static_storage_bytes: stats.static_storage_bytes,
             divergence_score,
         }
-    }
-
-    /// Compute a device-aware estimate from this certificate.
-    ///
-    /// The tile is an input: this projects the cost of a shape someone else
-    /// selected. It used to rank a tile against the adapter here, which made
-    /// every cost query a second selector answering a question
-    /// `vyre-megakernel` owns.
-    #[must_use]
-    pub fn estimate_for_adapter(
-        &self,
-        caps: &AdapterCaps,
-        workgroup_tile: [u32; 3],
-    ) -> DeviceCostEstimate {
-        let policy = crate::execution_plan::SchedulingPolicy::standard();
-        let vector_pack_bits = policy.select_vector_pack_bits(32, caps);
-        let unroll_depth = policy.select_unroll_depth(None, caps);
-        let vector_divisor = u64::from((vector_pack_bits / 32).max(1));
-        let unroll_divisor = u64::from(unroll_depth.max(1));
-        let tile_lanes = u64::from(
-            workgroup_tile[0]
-                .saturating_mul(workgroup_tile[1])
-                .saturating_mul(workgroup_tile[2])
-                .max(1),
-        );
-        let memory_component = self.memory_op_count.saturating_mul(1024) / vector_divisor;
-        let instruction_component = self.instruction_count.saturating_mul(1024) / unroll_divisor;
-        let occupancy_component =
-            u64::from(self.register_pressure_estimate).saturating_mul(1024) / tile_lanes.min(1024);
-        DeviceCostEstimate {
-            base: *self,
-            vector_pack_bits,
-            unroll_depth,
-            workgroup_tile,
-            score: memory_component
-                .saturating_add(instruction_component)
-                .saturating_add(occupancy_component)
-                .saturating_add(self.atomic_op_count.saturating_mul(2048))
-                .saturating_add(self.divergence_score.saturating_mul(4096)),
-        }
-    }
-
-    /// Compute a device-aware estimate for `program` at its declared shape.
-    #[must_use]
-    pub fn for_program_on_adapter(program: &Program, caps: &AdapterCaps) -> DeviceCostEstimate {
-        Self::for_program(program).estimate_for_adapter(caps, program.parallel_region_size())
     }
 
     /// Returns `true` when `self` is cost-monotone-down relative to `other`:
@@ -414,66 +351,5 @@ mod tests {
             cost.divergence_score, 2,
             "nested divergence patterns must be counted at every depth"
         );
-    }
-
-    /// WHY: a projection reads device facts for vector width and unroll depth
-    /// and reads the tile from the program that declared it. A tile taken from
-    /// the adapter would make the estimate choose a shape, and choosing shapes
-    /// is one owner's job.
-    #[test]
-    fn device_profile_fields_change_cost_projection() {
-        let buffers = || {
-            vec![
-                BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32)
-                    .with_count(4096),
-            ]
-        };
-        let body = || {
-            vec![
-                Node::let_bind("x", Expr::load("buf", Expr::gid_x())),
-                Node::store("buf", Expr::gid_x(), Expr::var("x")),
-            ]
-        };
-        let scalar_region = Program::wrapped(buffers(), [1, 1, 1], body());
-        let tiled_region = Program::wrapped(buffers(), [8, 4, 1], body());
-        let compact = AdapterCaps {
-            max_workgroup_size: [256, 256, 64],
-            max_invocations_per_workgroup: 256,
-            ideal_unroll_depth: 4,
-            ideal_vector_pack_bits: 64,
-            ideal_workgroup_tile: [8, 8, 1],
-            ..AdapterCaps::conservative()
-        };
-        let wide = AdapterCaps {
-            ideal_unroll_depth: 8,
-            ideal_vector_pack_bits: 128,
-            ideal_workgroup_tile: [16, 16, 1],
-            ..compact
-        };
-
-        let compact_cost = CostCertificate::for_program_on_adapter(&scalar_region, &compact);
-        let wide_cost = CostCertificate::for_program_on_adapter(&scalar_region, &wide);
-
-        assert_eq!(compact_cost.vector_pack_bits, 64);
-        assert_eq!(wide_cost.vector_pack_bits, 128);
-        assert_eq!(compact_cost.unroll_depth, 4);
-        assert_eq!(wide_cost.unroll_depth, 8);
-        assert!(
-            wide_cost.score < compact_cost.score,
-            "Fix: wider profile vector and unroll facts must lower the projected device cost"
-        );
-
-        for caps in [&compact, &wide] {
-            assert_eq!(
-                CostCertificate::for_program_on_adapter(&scalar_region, caps).workgroup_tile,
-                [1, 1, 1],
-                "Fix: the projected tile is the region the program declares, never the adapter's ideal tile"
-            );
-            assert_eq!(
-                CostCertificate::for_program_on_adapter(&tiled_region, caps).workgroup_tile,
-                [8, 4, 1],
-                "Fix: the projected tile is the region the program declares, never the adapter's ideal tile"
-            );
-        }
     }
 }

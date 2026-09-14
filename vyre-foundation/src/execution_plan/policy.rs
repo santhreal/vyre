@@ -5,8 +5,6 @@
 //! budget, how many lanes a worker workgroup takes, and how a slot count pads
 //! into whole workgroups. None of it ranks a candidate against a device.
 
-use crate::optimizer::AdapterCaps;
-
 /// Central contract for launch legality and resident-ring thresholds.
 ///
 /// The values are private on purpose: callers ask policy questions instead of
@@ -15,10 +13,7 @@ use crate::optimizer::AdapterCaps;
 pub struct SchedulingPolicy {
     fused_over_dispatch_multiplier: u64,
     default_worker_count: u32,
-    occupancy_worker_divisor: u32,
     max_dispatch_workgroups: u32,
-    powerful_invocation_threshold: u32,
-    powerful_min_worker_groups: u32,
 }
 
 impl Default for SchedulingPolicy {
@@ -34,10 +29,7 @@ impl SchedulingPolicy {
         Self {
             fused_over_dispatch_multiplier: 4,
             default_worker_count: 64,
-            occupancy_worker_divisor: 256,
             max_dispatch_workgroups: 1024,
-            powerful_invocation_threshold: 4096,
-            powerful_min_worker_groups: 64,
         }
     }
 
@@ -112,88 +104,6 @@ impl SchedulingPolicy {
         let final_workgroups = min3(workgroups, requested_workers, self.max_dispatch_workgroups);
         [final_workgroups, 1, 1]
     }
-
-    /// Compute a persistent-worker ceiling from adapter limits.
-    #[must_use]
-    pub const fn default_worker_groups_from_limits(
-        &self,
-        max_compute_workgroups_per_dimension: u32,
-        max_compute_invocations_per_workgroup: u32,
-    ) -> u32 {
-        let occupancy_based = clamp_between(
-            max_compute_workgroups_per_dimension / self.occupancy_worker_divisor,
-            1,
-            self.max_dispatch_workgroups,
-        );
-        let min_for_powerful =
-            if max_compute_invocations_per_workgroup >= self.powerful_invocation_threshold {
-                self.powerful_min_worker_groups
-            } else {
-                1
-            };
-        if occupancy_based > min_for_powerful {
-            occupancy_based
-        } else {
-            min_for_powerful
-        }
-    }
-
-    /// Choose a vector pack width in bits from device-signature facts.
-    #[must_use]
-    pub const fn select_vector_pack_bits(&self, element_bits: u32, caps: &AdapterCaps) -> u32 {
-        let minimum = if element_bits > 0 { element_bits } else { 32 };
-        let preferred = caps.ideal_vector_pack_bits;
-        if preferred >= minimum && preferred % minimum == 0 {
-            preferred
-        } else if caps.l2_cache_bytes >= 32 * 1024 * 1024 && minimum <= 128 {
-            128
-        } else if minimum <= 64 {
-            64
-        } else {
-            minimum
-        }
-    }
-
-    /// Choose an unroll depth from device-signature facts and register limits.
-    #[must_use]
-    pub const fn select_unroll_depth(
-        &self,
-        loop_trip_count: Option<u32>,
-        caps: &AdapterCaps,
-    ) -> u32 {
-        let mut preferred = if caps.ideal_unroll_depth > 0 {
-            caps.ideal_unroll_depth
-        } else if caps.regs_per_thread_max >= 128 {
-            8
-        } else {
-            4
-        };
-        if caps.regs_per_thread_max > 0 && caps.regs_per_thread_max < 64 && preferred > 4 {
-            preferred = 4;
-        }
-        if let Some(trip_count) = loop_trip_count {
-            if trip_count > 0 && preferred > trip_count {
-                preferred = trip_count;
-            }
-        }
-        if preferred > 16 {
-            16
-        } else if preferred > 0 {
-            preferred
-        } else {
-            1
-        }
-    }
-}
-
-const fn clamp_between(value: u32, min: u32, max: u32) -> u32 {
-    if value < min {
-        min
-    } else if value > max {
-        max
-    } else {
-        value
-    }
 }
 
 const fn min3(a: u32, b: u32, c: u32) -> u32 {
@@ -267,39 +177,5 @@ mod tests {
         assert!(policy().allow_fused_threads(100, 100));
         assert!(policy().allow_fused_threads(400, 100)); // 4x
         assert!(!policy().allow_fused_threads(401, 100)); // >4x
-    }
-
-    // --- Default worker groups ---
-
-    #[test]
-    fn default_worker_groups_from_powerful_adapter() {
-        let groups = policy().default_worker_groups_from_limits(65536, 4096);
-        assert!(
-            groups >= 64,
-            "powerful adapter should get at least 64 groups: {groups}"
-        );
-    }
-
-    #[test]
-    fn default_worker_groups_from_weak_adapter() {
-        let groups = policy().default_worker_groups_from_limits(256, 128);
-        assert!(groups >= 1);
-    }
-
-    #[test]
-    fn device_signature_selects_vector_and_unroll() {
-        let caps = AdapterCaps {
-            max_workgroup_size: [256, 256, 64],
-            max_invocations_per_workgroup: 256,
-            regs_per_thread_max: 255,
-            l2_cache_bytes: 96 * 1024 * 1024,
-            ideal_unroll_depth: 8,
-            ideal_vector_pack_bits: 128,
-            ideal_workgroup_tile: [16, 16, 1],
-            ..AdapterCaps::conservative()
-        };
-
-        assert_eq!(policy().select_vector_pack_bits(32, &caps), 128);
-        assert_eq!(policy().select_unroll_depth(Some(32), &caps), 8);
     }
 }

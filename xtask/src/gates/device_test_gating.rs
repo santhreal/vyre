@@ -1484,8 +1484,7 @@ mod closure_tests {
             ),
         ]);
         let root = PathBuf::from("conform/vyre-conform/tests/all_tests_device_tests.rs");
-        let admitted_files =
-            admitted_closure(&parsed, &BTreeSet::from([root.clone()]));
+        let admitted_files = admitted_closure(&parsed, &BTreeSet::from([root.clone()]));
         assert!(
             admitted_files.contains(Path::new("conform/vyre-conform/tests/parity_matrix.rs")),
             "Fix: a `required-features` target must pass admission to the modules it declares"

@@ -1,6 +1,8 @@
 //! Function, method, and interface declaration extraction.
 
-use crate::parsing::go::parse::token_predicates::{token_is_ident, token_is_keyword, token_type_eq};
+use crate::parsing::go::parse::token_predicates::{
+    token_is_ident, token_is_keyword, token_type_eq,
+};
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_libs_builder::builder::trip_count::clamped_by_extents;
@@ -149,7 +151,8 @@ pub fn go_extract_declarations(
     let mut buffers = super::super::token_stream_decls(tok_types, tok_starts, tok_lens, haystack);
     buffers.extend([
         BufferDecl::storage(out_decls, 4, BufferAccess::ReadWrite, DataType::U32),
-        BufferDecl::storage(out_decl_counts, 5, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+        BufferDecl::storage(out_decl_counts, 5, BufferAccess::ReadWrite, DataType::U32)
+            .with_count(1),
     ]);
 
     Program::wrapped(

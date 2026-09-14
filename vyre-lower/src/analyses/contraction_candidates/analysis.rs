@@ -17,8 +17,8 @@ use super::plan::{
     ContractionCandidate, ContractionPlan, ContractionStrategy, MatrixInstructionSource,
 };
 use crate::descriptor::{
-    BindingVisibility, KernelBody, KernelDescriptor, KernelOpKind, MatrixMmaElement,
-    MatrixMmaSpec, MatrixTileShape,
+    BindingVisibility, KernelBody, KernelDescriptor, KernelOpKind, MatrixMmaElement, MatrixMmaSpec,
+    MatrixTileShape,
 };
 use std::collections::BTreeSet;
 use vyre_foundation::ir::{BinOp, DataType};
@@ -96,7 +96,9 @@ fn simt_tiled_candidate(
     // The staged reduction step is the tile the same invocations can fill in
     // one cooperative load, which is the invocation count spread over the
     // tile's rows.
-    let tile_k = u32::try_from(invocations / u64::from(tile_m)).unwrap_or(1).max(1);
+    let tile_k = u32::try_from(invocations / u64::from(tile_m))
+        .unwrap_or(1)
+        .max(1);
 
     // Each staged operand element is read once from memory and reused by the
     // other tile extent: `tile_n` reuses of a left element, `tile_m` of a

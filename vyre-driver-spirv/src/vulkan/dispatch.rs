@@ -42,7 +42,11 @@ pub(crate) enum InputOrder<'a> {
 
 impl InputOrder<'_> {
     /// Index in the borrowed input slice that fills `buffer`, if any.
-    fn index_for(self, buffer: &vyre_foundation::ir::BufferDecl, plan: Option<usize>) -> Option<usize> {
+    fn index_for(
+        self,
+        buffer: &vyre_foundation::ir::BufferDecl,
+        plan: Option<usize>,
+    ) -> Option<usize> {
         match self {
             Self::Plan => plan,
             Self::Named(names) => names.iter().position(|name| *name == buffer.name()),
@@ -433,7 +437,10 @@ pub(crate) unsafe fn dispatch_program(
 /// workgroup. If both outputs and inputs are runtime-sized the caller must
 /// supply `DispatchConfig::grid_override`; otherwise a 1-workgroup launch would
 /// silently process only `workgroup_size[0]` elements.
-pub(super) fn infer_grid(program: &Program, workgroup_size: [u32; 3]) -> Result<[u32; 3], BackendError> {
+pub(super) fn infer_grid(
+    program: &Program,
+    workgroup_size: [u32; 3],
+) -> Result<[u32; 3], BackendError> {
     if workgroup_size[1] != 1 || workgroup_size[2] != 1 {
         return Err(BackendError::new(format!(
             "Fix: non-1D workgroup_size {:?} requires DispatchConfig::grid_override. Set grid_override explicitly.",

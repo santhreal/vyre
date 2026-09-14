@@ -34787,7 +34787,7 @@ seam = "foundation-ir"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 8862
+exported_item_count = 8851
 
   [[package.item]]
   path = "alloc::string::String::from(err: vyre_foundation::serial::wire::encode::WireEncodeErr) -> alloc::string::String"
@@ -45857,13 +45857,6 @@ exported_item_count = 8862
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::execution_plan::SchedulingPolicy::default_worker_groups_from_limits(&self, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_foundation::execution_plan::SchedulingPolicy::dispatch_grid_for(&self, worker_count: u32, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3]"
   kind = "fn"
   stability = "extension"
@@ -45879,20 +45872,6 @@ exported_item_count = 8862
 
   [[package.item]]
   path = "vyre_foundation::execution_plan::SchedulingPolicy::padded_slot_count(&self, slot_count: u32, workgroup_size_x: u32) -> u32"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::SchedulingPolicy::select_unroll_depth(&self, loop_trip_count: core::option::Option<u32>, caps: &vyre_foundation::optimizer::AdapterCaps) -> u32"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::SchedulingPolicy::select_vector_pack_bits(&self, element_bits: u32, caps: &vyre_foundation::optimizer::AdapterCaps) -> u32"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -66934,21 +66913,7 @@ exported_item_count = 8862
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::optimizer::cost::CostCertificate::estimate_for_adapter(&self, caps: &vyre_foundation::optimizer::AdapterCaps, workgroup_tile: [u32; 3]) -> vyre_foundation::optimizer::cost::DeviceCostEstimate"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_foundation::optimizer::cost::CostCertificate::for_program(program: &vyre_foundation::ir::Program) -> Self"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::optimizer::cost::CostCertificate::for_program_on_adapter(program: &vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::AdapterCaps) -> vyre_foundation::optimizer::cost::DeviceCostEstimate"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -66984,48 +66949,6 @@ exported_item_count = 8862
 
   [[package.item]]
   path = "vyre_foundation::optimizer::cost::CostCertificate::static_storage_bytes: u64"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::optimizer::cost::DeviceCostEstimate"
-  kind = "struct"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::optimizer::cost::DeviceCostEstimate::base: vyre_foundation::optimizer::cost::CostCertificate"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::optimizer::cost::DeviceCostEstimate::score: u64"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::optimizer::cost::DeviceCostEstimate::unroll_depth: u32"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::optimizer::cost::DeviceCostEstimate::vector_pack_bits: u32"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::optimizer::cost::DeviceCostEstimate::workgroup_tile: [u32; 3]"
   kind = "field"
   stability = "extension"
   feature = "unconditional"
@@ -159753,7 +159676,7 @@ seam = "runtime"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre"
 stability = "internal"
-exported_item_count = 2865
+exported_item_count = 2863
 
   [[package.item]]
   path = "impl bytemuck::pod::Pod for vyre_runtime::resident_work_queue::planner::ResidentWorkItem"
@@ -170298,13 +170221,6 @@ exported_item_count = 2865
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::calculate_optimal_grid(&self, request: vyre_runtime::resident_work_queue::planner::ResidentGridRequest, limits: vyre_runtime::resident_work_queue::planner::ResidentGridLimits) -> core::result::Result<vyre_runtime::resident_work_queue::planner::ResidentGridPlan, vyre_driver::backend::error::BackendError>"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::default() -> Self"
   kind = "fn"
   stability = "internal"
@@ -170313,13 +170229,6 @@ exported_item_count = 2865
 
   [[package.item]]
   path = "vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::default_worker_count(&self) -> u32"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::default_worker_groups_from_limits(&self, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32"
   kind = "fn"
   stability = "internal"
   feature = "unconditional"
@@ -170348,6 +170257,13 @@ exported_item_count = 2865
 
   [[package.item]]
   path = "vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::padded_slot_count(&self, slot_count: u32, workgroup_size_x: u32) -> u32"
+  kind = "fn"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_runtime::resident_work_queue::planner::ResidentSizingPolicy::resolve_grid(&self, request: vyre_runtime::resident_work_queue::planner::ResidentGridRequest, limits: vyre_runtime::resident_work_queue::planner::ResidentGridLimits) -> core::result::Result<vyre_runtime::resident_work_queue::planner::ResidentGridPlan, vyre_driver::backend::error::BackendError>"
   kind = "fn"
   stability = "internal"
   feature = "unconditional"
@@ -170502,13 +170418,6 @@ exported_item_count = 2865
 
   [[package.item]]
   path = "vyre_runtime::resident_work_queue::planner::build_sinkhorn_full_clustering_program(buffers: vyre_libs_math::math::sinkhorn_iterate::SinkhornBuffers<'_>, extents: vyre_libs_math::math::sinkhorn_iterate::SinkhornExtents) -> vyre_foundation::ir_inner::model::program::definition::Program"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::resident_work_queue::planner::default_worker_groups_from_limits(max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> u32"
   kind = "fn"
   stability = "internal"
   feature = "unconditional"
@@ -176080,6 +175989,34 @@ exported_item_count = 2865
   wire_compatibility = "api-only"
 
   [[package.item]]
+  path = "vyre_runtime::resource_transfer::AdmissibleTransferPath"
+  kind = "struct"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_runtime::resource_transfer::AdmissibleTransferPath::is_zero_copy: bool"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_runtime::resource_transfer::AdmissibleTransferPath::path: vyre_runtime::resource_transfer::ResourceTransferPath"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_runtime::resource_transfer::AdmissibleTransferPath::reason: &'static str"
+  kind = "field"
+  stability = "internal"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
   path = "vyre_runtime::resource_transfer::DeviceTransferCapabilities"
   kind = "struct"
   stability = "internal"
@@ -176116,34 +176053,6 @@ exported_item_count = 2865
 
   [[package.item]]
   path = "vyre_runtime::resource_transfer::DeviceTransferCapabilities::supports_pinned_host_memory: bool"
-  kind = "field"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::resource_transfer::PathSelectionDecision"
-  kind = "struct"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::resource_transfer::PathSelectionDecision::is_zero_copy: bool"
-  kind = "field"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::resource_transfer::PathSelectionDecision::reason: &'static str"
-  kind = "field"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::resource_transfer::PathSelectionDecision::selected_path: vyre_runtime::resource_transfer::ResourceTransferPath"
   kind = "field"
   stability = "internal"
   feature = "unconditional"
@@ -176542,7 +176451,7 @@ exported_item_count = 2865
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_runtime::resource_transfer::select_transfer_path(caps: &vyre_runtime::resource_transfer::DeviceTransferCapabilities, file_offset: u64, fs_supports_direct: bool) -> vyre_runtime::resource_transfer::PathSelectionDecision"
+  path = "vyre_runtime::resource_transfer::admissible_transfer_path(caps: &vyre_runtime::resource_transfer::DeviceTransferCapabilities, file_offset: u64, fs_supports_direct: bool) -> vyre_runtime::resource_transfer::AdmissibleTransferPath"
   kind = "fn"
   stability = "internal"
   feature = "unconditional"

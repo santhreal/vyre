@@ -173,11 +173,7 @@ fn store_bounded_by(bound: &str) -> Program {
         1,
         vec![
             Node::let_bind("n", Expr::buf_len(bound)),
-            Node::store(
-                "out",
-                Expr::sub(Expr::var("n"), Expr::u32(1)),
-                Expr::u32(1),
-            ),
+            Node::store("out", Expr::sub(Expr::var("n"), Expr::u32(1)), Expr::u32(1)),
         ],
     )
 }

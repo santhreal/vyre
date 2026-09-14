@@ -176,7 +176,7 @@ impl ResidentLaunchPolicy {
             promote_hot_windows,
         );
         let scheduled_request = self.apply_topology_worker_policy(effective_request, topology)?;
-        let grid = self.sizing.calculate_optimal_grid(
+        let grid = self.sizing.resolve_grid(
             ResidentGridRequest::new(
                 scheduled_request.queue_len,
                 scheduled_request.requested_worker_groups,
