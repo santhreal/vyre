@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"7956027ba7cacd6f64c915fdfbb8b12fd84c9eb7","commit_timestamp":"1789353100","parent_commit":"29516fdeda20f6cd90e23896e77f7021417eca6e","dirty":false,"source_fingerprint":"git:7956027ba7cacd6f64c915fdfbb8b12fd84c9eb7:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"908172a2b7c535d690f0c4dc2a234a43b0e39699","commit_timestamp":"1789370872","parent_commit":"780f9ed27f41773b7128f3ea8ad552324771803f","dirty":false,"source_fingerprint":"git:908172a2b7c535d690f0c4dc2a234a43b0e39699:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
   "schema_version": "vyre.whole-application-record.v2",
   "workload_id": "workload.whole_app.irregular_stateful_traversal",
   "workload_name": "Irregular CSR Sparse Graph Frontier Traversal & Stateful Accumulator",
@@ -24,30 +24,30 @@
     "candidate_digest": "5fdbac95abd53af907b57e5f57db7f0c1396f498b397151adb03212867ebd333",
     "parity_status": "matched_exact_bytes"
   },
-  "compile_time_ns": 13222714,
-  "load_time_ns": 8292873,
+  "compile_time_ns": 13881319,
+  "load_time_ns": 8531353,
   "measured_samples": 30,
-  "p50_latency_ns": 176132,
-  "p99_latency_ns": 194874,
-  "device_p50_latency_ns": 9248,
+  "p50_latency_ns": 182628,
+  "p99_latency_ns": 213584,
+  "device_p50_latency_ns": 9856,
   "throughput": {
     "gflops": null,
-    "gb_per_sec": 0.16278700065859697,
-    "items_per_sec": 5813821.452092749
+    "gb_per_sec": 0.156996736535471,
+    "items_per_sec": 5607026.30483825
   },
   "peak_bytes": 24576,
   "resident_bytes": 8192,
   "cold_state": {
-    "latency_ns": 265067,
+    "latency_ns": 292151,
     "memory_bytes": null,
     "is_cold_start": true,
-    "warmup_ratio": 1.5049337996502623
+    "warmup_ratio": 1.5997054120945309
   },
   "warm_state": {
-    "latency_ns": 176132,
+    "latency_ns": 182628,
     "memory_bytes": null,
     "is_cold_start": false,
-    "warmup_ratio": 1.5049337996502623
+    "warmup_ratio": 1.5997054120945309
   },
   "selected_schedule_id": "schedule.70cdcebfa380d32923c0e4d22c83df0ca7848d91ab48123cc52aaf51c7a18900",
   "input_digest": "42ded5eeca877f23b336768be0ba5082190d3e6dcae7037bf8ee9db2d31abb1d",
@@ -57,5 +57,5 @@
     "reason": "no version-pinned native baseline `native.cub.spmv_segmented_scatter_v2_1_0` is vendored. Fix: vendor the pinned native kernel and register it before claiming a comparison against it."
   },
   "host_environment": "x86_64-linux / cuda / NVIDIA GeForce RTX 4090",
-  "recorded_at_utc": "2026-09-14T02:45:46Z"
+  "recorded_at_utc": "2026-09-14T07:57:03Z"
 }
