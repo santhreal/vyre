@@ -1556,26 +1556,6 @@ public_api_entry = "docs/public-api/vyre-runtime.txt"
 disposition = "implemented"
 
 [[closure]]
-type_name = "AutotuneStrategy"
-variant_name = "DeclaredShape"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:38"
-constructors = ["AutotuneStrategy::DeclaredShape"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "AutotuneStrategy"
-variant_name = "MeasureVariants"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:40"
-constructors = ["AutotuneStrategy::MeasureVariants"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
 type_name = "AxisDomain"
 variant_name = "Boolean"
 declaration_site = "vyre-megakernel/src/specialization/guard.rs:55"
@@ -5409,26 +5389,6 @@ public_api_entry = "docs/public-api/vyre-lower.txt"
 disposition = "implemented"
 
 [[closure]]
-type_name = "ConformanceStrength"
-variant_name = "Exhaustive"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:30"
-constructors = ["ConformanceStrength::Exhaustive"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "ConformanceStrength"
-variant_name = "Standard"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:28"
-constructors = ["ConformanceStrength::Standard"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
 type_name = "ConstFoldError"
 variant_name = "Encode"
 declaration_site = "vyre-pass-engine/src/optimizer/const_fold_via_encoded.rs:35"
@@ -7516,26 +7476,6 @@ constructors = ["DispatchSplitError::UnresolvedCarrier"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq)"
 public_api_entry = "docs/public-api/vyre-lower.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "DispatchStrategy"
-variant_name = "CompiledPipeline"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:15"
-constructors = ["DispatchStrategy::CompiledPipeline"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "DispatchStrategy"
-variant_name = "PersistentRuntime"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:17"
-constructors = ["DispatchStrategy::PersistentRuntime"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
 disposition = "implemented"
 
 [[closure]]
@@ -11490,26 +11430,6 @@ public_api_entry = "docs/public-api/vyre-foundation.txt"
 disposition = "implemented"
 
 [[closure]]
-type_name = "FusionStrategy"
-variant_name = "Candidate"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:6"
-constructors = ["FusionStrategy::Candidate"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "FusionStrategy"
-variant_name = "Isolated"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:8"
-constructors = ["FusionStrategy::Isolated"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
 type_name = "GateRejection"
 variant_name = "Cost"
 declaration_site = "vyre-foundation/src/optimizer/scheduler/run.rs:116"
@@ -13549,7 +13469,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "InnovationTrack"
 variant_name = "ConformanceGuidedAutotune"
-declaration_site = "vyre-foundation/src/execution_plan/mod.rs:31"
+declaration_site = "vyre-foundation/src/execution_plan/mod.rs:26"
 constructors = ["InnovationTrack::ConformanceGuidedAutotune"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -13559,7 +13479,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "InnovationTrack"
 variant_name = "DataLayoutCompiler"
-declaration_site = "vyre-foundation/src/execution_plan/mod.rs:35"
+declaration_site = "vyre-foundation/src/execution_plan/mod.rs:30"
 constructors = ["InnovationTrack::DataLayoutCompiler"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -13569,7 +13489,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "InnovationTrack"
 variant_name = "DifferentialAccuracy"
-declaration_site = "vyre-foundation/src/execution_plan/mod.rs:29"
+declaration_site = "vyre-foundation/src/execution_plan/mod.rs:24"
 constructors = ["InnovationTrack::DifferentialAccuracy"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -13579,7 +13499,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "InnovationTrack"
 variant_name = "GpuResidentProvenance"
-declaration_site = "vyre-foundation/src/execution_plan/mod.rs:33"
+declaration_site = "vyre-foundation/src/execution_plan/mod.rs:28"
 constructors = ["InnovationTrack::GpuResidentProvenance"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -13589,7 +13509,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "InnovationTrack"
 variant_name = "PersistentExecution"
-declaration_site = "vyre-foundation/src/execution_plan/mod.rs:27"
+declaration_site = "vyre-foundation/src/execution_plan/mod.rs:22"
 constructors = ["InnovationTrack::PersistentExecution"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -13599,7 +13519,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "InnovationTrack"
 variant_name = "ReadbackMinimization"
-declaration_site = "vyre-foundation/src/execution_plan/mod.rs:37"
+declaration_site = "vyre-foundation/src/execution_plan/mod.rs:32"
 constructors = ["InnovationTrack::ReadbackMinimization"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -13609,7 +13529,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "InnovationTrack"
 variant_name = "WholeProgramFusion"
-declaration_site = "vyre-foundation/src/execution_plan/mod.rs:25"
+declaration_site = "vyre-foundation/src/execution_plan/mod.rs:20"
 constructors = ["InnovationTrack::WholeProgramFusion"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -15610,36 +15530,6 @@ public_api_entry = "docs/public-api/vyre-foundation.txt"
 disposition = "implemented"
 
 [[closure]]
-type_name = "LayoutStrategy"
-variant_name = "Dynamic"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:60"
-constructors = ["LayoutStrategy::Dynamic"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "LayoutStrategy"
-variant_name = "Empty"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:56"
-constructors = ["LayoutStrategy::Empty"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "LayoutStrategy"
-variant_name = "Static"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:58"
-constructors = ["LayoutStrategy::Static"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
 type_name = "Legalization"
 variant_name = "Identity"
 declaration_site = "vyre-lower/src/verified_lowering.rs:170"
@@ -16947,7 +16837,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryAccessKind"
 variant_name = "AsyncTransfer"
-declaration_site = "vyre-reference/src/interleaving/model.rs:57"
+declaration_site = "vyre-reference/src/interleaving/model.rs:55"
 constructors = ["MemoryAccessKind::AsyncTransfer"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
@@ -16957,7 +16847,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryAccessKind"
 variant_name = "Atomic"
-declaration_site = "vyre-reference/src/interleaving/model.rs:50"
+declaration_site = "vyre-reference/src/interleaving/model.rs:48"
 constructors = ["MemoryAccessKind::Atomic"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
@@ -16967,7 +16857,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryAccessKind"
 variant_name = "Read"
-declaration_site = "vyre-reference/src/interleaving/model.rs:46"
+declaration_site = "vyre-reference/src/interleaving/model.rs:44"
 constructors = ["MemoryAccessKind::Read"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
@@ -16977,7 +16867,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "MemoryAccessKind"
 variant_name = "Write"
-declaration_site = "vyre-reference/src/interleaving/model.rs:48"
+declaration_site = "vyre-reference/src/interleaving/model.rs:46"
 constructors = ["MemoryAccessKind::Write"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
@@ -20973,7 +20863,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PlanError"
 variant_name = "BufferBudgetExceeded"
-declaration_site = "vyre-foundation/src/execution_plan/mod.rs:125"
+declaration_site = "vyre-foundation/src/execution_plan/mod.rs:118"
 constructors = ["PlanError::BufferBudgetExceeded"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug)"
@@ -20983,7 +20873,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PlanError"
 variant_name = "DeclaredBudgetExceeded"
-declaration_site = "vyre-foundation/src/execution_plan/mod.rs:139"
+declaration_site = "vyre-foundation/src/execution_plan/mod.rs:132"
 constructors = ["PlanError::DeclaredBudgetExceeded"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug)"
@@ -20993,7 +20883,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PlanError"
 variant_name = "InvalidOutputRange"
-declaration_site = "vyre-foundation/src/execution_plan/mod.rs:100"
+declaration_site = "vyre-foundation/src/execution_plan/mod.rs:93"
 constructors = ["PlanError::InvalidOutputRange"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug)"
@@ -21003,7 +20893,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PlanError"
 variant_name = "NonCanonicalProgram"
-declaration_site = "vyre-foundation/src/execution_plan/mod.rs:94"
+declaration_site = "vyre-foundation/src/execution_plan/mod.rs:87"
 constructors = ["PlanError::NonCanonicalProgram"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug)"
@@ -21013,7 +20903,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PlanError"
 variant_name = "RuntimeSizedBuffer"
-declaration_site = "vyre-foundation/src/execution_plan/mod.rs:114"
+declaration_site = "vyre-foundation/src/execution_plan/mod.rs:107"
 constructors = ["PlanError::RuntimeSizedBuffer"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug)"
@@ -21023,7 +20913,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PlanError"
 variant_name = "Validation"
-declaration_site = "vyre-foundation/src/execution_plan/mod.rs:88"
+declaration_site = "vyre-foundation/src/execution_plan/mod.rs:81"
 constructors = ["PlanError::Validation"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug)"
@@ -22472,26 +22362,6 @@ equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq)"
 disposition = "implemented"
 
 [[closure]]
-type_name = "ProvenanceStrategy"
-variant_name = "GpuTrace"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:49"
-constructors = ["ProvenanceStrategy::GpuTrace"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "ProvenanceStrategy"
-variant_name = "Minimal"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:47"
-constructors = ["ProvenanceStrategy::Minimal"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
 type_name = "PruneReason"
 variant_name = "AliasOrEffect"
 declaration_site = "vyre-megakernel/src/certificate.rs:25"
@@ -23154,7 +23024,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "RaceFinding"
 variant_name = "ScheduleDisagreement"
-declaration_site = "vyre-reference/src/interleaving/model.rs:99"
+declaration_site = "vyre-reference/src/interleaving/model.rs:97"
 constructors = ["RaceFinding::ScheduleDisagreement"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -23164,7 +23034,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "RaceFinding"
 variant_name = "UnsynchronizedAccess"
-declaration_site = "vyre-reference/src/interleaving/model.rs:108"
+declaration_site = "vyre-reference/src/interleaving/model.rs:106"
 constructors = ["RaceFinding::UnsynchronizedAccess"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
@@ -23229,26 +23099,6 @@ constructors = ["RangePrecondition::UnitInterval"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash)"
 public_api_entry = "docs/public-api/vyre-spec.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "ReadbackStrategy"
-variant_name = "Full"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:67"
-constructors = ["ReadbackStrategy::Full"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "ReadbackStrategy"
-variant_name = "Trimmed"
-declaration_site = "vyre-foundation/src/execution_plan/strategy.rs:72"
-constructors = ["ReadbackStrategy::Trimmed"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-foundation.txt"
 disposition = "implemented"
 
 [[closure]]
@@ -26008,7 +25858,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceTransferError"
 variant_name = "AlignmentFailure"
-declaration_site = "vyre-runtime/src/resource_transfer.rs:179"
+declaration_site = "vyre-runtime/src/resource_transfer.rs:183"
 constructors = ["ResourceTransferError::AlignmentFailure"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash)"
@@ -26018,7 +25868,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceTransferError"
 variant_name = "DeviceLoss"
-declaration_site = "vyre-runtime/src/resource_transfer.rs:187"
+declaration_site = "vyre-runtime/src/resource_transfer.rs:191"
 constructors = ["ResourceTransferError::DeviceLoss"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash)"
@@ -26028,7 +25878,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceTransferError"
 variant_name = "DigestMismatch"
-declaration_site = "vyre-runtime/src/resource_transfer.rs:197"
+declaration_site = "vyre-runtime/src/resource_transfer.rs:201"
 constructors = ["ResourceTransferError::DigestMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash)"
@@ -26038,7 +25888,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceTransferError"
 variant_name = "FileReplaced"
-declaration_site = "vyre-runtime/src/resource_transfer.rs:163"
+declaration_site = "vyre-runtime/src/resource_transfer.rs:167"
 constructors = ["ResourceTransferError::FileReplaced"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash)"
@@ -26048,7 +25898,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceTransferError"
 variant_name = "PartialUploadCleanedUp"
-declaration_site = "vyre-runtime/src/resource_transfer.rs:213"
+declaration_site = "vyre-runtime/src/resource_transfer.rs:217"
 constructors = ["ResourceTransferError::PartialUploadCleanedUp"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash)"
@@ -26058,7 +25908,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceTransferError"
 variant_name = "QueueBackpressure"
-declaration_site = "vyre-runtime/src/resource_transfer.rs:203"
+declaration_site = "vyre-runtime/src/resource_transfer.rs:207"
 constructors = ["ResourceTransferError::QueueBackpressure"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash)"
@@ -26068,7 +25918,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceTransferError"
 variant_name = "ShortRead"
-declaration_site = "vyre-runtime/src/resource_transfer.rs:151"
+declaration_site = "vyre-runtime/src/resource_transfer.rs:155"
 constructors = ["ResourceTransferError::ShortRead"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash)"
@@ -26078,7 +25928,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceTransferError"
 variant_name = "Truncation"
-declaration_site = "vyre-runtime/src/resource_transfer.rs:169"
+declaration_site = "vyre-runtime/src/resource_transfer.rs:173"
 constructors = ["ResourceTransferError::Truncation"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash)"
@@ -26118,7 +25968,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceTransferState"
 variant_name = "Cancelled"
-declaration_site = "vyre-runtime/src/resource_transfer.rs:144"
+declaration_site = "vyre-runtime/src/resource_transfer.rs:148"
 constructors = ["ResourceTransferState::Cancelled"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash)"
@@ -26128,7 +25978,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceTransferState"
 variant_name = "Completed"
-declaration_site = "vyre-runtime/src/resource_transfer.rs:134"
+declaration_site = "vyre-runtime/src/resource_transfer.rs:138"
 constructors = ["ResourceTransferState::Completed"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash)"
@@ -26138,7 +25988,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceTransferState"
 variant_name = "Failed"
-declaration_site = "vyre-runtime/src/resource_transfer.rs:139"
+declaration_site = "vyre-runtime/src/resource_transfer.rs:143"
 constructors = ["ResourceTransferState::Failed"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash)"
@@ -26148,7 +25998,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceTransferState"
 variant_name = "InProgress"
-declaration_site = "vyre-runtime/src/resource_transfer.rs:129"
+declaration_site = "vyre-runtime/src/resource_transfer.rs:133"
 constructors = ["ResourceTransferState::InProgress"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash)"
@@ -26158,7 +26008,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceTransferState"
 variant_name = "Initiated"
-declaration_site = "vyre-runtime/src/resource_transfer.rs:125"
+declaration_site = "vyre-runtime/src/resource_transfer.rs:129"
 constructors = ["ResourceTransferState::Initiated"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash)"
@@ -26168,7 +26018,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "ResourceTransferState"
 variant_name = "Validating"
-declaration_site = "vyre-runtime/src/resource_transfer.rs:127"
+declaration_site = "vyre-runtime/src/resource_transfer.rs:131"
 constructors = ["ResourceTransferState::Validating"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Hash)"
@@ -27059,26 +26909,6 @@ declaration_site = "vyre-runtime/src/routed_work_queue.rs:49"
 constructors = ["RoutedQueueError::TaskCancelled"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
-public_api_entry = "docs/public-api/vyre-runtime.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "RoutingDecision"
-variant_name = "GpuPipeline"
-declaration_site = "vyre-runtime/src/routing/mod.rs:18"
-constructors = ["RoutingDecision::GpuPipeline"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-runtime.txt"
-disposition = "implemented"
-
-[[closure]]
-type_name = "RoutingDecision"
-variant_name = "PersistentMegakernel"
-declaration_site = "vyre-runtime/src/routing/mod.rs:20"
-constructors = ["RoutingDecision::PersistentMegakernel"]
-child_traversal = "leaf"
-equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
 public_api_entry = "docs/public-api/vyre-runtime.txt"
 disposition = "implemented"
 

@@ -1,5 +1,4 @@
-//! The class closed here: a routing enum that offers to run a program on the
-//! host.
+//! The class closed here: a type whose values are execution routes.
 //!
 //! # What used to stand here
 //!
@@ -10,8 +9,9 @@
 //! underscore-prefixed and whose body was `false`. Nothing could reach the arm and
 //! the two thresholds were read by nothing, so the struct advertised tuning for a
 //! decision that did not exist. `vyre_runtime::routing::RoutingDecision` mirrored
-//! the variant and `standard_policy` rewrote it to `PersistentMegakernel` on
-//! arrival, which is a second statement that the route was not real.
+//! the variant, `standard_policy` rewrote it to `PersistentMegakernel` on arrival,
+//! and a `RoutingPolicy` trait plus a `RoutingEngine` stood behind it with no
+//! production caller at all.
 //!
 //! Dead is the good case. The bad case is the same shape wired up: a route that
 //! quietly moves work to the host when a device capability is missing reports
@@ -20,27 +20,41 @@
 //!
 //! # The property
 //!
-//! Vyre executes on a device. `vyre-reference` is the one crate permitted to
-//! compute on a host, as the parity oracle a conformance comparison reads, and
-//! the optimizer runs on the host at COMPILE time, which is not program
-//! execution. Everything else routes to a device or fails closed with an error
-//! naming the missing capability.
+//! Every production compile emits a megakernel artifact. There is one route, so
+//! no type enumerates routes, and this gate asserts that absence.
 //!
-//! So no routing enum may name a host execution target.
+//! Absence is the checkable form of the property, and it is stronger than asking
+//! a route type to hold only device routes. A route type is the place a host
+//! route gets added: while one exists, every future variant is one edit away
+//! from reaching the host, and the variant that does is indistinguishable from
+//! the variants that do not until something measures the path. The enum that
+//! stood here shipped `GpuPipeline` for years with nothing routing to it, which
+//! is how `CpuSimd` sat beside it unnoticed.
+//!
+//! `vyre-reference` is the one crate permitted to compute on a host, as the
+//! parity oracle a conformance comparison reads, so a route type there names
+//! which host evaluator supplies the comparison arm and is exempt. The optimizer
+//! also runs on the host, at compile time, which is not program execution.
+//!
+//! Where the rest of this class lives: `vyre-lints`' `production_cpu_fallbacks`
+//! rejects a production call into the oracle, and
+//! `vyre-test-support`'s `ProductionBackend` maps every backend registration the
+//! registry may hold onto an `ExecutionDomain` through an exhaustive match, so a
+//! registration that executes in host memory has no recorded decision and its
+//! readers fail. This gate covers the third shape, which neither of those sees:
+//! a route offered as a value.
 //!
 //! # Why it fails by default
 //!
-//! Neither the enum roster nor the variant list is written here. Both are read
-//! out of the workspace sources at run time: a routing enum is recognised by its
-//! own contents, as an enum declaring a variant this workspace uses for a device
-//! route, and then every variant it declares is checked. Add a routing enum
-//! anywhere and it is measured without being registered; add a host variant to
-//! one and this fails naming the file, the enum and the variant.
+//! The roster is not written here. A route type is recognised by its own
+//! contents, as an enum declaring a variant this workspace uses for a device
+//! route, and the tree is read at run time. Declare one anywhere, under any
+//! name, and this fails naming the file, the enum and the variant; a second
+//! route therefore cannot arrive without a recorded decision.
 //!
-//! The recognition rule is deliberately structural rather than a list of enum
-//! names. A list of names is the thing that goes stale in silence, and a
-//! `CpuSimd` variant reintroduced under a fresh enum name is the exact case a
-//! name list would miss.
+//! An empty result is only meaningful because the scanner is proven against
+//! literal source below rather than against the tree, and because a file the
+//! walk cannot read is a panic rather than a skip.
 
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -76,18 +90,6 @@ const HOST_EXECUTION_MARKERS: [&str; 8] = [
 /// execution in the workspace.
 const ORACLE_CRATES: [&str; 1] = ["vyre-reference"];
 
-/// Device routes this workspace serves, with what serves each.
-///
-/// `GpuPipeline` is the per-dispatch pipeline every backend implements.
-/// `PersistentMegakernel` is the resident single-launch form the standard policy
-/// promotes to. Both are reached by a dispatch.
-///
-/// A variant outside this set fails the roster test below even when its name
-/// carries no host marker. That is the point: the marker test catches a route
-/// back to the host, and this one catches a route nobody serves, which is how
-/// the deleted `CpuSimd` survived review for as long as it did.
-const SERVED_DEVICE_ROUTES: [&str; 2] = ["GpuPipeline", "PersistentMegakernel"];
-
 /// One enum declaration found in the tree.
 #[derive(Debug)]
 struct RoutingEnum {
@@ -96,118 +98,73 @@ struct RoutingEnum {
     variants: Vec<String>,
 }
 
+/// No type in the workspace enumerates execution routes.
+///
+/// # What it does not catch
+///
+/// A second route expressed as something other than an enum variant: a boolean
+/// field, a string id, or a trait with two implementors. Those are the shapes
+/// `vyre-lints`' `production_cpu_fallbacks` and the `schedule-ownership` gate
+/// read, over calls rather than declarations.
 #[test]
-fn no_routing_enum_offers_a_host_execution_target() {
+fn no_type_enumerates_execution_routes() {
     let root = workspace_root();
-    let routes = routing_enums(&root);
-
-    assert!(
-        !routes.is_empty(),
-        "Fix: no routing enum was recognised anywhere in the workspace, so this gate is measuring \
-         nothing. Either the device route variant names in DEVICE_ROUTE_MARKERS changed, or the \
-         scanner stopped reading the tree at {}",
-        root.display()
-    );
 
     let mut offenders = Vec::new();
-    for route in &routes {
+    for route in routing_enums(&root) {
         if ORACLE_CRATES
             .iter()
             .any(|crate_name| route.path.starts_with(&format!("{crate_name}/")))
         {
             continue;
         }
-        for variant in &route.variants {
-            if let Some(marker) = HOST_EXECUTION_MARKERS
-                .iter()
-                .find(|marker| variant.contains(*marker))
-            {
-                offenders.push(format!(
-                    "  {}: {}::{} (matches `{marker}`)",
-                    route.path, route.name, variant
-                ));
-            }
-        }
+        let host = route
+            .variants
+            .iter()
+            .filter_map(|variant| {
+                HOST_EXECUTION_MARKERS
+                    .iter()
+                    .find(|marker| variant.contains(*marker))
+                    .map(|marker| format!("{variant} matches `{marker}`"))
+            })
+            .collect::<Vec<_>>();
+        let reached = if host.is_empty() {
+            "no variant names the host yet".to_owned()
+        } else {
+            format!("already reaches the host: {}", host.join(", "))
+        };
+        offenders.push(format!(
+            "  {}: {} {{ {} }}  -  {reached}",
+            route.path,
+            route.name,
+            route.variants.join(", "),
+        ));
     }
 
     assert!(
         offenders.is_empty(),
-        "{} routing variant(s) name a host execution target:\n{}\n\n\
-         Vyre executes on a device. A workload that cannot be placed on one is an error at the \
-         point that discovers it, naming the missing capability and the corrective action, not a \
-         route to somewhere slower. The only host computation in this workspace is the \
-         `vyre-reference` parity oracle, which supplies the comparison arm of a conformance test \
-         and is never reached by a dispatch. The optimizer also runs on the host, at compile \
-         time, which is not program execution.\n\
-         Fix: delete the variant, delete the predicate that selects it and any threshold field \
-         that only fed that predicate, and make the surrounding decision fail closed instead.",
+        "{} type(s) enumerate execution routes:\n{}\n\n\
+         Every production compile emits a megakernel artifact, so there is one route and nothing \
+         to select. A type whose values are routes is where a second one arrives: the variant \
+         that reaches the host is indistinguishable from the variants that do not until something \
+         measures the path, and a workload that cannot be placed on a device must be an error at \
+         the point that discovers it, naming the missing capability, not a route to somewhere \
+         slower.\n\
+         Fix: delete the type and the policy trait, engine and predicate behind it, and let the \
+         one route be the only thing the caller can reach. A genuine second route is a recorded \
+         decision: name what serves it and what selects it here before the type exists.",
         offenders.len(),
         offenders.join("\n"),
     );
 }
 
-/// A routing enum declares only routes something serves.
+/// The scanner recognises a route type, and leaves an unrelated enum alone.
 ///
-/// # Why this shape
-///
-/// The marker test above answers "does a variant name the host". It cannot see
-/// a route that is merely unserved: a `WaveOps` or `TensorPipeline` variant
-/// added to a routing enum with no executor arm behind it reads to a caller as
-/// a placement that exists, and the first evidence otherwise is a decision that
-/// silently becomes something else on arrival.
-///
-/// So every variant of every recognised routing enum must be a route recorded
-/// in `SERVED_DEVICE_ROUTES` with what serves it. Adding a route turns this RED
-/// on arrival; the fix is to name the executor that runs it, not to extend the
-/// list.
-///
-/// # What it does not catch
-///
-/// Whether the recorded executor arm still exists. This asserts a decision was
-/// recorded, not that the implementation behind it is live.
+/// Held against literal sources, so the empty tree result above is a measured
+/// absence rather than a scanner that stopped reading. The first case is the
+/// deleted `PolicyRoute` verbatim.
 #[test]
-fn every_routing_variant_is_a_route_this_workspace_serves() {
-    let root = workspace_root();
-    let routes = routing_enums(&root);
-
-    assert!(
-        !routes.is_empty(),
-        "Fix: no routing enum was recognised under {}, so this gate is measuring nothing",
-        root.display()
-    );
-
-    let mut unserved = Vec::new();
-    for route in &routes {
-        if ORACLE_CRATES
-            .iter()
-            .any(|crate_name| route.path.starts_with(&format!("{crate_name}/")))
-        {
-            continue;
-        }
-        for variant in &route.variants {
-            if !SERVED_DEVICE_ROUTES.contains(&variant.as_str()) {
-                unserved.push(format!("  {}: {}::{}", route.path, route.name, variant));
-            }
-        }
-    }
-
-    assert!(
-        unserved.is_empty(),
-        "{} routing variant(s) name a route with no recorded executor:\n{}\n\n\
-         Fix: name what serves the route and record it in SERVED_DEVICE_ROUTES beside the \
-         others, or delete the variant. A route a caller can select and nothing runs is a \
-         degradation path that does not exist being advertised as one.",
-        unserved.len(),
-        unserved.join("\n"),
-    );
-}
-
-/// The gate sees a reintroduced host variant, and leaves a device-only enum alone.
-///
-/// Held against literal sources so a clean tree cannot make it pass by measuring
-/// nothing. The first case is the deleted `PolicyRoute` verbatim.
-#[test]
-fn the_scanner_sees_a_reintroduced_host_route() {
+fn the_scanner_recognises_a_reintroduced_route_type() {
     let reinjected = "\
 pub enum PolicyRoute {
     /// Explicit diagnostic/reference route.
@@ -230,16 +187,19 @@ pub enum PolicyRoute {
             .2
             .iter()
             .any(|variant| DEVICE_ROUTE_MARKERS.contains(&variant.as_str())),
-        "Fix: the scanner no longer recognises this as a routing enum, so a host variant added \
-         to it would go unmeasured"
+        "Fix: the scanner no longer recognises this as a route type, so reintroducing one would \
+         go unmeasured"
     );
     assert!(
         route.2.iter().any(|variant| HOST_EXECUTION_MARKERS
             .iter()
             .any(|marker| variant.contains(marker))),
-        "Fix: `CpuSimd` stopped matching the host execution markers, which is the whole check"
+        "Fix: `CpuSimd` stopped matching the host execution markers, so the report would not say \
+         the reintroduced type already reaches the host"
     );
 
+    // A device-only route type is reported too: absence is the property, and
+    // `GpuPipeline` shipped for years with nothing routing to it.
     let device_only = "\
 pub enum PolicyRoute {
     GpuPipeline,
@@ -252,10 +212,36 @@ pub enum PolicyRoute {
         .find(|item| item.1 == "PolicyRoute")
         .expect("Fix: the scanner stopped recognising an enum declaration");
     assert!(
-        !route.2.iter().any(|variant| HOST_EXECUTION_MARKERS
+        route
+            .2
             .iter()
-            .any(|marker| variant.contains(marker))),
-        "Fix: the gate reports the shipped device-only enum, so it fails on correct code"
+            .any(|variant| DEVICE_ROUTE_MARKERS.contains(&variant.as_str())),
+        "Fix: a route type carrying only device routes is no longer recognised, so the one shape \
+         this gate exists to keep out would pass"
+    );
+
+    // An enum that uses the vocabulary for something else is not a route type.
+    // `CausalPhase::MegakernelCompilation` and `PruneReason::PipelineCapacity`
+    // are the live cases; an exact variant match is what separates them.
+    let unrelated = "\
+pub enum CausalPhase {
+    MegakernelCompilation,
+    DriverSubmission,
+    RuntimeExecution,
+}
+";
+    let other = enums_in(unrelated);
+    let phase = other
+        .iter()
+        .find(|item| item.1 == "CausalPhase")
+        .expect("Fix: the scanner stopped recognising an enum declaration");
+    assert!(
+        !phase
+            .2
+            .iter()
+            .any(|variant| DEVICE_ROUTE_MARKERS.contains(&variant.as_str())),
+        "Fix: the recognition rule widened to a substring, so every enum naming a dispatch form \
+         is now reported and the gate fails on correct code"
     );
 }
 

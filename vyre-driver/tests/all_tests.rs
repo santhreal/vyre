@@ -166,10 +166,6 @@ pub mod external_import_order;
 #[path = "external_resource_path_agreement.rs"]
 pub mod external_resource_path_agreement;
 
-/// Integration tests from `tests/extraction_memory_verifier_cost_model.rs`.
-#[path = "extraction_memory_verifier_cost_model.rs"]
-pub mod extraction_memory_verifier_cost_model;
-
 /// Integration tests from `tests/float_lowering_refusal.rs`.
 #[path = "float_lowering_refusal.rs"]
 pub mod float_lowering_refusal;

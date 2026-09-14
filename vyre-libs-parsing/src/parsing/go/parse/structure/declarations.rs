@@ -1,4 +1,5 @@
-//! Function, method, and interface declaration extraction.
+//! Function and method declaration extraction, and the program every Go
+//! declaration kind is emitted into.
 
 use crate::parsing::go::parse::token_predicates::{
     token_is_ident, token_is_keyword, token_type_eq,
@@ -9,7 +10,7 @@ use vyre_libs_builder::builder::trip_count::clamped_by_extents;
 use vyre_spec::go_token::{TOK_LPAREN, TOK_RPAREN};
 
 use super::decl_span::GoDeclSpan;
-use super::{GO_DECL_FUNC, GO_DECL_INTERFACE, GO_DECL_METHOD};
+use super::{GO_DECL_FUNC, GO_DECL_METHOD};
 
 /// Extract function, method, and interface declarations.
 #[must_use]
@@ -115,37 +116,7 @@ pub fn go_extract_declarations(
                 ),
             ],
         ),
-        Node::if_then(
-            Expr::lt(Expr::add(t.clone(), Expr::u32(2)), num_tokens.clone()),
-            vec![Node::if_then(
-                Expr::and(
-                    token_is_keyword(
-                        haystack,
-                        tok_types,
-                        tok_starts,
-                        tok_lens,
-                        t.clone(),
-                        b"type",
-                    ),
-                    Expr::and(
-                        token_is_ident(tok_types, Expr::add(t.clone(), Expr::u32(1))),
-                        token_is_keyword(
-                            haystack,
-                            tok_types,
-                            tok_starts,
-                            tok_lens,
-                            Expr::add(t.clone(), Expr::u32(2)),
-                            b"interface",
-                        ),
-                    ),
-                ),
-                decl_span.nodes(
-                    Expr::add(t.clone(), Expr::u32(3)),
-                    Expr::u32(GO_DECL_INTERFACE),
-                    Expr::add(t.clone(), Expr::u32(1)),
-                ),
-            )],
-        ),
+        decl_span.interface_node(haystack, &t),
     ];
 
     let mut buffers = super::super::token_stream_decls(tok_types, tok_starts, tok_lens, haystack);

@@ -3,7 +3,6 @@
 #[non_exhaustive] pub enum vyre_runtime::replay::ReplayLogError
 #[non_exhaustive] pub enum vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolError
 #[non_exhaustive] pub enum vyre_runtime::resident_work_queue::protocol::ProtocolError
-#[non_exhaustive] pub enum vyre_runtime::routing::RoutingDecision
 #[non_exhaustive] pub enum vyre_runtime::tenant::TenantError
 #[repr(C)] pub struct vyre_runtime::resident_work_queue::planner::ResidentWorkItem
 #[repr(C)] pub struct vyre_runtime::resident_work_queue::rule_catalog::RuleMeta
@@ -196,8 +195,6 @@ impl vyre_runtime::retained_page_cache::RetainedPageCacheManager
 impl vyre_runtime::retained_page_cache::RetainedPageLayout
 impl vyre_runtime::routed_work_queue::BoundedRoutedWorkQueue
 impl vyre_runtime::routed_work_queue::InterDeviceRoutedExchange
-impl vyre_runtime::routing::RoutingEngine
-impl vyre_runtime::routing::RoutingPolicy for vyre_runtime::routing::standard_policy::StandardPolicy
 impl vyre_runtime::scheduler::WorkStealingScheduler
 impl vyre_runtime::speculative_transaction::SpeculativeTransactionCoordinator
 impl vyre_runtime::structured_concurrency::CancellationToken
@@ -1168,15 +1165,6 @@ pub fn vyre_runtime::routed_work_queue::BoundedRoutedWorkQueue::new(limits: vyre
 pub fn vyre_runtime::routed_work_queue::InterDeviceRoutedExchange::new(topology: vyre_driver::peer_transfer::PeerTopology) -> Self
 pub fn vyre_runtime::routed_work_queue::InterDeviceRoutedExchange::route_all_to_all(&mut self, items: alloc::vec::Vec<vyre_runtime::routed_work_queue::InterDeviceRoutedItem>) -> core::result::Result<alloc::collections::btree::map::BTreeMap<u32, alloc::vec::Vec<vyre_runtime::routed_work_queue::InterDeviceRoutedItem>>, vyre_runtime::routed_work_queue::RoutedQueueError>
 pub fn vyre_runtime::routed_work_queue::RoutedQueueLimits::default() -> Self
-pub fn vyre_runtime::routing::RoutingEngine::new(policy: impl vyre_runtime::routing::RoutingPolicy + 'static) -> Self
-pub fn vyre_runtime::routing::RoutingEngine::route(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingDecision
-pub fn vyre_runtime::routing::RoutingEngine::route_with_explanation(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingExplanation
-pub fn vyre_runtime::routing::RoutingPolicy::name(&self) -> &'static str
-pub fn vyre_runtime::routing::RoutingPolicy::route(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingDecision
-pub fn vyre_runtime::routing::RoutingPolicy::route_with_explanation(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingExplanation
-pub fn vyre_runtime::routing::standard_policy::StandardPolicy::name(&self) -> &'static str
-pub fn vyre_runtime::routing::standard_policy::StandardPolicy::route(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingDecision
-pub fn vyre_runtime::routing::standard_policy::StandardPolicy::route_with_explanation(&self, _plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingExplanation
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::claim_next_unit(&self) -> usize
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::new(backend_ids: alloc::vec::Vec<&'static str>) -> Self
 pub fn vyre_runtime::scheduler::WorkStealingScheduler::partition_into(&self, total_len: usize, out: &mut alloc::vec::Vec<vyre_runtime::scheduler::Shard>)
@@ -1356,8 +1344,6 @@ pub mod vyre_runtime::resource_residency
 pub mod vyre_runtime::resource_transfer
 pub mod vyre_runtime::retained_page_cache
 pub mod vyre_runtime::routed_work_queue
-pub mod vyre_runtime::routing
-pub mod vyre_runtime::routing::standard_policy
 pub mod vyre_runtime::scheduler
 pub mod vyre_runtime::speculative_transaction
 pub mod vyre_runtime::structured_concurrency
@@ -1513,9 +1499,6 @@ pub struct vyre_runtime::routed_work_queue::InterDeviceRoutedExchange
 pub struct vyre_runtime::routed_work_queue::InterDeviceRoutedItem
 pub struct vyre_runtime::routed_work_queue::RoutedQueueLimits
 pub struct vyre_runtime::routed_work_queue::RoutedWorkItem
-pub struct vyre_runtime::routing::RoutingEngine
-pub struct vyre_runtime::routing::RoutingExplanation
-pub struct vyre_runtime::routing::standard_policy::StandardPolicy
 pub struct vyre_runtime::scheduler::Shard
 pub struct vyre_runtime::scheduler::WorkStealingScheduler
 pub struct vyre_runtime::speculative_transaction::SpeculativeProposal
@@ -1547,7 +1530,6 @@ pub trait vyre_runtime::resident_work_queue::ring::RingConsumer
 pub trait vyre_runtime::resident_work_queue::ring::RingProducer
 pub trait vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter
 pub trait vyre_runtime::resource_residency::ResidentResourceDevice: core::marker::Send + core::marker::Sync
-pub trait vyre_runtime::routing::RoutingPolicy: core::marker::Send + core::marker::Sync
 pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_bar1_peer_with_owner<O: ?core::marker::Sized>(_owner: &'a mut O, peer_ptr: *mut u8, len: usize) -> Self
 pub unsafe fn vyre_runtime::uring::GpuMappedBuffer<'a>::from_host_visible_owner<O: ?core::marker::Sized>(_owner: &'a mut O, ptr: *mut u8, len: usize) -> Self
 pub unsafe fn vyre_runtime::uring::IoUringState::register_buffers(&self, iovecs: &[vyre_runtime::uring::Iovec]) -> core::result::Result<(), vyre_runtime::PipelineError>
@@ -2739,11 +2721,6 @@ pub vyre_runtime::routed_work_queue::RoutedWorkItem::request_id: u64
 pub vyre_runtime::routed_work_queue::RoutedWorkItem::route_id: u32
 pub vyre_runtime::routed_work_queue::RoutedWorkItem::ticket: u64
 pub vyre_runtime::routed_work_queue::RoutedWorkItem::weight: f32
-pub vyre_runtime::routing::RoutingDecision::GpuPipeline
-pub vyre_runtime::routing::RoutingDecision::PersistentMegakernel
-pub vyre_runtime::routing::RoutingExplanation::decision: vyre_runtime::routing::RoutingDecision
-pub vyre_runtime::routing::RoutingExplanation::policy: &'static str
-pub vyre_runtime::routing::RoutingExplanation::reason: &'static str
 pub vyre_runtime::scheduler::Shard::backend_id: &'static str
 pub vyre_runtime::scheduler::Shard::work_range: core::ops::range::Range<usize>
 pub vyre_runtime::speculative_transaction::SpeculativeProposal::confidence: f32

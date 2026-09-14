@@ -8,7 +8,7 @@ use vyre_driver::validation::LaunchGeometryLimits;
 use vyre_driver::BackendError;
 #[cfg(feature = "device-tests")]
 use vyre_driver::{DEFAULT_PIPELINE_CACHE_BYTES, DEFAULT_PIPELINE_CACHE_ENTRIES};
-use vyre_foundation::execution_plan::{self, ReadbackStrategy};
+use vyre_foundation::execution_plan;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 
 use super::tuning::wgpu_effective_dispatch_config_for_limits;
@@ -321,13 +321,8 @@ mod layout_config_contracts {
         let plan = execution_plan::plan(&program).expect(
             "Fix: trimmed output program must plan; restore this invariant before continuing.",
         );
-        assert_eq!(
-            plan.strategy.readback,
-            ReadbackStrategy::Trimmed {
-                visible_bytes: 8,
-                avoided_bytes: 4088,
-            }
-        );
+        assert_eq!(plan.memory.visible_readback_bytes, 8);
+        assert_eq!(plan.memory.avoided_readback_bytes, 4088);
         let layouts = vyre_driver::output_binding_layouts(&program)
             .expect("Fix: layout must derive; restore this invariant before continuing.");
         assert_eq!(layouts[0].layout.read_size, 8);

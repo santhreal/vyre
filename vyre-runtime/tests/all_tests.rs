@@ -225,14 +225,6 @@ pub mod resource_residency;
 #[path = "ring_fault_selection_is_typed.rs"]
 pub mod ring_fault_selection_is_typed;
 
-/// Integration tests from `tests/routing_policy.rs`.
-#[path = "routing_policy.rs"]
-pub mod routing_policy;
-
-/// Integration tests from `tests/routing_standard_policy_contracts.rs`.
-#[path = "routing_standard_policy_contracts.rs"]
-pub mod routing_standard_policy_contracts;
-
 /// Integration tests from `tests/resource_transfer_integrity_contracts.rs`.
 #[path = "resource_transfer_integrity_contracts.rs"]
 pub mod resource_transfer_integrity_contracts;

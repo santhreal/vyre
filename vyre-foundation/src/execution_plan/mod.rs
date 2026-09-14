@@ -10,13 +10,8 @@ use crate::validate::{validate_with_options, ValidationOptions};
 pub mod fusion;
 pub(crate) mod memory_budget;
 mod policy;
-mod strategy;
 pub use memory_budget::{DeviceMemoryBudget, MemoryBudgetReport};
 pub use policy::SchedulingPolicy;
-pub use strategy::{
-    AutotuneStrategy, ConformanceStrength, DispatchStrategy, FusionStrategy, LayoutStrategy,
-    ProvenanceStrategy, ReadbackStrategy, StrategyPlan,
-};
 
 /// Concerns that vyre treats as first-class planning concerns.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -66,8 +61,6 @@ pub struct ExecutionPlan {
     pub accuracy: AccuracyPlan,
     /// Autotuning planning facts.
     pub autotune: AutotunePlan,
-    /// Concrete execution strategies derived from the plan facts.
-    pub strategy: StrategyPlan,
     /// Per-track decisions used by dashboards and diagnostics.
     pub tracks: Vec<TrackDecision>,
 }
@@ -208,7 +201,6 @@ pub fn plan_with_options_for_adapter(
     let accuracy = accuracy_plan(&required_capabilities, &provenance);
     let autotune = autotune_plan(program, adapter_caps);
 
-    let strategy = StrategyPlan::from_parts(&fusion, &memory, &provenance, &accuracy, &autotune);
     let tracks = track_decisions(&fusion, &memory, &provenance, &accuracy, &autotune);
 
     Ok(ExecutionPlan {
@@ -219,7 +211,6 @@ pub fn plan_with_options_for_adapter(
         provenance,
         accuracy,
         autotune,
-        strategy,
         tracks,
     })
 }
@@ -591,16 +582,6 @@ mod tests {
         let exec_plan = plan(&p).unwrap();
         // GpuResidentProvenance is always inactive in current implementation
         assert!(!exec_plan.track_active(InnovationTrack::GpuResidentProvenance));
-    }
-
-    #[test]
-    fn plan_tiny_program_uses_persistent_dispatch() {
-        let p = trivial_program();
-        let exec_plan = plan(&p).unwrap();
-        assert_eq!(
-            exec_plan.strategy.dispatch,
-            DispatchStrategy::PersistentRuntime
-        );
     }
 
     #[test]

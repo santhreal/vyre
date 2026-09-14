@@ -4808,6 +4808,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   memory handle, resource importer and imported record are reachable at the
   crate root and nowhere else. Those four module paths and the 96 items they
   restated left the published surface.
+- `vyre_driver::extraction_cost` and `vyre_driver::{extract_best_for_device,
+  extract_best_for_devices, DeviceExtraction, ExtractionDevice}` are deleted.
+  They scaled e-graph extraction costs by device capability bits inside a
+  driver, which is a second cost model, and no production path reached them.
 - The infallible wrappers `vyre_driver::grid_sync::split_on_grid_sync`,
   `vyre_driver::cache_eviction_heat::entries_to_evict`,
   `vyre_runtime::scheduler::WorkStealingScheduler::partition`,
@@ -5173,6 +5177,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `element_zero`, `shape`, `tensor_ref`, `attribution`, `descriptor`, `outputs`
   and `signatures`, are reachable only through `plumbing::host`,
   `plumbing::operand`, `plumbing::program` and `plumbing::registration`.
+- `vyre_foundation::execution_plan::StrategyPlan` and the `FusionStrategy`,
+  `DispatchStrategy`, `AutotuneStrategy`, `ProvenanceStrategy`,
+  `LayoutStrategy`, `ConformanceStrength` and `ReadbackStrategy` types are
+  deleted, along with `ExecutionPlan::strategy`. Each restated a bool or byte
+  count the plan already carried on `ExecutionPlan::{fusion, memory,
+  provenance, accuracy, autotune}`, and `DispatchStrategy` was a constant. Read
+  the fact instead: `ReadbackStrategy::visible_bytes()` is
+  `memory.visible_readback_bytes`.
 - `vyre_foundation::substrate::arenas::ExprArena`,
   `substrate::arenas::compute_expr_digest` and `substrate::ids::ExprId` are
   deleted. `SubstrateArena` interns through `optimizer::expr_arena::ExprArena`
@@ -5213,6 +5225,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   sized a workgroup buffer as `count * element_bytes` and so over-allocated
   every packed sub-byte element; the live builders in the hashmap execution
   path are the only ones left.
+- `vyre_runtime::routing` is deleted. It exported a `RoutingPolicy` trait, a
+  `RoutingEngine`, and a `RoutingDecision` enum whose `GpuPipeline` variant
+  nothing served, behind one policy that ignored its argument and returned
+  `PersistentMegakernel` for every plan; no production path called any of it.
+  Every production compile emits a megakernel artifact, so there is one route,
+  and the `device_only_routing` gate now asserts that no type enumerates
+  execution routes rather than that an existing route type holds only device
+  routes.
 - vyre_foundation::ir::ExprArena, ExprRef, ArenaProgram and Program::with_arena
   are gone. Nothing in the workspace ever constructed one: it was a second
   expression arena beside the live flat arena in optimizer::expr_arena,

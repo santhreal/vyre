@@ -293,7 +293,6 @@ impl vyre_foundation::dialect::ResourceAbi
 impl vyre_foundation::dialect_lookup::Signature
 impl vyre_foundation::execution_plan::DeviceMemoryBudget
 impl vyre_foundation::execution_plan::ExecutionPlan
-impl vyre_foundation::execution_plan::ReadbackStrategy
 impl vyre_foundation::execution_plan::SchedulingPolicy
 impl vyre_foundation::execution_plan::fusion::FusionCandidate
 impl vyre_foundation::execution_plan::fusion::FusionCandidateKind
@@ -1249,14 +1248,7 @@ pub enum vyre_foundation::dialect::DialectVersionError
 pub enum vyre_foundation::dialect::FieldType
 pub enum vyre_foundation::dialect::FieldValue
 pub enum vyre_foundation::dialect::SchemaTranslationError
-pub enum vyre_foundation::execution_plan::AutotuneStrategy
-pub enum vyre_foundation::execution_plan::ConformanceStrength
-pub enum vyre_foundation::execution_plan::DispatchStrategy
-pub enum vyre_foundation::execution_plan::FusionStrategy
-pub enum vyre_foundation::execution_plan::LayoutStrategy
 pub enum vyre_foundation::execution_plan::PlanError
-pub enum vyre_foundation::execution_plan::ProvenanceStrategy
-pub enum vyre_foundation::execution_plan::ReadbackStrategy
 pub enum vyre_foundation::execution_plan::fusion::FusionCandidateKind
 pub enum vyre_foundation::execution_plan::fusion::FusionLegalityVerdict
 pub enum vyre_foundation::execution_plan::fusion::FusionRejectionReason
@@ -1632,7 +1624,6 @@ pub fn vyre_foundation::dialect::validate_schema_identity(dialect: &'static str,
 pub fn vyre_foundation::execution_plan::DeviceMemoryBudget::from_adapter(caps: &vyre_foundation::optimizer::AdapterCaps) -> Self
 pub fn vyre_foundation::execution_plan::DeviceMemoryBudget::validate(&self, plan: &vyre_foundation::execution_plan::MemoryPlan) -> core::result::Result<vyre_foundation::execution_plan::MemoryBudgetReport, vyre_foundation::execution_plan::PlanError>
 pub fn vyre_foundation::execution_plan::ExecutionPlan::track_active(&self, track: vyre_foundation::execution_plan::InnovationTrack) -> bool
-pub fn vyre_foundation::execution_plan::ReadbackStrategy::visible_bytes(&self) -> u64
 pub fn vyre_foundation::execution_plan::SchedulingPolicy::default() -> Self
 pub fn vyre_foundation::execution_plan::fusion::FusionAliasingError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::execution_plan::fusion::FusionBufferRenameError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -4322,7 +4313,6 @@ pub struct vyre_foundation::execution_plan::MemoryBudgetReport
 pub struct vyre_foundation::execution_plan::MemoryPlan
 pub struct vyre_foundation::execution_plan::ProvenancePlan
 pub struct vyre_foundation::execution_plan::SchedulingPolicy
-pub struct vyre_foundation::execution_plan::StrategyPlan
 pub struct vyre_foundation::execution_plan::TrackDecision
 pub struct vyre_foundation::execution_plan::fusion::FusionAliasingError
 pub struct vyre_foundation::execution_plan::fusion::FusionBufferRenameError
@@ -5330,8 +5320,6 @@ pub vyre_foundation::execution_plan::AccuracyPlan::reason: &'static str
 pub vyre_foundation::execution_plan::AutotunePlan::parallel_region_size: [u32; 3]
 pub vyre_foundation::execution_plan::AutotunePlan::reason: &'static str
 pub vyre_foundation::execution_plan::AutotunePlan::recommended: bool
-pub vyre_foundation::execution_plan::AutotuneStrategy::DeclaredShape
-pub vyre_foundation::execution_plan::AutotuneStrategy::MeasureVariants
 pub vyre_foundation::execution_plan::BufferPlan::access: vyre_spec::buffer_access::BufferAccess
 pub vyre_foundation::execution_plan::BufferPlan::binding: u32
 pub vyre_foundation::execution_plan::BufferPlan::count: u32
@@ -5340,13 +5328,9 @@ pub vyre_foundation::execution_plan::BufferPlan::kind: vyre_foundation::ir::Memo
 pub vyre_foundation::execution_plan::BufferPlan::name: alloc::string::String
 pub vyre_foundation::execution_plan::BufferPlan::output_range: core::option::Option<core::ops::range::Range<u64>>
 pub vyre_foundation::execution_plan::BufferPlan::static_size_bytes: core::option::Option<u64>
-pub vyre_foundation::execution_plan::ConformanceStrength::Exhaustive
-pub vyre_foundation::execution_plan::ConformanceStrength::Standard
 pub vyre_foundation::execution_plan::DeviceMemoryBudget::backend: &'static str
 pub vyre_foundation::execution_plan::DeviceMemoryBudget::declared_static_bytes: u64
 pub vyre_foundation::execution_plan::DeviceMemoryBudget::per_buffer_bytes: u64
-pub vyre_foundation::execution_plan::DispatchStrategy::CompiledPipeline
-pub vyre_foundation::execution_plan::DispatchStrategy::PersistentRuntime
 pub vyre_foundation::execution_plan::ExecutionPlan::accuracy: vyre_foundation::execution_plan::AccuracyPlan
 pub vyre_foundation::execution_plan::ExecutionPlan::autotune: vyre_foundation::execution_plan::AutotunePlan
 pub vyre_foundation::execution_plan::ExecutionPlan::fusion: vyre_foundation::execution_plan::FusionPlan
@@ -5354,14 +5338,11 @@ pub vyre_foundation::execution_plan::ExecutionPlan::memory: vyre_foundation::exe
 pub vyre_foundation::execution_plan::ExecutionPlan::program_fingerprint: [u8; 32]
 pub vyre_foundation::execution_plan::ExecutionPlan::provenance: vyre_foundation::execution_plan::ProvenancePlan
 pub vyre_foundation::execution_plan::ExecutionPlan::required_capabilities: vyre_foundation::program_caps::RequiredCapabilities
-pub vyre_foundation::execution_plan::ExecutionPlan::strategy: vyre_foundation::execution_plan::StrategyPlan
 pub vyre_foundation::execution_plan::ExecutionPlan::tracks: alloc::vec::Vec<vyre_foundation::execution_plan::TrackDecision>
 pub vyre_foundation::execution_plan::FusionPlan::batch_fusion_candidate: bool
 pub vyre_foundation::execution_plan::FusionPlan::entry_op_id: core::option::Option<alloc::string::String>
 pub vyre_foundation::execution_plan::FusionPlan::node_count: usize
 pub vyre_foundation::execution_plan::FusionPlan::top_level_regions: usize
-pub vyre_foundation::execution_plan::FusionStrategy::Candidate
-pub vyre_foundation::execution_plan::FusionStrategy::Isolated
 pub vyre_foundation::execution_plan::InnovationTrack::ConformanceGuidedAutotune
 pub vyre_foundation::execution_plan::InnovationTrack::DataLayoutCompiler
 pub vyre_foundation::execution_plan::InnovationTrack::DifferentialAccuracy
@@ -5369,9 +5350,6 @@ pub vyre_foundation::execution_plan::InnovationTrack::GpuResidentProvenance
 pub vyre_foundation::execution_plan::InnovationTrack::PersistentExecution
 pub vyre_foundation::execution_plan::InnovationTrack::ReadbackMinimization
 pub vyre_foundation::execution_plan::InnovationTrack::WholeProgramFusion
-pub vyre_foundation::execution_plan::LayoutStrategy::Dynamic
-pub vyre_foundation::execution_plan::LayoutStrategy::Empty
-pub vyre_foundation::execution_plan::LayoutStrategy::Static
 pub vyre_foundation::execution_plan::MemoryBudgetReport::backend: &'static str
 pub vyre_foundation::execution_plan::MemoryBudgetReport::declared_budget_bytes: u64
 pub vyre_foundation::execution_plan::MemoryBudgetReport::dynamic_buffers: usize
@@ -5408,20 +5386,6 @@ pub vyre_foundation::execution_plan::PlanError::Validation::issues: alloc::vec::
 pub vyre_foundation::execution_plan::ProvenancePlan::emit_region_trace: bool
 pub vyre_foundation::execution_plan::ProvenancePlan::region_count: usize
 pub vyre_foundation::execution_plan::ProvenancePlan::top_level_region_wrapped: bool
-pub vyre_foundation::execution_plan::ProvenanceStrategy::GpuTrace
-pub vyre_foundation::execution_plan::ProvenanceStrategy::Minimal
-pub vyre_foundation::execution_plan::ReadbackStrategy::Full
-pub vyre_foundation::execution_plan::ReadbackStrategy::Full::bytes: u64
-pub vyre_foundation::execution_plan::ReadbackStrategy::Trimmed
-pub vyre_foundation::execution_plan::ReadbackStrategy::Trimmed::avoided_bytes: u64
-pub vyre_foundation::execution_plan::ReadbackStrategy::Trimmed::visible_bytes: u64
-pub vyre_foundation::execution_plan::StrategyPlan::autotune: vyre_foundation::execution_plan::AutotuneStrategy
-pub vyre_foundation::execution_plan::StrategyPlan::conformance: vyre_foundation::execution_plan::ConformanceStrength
-pub vyre_foundation::execution_plan::StrategyPlan::dispatch: vyre_foundation::execution_plan::DispatchStrategy
-pub vyre_foundation::execution_plan::StrategyPlan::fusion: vyre_foundation::execution_plan::FusionStrategy
-pub vyre_foundation::execution_plan::StrategyPlan::layout: vyre_foundation::execution_plan::LayoutStrategy
-pub vyre_foundation::execution_plan::StrategyPlan::provenance: vyre_foundation::execution_plan::ProvenanceStrategy
-pub vyre_foundation::execution_plan::StrategyPlan::readback: vyre_foundation::execution_plan::ReadbackStrategy
 pub vyre_foundation::execution_plan::TrackDecision::active: bool
 pub vyre_foundation::execution_plan::TrackDecision::reason: &'static str
 pub vyre_foundation::execution_plan::TrackDecision::track: vyre_foundation::execution_plan::InnovationTrack

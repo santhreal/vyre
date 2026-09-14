@@ -75,9 +75,6 @@ pub mod recovery;
 /// against a live backend.
 pub mod replay;
 
-/// Backend routing policy for execution plans.
-pub mod routing;
-
 /// Multi-GPU work partitioning across runtime backends.
 pub mod scheduler;
 

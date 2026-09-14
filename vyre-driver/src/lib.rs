@@ -59,7 +59,6 @@ pub mod command_reuse_policy;
 pub mod device_convergence;
 /// Backend-neutral device diagnostic aggregation planning.
 pub mod device_diagnostic_aggregation;
-pub(crate) mod device_extraction;
 /// Backend-neutral device capability profile and projections.
 pub(crate) mod device_profile;
 /// Tier-B device signature TOML loader.
@@ -81,8 +80,6 @@ pub mod external_import;
 /// The external-import contract every concrete driver's importer answers.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod external_import_contracts;
-/// Device-profile-aware extraction cost helpers.
-pub mod extraction_cost;
 /// Backend-neutral fixpoint-iteration resolution.
 pub(crate) mod fixpoint_iterations;
 /// Cross-dispatch fusion decision types and pure analysis.
@@ -280,9 +277,6 @@ pub use binding::{
     binding_plans_share_layout, dynamic_element_count_from_bytes, BackendLayoutClass,
     BackendLayoutFingerprint, BackendLayoutSlot, Binding, BindingPlan, BindingRole,
     BindingSetFingerprint,
-};
-pub use device_extraction::{
-    extract_best_for_device, extract_best_for_devices, DeviceExtraction, ExtractionDevice,
 };
 pub use device_profile::{DeviceProfile, DeviceTimingQuality};
 pub use device_signature::{DeviceSignature, DeviceSignatureTable};

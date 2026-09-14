@@ -3,6 +3,7 @@
 
 mod decl_span;
 mod declarations;
+mod interface_decl;
 mod packages;
 
 pub use declarations::go_extract_declarations;

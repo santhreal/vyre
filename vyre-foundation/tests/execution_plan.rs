@@ -1,9 +1,7 @@
 //! Execution-planning contract tests.
 
 use vyre_foundation::execution_plan::{
-    plan, plan_for_adapter, plan_with_options, AutotuneStrategy, ConformanceStrength,
-    DispatchStrategy, FusionStrategy, InnovationTrack, LayoutStrategy, PlanError,
-    ProvenanceStrategy, ReadbackStrategy, SchedulingPolicy,
+    plan, plan_for_adapter, plan_with_options, InnovationTrack, PlanError, SchedulingPolicy,
 };
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::optimizer::AdapterCaps;
@@ -65,22 +63,19 @@ fn plan_marks_wrapped_program_fusion_candidate() {
     assert!(plan.provenance.top_level_region_wrapped);
 }
 
+/// WHY: the plan states facts about the program, and every one of them once
+/// had a second spelling as a `StrategyPlan` enum restating the same bool.
 #[test]
-fn strategy_encodes_all_seven_tracks_for_small_trimmed_program() {
+fn the_plan_states_every_fact_for_a_small_trimmed_program() {
     let plan = plan(&ranged_output_program()).expect("canonical ranged output program must plan");
-    assert_eq!(plan.strategy.fusion, FusionStrategy::Candidate);
-    assert_eq!(plan.strategy.dispatch, DispatchStrategy::PersistentRuntime);
-    assert_eq!(plan.strategy.conformance, ConformanceStrength::Standard);
-    assert_eq!(plan.strategy.autotune, AutotuneStrategy::DeclaredShape);
-    assert_eq!(plan.strategy.provenance, ProvenanceStrategy::GpuTrace);
-    assert_eq!(plan.strategy.layout, LayoutStrategy::Static);
-    assert_eq!(
-        plan.strategy.readback,
-        ReadbackStrategy::Trimmed {
-            visible_bytes: 8,
-            avoided_bytes: 4088,
-        }
-    );
+    assert!(plan.fusion.batch_fusion_candidate);
+    assert!(!plan.accuracy.exhaustive_conformance_required);
+    assert!(!plan.autotune.recommended);
+    assert!(plan.provenance.emit_region_trace);
+    assert_eq!(plan.memory.dynamic_buffers, 0);
+    assert!(plan.memory.static_bytes > 0);
+    assert_eq!(plan.memory.visible_readback_bytes, 8);
+    assert_eq!(plan.memory.avoided_readback_bytes, 4088);
 }
 
 /// WHY: measuring variants is a fact about the target, not about program size.
@@ -113,21 +108,15 @@ fn measuring_variants_is_a_target_fact_and_not_a_node_count() {
 
     for program in [&large, &small] {
         let bare_plan = plan_for_adapter(program, &bare).expect("static program must plan");
-        assert_eq!(
-            bare_plan.strategy.autotune,
-            AutotuneStrategy::DeclaredShape,
+        assert!(
+            !bare_plan.autotune.recommended,
             "a target that declares no shape has nothing to measure, whatever the node count"
-        );
-        assert_eq!(
-            bare_plan.strategy.dispatch,
-            DispatchStrategy::PersistentRuntime
         );
 
         let measured =
             plan_for_adapter(program, &declares_shapes).expect("static program must plan");
-        assert_eq!(
-            measured.strategy.autotune,
-            AutotuneStrategy::MeasureVariants,
+        assert!(
+            measured.autotune.recommended,
             "a target that declares shapes states there is something to measure"
         );
     }
@@ -149,7 +138,7 @@ fn the_shared_policy_answers_legality_and_ring_arithmetic() {
 }
 
 #[test]
-fn runtime_sized_storage_buffers_remain_dynamic_layout() {
+fn runtime_sized_storage_buffers_stay_dynamic() {
     let program = Program::wrapped(
         vec![
             BufferDecl::read("input", 0, DataType::U32),
@@ -159,7 +148,6 @@ fn runtime_sized_storage_buffers_remain_dynamic_layout() {
         vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
     );
     let plan = plan(&program).expect("runtime-sized input storage must be wire-roundtrippable");
-    assert_eq!(plan.strategy.layout, LayoutStrategy::Dynamic);
     assert_eq!(plan.memory.dynamic_buffers, 1);
 }
 

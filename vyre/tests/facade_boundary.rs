@@ -22,7 +22,6 @@ pub(crate) const FORBIDDEN_INTERNAL_PATH_SEGMENTS: &[&str] = &[
     "candidate",
     "select",
     "cost",
-    "extraction_cost",
     "lower",
     "lowering",
     "emit",

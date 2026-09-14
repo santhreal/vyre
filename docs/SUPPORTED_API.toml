@@ -1223,7 +1223,7 @@ seam = "backend-contract"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 2751
+exported_item_count = 2724
 
   [[package.item]]
   path = "T::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>"
@@ -2522,13 +2522,6 @@ exported_item_count = 2751
 
   [[package.item]]
   path = "impl vyre_foundation::failure_domain::StateOwnerRecovery for vyre_driver::SupportCertificateRegistry"
-  kind = "impl"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl<'a> vyre_driver::ExtractionDevice<'a>"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -4327,41 +4320,6 @@ exported_item_count = 2751
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::DeviceExtraction::backend: &'static str"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::DeviceExtraction::cost: u64"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::DeviceExtraction::hot_path: bool"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::DeviceExtraction::node: L"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::DeviceExtraction<L>"
-  kind = "struct"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_driver::DeviceIdentity"
   kind = "struct"
   stability = "extension"
@@ -5616,62 +5574,6 @@ exported_item_count = 2751
 
   [[package.item]]
   path = "vyre_driver::ExternalResourceRegistry<H>::require_admitted(&self, resource_id: u64) -> core::result::Result<(), vyre_spec::resource_capability::ResourceAbiError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::ExtractionDevice::autotune_record: core::option::Option<&'a vyre_driver::autotune_store::AutotuneRecord>"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::ExtractionDevice::hot_path: bool"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::ExtractionDevice::profile: &'a vyre_driver::DeviceProfile"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::ExtractionDevice::trace_jit: core::option::Option<vyre_driver::trace_jit_policy::TraceJitInputs>"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::ExtractionDevice<'a>"
-  kind = "struct"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::ExtractionDevice<'a>::new(profile: &'a vyre_driver::DeviceProfile, hot_path: bool) -> Self"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::ExtractionDevice<'a>::with_autotune_record(self, record: &'a vyre_driver::autotune_store::AutotuneRecord) -> Self"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::ExtractionDevice<'a>::with_trace_jit(self, counters: vyre_driver::trace_jit_policy::TraceJitInputs) -> Self"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -13193,97 +13095,6 @@ exported_item_count = 2751
   kind = "fn"
   stability = "extension"
   feature = "test-fixtures"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::extract_best_for_device<L, B, H>(egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>, root: vyre_foundation::optimizer::eqsat::EClassId, device: vyre_driver::ExtractionDevice<'_>, base_cost: B, hint_lookup: H) -> core::option::Option<vyre_driver::DeviceExtraction<L>> where L: vyre_foundation::optimizer::eqsat::ENodeLang, B: core::ops::function::Fn(&L) -> u64, H: core::ops::function::Fn(&L) -> vyre_driver::extraction_cost::NodeHints"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::extract_best_for_devices<'a, L, B, H>(egraph: &vyre_foundation::optimizer::eqsat::EGraph<L>, root: vyre_foundation::optimizer::eqsat::EClassId, devices: impl core::iter::traits::collect::IntoIterator<Item = vyre_driver::ExtractionDevice<'a>>, base_cost: B, hint_lookup: H) -> smallvec::SmallVec<[vyre_driver::DeviceExtraction<L>; 4]> where L: vyre_foundation::optimizer::eqsat::ENodeLang, B: core::ops::function::Fn(&L) -> u64, H: core::ops::function::Fn(&L) -> vyre_driver::extraction_cost::NodeHints"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::extraction_cost"
-  kind = "mod"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::extraction_cost::COLD_PATH_COST_SCALE: f32"
-  kind = "const"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::extraction_cost::COLD_PATH_COST_SCALE_BPS: u32"
-  kind = "const"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::extraction_cost::HOT_PATH_COST_SCALE: f32"
-  kind = "const"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::extraction_cost::HOT_PATH_COST_SCALE_BPS: u32"
-  kind = "const"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::extraction_cost::NodeHints"
-  kind = "struct"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::extraction_cost::NodeHints::compile_time_constant: bool"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::extraction_cost::NodeHints::fp16_eligible: bool"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::extraction_cost::TENSOR_CORE_COST_SCALE: f32"
-  kind = "const"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::extraction_cost::TENSOR_CORE_COST_SCALE_BPS: u32"
-  kind = "const"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::extraction_cost::device_aware_cost<L, B, H>(profile: &vyre_driver::DeviceProfile, hot: bool, base_cost_fn: B, hint_lookup: H) -> impl core::ops::function::Fn(&L) -> u64 where L: vyre_foundation::optimizer::eqsat::ENodeLang, B: core::ops::function::Fn(&L) -> u64, H: core::ops::function::Fn(&L) -> vyre_driver::extraction_cost::NodeHints"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
@@ -34787,7 +34598,7 @@ seam = "foundation-ir"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 8851
+exported_item_count = 8815
 
   [[package.item]]
   path = "alloc::string::String::from(err: vyre_foundation::serial::wire::encode::WireEncodeErr) -> alloc::string::String"
@@ -36464,13 +36275,6 @@ exported_item_count = 8851
 
   [[package.item]]
   path = "impl vyre_foundation::execution_plan::ExecutionPlan"
-  kind = "impl"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl vyre_foundation::execution_plan::ReadbackStrategy"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -45094,27 +44898,6 @@ exported_item_count = 8851
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::execution_plan::AutotuneStrategy"
-  kind = "enum"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::AutotuneStrategy::DeclaredShape"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::AutotuneStrategy::MeasureVariants"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_foundation::execution_plan::BufferPlan"
   kind = "struct"
   stability = "extension"
@@ -45178,27 +44961,6 @@ exported_item_count = 8851
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::execution_plan::ConformanceStrength"
-  kind = "enum"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::ConformanceStrength::Exhaustive"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::ConformanceStrength::Standard"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_foundation::execution_plan::DeviceMemoryBudget"
   kind = "struct"
   stability = "extension"
@@ -45236,27 +44998,6 @@ exported_item_count = 8851
   [[package.item]]
   path = "vyre_foundation::execution_plan::DeviceMemoryBudget::validate(&self, plan: &vyre_foundation::execution_plan::MemoryPlan) -> core::result::Result<vyre_foundation::execution_plan::MemoryBudgetReport, vyre_foundation::execution_plan::PlanError>"
   kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::DispatchStrategy"
-  kind = "enum"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::DispatchStrategy::CompiledPipeline"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::DispatchStrategy::PersistentRuntime"
-  kind = "variant"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -45318,13 +45059,6 @@ exported_item_count = 8851
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::execution_plan::ExecutionPlan::strategy: vyre_foundation::execution_plan::StrategyPlan"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_foundation::execution_plan::ExecutionPlan::track_active(&self, track: vyre_foundation::execution_plan::InnovationTrack) -> bool"
   kind = "fn"
   stability = "extension"
@@ -45369,27 +45103,6 @@ exported_item_count = 8851
   [[package.item]]
   path = "vyre_foundation::execution_plan::FusionPlan::top_level_regions: usize"
   kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::FusionStrategy"
-  kind = "enum"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::FusionStrategy::Candidate"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::FusionStrategy::Isolated"
-  kind = "variant"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -45445,34 +45158,6 @@ exported_item_count = 8851
 
   [[package.item]]
   path = "vyre_foundation::execution_plan::InnovationTrack::WholeProgramFusion"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::LayoutStrategy"
-  kind = "enum"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::LayoutStrategy::Dynamic"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::LayoutStrategy::Empty"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::LayoutStrategy::Static"
   kind = "variant"
   stability = "extension"
   feature = "unconditional"
@@ -45759,76 +45444,6 @@ exported_item_count = 8851
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::execution_plan::ProvenanceStrategy"
-  kind = "enum"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::ProvenanceStrategy::GpuTrace"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::ProvenanceStrategy::Minimal"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::ReadbackStrategy"
-  kind = "enum"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::ReadbackStrategy::Full"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::ReadbackStrategy::Full::bytes: u64"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::ReadbackStrategy::Trimmed"
-  kind = "variant"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::ReadbackStrategy::Trimmed::avoided_bytes: u64"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::ReadbackStrategy::Trimmed::visible_bytes: u64"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::ReadbackStrategy::visible_bytes(&self) -> u64"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_foundation::execution_plan::SchedulingPolicy"
   kind = "struct"
   stability = "extension"
@@ -45887,62 +45502,6 @@ exported_item_count = 8851
   [[package.item]]
   path = "vyre_foundation::execution_plan::SchedulingPolicy::worker_workgroup_size(&self, worker_count: u32, max_workgroup_size_x: u32) -> u32"
   kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::StrategyPlan"
-  kind = "struct"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::StrategyPlan::autotune: vyre_foundation::execution_plan::AutotuneStrategy"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::StrategyPlan::conformance: vyre_foundation::execution_plan::ConformanceStrength"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::StrategyPlan::dispatch: vyre_foundation::execution_plan::DispatchStrategy"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::StrategyPlan::fusion: vyre_foundation::execution_plan::FusionStrategy"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::StrategyPlan::layout: vyre_foundation::execution_plan::LayoutStrategy"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::StrategyPlan::provenance: vyre_foundation::execution_plan::ProvenanceStrategy"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::execution_plan::StrategyPlan::readback: vyre_foundation::execution_plan::ReadbackStrategy"
-  kind = "field"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -159676,7 +159235,7 @@ seam = "runtime"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre"
 stability = "internal"
-exported_item_count = 2863
+exported_item_count = 2840
 
   [[package.item]]
   path = "impl bytemuck::pod::Pod for vyre_runtime::resident_work_queue::planner::ResidentWorkItem"
@@ -160968,20 +160527,6 @@ exported_item_count = 2863
 
   [[package.item]]
   path = "impl vyre_runtime::routed_work_queue::InterDeviceRoutedExchange"
-  kind = "impl"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl vyre_runtime::routing::RoutingEngine"
-  kind = "impl"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl vyre_runtime::routing::RoutingPolicy for vyre_runtime::routing::standard_policy::StandardPolicy"
   kind = "impl"
   stability = "internal"
   feature = "unconditional"
@@ -177412,153 +176957,6 @@ exported_item_count = 2863
   [[package.item]]
   path = "vyre_runtime::routed_work_queue::RoutedWorkItem::weight: f32"
   kind = "field"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing"
-  kind = "mod"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingDecision"
-  kind = "enum"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingDecision::GpuPipeline"
-  kind = "variant"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingDecision::PersistentMegakernel"
-  kind = "variant"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingEngine"
-  kind = "struct"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingEngine::new(policy: impl vyre_runtime::routing::RoutingPolicy + 'static) -> Self"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingEngine::route(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingDecision"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingEngine::route_with_explanation(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingExplanation"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingExplanation"
-  kind = "struct"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingExplanation::decision: vyre_runtime::routing::RoutingDecision"
-  kind = "field"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingExplanation::policy: &'static str"
-  kind = "field"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingExplanation::reason: &'static str"
-  kind = "field"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingPolicy: core::marker::Send + core::marker::Sync"
-  kind = "trait"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingPolicy::name(&self) -> &'static str"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingPolicy::route(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingDecision"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::RoutingPolicy::route_with_explanation(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingExplanation"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::standard_policy"
-  kind = "mod"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::standard_policy::StandardPolicy"
-  kind = "struct"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::standard_policy::StandardPolicy::name(&self) -> &'static str"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::standard_policy::StandardPolicy::route(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingDecision"
-  kind = "fn"
-  stability = "internal"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_runtime::routing::standard_policy::StandardPolicy::route_with_explanation(&self, _plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingExplanation"
-  kind = "fn"
   stability = "internal"
   feature = "unconditional"
   wire_compatibility = "api-only"

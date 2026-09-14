@@ -639,7 +639,7 @@ impl WgpuPipeline {
         let Some(limit) = config.max_output_bytes else {
             return Ok(());
         };
-        let visible = self.execution_plan.strategy.readback.visible_bytes();
+        let visible = self.execution_plan.memory.visible_readback_bytes;
         let visible = usize::try_from(visible).map_err(|source| {
             BackendError::new(format!(
                 "visible readback size cannot fit usize: {source}. Fix: split the Program output before dispatch."
