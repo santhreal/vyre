@@ -1,0 +1,16 @@
+category = "Fixed"
+text = """
+A grid-sync segment launches the grid its own pass covers instead of the grid \
+stated for the whole program, and the width is inferred from the buffers the \
+segment references rather than the widest one it declares. A segment inherits \
+the whole program's buffer table so one resident resource slice binds to every \
+segment, so both the split and the launch analysis read the 1048576-element \
+input beside a 4096-element block-total buffer. Profiled on an RTX 4090, all \
+five kernels of the 1048576-element inclusive `u32` scan launched 4096 \
+workgroups of 256, so the two block-total passes ran 1048576 lanes over a \
+4096-element domain. The five kernels now launch 4096, 16, 1, 16 and 4096 \
+workgroups, and their total device time falls from 62.8 us to 40.4 us; the \
+block-total pass alone falls from 22.2 us to 3.2 us. A pass whose result \
+depends on how many invocations ran keeps its full input span, and the block \
+shape carries forward unchanged because the compiled module declares it.
+"""
