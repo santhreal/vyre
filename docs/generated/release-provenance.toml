@@ -1,5 +1,5 @@
 schema_version = 2
-bom_timestamp = "2026-09-14T07:27:52Z"
+bom_timestamp = "2026-09-14T16:48:20Z"
 rustc_version = "1.86.0 (05f9846f8 2025-03-31)"
 cargo_version = "1.86.0 (adf9b6ad1 2025-02-28)"
 target_triples = [
@@ -9,9 +9,9 @@ target_triples = [
     "aarch64-apple-darwin",
     "aarch64-unknown-linux-gnu",
 ]
-lockfile_digest = "c861f1b93b4721e8da20b7092d9111898c962e5692028948344cfeac3dc2386a"
+lockfile_digest = "4b6e057aee514ac1ff8c7980536f4743d7faf47bff6759b4890fc90e4890a083"
 is_offline_capable = true
-reproducible_archive_hash = "1715da3e46ce83a8268a524f14883bdbaa0fee59549109ca911fd33c664d6ab2"
+reproducible_archive_hash = "5cb82eccff9aaa72c4230e10128478077460e00181ebf8f69079437ef5e6d8b8"
 
 [[dependencies]]
 name = "adler2"
@@ -4127,7 +4127,7 @@ digest = "ab7433710f7119519c205c4179d6a766f0b8361ee6ec65665c9cc513151641bb"
 
 [[schemas]]
 path = "docs/generated/change-closure.toml"
-digest = "957a8739b50c8078a3058eb8c60d304cc8736e8092ad4f6698beb0c085193f4e"
+digest = "ed60ff263919ff28427a95cf62a2ec11f576dd861d6f64c8b1d6599d7095c284"
 
 [[schemas]]
 path = "docs/generated/configuration-space.toml"

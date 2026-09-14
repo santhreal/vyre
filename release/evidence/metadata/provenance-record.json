@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"908172a2b7c535d690f0c4dc2a234a43b0e39699","commit_timestamp":"1789370872","parent_commit":"780f9ed27f41773b7128f3ea8ad552324771803f","dirty":false,"source_fingerprint":"git:908172a2b7c535d690f0c4dc2a234a43b0e39699:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"db6257d094ddcadaa804538a60b4061570775cf4","commit_timestamp":"1789404500","parent_commit":"c41a5a6af30863023ad0a6faa4ef3d330f7b6665","dirty":false,"source_fingerprint":"git:db6257d094ddcadaa804538a60b4061570775cf4:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
   "_type": "https://in-toto.io/Statement/v1",
   "predicate": {
     "buildDefinition": {
@@ -2913,7 +2913,7 @@
         },
         {
           "digest": {
-            "sha256": "957a8739b50c8078a3058eb8c60d304cc8736e8092ad4f6698beb0c085193f4e"
+            "sha256": "ed60ff263919ff28427a95cf62a2ec11f576dd861d6f64c8b1d6599d7095c284"
           },
           "name": "docs/generated/change-closure.toml"
         },
@@ -2966,7 +2966,7 @@
           "materials": true,
           "parameters": true
         },
-        "invocationId": "inv-c861f1b93b4721e8da20b7092d9111898c962e5692028948344cfeac3dc2386a",
+        "invocationId": "inv-4b6e057aee514ac1ff8c7980536f4743d7faf47bff6759b4890fc90e4890a083",
         "reproducible": true
       }
     }
@@ -2975,7 +2975,7 @@
   "subject": [
     {
       "digest": {
-        "blake3": "1715da3e46ce83a8268a524f14883bdbaa0fee59549109ca911fd33c664d6ab2"
+        "blake3": "5cb82eccff9aaa72c4230e10128478077460e00181ebf8f69079437ef5e6d8b8"
       },
       "name": "vyre-release-archive"
     }
