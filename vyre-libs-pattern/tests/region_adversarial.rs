@@ -61,6 +61,114 @@ fn lcg_next(state: &mut u32) -> u32 {
     *state
 }
 
+/// One dedup under measurement.
+type Dedup<'a> = &'a dyn Fn(Vec<RegionTriple>) -> Vec<RegionTriple>;
+
+/// Shortest of three runs of `dedup` over `build(n)`, in nanoseconds.
+///
+/// The shortest run is the one least disturbed by whatever else the host is
+/// doing, which is what makes the ratio below readable while the whole
+/// workspace test suite runs beside it.
+fn fastest_dedup_nanos(
+    n: usize,
+    build: &dyn Fn(usize) -> Vec<RegionTriple>,
+    dedup: Dedup<'_>,
+) -> u128 {
+    let input = build(n);
+    (0..3)
+        .map(|_| {
+            let sample = input.clone();
+            let start = Instant::now();
+            let out = dedup(sample);
+            let elapsed = start.elapsed();
+            std::hint::black_box(out);
+            elapsed.as_nanos()
+        })
+        .min()
+        .expect("three samples")
+}
+
+/// Assert `dedup` grows sub-quadratically from `n` to `4 * n`.
+///
+/// WHY: a wall-clock ceiling measures how busy the host is, so it goes red
+/// under the very sweep that runs it while a quadratic rewrite on an idle host
+/// stays green. A ratio between two sizes measured back to back cancels the
+/// host out: sorting plus a linear merge lands near `4.3`, and the quadratic
+/// term this guards against lands at `16`. The gap is where the bound sits.
+///
+/// It does not catch a constant-factor regression, and it does not catch a
+/// blowup that needs more than `4 * n` elements to show.
+fn assert_subquadratic_growth_of(
+    n: usize,
+    build: &dyn Fn(usize) -> Vec<RegionTriple>,
+    dedup: Dedup<'_>,
+) {
+    let small = fastest_dedup_nanos(n, build, dedup).max(1);
+    let large = fastest_dedup_nanos(4 * n, build, dedup).max(1);
+    assert!(
+        large * 100 < small * 800,
+        "FINDING-ADV-REGION-SCALE: {n} took {small} ns and {} took {large} ns, \
+         a factor of {:.1} against the quadratic factor of 16",
+        4 * n,
+        large as f64 / small as f64
+    );
+}
+
+/// Assert the shipped `reference_dedup_regions` grows sub-quadratically.
+fn assert_subquadratic_growth(n: usize, build: &dyn Fn(usize) -> Vec<RegionTriple>) {
+    assert_subquadratic_growth_of(n, build, &|input| reference_dedup_regions(input));
+}
+
+/// Dedup with the same output as the reference and a quadratic sort.
+///
+/// Exists only to prove the growth bound above can go red.
+fn quadratic_dedup(mut regions: Vec<RegionTriple>) -> Vec<RegionTriple> {
+    for i in 1..regions.len() {
+        let mut j = i;
+        while j > 0 && regions[j - 1] > regions[j] {
+            regions.swap(j - 1, j);
+            j -= 1;
+        }
+    }
+    let mut merged: Vec<RegionTriple> = Vec::with_capacity(regions.len());
+    for region in regions {
+        if let Some(previous) = merged.last_mut() {
+            if previous.pid == region.pid && region.start <= previous.end {
+                previous.end = previous.end.max(region.end);
+                continue;
+            }
+        }
+        merged.push(region);
+    }
+    merged
+}
+
+/// WHY: a growth bound that no quadratic implementation trips is not a bound.
+/// The stand-in merges identically and differs only in how it sorts, so the
+/// ratio is the one thing that separates it from the shipped path.
+#[test]
+fn the_growth_bound_goes_red_on_a_quadratic_dedup() {
+    let build = |n: usize| -> Vec<RegionTriple> {
+        let mut rng = 0x5eedu32;
+        (0..n)
+            .map(|_| {
+                let start = lcg_next(&mut rng) % 10_000;
+                RegionTriple::new(lcg_next(&mut rng) % 4, start, start + 100)
+            })
+            .collect()
+    };
+    assert_eq!(
+        quadratic_dedup(build(4_000)),
+        reference_dedup_regions(build(4_000)),
+        "the stand-in must agree with the reference, or it proves nothing"
+    );
+    let fired = std::panic::catch_unwind(|| {
+        assert_subquadratic_growth_of(1_000, &build, &|input| quadratic_dedup(input));
+    })
+    .is_err();
+    assert!(fired, "the growth bound accepted a quadratic dedup");
+}
+
 // ---------------------------------------------------------------------------
 // 1. u32 boundary conditions
 // ---------------------------------------------------------------------------
@@ -190,17 +298,12 @@ fn degenerate_zero_width_alternating_pids() {
 
 #[test]
 fn cluster_100k_all_overlapping_same_pid() {
-    let input: Vec<_> = (0..100_000)
-        .map(|i| RegionTriple::new(0, (i as u32) % 1000, (i as u32) % 1000 + 500))
-        .collect();
-    let start = Instant::now();
-    let out = reference_dedup_regions(input.clone());
-    let elapsed = start.elapsed();
-    assert!(
-        elapsed.as_millis() < 100,
-        "FINDING-ADV-REGION-SCALE: 100k overlapping cluster took {} ms",
-        elapsed.as_millis()
-    );
+    let build = |n: usize| -> Vec<RegionTriple> {
+        (0..n)
+            .map(|i| RegionTriple::new(0, (i as u32) % 1000, (i as u32) % 1000 + 500))
+            .collect()
+    };
+    let out = reference_dedup_regions(build(100_000));
     assert_eq!(
         out.len(),
         1,
@@ -209,6 +312,7 @@ fn cluster_100k_all_overlapping_same_pid() {
     assert_eq!(out[0], RegionTriple::new(0, 0, 1499));
     assert_sorted(&out);
     assert_no_same_pid_overlap(&out);
+    assert_subquadratic_growth(25_000, &build);
 }
 
 #[test]
@@ -414,39 +518,28 @@ fn scale_1024_random_no_panic() {
 
 #[test]
 fn scale_100k_smoke_no_quadratic_blowup() {
-    let mut rng = 0xc0ffeeu32;
-    let mut input = Vec::with_capacity(100_000);
-    for _ in 0..100_000 {
-        let pid = lcg_next(&mut rng) % 4;
-        let start = lcg_next(&mut rng) % 10_000;
-        let len = 100 + (lcg_next(&mut rng) % 500);
-        let end = start.saturating_add(len);
-        input.push(RegionTriple::new(pid, start, end));
-    }
-    let start = Instant::now();
-    let out = reference_dedup_regions(input.clone());
-    let elapsed = start.elapsed();
-    assert!(
-        elapsed.as_millis() < 100,
-        "FINDING-ADV-REGION-SCALE: 100k random triples took {} ms \
-         (possible quadratic blowup)",
-        elapsed.as_millis()
-    );
+    let build = |n: usize| -> Vec<RegionTriple> {
+        let mut rng = 0xc0ffeeu32;
+        let mut input = Vec::with_capacity(n);
+        for _ in 0..n {
+            let pid = lcg_next(&mut rng) % 4;
+            let start = lcg_next(&mut rng) % 10_000;
+            let len = 100 + (lcg_next(&mut rng) % 500);
+            let end = start.saturating_add(len);
+            input.push(RegionTriple::new(pid, start, end));
+        }
+        input
+    };
+    let out = reference_dedup_regions(build(100_000));
     assert_sorted(&out);
     assert_no_same_pid_overlap(&out);
+    assert_subquadratic_growth(25_000, &build);
 }
 
 #[test]
 fn scale_100k_identical_collapse() {
     let t = RegionTriple::new(5, 1000, 2000);
-    let input = vec![t; 100_000];
-    let start = Instant::now();
-    let out = reference_dedup_regions(input.clone());
-    let elapsed = start.elapsed();
-    assert!(
-        elapsed.as_millis() < 100,
-        "FINDING-ADV-REGION-SCALE: 100k identical collapse took {} ms",
-        elapsed.as_millis()
-    );
-    assert_eq!(out, vec![t]);
+    let build = |n: usize| -> Vec<RegionTriple> { vec![t; n] };
+    assert_eq!(reference_dedup_regions(build(100_000)), vec![t]);
+    assert_subquadratic_growth(25_000, &build);
 }

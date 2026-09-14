@@ -68,7 +68,7 @@ disk_use_bytes = 2725131
 compile_units = 32
 link_units = 55
 duplicate_source_bytes = 13845
-disk_use_bytes = 2901257
+disk_use_bytes = 2904806
 
 [tier.lowering]
 compile_units = 2

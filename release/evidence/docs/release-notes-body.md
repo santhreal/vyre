@@ -587,6 +587,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   query and key heads. It accumulates sum-of-squares in F32, applies epsilon
   inside the canonical inverse-square-root contract, isolates rows exactly, and
   converts output once to F32, F16, or BF16.
+- `vyre_foundation::composition::lesser_extent` yields the smaller of two
+  buffer extents, so a composition that reads one buffer and writes another
+  bounds its loop by both.
 - Every quantized dispatch entry point in `vyre-libs` published as `_via` must
   carry a row asserting how it rejects a malformed backend readback, checked
   against the re-export list parsed from
@@ -924,6 +927,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A versioned specialization contract states which typed facts a compile may
   specialize on, and rejects a variant guard that reads an undeclared axis or
   states values the axis domain does not admit.
+- `vyre_driver::staged_input_gather!` implements the `core` accessor and the
+  staged-input `gather` for a materialized instance whose module carries
+  `input_slots`, so every driver resolves inter-module values in target binding
+  order.
 - `FloatLoweringMode::StrictIeee` replaces `sin`, `cos`, `sqrt`, `exp` and
   `log` with f32 expansions built only from correctly-rounded operations and
   exact integer work on exponent and mantissa fields, so a device and the
@@ -7562,6 +7569,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   held to its own declared tolerance, and the attribution is refused rather
   than guessed when the second stage writes the piped buffer. No budget was
   widened.
+- Brute-force substring search, the cooperative DFA scan, the Aho-Corasick
+  bounded suffix scan, and the atomic trace compositions bound every store by
+  the extent of the buffer they write instead of the extent of the buffer they
+  read. An invocation whose output buffer is shorter than its input buffer
+  stored one element past the end of the output.
+  `assert_oob_clean_under_over_provisioned_inputs` runs every registered
+  composition with inputs longer than its declared outputs and fails on a store
+  outside a declared buffer.
 - The conformance certificate's signable body is defined once, in
   `vyre-conform`'s `certificate_wire`. The prove, merge and test paths each
   restated the serialized layout, so adding the unavailable-backend roster to
@@ -9080,6 +9095,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The registered regex NFA and DFA operations now carry exact byte-output
   fixtures for their canonical zero-input cases, restoring positive reference,
   CUDA, and WGPU conformance coverage.
+- The region dedup scale tests assert that the shipped dedup grows
+  sub-quadratically between two input sizes measured back to back, instead of
+  asserting a 100 ms wall-clock ceiling. The ceiling measured how busy the host
+  was, so it went red under the workspace test sweep that runs it and stayed
+  green for a quadratic rewrite on an idle host. A stand-in dedup that merges
+  identically and sorts quadratically proves the new bound goes red.
 - Both validator walks agree that `Node::Region` scopes its body. The legacy
   multi-walk arm recorded no scope log for a region body, so a `let` inside a
   region was never undone and stayed live past the region, past an enclosing
