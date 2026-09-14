@@ -155,3 +155,103 @@ fn a_pure_collective_argument_still_evaluates() {
         "every lane in the one subgroup must read the same reduction of every lane's value"
     );
 }
+
+/// A program whose only collective is `collective`, gathering over whatever
+/// argument expression each case supplies.
+fn program_with_collective(collective: Expr) -> Program {
+    Program::wrapped(
+        vec![
+            BufferDecl::storage("sink", 0, BufferAccess::ReadWrite, DataType::U32)
+                .with_count(LANES),
+            BufferDecl::output("counter", 1, DataType::U32).with_count(1),
+        ],
+        [LANES, 1, 1],
+        vec![
+            Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
+            Node::let_bind("gathered", collective),
+            Node::store("sink", Expr::var("idx"), Expr::var("gathered")),
+        ],
+    )
+}
+
+/// An atomic, and the same atomic buried under pure operators.
+///
+/// The refusal reads the whole argument subtree, so depth must not hide the
+/// write. A predicate that inspected only the argument's root node would
+/// admit every nested case here and commit it once per lane per lane.
+fn effectful_arguments() -> Vec<(&'static str, Expr)> {
+    let bare = || Expr::atomic_add("counter", Expr::u32(0), Expr::u32(1));
+    vec![
+        ("bare atomic", bare()),
+        ("atomic under an operator", Expr::add(bare(), Expr::u32(1))),
+        (
+            "atomic under a select arm",
+            Expr::select(Expr::LitBool(true), bare(), Expr::u32(0)),
+        ),
+        (
+            "atomic under two operators",
+            Expr::add(Expr::add(bare(), Expr::u32(1)), Expr::u32(2)),
+        ),
+    ]
+}
+
+/// Every collective, and every argument position each one has.
+///
+/// The gather is one function, so one refusal covers all of them; the union is
+/// enumerated anyway because the recurring defect is a rule applied to the
+/// case someone had in mind and not to its siblings. `SubgroupShuffle` carries
+/// TWO argument expressions and a guard on the value alone would leave the
+/// lane index committing on every gather.
+fn collectives_over(argument: &Expr) -> Vec<(&'static str, Expr)> {
+    vec![
+        (
+            "reduce value",
+            Expr::SubgroupReduce {
+                op: vyre_foundation::ir::SubgroupReduceOp::Add,
+                value: Box::new(argument.clone()),
+            },
+        ),
+        (
+            "ballot condition",
+            Expr::SubgroupBallot {
+                cond: Box::new(argument.clone()),
+            },
+        ),
+        (
+            "shuffle value",
+            Expr::SubgroupShuffle {
+                value: Box::new(argument.clone()),
+                lane: Box::new(Expr::u32(0)),
+            },
+        ),
+        (
+            "shuffle lane",
+            Expr::SubgroupShuffle {
+                value: Box::new(Expr::u32(0)),
+                lane: Box::new(argument.clone()),
+            },
+        ),
+    ]
+}
+
+/// Every collective argument position refuses a write at every nesting depth.
+#[test]
+fn every_collective_argument_position_refuses_a_write() {
+    for (shape, argument) in effectful_arguments() {
+        for (position, collective) in collectives_over(&argument) {
+            let error = vyre_reference::ReferenceRequest::standard(
+                &program_with_collective(collective),
+                &atomic_program_inputs(),
+            )
+            .outputs()
+            .expect_err(&format!(
+                "{position} must refuse {shape} rather than commit it once per lane per lane"
+            ));
+            let message = error.to_string();
+            assert!(
+                message.contains("subgroup collective") && message.contains("writes memory"),
+                "{position} refused {shape} for the wrong reason: {message}"
+            );
+        }
+    }
+}
