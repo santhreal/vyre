@@ -97,17 +97,26 @@ fn schema_field_numbers_are_strictly_ascending() {
     }
 }
 
+/// WHY: closes the class "one schema's record tag is confusable with
+/// another's". A `domain_separator` and a `stale_fixtures` entry are both just
+/// strings in one namespace, so the registry can declare a tag live for one
+/// schema and retired by another, hand two schemas the same separator, retire
+/// one tag from two owners, or bump `semver` without bumping the version the
+/// separator carries into the digest. Each of those refuses a live record or
+/// accepts a stale one.
+///
+/// The member set comes from `SchemaRegistry::all()` at run time, so a new
+/// schema is checked without editing this test. What it does NOT catch: a
+/// retired tag that was never a real previous spelling, which no data in the
+/// registry can distinguish from a real one.
 #[test]
-fn domain_separators_are_globally_unique() {
-    let mut seen = std::collections::BTreeSet::new();
-    for def in SchemaRegistry::all() {
-        assert!(
-            seen.insert(def.domain_separator),
-            "Fix: duplicate domain separator `{}` found for {:?}",
-            def.domain_separator,
-            def.id
-        );
-    }
+fn no_record_tag_is_confusable_between_schemas() {
+    let violations = SchemaRegistry::tag_authority_violations();
+    assert!(
+        violations.is_empty(),
+        "Fix: give each tag one owner and one meaning:\n  {}",
+        violations.join("\n  ")
+    );
 }
 
 #[test]

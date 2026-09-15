@@ -180267,7 +180267,7 @@ seam = "specification"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre"
 stability = "extension"
-exported_item_count = 2018
+exported_item_count = 2019
 
   [[package.item]]
   path = "F::available(&self, op: &str) -> bool"
@@ -194117,6 +194117,13 @@ exported_item_count = 2018
 
   [[package.item]]
   path = "vyre_spec::schema_registry::SchemaRegistry::lookup(id: vyre_spec::schema_registry::SchemaId) -> core::option::Option<&'static vyre_spec::schema_registry::SchemaDefinition>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_spec::schema_registry::SchemaRegistry::tag_authority_violations() -> alloc::vec::Vec<alloc::string::String>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"

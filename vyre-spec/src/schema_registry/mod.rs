@@ -426,7 +426,7 @@ static STALE_INVARIANT_FIXTURES: &[&str] = &["vyre-invariant-v0"];
 static STALE_ANALYSIS_FIXTURES: &[&str] = &["vyre-fact-v0"];
 static STALE_EXTENSION_FIXTURES: &[&str] = &["vyre-ext-schema-v0"];
 static STALE_REPLAY_FIXTURES: &[&str] = &["vyre-replay-capsule-v1"];
-static STALE_BUNDLE_FIXTURES: &[&str] = &["vyre-conformance-certificate-v1"];
+static STALE_BUNDLE_FIXTURES: &[&str] = &["vyre-bundle-certificate-v1"];
 static STALE_PROVE_FIXTURES: &[&str] = &["vyre-prove-artifact-v1"];
 static STALE_PROOF_PLAN_FIXTURES: &[&str] = &["vyre-proof-plan-v0"];
 static STALE_SAFETENSOR_FIXTURES: &[&str] = &["vyre-safetensors-v0"];
@@ -919,4 +919,89 @@ impl SchemaRegistry {
     pub const fn all() -> &'static [SchemaDefinition] {
         CANONICAL_SCHEMA_REGISTRY
     }
+
+    /// Every way one schema's record tag can be confused with another's.
+    ///
+    /// A `domain_separator` is what keeps two schemas' digests apart, and a
+    /// `stale_fixtures` entry is a tag a decoder must refuse. Both live in one
+    /// flat namespace of strings, so the two lists can disagree: a tag can be
+    /// live for one schema and retired by another, two schemas can claim the
+    /// same separator, or a bump can land on `semver` and not on the separator
+    /// that carries the version into the digest. Each of those either refuses a
+    /// live record or accepts a stale one, and none is visible from a single
+    /// definition, so the check is over the whole registry.
+    #[must_use]
+    pub fn tag_authority_violations() -> Vec<String> {
+        let mut violations = Vec::new();
+        for (index, def) in CANONICAL_SCHEMA_REGISTRY.iter().enumerate() {
+            let live = def.domain_separator;
+
+            if let Some(version) = trailing_version(live) {
+                if version != def.semver.major {
+                    violations.push(format!(
+                        "{:?} separator `{live}` carries version {version} but semver is {}",
+                        def.id, def.semver
+                    ));
+                }
+            } else {
+                violations.push(format!(
+                    "{:?} separator `{live}` states no trailing version, so a bump cannot reach the digest",
+                    def.id
+                ));
+            }
+
+            for (position, tag) in def.stale_fixtures.iter().enumerate() {
+                if *tag == live {
+                    violations.push(format!(
+                        "{:?} retires `{tag}`, which is its own live separator",
+                        def.id
+                    ));
+                }
+                if def.stale_fixtures[..position].contains(tag) {
+                    violations.push(format!("{:?} retires `{tag}` twice", def.id));
+                }
+            }
+
+            for other in CANONICAL_SCHEMA_REGISTRY.iter().skip(index + 1) {
+                if other.domain_separator == live {
+                    violations.push(format!(
+                        "{:?} and {:?} share the separator `{live}`",
+                        def.id, other.id
+                    ));
+                }
+                for tag in other.stale_fixtures {
+                    if *tag == live {
+                        violations.push(format!(
+                            "{:?} is live as `{live}` while {:?} retires that tag",
+                            def.id, other.id
+                        ));
+                    }
+                    if def.stale_fixtures.contains(tag) {
+                        violations.push(format!(
+                            "{:?} and {:?} both retire `{tag}`, so the tag has no owner",
+                            def.id, other.id
+                        ));
+                    }
+                }
+                if def.stale_fixtures.contains(&other.domain_separator) {
+                    violations.push(format!(
+                        "{:?} retires `{}`, which is {:?}'s live separator",
+                        def.id, other.domain_separator, other.id
+                    ));
+                }
+            }
+        }
+        violations
+    }
+}
+
+/// Major version stated by the trailing `-vN` or `_VN` of a domain separator.
+///
+/// Both spellings are in use across the registry, so the parse accepts either
+/// rather than forcing a rename of tags that are already written into persisted
+/// records.
+fn trailing_version(separator: &str) -> Option<u32> {
+    let (_, tail) = separator.rsplit_once(['-', '_'])?;
+    let digits = tail.strip_prefix('v').or_else(|| tail.strip_prefix('V'))?;
+    digits.parse().ok()
 }

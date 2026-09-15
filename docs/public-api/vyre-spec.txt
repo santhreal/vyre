@@ -863,6 +863,7 @@ pub fn vyre_spec::schema_registry::SchemaDefinition::identity_fields(&self) -> i
 pub fn vyre_spec::schema_registry::SchemaDefinition::validate_invariants(&self) -> bool
 pub fn vyre_spec::schema_registry::SchemaId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_spec::schema_registry::SchemaRegistry::lookup(id: vyre_spec::schema_registry::SchemaId) -> core::option::Option<&'static vyre_spec::schema_registry::SchemaDefinition>
+pub fn vyre_spec::schema_registry::SchemaRegistry::tag_authority_violations() -> alloc::vec::Vec<alloc::string::String>
 pub fn vyre_spec::soundness::DynamicPrimitiveSoundness::new(op_id: impl core::convert::Into<alloc::string::String>, soundness: vyre_spec::soundness::Soundness) -> Self
 pub fn vyre_spec::soundness::DynamicPrimitiveSoundness::with_sanitizer_filter(self) -> Self
 pub fn vyre_spec::soundness::SoundnessTagged::soundness(&self) -> vyre_spec::soundness::Soundness
