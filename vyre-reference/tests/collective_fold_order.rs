@@ -32,6 +32,9 @@
 //! association, and a device that folds in an order no `LaneOrder` names.
 #![cfg(feature = "subgroup-ops")]
 
+use crate::lane_collectives;
+
+use lane_collectives::{lane_program, shuffle_values_by};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Node, Program, SubgroupReduceOp,
 };
@@ -71,14 +74,13 @@ fn every_policy() -> Vec<(String, DeterministicSchedulePolicy)> {
 /// Every lane stores the reduction to its own slot, so the output bytes are
 /// the reduction itself rather than a race between lanes.
 fn reducing_program(op: SubgroupReduceOp, ty: DataType) -> Program {
-    Program::wrapped(
+    lane_program(
+        LANES,
         vec![
             BufferDecl::storage("in", 0, BufferAccess::ReadOnly, ty.clone()).with_count(LANES),
             BufferDecl::output("out", 1, ty).with_count(LANES),
         ],
-        [LANES, 1, 1],
         vec![
-            Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
             Node::let_bind(
                 "folded",
                 Expr::SubgroupReduce {
@@ -92,21 +94,11 @@ fn reducing_program(op: SubgroupReduceOp, ty: DataType) -> Program {
 }
 
 fn pack_u32(words: &[u32]) -> Value {
-    Value::from(
-        words
-            .iter()
-            .flat_map(|word| word.to_le_bytes())
-            .collect::<Vec<u8>>(),
-    )
+    Value::from(vyre_primitives::wire::pack_u32_slice(words))
 }
 
 fn pack_f32(lanes: &[f32]) -> Value {
-    Value::from(
-        lanes
-            .iter()
-            .flat_map(|lane| lane.to_le_bytes())
-            .collect::<Vec<u8>>(),
-    )
+    Value::from(vyre_primitives::wire::pack_f32_slice(lanes))
 }
 
 /// Raw output bytes of the single declared output buffer.
@@ -276,21 +268,17 @@ fn an_order_dependent_reduction_disagrees_under_some_explored_order() {
 /// true only below lane 8, so permuting the predicates changes the mask.
 #[test]
 fn a_lane_addressed_collective_is_unchanged_by_every_explored_order() {
-    let program = Program::wrapped(
+    let program = lane_program(
+        LANES,
         vec![
             BufferDecl::storage("values", 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(LANES),
             BufferDecl::output("out", 1, DataType::U32).with_count(LANES),
         ],
-        [LANES, 1, 1],
         vec![
-            Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
-            Node::let_bind(
+            shuffle_values_by(
                 "shuffled",
-                Expr::SubgroupShuffle {
-                    value: Box::new(Expr::load("values", Expr::var("idx"))),
-                    lane: Box::new(Expr::sub(Expr::u32(LANES - 1), Expr::var("idx"))),
-                },
+                Expr::sub(Expr::u32(LANES - 1), Expr::var("idx")),
             ),
             Node::let_bind(
                 "mask",

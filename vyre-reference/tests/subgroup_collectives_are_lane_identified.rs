@@ -21,6 +21,9 @@
 //! interpreter that is consistently wrong in every schedule still fails.
 #![cfg(feature = "subgroup-ops")]
 
+use crate::lane_collectives;
+
+use lane_collectives::{lane_program, shuffle_values_by};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::value::Value;
 
@@ -109,14 +112,13 @@ fn assert_every_step_order_matches(
 
 /// `out[i] = subgroupBallot(cond[i] == 1)`, no guards: every lane is in bounds.
 fn ballot_program() -> Program {
-    Program::wrapped(
+    lane_program(
+        LANES,
         vec![
             BufferDecl::storage("cond", 0, BufferAccess::ReadOnly, DataType::U32).with_count(LANES),
             BufferDecl::output("out", 1, DataType::U32).with_count(LANES),
         ],
-        [LANES, 1, 1],
         vec![
-            Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
             Node::let_bind(
                 "mask",
                 Expr::SubgroupBallot {
@@ -130,7 +132,8 @@ fn ballot_program() -> Program {
 
 /// `out[i] = subgroupShuffle(values[i], lanes[i])`, no guards.
 fn shuffle_program() -> Program {
-    Program::wrapped(
+    lane_program(
+        LANES,
         vec![
             BufferDecl::storage("values", 0, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(LANES),
@@ -138,16 +141,8 @@ fn shuffle_program() -> Program {
                 .with_count(LANES),
             BufferDecl::output("out", 2, DataType::U32).with_count(LANES),
         ],
-        [LANES, 1, 1],
         vec![
-            Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
-            Node::let_bind(
-                "shuffled",
-                Expr::SubgroupShuffle {
-                    value: Box::new(Expr::load("values", Expr::var("idx"))),
-                    lane: Box::new(Expr::load("lanes", Expr::var("idx"))),
-                },
-            ),
+            shuffle_values_by("shuffled", Expr::load("lanes", Expr::var("idx"))),
             Node::store("out", Expr::var("idx"), Expr::var("shuffled")),
         ],
     )

@@ -10,6 +10,11 @@
 #[path = "flat_expr_eval/mod.rs"]
 pub mod flat_expr_eval;
 
+/// Shared fixture module from `tests/lane_collectives/mod.rs`.
+#[allow(missing_docs)]
+#[path = "lane_collectives/mod.rs"]
+pub mod lane_collectives;
+
 /// Shared fixture module from `tests/wire_words/mod.rs`.
 #[allow(missing_docs)]
 #[path = "wire_words/mod.rs"]
