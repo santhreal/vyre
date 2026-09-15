@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Barrier lowering follows the IR memory ordering. Acquire, Release and AcqRel name global-memory visibility and lower to a storage fence, PTX membar.gl and WGSL STORAGE. SeqCst stays a full workgroup barrier and its WGSL flags are the address spaces the barrier body actually touches, so a workgroup-scratch reduction round no longer requests a device-scope storage fence and a global release fence no longer converges the whole workgroup. The four strong orderings used to collapse onto one construct."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`scripts/check_feature_msrv.sh` printed a hardcoded 19-entry matrix and exited 0 without compiling anything. It now derives one entry per publishable member per declared feature from tracked manifests and compiles each alone on the toolchain `[workspace.package].rust-version` names, which must be installed."

@@ -1,0 +1,2 @@
+category = "Added"
+text = "The neural library now provides last-dimension L2 normalization for grouped query and key heads. It accumulates sum-of-squares in F32, applies epsilon inside the canonical inverse-square-root contract, isolates rows exactly, and converts output once to F32, F16, or BF16."

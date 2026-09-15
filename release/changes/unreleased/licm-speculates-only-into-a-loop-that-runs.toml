@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Loop-invariant hoisting moves a load out of a loop only when the header proves the body runs, so a read is never issued for an iteration space that may be empty."

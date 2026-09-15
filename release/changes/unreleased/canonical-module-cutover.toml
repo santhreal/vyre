@@ -1,0 +1,2 @@
+category = "Removed"
+text = "Neural operations and opaque-payload helpers now use their category-owned module paths. Flat compatibility re-exports and the `matching::ops` shim are gone; unclassified backend failures use `BackendError::Other`."

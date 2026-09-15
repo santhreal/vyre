@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Artifact completion and resource projection now filter out internal intermediate buffers and retained predecessor carriers from caller-visible outputs and retained state. Fused security and library compositions demote intermediate stage outputs so only terminal graph values are published to the runtime semantic boundary."

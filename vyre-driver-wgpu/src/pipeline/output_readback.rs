@@ -7,8 +7,8 @@
 
 use std::time::Instant;
 
-use vyre_driver::program_walks::OutputBindingLayout;
 use vyre_driver::BackendError;
+use vyre_driver::OutputBindingLayout;
 
 use crate::buffer::{GpuBufferHandle, StagingBufferPool};
 

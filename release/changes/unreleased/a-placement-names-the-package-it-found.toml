@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The operation placement reader reports the declared package name rather than the workspace member directory, so a crate under a grouping directory is named by something a reader can pass to cargo."

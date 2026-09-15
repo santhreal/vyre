@@ -1,0 +1,2 @@
+category = "Added"
+text = "The neural library now executes recurrent gated delta attention with F32 Q/K normalization, grouped heads, scaled queries, exponential decay, sigmoid beta, F32 matrix-state continuation, source-dtype output, and explicit validated prior and next state generations."

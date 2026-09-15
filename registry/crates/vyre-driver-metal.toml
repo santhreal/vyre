@@ -1,0 +1,5 @@
+name = "vyre-driver-metal"
+concern = "Own pure MSL target compilation, native Apple device acquisition, materialization, dispatch, and backend evidence."
+pages = { spec = "vyre-driver-metal/SPEC.md", readme = "vyre-driver-metal/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-driver", "vyre-emit-metal", "vyre-foundation", "vyre-lower", "vyre-megakernel"]

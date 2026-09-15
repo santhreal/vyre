@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Where a packed field sits is answered by the contract that states the layout, so the four-bit library paths build their reads from `load_field`, `load_row_field` and `decode_field` instead of their own lane arithmetic and sign-extension helpers."

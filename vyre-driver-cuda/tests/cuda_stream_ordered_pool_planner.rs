@@ -1,5 +1,7 @@
 //! Cuda stream ordered pool planner test suite.
 
+#![cfg(feature = "device-tests")]
+
 const PLANNER: &str = include_str!("../../docs/optimization/CUDA_STREAM_ORDERED_POOL_PLANNER.toml");
 
 #[test]

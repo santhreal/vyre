@@ -81,6 +81,8 @@ fn decode_part_len(bytes: &[u8]) -> Result<usize> {
     Ok(len)
 }
 
+// Inline: `vyre_driver_wgpu::runtime::serializer::decode_parts` is `pub(crate)`, so no integration
+// test can reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -48,7 +48,8 @@ fn range_fold_does_not_dissolve_arm_scope_into_loop_body() {
     let program = program_arm_binding_collides_with_sibling();
     let inputs: [Value; 0] = []; // buf is the only buffer and it is an output.
 
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original program is well-scoped (arm `x` popped before sibling `x`)");
     assert_eq!(
         original,
@@ -62,10 +63,12 @@ fn range_fold_does_not_dissolve_arm_scope_into_loop_body() {
         "i < 8 is always true for i in [0,8) and must fold"
     );
 
-    let after = vyre_reference::reference_eval(&result.program, &inputs).expect(
-        "folding the always-true If must keep the arm's `let x` scoped -- splicing \
+    let after = vyre_reference::ReferenceRequest::standard(&result.program, &inputs)
+        .outputs()
+        .expect(
+            "folding the always-true If must keep the arm's `let x` scoped -- splicing \
          it next to the sibling `let x` is a V032 duplicate-binding miscompile",
-    );
+        );
     assert_eq!(
         after, original,
         "range-fold must preserve semantics and scoping",

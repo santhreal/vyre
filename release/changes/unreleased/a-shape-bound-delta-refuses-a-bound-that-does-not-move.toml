@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A shape bound delta is refused when the new bound is zero or equal to the old one, and a symbol no graph value declares is reported as `UnknownShapeSymbol`. The previous `ShapeBoundMismatch` claimed to compare the prior bound and reported a fixed `found = 0`, because a symbol extent is supplied by the caller's binding map and is not stored in the graph."

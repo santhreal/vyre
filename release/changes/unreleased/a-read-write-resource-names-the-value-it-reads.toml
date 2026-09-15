@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A fusion module that binds a resource read-write now names an input identity for it at every resource lifetime. Classifying the binding by lifetime left a caller-visible output resource out of the input projection, so every wgpu case whose witness binds an output buffer and reads it in the same pass failed materialization before its first case ran."

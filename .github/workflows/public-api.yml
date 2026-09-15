@@ -15,8 +15,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
+      # Dated, not floating: the snapshot records rustdoc's item paths, so a new
+      # nightly rewrites committed lines with no source change behind it. The
+      # date is declared by RUSTDOC_TOOLCHAIN in xtask/src/gates/public_api.rs
+      # and the gate exports it for the extraction, so both must move together.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-08-07
       - name: Install cargo-public-api
-        run: cargo install cargo-public-api --locked
+        run: cargo +nightly-2026-08-07 install --locked cargo-public-api --version 0.51.0
       - name: Diff every publishable crate
-        run: bash scripts/check_public_api_snapshot.sh
+        run: ./cargo_full run -q -p xtask --bin xtask -- public-api-snapshot
+      - name: One public path per published item
+        run: ./cargo_full run -p xtask --bin xtask -- public-api-paths
+      # Only the cases that drive `cargo public-api`; the rest of this harness
+      # runs on every lane and one of them rebuilds every workspace binary.
+      - name: Snapshot inventory the tool backs
+        run: ./cargo_full test -p xtask --features public-api-tool --test tree_contracts public_api_snapshot_inventory

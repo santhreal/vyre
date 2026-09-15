@@ -4,6 +4,8 @@ use std::sync::Arc;
 
 use vyre_reference::value::Value;
 
+use vyre_test_support::scalar_corpora::mix32;
+
 #[test]
 fn generated_write_bytes_width_matches_allocating_encoding_for_16384_cases() {
     let mut assertions = 0usize;
@@ -54,14 +56,14 @@ fn generated_value(seed: u32) -> Value {
             (u64::from(mix32(seed ^ 0xCAFE_BABE)) << 32) | u64::from(mix32(seed)),
         )),
         5 => Value::Bytes(Arc::from(generated_bytes(seed))),
-        6 => Value::Array(vec![
+        6 => Value::array(vec![
             Value::U32(mix32(seed)),
             Value::Bool((seed & 1) == 1),
             Value::Bytes(Arc::from(generated_bytes(seed.rotate_left(3)))),
         ]),
-        _ => Value::Array(vec![
+        _ => Value::array(vec![
             generated_leaf(seed ^ 0xA5A5_5A5A),
-            Value::Array(vec![
+            Value::array(vec![
                 Value::U64(u64::from(mix32(seed))),
                 Value::Bytes(Arc::from(generated_bytes(seed ^ 0x5A5A_A5A5))),
             ]),
@@ -92,12 +94,4 @@ fn generated_bytes(seed: u32) -> Vec<u8> {
             ) as u8
         })
         .collect()
-}
-
-fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
-    value ^ (value >> 16)
 }

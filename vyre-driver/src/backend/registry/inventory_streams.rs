@@ -5,29 +5,11 @@ use std::sync::{Arc, LazyLock};
 
 use vyre_foundation::ir::OpId;
 use vyre_foundation::operation::{TargetId, TargetOperationFacet};
+use vyre_foundation::transform::schedule_lowering::lower_logical_schedule_borrowed;
 
 use super::grid_sync_split::wrap_grid_sync_split;
 use crate::backend::{ArtifactMaterializer, BackendError, VyreBackend};
 use vyre_megakernel::TargetCompiler;
-
-struct RegisteredOperationSupport {
-    id: &'static str,
-    operations: &'static HashSet<OpId>,
-}
-
-impl crate::backend::Backend for RegisteredOperationSupport {
-    fn id(&self) -> &'static str {
-        self.id
-    }
-
-    fn version(&self) -> &'static str {
-        "registered-target-compiler"
-    }
-
-    fn supported_ops(&self) -> &HashSet<OpId> {
-        self.operations
-    }
-}
 
 /// One backend constructor contributed by a linked backend crate.
 ///
@@ -55,17 +37,77 @@ pub struct BackendRegistration {
     /// per the frozen `BackendError` contract.
     pub factory: fn() -> Result<Box<dyn VyreBackend>, BackendError>,
     /// Language-level IR operation IDs accepted by raw backend dispatch.
-    pub supported_ops: fn() -> &'static HashSet<OpId>,
-    /// Canonical semantic operation IDs supported by the target compiler.
     ///
-    /// This owner-local projection is the target facet submission. The shared
-    /// driver joins it with `OperationRegistry` and never infers semantic
-    /// support from language-level node capability.
+    /// This is the backend's lowering-arm declaration. `validate_program`
+    /// refuses a program whose nodes leave it, and
+    /// [`registered_target_operation_facets`] refuses a semantic operation
+    /// whose canonical program leaves it.
+    pub supported_ops: fn() -> &'static HashSet<OpId>,
+    /// Canonical semantic operation IDs the target compiler claims.
+    ///
+    /// This owner-local projection is a claim, not a facet. A published facet
+    /// is the intersection of this claim with `OperationRegistry` and with the
+    /// lowering arms in `supported_ops`, so a driver that claims the whole
+    /// catalog publishes only the part it lowers.
     pub semantic_operations: fn() -> &'static HashSet<OpId>,
     /// Pure compiler facet for this backend's immutable target payload.
     pub target_compiler: Option<fn() -> Result<Box<dyn TargetCompiler>, BackendError>>,
     /// Device acquisition and immutable payload materialization facet.
     pub materializer: Option<fn() -> Result<Box<dyn ArtifactMaterializer>, BackendError>>,
+}
+
+/// Hold the process-wide claim on vendor runtime initialization.
+///
+/// A backend factory brings up its vendor userspace runtime the first time it
+/// runs: a driver library for one backend, a loader and its installable client
+/// driver for another. On a host whose backends come from one device vendor
+/// those runtimes are the same shared libraries, so they share process-global
+/// state, and bringing two of them up at once is not supported by either.
+/// Proving every backend of a host runs one thread per backend, which did
+/// exactly that and took the process down with a SIGSEGV inside a loader's
+/// instance-extension enumeration: no output, no error, no certificate, and
+/// nothing in the artifact to say which pair was running.
+///
+/// Serializing costs one bring-up per backend per process, which the work
+/// behind it dwarfs, and nothing after bring-up is held: the guard is dropped
+/// as the factory returns, so dispatch, compilation and submission stay
+/// concurrent.
+///
+/// The lock is never poisoned into a failure: a factory that panics while
+/// holding it leaves the vendor runtime in whatever state it reached, and the
+/// next acquisition's own error is a better account of that than a poison
+/// report from here.
+///
+/// The lock lives on a named type rather than a bare static: the recovery
+/// class of a mutable owner is stated by a `StateOwnerRecovery` impl, and a
+/// static has nothing to implement it on.
+struct VendorRuntimeBringUp {
+    serialized: std::sync::Mutex<()>,
+}
+
+impl crate::lock_policy::StateOwnerRecovery for VendorRuntimeBringUp {
+    fn failure_domain(&self) -> crate::lock_policy::FailureDomain {
+        crate::lock_policy::FailureDomain::DeviceContext
+    }
+
+    fn recovery_class(&self) -> crate::lock_policy::RecoveryClass {
+        // A vendor runtime that failed to initialize under the guard leaves
+        // the device context in whatever state it reached, and the next
+        // acquisition brings it up again from the same canonical input.
+        crate::lock_policy::RecoveryClass::RestartableFromCanonicalInput
+    }
+}
+
+static VENDOR_RUNTIME_BRING_UP: std::sync::LazyLock<VendorRuntimeBringUp> =
+    std::sync::LazyLock::new(|| VendorRuntimeBringUp {
+        serialized: std::sync::Mutex::new(()),
+    });
+
+fn vendor_runtime_init() -> std::sync::MutexGuard<'static, ()> {
+    VENDOR_RUNTIME_BRING_UP
+        .serialized
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 impl BackendRegistration {
@@ -80,6 +122,7 @@ impl BackendRegistration {
     /// Returns the backend factory error when the concrete backend cannot
     /// initialize on this host.
     pub fn acquire(&self) -> Result<Box<dyn VyreBackend>, BackendError> {
+        let _serialized = vendor_runtime_init();
         (self.factory)().map(wrap_grid_sync_split)
     }
 
@@ -121,11 +164,14 @@ impl BackendRegistration {
     /// Returns an explicit unsupported-feature error when no native
     /// materializer is registered, or the concrete device acquisition error.
     pub fn materializer(&self) -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
-        self.materializer
+        let factory = self
+            .materializer
             .ok_or_else(|| BackendError::UnsupportedFeature {
                 name: "registered artifact materializer; Fix: link the backend's native materializer instead of recompiling a raw Program at dispatch".to_string(),
                 backend: self.id.to_string(),
-            })?()
+            })?;
+        let _serialized = vendor_runtime_init();
+        factory()
     }
 }
 
@@ -133,8 +179,21 @@ inventory::collect!(BackendRegistration);
 
 /// Return target compiler facets keyed by canonical semantic operation identity.
 ///
-/// A compiler-capable backend contributes a facet when the canonical neutral
-/// program contains only operation IDs advertised by that backend.
+/// A compiler-capable backend contributes a facet for an operation only when
+/// that backend has a lowering arm for every node of the operation's canonical
+/// program. The declared semantic set is the backend's claim; the language-level
+/// operation set it registers for dispatch is what it can actually lower, and a
+/// facet is the intersection. Emitting one per declared id made every backend
+/// report the whole catalog, which is the same answer for a backend with one
+/// emitter arm and a backend with all of them.
+///
+/// The program is legalized first, exactly as
+/// [`crate::validation::validate_program_contract`] legalizes it before
+/// admission: a logical execution marker is resolved by schedule lowering and
+/// never reaches an emitter, so asking whether a backend lowers one is the
+/// wrong question. Device-dependent facts stay out of this join; a capability
+/// a device reports is answered by the support certificate, not by a static
+/// registration.
 ///
 /// # Errors
 ///
@@ -145,6 +204,7 @@ pub fn registered_target_operation_facets() -> Result<&'static [TargetOperationF
     static FACETS: LazyLock<Result<Arc<[TargetOperationFacet]>, BackendError>> = LazyLock::new(
         || {
             let backends = registered_backends()?;
+            let registry = vyre_foundation::operation::OperationRegistry::global();
             let mut facets = Vec::new();
             let facet_count = backends.iter().fold(0usize, |count, backend| {
                 count.saturating_add((backend.semantic_operations)().len())
@@ -156,27 +216,44 @@ pub fn registered_target_operation_facets() -> Result<&'static [TargetOperationF
                 "target operation facet",
                 "reduce linked target operation declarations",
             )?;
-            for backend in backends
-                .iter()
-                .filter(|backend| backend.target_compiler.is_some())
-            {
+            let compiling = || {
+                backends
+                    .iter()
+                    .filter(|backend| backend.target_compiler.is_some())
+            };
+            for backend in compiling() {
                 for operation_id in (backend.semantic_operations)() {
-                    let operation =
-                        vyre_foundation::operation::OperationRegistry::global()
-                            .get(operation_id)
-                            .ok_or_else(|| {
-                                BackendError::new(format!(
-                                    "target `{}` advertises unknown semantic operation `{operation_id}`. Fix: submit one canonical OperationRegistration or remove the stale target facet.",
-                                    backend.target_id
-                                ))
-                            })?;
-                    if operation.program().is_some() {
-                        facets.push(TargetOperationFacet {
-                            operation_id: operation.id,
-                            target_id: backend.target_id.clone(),
-                            version: 1,
-                        });
+                    if registry.get(operation_id).is_none() {
+                        return Err(BackendError::new(format!(
+                            "target `{}` advertises unknown semantic operation `{operation_id}`. Fix: submit one canonical OperationRegistration or remove the stale target facet.",
+                            backend.target_id
+                        )));
                     }
+                }
+            }
+            for operation in registry.iter() {
+                let Some(program) = operation.program() else {
+                    continue;
+                };
+                let lowered = lower_logical_schedule_borrowed(&program);
+                let physical = lowered.as_ref().unwrap_or(&program);
+                for backend in compiling() {
+                    if !(backend.semantic_operations)().contains(operation.id) {
+                        continue;
+                    }
+                    if crate::backend::validation::first_unsupported_node_op(
+                        physical.entry(),
+                        (backend.supported_ops)(),
+                    )
+                    .is_some()
+                    {
+                        continue;
+                    }
+                    facets.push(TargetOperationFacet {
+                        operation_id: operation.id,
+                        target_id: backend.target_id.clone(),
+                        version: 1,
+                    });
                 }
             }
             facets.sort_unstable_by(|left, right| {
@@ -228,6 +305,70 @@ pub struct BackendCapability {
 }
 
 inventory::collect!(BackendCapability);
+
+/// Register a backend descriptor, precedence rank, and dispatch capability.
+///
+/// Expands to three `inventory::submit!` invocations:
+/// - [`BackendRegistration`]: registers the backend identifier, target identity,
+///   optional payload format, reference oracle flag, factory function, supported
+///   operation set, semantic operation set, and optional compiler/materializer facets.
+/// - [`BackendPrecedence`]: registers the backend router priority rank.
+/// - [`BackendCapability`]: registers dispatch execution availability (`dispatches: true`).
+#[macro_export]
+macro_rules! register_backend {
+    (
+        id: $id:expr,
+        target_id: $target_id:expr,
+        payload_format: $payload_format:expr,
+        reference_oracle: $reference_oracle:expr,
+        factory: $factory:expr,
+        $(supported_ops: $supported_ops:expr,)?
+        $(semantic_operations: $semantic_operations:expr,)?
+        target_compiler: $target_compiler:expr,
+        materializer: $materializer:expr,
+        rank: $rank:expr $(,)?
+    ) => {
+        $crate::inventory::submit! {
+            $crate::BackendRegistration {
+                id: $id,
+                target_id: $target_id,
+                payload_format: $payload_format,
+                reference_oracle: $reference_oracle,
+                factory: $factory,
+                supported_ops: $crate::register_backend!(@supported_ops $($supported_ops)?),
+                semantic_operations: $crate::register_backend!(@semantic_ops $($semantic_operations)?),
+                target_compiler: $target_compiler,
+                materializer: $materializer,
+            }
+        }
+
+        $crate::inventory::submit! {
+            $crate::BackendPrecedence {
+                id: $id,
+                rank: $rank,
+            }
+        }
+
+        $crate::inventory::submit! {
+            $crate::BackendCapability {
+                id: $id,
+                dispatches: true,
+            }
+        }
+    };
+    (@supported_ops $ops:expr) => {
+        $ops
+    };
+    (@supported_ops) => {
+        $crate::core_supported_ops
+    };
+    (@semantic_ops $ops:expr) => {
+        $ops
+    };
+    (@semantic_ops) => {
+        $crate::dialect_only_supported_ops
+    };
+}
 
 /// Immutable validated view over linked backend registrations and metadata.
 struct BackendRegistry {

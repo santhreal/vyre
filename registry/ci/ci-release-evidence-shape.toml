@@ -1,0 +1,12 @@
+lane = "ci-release-evidence-shape"
+workflow = ".github/workflows/ci.yml"
+job = "release-evidence-shape"
+state = "live"
+required_status = "CI / release evidence shape"
+triggers = ["push", "pull_request"]
+steps = [
+  { command = '''MSRV="$(grep -E '^rust-version' Cargo.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
+rustup toolchain install "$MSRV" --profile minimal
+rustup default "$MSRV"''' },
+  { gate = "release-evidence" },
+]

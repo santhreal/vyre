@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The conformance parity matrix's synthetic coverage program binds `Expr::SubgroupSize`, the one Expr variant the matrix declared a row class for and never exercised."

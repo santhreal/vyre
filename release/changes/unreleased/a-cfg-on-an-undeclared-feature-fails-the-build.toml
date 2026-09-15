@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The workspace denies the unexpected_cfgs lint instead of warning. A cfg attribute naming a feature its own crate does not declare removes the code under it, and at warning level that signal is one line in a build that emits many. The one allowance stays: external_ifds_engine names a bridge that cannot be a Cargo feature here."

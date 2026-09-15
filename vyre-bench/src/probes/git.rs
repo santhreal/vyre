@@ -50,6 +50,12 @@ pub fn capture_git_info() -> BTreeMap<String, String> {
 }
 
 /// Capture git facts for `workspace_root`.
+///
+/// The dirty state and the worktree digest are not measured here. One producer
+/// owns the fingerprint every recorded artifact names its tree with
+/// (`xtask::source_provenance`), and this probe reads the facts back out of the
+/// string it returns: a second implementation of that digest agreed with the
+/// first only because a test compared them byte for byte.
 #[must_use]
 pub fn capture_git_info_at(workspace_root: &Path) -> BTreeMap<String, String> {
     let mut info = BTreeMap::new();
@@ -60,29 +66,22 @@ pub fn capture_git_info_at(workspace_root: &Path) -> BTreeMap<String, String> {
     if let Ok(branch) = shell(workspace_root, &["rev-parse", "--abbrev-ref", "HEAD"]) {
         info.insert("branch".to_string(), branch);
     }
-    let dirty_status = shell_bytes(
-        workspace_root,
-        &[
-            "status",
-            "--porcelain=v1",
-            "-z",
-            "--untracked-files=all",
-            "--",
-            ".",
-            ":!release/evidence/**",
-        ],
-    );
-    let dirty = match dirty_status.as_ref() {
-        Ok(status) if status.is_empty() => "false",
-        Ok(status) => {
-            if let Some(fingerprint) = dirty_worktree_fingerprint(workspace_root, status) {
-                info.insert("dirty_worktree_fingerprint".to_string(), fingerprint);
+    match xtask::source_provenance::capture(workspace_root) {
+        Ok(fingerprint) => {
+            let dirty = fingerprint.contains(":dirty=true");
+            if let Some(worktree) = fingerprint.split(":worktree=").nth(1) {
+                info.insert(
+                    "dirty_worktree_fingerprint".to_string(),
+                    worktree.to_string(),
+                );
             }
-            "true"
+            info.insert("source_fingerprint".to_string(), fingerprint);
+            info.insert("dirty".to_string(), dirty.to_string());
         }
-        Err(_) => "unknown",
-    };
-    info.insert("dirty".to_string(), dirty.to_string());
+        Err(_) => {
+            info.insert("dirty".to_string(), "unknown".to_string());
+        }
+    }
 
     if let Ok(parent) = shell(workspace_root, &["rev-parse", "HEAD^"]) {
         info.insert("parent_commit".to_string(), parent);
@@ -94,20 +93,18 @@ pub fn capture_git_info_at(workspace_root: &Path) -> BTreeMap<String, String> {
     info
 }
 
-/// Build the commit/dirty-state source fingerprint used by release evidence.
+/// The commit/dirty-state source fingerprint release evidence names a tree with.
+///
+/// The string is produced once, by the one owner, and carried in the map under
+/// `source_fingerprint`. A checkout git cannot identify has no fingerprint, and
+/// the crate identity is what a report carries then.
 #[must_use]
 pub fn source_fingerprint(git: &BTreeMap<String, String>) -> String {
-    if let Some(commit) = git.get("commit").filter(|commit| !commit.is_empty()) {
-        let dirty = git.get("dirty").map(String::as_str).unwrap_or("unknown");
-        if dirty == "true" {
-            let worktree = git
-                .get("dirty_worktree_fingerprint")
-                .filter(|fingerprint| !fingerprint.is_empty())
-                .map(String::as_str)
-                .unwrap_or("unknown");
-            return format!("git:{commit}:dirty=true:worktree={worktree}");
-        }
-        return format!("git:{commit}:dirty={dirty}");
+    if let Some(fingerprint) = git
+        .get("source_fingerprint")
+        .filter(|fingerprint| !fingerprint.is_empty())
+    {
+        return fingerprint.clone();
     }
     format!(
         "crate:{}:{}",
@@ -124,8 +121,9 @@ pub fn source_tree_fingerprint() -> String {
 
 /// Capture the runtime source-tree fingerprint for `workspace_root`.
 ///
-/// Generated evidence, release tooling, tests, and operator-internal files are
-/// excluded because they do not change the benchmarked runtime.
+/// Generated evidence, generated documents, release tooling, tests, and
+/// operator-internal files are excluded because they do not change the
+/// benchmarked runtime.
 #[must_use]
 pub fn source_tree_fingerprint_at(workspace_root: &Path) -> String {
     match shell_bytes(
@@ -175,12 +173,66 @@ fn source_tree_fingerprint_from_paths(workspace_root: &Path, paths: &[u8]) -> St
     hasher.finalize().to_hex().to_string()
 }
 
+/// One path rule naming a tree the benchmarked runtime is never built from.
+enum ProvenancePathRule {
+    /// The whole workspace-relative path.
+    Exact(&'static [u8]),
+    /// Every path starting with these bytes.
+    Prefix(&'static [u8]),
+}
+
+impl ProvenancePathRule {
+    /// Whether `path` falls under this rule.
+    fn matches(&self, path: &[u8]) -> bool {
+        match self {
+            Self::Exact(exact) => path == *exact,
+            Self::Prefix(prefix) => path.starts_with(prefix),
+        }
+    }
+
+    /// A workspace-relative path this rule excludes, for exercising the rule.
+    #[cfg(test)]
+    fn sample_path(&self) -> Vec<u8> {
+        match self {
+            Self::Exact(exact) => exact.to_vec(),
+            Self::Prefix(prefix) => {
+                let mut path = prefix.to_vec();
+                path.extend_from_slice(b"excluded-fixture.toml");
+                path
+            }
+        }
+    }
+}
+
+/// Trees the benchmarked runtime is never built from.
+///
+/// Generated documents, release and verification paperwork, assurance tooling,
+/// and tests are produced from the runtime rather than compiled into it. A
+/// document a crate does compile in, such as `docs/optimization`, is absent
+/// here and keys the measurement as any other source file does, and so is
+/// `docs/public-api`, which `vyre-runtime` compiles in.
+///
+/// The rules are a table rather than a chain of comparisons so that the
+/// predicate's members can be enumerated and each one exercised.
+const BENCHMARK_PROVENANCE_IGNORED: &[ProvenancePathRule] = &[
+    ProvenancePathRule::Exact(b"cargo_full"),
+    ProvenancePathRule::Exact(b"cargo_full.cmd"),
+    ProvenancePathRule::Exact(b"CHANGELOG.md"),
+    ProvenancePathRule::Prefix(b".github/"),
+    ProvenancePathRule::Prefix(b"docs/generated/"),
+    ProvenancePathRule::Prefix(b"docs/testing/"),
+    ProvenancePathRule::Prefix(b"release/changes/"),
+    ProvenancePathRule::Prefix(b"release/evidence/"),
+    ProvenancePathRule::Prefix(b"scripts/"),
+    ProvenancePathRule::Prefix(b"xtask/"),
+    ProvenancePathRule::Prefix(b"xtask-"),
+];
+
+/// Whether `path` names a tree the benchmarked runtime is never built from.
 fn source_tree_path_is_benchmark_provenance_ignored(path: &[u8]) -> bool {
-    path == b"cargo_full"
-        || path.starts_with(b".github/")
-        || path.starts_with(b"release/evidence/")
-        || path.starts_with(b"scripts/")
-        || path.starts_with(b"xtask/")
+    BENCHMARK_PROVENANCE_IGNORED
+        .iter()
+        .any(|rule| rule.matches(path))
         || source_tree_path_is_operator_internal(path)
         || source_tree_path_is_test_evidence(path)
 }
@@ -189,6 +241,7 @@ fn source_tree_path_is_operator_internal(path: &[u8]) -> bool {
     const FILE_NAMES: &[&[u8]] = &[
         b"AGENTS.md",
         b"BACKLOG.md",
+        b"DEDUP_PLAN.md",
         b"CLAUDE.md",
         b"GEMINI.md",
         b"SKILL.md",
@@ -214,69 +267,6 @@ fn source_tree_path_is_test_evidence(path: &[u8]) -> bool {
 
 fn path_contains(path: &[u8], needle: &[u8]) -> bool {
     !needle.is_empty() && path.windows(needle.len()).any(|window| window == needle)
-}
-
-fn dirty_worktree_fingerprint(workspace_root: &Path, status: &[u8]) -> Option<String> {
-    let diff = shell_bytes(
-        workspace_root,
-        &[
-            "diff",
-            "--binary",
-            "HEAD",
-            "--",
-            ".",
-            ":!release/evidence/**",
-        ],
-    )
-    .ok()?;
-    let untracked = shell_bytes(
-        workspace_root,
-        &[
-            "ls-files",
-            "--others",
-            "--exclude-standard",
-            "-z",
-            "--",
-            ".",
-            ":!release/evidence/**",
-        ],
-    )
-    .unwrap_or_default();
-    Some(dirty_worktree_fingerprint_from_parts(
-        workspace_root,
-        status,
-        &diff,
-        &untracked,
-    ))
-}
-
-fn dirty_worktree_fingerprint_from_parts(
-    workspace_root: &Path,
-    status: &[u8],
-    diff: &[u8],
-    untracked: &[u8],
-) -> String {
-    let mut hasher = blake3::Hasher::new();
-    update_hash_field(&mut hasher, b"format", b"vyre-bench-dirty-source-v1");
-    update_hash_field(&mut hasher, b"status", status);
-    update_hash_field(&mut hasher, b"diff", diff);
-    for path in untracked
-        .split(|byte| *byte == 0)
-        .filter(|path| !path.is_empty())
-    {
-        update_hash_field(&mut hasher, b"untracked-path", path);
-        let path = String::from_utf8_lossy(path);
-        match read_source_fingerprint_file_bounded(&workspace_root.join(path.as_ref())) {
-            Ok(Some(bytes)) => update_hash_field(&mut hasher, b"untracked-content", &bytes),
-            Ok(None) => update_hash_field(
-                &mut hasher,
-                b"untracked-content-oversized",
-                MAX_SOURCE_FINGERPRINT_FILE_BYTES.to_string().as_bytes(),
-            ),
-            Err(_) => {}
-        }
-    }
-    hasher.finalize().to_hex().to_string()
 }
 
 fn read_source_fingerprint_file_bounded(path: &Path) -> std::io::Result<Option<Vec<u8>>> {
@@ -313,5 +303,62 @@ fn shell_bytes(workspace_root: &Path, args: &[&str]) -> Result<Vec<u8>, String> 
         Ok(output.stdout)
     } else {
         Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+    }
+}
+
+#[cfg(test)]
+mod benchmark_provenance_rules {
+    use super::{source_tree_path_is_benchmark_provenance_ignored, BENCHMARK_PROVENANCE_IGNORED};
+
+    /// Every rule in the table excludes the path it names.
+    ///
+    /// WHY: the exclusions were a chain of comparisons, and the cases that
+    /// exercised them were a list written beside it. A rule added to the chain
+    /// and covered by nothing looked identical to one that was covered. The
+    /// table is now the member list, so a rule added here is exercised without
+    /// editing a test.
+    ///
+    /// What it does not catch: whether a tree belongs in the table. That a
+    /// crate compiles a document in is what
+    /// `every_compiled_in_document_keys_the_measurement` answers.
+    #[test]
+    fn every_rule_excludes_the_tree_it_names() {
+        let mut checked = 0usize;
+        for rule in BENCHMARK_PROVENANCE_IGNORED {
+            let path = rule.sample_path();
+            assert!(
+                source_tree_path_is_benchmark_provenance_ignored(&path),
+                "Fix: `{}` is in the table and the predicate counts it",
+                String::from_utf8_lossy(&path)
+            );
+            checked += 1;
+        }
+        assert!(
+            checked > 0,
+            "Fix: the table is the member list and it is empty"
+        );
+    }
+
+    /// A runtime source file under no rule keys the measurement.
+    ///
+    /// WHY: a prefix widened by one character excludes trees nobody decided to
+    /// exclude. `docs/` would take every reference document, `xtask` without
+    /// the separator would take a crate named `xtaskfoo`, and the fingerprint
+    /// would stop moving for source the runtime is built from.
+    #[test]
+    fn a_runtime_source_file_is_never_excluded() {
+        for path in [
+            &b"vyre-libs-reduce/src/reduce/sum.rs"[..],
+            b"docs/optimization/megakernel.md",
+            b"docs/public-api/vyre-runtime.txt",
+            b"Cargo.toml",
+            b"vyre-bench/src/probes/git.rs",
+        ] {
+            assert!(
+                !source_tree_path_is_benchmark_provenance_ignored(path),
+                "Fix: `{}` is runtime source and must key the measurement",
+                String::from_utf8_lossy(path)
+            );
+        }
     }
 }

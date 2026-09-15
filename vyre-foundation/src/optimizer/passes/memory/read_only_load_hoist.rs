@@ -1,4 +1,4 @@
-//! ROADMAP A15  -  buffer aliasing facts into load elision.
+//! buffer aliasing facts into load elision.
 //!
 //! Read-only-buffer slice shipped here. When both arms of an
 //! `Node::If` begin with a `Let(name, Load(buf, idx))` whose
@@ -52,11 +52,11 @@
 //! variant lands beside the downstream alias pass.
 
 use crate::ir::{BufferAccess, Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::passes::expr_is_observably_free;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::bound_names::count_bound_names;
 use rustc_hash::{FxHashMap, FxHashSet};
-use std::sync::Arc;
 
 /// Hoist Loads on declared-ReadOnly buffers out of common
 /// branch prefixes.
@@ -75,27 +75,20 @@ impl ReadOnlyLoadHoistPass {
     /// Skip programs with no candidate `If`.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        // The hoist needs an If with two arms that both load from a
-        // ReadOnly buffer. Without an If, no candidate is possible.
-        if !program.stats().has_node_if() {
+        // A hoist needs an If whose two arms both open with a load from a
+        // ReadOnly buffer. The kind filter is O(1); collecting the ReadOnly
+        // buffer names is not, so it comes second.
+        let required = [crate::ir::stats::NODE_KIND_IF];
+        if !driver::carries_every_kind(program, &required) {
             return PassAnalysis::SKIP;
         }
         let read_only = read_only_buffer_set(program);
         if read_only.is_empty() {
             return PassAnalysis::SKIP;
         }
-        let mut found = false;
-        for node in program.entry() {
-            if has_candidate(node, &read_only) {
-                found = true;
-                break;
-            }
-        }
-        if found {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(program, &required, &mut |node| {
+            opens_hoistable_pair(node, &read_only)
+        })
     }
 
     /// Walk the entry tree and hoist common Read-Only-Load prefixes.
@@ -108,142 +101,113 @@ impl ReadOnlyLoadHoistPass {
                 changed: false,
             };
         }
-        let mut changed = false;
-        let program = program.map_entry(|entry| hoist_in_body(entry, &read_only, &mut changed));
-        PassResult { program, changed }
+        driver::rewrite_entry_bodies(program, &mut |body| hoist_in_body(body, &read_only))
     }
 }
 
-fn read_only_buffer_set(program: &Program) -> FxHashSet<crate::ir::Ident> {
+fn read_only_buffer_set(program: &Program) -> FxHashSet<Ident> {
     program
         .buffers()
         .iter()
         .filter(|b| matches!(b.access(), BufferAccess::ReadOnly))
-        .map(|b| crate::ir::Ident::from(b.name.as_ref()))
+        .map(|b| Ident::from(b.name.as_ref()))
         .collect()
 }
 
-/// Hoist common Read-Only-Load prefixes out of every `If` in `body`, after
-/// recursing into nested bodies.
+/// `body` with every hoistable read-only load prefix lifted out of the `If` it
+/// opened both arms of, or `None` when no `If` here has one.
 ///
-/// Hoisting a prefix `let x = load(ro, idx)` to before the `If` moves `x` from
-/// arm scope -- which the block-scoped IR pops at arm exit -- to THIS enclosing
-/// scope, where `x` now lives across the `If` and the rest of `body`. That is
-/// sound only if no other node in `body` binds `x`; otherwise the hoisted
-/// binding collides with that other binder, which the validator rejects as a
-/// duplicate sibling (V032) or a shadow (V008). A name bound at the front of
-/// both arms is counted exactly twice over `body` (once per arm) iff this `If`
-/// is its only binder, so `count_bound_names(body)[x] == 2` is the scope-safety
-/// gate (see `extract_common_prefix`).
-fn hoist_in_body(body: Vec<Node>, read_only: &FxHashSet<Ident>, changed: &mut bool) -> Vec<Node> {
-    // Recurse first so nested `If`s hoist within their own bodies; any prefix a
-    // nested `If` lifts up becomes a sibling here and is reflected in the counts.
-    let recursed: Vec<Node> = body
-        .into_iter()
-        .map(|node| recurse_children(node, read_only, changed))
-        .collect();
-
-    let mut body_counts: FxHashMap<Ident, usize> = FxHashMap::default();
-    count_bound_names(&recursed, &mut body_counts);
-
-    let mut out = Vec::with_capacity(recursed.len());
-    for node in recursed {
-        if let Node::If {
-            cond,
-            then,
-            otherwise,
-        } = node
-        {
-            let (prefix, new_then, new_otherwise) =
-                extract_common_prefix(then, otherwise, read_only, &body_counts);
-            if !prefix.is_empty() {
-                *changed = true;
-                out.extend(prefix);
-            }
-            out.push(Node::If {
-                cond,
-                then: new_then,
-                otherwise: new_otherwise,
-            });
-        } else {
-            out.push(node);
-        }
-    }
-    out
-}
-
-fn recurse_children(node: Node, read_only: &FxHashSet<Ident>, changed: &mut bool) -> Node {
-    match node {
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::If {
-            cond,
-            then: hoist_in_body(then, read_only, changed),
-            otherwise: hoist_in_body(otherwise, read_only, changed),
-        },
-        Node::Loop {
-            var,
-            from,
-            to,
-            body,
-        } => Node::Loop {
-            var,
-            from,
-            to,
-            body: hoist_in_body(body, read_only, changed),
-        },
-        Node::Block(body) => Node::Block(hoist_in_body(body, read_only, changed)),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec: Vec<Node> = match Arc::try_unwrap(body) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            Node::Region {
-                generator,
-                source_region,
-                body: Arc::new(hoist_in_body(body_vec, read_only, changed)),
-            }
-        }
-        other => other,
-    }
-}
-
-fn extract_common_prefix(
-    mut then: Vec<Node>,
-    mut otherwise: Vec<Node>,
-    read_only: &FxHashSet<Ident>,
-    body_counts: &FxHashMap<Ident, usize>,
-) -> (Vec<Node>, Vec<Node>, Vec<Node>) {
-    let prefix_len = then
+/// This is a body rule rather than a node rule because scope safety is a
+/// property of the enclosing sequence, not of the `If`: see
+/// [`hoistable_prefix_len`].
+fn hoist_in_body(body: &[Node], read_only: &FxHashSet<Ident>) -> Option<Vec<Node>> {
+    // Structural screen before the name census: no arm pair opens with the same
+    // read-only load, so nothing here can hoist and the body stays borrowed.
+    if !body
         .iter()
-        .zip(otherwise.iter())
-        .take_while(|(t, o)| {
-            // Structurally hoistable AND scope-safe: bound only by this `If`'s
-            // two arm prefixes (count == 2), so hoisting introduces no
-            // colliding sibling/shadow binding in the enclosing scope.
-            is_hoistable_load_pair(t, o, read_only)
-                && matches!(t, Node::Let { name, .. } if body_counts.get(name).copied().unwrap_or(0) == 2)
-        })
-        .count();
-    if prefix_len == 0 {
-        return (Vec::new(), then, otherwise);
+        .any(|node| opens_hoistable_pair(node, read_only))
+    {
+        return None;
     }
-    let prefix = then.drain(..prefix_len).collect();
-    otherwise.drain(..prefix_len);
-    (prefix, then, otherwise)
+    let mut counts: FxHashMap<Ident, usize> = FxHashMap::default();
+    count_bound_names(body, &mut counts);
+    let prefixes: Vec<usize> = body
+        .iter()
+        .map(|node| hoistable_prefix_len(node, read_only, &counts))
+        .collect();
+    if prefixes.iter().all(|len| *len == 0) {
+        return None;
+    }
+
+    let mut out = Vec::with_capacity(body.len());
+    for (node, prefix_len) in body.iter().zip(prefixes) {
+        match node {
+            Node::If {
+                cond,
+                then,
+                otherwise,
+            } if prefix_len > 0 => {
+                out.extend(then[..prefix_len].iter().cloned());
+                out.push(Node::If {
+                    cond: cond.clone(),
+                    then: then[prefix_len..].to_vec(),
+                    otherwise: otherwise[prefix_len..].to_vec(),
+                });
+            }
+            other => out.push(other.clone()),
+        }
+    }
+    Some(out)
 }
 
-/// The structural half of the hoist test: both arms bind the SAME name to the
-/// SAME read-only load with an observably-free index. Scope safety (the name
-/// not being bound elsewhere in the enclosing body) is gated separately in
-/// [`extract_common_prefix`] via `body_counts`; the analyze path uses only this
-/// structural predicate, so it may over-approximate `RUN` (a no-op transform).
+/// How many leading nodes `node`'s arms share that this body may lift out:
+/// pairs that are structurally hoistable and bound by nothing but those arms.
+///
+/// Hoisting `let x = load(ro, i)` out of both arms moves `x` from arm scope,
+/// which the block-scoped IR pops at arm exit, into the enclosing body, where it
+/// then lives across the `If` and every later sibling. That is sound only if no
+/// other node in the body binds `x`; otherwise the hoisted binding collides with
+/// that binder, which the validator rejects as a duplicate sibling (V032) or a
+/// shadow (V008). A name bound at the front of both arms is counted exactly
+/// twice over the body iff this `If` is its only binder, so `counts[x] == 2` is
+/// the scope-safety gate.
+fn hoistable_prefix_len(
+    node: &Node,
+    read_only: &FxHashSet<Ident>,
+    counts: &FxHashMap<Ident, usize>,
+) -> usize {
+    let Node::If {
+        then, otherwise, ..
+    } = node
+    else {
+        return 0;
+    };
+    driver::common_prefix_len(then, otherwise, |t, o| {
+        is_hoistable_load_pair(t, o, read_only)
+            && matches!(t, Node::Let { name, .. } if counts.get(name).copied().unwrap_or(0) == 2)
+    })
+}
+
+/// True iff both arms of `node` open with the same hoistable read-only load.
+///
+/// The structural half of the test, and the one the analysis uses: scope safety
+/// needs the enclosing body, which the analysis walk does not carry, so
+/// `analyze_impl` may over-approximate `RUN` into a no-op transform.
+fn opens_hoistable_pair(node: &Node, read_only: &FxHashSet<Ident>) -> bool {
+    let Node::If {
+        then, otherwise, ..
+    } = node
+    else {
+        return false;
+    };
+    match (then.first(), otherwise.first()) {
+        (Some(t), Some(o)) => is_hoistable_load_pair(t, o, read_only),
+        _ => false,
+    }
+}
+
+/// True iff both nodes bind the SAME name to the SAME read-only load with an
+/// observably-free index.
 fn is_hoistable_load_pair(a: &Node, b: &Node, read_only: &FxHashSet<Ident>) -> bool {
     let Node::Let {
         name: name_a,
@@ -263,28 +227,6 @@ fn is_hoistable_load_pair(a: &Node, b: &Node, read_only: &FxHashSet<Ident>) -> b
         return false;
     }
     matches!(value_a, Expr::Load { buffer, index } if read_only.contains(buffer) && expr_is_observably_free(index))
-}
-
-fn has_candidate(node: &Node, read_only: &FxHashSet<crate::ir::Ident>) -> bool {
-    match node {
-        Node::If {
-            then, otherwise, ..
-        } => match (then.first(), otherwise.first()) {
-            (Some(t), Some(o)) => {
-                is_hoistable_load_pair(t, o, read_only)
-                    || then.iter().any(|n| has_candidate(n, read_only))
-                    || otherwise.iter().any(|n| has_candidate(n, read_only))
-            }
-            _ => {
-                then.iter().any(|n| has_candidate(n, read_only))
-                    || otherwise.iter().any(|n| has_candidate(n, read_only))
-            }
-        },
-        Node::Loop { body, .. } => body.iter().any(|n| has_candidate(n, read_only)),
-        Node::Block(body) => body.iter().any(|n| has_candidate(n, read_only)),
-        Node::Region { body, .. } => body.iter().any(|n| has_candidate(n, read_only)),
-        _ => false,
-    }
 }
 
 #[cfg(test)]

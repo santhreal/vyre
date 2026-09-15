@@ -7,7 +7,8 @@
 
 use crate::accounting::{checked_add_usize_count, ArithmeticOverflow};
 use crate::reservation_policy::{
-    reserve_typed_vec_to_capacity as reserve_vec_to_capacity, ReservationPolicy,
+    reserve_typed_vec_to_capacity as reserve_vec_to_capacity, storage_reserve_failure_adapter,
+    ReservationPolicy,
 };
 
 const MEGAKERNEL_BARRIER_RESERVATION: ReservationPolicy = ReservationPolicy::new(
@@ -38,6 +39,23 @@ pub struct MegakernelBarrierPlan {
     pub groups: Vec<MegakernelBarrierGroup>,
     /// Number of global synchronization points required between groups.
     pub global_barriers: usize,
+}
+
+impl MegakernelBarrierPlan {
+    /// Build a plan from ordered barrier-free groups.
+    ///
+    /// The barrier count is not independent data: one global synchronization
+    /// point separates each adjacent pair of groups, so `n` groups need `n - 1`
+    /// barriers and an empty plan needs none. Deriving it here is what keeps a
+    /// caller that re-groups waves, such as the frontier memory-budget splitter,
+    /// from carrying a barrier count that no longer matches its own groups.
+    #[must_use]
+    pub fn from_groups(groups: Vec<MegakernelBarrierGroup>) -> Self {
+        Self {
+            global_barriers: groups.len().saturating_sub(1),
+            groups,
+        }
+    }
 }
 
 /// Caller-owned scratch for repeated megakernel barrier planning.
@@ -363,14 +381,7 @@ pub fn plan_megakernel_barriers_with_scratch(
         });
     }
 
-    Ok(MegakernelBarrierPlan {
-        global_barriers: if groups.is_empty() {
-            0
-        } else {
-            groups.len() - 1
-        },
-        groups,
-    })
+    Ok(MegakernelBarrierPlan::from_groups(groups))
 }
 
 fn group_capacity_hint(
@@ -414,23 +425,18 @@ fn reserve_vec<T>(
     )
 }
 
-fn storage_reserve_failed(
-    field: &'static str,
-    requested: usize,
-    message: String,
-) -> MegakernelBarrierPlanError {
-    MegakernelBarrierPlanError::StorageReserveFailed {
-        field,
-        requested,
-        message,
-    }
-}
+storage_reserve_failure_adapter!(MegakernelBarrierPlanError);
 
+// Inline: the suite grades against `crate::megakernel_fixtures`, which is gated on `cfg(any(test,
+// feature = "test-fixtures"))` and so is absent from an integration test build.
 #[cfg(test)]
 mod tests {
     use super::{
         plan_megakernel_barriers, plan_megakernel_barriers_with_scratch,
         MegakernelBarrierPlanError, MegakernelBarrierScratch, MegakernelWaveDependency,
+    };
+    use crate::megakernel_fixtures::{
+        layered_dag_dependencies, CYCLE_DEPENDENCIES, DIAMOND_DEPENDENCIES, LONG_CHAIN_DEPENDENCIES,
     };
 
     #[test]
@@ -445,24 +451,8 @@ mod tests {
 
     #[test]
     fn dependency_chain_requires_one_barrier_between_each_wave() {
-        let plan = plan_megakernel_barriers(
-            4,
-            &[
-                MegakernelWaveDependency {
-                    before: 0,
-                    after: 1,
-                },
-                MegakernelWaveDependency {
-                    before: 1,
-                    after: 2,
-                },
-                MegakernelWaveDependency {
-                    before: 2,
-                    after: 3,
-                },
-            ],
-        )
-        .expect("Fix: acyclic megakernel wave chain should be schedulable.");
+        let plan = plan_megakernel_barriers(4, LONG_CHAIN_DEPENDENCIES)
+            .expect("Fix: acyclic megakernel wave chain should be schedulable.");
 
         assert_eq!(plan.global_barriers, 3);
         assert_eq!(plan.groups[0].waves, vec![0]);
@@ -473,28 +463,8 @@ mod tests {
 
     #[test]
     fn diamond_dependencies_fuse_middle_waves() {
-        let plan = plan_megakernel_barriers(
-            4,
-            &[
-                MegakernelWaveDependency {
-                    before: 0,
-                    after: 1,
-                },
-                MegakernelWaveDependency {
-                    before: 0,
-                    after: 2,
-                },
-                MegakernelWaveDependency {
-                    before: 1,
-                    after: 3,
-                },
-                MegakernelWaveDependency {
-                    before: 2,
-                    after: 3,
-                },
-            ],
-        )
-        .expect("Fix: diamond megakernel dependencies should preserve middle-wave fusion.");
+        let plan = plan_megakernel_barriers(4, DIAMOND_DEPENDENCIES)
+            .expect("Fix: diamond megakernel dependencies should preserve middle-wave fusion.");
 
         assert_eq!(plan.global_barriers, 2);
         assert_eq!(plan.groups[0].waves, vec![0]);
@@ -530,20 +500,9 @@ mod tests {
             MegakernelBarrierPlanError::SelfDependency { wave: 1 }
         );
 
-        let cycle = plan_megakernel_barriers(
-            2,
-            &[
-                MegakernelWaveDependency {
-                    before: 0,
-                    after: 1,
-                },
-                MegakernelWaveDependency {
-                    before: 1,
-                    after: 0,
-                },
-            ],
-        )
-        .expect_err("Fix: cyclic megakernel dependencies require explicit fixed-point kernels.");
+        let cycle = plan_megakernel_barriers(2, CYCLE_DEPENDENCIES).expect_err(
+            "Fix: cyclic megakernel dependencies require explicit fixed-point kernels.",
+        );
         assert_eq!(
             cycle,
             MegakernelBarrierPlanError::Cycle {
@@ -566,25 +525,9 @@ mod tests {
 
         assert_eq!(wide.groups[1].waves.len(), 1_024);
 
-        let narrow = plan_megakernel_barriers_with_scratch(
-            4,
-            &[
-                MegakernelWaveDependency {
-                    before: 0,
-                    after: 1,
-                },
-                MegakernelWaveDependency {
-                    before: 1,
-                    after: 2,
-                },
-                MegakernelWaveDependency {
-                    before: 2,
-                    after: 3,
-                },
-            ],
-            &mut scratch,
-        )
-        .expect("Fix: narrow megakernel dependency chain should reuse larger scratch");
+        let narrow =
+            plan_megakernel_barriers_with_scratch(4, LONG_CHAIN_DEPENDENCIES, &mut scratch)
+                .expect("Fix: narrow megakernel dependency chain should reuse larger scratch");
 
         assert_eq!(narrow.global_barriers, 3);
         assert!(scratch.wave_capacity() >= wave_capacity);
@@ -597,17 +540,7 @@ mod tests {
         for width in 1usize..=64 {
             for depth in 1usize..=32 {
                 let wave_count = width * depth;
-                let mut dependencies = Vec::new();
-                for layer in 0..depth.saturating_sub(1) {
-                    let base = layer * width;
-                    let next = base + width;
-                    for slot in 0..width {
-                        dependencies.push(MegakernelWaveDependency {
-                            before: base + slot,
-                            after: next + slot,
-                        });
-                    }
-                }
+                let dependencies = layered_dag_dependencies(width, depth);
 
                 let plan =
                     plan_megakernel_barriers_with_scratch(wave_count, &dependencies, &mut scratch)

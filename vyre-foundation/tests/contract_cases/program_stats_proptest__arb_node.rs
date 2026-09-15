@@ -1,61 +1,37 @@
+use super::*;
+
 fn arb_node() -> BoxedStrategy<Node> {
     arb_node_with_depth(3)
 }
 
 fn arb_program() -> BoxedStrategy<Program> {
-    (
-        arb_buffer_datatype(),
-        arb_buffer_datatype(),
-        prop_vec(arb_node(), 0..=6),
-        prop_oneof![9 => Just(false), 1 => Just(true)],
-    )
-        .prop_map(|(extra_a, extra_b, entry, non_composable)| {
-            Program::wrapped(
-                vec![
-                    BufferDecl::output("out", 0, DataType::U32)
-                        .with_count(8)
-                        .with_output_byte_range(0..16),
-                    BufferDecl::read("input", 1, DataType::U32).with_count(8),
-                    BufferDecl::read_write("rw", 2, DataType::U32).with_count(8),
-                    BufferDecl::read("bytes_in", 3, DataType::Bytes).with_count(16),
-                    BufferDecl::read_write("bytes_out", 4, DataType::Bytes).with_count(16),
-                    BufferDecl::read("counts", 5, DataType::U32).with_count(8),
-                    BufferDecl::workgroup("scratch", 4, DataType::U32),
-                    BufferDecl::read("extra_a", 6, extra_a).with_count(1),
-                    BufferDecl::read("extra_b", 7, extra_b).with_count(1),
-                ],
-                [1, 1, 1],
-                entry,
-            )
-            .with_non_composable_with_self(non_composable)
-        })
-        .boxed()
+    arb_program_with(arb_node())
 }
 
 // ─── manual recompute functions (must mirror compute_stats exactly) ───
 
 #[inline]
 fn mark_datatype_bits(ty: &DataType, bits: &mut u32) {
-    match ty {
-        DataType::F16 => *bits |= CAP_F16,
-        DataType::BF16 => *bits |= CAP_BF16,
-        DataType::F64 => *bits |= CAP_F64,
-        DataType::Tensor | DataType::TensorShaped { .. } => *bits |= CAP_TENSOR_OPS,
-        _ => {}
-    }
+    *bits |= match ty {
+        DataType::F16 => CAP_F16,
+        DataType::BF16 => CAP_BF16,
+        DataType::F64 => CAP_F64,
+        DataType::Tensor | DataType::TensorShaped { .. } => CAP_TENSOR_OPS,
+        _ => 0,
+    };
 }
 
 fn is_subgroup_intrinsic_id(op_id: &str) -> bool {
-    const MARKERS: &[&str] = &[
+    [
         "subgroup_",
-        "::subgroup::",
         "::subgroup",
         "wave_",
-        "::wave::",
+        "::wave",
         "warp_",
-        "::warp::",
-    ];
-    MARKERS.iter().any(|marker| op_id.contains(marker))
+        "::warp",
+    ]
+    .into_iter()
+    .any(|pattern| op_id.contains(pattern))
 }
 
 #[allow(clippy::only_used_in_recursion)]
@@ -131,17 +107,20 @@ fn manual_walk_expr(
         Expr::Opaque(_) => {
             *opaque = opaque.saturating_add(1);
         }
+        Expr::SubgroupLocalId | Expr::SubgroupSize => {
+            *bits |= CAP_SUBGROUP_OPS | CAP_WORKGROUP_GEOMETRY;
+        }
+        Expr::WorkgroupId { .. } | Expr::LocalId { .. } => {
+            *bits |= CAP_WORKGROUP_GEOMETRY;
+        }
         Expr::LitU32(_)
         | Expr::LitI32(_)
         | Expr::LitF32(_)
         | Expr::LitBool(_)
         | Expr::Var(_)
+        | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => {}
+        | Expr::InvocationId { .. } => {}
         _ => {}
     }
 }
@@ -209,6 +188,22 @@ fn manual_walk_node(
         Node::Opaque(_) => {
             *opaque = opaque.saturating_add(1);
         }
+        Node::TileLoad { origin, .. } => {
+            for offset in origin {
+                manual_walk_expr(offset, nodes, regions, calls, opaque, bits);
+            }
+        }
+        Node::TileStore { origin, .. } => {
+            for offset in origin {
+                manual_walk_expr(offset, nodes, regions, calls, opaque, bits);
+            }
+        }
+        Node::TileElementwise { body, .. } => {
+            for child in body {
+                manual_walk_node(child, nodes, regions, calls, opaque, bits);
+            }
+        }
+        Node::TileDecl { .. } | Node::TileMatmul { .. } | Node::TileReduce { .. } => {}
         Node::Return | Node::Barrier { .. } | Node::Resume { .. } => {}
         _ => {}
     }
@@ -222,13 +217,10 @@ fn manual_compute_stats(program: &Program) -> ProgramStats {
     let mut capability_bits = 0u32;
     let mut static_storage_bytes = 0u64;
 
-    for decl in program.buffers().iter() {
-        let count = decl.count();
-        if count != 0 {
-            if let Some(elem) = decl.element().size_bytes() {
-                static_storage_bytes =
-                    static_storage_bytes.saturating_add(u64::from(count) * elem as u64);
-            }
+    for decl in program.buffers() {
+        if let Some(elem) = decl.element().size_bytes().filter(|_| decl.count() != 0) {
+            static_storage_bytes =
+                static_storage_bytes.saturating_add(u64::from(decl.count()) * elem as u64);
         }
         mark_datatype_bits(&decl.element(), &mut capability_bits);
     }

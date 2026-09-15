@@ -3,25 +3,8 @@ use super::*;
 #[test]
 fn cuda_large_storage_atomic_sum_crosses_workgroup_boundary() {
     let count = 4096u32;
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("sum", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-            BufferDecl::read("values", 1, DataType::U32).with_count(count),
-        ],
-        [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(count)),
-                vec![Node::let_bind(
-                    "old_sum",
-                    Expr::atomic_add("sum", Expr::u32(0), Expr::load("values", Expr::var("idx"))),
-                )],
-            ),
-        ],
-    );
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend must acquire on the GPU-required host.");
+    let program = make_atomic_sum_program(count, false);
+    let backend = acquire_cuda_backend();
     let outputs = backend
         .dispatch(
             &program,
@@ -37,50 +20,53 @@ fn cuda_large_storage_atomic_sum_crosses_workgroup_boundary() {
     );
 }
 
+/// The artifact route launches the geometry the compiler admitted, and a caller
+/// grid cannot reach it.
+///
+/// `submit` takes a binding set and nothing else, so a hostile grid has no
+/// channel into the artifact route. It is applied here through the direct
+/// dispatch route on the same program to pin what that grid actually computes:
+/// one workgroup, a sum strictly short of `count`. An artifact route that
+/// adopted a caller grid would return that partial sum instead of the full one.
+///
+/// A grid override beside a frozen launch is refused rather than ranked, and
+/// that rule is owned by `vyre-driver/tests/backend_launch_validation.rs`. This
+/// config carries no frozen launch, so it is a legal dispatch.
 #[test]
-fn cuda_artifact_dispatch_matches_direct_dispatch_for_multi_block_atomics() {
+fn cuda_artifact_dispatch_launches_admitted_geometry_not_a_caller_grid() {
     let count = 4096u32;
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("sum", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-            BufferDecl::read("values", 1, DataType::U32).with_count(count),
-        ],
-        [256, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::gid_x()),
-            Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(count)),
-                vec![Node::let_bind(
-                    "old_sum",
-                    Expr::atomic_add("sum", Expr::u32(0), Expr::load("values", Expr::var("idx"))),
-                )],
-            ),
-        ],
-    );
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend must acquire on the GPU-required host.");
+    let program = make_atomic_sum_program(count, false);
+    let backend = acquire_cuda_backend();
     let values = u32_bytes(&vec![1; count as usize]);
     let initial_sum = u32_bytes(&[0]);
-    let grid = vyre_driver::program_walks::infer_dispatch_grid(
-        &program,
-        &[initial_sum.clone(), values.clone()],
-        &DispatchConfig::default(),
-    )
-    .expect("Fix: shared dispatch-grid inference must handle CUDA storage atomic programs.");
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some(grid);
-    let outputs = compiled_cuda_outputs_with_config(
+
+    let mut hostile_config = DispatchConfig::default();
+    hostile_config.grid_override = Some([1, 1, 1]);
+    let hostile_outputs = backend
+        .dispatch(
+            &program,
+            &[initial_sum.clone(), values.clone()],
+            &hostile_config,
+        )
+        .expect("Fix: a grid override with no frozen launch must be a legal dispatch.");
+    let hostile_sum = bytes_u32(&hostile_outputs[0]);
+    assert!(
+        hostile_sum[0] < count,
+        "Fix: grid override [1,1,1] must launch one workgroup, so its sum is short of {count}; got {}.",
+        hostile_sum[0]
+    );
+
+    let outputs = compiled_cuda_outputs(
         &backend,
         &program,
         &[initial_sum, values],
-        &config,
-        "cuda multi-block storage atomic",
+        "CUDA artifact admitted geometry",
     );
-
     assert_eq!(
         bytes_u32(&outputs[0]),
         vec![count],
-        "Fix: CUDA artifact dispatch must honor caller launch config across all workgroups."
+        "Fix: the artifact route must launch its admitted geometry; {} is the caller grid's own answer.",
+        hostile_sum[0]
     );
 }
 

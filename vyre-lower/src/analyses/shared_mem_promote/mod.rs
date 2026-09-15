@@ -1,6 +1,5 @@
 //! Shared-memory promotion analysis for vyre kernels.
 //!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section B.3 item B12.
 //!
 //! Workgroup-shared memory is roughly 100x faster than global memory on
 //! modern GPUs. When the same data is read multiple times by threads in
@@ -33,13 +32,8 @@
 //! Output: `PromotionPlan` with one entry per candidate binding,
 //! including projected savings.
 
-pub mod analysis;
-pub mod plan;
+pub(crate) mod analysis;
+pub(crate) mod plan;
 
 pub use analysis::analyze;
 pub use plan::{PromotionCandidate, PromotionPlan};
-
-/// Default per-workgroup shared-memory budget, in bytes. Callers with
-/// tighter backend limits should pass their real budget into the
-/// analysis entry point.
-pub const DEFAULT_SHARED_BUDGET_BYTES: u32 = 48 * 1024;

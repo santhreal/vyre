@@ -1,0 +1,2 @@
+category = "Added"
+text = "`docs/generated/OP_SCHEMA.json` records each operation's transform decision and absence class, so an empty `laws` array no longer conflates no legal rewrite, guarded only, uncharacterized, and nothing recorded."

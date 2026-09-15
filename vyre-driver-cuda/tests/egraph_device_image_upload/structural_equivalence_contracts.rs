@@ -40,13 +40,14 @@ fn egraph_structural_equivalence_kernel_ptx_loads_on_live_cuda_driver() {
 fn egraph_structural_equivalence_kernel_emits_live_cuda_pairs() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let snapshot = GpuEGraphSnapshot::build([
+    let snapshot = GpuEGraphSnapshot::try_build([
         (10u32, "lit", &[][..]),
         (20u32, "lit", &[][..]),
         (30u32, "add", &[10u32, 20u32][..]),
         (40u32, "add", &[10u32, 20u32][..]),
         (50u32, "add", &[20u32, 10u32][..]),
-    ]);
+    ])
+    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
     let image = snapshot
         .try_pack_device_image()
         .expect("Fix: valid foundation e-graph image must pack.");
@@ -99,7 +100,7 @@ fn egraph_structural_equivalence_kernel_emits_live_cuda_pairs() {
 fn egraph_structural_equivalence_discovery_api_runs_end_to_end() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let snapshot = GpuEGraphSnapshot::build([
+    let snapshot = GpuEGraphSnapshot::try_build([
         (10u32, "lit", &[][..]),
         (20u32, "lit", &[][..]),
         (30u32, "add", &[10u32, 20u32][..]),
@@ -107,7 +108,8 @@ fn egraph_structural_equivalence_discovery_api_runs_end_to_end() {
         (50u32, "add", &[20u32, 10u32][..]),
         (60u32, "mul", &[30u32, 40u32][..]),
         (70u32, "mul", &[30u32, 40u32][..]),
-    ]);
+    ])
+    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
     let image = snapshot
         .try_pack_device_image()
         .expect("Fix: valid foundation e-graph image must pack.");
@@ -150,12 +152,13 @@ fn egraph_structural_equivalence_discovery_api_runs_end_to_end() {
 fn egraph_structural_equivalence_kernel_rejects_forced_ordering_bucket() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let snapshot = GpuEGraphSnapshot::build([
+    let snapshot = GpuEGraphSnapshot::try_build([
         (10u32, "lit", &[][..]),
         (20u32, "lit", &[][..]),
         (30u32, "add", &[10u32, 20u32][..]),
         (40u32, "add", &[20u32, 10u32][..]),
-    ]);
+    ])
+    .expect("Fix: fixture rows must fit the 32-bit GPU column ABI");
     let image = snapshot
         .try_pack_device_image()
         .expect("Fix: valid foundation e-graph image must pack.");
@@ -226,12 +229,7 @@ fn egraph_structural_equivalence_kernel_fails_closed_on_output_overflow() {
     // The kernel will emit exactly 1 equivalence pair (30, 40).
     // We cap `max_equivalences` to 0 so device_reported_count (1) > planned_capacity (0),
     // triggering the fail-closed path.
-    let snapshot = GpuEGraphSnapshot::build([
-        (10u32, "lit", &[][..]),
-        (20u32, "lit", &[][..]),
-        (30u32, "add", &[10u32, 20u32][..]),
-        (40u32, "add", &[10u32, 20u32][..]),
-    ]);
+    let snapshot = duplicate_add_snapshot();
     let image = snapshot
         .try_pack_device_image()
         .expect("Fix: valid foundation e-graph image must pack.");

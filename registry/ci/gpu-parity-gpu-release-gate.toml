@@ -1,0 +1,107 @@
+lane = "gpu-parity-gpu-release-gate"
+workflow = ".github/workflows/gpu-parity.yml"
+job = "gpu-release-gate"
+state = "live"
+required_status = "GPU Parity + Determinism / GPU release gate"
+triggers = ["pull_request", "push", "workflow_dispatch"]
+steps = [
+  { command = '''if [ "${{ needs.driver-contracts.result }}" != "success" ] \
+  || [ "${{ needs.cuda-driver-contracts.result }}" != "success" ] \
+  || [ "${{ needs.cuda-parity-suite.result }}" != "success" ] \
+  || [ "${{ needs.composition-parity-gpu.result }}" != "success" ] \
+  || [ "${{ needs.determinism-stress-gpu.result }}" != "success" ] \
+  || [ "${{ needs.mandatory-gpu-enforcer.result }}" != "success" ] \
+  || [ "${{ needs.cuda-conformance-all-ops.result }}" != "success" ] \
+  || [ "${{ needs.wgpu-conformance-all-ops.result }}" != "success" ] \
+  || [ "${{ needs.release-conformance-artifacts.result }}" != "success" ] \
+  || [ "${{ needs.cuda-release-bench-evidence.result }}" != "success" ]; then
+  echo "::error::A required GPU job failed or did not run."
+  exit 1
+fi''' },
+  { command = '''set -euo pipefail
+find release-artifacts/conformance -name cuda-conformance.json -size +0c | grep -q .
+find release-artifacts/conformance -name wgpu-conformance.json -size +0c | grep -q .
+find release-artifacts/conformance -name reference-conformance.json -size +0c | grep -q .
+find release-artifacts/conformance -name release-gate-log.json -size +0c | grep -q .
+find release-artifacts/benchmarks -name pass-family-benchmark-manifest.json -size +0c | grep -q .
+find release-artifacts/benchmarks -name release-workload-matrix.json -size +0c | grep -q .
+python3 -c '
+import json
+import pathlib
+def one(root, name):
+    matches = list(pathlib.Path(root).rglob(name))
+    if len(matches) != 1:
+        raise SystemExit(f"expected exactly one {name} under {root}, found {len(matches)}")
+    with matches[0].open() as handle:
+        return json.load(handle)
+for backend, filename in [("cuda", "cuda-conformance.json"), ("wgpu", "wgpu-conformance.json"), ("cpu-ref", "reference-conformance.json")]:
+    report = one("release-artifacts/conformance", filename)
+    if report.get("backend_id") != backend:
+        raise SystemExit("{}: backend_id={!r}, expected {!r}".format(filename, report.get("backend_id"), backend))
+    if report.get("failed_pairs") != 0:
+        raise SystemExit("{}: failed_pairs={!r}".format(filename, report.get("failed_pairs")))
+    if report.get("distinct_op_count", 0) < 49:
+        raise SystemExit(f"{filename}: distinct_op_count below 49")
+    if report.get("duplicate_op_ids"):
+        raise SystemExit(f"{filename}: duplicate_op_ids must be empty")
+    if report.get("blockers"):
+        raise SystemExit(f"{filename}: blockers must be empty")
+manifest = one("release-artifacts/benchmarks", "pass-family-benchmark-manifest.json")
+if manifest.get("backend") != "cuda":
+    raise SystemExit("pass-family-benchmark-manifest.json: backend must be cuda")
+if manifest.get("blockers"):
+    raise SystemExit("pass-family-benchmark-manifest.json: blockers must be empty")
+if len(manifest.get("cases", [])) < 4:
+    raise SystemExit("pass-family-benchmark-manifest.json: expected at least 4 cases")
+for case in manifest.get("cases", []):
+    case_id = case.get("case_id", "<unknown>")
+    for field in ("missing_custom_metrics", "non_positive_required_metrics", "non_winning_cases", "blockers"):
+        if case.get(field):
+            raise SystemExit(f"pass-family-benchmark-manifest.json: {case_id} has non-empty {field}")
+    if case.get("min_wall_speedup_x1000", 0) <= 1000:
+        raise SystemExit(f"pass-family-benchmark-manifest.json: {case_id} does not prove optimized wall_ns p50 beats baseline_wall_ns p50")
+workloads = one("release-artifacts/benchmarks", "release-workload-matrix.json")
+if workloads.get("blockers"):
+    raise SystemExit("release-workload-matrix.json: blockers must be empty")
+required = workloads.get("required_closed_families", 10)
+if workloads.get("matched_required_families", 0) < required:
+    raise SystemExit("release-workload-matrix.json: matched_required_families below required_closed_families")
+for suite_name, expected_backend in [("cuda-release-suite.json", "cuda"), ("wgpu-fallback-suite.json", "wgpu")]:
+    suite = one("release-artifacts/benchmarks", suite_name)
+    if suite.get("backend") != expected_backend:
+        raise SystemExit(f"{suite_name}: backend must be {expected_backend}")
+    if suite.get("blockers"):
+        raise SystemExit(f"{suite_name}: blockers must be empty")
+    statuses = suite.get("artifact_statuses") or []
+    if suite.get("family_count", 0) < required or len(statuses) < required:
+        raise SystemExit(f"{suite_name}: expected at least {required} family statuses")
+    for status in statuses:
+        path = status.get("path", "<unknown>")
+        if status.get("blockers"):
+            raise SystemExit(f"{suite_name}: {path} has blockers")
+        if not status.get("family_id") or not status.get("requested_case_id"):
+            raise SystemExit(f"{suite_name}: {path} lacks family/case provenance")
+        if status.get("case_count", 0) == 0:
+            raise SystemExit(f"{suite_name}: {path} has zero cases")
+        if status.get("failed_count") != 0:
+            raise SystemExit(f"{suite_name}: {path} failed_count must be zero")
+        if status.get("nonmatching_case_backend_count") != 0:
+            raise SystemExit(f"{suite_name}: {path} has backend mismatches")
+        if status.get("min_wall_samples", 0) < 30:
+            raise SystemExit(f"{suite_name}: {path} has fewer than 30 wall samples")
+        if status.get("min_baseline_wall_samples", 0) < 30:
+            raise SystemExit(f"{suite_name}: {path} has fewer than 30 baseline wall samples")
+        if status.get("cpu_sota_100x_required") and status.get("cpu_sota_100x_passing_cases", 0) == 0:
+            raise SystemExit(f"{suite_name}: {path} lacks passing CPU-SOTA 100x proof")
+proof = one("release-artifacts/benchmarks", "cpu-only-100x-proof.json")
+if proof.get("blockers"):
+    raise SystemExit("cpu-only-100x-proof.json: blockers must be empty")
+if proof.get("cpu_sota_100x_contract_case_count", 0) < 10:
+    raise SystemExit("cpu-only-100x-proof.json: expected at least ten 100x contract cases")
+if proof.get("cpu_sota_100x_passing_case_count", 0) < 10:
+    raise SystemExit("cpu-only-100x-proof.json: expected at least ten passing 100x cases")
+if proof.get("min_wall_samples", 0) < 30 or proof.get("min_baseline_wall_samples", 0) < 30:
+    raise SystemExit("cpu-only-100x-proof.json: wall and baseline samples must both be at least 30")
+'
+echo "GPU release gate passed: CUDA/WGPU all-op conformance, backend contracts, determinism stress, and CUDA release benchmark evidence artifacts all exist."''' },
+]

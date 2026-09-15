@@ -1,0 +1,3 @@
+path = "scripts/wait-crates-index.sh"
+state = "operator"
+reason = "polls the crates.io index for a published version inside the publish loop"

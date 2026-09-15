@@ -1,0 +1,4 @@
+path = "scripts/check_bench_smoke_runtime.sh"
+state = "retired"
+gate = "bench-smoke-runtime"
+reason = "bench-regression.yml runs the gate in its place"

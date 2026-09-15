@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The jobs that run the gate registry, the coverage floor, and the smoke benchmark budget now run on a GPU host. A device-required gate fails closed on an empty adapter probe rather than skipping, so a hosted runner reported a missing accelerator instead of a verdict, and the smoke budget timed a panic from a build-only lane whose own header sends real measurement to the device workflows."

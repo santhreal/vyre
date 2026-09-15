@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The sweep runner's name has one owner. `gates` was a literal in the dispatcher, in the generated help and in the check that every subcommand a workflow names is dispatchable, and that check compared against the gate registry alone, so it reported every workflow step that runs the sweep as an unregistered subcommand: the whole tree-rules job and the release-evidence workflow. The name is now `xtask::gates::sweep::RUNNER`, the check accepts every gate plus the runner, and it still fails on a workflow step naming a subcommand nothing dispatches."

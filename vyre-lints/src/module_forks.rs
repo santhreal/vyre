@@ -3,10 +3,10 @@
 //! Exact duplicate hashes miss the common architectural failure mode:
 //! two crates keep files with the same domain name and drift independently.
 //! This scanner is intentionally root-scoped so callers can compare domain
-//! roots such as `vyre-primitives/src/graph` and `vyre-self-substrate/src`
+//! roots such as `vyre-primitives/src/graph` and `vyre-pass-engine/src`
 //! without flagging every generic `mod.rs` or `tests.rs` in the workspace.
 
-use crate::{paths::workspace_relative, Violation, ViolationKind};
+use crate::{scan, Violation, ViolationKind};
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -66,31 +66,24 @@ fn scan_root(
     root: &Path,
     by_basename: &mut BTreeMap<String, Vec<ModuleHit>>,
 ) -> Result<()> {
-    for entry in walkdir::WalkDir::new(root)
-        .into_iter()
-        .filter_map(|entry| entry.ok())
-    {
-        let path = entry.path();
-        if !path.is_file() || path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
-            continue;
-        }
+    scan::visit_sources(root, scan::RUST_SOURCE, |path, workspace_rel| {
         let basename = path
             .file_name()
             .and_then(|name| name.to_str())
             .with_context(|| format!("read module filename {}", path.display()))?;
         if EXEMPT_BASENAMES.contains(&basename) {
-            continue;
+            return Ok(());
         }
         by_basename
             .entry(basename.to_string())
             .or_default()
             .push(ModuleHit {
                 root_index,
-                path: workspace_relative(path),
+                path: workspace_rel.to_string(),
                 symbols: function_symbols(&crate::read_source_bounded(path)?),
             });
-    }
-    Ok(())
+        Ok(())
+    })
 }
 
 fn shared_symbol_summary(paths: &[ModuleHit]) -> String {

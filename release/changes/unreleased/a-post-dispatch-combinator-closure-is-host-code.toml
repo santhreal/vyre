@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Four mutation tests in the host oracle elimination gate lost their test attribute in a file split and stopped running. Restoring them exposed a rule hole: the visitor cleared the dispatch-root and post-dispatch phase for every closure body, so a host reduction written as a combinator on the dispatch result was never convicted while the same reduction written as a statement was. A closure that is the argument of a non-fallback combinator whose receiver executed a dispatch now keeps the post-dispatch phase."

@@ -5,30 +5,13 @@
 //! pinning verification, word emission, and byte emission contracts.
 
 use vyre_foundation::ir::{BinOp, DataType};
-use vyre_lower::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-    KernelOp, KernelOpKind, LiteralValue, MemoryClass,
-};
-
-fn rw_slot(name: &str) -> BindingSlot {
-    BindingSlot {
-        slot: 0,
-        element_type: DataType::U32,
-        element_count: None,
-        memory_class: MemoryClass::Global,
-        visibility: BindingVisibility::ReadWrite,
-        name: name.into(),
-    }
-}
+use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
+use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
 fn generated_descriptor(seed: u32) -> KernelDescriptor {
     let chain_len = 1 + (seed as usize % 12);
     let mut literals = vec![LiteralValue::U32(0)];
-    let mut ops = vec![KernelOp {
-        kind: KernelOpKind::Literal,
-        operands: vec![0],
-        result: Some(0),
-    }];
+    let mut ops = vec![lit(0, 0)];
     let mut accumulator = 0u32;
 
     for idx in 0..chain_len {
@@ -38,51 +21,34 @@ fn generated_descriptor(seed: u32) -> KernelDescriptor {
             .rotate_left((idx as u32) & 31)
             .wrapping_add(idx as u32);
         literals.push(LiteralValue::U32(literal_value));
-
         let literal_result = ops.len() as u32;
-        ops.push(KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![literal_idx],
-            result: Some(literal_result),
-        });
-
+        ops.push(lit(literal_idx, literal_result));
         let binop_result = ops.len() as u32;
-        let op = match idx % 4 {
+        let kind = match idx % 4 {
             0 => BinOp::Add,
             1 => BinOp::BitXor,
             2 => BinOp::BitOr,
             _ => BinOp::BitAnd,
         };
-        ops.push(KernelOp {
-            kind: KernelOpKind::BinOpKind(op),
-            operands: vec![accumulator, literal_result],
-            result: Some(binop_result),
-        });
+        ops.push(op(
+            KernelOpKind::BinOpKind(kind),
+            [accumulator, literal_result],
+            binop_result,
+        ));
         accumulator = binop_result;
     }
 
-    ops.push(KernelOp {
-        kind: KernelOpKind::StoreGlobal,
-        operands: vec![0, 0, accumulator],
-        result: None,
-    });
+    ops.push(effect(KernelOpKind::StoreGlobal, [0, 0, accumulator]));
 
-    KernelDescriptor {
-        id: format!("generated_spirv_{seed:08x}"),
-        bindings: BindingLayout {
-            slots: vec![rw_slot("out")],
-        },
-        dispatch: Dispatch::new(
+    descriptor(&format!("generated_spirv_{seed:08x}"))
+        .slot(global_rw(0, DataType::U32, "out"))
+        .dispatch(
             1 + (seed & 255),
             1 + ((seed >> 8) & 7),
             1 + ((seed >> 16) & 3),
-        ),
-        body: KernelBody {
-            ops,
-            child_bodies: vec![],
-            literals,
-        },
-    }
+        )
+        .body(body().literals(literals).ops(ops))
+        .build()
 }
 
 fn words_from_le_bytes(bytes: &[u8]) -> Vec<u32> {

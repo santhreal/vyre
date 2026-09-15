@@ -1,0 +1,10 @@
+lane = "docs-ci-docs"
+workflow = ".github/workflows/docs-ci.yml"
+job = "docs"
+state = "live"
+required_status = "Doc CI / docs"
+triggers = ["push", "pull_request"]
+steps = [
+  { gate = "workspace-docs" },
+  { gate = "cli-docs" },
+]

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The vyre_foundation::ir facade no longer re-exports items another module owns. Validation is reached at validate::{validate, ValidationError, LimitState, DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_NESTING_DEPTH, DEFAULT_MAX_NODE_COUNT}, call inlining at transform::inline, the text wire format at serial::text, and the CSE and DCE pass internals at optimizer::passes::fusion_cse. MemoryOrdering is published once, at vyre_foundation::ir::MemoryOrdering, beside the node variants that carry it."

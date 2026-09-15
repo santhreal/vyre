@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The continuous integration lanes no longer delete preinstalled runner toolchains, because grouping the integration tests into one harness per crate and required-feature set brought the workspace test executables from roughly 67 GiB to 5.6 GiB."

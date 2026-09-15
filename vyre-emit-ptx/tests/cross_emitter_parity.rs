@@ -5,164 +5,73 @@
 //! `KernelDescriptor` is broken for that shape.
 
 use vyre_foundation::ir::{BinOp, DataType};
-use vyre_lower::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-    KernelOp, KernelOpKind, LiteralValue, MemoryClass,
-};
+use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
+use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
-fn rw_slot(id: u32, name: &str) -> BindingSlot {
-    rw_slot_typed(id, name, DataType::U32)
-}
-
-fn rw_slot_typed(id: u32, name: &str, element_type: DataType) -> BindingSlot {
-    BindingSlot {
-        slot: id,
-        element_type,
-        element_count: None,
-        memory_class: MemoryClass::Global,
-        visibility: BindingVisibility::ReadWrite,
-        name: name.into(),
-    }
+/// `LocalInvocationId` keeps each arithmetic op alive through constant
+/// folding, so the instruction assertions below observe real emission.
+fn invocation_id(result: u32) -> vyre_lower::KernelOp {
+    op(KernelOpKind::LocalInvocationId, [0], result)
 }
 
 fn add_descriptor() -> KernelDescriptor {
-    KernelDescriptor {
-        id: "add_store".into(),
-        bindings: BindingLayout {
-            slots: vec![rw_slot(0, "out")],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                // Use LocalInvocationId so the op survives constant folding.
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(1),
-                }, // 7
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(2),
-                }, // 0 (idx)
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![0, 1],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 2, 3],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(7), LiteralValue::U32(0)],
-        },
-    }
+    descriptor("add_store")
+        .slot(global_rw(0, DataType::U32, "out"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([LiteralValue::U32(7), LiteralValue::U32(0)])
+                .op(invocation_id(0))
+                .op(lit(0, 1))
+                .op(lit(1, 2))
+                .op(op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 3))
+                .op(effect(KernelOpKind::StoreGlobal, [0, 2, 3])),
+        )
+        .build()
 }
 
 fn mul_descriptor() -> KernelDescriptor {
-    KernelDescriptor {
-        id: "mul_store".into(),
-        bindings: BindingLayout {
-            slots: vec![rw_slot(0, "out")],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(2),
-                }, // 0 (idx)
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                    operands: vec![0, 1],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 2, 3],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0)],
-        },
-    }
+    descriptor("mul_store")
+        .slot(global_rw(0, DataType::U32, "out"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([LiteralValue::U32(0)])
+                .op(invocation_id(0))
+                .op(invocation_id(1))
+                .op(lit(0, 2))
+                .op(op(KernelOpKind::BinOpKind(BinOp::Mul), [0, 1], 3))
+                .op(effect(KernelOpKind::StoreGlobal, [0, 2, 3])),
+        )
+        .build()
 }
 
 fn fma_descriptor() -> KernelDescriptor {
-    KernelDescriptor {
-        id: "fma_store".into(),
-        bindings: BindingLayout {
-            slots: vec![rw_slot_typed(0, "out", DataType::F32)],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+    descriptor("fma_store")
+        .slot(global_rw(0, DataType::F32, "out"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .literals([
+                    LiteralValue::F32(7.0),
+                    LiteralValue::U32(0),
+                    LiteralValue::F32(11.0),
+                ])
+                .op(invocation_id(0))
+                .op(op(
+                    KernelOpKind::Cast {
                         target: DataType::F32,
                     },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(2),
-                }, // 7
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(3),
-                }, // 0 (idx)
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![2],
-                    result: Some(5),
-                }, // 11
-                KernelOp {
-                    kind: KernelOpKind::Fma,
-                    operands: vec![1, 2, 5],
-                    result: Some(4),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 3, 4],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![
-                LiteralValue::F32(7.0),
-                LiteralValue::U32(0),
-                LiteralValue::F32(11.0),
-            ],
-        },
-    }
+                    [0],
+                    1,
+                ))
+                .op(lit(0, 2))
+                .op(lit(1, 3))
+                .op(lit(2, 5))
+                .op(op(KernelOpKind::Fma, [1, 2, 5], 4))
+                .op(effect(KernelOpKind::StoreGlobal, [0, 3, 4])),
+        )
+        .build()
 }
 
 fn op_corpus() -> Vec<KernelDescriptor> {
@@ -270,13 +179,8 @@ fn ptx_output_contains_required_directives() {
         )
         .unwrap();
         assert!(
-            ptx.contains(".version"),
-            "PTX for `{}` missing .version",
-            desc.id
-        );
-        assert!(
-            ptx.contains(".target"),
-            "PTX for `{}` missing .target",
+            ptx.contains(".version") && ptx.contains(".target"),
+            "PTX for `{}` missing .version or .target directive",
             desc.id
         );
         assert!(

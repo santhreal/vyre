@@ -1,4 +1,4 @@
-use super::expr_key::{ExprId, ExprKey};
+use super::expr_key::{CseExprId, ExprKey};
 use crate::ir::Ident;
 use rustc_hash::FxHashMap;
 
@@ -20,8 +20,8 @@ pub struct CseCtx {
     // CSE runs on every expression in the program; switching from
     // String (heap alloc per entry) to Ident (atomic refcount bump)
     // eliminates O(n) allocations per CSE pass.
-    pub(super) values: FxHashMap<ExprId, ScopedBinding>,
-    pub(super) undo_log: Vec<(ExprId, Option<ScopedBinding>)>,
+    pub(super) values: FxHashMap<CseExprId, ScopedBinding>,
+    pub(super) undo_log: Vec<(CseExprId, Option<ScopedBinding>)>,
     pub(super) scope_stack: Vec<ScopeFrame>,
     /// Visibility epoch for side-effect invalidation inside a lexical scope.
     ///
@@ -32,7 +32,7 @@ pub struct CseCtx {
     /// map mutations are still restored by the undo log.
     pub(super) current_epoch: u64,
     pub(super) arena: Vec<ExprKey>,
-    pub(super) deduplication: FxHashMap<ExprKey, ExprId>,
+    pub(super) deduplication: FxHashMap<ExprKey, CseExprId>,
     /// Monotonic counter for uniquely keying subgroup-intrinsic expressions
     /// so CSE never merges two subgroup calls (they are lane-correlated
     /// and effectful). See `expr_key::ExprKey::Subgroup`.

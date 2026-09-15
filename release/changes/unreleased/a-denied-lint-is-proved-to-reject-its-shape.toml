@@ -1,0 +1,2 @@
+category = "Added"
+text = "A test compiles one throwaway crate per defect shape under the lint levels read from the root manifest, so a level lowered to `warn` fails instead of silently widening what ships. Cases cover an unused private item, an unreachable public item, a stale `expect`, a feature-only orphan, a test-only production caller, an undeclared feature cfg and an unused binding, and a second test requires a case for every denied lint the table declares."

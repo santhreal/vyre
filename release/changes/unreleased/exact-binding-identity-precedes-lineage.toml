@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Target binding resolution now prefers the exact resource identity over a retained-lineage alias when both appear in one directional projection."

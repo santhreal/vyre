@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A `major.minor.patch` version record is declared once by `vyre_spec::semver_triple!`, which `ExtensionSemVer`, `ProtocolVersion`, `CanonicalSchemaVersion`, and the driver registry `Semver` now use."

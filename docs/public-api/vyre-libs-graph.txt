@@ -1,0 +1,1039 @@
+#[non_exhaustive] pub enum vyre_libs_graph::graph::dominator_tree::DominatorTreeError
+#[non_exhaustive] pub enum vyre_libs_graph::graph::toposort::ToposortCsrError
+#[non_exhaustive] pub enum vyre_libs_graph::graph::toposort::ToposortError
+#[repr(u32)] pub enum vyre_libs_graph::graph::state_index_frontier::StateIndexDuplicateRule
+#[repr(u32)] pub enum vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierDomain
+#[repr(u32)] pub enum vyre_libs_graph::graph::state_index_frontier::StateIndexSpillDecision
+impl core::convert::From<vyre_libs_graph::graph::reachable::UnknownNode> for vyre_libs_graph::graph::reachable::ReachableError
+impl core::error::Error for vyre_libs_graph::graph::reachable::ReachableError
+impl core::error::Error for vyre_libs_graph::graph::reachable::UnknownNode
+impl core::fmt::Display for vyre_libs_graph::graph::reachable::ReachableError
+impl core::fmt::Display for vyre_libs_graph::graph::reachable::UnknownNode
+impl vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalBuffers<'static>
+impl vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey
+impl vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalDispatchPlan
+impl vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan
+impl vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedProgramKey
+impl vyre_libs_graph::graph::dominator_frontier::DominatorFrontierDispatchPlan
+impl vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLaunchPlan
+impl vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan
+impl vyre_libs_graph::graph::exploded::IfdsCsrProgramCacheKey
+impl vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns
+impl vyre_libs_graph::graph::exploded::IfdsCsrRuleInputFingerprint
+impl vyre_libs_graph::graph::motif::MotifDispatchPlan
+impl vyre_libs_graph::graph::motif::MotifLaunchPlan
+impl vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructDispatchPlan
+impl vyre_libs_graph::graph::path_reconstruct::PathReconstructDispatchPlan
+impl vyre_libs_graph::graph::program_graph::ProgramGraphShape
+impl vyre_libs_graph::graph::state_index_frontier::StateIndexDuplicateRule
+impl vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierDomain
+impl vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierHeader
+impl vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierItem
+impl vyre_libs_graph::graph::state_index_frontier::StateIndexSpillDecision
+impl vyre_libs_graph::graph::toposort::ToposortCsrDispatchPlan
+impl<'a> vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'a>
+impl<'a> vyre_libs_graph::graph::csr_closure_inputs::CsrGraphView<'a>
+pub const fn vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::clear_frontier_out(_layout_hash: u64, node_count: u32, edge_count: u32, words: u32, device_features: u64) -> Self
+pub const fn vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::four_russians_dense(_layout_hash: u64, node_count: u32, words: u32, device_features: u64) -> Self
+pub const fn vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::frontier_to_queue(_layout_hash: u64, node_count: u32, edge_count: u32, words: u32, queue_capacity: u32, device_features: u64) -> Self
+pub const fn vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::frontier_word_block_offsets(_layout_hash: u64, node_count: u32, edge_count: u32, words: u32, device_features: u64) -> Self
+pub const fn vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::frontier_word_block_offsets_queue(_layout_hash: u64, node_count: u32, edge_count: u32, words: u32, queue_capacity: u32, device_features: u64) -> Self
+pub const fn vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::frontier_word_counts(_layout_hash: u64, node_count: u32, edge_count: u32, words: u32, device_features: u64) -> Self
+pub const fn vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::frontier_word_prefix_queue(_layout_hash: u64, node_count: u32, edge_count: u32, words: u32, queue_capacity: u32, device_features: u64) -> Self
+pub const fn vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::new(layout_hash: u64, node_count: u32, edge_count: u32, words: u32, queue_capacity: u32, allow_mask: u32, dense_threshold_pct: u32, device_features: u64, kind: vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind) -> Self
+pub const fn vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::popcount(_layout_hash: u64, node_count: u32, edge_count: u32, words: u32, device_features: u64) -> Self
+pub const fn vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::queue_forward(_layout_hash: u64, node_count: u32, edge_count: u32, words: u32, queue_capacity: u32, allow_mask: u32, device_features: u64) -> Self
+pub const fn vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::queue_forward_strided(_layout_hash: u64, node_count: u32, edge_count: u32, words: u32, queue_capacity: u32, allow_mask: u32, device_features: u64) -> Self
+pub const fn vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::queue_len_init(_layout_hash: u64, node_count: u32, edge_count: u32, words: u32, queue_capacity: u32, device_features: u64) -> Self
+pub const fn vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::queue_split_low(_layout_hash: u64, node_count: u32, edge_count: u32, words: u32, queue_capacity: u32, high_queue_capacity: u32, high_degree_threshold: u32, allow_mask: u32, device_features: u64) -> Self
+pub const fn vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::sparse_dense(_layout_hash: u64, node_count: u32, edge_count: u32, words: u32, allow_mask: u32, dense_threshold_pct: u32, device_features: u64) -> Self
+pub const fn vyre_libs_graph::graph::adaptive_traverse::adaptive_traversal_program_layout_hash(node_count: u32, edge_count: u32, words: u32, queue_capacity: u32, kind: vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind) -> u64
+pub const fn vyre_libs_graph::graph::adaptive_traverse::adaptive_traversal_split_program_layout_hash(node_count: u32, edge_count: u32, words: u32, queue_capacity: u32, high_queue_capacity: u32, high_degree_threshold: u32, kind: vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind) -> u64
+pub const fn vyre_libs_graph::graph::adaptive_traverse::four_russians_frontier_words(node_count: u32) -> u32
+pub const fn vyre_libs_graph::graph::adaptive_traverse::four_russians_source_tile_count(node_count: u32) -> u32
+pub const fn vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalDispatchPlan::program_key(&self) -> vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalProgramKey
+pub const fn vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'a>::allow_all(graph: vyre_libs_graph::graph::csr_closure_inputs::CsrGraphView<'a>, max_iters: u32) -> Self
+pub const fn vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'a>::new(node_count: u32, edge_offsets: &'a [u32], edge_targets: &'a [u32], edge_kind_mask: &'a [u32], allow_mask: u32, max_iters: u32) -> Self
+pub const fn vyre_libs_graph::graph::csr_closure_inputs::CsrGraphView<'a>::new(node_count: u32, edge_offsets: &'a [u32], edge_targets: &'a [u32], edge_kind_mask: &'a [u32]) -> Self
+pub const fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan::changed_slot_value(&self, iteration: u32) -> core::option::Option<u32>
+pub const fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan::changed_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan::edge_offset_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan::edge_storage_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan::frontier_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan::layout(&self) -> vyre_libs_graph::graph::csr_forward_or_changed::layout::CsrForwardOrChangedLayout
+pub const fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan::node_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan::program_key(&self) -> vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedProgramKey
+pub const fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan::uses_changed_history(&self) -> bool
+pub const fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedProgramKey::allow_mask(&self) -> u32
+pub const fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedProgramKey::changed_slots(&self) -> u32
+pub const fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedProgramKey::layout(&self) -> vyre_libs_graph::graph::csr_forward_or_changed::layout::CsrForwardOrChangedLayout
+pub const fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedProgramKey::uses_changed_history(&self) -> bool
+pub const fn vyre_libs_graph::graph::csr_queue_delta::csr_queue_delta_strided_logical_lanes_per_launch(active_queue_capacity: u32) -> u32
+pub const fn vyre_libs_graph::graph::csr_queue_delta::csr_queue_delta_strided_source_slots_per_launch(active_queue_capacity: u32) -> u32
+pub const fn vyre_libs_graph::graph::csr_queue_split::csr_queue_split_mixed_logical_lanes(queue_capacity: u32, high_queue_capacity: u32) -> u64
+pub const fn vyre_libs_graph::graph::dominator_frontier::DominatorFrontierDispatchPlan::dom_target_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::dominator_frontier::DominatorFrontierDispatchPlan::frontier_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::dominator_frontier::DominatorFrontierDispatchPlan::layout(&self) -> vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLayout
+pub const fn vyre_libs_graph::graph::dominator_frontier::DominatorFrontierDispatchPlan::pred_target_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::dominator_frontier::DominatorFrontierDispatchPlan::program(&self) -> &vyre_foundation::ir_inner::model::program::definition::Program
+pub const fn vyre_libs_graph::graph::dominator_frontier::DominatorFrontierDispatchPlan::shape(&self) -> vyre_libs_graph::graph::dominator_frontier::DominatorFrontierProgramShape
+pub const fn vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLaunchPlan::dom_target_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLaunchPlan::frontier_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLaunchPlan::layout(&self) -> vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLayout
+pub const fn vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLaunchPlan::pred_target_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLaunchPlan::shape(&self) -> vyre_libs_graph::graph::dominator_frontier::DominatorFrontierProgramShape
+pub const fn vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::program_cache_key(&self) -> vyre_libs_graph::graph::exploded::IfdsCsrProgramCacheKey
+pub const fn vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::static_input_key(&self, rule_fingerprint: vyre_libs_graph::graph::exploded::IfdsCsrRuleInputFingerprint) -> vyre_libs_graph::graph::exploded::IfdsCsrStaticInputKey
+pub const fn vyre_libs_graph::graph::exploded::IfdsCsrProgramCacheKey::from_layout(layout: &vyre_libs_graph::graph::exploded::IfdsCsrLayout) -> Self
+pub const fn vyre_libs_graph::graph::motif::MotifDispatchPlan::edge_storage_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::motif::MotifDispatchPlan::layout(&self) -> vyre_libs_graph::graph::motif::MotifLayout
+pub const fn vyre_libs_graph::graph::motif::MotifDispatchPlan::output_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::motif::MotifDispatchPlan::program(&self) -> &vyre_foundation::ir_inner::model::program::definition::Program
+pub const fn vyre_libs_graph::graph::motif::MotifLaunchPlan::edge_storage_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::motif::MotifLaunchPlan::layout(&self) -> vyre_libs_graph::graph::motif::MotifLayout
+pub const fn vyre_libs_graph::graph::motif::MotifLaunchPlan::output_words(&self) -> usize
+pub const fn vyre_libs_graph::graph::state_index_frontier::StateIndexDuplicateRule::as_str(self) -> &'static str
+pub const fn vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierDomain::as_str(self) -> &'static str
+pub const fn vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierHeader::to_words(self) -> [u32; 8]
+pub const fn vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierItem::new(state_id: u32, index: u32) -> Self
+pub const fn vyre_libs_graph::graph::state_index_frontier::StateIndexSpillDecision::as_str(self) -> &'static str
+pub const fn vyre_libs_graph::graph::vast_tree_walk::primitive_op_ids() -> [&'static str; 2]
+pub const vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalBuffers<'static>::CANONICAL: Self
+pub const vyre_libs_graph::graph::adaptive_traverse::DENSE_THRESHOLD_PCT: u32
+pub const vyre_libs_graph::graph::adaptive_traverse::FOUR_RUSSIANS_DENSE_OP_ID: &str
+pub const vyre_libs_graph::graph::adaptive_traverse::HYBRID_OP_ID: &str
+pub const vyre_libs_graph::graph::adaptive_traverse::NAME_ACTIVE_QUEUE: &str
+pub const vyre_libs_graph::graph::adaptive_traverse::NAME_ADJ_ROWS_DENSE: &str
+pub const vyre_libs_graph::graph::adaptive_traverse::NAME_EDGE_KIND_MASK: &str
+pub const vyre_libs_graph::graph::adaptive_traverse::NAME_EDGE_OFFSETS: &str
+pub const vyre_libs_graph::graph::adaptive_traverse::NAME_EDGE_TARGETS: &str
+pub const vyre_libs_graph::graph::adaptive_traverse::NAME_FRONTIER_IN: &str
+pub const vyre_libs_graph::graph::adaptive_traverse::NAME_FRONTIER_OUT: &str
+pub const vyre_libs_graph::graph::adaptive_traverse::NAME_FRONTIER_POPCOUNT: &str
+pub const vyre_libs_graph::graph::adaptive_traverse::NAME_QUEUE_LEN: &str
+pub const vyre_libs_graph::graph::adaptive_traverse::OP_ID: &str
+pub const vyre_libs_graph::graph::adjustment_set::OP_ID: &str
+pub const vyre_libs_graph::graph::chebyshev_filter::MAX_K: u32
+pub const vyre_libs_graph::graph::chebyshev_filter::OP_ID: &str
+pub const vyre_libs_graph::graph::csr_backward_or_changed::CSR_BACKWARD_OR_CHANGED_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_graph::graph::csr_backward_or_changed::OP_ID: &str
+pub const vyre_libs_graph::graph::csr_backward_traverse::BINDING_FRONTIER_IN: u32
+pub const vyre_libs_graph::graph::csr_backward_traverse::BINDING_FRONTIER_OUT: u32
+pub const vyre_libs_graph::graph::csr_backward_traverse::OP_ID: &str
+pub const vyre_libs_graph::graph::csr_bidirectional::CSR_BIDIRECTIONAL_EDGE_KIND_BUFFER: &str
+pub const vyre_libs_graph::graph::csr_bidirectional::CSR_BIDIRECTIONAL_FRONTIER_IN_BUFFER: &str
+pub const vyre_libs_graph::graph::csr_bidirectional::CSR_BIDIRECTIONAL_FRONTIER_OUT_BUFFER: &str
+pub const vyre_libs_graph::graph::csr_bidirectional::CSR_BIDIRECTIONAL_NODES_BUFFER: &str
+pub const vyre_libs_graph::graph::csr_bidirectional::CSR_BIDIRECTIONAL_NODE_TAGS_BUFFER: &str
+pub const vyre_libs_graph::graph::csr_bidirectional::CSR_BIDIRECTIONAL_OFFSETS_BUFFER: &str
+pub const vyre_libs_graph::graph::csr_bidirectional::CSR_BIDIRECTIONAL_TARGETS_BUFFER: &str
+pub const vyre_libs_graph::graph::csr_bidirectional::OP_ID: &str
+pub const vyre_libs_graph::graph::csr_forward_traverse::BINDING_EXCLUDED_SOURCES: u32
+pub const vyre_libs_graph::graph::csr_forward_traverse::BINDING_EXCLUDING_FRONTIER_OUT: u32
+pub const vyre_libs_graph::graph::csr_forward_traverse::BINDING_FRONTIER_IN: u32
+pub const vyre_libs_graph::graph::csr_forward_traverse::BINDING_FRONTIER_OUT: u32
+pub const vyre_libs_graph::graph::csr_forward_traverse::EXCLUDING_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_forward_traverse::OP_ID: &str
+pub const vyre_libs_graph::graph::csr_frontier_degree_sum::BINDING_DEGREE_SUM_OUT: u32
+pub const vyre_libs_graph::graph::csr_frontier_degree_sum::BINDING_FRONTIER_IN: u32
+pub const vyre_libs_graph::graph::csr_frontier_degree_sum::CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_graph::graph::csr_frontier_degree_sum::OP_ID: &str
+pub const vyre_libs_graph::graph::csr_frontier_queue::CSR_QUEUE_FORWARD_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_frontier_queue::FRONTIER_QUEUE_LEN_INIT_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_frontier_queue::FRONTIER_TO_QUEUE_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_frontier_queue::FRONTIER_TO_QUEUE_PARALLEL_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_frontier_queue::FRONTIER_WORDS_TO_QUEUE_CLEAR_OUT_PARALLEL_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_frontier_queue::FRONTIER_WORDS_TO_QUEUE_PARALLEL_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_frontier_queue::FRONTIER_WORD_BLOCK_OFFSETS_IN_PLACE_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_frontier_queue::FRONTIER_WORD_BLOCK_OFFSETS_TO_QUEUE_PARALLEL_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_frontier_queue::FRONTIER_WORD_BLOCK_PREFIX_TO_QUEUE_PARALLEL_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_frontier_queue::FRONTIER_WORD_COUNTS_SCAN_PASS_A_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_queue_delta::CSR_QUEUE_DELTA_ENQUEUE_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_queue_delta::CSR_QUEUE_DELTA_ENQUEUE_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_graph::graph::csr_queue_delta::CSR_QUEUE_DELTA_STRIDED_CAPPED_LAUNCH_MIN_CAPACITY: u32
+pub const vyre_libs_graph::graph::csr_queue_delta::CSR_QUEUE_DELTA_STRIDED_ENQUEUE_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_queue_delta::CSR_QUEUE_DELTA_STRIDED_LANES_PER_SOURCE: u32
+pub const vyre_libs_graph::graph::csr_queue_delta::CSR_QUEUE_DELTA_STRIDED_MAX_SOURCE_SLOTS_PER_LAUNCH: u32
+pub const vyre_libs_graph::graph::csr_queue_split::CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD: u32
+pub const vyre_libs_graph::graph::csr_queue_split::CSR_QUEUE_SPLIT_LOW_FORWARD_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_queue_split::CSR_QUEUE_SPLIT_LOW_FORWARD_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_graph::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE: u32
+pub const vyre_libs_graph::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_OP_ID: &str
+pub const vyre_libs_graph::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_graph::graph::do_calculus::OP_ID: &str
+pub const vyre_libs_graph::graph::do_calculus::RULE2_OP_ID: &str
+pub const vyre_libs_graph::graph::do_calculus::RULE3_OP_ID: &str
+pub const vyre_libs_graph::graph::dominator_frontier::DOMINATOR_FRONTIER_DOM_OFFSETS_BUFFER: u32
+pub const vyre_libs_graph::graph::dominator_frontier::DOMINATOR_FRONTIER_DOM_TARGETS_BUFFER: u32
+pub const vyre_libs_graph::graph::dominator_frontier::DOMINATOR_FRONTIER_OUT_BUFFER: u32
+pub const vyre_libs_graph::graph::dominator_frontier::DOMINATOR_FRONTIER_PRED_CHECK_OP_ID: &str
+pub const vyre_libs_graph::graph::dominator_frontier::DOMINATOR_FRONTIER_PRED_OFFSETS_BUFFER: u32
+pub const vyre_libs_graph::graph::dominator_frontier::DOMINATOR_FRONTIER_PRED_TARGETS_BUFFER: u32
+pub const vyre_libs_graph::graph::dominator_frontier::DOMINATOR_FRONTIER_SEED_BUFFER: u32
+pub const vyre_libs_graph::graph::dominator_frontier::DOMINATOR_FRONTIER_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_graph::graph::dominator_frontier::OP_ID: &str
+pub const vyre_libs_graph::graph::dominator_tree::DOMINATOR_TREE_DEPTH_OP_ID: &str
+pub const vyre_libs_graph::graph::dominator_tree::DOMINATOR_TREE_INTERSECT_STEP_OP_ID: &str
+pub const vyre_libs_graph::graph::dominator_tree::DOMINATOR_TREE_LCA_OP_ID: &str
+pub const vyre_libs_graph::graph::dominator_tree::IDOM_NONE: u32
+pub const vyre_libs_graph::graph::dominator_tree::OP_ID: &str
+pub const vyre_libs_graph::graph::exploded::BLOCK_BITS: u32
+pub const vyre_libs_graph::graph::exploded::FACTS_PER_WORKGROUP: usize
+pub const vyre_libs_graph::graph::exploded::FACT_BITS: u32
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_COL_IDX_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_COL_LEN_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_GEN_BLOCK_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_GEN_FACT_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_GEN_PROC_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_INTER_DST_BLOCK_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_INTER_DST_PROC_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_INTER_SRC_BLOCK_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_INTER_SRC_PROC_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_INTRA_DST_BLOCK_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_INTRA_PROC_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_INTRA_SRC_BLOCK_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_KILLED_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_KILL_BLOCK_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_KILL_FACT_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_KILL_PROC_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_ROW_CURSOR_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_ROW_PTR_BUFFER: &str
+pub const vyre_libs_graph::graph::exploded::IFDS_CSR_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_graph::graph::exploded::MAX_BLOCK_ID: u32
+pub const vyre_libs_graph::graph::exploded::MAX_FACT_ID: u32
+pub const vyre_libs_graph::graph::exploded::MAX_PROC_ID: u32
+pub const vyre_libs_graph::graph::exploded::OP_ID: &str
+pub const vyre_libs_graph::graph::exploded::PROC_BITS: u32
+pub const vyre_libs_graph::graph::functorial::OP_ID: &str
+pub const vyre_libs_graph::graph::knowledge_compile::AND_NODE: u32
+pub const vyre_libs_graph::graph::knowledge_compile::DDNNF_EVALUATE_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_graph::graph::knowledge_compile::LITERAL_FALSE: u32
+pub const vyre_libs_graph::graph::knowledge_compile::LITERAL_TRUE: u32
+pub const vyre_libs_graph::graph::knowledge_compile::OP_ID: &str
+pub const vyre_libs_graph::graph::knowledge_compile::OR_NODE: u32
+pub const vyre_libs_graph::graph::level_wave::LEVEL_WAVE_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_graph::graph::level_wave::OP_ID: &str
+pub const vyre_libs_graph::graph::matroid::OP_ID: &str
+pub const vyre_libs_graph::graph::matroid_intersection_full::OP_ID: &str
+pub const vyre_libs_graph::graph::motif::MOTIF_HITS_BUFFER: u32
+pub const vyre_libs_graph::graph::motif::MOTIF_WITNESS_OUT_BUFFER: u32
+pub const vyre_libs_graph::graph::motif::MOTIF_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_graph::graph::motif::OP_ID: &str
+pub const vyre_libs_graph::graph::motif::TWO_EDGE_PATH_MOTIF: [vyre_libs_graph::graph::motif::MotifEdge; 2]
+pub const vyre_libs_graph::graph::path_reconstruct::BATCHED_LENS_BUFFER: &str
+pub const vyre_libs_graph::graph::path_reconstruct::BATCHED_OP_ID: &str
+pub const vyre_libs_graph::graph::path_reconstruct::BATCHED_PATHS_BUFFER: &str
+pub const vyre_libs_graph::graph::path_reconstruct::BATCHED_PATH_TARGETS_BUFFER: &str
+pub const vyre_libs_graph::graph::path_reconstruct::BATCHED_WORKGROUP_SIZE: u32
+pub const vyre_libs_graph::graph::path_reconstruct::OP_ID: &str
+pub const vyre_libs_graph::graph::path_reconstruct::PATH_LEN_BUFFER: &str
+pub const vyre_libs_graph::graph::path_reconstruct::PATH_OUT_BUFFER: &str
+pub const vyre_libs_graph::graph::path_reconstruct::PATH_PARENT_BUFFER: &str
+pub const vyre_libs_graph::graph::path_reconstruct::PATH_TARGET_BUFFER: &str
+pub const vyre_libs_graph::graph::persistent_bfs::BATCH_OP_ID: &str
+pub const vyre_libs_graph::graph::persistent_bfs::BINDING_CHANGED: u32
+pub const vyre_libs_graph::graph::persistent_bfs::BINDING_CONVERGED: u32
+pub const vyre_libs_graph::graph::persistent_bfs::BINDING_DENSITY_ACTIVE: u32
+pub const vyre_libs_graph::graph::persistent_bfs::BINDING_FRONTIER_IN: u32
+pub const vyre_libs_graph::graph::persistent_bfs::BINDING_FRONTIER_OUT: u32
+pub const vyre_libs_graph::graph::persistent_bfs::DENSITY_ACTIVE_BUFFER: &str
+pub const vyre_libs_graph::graph::persistent_bfs::OP_ID: &str
+pub const vyre_libs_graph::graph::persistent_bfs::PERSISTENT_BFS_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_graph::graph::persistent_bfs_step::PERSISTENT_BFS_STEP_OP_ID: &str
+pub const vyre_libs_graph::graph::program_graph::BINDING_EDGE_KIND_MASK: u32
+pub const vyre_libs_graph::graph::program_graph::BINDING_EDGE_OFFSETS: u32
+pub const vyre_libs_graph::graph::program_graph::BINDING_EDGE_TARGETS: u32
+pub const vyre_libs_graph::graph::program_graph::BINDING_NODES: u32
+pub const vyre_libs_graph::graph::program_graph::BINDING_NODE_TAGS: u32
+pub const vyre_libs_graph::graph::program_graph::BINDING_PRIMITIVE_START: u32
+pub const vyre_libs_graph::graph::program_graph::NAME_EDGE_KIND_MASK: &str
+pub const vyre_libs_graph::graph::program_graph::NAME_EDGE_OFFSETS: &str
+pub const vyre_libs_graph::graph::program_graph::NAME_EDGE_TARGETS: &str
+pub const vyre_libs_graph::graph::program_graph::NAME_NODES: &str
+pub const vyre_libs_graph::graph::program_graph::NAME_NODE_TAGS: &str
+pub const vyre_libs_graph::graph::program_graph::READ_ONLY_BUFFER_NAMES: [&str; 5]
+pub const vyre_libs_graph::graph::reachable::OP_ID: &str
+pub const vyre_libs_graph::graph::scc_decompose::OP_ID: &str
+pub const vyre_libs_graph::graph::scc_decompose::SCC_DECOMPOSE_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_graph::graph::sheaf::OP_ID: &str
+pub const vyre_libs_graph::graph::state_index_frontier::STATE_INDEX_FRONTIER_SCHEMA_VERSION: u32
+pub const vyre_libs_graph::graph::string_diagram::OP_ID: &str
+pub const vyre_libs_graph::graph::sum_product_circuit::KIND_LEAF: u32
+pub const vyre_libs_graph::graph::sum_product_circuit::KIND_PRODUCT: u32
+pub const vyre_libs_graph::graph::sum_product_circuit::KIND_SUM: u32
+pub const vyre_libs_graph::graph::sum_product_circuit::OP_ID: &str
+pub const vyre_libs_graph::graph::sum_product_circuit::OP_ID_LEVELED: &str
+pub const vyre_libs_graph::graph::tensor_flow_forward::BINDING_TENSOR_IN: u32
+pub const vyre_libs_graph::graph::tensor_flow_forward::BINDING_TENSOR_OUT: u32
+pub const vyre_libs_graph::graph::tensor_flow_forward::OP_ID: &str
+pub const vyre_libs_graph::graph::tensor_flow_forward::TENSOR_FLOW_FORWARD_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_graph::graph::tensor_flow_forward::TENSOR_FLOW_PROPAGATE_EDGES_OP_ID: &str
+pub const vyre_libs_graph::graph::toposort::OP_ID: &str
+pub const vyre_libs_graph::graph::toposort::TOPOSORT_INDEGREE_SCRATCH_BUFFER: &str
+pub const vyre_libs_graph::graph::toposort::TOPOSORT_OFFSETS_BUFFER: &str
+pub const vyre_libs_graph::graph::toposort::TOPOSORT_ORDER_OUT_BUFFER: &str
+pub const vyre_libs_graph::graph::toposort::TOPOSORT_QUEUE_SCRATCH_BUFFER: &str
+pub const vyre_libs_graph::graph::toposort::TOPOSORT_TARGETS_BUFFER: &str
+pub const vyre_libs_graph::graph::union_find::OP_ID: &str
+pub const vyre_libs_graph::graph::union_find::UNION_FIND_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_graph::graph::vast_tree_walk::POSTORDER_OP_ID: &str
+pub const vyre_libs_graph::graph::vast_tree_walk::PREORDER_OP_ID: &str
+pub const vyre_libs_graph::graph::vast_tree_walk::VAST_DESCEND_LEFTMOST_LEAF_OP_ID: &str
+pub const vyre_libs_graph::topology::simplicial::OP_ID: &str
+pub const vyre_libs_graph::topology::vietoris_rips::OP_ID: &str
+pub enum vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalMode
+pub enum vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind
+pub enum vyre_libs_graph::graph::adaptive_traverse::DenseTraversalKernel
+pub enum vyre_libs_graph::graph::program_graph::GraphValidationError
+pub enum vyre_libs_graph::graph::reachable::ReachableError
+pub enum vyre_libs_graph::graph::vast_tree_walk::VastWalkOrder
+pub fn vyre_libs_graph::graph::adaptive_traverse::adaptive_dense_step(frontier_in: &str, frontier_out: &str, adj_rows_dense: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::adaptive_traverse::adaptive_four_russians_dense_step(frontier_in: &str, tile_lut: &str, frontier_out: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::adaptive_traverse::adaptive_four_russians_graph_content_hash(node_count: u32, adj_rows_dense: &[u32]) -> u64
+pub fn vyre_libs_graph::graph::adaptive_traverse::adaptive_frontier_stats(node_count: u32, frontier_in: &[u32], context: &str) -> core::result::Result<vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierStats, alloc::string::String>
+pub fn vyre_libs_graph::graph::adaptive_traverse::adaptive_sparse_dense_step(frontier_in: &str, frontier_out: &str, frontier_popcount: &str, edge_offsets: &str, edge_targets: &str, edge_kind_mask: &str, adj_rows_dense: &str, node_count: u32, edge_count: u32, allow_mask: u32, dense_threshold_pct: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::adaptive_traverse::adaptive_sparse_queue_graph_content_hash(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32]) -> u64
+pub fn vyre_libs_graph::graph::adaptive_traverse::adaptive_traversal_graph_content_hash(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], adj_rows_dense: &[u32]) -> u64
+pub fn vyre_libs_graph::graph::adaptive_traverse::four_russians_dense_columns_from_adj_rows(node_count: u32, adj_rows_dense: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
+pub fn vyre_libs_graph::graph::adaptive_traverse::four_russians_dense_lut_from_adj_rows(node_count: u32, adj_rows_dense: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
+pub fn vyre_libs_graph::graph::adaptive_traverse::four_russians_dense_lut_words(node_count: u32) -> u32
+pub fn vyre_libs_graph::graph::adaptive_traverse::plan_adaptive_dense_step(frontier_in: &str, tile_lut: &str, frontier_out: &str, adj_rows_dense_name: &str, node_count: u32, frontier_popcount: u32, expected_lut_reuse_steps: u32, adj_rows_dense: &[u32]) -> core::result::Result<vyre_libs_graph::graph::adaptive_traverse::AdaptiveDenseStepPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::adaptive_traverse::plan_adaptive_frontier_work(node_count: u32, frontier_in: &[u32]) -> core::result::Result<vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierWorkPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::adaptive_traverse::plan_adaptive_traversal_step(buffers: &vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalBuffers<'_>, node_count: u32, edge_count: u32, frontier_popcount: u32, queue_capacity: u32, allow_mask: u32) -> vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalStepPlan
+pub fn vyre_libs_graph::graph::adaptive_traverse::select_adaptive_traversal_mode(node_count: u32, edge_count: u32, frontier_popcount: u32, dense_threshold_pct: u32) -> vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalMode
+pub fn vyre_libs_graph::graph::adaptive_traverse::select_dense_traversal_kernel(node_count: u32, frontier_popcount: u32, expected_lut_reuse_steps: u32) -> vyre_libs_graph::graph::adaptive_traverse::DenseTraversalKernel
+pub fn vyre_libs_graph::graph::adaptive_traverse::validate_adaptive_frontier(node_count: u32, frontier_in: &[u32]) -> core::result::Result<vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::adaptive_traverse::validate_adaptive_traversal_layout(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], adj_rows_dense: &[u32]) -> core::result::Result<vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::adjustment_set::backdoor_descendants_check(candidate_z: &str, descendants_of_x: &str, out_violation: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::ast_walk(order: vyre_libs_graph::graph::vast_tree_walk::VastWalkOrder, nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::ast_walk_postorder(out: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::ast_walk_postorder_nodes(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::ast_walk_preorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::chebyshev_filter::chebyshev_filter(laplacian: &str, signal: &str, coeffs: &str, output: &str, scratch: &str, n: u32, k_steps: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::chebyshev_filter::try_chebyshev_filter(laplacian: &str, signal: &str, coeffs: &str, output: &str, scratch: &str, n: u32, k_steps: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_backward_or_changed::csr_backward_or_changed_parallel(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, edge_kind_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_backward_traverse::csr_backward_traverse(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str, allow_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalDispatchPlan::program(&self) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalDispatchPlan::static_input_key(&self, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32]) -> core::result::Result<vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalStaticInputKey, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_bidirectional::csr_bidirectional(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str, edge_kind_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_bidirectional::merge_frontier_or_changed(current: &mut [u32], next: &[u32]) -> bool
+pub fn vyre_libs_graph::graph::csr_bidirectional::plan_csr_bidirectional_step(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], frontier_in: &[u32], allow_mask: u32) -> core::result::Result<vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalDispatchPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_bidirectional::try_merge_frontier_or_changed(current: &mut [u32], next: &[u32]) -> core::result::Result<bool, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_bidirectional::validate_csr_inputs(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], frontier_in: &[u32]) -> core::result::Result<vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan::changed_read_index(&self, iteration: u32) -> core::result::Result<usize, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan::program(&self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan::static_input_key(&self, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32]) -> core::result::Result<vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedStaticInputKey, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::build_csr_forward_or_changed_dispatch_program(key: vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedProgramKey) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::copy_csr_forward_seed_frontier_into<E>(seed: &[u32], frontier_words: usize, frontier: &mut alloc::vec::Vec<u32>, reserve: impl core::ops::function::FnOnce(&mut alloc::vec::Vec<u32>, usize, &'static str) -> core::result::Result<(), E>, map_bad_input: impl core::ops::function::FnOnce(alloc::string::String) -> E) -> core::result::Result<(), E>
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::csr_forward_or_changed(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, edge_kind_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::csr_forward_or_changed_body(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed_var: &str, edge_kind_mask: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::csr_forward_or_changed_body_prefixed(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed_var: &str, edge_kind_mask: u32, prefix: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::csr_forward_or_changed_child(parent_op_id: &str, shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed_var: &str, edge_kind_mask: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::csr_forward_or_changed_child_prefixed(parent_op_id: &str, shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed_var: &str, edge_kind_mask: u32, local_prefix: &str) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::csr_forward_or_changed_parallel(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, edge_kind_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_batch(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, edge_kind_mask: u32, query_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_batch_global(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, edge_kind_mask: u32, query_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_batch_global_slot(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, edge_kind_mask: u32, query_count: u32, changed_slot: u32, changed_slots: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_body_prefixed(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, edge_kind_mask: u32, local_prefix: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_child_prefixed(parent_op_id: &str, shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, edge_kind_mask: u32, local_prefix: &str) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_snapshot_body_prefixed(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, edge_kind_mask: u32, local_prefix: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_snapshot_child_prefixed(parent_op_id: &str, shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, edge_kind_mask: u32, local_prefix: &str) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::csr_forward_or_changed_parallel_snapshot_child_prefixed_with_active(parent_op_id: &str, shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, active_gate: vyre_foundation::ir_inner::model::generated::Expr, active_changed_index: vyre_foundation::ir_inner::model::generated::Expr, edge_kind_mask: u32, local_prefix: &str) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::plan_csr_forward_or_changed_launch(inputs: vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'_>) -> core::result::Result<vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::try_csr_forward_or_changed_parallel_batch(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, edge_kind_mask: u32, query_count: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::try_csr_forward_or_changed_parallel_batch_global_slot(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, edge_kind_mask: u32, query_count: u32, changed_slot: u32, changed_slots: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_forward_or_changed::validate_csr_forward_or_changed_flag(changed: u32) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_forward_traverse::csr_forward_traverse(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str, allow_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_forward_traverse::csr_forward_traverse_excluding(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, excluded_sources: &str, frontier_out: &str, allow_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_frontier_degree_sum::csr_frontier_degree_sum(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_frontier_queue::csr_queue_forward_traverse(active_queue: &str, queue_len: &str, edge_offsets: &str, edge_targets: &str, edge_kind_mask: &str, frontier_out: &str, node_count: u32, edge_count: u32, queue_capacity: u32, allow_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_frontier_queue::csr_queue_forward_traverse_with(params: vyre_libs_graph::graph::csr_frontier_queue::CsrQueueForwardTraverseParams<'_>) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_frontier_queue::frontier_queue_len_init(queue_len: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_frontier_queue::frontier_to_queue(frontier_in: &str, active_queue: &str, queue_len: &str, node_count: u32, queue_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_frontier_queue::frontier_to_queue_parallel(frontier_in: &str, active_queue: &str, queue_len: &str, node_count: u32, queue_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_frontier_queue::frontier_word_block_offsets_in_place(block_totals: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_frontier_queue::frontier_word_block_offsets_to_queue_parallel(frontier_in: &str, word_partials: &str, block_offsets: &str, active_queue: &str, queue_len: &str, node_count: u32, queue_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_frontier_queue::frontier_word_block_prefix_to_queue_parallel(frontier_in: &str, word_partials: &str, block_totals: &str, active_queue: &str, queue_len: &str, node_count: u32, queue_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_frontier_queue::frontier_word_counts_scan_pass_a(frontier_in: &str, word_partials: &str, block_totals: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_frontier_queue::frontier_words_to_queue_clear_out_parallel(frontier_in: &str, active_queue: &str, queue_len: &str, frontier_out: &str, node_count: u32, queue_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_frontier_queue::frontier_words_to_queue_parallel(frontier_in: &str, active_queue: &str, queue_len: &str, node_count: u32, queue_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_frontier_queue::validate_csr_queue_graph(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32]) -> core::result::Result<vyre_libs_graph::graph::csr_frontier_queue::CsrQueueGraphLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_frontier_queue::validate_frontier_queue_batch(node_count: u32, frontiers: &[&[u32]], queue_capacity: u32) -> core::result::Result<usize, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_frontier_queue::validate_frontier_queue_query(node_count: u32, frontier: &[u32], queue_capacity: u32) -> core::result::Result<usize, alloc::string::String>
+pub fn vyre_libs_graph::graph::csr_queue_delta::csr_queue_delta_enqueue(active_queue: &str, active_len: &str, edge_offsets: &str, edge_targets: &str, edge_kind_mask: &str, accumulator: &str, next_queue: &str, next_len: &str, node_count: u32, edge_count: u32, active_queue_capacity: u32, next_queue_capacity: u32, allow_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_queue_delta::csr_queue_delta_enqueue_with(params: vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams<'_>) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_queue_delta::csr_queue_delta_strided_enqueue(active_queue: &str, active_len: &str, edge_offsets: &str, edge_targets: &str, edge_kind_mask: &str, accumulator: &str, next_queue: &str, next_len: &str, node_count: u32, edge_count: u32, active_queue_capacity: u32, next_queue_capacity: u32, allow_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_queue_delta::csr_queue_delta_strided_enqueue_with(params: vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams<'_>) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_queue_split::csr_queue_split_low_forward_traverse(active_queue: &str, queue_len: &str, edge_offsets: &str, edge_targets: &str, edge_kind_mask: &str, frontier_out: &str, high_queue: &str, high_len: &str, node_count: u32, edge_count: u32, queue_capacity: u32, high_queue_capacity: u32, high_degree_threshold: u32, allow_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_queue_split::csr_queue_split_low_forward_traverse_with(params: vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams<'_>) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_queue_strided::csr_queue_strided_forward_traverse(active_queue: &str, queue_len: &str, edge_offsets: &str, edge_targets: &str, edge_kind_mask: &str, frontier_out: &str, node_count: u32, edge_count: u32, queue_capacity: u32, allow_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::csr_queue_strided::csr_queue_strided_forward_traverse_with(params: vyre_libs_graph::graph::csr_frontier_queue::CsrQueueForwardTraverseParams<'_>) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::dispatch::csr_bidirectional::bidirectional_closure_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, inputs: vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'_>, seed: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::csr_bidirectional::bidirectional_closure_via_into(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, inputs: vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'_>, seed: &[u32], current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::csr_bidirectional::bidirectional_closure_via_with_scratch_into(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, inputs: vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'_>, seed: &[u32], scratch: &mut vyre_libs_graph::graph::dispatch::csr_bidirectional::BidirectionalGpuScratch, current: &mut alloc::vec::Vec<u32>, next: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::csr_bidirectional::bidirectional_step_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], frontier_in: &[u32], allow_mask: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::csr_bidirectional::bidirectional_step_via_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], frontier_in: &[u32], allow_mask: u32, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::csr_bidirectional::bidirectional_step_via_with_scratch_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], frontier_in: &[u32], allow_mask: u32, scratch: &mut vyre_libs_graph::graph::dispatch::csr_bidirectional::BidirectionalGpuScratch, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::csr_forward_or_changed::forward_closure_via_change_flag_gpu(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, inputs: vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'_>, seed: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::csr_forward_or_changed::forward_closure_via_change_flag_gpu_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, inputs: vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'_>, seed: &[u32], frontier: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::csr_forward_or_changed::forward_closure_via_change_flag_gpu_with_scratch_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, inputs: vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'_>, seed: &[u32], scratch: &mut vyre_libs_graph::graph::dispatch::csr_forward_or_changed::ForwardChangedGpuScratch, frontier: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::dominator_frontier::dominance_frontier_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, dom_offsets: &[u32], dom_targets: &[u32], pred_offsets: &[u32], pred_targets: &[u32], seed: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::dominator_frontier::dominance_frontier_via_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, dom_offsets: &[u32], dom_targets: &[u32], pred_offsets: &[u32], pred_targets: &[u32], seed: &[u32], frontier_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::dominator_frontier::dominance_frontier_via_with_scratch_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, dom_offsets: &[u32], dom_targets: &[u32], pred_offsets: &[u32], pred_targets: &[u32], seed: &[u32], scratch: &mut vyre_libs_graph::graph::dispatch::dominator_frontier::DominanceFrontierGpuScratch, frontier_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::exploded::build_ifds_csr_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, num_procs: u32, blocks_per_proc: u32, facts_per_proc: u32, intra_edges: &[(u32, u32, u32)], inter_edges: &[(u32, u32, u32, u32)], flow_gen: &[(u32, u32, u32)], flow_kill: &[(u32, u32, u32)]) -> core::result::Result<(alloc::vec::Vec<u32>, alloc::vec::Vec<u32>), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::exploded::build_ifds_csr_via_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, num_procs: u32, blocks_per_proc: u32, facts_per_proc: u32, intra_edges: &[(u32, u32, u32)], inter_edges: &[(u32, u32, u32, u32)], flow_gen: &[(u32, u32, u32)], flow_kill: &[(u32, u32, u32)], row_ptr_out: &mut alloc::vec::Vec<u32>, col_idx_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::exploded::build_ifds_csr_via_with_scratch_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, num_procs: u32, blocks_per_proc: u32, facts_per_proc: u32, intra_edges: &[(u32, u32, u32)], inter_edges: &[(u32, u32, u32, u32)], flow_gen: &[(u32, u32, u32)], flow_kill: &[(u32, u32, u32)], scratch: &mut vyre_libs_graph::graph::dispatch::exploded::IfdsCsrGpuScratch, row_ptr_out: &mut alloc::vec::Vec<u32>, col_idx_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::motif::match_motif_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], motif_edges: &[vyre_libs_graph::graph::motif::MotifEdge]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::motif::match_motif_via_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], motif_edges: &[vyre_libs_graph::graph::motif::MotifEdge], witness_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::motif::match_motif_via_with_scratch_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], motif_edges: &[vyre_libs_graph::graph::motif::MotifEdge], scratch: &mut vyre_libs_graph::graph::dispatch::motif::MotifGpuScratch, witness_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::motif::motif_matches_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], motif_edges: &[vyre_libs_graph::graph::motif::MotifEdge]) -> core::result::Result<bool, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::motif::motif_participation_count_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], motif_edges: &[vyre_libs_graph::graph::motif::MotifEdge]) -> core::result::Result<u32, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::path_reconstruct::path_to_root_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, parent: &[u32], target: u32, max_depth: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::path_reconstruct::reconstruct_path_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, parent: &[u32], target: u32, max_depth: u32, scratch: &mut alloc::vec::Vec<u32>) -> core::result::Result<u32, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::path_reconstruct::reconstruct_path_via_with_scratch(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, parent: &[u32], target: u32, max_depth: u32, dispatch_scratch: &mut vyre_libs_graph::graph::dispatch::path_reconstruct::PathReconstructGpuScratch, scratch: &mut alloc::vec::Vec<u32>) -> core::result::Result<u32, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::path_reconstruct::reconstruct_paths_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, parent: &[u32], targets: &[u32], max_depth: u32) -> core::result::Result<(alloc::vec::Vec<u32>, alloc::vec::Vec<u32>), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::path_reconstruct::reconstruct_paths_via_with_scratch_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, parent: &[u32], targets: &[u32], max_depth: u32, scratch: &mut vyre_libs_graph::graph::dispatch::path_reconstruct::PathReconstructGpuScratch, paths: &mut alloc::vec::Vec<u32>, lens: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::persistent_bfs::bfs_expand_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, inputs: vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'_>, frontier_in: &[u32]) -> core::result::Result<(alloc::vec::Vec<u32>, u32, u32), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::persistent_bfs::bfs_expand_via_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, inputs: vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'_>, frontier_in: &[u32], frontier_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(u32, u32), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::persistent_bfs::bfs_expand_via_with_scratch_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, inputs: vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'_>, frontier_in: &[u32], scratch: &mut vyre_libs_graph::graph::dispatch::persistent_bfs::PersistentBfsGpuScratch, frontier_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(u32, u32), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::toposort::topo_order_csr_via(dispatcher: &impl vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, offsets: &[u32], targets: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::toposort::topo_order_csr_via_with_scratch(dispatcher: &impl vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, offsets: &[u32], targets: &[u32], scratch: &mut vyre_libs_graph::graph::dispatch::toposort::ToposortGpuScratch) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::toposort::topo_order_csr_via_with_scratch_into(dispatcher: &impl vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, offsets: &[u32], targets: &[u32], scratch: &mut vyre_libs_graph::graph::dispatch::toposort::ToposortGpuScratch, order: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::union_find_emit::union_find_alias_program(parent: &str, edge_a: &str, edge_b: &str, node_count: u32, edge_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::dispatch::union_find_emit::union_find_alias_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, parent_init: &[u32], edge_a: &[u32], edge_b: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::union_find_emit::union_find_alias_via_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, parent_init: &[u32], edge_a: &[u32], edge_b: &[u32], parent_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::dispatch::union_find_emit::union_find_alias_via_with_scratch_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, parent_init: &[u32], edge_a: &[u32], edge_b: &[u32], scratch: &mut vyre_libs_graph::graph::dispatch::union_find_emit::UnionFindGpuScratch, parent_out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_graph::graph::do_calculus::impact_mask_from_closure(intervention_mask: &str, closure: &str, impact_mask: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::do_calculus::intervention_delete_incoming(adjacency: &str, intervention_mask: &str, out_adjacency: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::do_calculus::rule2_reverse_incoming(adjacency: &str, treatment_mask: &str, out_adjacency: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::do_calculus::rule3_subgraph(adjacency: &str, keep_mask: &str, reduced: &str, kept: &str, kept_len: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::do_calculus::try_intervention_delete_incoming(adjacency: &str, intervention_mask: &str, out_adjacency: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::do_calculus::try_rule2_reverse_incoming(adjacency: &str, treatment_mask: &str, out_adjacency: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::do_calculus::try_rule3_subgraph(adjacency: &str, keep_mask: &str, reduced: &str, kept: &str, kept_len: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLaunchPlan::program(&self, seed_buffer: &str, out_buffer: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLaunchPlan::static_input_key(&self, dom_offsets: &[u32], dom_targets: &[u32], pred_offsets: &[u32], pred_targets: &[u32]) -> vyre_libs_graph::graph::dominator_frontier::DominatorFrontierStaticInputKey
+pub fn vyre_libs_graph::graph::dominator_frontier::dominator_frontier(node_count: u32, dom_edge_count: u32, pred_edge_count: u32, seed: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::dominator_frontier::dominator_frontier_pred_check_body(candidate: vyre_foundation::ir_inner::model::generated::Expr, n: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_graph::graph::dominator_frontier::dominator_frontier_pred_check_program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::dominator_frontier::dominator_frontier_slice_fingerprint(words: &[u32]) -> vyre_libs_graph::graph::dominator_frontier::DominatorFrontierSliceFingerprint
+pub fn vyre_libs_graph::graph::dominator_frontier::plan_dominator_frontier_dispatch(node_count: u32, dom_offsets: &[u32], dom_targets: &[u32], pred_offsets: &[u32], pred_targets: &[u32], seed: &[u32], seed_buffer: &str, out_buffer: &str) -> core::result::Result<vyre_libs_graph::graph::dominator_frontier::DominatorFrontierDispatchPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::dominator_frontier::plan_dominator_frontier_launch(node_count: u32, dom_offsets: &[u32], dom_targets: &[u32], pred_offsets: &[u32], pred_targets: &[u32], seed: &[u32]) -> core::result::Result<vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLaunchPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::dominator_frontier::try_dominator_frontier(node_count: u32, dom_edge_count: u32, pred_edge_count: u32, seed: &str, out: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::dominator_frontier::validate_csr_shape(label: &str, node_count: u32, offsets: &[u32], targets: &[u32]) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_libs_graph::graph::dominator_frontier::validate_dominator_frontier_inputs(node_count: u32, dom_offsets: &[u32], dom_targets: &[u32], pred_offsets: &[u32], pred_targets: &[u32], seed: &[u32]) -> core::result::Result<vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::dominator_tree::dominator_tree_depth(node_count: u32, idom: &str, depth: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::dominator_tree::dominator_tree_depth_body(node_count: u32, idom: &str, depth: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_graph::graph::dominator_tree::dominator_tree_depth_child(parent_op_id: &str, node_count: u32, idom: &str, depth: &str) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_graph::graph::dominator_tree::dominator_tree_intersect_step(node_count: u32, pred_edge_count: u32, idom: &str, depth: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::dominator_tree::dominator_tree_intersect_step_body(node_count: u32, idom: &str, depth: &str, changed: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_graph::graph::dominator_tree::dominator_tree_intersect_step_child(parent_op_id: &str, node_count: u32, idom: &str, depth: &str, changed: &str) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_graph::graph::dominator_tree::dominator_tree_lca_body(node_count: u32, idom: &str, depth: &str, b_init: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_graph::graph::dominator_tree::dominator_tree_lca_program(node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::dominator_tree::dominator_tree_program(node_count: u32, edge_count: u32, pred_edge_count: u32, idom_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::dominator_tree::try_dominator_tree_program(node_count: u32, edge_count: u32, pred_edge_count: u32, idom_out: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::dominator_tree::validate_dominator_tree_inputs(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], pred_offsets: &[u32], pred_targets: &[u32]) -> core::result::Result<vyre_libs_graph::graph::dominator_tree::DominatorTreeLayout, vyre_libs_graph::graph::dominator_tree::DominatorTreeError>
+pub fn vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::program(&self) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns::prepare(&mut self, intra_edges: &[(u32, u32, u32)], inter_edges: &[(u32, u32, u32, u32)], flow_gen: &[(u32, u32, u32)], flow_kill: &[(u32, u32, u32)]) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_libs_graph::graph::exploded::IfdsCsrRuleInputFingerprint::from_rules(intra_edges: &[(u32, u32, u32)], inter_edges: &[(u32, u32, u32, u32)], flow_gen: &[(u32, u32, u32)], flow_kill: &[(u32, u32, u32)]) -> Self
+pub fn vyre_libs_graph::graph::exploded::build_ifds_csr_program(num_procs: u32, blocks_per_proc: u32, facts_per_proc: u32, intra_count: u32, inter_count: u32, gen_count: u32, kill_count: u32, max_col_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::exploded::canonicalize_csr_within_rows_in_place(row_ptr: &[u32], col_idx: &mut [u32]) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_libs_graph::graph::exploded::fits(proc_id: u32, block_id: u32, fact_id: u32) -> bool
+pub fn vyre_libs_graph::graph::exploded::max_ifds_col_count(intra_count: u32, inter_count: u32, gen_count: u32, facts_per_proc: u32) -> core::option::Option<u32>
+pub fn vyre_libs_graph::graph::exploded::plan_ifds_csr_dispatch(num_procs: u32, blocks_per_proc: u32, facts_per_proc: u32, intra_edges: &[(u32, u32, u32)], inter_edges: &[(u32, u32, u32, u32)], flow_gen: &[(u32, u32, u32)], flow_kill: &[(u32, u32, u32)]) -> core::result::Result<vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::exploded::split_ifds_rule_quads_into(quads: &[(u32, u32, u32, u32)], first: &mut alloc::vec::Vec<u32>, second: &mut alloc::vec::Vec<u32>, third: &mut alloc::vec::Vec<u32>, fourth: &mut alloc::vec::Vec<u32>, context: &str) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_libs_graph::graph::exploded::split_ifds_rule_triples_into(triples: &[(u32, u32, u32)], first: &mut alloc::vec::Vec<u32>, second: &mut alloc::vec::Vec<u32>, third: &mut alloc::vec::Vec<u32>, context: &str) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_libs_graph::graph::exploded::validate_ifds_csr_inputs(num_procs: u32, blocks_per_proc: u32, facts_per_proc: u32, intra_edges: &[(u32, u32, u32)], inter_edges: &[(u32, u32, u32, u32)], flow_gen: &[(u32, u32, u32)], flow_kill: &[(u32, u32, u32)]) -> core::result::Result<vyre_libs_graph::graph::exploded::IfdsCsrLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::exploded::validate_ifds_csr_layout(num_procs: u32, blocks_per_proc: u32, facts_per_proc: u32, intra_count: u32, inter_count: u32, gen_count: u32) -> core::result::Result<vyre_libs_graph::graph::exploded::IfdsCsrLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::exploded::validate_ifds_csr_readback(layout: &vyre_libs_graph::graph::exploded::IfdsCsrLayout, row_ptr: &[u32], col_idx: &[u32], col_len: u32) -> core::result::Result<usize, alloc::string::String>
+pub fn vyre_libs_graph::graph::functorial::functor_apply(source_row: &str, mapping: &str, target_row: &str, n_cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::functorial::functor_apply_sized(source_row: &str, mapping: &str, target_row: &str, n_cols: u32, target_n_cols: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::knowledge_compile::ddnnf_evaluate(node_kinds: &str, node_var: &str, child_offsets: &str, child_counts: &str, children: &str, var_assignments: &str, out: &str, n_nodes: u32, n_children: u32, n_vars: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::knowledge_compile::try_ddnnf_evaluate(node_kinds: &str, node_var: &str, child_offsets: &str, child_counts: &str, children: &str, var_assignments: &str, out: &str, n_nodes: u32, n_children: u32, n_vars: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::level_wave::build_callee_before_caller_program(step_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, depth_buf: &str, max_depth: u32, function_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::level_wave::build_callee_before_caller_program_with_buffers(step_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, depth_buf: &str, extra_buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, max_depth: u32, function_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::level_wave::level_wave_program(step_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, depth_buf: &str, max_depth: u32, lane_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::level_wave::level_wave_program_with_buffers(step_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, depth_buf: &str, extra_buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, max_depth: u32, lane_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::level_wave::level_wave_program_with_buffers_and_op_id(op_id: &str, step_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, depth_buf: &str, extra_buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, max_depth: u32, lane_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::matroid::matroid_exchange_bfs_step(frontier_in: &str, exchange_adj: &str, visited: &str, frontier_out: &str, any_change: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::matroid::try_matroid_exchange_bfs_step(frontier_in: &str, exchange_adj: &str, visited: &str, frontier_out: &str, any_change: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::matroid_intersection_full::matroid_intersection_full(exchange_adj: &str, sources: &str, sinks: &str, set_x: &str, parent: &str, frontier: &str, next_frontier: &str, visited: &str, any_change: &str, path_out: &str, path_len: &str, n: u32, max_augmentations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::motif::MotifLaunchPlan::cache_key(&self) -> &vyre_libs_graph::graph::motif::MotifProgramCacheKey
+pub fn vyre_libs_graph::graph::motif::MotifLaunchPlan::program(&self) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::motif::MotifLaunchPlan::static_input_key(&self, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32]) -> core::result::Result<vyre_libs_graph::graph::motif::MotifStaticInputKey, alloc::string::String>
+pub fn vyre_libs_graph::graph::motif::motif(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, edges: &[vyre_libs_graph::graph::motif::MotifEdge], witness_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::motif::plan_motif_dispatch(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], motif_edges: &[vyre_libs_graph::graph::motif::MotifEdge], witness_out: &str) -> core::result::Result<vyre_libs_graph::graph::motif::MotifDispatchPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::motif::plan_motif_launch(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], motif_edges: &[vyre_libs_graph::graph::motif::MotifEdge], witness_out: &str) -> core::result::Result<vyre_libs_graph::graph::motif::MotifLaunchPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::motif::validate_csr_inputs(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32]) -> core::result::Result<vyre_libs_graph::graph::motif::MotifLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::motif::validate_motif_inputs(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], motif_edges: &[vyre_libs_graph::graph::motif::MotifEdge]) -> core::result::Result<vyre_libs_graph::graph::motif::MotifLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::motif::validate_motif_witness(layout: vyre_libs_graph::graph::motif::MotifLayout, witness: &[u32]) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_libs_graph::graph::pack_branching_fixture() -> alloc::vec::Vec<u8>
+pub fn vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::program(&self) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::static_input_key(&self, parent: &[u32]) -> core::result::Result<vyre_libs_graph::graph::path_reconstruct::PathReconstructStaticInputKey, alloc::string::String>
+pub fn vyre_libs_graph::graph::path_reconstruct::PathReconstructDispatchPlan::program(&self) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::path_reconstruct::PathReconstructDispatchPlan::static_input_key(&self, parent: &[u32]) -> core::result::Result<vyre_libs_graph::graph::path_reconstruct::PathReconstructStaticInputKey, alloc::string::String>
+pub fn vyre_libs_graph::graph::path_reconstruct::batched_path_reconstruct(parent_count: u32, target_count: u32, max_depth: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::path_reconstruct::path_reconstruct(parent: &str, target: &str, path_out: &str, path_len: &str, parent_count: u32, max_depth: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::path_reconstruct::plan_batched_path_reconstruct_dispatch(parent_len: usize, target_len: usize, max_depth: u32) -> core::result::Result<vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructDispatchPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::path_reconstruct::plan_path_reconstruct_dispatch(parent_len: usize, max_depth: u32) -> core::result::Result<vyre_libs_graph::graph::path_reconstruct::PathReconstructDispatchPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::path_reconstruct::validate_batched_path_reconstruct_layout(target_len: usize, max_depth: u32) -> core::result::Result<vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::path_reconstruct::validate_batched_path_reconstruct_readback(plan: &vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructDispatchPlan, path_words: usize, len_words: usize, lens: &[u32]) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_libs_graph::graph::path_reconstruct::validate_path_reconstruct_readback(plan: &vyre_libs_graph::graph::path_reconstruct::PathReconstructDispatchPlan, len: u32) -> core::result::Result<usize, alloc::string::String>
+pub fn vyre_libs_graph::graph::persistent_bfs::copy_persistent_bfs_batch_seed_and_clear_changed_into<E, MapError>(frontier_outputs: &mut alloc::vec::Vec<u32>, frontier_inputs: &[u32], changed_outputs: &mut alloc::vec::Vec<u32>, query_count: usize, context: &'static str, map_error: MapError) -> core::result::Result<(), E> where MapError: core::ops::function::FnMut(alloc::string::String) -> E
+pub fn vyre_libs_graph::graph::persistent_bfs::copy_persistent_bfs_seed_frontier_into<E, MapError>(frontier_out: &mut alloc::vec::Vec<u32>, frontier_in: &[u32], context: &'static str, map_error: MapError) -> core::result::Result<(), E> where MapError: core::ops::function::FnMut(alloc::string::String) -> E
+pub fn vyre_libs_graph::graph::persistent_bfs::persistent_bfs(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str, edge_kind_mask: u32, max_iters: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::persistent_bfs::persistent_bfs_batch(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str, changed: &str, converged: &str, query_count: u32, edge_kind_mask: u32, max_iters: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::persistent_bfs::persistent_bfs_batch_with_density(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str, changed: &str, converged: &str, density_active: &str, query_count: u32, edge_kind_mask: u32, max_iters: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::persistent_bfs::persistent_bfs_layout_hash(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32]) -> u64
+pub fn vyre_libs_graph::graph::persistent_bfs::persistent_bfs_program_layout_hash(node_count: u32, edge_count: u32, words_per_query: u32, query_count: u32, kind: vyre_libs_graph::graph::persistent_bfs::layout::PersistentBfsPlanCacheKind) -> u64
+pub fn vyre_libs_graph::graph::persistent_bfs::persistent_bfs_with_density(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str, density_active: &str, edge_kind_mask: u32, max_iters: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::persistent_bfs::plan_persistent_bfs_dispatch(inputs: vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'_>, frontier_in: &[u32]) -> core::result::Result<vyre_libs_graph::graph::persistent_bfs::dispatch_plan::PersistentBfsDispatchPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::persistent_bfs::plan_persistent_bfs_resident_batch_dispatch(node_count: u32, edge_count: u32, words_per_query: usize, frontier_inputs: &[u32], query_count: usize, allow_mask: u32, max_iters: u32) -> core::result::Result<vyre_libs_graph::graph::persistent_bfs::resident_plan::PersistentBfsResidentBatchDispatchPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::persistent_bfs::plan_persistent_bfs_resident_dispatch(node_count: u32, edge_count: u32, words_per_query: usize, frontier_in: &[u32], allow_mask: u32, max_iters: u32) -> core::result::Result<vyre_libs_graph::graph::persistent_bfs::resident_plan::PersistentBfsResidentDispatchPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::persistent_bfs::try_persistent_bfs_batch(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str, changed: &str, converged: &str, query_count: u32, edge_kind_mask: u32, max_iters: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::persistent_bfs::try_persistent_bfs_batch_with_density(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_in: &str, frontier_out: &str, changed: &str, converged: &str, density_active: &str, query_count: u32, edge_kind_mask: u32, max_iters: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::persistent_bfs::validate_persistent_bfs_batch_frontiers(words_per_query: usize, frontier_inputs: &[u32], query_count: usize) -> core::result::Result<vyre_libs_graph::graph::persistent_bfs::layout::PersistentBfsBatchLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::persistent_bfs::validate_persistent_bfs_changed_flag(changed: u32) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_libs_graph::graph::persistent_bfs::validate_persistent_bfs_converged_flag(converged: u32) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_libs_graph::graph::persistent_bfs::validate_persistent_bfs_frontier(words_per_query: usize, frontier_in: &[u32]) -> core::result::Result<vyre_libs_graph::graph::persistent_bfs::layout::PersistentBfsFrontierLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::persistent_bfs::validate_persistent_bfs_graph_layout(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32]) -> core::result::Result<vyre_libs_graph::graph::persistent_bfs::layout::PersistentBfsLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::persistent_bfs::validate_persistent_bfs_inputs(node_count: u32, edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], frontier_in: &[u32]) -> core::result::Result<vyre_libs_graph::graph::persistent_bfs::layout::PersistentBfsLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::persistent_bfs_step::persistent_bfs_step(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, edge_kind_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::persistent_bfs_step::persistent_bfs_step_body(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, scratch: &str, edge_kind_mask: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_graph::graph::persistent_bfs_step::persistent_bfs_step_body_prefixed(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, scratch: &str, edge_kind_mask: u32, local_prefix: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_graph::graph::persistent_bfs_step::persistent_bfs_step_child(parent_op_id: &str, shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, scratch: &str, edge_kind_mask: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_graph::graph::persistent_bfs_step::persistent_bfs_step_child_prefixed(parent_op_id: &str, shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, scratch: &str, edge_kind_mask: u32, local_prefix: &str) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_graph::graph::persistent_bfs_step::persistent_bfs_step_child_prefixed_with_active(parent_op_id: &str, shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, frontier_out: &str, changed: &str, scratch: &str, active_scratch: &str, edge_kind_mask: u32, local_prefix: &str) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_graph::graph::program_graph::ProgramGraphShape::new(node_count: u32, edge_count: u32) -> Self
+pub fn vyre_libs_graph::graph::program_graph::ProgramGraphShape::read_only_buffers(&self) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>
+pub fn vyre_libs_graph::graph::program_graph::ProgramGraphShape::try_read_only_buffers(&self) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, alloc::string::String>
+pub fn vyre_libs_graph::graph::program_graph::frontier_buffer(name: &str, binding: u32, access: vyre_spec::buffer_access::BufferAccess, node_count: u32) -> vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl
+pub fn vyre_libs_graph::graph::program_graph::push_frontier_changed_buffers(buffers: &mut alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, frontier: &str, changed: &str, node_count: u32)
+pub fn vyre_libs_graph::graph::program_graph::validate_program_graph(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, nodes: &[u32], edge_offsets: &[u32], edge_targets: &[u32], edge_kind_mask: &[u32], node_tags: &[u32]) -> core::result::Result<(), vyre_libs_graph::graph::program_graph::GraphValidationError>
+pub fn vyre_libs_graph::graph::program_graph::word_buffer(name: &str, binding: u32, access: vyre_spec::buffer_access::BufferAccess, words: u32) -> vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl
+pub fn vyre_libs_graph::graph::reachable::ReachableError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_graph::graph::reachable::ReachableError::from(error: vyre_libs_graph::graph::reachable::UnknownNode) -> Self
+pub fn vyre_libs_graph::graph::reachable::UnknownNode::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_graph::graph::reachable::reachable_program(node_count: u32, edge_count: u32, sources_buf: &str, reach_out: &str, max_iters: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::scc_decompose::dense_reachability_bitsets(node_count: u32, dense_count: u32, pivot: u32, forward_closure: &str, backward_closure: &str, forward_bitset: &str, backward_bitset: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::scc_decompose::scc_decompose(node_count: u32, forward_bitset: &str, backward_bitset: &str, component_out: &str, pivot: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::sheaf::sheaf_diffusion_step(stalks: &str, restriction_diag: &str, damping_scaled: &str, stalks_next: &str, n_nodes: u32, d: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::sheaf::try_sheaf_diffusion_step(stalks: &str, restriction_diag: &str, damping_scaled: &str, stalks_next: &str, n_nodes: u32, d: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierHeader::is_complete(self) -> bool
+pub fn vyre_libs_graph::graph::string_diagram::monoidal_compose(f: &str, g: &str, out: &str, a: u32, b: u32, c: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::string_diagram::try_monoidal_compose(f: &str, g: &str, out: &str, a: u32, b: u32, c: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::sum_product_circuit::sum_product_depths(child_offsets: &[u32], child_counts: &[u32], children: &[u32], n_nodes: u32) -> core::result::Result<(alloc::vec::Vec<u32>, u32), alloc::string::String>
+pub fn vyre_libs_graph::graph::sum_product_circuit::sum_product_evaluate(kinds: &str, child_offsets: &str, child_counts: &str, children: &str, weights: &str, leaf_values: &str, out: &str, n_nodes: u32, n_edges: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::sum_product_circuit::sum_product_evaluate_leveled(depths: &str, kinds: &str, child_offsets: &str, child_counts: &str, children: &str, weights: &str, leaf_values: &str, out: &str, n_nodes: u32, n_edges: u32, max_depth: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::sum_product_circuit::try_sum_product_evaluate(kinds: &str, child_offsets: &str, child_counts: &str, children: &str, weights: &str, leaf_values: &str, out: &str, n_nodes: u32, n_edges: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::sum_product_circuit::try_sum_product_evaluate_leveled(depths: &str, kinds: &str, child_offsets: &str, child_counts: &str, children: &str, weights: &str, leaf_values: &str, out: &str, n_nodes: u32, n_edges: u32, max_depth: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::tensor_flow_forward::tensor_flow_forward(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, tensor_in: &str, tensor_out: &str, context_limit: u32, field_limit: u32, allow_mask: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::tensor_flow_forward::tensor_flow_propagate_edges_body(tensor_out: &str, node_count: u32, field_limit: u32, tensor_lane_count: u32, allow_mask: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_graph::graph::tensor_flow_forward::tensor_flow_propagate_edges_program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::tensor_flow_forward::try_tensor_flow_forward(shape: vyre_libs_graph::graph::program_graph::ProgramGraphShape, tensor_in: &str, tensor_out: &str, context_limit: u32, field_limit: u32, allow_mask: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::tensor_flow_forward::try_tensor_words(node_count: u32, context_limit: u32, field_limit: u32) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_libs_graph::graph::toposort::ToposortCsrDispatchPlan::program(&self) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::toposort::ToposortCsrDispatchPlan::static_input_key(&self, offsets: &[u32], targets: &[u32]) -> core::result::Result<vyre_libs_graph::graph::toposort::ToposortCsrStaticInputKey, vyre_libs_graph::graph::toposort::ToposortCsrError>
+pub fn vyre_libs_graph::graph::toposort::plan_toposort_csr_dispatch(node_count: u32, offsets: &[u32], targets: &[u32]) -> core::result::Result<vyre_libs_graph::graph::toposort::ToposortCsrDispatchPlan, vyre_libs_graph::graph::toposort::ToposortCsrError>
+pub fn vyre_libs_graph::graph::toposort::toposort_csr_slice_fingerprint(values: &[u32]) -> u64
+pub fn vyre_libs_graph::graph::toposort::toposort_program(node_count: u32, offsets_buf: &str, targets_buf: &str, indeg_scratch: &str, queue_scratch: &str, order_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::toposort::validate_toposort_csr_inputs(node_count: u32, offsets: &[u32], targets: &[u32]) -> core::result::Result<vyre_libs_graph::graph::toposort::ToposortCsrLayout, vyre_libs_graph::graph::toposort::ToposortCsrError>
+pub fn vyre_libs_graph::graph::toposort::validate_toposort_csr_order(node_count: u32, offsets: &[u32], targets: &[u32], order: &[u32]) -> core::result::Result<(), vyre_libs_graph::graph::toposort::ToposortCsrError>
+pub fn vyre_libs_graph::graph::union_find::find_root_body(parent: &str, id_var: &str, root_var: &str, scratch_parent_var: &str, node_count: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_graph::graph::union_find::union_find_alias_program(parent: &str, edge_a: &str, edge_b: &str, node_count: u32, edge_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::union_find::union_find_program(parent: &str, edge_a: &str, edge_b: &str, node_count: u32, edge_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::union_find::union_roots_body(parent: &str, edge_a: &str, edge_b: &str, edge_index_var: &str, node_count: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_graph::graph::union_find::validate_union_find_inputs(parent_init: &[u32], edge_a: &[u32], edge_b: &[u32]) -> core::result::Result<vyre_libs_graph::graph::union_find::UnionFindLayout, alloc::string::String>
+pub fn vyre_libs_graph::graph::vast_tree_walk::ast_walk_postorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::vast_tree_walk::ast_walk_preorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::vast_tree_walk::build_checked_postorder_walk(nodes: &str, out: &str, node_count: u32, traversal_capacity: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::vast_tree_walk::build_checked_preorder_walk(nodes: &str, out: &str, node_count: u32, traversal_capacity: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::vast_tree_walk::build_trusted_postorder_walk(nodes: &str, out: &str, node_count: u32, traversal_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::vast_tree_walk::build_trusted_preorder_walk(nodes: &str, out: &str, node_count: u32, traversal_capacity: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph::vast_tree_walk::build_vast_tree_walk_plan(nodes: &str, preorder_out: &str, postorder_out: &str, node_count: u32, traversal_capacity: u32) -> core::result::Result<vyre_libs_graph::graph::vast_tree_walk::VastTreeWalkPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::vast_tree_walk::descend_to_leftmost_leaf_body(nodes_name: &str, node_count: u32, stride: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_graph::graph::vast_tree_walk::try_ast_walk_order(order: vyre_libs_graph::graph::vast_tree_walk::VastWalkOrder, nodes: &str, out: &str, node_count: u32, out_cap: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::vast_tree_walk::try_ast_walk_plan(nodes: &str, preorder_out: &str, postorder_out: &str, node_count: u32, out_cap: u32) -> core::result::Result<vyre_libs_graph::graph::vast_tree_walk::VastTreeWalkProgramPlan, alloc::string::String>
+pub fn vyre_libs_graph::graph::vast_tree_walk::try_ast_walk_postorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::vast_tree_walk::try_ast_walk_preorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_graph::graph::vast_tree_walk::vast_descend_leftmost_leaf_program(node_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::graph_compositions::build_csr_graph_traversal_pipeline(node_count: u64, edge_count: u64, steps: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::contracts::ProgramGraphError>
+pub fn vyre_libs_graph::graph_compositions::build_dense_neural_pipeline(batch_size: u64, in_dim: u64, hidden_dim: u64, out_dim: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::contracts::ProgramGraphError>
+pub fn vyre_libs_graph::graph_compositions::build_interactive_graphics_pipeline(params: vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::contracts::ProgramGraphError>
+pub fn vyre_libs_graph::graph_compositions::build_streaming_parser_pipeline(chunk_size: u64) -> core::result::Result<vyre_foundation::ir_inner::model::program_graph::graph::ProgramGraph, vyre_foundation::ir_inner::model::program_graph::contracts::ProgramGraphError>
+pub fn vyre_libs_graph::link_anchor()
+pub fn vyre_libs_graph::topology::simplicial::simplicial_triangle_message(edge_features: &str, triangle_edges: &str, triangle_messages: &str, n_edges: u32, n_triangles: u32, d: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_graph::topology::vietoris_rips::vietoris_rips_edge_filter(dist_matrix: &str, epsilon: &str, edge_mask: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub mod vyre_libs_graph
+pub mod vyre_libs_graph::graph
+pub mod vyre_libs_graph::graph::adaptive_traverse
+pub mod vyre_libs_graph::graph::adjustment_set
+pub mod vyre_libs_graph::graph::chebyshev_filter
+pub mod vyre_libs_graph::graph::csr_backward_or_changed
+pub mod vyre_libs_graph::graph::csr_backward_traverse
+pub mod vyre_libs_graph::graph::csr_bidirectional
+pub mod vyre_libs_graph::graph::csr_closure_inputs
+pub mod vyre_libs_graph::graph::csr_forward_or_changed
+pub mod vyre_libs_graph::graph::csr_forward_traverse
+pub mod vyre_libs_graph::graph::csr_frontier_degree_sum
+pub mod vyre_libs_graph::graph::csr_frontier_queue
+pub mod vyre_libs_graph::graph::csr_queue_delta
+pub mod vyre_libs_graph::graph::csr_queue_split
+pub mod vyre_libs_graph::graph::csr_queue_strided
+pub mod vyre_libs_graph::graph::dispatch
+pub mod vyre_libs_graph::graph::dispatch::csr_bidirectional
+pub mod vyre_libs_graph::graph::dispatch::csr_forward_or_changed
+pub mod vyre_libs_graph::graph::dispatch::dominator_frontier
+pub mod vyre_libs_graph::graph::dispatch::exploded
+pub mod vyre_libs_graph::graph::dispatch::motif
+pub mod vyre_libs_graph::graph::dispatch::path_reconstruct
+pub mod vyre_libs_graph::graph::dispatch::persistent_bfs
+pub mod vyre_libs_graph::graph::dispatch::toposort
+pub mod vyre_libs_graph::graph::dispatch::union_find_emit
+pub mod vyre_libs_graph::graph::do_calculus
+pub mod vyre_libs_graph::graph::dominator_frontier
+pub mod vyre_libs_graph::graph::dominator_tree
+pub mod vyre_libs_graph::graph::exploded
+pub mod vyre_libs_graph::graph::functorial
+pub mod vyre_libs_graph::graph::knowledge_compile
+pub mod vyre_libs_graph::graph::level_wave
+pub mod vyre_libs_graph::graph::matroid
+pub mod vyre_libs_graph::graph::matroid_intersection_full
+pub mod vyre_libs_graph::graph::motif
+pub mod vyre_libs_graph::graph::path_reconstruct
+pub mod vyre_libs_graph::graph::persistent_bfs
+pub mod vyre_libs_graph::graph::persistent_bfs_step
+pub mod vyre_libs_graph::graph::program_graph
+pub mod vyre_libs_graph::graph::reachable
+pub mod vyre_libs_graph::graph::scc_decompose
+pub mod vyre_libs_graph::graph::sheaf
+pub mod vyre_libs_graph::graph::state_index_frontier
+pub mod vyre_libs_graph::graph::string_diagram
+pub mod vyre_libs_graph::graph::sum_product_circuit
+pub mod vyre_libs_graph::graph::tensor_flow_forward
+pub mod vyre_libs_graph::graph::toposort
+pub mod vyre_libs_graph::graph::union_find
+pub mod vyre_libs_graph::graph::vast_tree_walk
+pub mod vyre_libs_graph::graph_compositions
+pub mod vyre_libs_graph::topology
+pub mod vyre_libs_graph::topology::simplicial
+pub mod vyre_libs_graph::topology::vietoris_rips
+pub struct vyre_libs_graph::graph::adaptive_traverse::AdaptiveDenseStepPlan
+pub struct vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierLayout
+pub struct vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierStats
+pub struct vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierWorkPlan
+pub struct vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalBuffers<'a>
+pub struct vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalLayout
+pub struct vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey
+pub struct vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalStepPlan
+pub struct vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalDispatchPlan
+pub struct vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalLayout
+pub struct vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalProgramKey
+pub struct vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalStaticInputKey
+pub struct vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs<'a>
+pub struct vyre_libs_graph::graph::csr_closure_inputs::CsrGraphView<'a>
+pub struct vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedLaunchPlan
+pub struct vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedProgramKey
+pub struct vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedStaticInputKey
+pub struct vyre_libs_graph::graph::csr_frontier_queue::CsrQueueForwardTraverseParams<'a>
+pub struct vyre_libs_graph::graph::csr_frontier_queue::CsrQueueGraphLayout
+pub struct vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams<'a>
+pub struct vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams<'a>
+pub struct vyre_libs_graph::graph::dispatch::csr_bidirectional::BidirectionalGpuScratch
+pub struct vyre_libs_graph::graph::dispatch::csr_forward_or_changed::ForwardChangedGpuScratch
+pub struct vyre_libs_graph::graph::dispatch::dominator_frontier::DominanceFrontierGpuScratch
+pub struct vyre_libs_graph::graph::dispatch::exploded::IfdsCsrGpuScratch
+pub struct vyre_libs_graph::graph::dispatch::motif::MotifGpuScratch
+pub struct vyre_libs_graph::graph::dispatch::path_reconstruct::PathReconstructGpuScratch
+pub struct vyre_libs_graph::graph::dispatch::persistent_bfs::PersistentBfsGpuScratch
+pub struct vyre_libs_graph::graph::dispatch::toposort::ToposortGpuScratch
+pub struct vyre_libs_graph::graph::dispatch::union_find_emit::UnionFindGpuScratch
+pub struct vyre_libs_graph::graph::dominator_frontier::DominatorFrontierDispatchPlan
+pub struct vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLaunchPlan
+pub struct vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLayout
+pub struct vyre_libs_graph::graph::dominator_frontier::DominatorFrontierProgramShape
+pub struct vyre_libs_graph::graph::dominator_frontier::DominatorFrontierSliceFingerprint
+pub struct vyre_libs_graph::graph::dominator_frontier::DominatorFrontierStaticInputKey
+pub struct vyre_libs_graph::graph::dominator_tree::DominatorTreeLayout
+pub struct vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan
+pub struct vyre_libs_graph::graph::exploded::IfdsCsrLayout
+pub struct vyre_libs_graph::graph::exploded::IfdsCsrProgramCacheKey
+pub struct vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns
+pub struct vyre_libs_graph::graph::exploded::IfdsCsrRuleInputFingerprint
+pub struct vyre_libs_graph::graph::exploded::IfdsCsrStaticInputKey
+pub struct vyre_libs_graph::graph::motif::MotifDispatchPlan
+pub struct vyre_libs_graph::graph::motif::MotifEdge
+pub struct vyre_libs_graph::graph::motif::MotifLaunchPlan
+pub struct vyre_libs_graph::graph::motif::MotifLayout
+pub struct vyre_libs_graph::graph::motif::MotifProgramCacheKey
+pub struct vyre_libs_graph::graph::motif::MotifStaticInputKey
+pub struct vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructDispatchPlan
+pub struct vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructLayout
+pub struct vyre_libs_graph::graph::path_reconstruct::PathReconstructDispatchPlan
+pub struct vyre_libs_graph::graph::path_reconstruct::PathReconstructStaticInputKey
+pub struct vyre_libs_graph::graph::persistent_bfs::PersistentBfsPlanCacheKey
+pub struct vyre_libs_graph::graph::persistent_bfs::PersistentBfsStaticInputKey
+pub struct vyre_libs_graph::graph::program_graph::ProgramGraphShape
+pub struct vyre_libs_graph::graph::reachable::UnknownNode
+pub struct vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierHeader
+pub struct vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierItem
+pub struct vyre_libs_graph::graph::toposort::ToposortCsrDispatchPlan
+pub struct vyre_libs_graph::graph::toposort::ToposortCsrLayout
+pub struct vyre_libs_graph::graph::toposort::ToposortCsrStaticInputKey
+pub struct vyre_libs_graph::graph::union_find::UnionFindLayout
+pub struct vyre_libs_graph::graph::vast_tree_walk::VastTreeWalkProgramPlan
+pub struct vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams
+pub type vyre_libs_graph::graph::vast_tree_walk::VastTreeWalkPlan = vyre_libs_graph::graph::vast_tree_walk::VastTreeWalkProgramPlan
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveDenseStepPlan::kernel: vyre_libs_graph::graph::adaptive_traverse::DenseTraversalKernel
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveDenseStepPlan::program: vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveDenseStepPlan::tile_lut: alloc::vec::Vec<u32>
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierLayout::words: usize
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierLayout::words_u32: u32
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierStats::layout: vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierLayout
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierStats::nonzero_words: usize
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierStats::popcount: u32
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierWorkPlan::has_active_bits: bool
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierWorkPlan::layout: vyre_libs_graph::graph::adaptive_traverse::AdaptiveFrontierLayout
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalBuffers::active_queue: &'a str
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalBuffers::adj_rows_dense: &'a str
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalBuffers::edge_kind_mask: &'a str
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalBuffers::edge_offsets: &'a str
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalBuffers::edge_targets: &'a str
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalBuffers::frontier_in: &'a str
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalBuffers::frontier_out: &'a str
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalBuffers::frontier_popcount: &'a str
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalBuffers::queue_len: &'a str
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalLayout::dense_words: usize
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalLayout::edge_count: u32
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalLayout::edge_storage_words: usize
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalLayout::max_row_degree: u32
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalLayout::words: usize
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalMode::SparseDense
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalMode::SparseQueue
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::allow_mask: u32
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::dense_threshold_pct: u32
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::device_features: u64
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::edge_count: u32
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::kind: vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::layout_hash: u64
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::node_count: u32
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::queue_capacity: u32
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalPlanCacheKey::words: u32
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind::ClearFrontierOut
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind::FourRussiansDense
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind::FrontierToQueue
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind::FrontierWordBlockOffsets
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind::FrontierWordBlockOffsetsQueue
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind::FrontierWordCounts
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind::FrontierWordPrefixQueue
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind::Popcount
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind::QueueForward
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind::QueueForwardStrided
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind::QueueLenInit
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind::QueueSplitLow
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalProgramKind::SparseDense
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalStepPlan::mode: vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalMode
+pub vyre_libs_graph::graph::adaptive_traverse::AdaptiveTraversalStepPlan::program: vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_libs_graph::graph::adaptive_traverse::DenseTraversalKernel::FourRussiansByteTile
+pub vyre_libs_graph::graph::adaptive_traverse::DenseTraversalKernel::RowScanBitmatrix
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalDispatchPlan::allow_mask: u32
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalDispatchPlan::edge_storage_words: usize
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalDispatchPlan::frontier_words: usize
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalDispatchPlan::layout: vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalLayout
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalDispatchPlan::node_words: usize
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalLayout::edge_count: u32
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalLayout::edge_storage_words: usize
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalLayout::node_count: u32
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalLayout::node_words: usize
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalLayout::words: usize
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalProgramKey::allow_mask: u32
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalProgramKey::layout: vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalLayout
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalStaticInputKey::edge_kind_mask_hash: u64
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalStaticInputKey::edge_offset_words: usize
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalStaticInputKey::edge_offsets_hash: u64
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalStaticInputKey::edge_storage_words: usize
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalStaticInputKey::edge_targets_hash: u64
+pub vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalStaticInputKey::program_key: vyre_libs_graph::graph::csr_bidirectional::CsrBidirectionalProgramKey
+pub vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs::allow_mask: u32
+pub vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs::graph: vyre_libs_graph::graph::csr_closure_inputs::CsrGraphView<'a>
+pub vyre_libs_graph::graph::csr_closure_inputs::CsrClosureInputs::max_iters: u32
+pub vyre_libs_graph::graph::csr_closure_inputs::CsrGraphView::edge_kind_mask: &'a [u32]
+pub vyre_libs_graph::graph::csr_closure_inputs::CsrGraphView::edge_offsets: &'a [u32]
+pub vyre_libs_graph::graph::csr_closure_inputs::CsrGraphView::edge_targets: &'a [u32]
+pub vyre_libs_graph::graph::csr_closure_inputs::CsrGraphView::node_count: u32
+pub vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedStaticInputKey::changed_words: usize
+pub vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedStaticInputKey::edge_kind_mask_hash: u64
+pub vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedStaticInputKey::edge_offset_words: usize
+pub vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedStaticInputKey::edge_offsets_hash: u64
+pub vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedStaticInputKey::edge_storage_words: usize
+pub vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedStaticInputKey::edge_targets_hash: u64
+pub vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedStaticInputKey::program_key: vyre_libs_graph::graph::csr_forward_or_changed::CsrForwardOrChangedProgramKey
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueForwardTraverseParams::active_queue: &'a str
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueForwardTraverseParams::allow_mask: u32
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueForwardTraverseParams::edge_count: u32
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueForwardTraverseParams::edge_kind_mask: &'a str
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueForwardTraverseParams::edge_offsets: &'a str
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueForwardTraverseParams::edge_targets: &'a str
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueForwardTraverseParams::frontier_out: &'a str
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueForwardTraverseParams::node_count: u32
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueForwardTraverseParams::queue_capacity: u32
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueForwardTraverseParams::queue_len: &'a str
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueGraphLayout::edge_count: u32
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueGraphLayout::edge_storage_words: usize
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueGraphLayout::max_row_degree: u32
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueGraphLayout::node_count: u32
+pub vyre_libs_graph::graph::csr_frontier_queue::CsrQueueGraphLayout::words: usize
+pub vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams::accumulator: &'a str
+pub vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams::active_len: &'a str
+pub vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams::active_queue: &'a str
+pub vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams::active_queue_capacity: u32
+pub vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams::allow_mask: u32
+pub vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams::edge_count: u32
+pub vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams::edge_kind_mask: &'a str
+pub vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams::edge_offsets: &'a str
+pub vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams::edge_targets: &'a str
+pub vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams::next_len: &'a str
+pub vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams::next_queue: &'a str
+pub vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams::next_queue_capacity: u32
+pub vyre_libs_graph::graph::csr_queue_delta::CsrQueueDeltaEnqueueParams::node_count: u32
+pub vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams::active_queue: &'a str
+pub vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams::allow_mask: u32
+pub vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams::edge_count: u32
+pub vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams::edge_kind_mask: &'a str
+pub vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams::edge_offsets: &'a str
+pub vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams::edge_targets: &'a str
+pub vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams::frontier_out: &'a str
+pub vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams::high_degree_threshold: u32
+pub vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams::high_len: &'a str
+pub vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams::high_queue: &'a str
+pub vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams::high_queue_capacity: u32
+pub vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams::node_count: u32
+pub vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams::queue_capacity: u32
+pub vyre_libs_graph::graph::csr_queue_split::CsrQueueSplitLowForwardParams::queue_len: &'a str
+pub vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLayout::dom_edge_count: u32
+pub vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLayout::pred_edge_count: u32
+pub vyre_libs_graph::graph::dominator_frontier::DominatorFrontierLayout::words: usize
+pub vyre_libs_graph::graph::dominator_frontier::DominatorFrontierProgramShape::dom_edge_count: u32
+pub vyre_libs_graph::graph::dominator_frontier::DominatorFrontierProgramShape::node_count: u32
+pub vyre_libs_graph::graph::dominator_frontier::DominatorFrontierProgramShape::pred_edge_count: u32
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeError::BadOffsets
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeError::BadOffsets::message: alloc::string::String
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeError::EntryOutOfRange
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeError::EntryOutOfRange::entry: u32
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeError::EntryOutOfRange::node_count: u32
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeError::NonMonotonicOffsets
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeError::NonMonotonicOffsets::index: usize
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeError::TargetOutOfRange
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeError::TargetOutOfRange::index: usize
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeError::TargetOutOfRange::node_count: u32
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeError::TargetOutOfRange::target: u32
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeLayout::depth_words: usize
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeLayout::edge_count: u32
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeLayout::idom_words: usize
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeLayout::node_count: u32
+pub vyre_libs_graph::graph::dominator_tree::DominatorTreeLayout::pred_edge_count: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::col_idx_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::col_len_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::gen_field_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::inter_field_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::intra_field_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::kill_field_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::killed_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::layout: vyre_libs_graph::graph::exploded::IfdsCsrLayout
+pub vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::max_col_count: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::program_key: vyre_libs_graph::graph::exploded::IfdsCsrProgramCacheKey
+pub vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::row_cursor_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrDispatchPlan::row_ptr_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::blocks_per_proc: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::col_buffer_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::empty: bool
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::facts_per_proc: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::gen_count: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::gen_storage_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::inter_count: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::inter_storage_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::intra_count: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::intra_storage_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::kill_count: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::kill_storage_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::killed_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::max_col_count: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::num_procs: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::row_cursor_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::row_words: usize
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::slots_per_proc: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrLayout::total_nodes: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrProgramCacheKey::blocks_per_proc: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrProgramCacheKey::facts_per_proc: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrProgramCacheKey::gen_count: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrProgramCacheKey::inter_count: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrProgramCacheKey::intra_count: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrProgramCacheKey::kill_count: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrProgramCacheKey::max_col_count: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrProgramCacheKey::num_procs: u32
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns::gen_block: alloc::vec::Vec<u32>
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns::gen_fact: alloc::vec::Vec<u32>
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns::gen_proc: alloc::vec::Vec<u32>
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns::inter_dst_block: alloc::vec::Vec<u32>
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns::inter_dst_proc: alloc::vec::Vec<u32>
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns::inter_src_block: alloc::vec::Vec<u32>
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns::inter_src_proc: alloc::vec::Vec<u32>
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns::intra_dst_block: alloc::vec::Vec<u32>
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns::intra_proc: alloc::vec::Vec<u32>
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns::intra_src_block: alloc::vec::Vec<u32>
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns::kill_block: alloc::vec::Vec<u32>
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns::kill_fact: alloc::vec::Vec<u32>
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleColumns::kill_proc: alloc::vec::Vec<u32>
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleInputFingerprint::gen: u128
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleInputFingerprint::inter: u128
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleInputFingerprint::intra: u128
+pub vyre_libs_graph::graph::exploded::IfdsCsrRuleInputFingerprint::kill: u128
+pub vyre_libs_graph::graph::exploded::IfdsCsrStaticInputKey::program_key: vyre_libs_graph::graph::exploded::IfdsCsrProgramCacheKey
+pub vyre_libs_graph::graph::exploded::IfdsCsrStaticInputKey::rule_fingerprint: vyre_libs_graph::graph::exploded::IfdsCsrRuleInputFingerprint
+pub vyre_libs_graph::graph::motif::MotifEdge::from: u32
+pub vyre_libs_graph::graph::motif::MotifEdge::kind_mask: u32
+pub vyre_libs_graph::graph::motif::MotifEdge::to: u32
+pub vyre_libs_graph::graph::motif::MotifLayout::edge_count: u32
+pub vyre_libs_graph::graph::motif::MotifLayout::edge_storage_words: usize
+pub vyre_libs_graph::graph::motif::MotifLayout::motif_edge_count: u32
+pub vyre_libs_graph::graph::motif::MotifLayout::node_count: u32
+pub vyre_libs_graph::graph::motif::MotifLayout::output_words: usize
+pub vyre_libs_graph::graph::motif::MotifProgramCacheKey::edge_count: u32
+pub vyre_libs_graph::graph::motif::MotifProgramCacheKey::motif_edges: alloc::vec::Vec<vyre_libs_graph::graph::motif::MotifEdge>
+pub vyre_libs_graph::graph::motif::MotifProgramCacheKey::node_count: u32
+pub vyre_libs_graph::graph::motif::MotifProgramCacheKey::witness_out: alloc::string::String
+pub vyre_libs_graph::graph::motif::MotifStaticInputKey::edge_kind_mask_hash: u64
+pub vyre_libs_graph::graph::motif::MotifStaticInputKey::edge_offsets_hash: u64
+pub vyre_libs_graph::graph::motif::MotifStaticInputKey::edge_storage_words: usize
+pub vyre_libs_graph::graph::motif::MotifStaticInputKey::edge_targets_hash: u64
+pub vyre_libs_graph::graph::motif::MotifStaticInputKey::node_count: u32
+pub vyre_libs_graph::graph::motif::MotifStaticInputKey::output_words: usize
+pub vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::layout: vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructLayout
+pub vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::len_words: usize
+pub vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::max_depth: u32
+pub vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::parent_words: usize
+pub vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::parent_words_u32: u32
+pub vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::path_words: usize
+pub vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructDispatchPlan::target_words: usize
+pub vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructLayout::path_words: usize
+pub vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructLayout::path_words_u32: u32
+pub vyre_libs_graph::graph::path_reconstruct::BatchedPathReconstructLayout::target_count: u32
+pub vyre_libs_graph::graph::path_reconstruct::PathReconstructDispatchPlan::len_words: usize
+pub vyre_libs_graph::graph::path_reconstruct::PathReconstructDispatchPlan::max_depth: u32
+pub vyre_libs_graph::graph::path_reconstruct::PathReconstructDispatchPlan::parent_words: usize
+pub vyre_libs_graph::graph::path_reconstruct::PathReconstructDispatchPlan::parent_words_u32: u32
+pub vyre_libs_graph::graph::path_reconstruct::PathReconstructDispatchPlan::path_words: usize
+pub vyre_libs_graph::graph::path_reconstruct::PathReconstructDispatchPlan::target_words: usize
+pub vyre_libs_graph::graph::path_reconstruct::PathReconstructStaticInputKey::batched: bool
+pub vyre_libs_graph::graph::path_reconstruct::PathReconstructStaticInputKey::max_depth: u32
+pub vyre_libs_graph::graph::path_reconstruct::PathReconstructStaticInputKey::parent_hash: u64
+pub vyre_libs_graph::graph::path_reconstruct::PathReconstructStaticInputKey::parent_words: usize
+pub vyre_libs_graph::graph::path_reconstruct::PathReconstructStaticInputKey::target_count: u32
+pub vyre_libs_graph::graph::persistent_bfs::PersistentBfsPlanCacheKey::allow_mask: u32
+pub vyre_libs_graph::graph::persistent_bfs::PersistentBfsPlanCacheKey::device_features: u64
+pub vyre_libs_graph::graph::persistent_bfs::PersistentBfsPlanCacheKey::edge_count: u32
+pub vyre_libs_graph::graph::persistent_bfs::PersistentBfsPlanCacheKey::kind: vyre_libs_graph::graph::persistent_bfs::layout::PersistentBfsPlanCacheKind
+pub vyre_libs_graph::graph::persistent_bfs::PersistentBfsPlanCacheKey::layout_hash: u64
+pub vyre_libs_graph::graph::persistent_bfs::PersistentBfsPlanCacheKey::max_iters: u32
+pub vyre_libs_graph::graph::persistent_bfs::PersistentBfsPlanCacheKey::node_count: u32
+pub vyre_libs_graph::graph::persistent_bfs::PersistentBfsPlanCacheKey::query_count: u32
+pub vyre_libs_graph::graph::persistent_bfs::PersistentBfsPlanCacheKey::words_per_query: u32
+pub vyre_libs_graph::graph::persistent_bfs::PersistentBfsStaticInputKey::edge_count: u32
+pub vyre_libs_graph::graph::persistent_bfs::PersistentBfsStaticInputKey::layout_hash: u64
+pub vyre_libs_graph::graph::persistent_bfs::PersistentBfsStaticInputKey::node_count: u32
+pub vyre_libs_graph::graph::persistent_bfs::PersistentBfsStaticInputKey::words: u32
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeCountMismatch
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeCountMismatch::expected: usize
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeCountMismatch::got: usize
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeKindMaskLen
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeKindMaskLen::expected: usize
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeKindMaskLen::got: usize
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeOffsetsLen
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeOffsetsLen::expected: usize
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeOffsetsLen::got: usize
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeOutOfRange
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeOutOfRange::index: usize
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeOutOfRange::node_count: u32
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeOutOfRange::target: u32
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeTargetsLen
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeTargetsLen::expected: usize
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::EdgeTargetsLen::got: usize
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::NodeTagsLen
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::NodeTagsLen::expected: usize
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::NodeTagsLen::got: usize
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::NodesLen
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::NodesLen::expected: usize
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::NodesLen::got: usize
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::NonMonotonicOffsets
+pub vyre_libs_graph::graph::program_graph::GraphValidationError::NonMonotonicOffsets::index: usize
+pub vyre_libs_graph::graph::program_graph::ProgramGraphShape::edge_count: u32
+pub vyre_libs_graph::graph::program_graph::ProgramGraphShape::node_count: u32
+pub vyre_libs_graph::graph::reachable::ReachableError::Allocation(alloc::string::String)
+pub vyre_libs_graph::graph::reachable::ReachableError::UnknownNode(vyre_libs_graph::graph::reachable::UnknownNode)
+pub vyre_libs_graph::graph::reachable::UnknownNode::index: usize
+pub vyre_libs_graph::graph::reachable::UnknownNode::node: u32
+pub vyre_libs_graph::graph::reachable::UnknownNode::node_count: u32
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexDuplicateRule::DropExactStateIndex = 1
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexDuplicateRule::DropStateKeepLowestIndex = 2
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexDuplicateRule::Preserve = 0
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierDomain::Automata = 2
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierDomain::Graph = 1
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierHeader::capacity: u32
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierHeader::compacted_len: u32
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierHeader::domain: vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierDomain
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierHeader::duplicate_count: u32
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierHeader::duplicate_rule: vyre_libs_graph::graph::state_index_frontier::StateIndexDuplicateRule
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierHeader::input_len: u32
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierHeader::schema_version: u32
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierHeader::spill_decision: vyre_libs_graph::graph::state_index_frontier::StateIndexSpillDecision
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierItem::index: u32
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexFrontierItem::state_id: u32
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexSpillDecision::Resident = 0
+pub vyre_libs_graph::graph::state_index_frontier::StateIndexSpillDecision::SpillRequired = 1
+pub vyre_libs_graph::graph::toposort::ToposortCsrDispatchPlan::layout: vyre_libs_graph::graph::toposort::ToposortCsrLayout
+pub vyre_libs_graph::graph::toposort::ToposortCsrDispatchPlan::node_words: usize
+pub vyre_libs_graph::graph::toposort::ToposortCsrDispatchPlan::offset_words: usize
+pub vyre_libs_graph::graph::toposort::ToposortCsrDispatchPlan::target_words: usize
+pub vyre_libs_graph::graph::toposort::ToposortCsrError::BadCsr
+pub vyre_libs_graph::graph::toposort::ToposortCsrError::BadCsr::message: alloc::string::String
+pub vyre_libs_graph::graph::toposort::ToposortCsrError::BadOrder
+pub vyre_libs_graph::graph::toposort::ToposortCsrError::BadOrder::message: alloc::string::String
+pub vyre_libs_graph::graph::toposort::ToposortCsrLayout::node_count: u32
+pub vyre_libs_graph::graph::toposort::ToposortCsrLayout::node_words: usize
+pub vyre_libs_graph::graph::toposort::ToposortCsrLayout::offset_words: usize
+pub vyre_libs_graph::graph::toposort::ToposortCsrLayout::target_words: usize
+pub vyre_libs_graph::graph::toposort::ToposortCsrStaticInputKey::node_count: u32
+pub vyre_libs_graph::graph::toposort::ToposortCsrStaticInputKey::node_words: usize
+pub vyre_libs_graph::graph::toposort::ToposortCsrStaticInputKey::offset_words: usize
+pub vyre_libs_graph::graph::toposort::ToposortCsrStaticInputKey::offsets_hash: u64
+pub vyre_libs_graph::graph::toposort::ToposortCsrStaticInputKey::target_words: usize
+pub vyre_libs_graph::graph::toposort::ToposortCsrStaticInputKey::targets_hash: u64
+pub vyre_libs_graph::graph::toposort::ToposortError::Cycle
+pub vyre_libs_graph::graph::toposort::ToposortError::Cycle::node: u32
+pub vyre_libs_graph::graph::toposort::ToposortError::InconsistentState
+pub vyre_libs_graph::graph::toposort::ToposortError::InconsistentState::message: alloc::string::String
+pub vyre_libs_graph::graph::toposort::ToposortError::IndegreeOverflow
+pub vyre_libs_graph::graph::toposort::ToposortError::IndegreeOverflow::node: u32
+pub vyre_libs_graph::graph::toposort::ToposortError::UnknownNode
+pub vyre_libs_graph::graph::toposort::ToposortError::UnknownNode::edge: usize
+pub vyre_libs_graph::graph::toposort::ToposortError::UnknownNode::node: u32
+pub vyre_libs_graph::graph::union_find::UnionFindLayout::edge_count: u32
+pub vyre_libs_graph::graph::union_find::UnionFindLayout::edge_storage_words: usize
+pub vyre_libs_graph::graph::union_find::UnionFindLayout::node_count: u32
+pub vyre_libs_graph::graph::union_find::UnionFindLayout::node_words: usize
+pub vyre_libs_graph::graph::vast_tree_walk::VastTreeWalkProgramPlan::postorder: vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_libs_graph::graph::vast_tree_walk::VastTreeWalkProgramPlan::preorder: vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_libs_graph::graph::vast_tree_walk::VastWalkOrder::Postorder
+pub vyre_libs_graph::graph::vast_tree_walk::VastWalkOrder::Preorder
+pub vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams::atlas_h: u32
+pub vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams::atlas_w: u32
+pub vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams::box_count: u32
+pub vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams::clip_rect: (u32, u32, u32, u32)
+pub vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams::glyph_count: u32
+pub vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams::height: u32
+pub vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams::patch_dest: (u32, u32)
+pub vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams::patch_h: u32
+pub vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams::patch_w: u32
+pub vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams::segment_count: u32
+pub vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams::stroke_color: u32
+pub vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams::stroke_radius: u32
+pub vyre_libs_graph::graph_compositions::InteractiveGraphicsPipelineParams::width: u32

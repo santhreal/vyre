@@ -16,7 +16,7 @@ required_fields = [
 ]
 
 [[symbol]]
-symbol = "vyre_primitives::graph::Motif"
+symbol = "vyre_libs::graph::Motif"
 owner_lane = "graph_flow_compiler"
 stability_class = "public-stable"
 feature_gate = "graph"

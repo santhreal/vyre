@@ -1,0 +1,42 @@
+[package]
+name = "vyre-libs-text"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Text processing, byte classification, UTF-8 validation, and line indexing"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-text"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "closure:vyre-libs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["text"]
+text = []
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+inventory.workspace = true
+vyre-libs-builder = { workspace = true }
+vyre-libs-reduce = { workspace = true }
+
+[dev-dependencies]
+proptest.workspace = true
+vyre-test-support = { workspace = true, features = ["semantic-parity"] }
+vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-reference = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

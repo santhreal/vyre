@@ -4,14 +4,16 @@ use std::ffi::c_void;
 
 use cudarc::driver::sys::{CUfunction, CUresult, CUstream};
 use smallvec::SmallVec;
-use vyre_driver::binding::BindingPlan;
 use vyre_driver::validation::validate_launch_geometry;
+use vyre_driver::BindingPlan;
 use vyre_driver::{BackendError, DispatchConfig, LaunchPlan};
 use vyre_foundation::ir::Program;
 
 use super::allocations::cuda_check;
 use super::dispatch::CudaBackend;
 use super::module_cache::ModuleCacheKey;
+use super::module_globals::ModuleGlobalsLease;
+use super::plan::CudaDispatchPlan;
 use super::staging_reserve::reserve_smallvec;
 use crate::numeric::CUDA_NUMERIC;
 use crate::occupancy::cooperative_thread_residency_block_limit;
@@ -389,6 +391,32 @@ impl CudaBackend {
         self.cooperative_residency_admits(&launch)
     }
 
+    /// Resident twin of [`Self::cooperative_grid_sync_launch_fits`].
+    ///
+    /// A resident dispatch derives its launch grid from the byte length of the
+    /// device buffers bound to it, not from host slices, so the borrowed
+    /// predicate cannot answer for it: the same program with the same grid was
+    /// routed to the split through a borrowed entry point and launched
+    /// natively through a resident one, where it could only fail with
+    /// `CooperativeResidencyExceeded`. Both now compare the same grid to the
+    /// same residency bound.
+    ///
+    /// The launch plan comes from [`Self::prepare_resident_dispatch`], the plan
+    /// builder the resident dispatch itself runs, so the preflight reads the
+    /// grid that is about to launch rather than a second derivation of it.
+    pub(crate) fn cooperative_grid_sync_resident_launch_fits(
+        &self,
+        program: &Program,
+        bindings: &[crate::backend::resident::CudaDispatchBinding<'_>],
+        config: &DispatchConfig,
+    ) -> Result<bool, BackendError> {
+        if !self.supports_grid_sync() || !vyre_driver::grid_sync::contains_grid_sync(program) {
+            return Ok(false);
+        }
+        let prepared = self.prepare_resident_dispatch(program, bindings, config)?;
+        self.cooperative_residency_admits(&prepared.launch)
+    }
+
     fn cooperative_residency_diagnostic(&self, launch: &LaunchPlan) -> String {
         match self.diagnose_launch_plan("main", launch, true, self.lowers_tensor_core_ops()) {
             Ok(envelope) => envelope.stable_message(),
@@ -461,14 +489,19 @@ impl CudaBackend {
         } else {
             "cuLaunchKernel"
         };
-        launch_cuda_function(
-            func,
-            kernel_args.as_mut_slice(),
-            launch,
-            stream,
-            cooperative,
-            self.ptx_target_sm(),
-            label,
+        crate::backend::dispatch_phase_probe::measure_nested(
+            crate::backend::dispatch_phase_probe::Nested::LaunchCall,
+            || {
+                launch_cuda_function(
+                    func,
+                    kernel_args.as_mut_slice(),
+                    launch,
+                    stream,
+                    cooperative,
+                    self.ptx_target_sm(),
+                    label,
+                )
+            },
         )?;
         if synchronize {
             crate::stream::synchronize_raw_stream(stream, "cuStreamSynchronize")?;
@@ -478,8 +511,83 @@ impl CudaBackend {
         self.record_launch_occupancy(func, launch);
         Ok(())
     }
+
+    /// Enqueue the resolved kernel `prepared.fixpoint_iterations` times on one
+    /// stream, resetting the grid-barrier counter ahead of every launch.
+    ///
+    /// Every launch path replayed this sequence itself, and the pairing is the
+    /// part that must not drift: the reset belongs inside the iteration and
+    /// ahead of the launch, because the counter is per-launch. A launch that
+    /// starts from a stale counter finds every barrier already satisfied, so
+    /// the kernel returns success, the driver reports no error, and the only
+    /// symptom is wrong data.
+    ///
+    /// `open_timing_window` runs once, between the first reset and the first
+    /// launch. The reset is a `cuMemsetD8Async` of the 4-byte counter, and it
+    /// is enqueued on this stream ahead of the kernel either way, so ordering
+    /// does not depend on which side of the window it lands. Its host driver
+    /// call cost 3.2 us against a 7.2 us kernel on the one-million-element
+    /// grid-stride tree reduction, and a CUDA event recorded before it charges
+    /// that host time to device time. Later iterations reset inside the window,
+    /// which is where they belong: they sit between two kernels of one measured
+    /// sequence.
+    ///
+    /// The trap record is per-SEQUENCE, not per launch, and is zeroed by
+    /// [`ModuleGlobalsLease::launch_then_release`] before this runs. Zeroing it
+    /// here would erase an earlier iteration's trap.
+    ///
+    /// CUDA serializes kernels within one stream, so each iteration observes the
+    /// previous iteration's writes. That is the persistent-state contract a
+    /// fixpoint program converges under, and it is why the iterations are
+    /// enqueued back to back on the same stream rather than fanned out.
+    ///
+    /// The lease is borrowed rather than consumed because ending it is a
+    /// separate ordered step that [`ModuleGlobalsLease::launch_then_release`]
+    /// owns; call this from inside that closure.
+    pub(crate) fn replay_fixpoint_launches(
+        &self,
+        module_globals: &ModuleGlobalsLease,
+        func: CUfunction,
+        kernel_args: &mut SmallVec<[*mut std::ffi::c_void; 8]>,
+        prepared: &CudaDispatchPlan,
+        stream: CUstream,
+        open_timing_window: impl FnOnce() -> Result<(), BackendError>,
+    ) -> Result<(), BackendError> {
+        let mut open_timing_window = Some(open_timing_window);
+        for _ in 0..prepared.fixpoint_iterations {
+            crate::backend::dispatch_phase_probe::measure_nested(
+                crate::backend::dispatch_phase_probe::Nested::BarrierReset,
+                // SAFETY: `stream` is owned by this dispatch's launch lease for
+                // the whole replay, so it outlives the memset; the memset is
+                // enqueued on the same stream as the launch below and is
+                // therefore ordered ahead of the kernel that waits on the
+                // counter.
+                || unsafe { module_globals.enqueue_barrier_reset(stream) },
+            )?;
+            if let Some(open) = open_timing_window.take() {
+                open()?;
+            }
+            self.launch_prevalidated_function(
+                func,
+                kernel_args,
+                &prepared.launch,
+                stream,
+                false,
+                prepared.cooperative,
+            )?;
+        }
+        // A plan with no iterations enqueues nothing, and the caller still
+        // records its end event. Opening the window here keeps the pair
+        // well-formed instead of leaving the end event to elapse against
+        // whatever the start event last held.
+        if let Some(open) = open_timing_window.take() {
+            open()?;
+        }
+        Ok(())
+    }
 }
 
+// Inline: covers `kernel_args_into`, `launch_cuda_function`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{launch_cuda_function, CudaBackend};

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The wgpu and SPIR-V drivers stage a fused artifact's module inputs through vyre_driver::staged_input_gather!, so every backend resolves target bindings by one rule."

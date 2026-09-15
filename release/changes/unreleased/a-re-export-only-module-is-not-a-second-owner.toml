@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`vyre-runtime/src/resident_work_queue/scaling.rs` is gone. It declared no item of its own: every line was a `pub use` of a `planner` or `policy` item, so each of those 77 items had two public paths and a reader had to pick. Its one caller, `telemetry.rs`, imports from `super::policy` directly."

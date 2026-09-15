@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A semantic execution completes when the artifact carries retained pipeline state the graph does not name, and refuses only a completion that returns an output value no graph value declares, naming the offending values."

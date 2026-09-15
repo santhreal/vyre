@@ -49,7 +49,8 @@ fn loop_licm_does_not_create_duplicate_sibling_binding_across_loops() {
 
     // Original: loop i writes 5, loop j overwrites with 9. Both `let t` live in
     // disjoint loop scopes, so the program is well-scoped and runs.
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original program is well-scoped and must run");
     assert_eq!(
         original,
@@ -63,10 +64,12 @@ fn loop_licm_does_not_create_duplicate_sibling_binding_across_loops() {
     // LICM hoists both `let t` into the shared enclosing body, they become
     // duplicate sibling bindings the validator rejects -- reference_eval errors
     // and this `.expect` panics.
-    let after = vyre_reference::reference_eval(&transformed, &inputs).expect(
-        "loop_licm must not hoist a binding into an enclosing scope where the \
+    let after = vyre_reference::ReferenceRequest::standard(&transformed, &inputs)
+        .outputs()
+        .expect(
+            "loop_licm must not hoist a binding into an enclosing scope where the \
          same name is bound by another sibling loop (duplicate sibling binding)",
-    );
+        );
 
     assert_eq!(
         after, original,

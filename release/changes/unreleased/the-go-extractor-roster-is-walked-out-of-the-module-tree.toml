@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The Go extractor bounds-probe roster is walked out of the parse module tree at run time, so an extractor added in a new file or a file split into a directory joins the probe coverage check."

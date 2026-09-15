@@ -16,6 +16,8 @@
 //! directly. What concurrency changes is the odds once a handle DOES cross,
 //! because every live instance holds a buffer under the same low ids.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::{BackendError, Resource, VyreBackend};
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
 

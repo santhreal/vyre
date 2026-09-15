@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The duplication scan folds a wrapped import back into one line, so re-exporting the same names from two facades no longer counts as copied code."

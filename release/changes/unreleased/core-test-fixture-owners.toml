@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-runtime` and `vyre-lower` contract tests read shared program fixtures from `vyre-test-support` and resolve the checkout through `vyre_test_support::monorepo::vyre_workspace_root` instead of restating both per file."

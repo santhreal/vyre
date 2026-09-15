@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "One failed dispatch allocation budget no longer poisons the shared measurement lock, so each of the five budgets reports its own measurement."

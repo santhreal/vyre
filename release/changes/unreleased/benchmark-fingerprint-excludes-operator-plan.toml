@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Benchmark source-tree fingerprints now exclude `DEDUP_PLAN.md` with the other operator-only control files and treat the Unix and Windows workspace Cargo launchers identically. Proof-checklist edits and platform-specific launcher changes no longer invalidate measurements when no runtime, compiler, benchmark, or release-policy source changed."

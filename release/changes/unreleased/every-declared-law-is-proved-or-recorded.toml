@@ -1,0 +1,2 @@
+category = "Added"
+text = "Every algebraic law a registration declares is proved against the reference oracle or recorded in `conform/vyre-conform/law-proof-decisions.toml` with the payload its statement needs, under a cap that only moves down."

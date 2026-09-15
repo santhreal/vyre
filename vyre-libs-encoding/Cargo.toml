@@ -1,0 +1,51 @@
+[package]
+name = "vyre-libs-encoding"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Compiler-internal bitset, provenance, matroid, and fingerprint encoding compositions"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-encoding"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.vyre]
+publication_class = "internal-engine"
+publication_contract = "closure:vyre-libs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["encoding"]
+encoding = []
+nn-paging = ["dep:vyre-libs-nn", "vyre-libs-nn/nn-attention"]
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-megakernel.workspace = true
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+vyre-libs-builder = { workspace = true }
+vyre-libs-bitset = { workspace = true }
+vyre-libs-reduce = { workspace = true }
+vyre-libs-math = { workspace = true, features = ["math-kernels"] }
+vyre-libs-nn = { workspace = true, optional = true }
+vyre-libs-graph = { workspace = true, features = ["graph"] }
+vyre-libs-pattern = { workspace = true }
+vyre-libs-parsing = { workspace = true }
+vyre-libs-hash = { workspace = true }
+
+[dev-dependencies]
+vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-test-support = { workspace = true, features = ["semantic-parity"] }
+vyre-reference = { workspace = true }
+vyre-driver-reference = { workspace = true }
+vyre-libs-bitset = { workspace = true, features = ["test-fixtures"] }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

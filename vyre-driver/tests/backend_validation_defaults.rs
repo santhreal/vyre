@@ -6,36 +6,14 @@
 
 use std::collections::HashSet;
 
-use vyre::ir::{CollectiveOp, CommGroup, Expr, Node, OpId, Program};
-use vyre_driver::backend::validation::{
+use vyre::ir::{CommGroup, Expr, Node, OpId, Program};
+use vyre_driver::{
     default_supported_ops, default_supported_ops_with_trap, node_op_id, validate_program,
+    BackendError, VyreBackend,
 };
-use vyre_driver::backend::{BackendError, VyreBackend};
 
 fn collective_nodes() -> [Node; 4] {
-    [
-        Node::AllReduce {
-            buffer: "a".into(),
-            op: CollectiveOp::Sum,
-            group: CommGroup::WORLD,
-        },
-        Node::AllGather {
-            input: "input".into(),
-            output: "out".into(),
-            group: CommGroup::WORLD,
-        },
-        Node::ReduceScatter {
-            input: "input".into(),
-            output: "out".into(),
-            op: CollectiveOp::Max,
-            group: CommGroup(7),
-        },
-        Node::Broadcast {
-            buffer: "a".into(),
-            root: 1,
-            group: CommGroup(7),
-        },
-    ]
+    vyre_test_support::collective_programs::collective_nodes(CommGroup(7), 1)
 }
 
 #[test]
@@ -95,6 +73,73 @@ fn node_op_id_store_is_stable() {
     );
 }
 
+/// The async transfer nodes are one vocabulary, not three decisions.
+///
+/// `AsyncStore` was absent from the core set while `AsyncLoad` and `AsyncWait`
+/// were present, so a program that streamed data out was rejected at capability
+/// validation even though every concrete emitter lowers the node. Asserting the
+/// three together keeps one direction from being admitted without its twin.
+#[test]
+fn default_supported_ops_contains_every_async_transfer_node() {
+    let ops = default_supported_ops();
+    for node in [
+        Node::async_load("tag"),
+        Node::async_store("src", "dst", Expr::u32(0), Expr::u32(4), "tag"),
+        Node::async_wait("tag"),
+    ] {
+        let id = node_op_id(&node);
+        assert!(
+            ops.contains(id),
+            "`{id}` must be in the default supported ops: every backend emitter lowers it"
+        );
+    }
+}
+#[test]
+fn default_supported_ops_contains_every_tile_node() {
+    use vyre::ir::{DataType, Layout, Residency, SubgroupReduceOp, Tile};
+    let tile = Tile::new(
+        DataType::F32,
+        vec![4, 4],
+        Layout::RowMajor,
+        Residency::Register,
+    );
+    let ops = default_supported_ops();
+    for node in [
+        Node::tile_decl("t", tile.clone()),
+        Node::tile_load(
+            "t",
+            tile.clone(),
+            "buf",
+            vec![Expr::u32(0)],
+            Layout::RowMajor,
+        ),
+        Node::tile_store("buf", vec![Expr::u32(0)], "t"),
+        Node::tile_matmul("c", "a", "b"),
+        Node::tile_reduce("r", "t", SubgroupReduceOp::Add, 1),
+        Node::tile_elementwise("e", vec!["t".into()], vec![Node::Return]),
+    ] {
+        let id = node_op_id(&node);
+        assert!(
+            ops.contains(id),
+            "`{id}` must be in the default supported ops: every backend lowers it"
+        );
+    }
+}
+
+#[test]
+fn node_op_id_async_store_is_stable() {
+    assert_eq!(
+        node_op_id(&Node::async_store(
+            "src",
+            "dst",
+            Expr::u32(0),
+            Expr::u32(4),
+            "tag"
+        )),
+        "vyre.node.async_store"
+    );
+}
+
 #[test]
 fn node_op_id_async_load_is_stable() {
     assert_eq!(node_op_id(&Node::async_load("tag")), "vyre.node.async_load");
@@ -134,12 +179,6 @@ fn node_op_id_collectives_are_stable() {
             "distributed collective node IDs are frozen wire/dispatch contracts"
         );
     }
-}
-
-#[test]
-fn node_op_id_is_deterministic_for_same_node() {
-    let node = Node::barrier();
-    assert_eq!(node_op_id(&node), node_op_id(&node));
 }
 
 #[test]
@@ -191,7 +230,7 @@ fn default_supported_ops_with_trap_excludes_distributed_collectives() {
 fn default_backend_validation_rejects_distributed_collectives() {
     struct DefaultOpsBackend;
 
-    impl vyre_driver::backend::private::Sealed for DefaultOpsBackend {}
+    impl vyre_driver::sealed::Sealed for DefaultOpsBackend {}
 
     impl VyreBackend for DefaultOpsBackend {
         fn id(&self) -> &'static str {
@@ -202,10 +241,10 @@ fn default_backend_validation_rejects_distributed_collectives() {
             default_supported_ops()
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            _inputs: &[Vec<u8>],
+            _inputs: &[&[u8]],
             _config: &vyre_driver::DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             Ok(Vec::new())

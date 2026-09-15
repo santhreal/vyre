@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A one-dimensional launch exceeding the device single-axis workgroup ceiling folds across grid axes with linearized global indexing instead of being refused."

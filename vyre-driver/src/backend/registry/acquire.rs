@@ -309,6 +309,9 @@ pub fn core_supported_ops() -> &'static HashSet<OpId> {
     default_supported_ops()
 }
 
+// Inline: covers `BackendSelectionFacts`, `backend_dispatches_result`, `backend_precedence_result`,
+// `compare_backend_selection_facts` and 2 more items this module keeps private, which no
+// integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

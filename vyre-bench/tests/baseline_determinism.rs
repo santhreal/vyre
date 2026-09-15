@@ -1,4 +1,12 @@
 //! Baseline determinism test.
+//!
+//! Runs a real benchmark case, which dispatches on the device the case selects.
+//! `foundation.elementwise.add.1m` routes to CUDA, so a hosted runner with no
+//! driver aborts inside cudarc before the coefficient of variation is ever
+//! computed: the failure names the absence of hardware, not a nondeterministic
+//! baseline. Gated on `device-tests`, which `gpu-parity.yml` enables on the
+//! runner that owns the GPU.
+#![cfg(feature = "device-tests")]
 #![allow(clippy::field_reassign_with_default)]
 use vyre_bench::api::suite::SuiteKind;
 use vyre_bench::runner::{execute_suite, RunConfig};

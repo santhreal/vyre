@@ -90,7 +90,7 @@ fn shape_facts_cache_no_longer_serves_another_programs_facts() {
 
 /// FIXED, same gap reached through the second independent cache.
 ///
-/// Why this exists separately from the test above: `FactSubstrate` is a second,
+/// Why this exists separately from the test above: `FactCache` is a second,
 /// independently-keyed cache (three thread-local slots of its own) that EMBEDS
 /// `ProgramShapeFacts`. Fixing one cache would not have fixed the other, so
 /// both need their own witness, and a future change that re-breaks only one of
@@ -98,21 +98,21 @@ fn shape_facts_cache_no_longer_serves_another_programs_facts() {
 /// picks vector widths from it, which is a codegen decision: a vector width
 /// chosen from another program's proved alignment reads or writes out of bounds.
 #[test]
-fn fact_substrate_cache_no_longer_serves_another_programs_shape_facts() {
+fn fact_cache_cache_no_longer_serves_another_programs_shape_facts() {
     let out = Ident::from("out");
     let plain = program_with(vec![out_buf()]);
     let refined = program_with(vec![
         out_buf().with_shape_predicate(ShapePredicate::AtLeast(64))
     ]);
 
-    let _primed = FactSubstrate::derive_shape_and_use_cached(&plain);
-    let served = FactSubstrate::derive_shape_and_use_cached(&refined);
+    let _primed = FactCache::derive_shape_and_use_cached(&plain);
+    let served = FactCache::derive_shape_and_use_cached(&refined);
     let shape = served.shape.as_deref().expect("shape partition populated");
 
     assert_eq!(
         shape.get(&out).expect("served fact").min_count,
         64,
-        "Fix: FactSubstrate served the WRONG program's shape facts."
+        "Fix: FactCache served the WRONG program's shape facts."
     );
     // And the uncached derivation on the same program proves the served value
     // is not merely a coincidence of the fixture.

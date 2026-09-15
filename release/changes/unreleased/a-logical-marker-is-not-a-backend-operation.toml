@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A schedule-free program compiles instead of being refused with `V056: backend does not support operation `vyre.node.logical_barrier``, because capability validation and physical preparation now resolve logical execution markers before asking a backend what it supports."

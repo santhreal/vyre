@@ -1,0 +1,6 @@
+pub const vyre_libs_vfs::vfs::resolve::VFS_RESOLVE_OP_ID: &str
+pub fn vyre_libs_vfs::link_anchor()
+pub fn vyre_libs_vfs::vfs::resolve::vfs_resolve_dma(include_hashes: &str, out_file_buffers: &str, block_words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub mod vyre_libs_vfs
+pub mod vyre_libs_vfs::vfs
+pub mod vyre_libs_vfs::vfs::resolve

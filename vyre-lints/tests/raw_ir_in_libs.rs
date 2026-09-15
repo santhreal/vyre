@@ -3,7 +3,9 @@
 //! Each test writes a synthetic vyre-libs source file to a tempdir,
 //! runs the lint, and asserts on the exact violation set.
 //!
-//! Implementation lives in two `include!`-d chunks under `contract_cases/`.
+//! Implementation lives in two chunks under `contract_cases/`:
+//! `raw_ir_in_libs__detection_cases.rs` and its child
+//! `raw_ir_in_libs__evasion_cases.rs`.
 
-include!("contract_cases/raw_ir_in_libs__write_lib_file.rs");
-include!("contract_cases/raw_ir_in_libs__adversarial_module_named_tests_inside_a_real_module.rs");
+#[path = "contract_cases/raw_ir_in_libs__detection_cases.rs"]
+mod raw_ir_in_libs_detection_cases;

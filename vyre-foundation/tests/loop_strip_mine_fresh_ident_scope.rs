@@ -37,7 +37,8 @@ fn loop_strip_mine_generated_var_does_not_shadow_outer_binding() {
     let program = program_with_outer_name_matching_generated_tile_var();
     let inputs: [Value; 0] = []; // `out` is the only buffer and it is an output.
 
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original program is well-scoped and must run");
     assert_eq!(
         original,
@@ -53,10 +54,12 @@ fn loop_strip_mine_generated_var_does_not_shadow_outer_binding() {
 
     // The transformed program must STILL validate. If strip-mine named its tile
     // loop var `i_tile`, it shadows the outer binding and reference_eval errors.
-    let after = vyre_reference::reference_eval(&transformed, &inputs).expect(
-        "strip-mine must not synthesize a tile/lane var that shadows an outer \
+    let after = vyre_reference::ReferenceRequest::standard(&transformed, &inputs)
+        .outputs()
+        .expect(
+            "strip-mine must not synthesize a tile/lane var that shadows an outer \
          binding (V008)",
-    );
+        );
     assert_eq!(
         after, original,
         "strip-mine must preserve observable semantics and scoping"

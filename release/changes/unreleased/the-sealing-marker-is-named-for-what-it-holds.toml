@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The marker trait that seals the driver, optimizer and registry traits lives in a module named sealed rather than private, and vyre-driver publishes it at vyre_driver::sealed. A module name states what a module contains, not who may reach it."

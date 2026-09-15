@@ -1,0 +1,15 @@
+lane = "bench-regression-bench-target-smoke"
+workflow = ".github/workflows/bench-regression.yml"
+job = "bench-target-smoke"
+state = "live"
+required_status = "bench-regression / bench target build"
+triggers = ["pull_request", "schedule"]
+steps = [
+  { command = '''./cargo_full bench -p vyre-bench --no-run
+./cargo_full bench -p vyre-foundation --no-run
+./cargo_full bench -p vyre-libs --no-run
+./cargo_full bench -p vyre-reference --no-run
+./cargo_full bench -p vyre-runtime --no-run
+./cargo_full bench -p vyre-driver-wgpu --no-run''' },
+  { gate = "bench-smoke-runtime" },
+]

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The gate tooling reads and writes a JSON document through one module. xtask::json_document owns both directions; the package readiness matrix, the release benchmark metrics and the release backend suite all read through it instead of each spelling its own bounded read and serde parse."

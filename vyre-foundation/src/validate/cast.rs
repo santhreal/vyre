@@ -96,24 +96,7 @@ fn integer_width_bits(data_type: &DataType) -> Option<u16> {
 #[inline]
 pub(crate) fn cast_target_set(source: &DataType) -> String {
     let mut legal_targets = Vec::new();
-    let candidate_targets = [
-        source.clone(),
-        DataType::U8,
-        DataType::U16,
-        DataType::U32,
-        DataType::U64,
-        DataType::I8,
-        DataType::I16,
-        DataType::I32,
-        DataType::I64,
-        DataType::Bool,
-        DataType::Bytes,
-        DataType::Vec2U32,
-        DataType::Vec4U32,
-        DataType::F16,
-        DataType::BF16,
-        DataType::F32,
-    ];
+    let candidate_targets = std::iter::once(source.clone()).chain(DataType::SCALAR_LEAVES);
 
     for target in candidate_targets {
         if cast_is_valid(source, &target) && !legal_targets.contains(&target) {

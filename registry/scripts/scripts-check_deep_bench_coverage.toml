@@ -1,0 +1,4 @@
+path = "scripts/check_deep_bench_coverage.sh"
+state = "retired"
+gate = "bench-coverage"
+reason = "gates.yml runs the gate in its place"

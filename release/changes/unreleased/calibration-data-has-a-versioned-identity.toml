@@ -1,0 +1,2 @@
+category = "Added"
+text = "Calibration data has an authenticated versioned identity, so two contracts naming different calibration payloads are two layouts and do not propagate into one another."

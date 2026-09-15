@@ -41,10 +41,14 @@
 //! one cached bool followed by the unmodified call.
 
 use std::cell::RefCell;
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 use std::time::Instant;
 
+use cudarc::driver::sys::CUstream;
+use vyre_driver::BackendError;
 use vyre_foundation::ir::Program;
+
+use crate::stream::{CudaEvent, CudaLaunchResourcePool, CudaTimingEventPairLease};
 
 /// Named host phases of one timed dispatch. Disjoint leaves that add.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -61,13 +65,13 @@ pub(crate) enum Phase {
     Stage,
     /// `resolve_launch_function`: module cache lookup plus argument vector.
     Resolve,
-    /// `lease_grid_barrier`: grid-sync detection, PTX barrier-marker scan,
-    /// module-scope counter lookup, gate acquisition.
+    /// `lease_module_globals`: grid-sync detection, PTX barrier-marker scan,
+    /// module-scope global lookup, gate acquisition.
     Lease,
-    /// The launch loop itself: per-iteration counter reset plus launch.
+    /// The launch loop itself: per-iteration global reset plus launch.
     LaunchLoop,
-    /// `release_after_launch`: stream synchronize, arrival-count audit,
-    /// gate release.
+    /// `release_after_launch`: stream synchronize, trap readback,
+    /// arrival-count audit, gate release.
     Release,
     /// Output readback after the post-kernel fence.
     Readback,
@@ -112,26 +116,37 @@ impl Phase {
 /// `Phase` is a partition: its leaves are disjoint and sum to the attributed
 /// host time, and adding a nested region to it would double count. These live
 /// in a second array and print with a `sub_` prefix so a reader cannot mistake
-/// one for a sibling of `ptx_ns`. Both current entries sit inside
-/// `Phase::Ptx`, which is where the two whole-program walks on the cache-hit
-/// path are: the normalized digest and the VSA fingerprint. Separating them is
-/// the whole point, because the digest has a memo landing and the fingerprint
-/// does not, so a combined figure cannot say which lane to fix.
+/// one for a sibling of `ptx_ns`. The first two sit inside `Phase::Ptx`, which
+/// is where the two whole-program walks on the cache-hit path are: the
+/// normalized digest and the VSA fingerprint. Separating them is the whole
+/// point, because the digest has a memo landing and the fingerprint does not,
+/// so a combined figure cannot say which lane to fix. The last two sit inside
+/// `Phase::LaunchLoop`, which is the one region a CUDA event pair around the
+/// launch cannot exclude: the barrier reset and the launch call are both host
+/// driver calls the pair reports as device time, and their separation decides
+/// whether a grid-sync dispatch pays for the reset or for the cooperative
+/// launch entry point.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Nested {
     /// `try_normalized_program_cache_digest`: one whole-program walk.
     PtxDigest,
     /// `program_vsa_fingerprint_words`: a second whole-program walk.
     PtxVsa,
+    /// `enqueue_barrier_reset`: the grid-barrier counter memset per launch.
+    BarrierReset,
+    /// `cuLaunchKernel` or `cuLaunchCooperativeKernel`, plus arg validation.
+    LaunchCall,
 }
 
 impl Nested {
-    const COUNT: usize = 2;
+    const COUNT: usize = 4;
 
     const fn index(self) -> usize {
         match self {
             Self::PtxDigest => 0,
             Self::PtxVsa => 1,
+            Self::BarrierReset => 2,
+            Self::LaunchCall => 3,
         }
     }
 
@@ -139,6 +154,8 @@ impl Nested {
         match self {
             Self::PtxDigest => "sub_ptx_digest_ns",
             Self::PtxVsa => "sub_ptx_vsa_ns",
+            Self::BarrierReset => "sub_barrier_reset_ns",
+            Self::LaunchCall => "sub_launch_call_ns",
         }
     }
 }
@@ -325,7 +342,7 @@ pub(crate) fn record_counts(
         return;
     }
     let mut nodes = 0u64;
-    vyre_foundation::transform::visit::walk_nodes(program, |_| {
+    vyre_foundation::visit::walk_nodes(program, |_| {
         nodes = nodes.saturating_add(1);
     });
     let blocks = u64::from(grid[0])
@@ -344,7 +361,7 @@ pub(crate) fn record_counts(
 }
 
 /// Record kernel-only device time from the inner event pair.
-pub(crate) fn record_kernel_ns(kernel_ns: u64) {
+fn record_kernel_ns(kernel_ns: u64) {
     if !enabled() {
         return;
     }
@@ -353,6 +370,201 @@ pub(crate) fn record_kernel_ns(kernel_ns: u64) {
             current.kernel_ns = kernel_ns;
         }
     });
+}
+
+/// One dispatch's inner launch-loop event pair and which ends reached a stream.
+struct KernelWindow {
+    lease: CudaTimingEventPairLease,
+    opened: bool,
+    closed: bool,
+}
+
+impl KernelWindow {
+    fn record_start(&mut self, stream: CUstream) {
+        self.opened = record_kernel_window_event(self.lease.events().map(|pair| &pair.0), stream);
+    }
+
+    fn record_end(&mut self, stream: CUstream) {
+        self.closed = record_kernel_window_event(self.lease.events().map(|pair| &pair.1), stream);
+    }
+
+    /// Whether the pair can go back to the pool without proving completion.
+    ///
+    /// An event that never entered a stream has nothing to retire. One that did
+    /// would time the next lease that draws it, so only an awaited dispatch may
+    /// return it.
+    fn is_returnable_unawaited(&self) -> bool {
+        !self.opened && !self.closed
+    }
+}
+
+thread_local! {
+    /// Inner launch-loop event pair of the dispatch now being measured.
+    static KERNEL_WINDOW: RefCell<Option<KernelWindow>> = const { RefCell::new(None) };
+}
+
+/// Clears the armed inner event pair when the measured dispatch ends.
+pub(crate) struct ArmedKernelWindow;
+
+impl Drop for ArmedKernelWindow {
+    fn drop(&mut self) {
+        let _ = KERNEL_WINDOW.try_with(|window| {
+            let Ok(mut window) = window.try_borrow_mut() else {
+                return;
+            };
+            if let Some(mut armed) = window.take() {
+                if armed.is_returnable_unawaited() {
+                    armed.lease.mark_synchronized();
+                }
+            }
+        });
+    }
+}
+
+/// Arm the inner launch-loop event pair for one measured dispatch.
+///
+/// The returned guard clears the pair when the arming dispatch ends, so a
+/// dispatch that failed before `charge_kernel_window` cannot leave its events
+/// armed for the next dispatch on this thread.
+pub(crate) fn arm_kernel_window(pool: &Arc<CudaLaunchResourcePool>) -> Option<ArmedKernelWindow> {
+    if !enabled() {
+        return None;
+    }
+    let lease = match CudaTimingEventPairLease::acquire(Arc::clone(pool)) {
+        Ok(lease) => lease,
+        Err(error) => {
+            tracing::error!(
+                "Fix: dispatch phase probe could not acquire a kernel-window timing event pair: {error}. kernel_ns stays zero for this dispatch."
+            );
+            return None;
+        }
+    };
+    let mut unstored = Some(KernelWindow {
+        lease,
+        opened: false,
+        closed: false,
+    });
+    let _ = KERNEL_WINDOW.try_with(|window| {
+        if let Ok(mut window) = window.try_borrow_mut() {
+            *window = unstored.take();
+        }
+    });
+    if let Some(mut armed) = unstored {
+        // Nothing was recorded on a stream, so the pair has no work to prove.
+        armed.lease.mark_synchronized();
+        return None;
+    }
+    Some(ArmedKernelWindow)
+}
+
+/// Record one dispatch's counted quantities and arm its launch-loop window.
+///
+/// Both timed dispatch entry points open a measured dispatch the same way, and
+/// each spelled the count list and the guard comment out again. A count the
+/// two lists disagree on is a phase record that reads as a different dispatch
+/// shape depending on which entry point produced it.
+pub(crate) fn arm_dispatch(
+    program: &Program,
+    ptx_bytes: usize,
+    bindings: usize,
+    fixpoint_iterations: usize,
+    grid: [u32; 3],
+    pool: &Arc<CudaLaunchResourcePool>,
+) -> Option<ArmedKernelWindow> {
+    record_counts(program, ptx_bytes, bindings, fixpoint_iterations, grid);
+    arm_kernel_window(pool)
+}
+
+/// Record the inner window's start event on `stream`, when armed.
+pub(crate) fn open_kernel_window(stream: CUstream) {
+    with_armed_kernel_window(|armed| armed.record_start(stream));
+}
+
+/// Record the inner window's end event on `stream`, when armed.
+pub(crate) fn close_kernel_window(stream: CUstream) {
+    with_armed_kernel_window(|armed| armed.record_end(stream));
+}
+
+fn with_armed_kernel_window(operation: impl FnOnce(&mut KernelWindow)) {
+    let _ = KERNEL_WINDOW.try_with(|window| {
+        let Ok(mut window) = window.try_borrow_mut() else {
+            return;
+        };
+        if let Some(armed) = window.as_mut() {
+            operation(armed);
+        }
+    });
+}
+
+/// Records one kernel-window event and reports whether it reached the stream.
+fn record_kernel_window_event(event: Result<&CudaEvent, BackendError>, stream: CUstream) -> bool {
+    match event.and_then(|event| event.record(stream)) {
+        Ok(()) => true,
+        Err(error) => {
+            tracing::error!(
+                "Fix: dispatch phase probe could not record a kernel-window event: {error}. kernel_ns stays zero for this dispatch."
+            );
+            false
+        }
+    }
+}
+
+/// Charge the armed window's device time once the dispatch has been awaited.
+///
+/// The caller's await synchronized the stream, which is what proves both events
+/// retired and lets the pair return to the pool.
+pub(crate) fn charge_kernel_window() {
+    let _ = KERNEL_WINDOW.try_with(|window| {
+        let taken = window
+            .try_borrow_mut()
+            .ok()
+            .and_then(|mut window| window.take());
+        let Some(mut armed) = taken else {
+            return;
+        };
+        armed.lease.mark_synchronized();
+        if !(armed.opened && armed.closed) {
+            // A launch that failed mid-loop leaves no window to measure, and
+            // cuEventElapsedTime on an unrecorded event reports an error rather
+            // than a duration.
+            return;
+        }
+        match armed
+            .lease
+            .events()
+            .and_then(|(start, end)| start.elapsed_time_ns(end))
+        {
+            Ok(kernel_ns) => record_kernel_ns(kernel_ns),
+            Err(error) => tracing::error!(
+                "Fix: dispatch phase probe could not read its kernel-window elapsed time: {error}. kernel_ns stays zero for this dispatch."
+            ),
+        }
+    });
+}
+
+/// Close a measured dispatch: charge its launch-loop window and emit the
+/// phase record, reading the dispatch count and the PTX cache from `backend`.
+pub(crate) fn emit_dispatch(
+    backend: &crate::backend::CudaBackend,
+    wall_ns: u64,
+    enqueue_ns: u64,
+    wait_ns: u64,
+    device_ns: Option<u64>,
+) {
+    if !enabled() {
+        return;
+    }
+    charge_kernel_window();
+    let ptx_cache = backend.ptx_source_cache_snapshot();
+    emit(
+        backend.telemetry.snapshot().timed_dispatches,
+        wall_ns,
+        enqueue_ns,
+        wait_ns,
+        device_ns,
+        ptx_cache.hits,
+        ptx_cache.misses,
+    );
 }
 
 /// Elapsed nanoseconds, saturating rather than fallible.
@@ -419,7 +631,12 @@ pub(crate) fn emit(
     ] {
         push_field(&mut line, phase.label(), phases.host_ns[phase.index()]);
     }
-    for nested in [Nested::PtxDigest, Nested::PtxVsa] {
+    for nested in [
+        Nested::PtxDigest,
+        Nested::PtxVsa,
+        Nested::BarrierReset,
+        Nested::LaunchCall,
+    ] {
         push_field(&mut line, nested.label(), phases.nested_ns[nested.index()]);
     }
     push_field(&mut line, "named_host_ns", phases.named_host_ns());
@@ -442,6 +659,8 @@ fn push_field(line: &mut String, name: &str, value: u64) {
     let _ = write!(line, " {name}={value}");
 }
 
+// Inline: `Phase`, `DispatchPhases`, `CURRENT`, `add_host_ns` and the kernel-window entry points
+// are crate-private, so no integration test in `tests/` can name them.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -532,5 +751,22 @@ mod tests {
         phases.host_ns[Phase::Ptx.index()] = 22;
         phases.host_ns[Phase::Readback.index()] = 33;
         assert_eq!(phases.named_host_ns(), 66);
+    }
+
+    /// Locks out: a kernel-window entry point that panics or charges time when
+    /// no pair is armed.
+    ///
+    /// These entry points sit inside the launch closure of every resident
+    /// dispatch, including the dispatches that run with the probe off and the
+    /// asynchronous ones that never arm a pair. A panicking borrow or an
+    /// `expect` on the empty slot is a dispatch-path panic, and a charge
+    /// against an unarmed slot would print another dispatch's kernel time.
+    #[test]
+    fn unarmed_kernel_window_entry_points_charge_nothing() {
+        open_kernel_window(std::ptr::null_mut());
+        close_kernel_window(std::ptr::null_mut());
+        charge_kernel_window();
+        let observed = CURRENT.with(|current| current.borrow().kernel_ns);
+        assert_eq!(observed, 0);
     }
 }

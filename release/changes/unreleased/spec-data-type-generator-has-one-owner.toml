@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The proptest `DataType` generator in `vyre-spec` has one owner, `vyre-spec/tests/spec_variants/mod.rs`. The layout sweep and the `OpSignature` byte-accounting sweep each carried their own generator and the two had already diverged: the signature copy omitted opaque, device-mesh, block-sparse and quantized types, so nothing checked that a signature carrying one of them survives serialization. Both sweeps now draw from the shared generator, which widens the signature sweep to the full type space."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Dispatch allocation budgets in vyre-driver-wgpu measure per-thread heap traffic directly, isolating concurrent test allocations and removing the serializing contract lock."

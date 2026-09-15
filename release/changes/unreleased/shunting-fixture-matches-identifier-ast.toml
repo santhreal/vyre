@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The registered shunting-yard operation now records the identifier node kind and four-word next offset produced by its canonical one-token statement fixture."

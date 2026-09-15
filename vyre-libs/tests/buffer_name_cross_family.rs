@@ -4,23 +4,29 @@
 //! "decoded") would alias in the fused kernel  -  the write-after-read / RW
 //! collision produces silent data corruption.
 //!
-//! vyre-libs defends against this by rewriting generic placeholders to
-//! family-scoped names via `buffer_names::scoped_generic_name`. This
-//! suite asserts the rewrite is effective across every shipped hash +
-//! decode family: calling each builder with the canonical generic names
-//! and asserting the flattened buffer-name set is unique.
+//! Every vyre-libs family that accepts generic placeholder names rewrites them
+//! to family-scoped names via `buffer_names::scoped_generic_name`. This suite
+//! asserts the rewrite is effective across all of them: calling each builder
+//! with the canonical generic names and asserting the flattened buffer-name set
+//! is unique.
 //!
 //! If this test ever fails, the fix is to add the conflicting family's
 //! builder to `scoped_generic_name` with a family-specific prefix, not
 //! to delete the test.
 
 #[cfg(all(feature = "hash", feature = "decode"))]
-use std::collections::HashSet;
+use std::collections::HashMap;
 
+#[cfg(feature = "decode")]
+use vyre_libs::decode::base64::base64_decode;
+#[cfg(feature = "decode")]
+use vyre_libs::decode::encodex::encodex_gpu;
+#[cfg(feature = "decode")]
+use vyre_libs::decode::hex::hex_decode;
+#[cfg(feature = "decode")]
+use vyre_libs::decode::inflate::inflate_stored_block;
 #[cfg(all(feature = "hash", feature = "decode"))]
-use vyre_libs::decode::{base64_decode, hex_decode, inflate_stored_block};
-#[cfg(feature = "hash")]
-use vyre_libs::hash::{adler32, blake3_compress, crc32, fnv1a32, fnv1a64};
+use vyre_libs::hash::blake3_compress;
 
 #[cfg(any(feature = "hash", feature = "decode"))]
 fn names_for(program: &vyre::ir::Program) -> Vec<String> {
@@ -35,10 +41,6 @@ fn names_for(program: &vyre::ir::Program) -> Vec<String> {
 #[test]
 fn cat_a_hash_and_decode_family_buffer_names_are_globally_unique() {
     let programs = vec![
-        ("adler32", adler32("input", "out", 64)),
-        ("crc32", crc32("input", "out", 64)),
-        ("fnv1a32", fnv1a32("input", "out")),
-        ("fnv1a64", fnv1a64("input", "out")),
         (
             "blake3_compress",
             blake3_compress("cv_in", "msg", "params", "cv_out"),
@@ -49,21 +51,19 @@ fn cat_a_hash_and_decode_family_buffer_names_are_globally_unique() {
             "inflate_stored_block",
             inflate_stored_block("input", "output", 64),
         ),
+        ("encodex_gpu", encodex_gpu("input", "output", 64)),
     ];
 
-    let mut seen: HashSet<String> = HashSet::new();
+    let mut source: HashMap<String, &str> = HashMap::new();
     let mut collisions: Vec<(String, String)> = Vec::new();
-    let mut source: std::collections::HashMap<String, &'static str> =
-        std::collections::HashMap::new();
 
     for (family, program) in &programs {
-        let static_family: &'static str = Box::leak((*family).to_string().into_boxed_str());
         for name in names_for(program) {
-            if let Some(prior) = source.get(&name) {
-                collisions.push((name.clone(), format!("{prior} + {static_family}")));
-            } else {
-                source.insert(name.clone(), static_family);
-                seen.insert(name);
+            match source.get(name.as_str()) {
+                Some(prior) => collisions.push((name, format!("{prior} + {family}"))),
+                None => {
+                    source.insert(name, family);
+                }
             }
         }
     }
@@ -75,7 +75,7 @@ fn cat_a_hash_and_decode_family_buffer_names_are_globally_unique() {
          FAMILY_PREFIX so its generic aliases rewrite to `__vyre_<prefix>_<role>`.",
     );
     assert!(
-        !seen.is_empty(),
+        !source.is_empty(),
         "sanity: at least one buffer must be declared"
     );
 }
@@ -84,7 +84,7 @@ fn cat_a_hash_and_decode_family_buffer_names_are_globally_unique() {
 // Adversarial extensions for F-IR-21.
 // ------------------------------------------------------------------
 
-#[cfg(feature = "hash")]
+#[cfg(feature = "decode")]
 #[test]
 fn explicit_scoped_name_is_preserved_not_rewritten() {
     // Adversarial: a malicious or advanced consumer passes the raw
@@ -93,8 +93,8 @@ fn explicit_scoped_name_is_preserved_not_rewritten() {
     // as an explicit (non-generic) name and preserve it unchanged.
     // If it were rewritten, the caller could not intentionally route
     // buffers across families.
-    let explicit = "__vyre_hash_fnv1a64_input";
-    let program = crc32(explicit, "out", 64);
+    let explicit = "__vyre_decode_hex_decoded";
+    let program = base64_decode(explicit, "output", 64);
 
     let names = names_for(&program);
     assert!(

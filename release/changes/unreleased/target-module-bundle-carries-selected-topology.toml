@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`TargetModuleBundle` schema version 5 serializes the selected `ExecutionTopology` and a per-module `TargetArmAssignment`, both covered by the bundle digest, and admission rejects a bundle whose arm records are not the selected topology's assignment."

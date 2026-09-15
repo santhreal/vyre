@@ -17,6 +17,7 @@
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::rewrite::expr_contains_atomic;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::visit::any_descendant;
 use smallvec::SmallVec;
 
 #[vyre_pass(
@@ -40,15 +41,14 @@ impl NormalizeAtomicsPass {
         if !stats.has_node_if() || stats.atomic_op_count == 0 {
             return PassAnalysis::SKIP;
         }
-        if program.entry().iter().any(node_has_atomic_condition) {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        PassAnalysis::run_if(program.entry().iter().any(node_has_atomic_condition))
     }
 
     /// Hoist atomics out of branch conditions while preserving statement order.
     pub fn transform(program: Program) -> PassResult {
+        if !Self::analyze_impl(&program).should_run {
+            return PassResult::unchanged(program);
+        }
         let mut state = RewriteState::default();
         let program = program.map_entry(|entry| rewrite_nodes(entry, &mut state));
         PassResult {
@@ -64,21 +64,17 @@ struct RewriteState {
     changed: bool,
 }
 
+/// True when any `If` anywhere under `node` is gated on an atomic expression.
+///
+/// Descent comes from [`any_descendant`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => false`, so an
+/// atomic condition inside a fifth body-bearing variant read as absent and the
+/// pass reported SKIP for a program it had work in.
 fn node_has_atomic_condition(node: &Node) -> bool {
-    match node {
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            expr_contains_atomic(cond)
-                || then.iter().any(node_has_atomic_condition)
-                || otherwise.iter().any(node_has_atomic_condition)
-        }
-        Node::Loop { body, .. } | Node::Block(body) => body.iter().any(node_has_atomic_condition),
-        Node::Region { body, .. } => body.iter().any(node_has_atomic_condition),
-        _ => false,
-    }
+    any_descendant(
+        node,
+        &mut |n| matches!(n, Node::If { cond, .. } if expr_contains_atomic(cond)),
+    )
 }
 
 fn rewrite_nodes(nodes: Vec<Node>, state: &mut RewriteState) -> Vec<Node> {
@@ -236,7 +232,7 @@ mod tests {
                     index: Box::new(Expr::u32(0)),
                     expected: None,
                     value: Box::new(Expr::u32(1)),
-                    ordering: crate::MemoryOrdering::SeqCst,
+                    ordering: crate::memory_model::MemoryOrdering::SeqCst,
                 },
                 then: vec![Node::store("state", Expr::u32(0), Expr::u32(2))],
                 otherwise: Vec::new(),

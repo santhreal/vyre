@@ -51,7 +51,8 @@ fn branch_value_hoist_preserves_arm_local_rebind_scope() {
     let inputs: [Value; 0] = []; // `out` is the only buffer and is output-allocated
 
     // Original: an arm runs (out=5), arm `x` pops, then `let x = 7`, out = 7.
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original program is well-scoped and must run");
     assert_eq!(
         original,
@@ -72,10 +73,12 @@ fn branch_value_hoist_preserves_arm_local_rebind_scope() {
     // `let x = 7`. If a refactor drops that Block-wrapping (as
     // read_only_load_hoist once did), `x` leaks to the enclosing scope, the
     // trailing `let x` becomes a duplicate sibling, and reference_eval errors.
-    let transformed = vyre_reference::reference_eval(&hoisted, &inputs).expect(
-        "branch_value_hoist must keep a hoisted binding scoped (Block-wrapped) \
+    let transformed = vyre_reference::ReferenceRequest::standard(&hoisted, &inputs)
+        .outputs()
+        .expect(
+            "branch_value_hoist must keep a hoisted binding scoped (Block-wrapped) \
          so it does not collide with a later rebind of the same name",
-    );
+        );
 
     assert_eq!(
         transformed, original,

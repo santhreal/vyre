@@ -2,7 +2,7 @@
 
 use rustc_hash::FxHashMap;
 
-use crate::operand_semantics::operand_is_result_reference;
+use crate::operand_class::operand_is_result_reference;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 
 /// Reaching definitions for a descriptor result id.
@@ -104,6 +104,7 @@ pub fn resolve_copy_alias(mut id: u32, copy_aliases: &FxHashMap<u32, u32>) -> u3
     id
 }
 
+// Inline: covers the crate-private `has_single_reaching_def` and `reaching_defs`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -36,6 +36,6 @@ proptest! {
     #[test]
     fn generated_array_truthiness_is_non_empty(len in 0usize..=32usize) {
         let values = vec![Value::U32(0); len];
-        prop_assert_eq!(Value::Array(values).truthy(), len != 0);
+        prop_assert_eq!(Value::array(values).truthy(), len != 0);
     }
 }

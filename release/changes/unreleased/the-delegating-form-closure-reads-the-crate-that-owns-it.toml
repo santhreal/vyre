@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The delegating-form closure check reads the source of the crate that owns it instead of a crate named in a literal, so the two prefix-scan facades in vyre-libs solvers are compared against the builders they forward to. Both pass the op id and both buffer names through unchanged, across the empty, single-workgroup and multi-block regimes."

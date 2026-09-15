@@ -3,9 +3,7 @@
 //! Freeze-tests for `CapabilityId`, `OperationContract`, and the
 //! classification enums that drive backend capability negotiation.
 
-use vyre_spec::op_contract::{
-    CapabilityId, CostHint, DeterminismClass, OperationContract, SideEffectClass,
-};
+use vyre_spec::{CapabilityId, CostHint, DeterminismClass, OperationContract, SideEffectClass};
 
 // ------------------------------------------------------------------
 // CapabilityId

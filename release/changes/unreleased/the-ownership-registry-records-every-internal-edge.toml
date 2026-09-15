@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The crate ownership registry declares every internal production edge with its feature list, target conditions, dependency kinds, optionality, boundary and owning seam, so the generated crate graph and ownership documents describe the workspace the manifests resolve."

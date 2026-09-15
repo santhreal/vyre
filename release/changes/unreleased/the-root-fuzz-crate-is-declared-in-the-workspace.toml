@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The root `fuzz` crate appeared in neither `members` nor `exclude` of the workspace manifest, so its position was undeclared. It joins `vyre-foundation/fuzz` in `exclude`, because a cargo-fuzz crate is built by `cargo fuzz` on nightly rather than by the workspace."

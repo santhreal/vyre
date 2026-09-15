@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The async dispatch contracts warm the pipeline before measuring, so a cold shader compile on the calling thread is not recorded as synchronous execution."

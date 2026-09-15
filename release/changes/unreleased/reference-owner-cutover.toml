@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The reference interpreter now consumes foundation-owned IR, diagnostics, and operation metadata directly instead of depending on the public `vyre` facade."

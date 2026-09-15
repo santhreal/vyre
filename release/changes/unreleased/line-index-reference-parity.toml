@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The line-index reference witness now returns one zero-based line number per input byte, including an empty result for empty input, instead of returning byte offsets for line starts. Packed-byte and word-backed line-index programs now share the same adversarial parity oracle."

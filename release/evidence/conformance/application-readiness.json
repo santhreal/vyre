@@ -1,0 +1,241 @@
+{
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"997287e7ab44b61927039993d65900f6e2149330","commit_timestamp":"1789108100","parent_commit":"956e5380ef0567214833a06e21d408b485495f5b","dirty":false,"source_fingerprint":"git:997287e7ab44b61927039993d65900f6e2149330:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "schema_version": 2,
+  "receipt_schema_version": 1,
+  "generic_frontend_dialects": [
+    {
+      "dialect_id": "vyre-libs::logical",
+      "name": "dialect",
+      "version": 1,
+      "min_supported_version": 1,
+      "tier": "Library",
+      "category": "logical",
+      "operations": [
+        {
+          "id": "vyre-libs::logical::nand",
+          "name": "nand",
+          "version": 1,
+          "is_composable": true,
+          "has_registered_builder": true,
+          "signature_inputs": 2,
+          "signature_outputs": 1
+        },
+        {
+          "id": "vyre-libs::logical::nor",
+          "name": "nor",
+          "version": 1,
+          "is_composable": true,
+          "has_registered_builder": true,
+          "signature_inputs": 2,
+          "signature_outputs": 1
+        }
+      ]
+    }
+  ],
+  "artifact_modules": [
+    {
+      "backend_id": "cuda",
+      "target_id": "cuda",
+      "target_format": "ptx",
+      "reference_oracle": false,
+      "has_target_compiler": true,
+      "has_materializer": true,
+      "semantic_operation_count": 358,
+      "artifact_schema_version": 18,
+      "payload_schema_version": 4
+    },
+    {
+      "backend_id": "spirv",
+      "target_id": "spirv",
+      "target_format": "spv",
+      "reference_oracle": false,
+      "has_target_compiler": true,
+      "has_materializer": true,
+      "semantic_operation_count": 358,
+      "artifact_schema_version": 18,
+      "payload_schema_version": 4
+    },
+    {
+      "backend_id": "wgpu",
+      "target_id": "wgpu",
+      "target_format": "wgsl",
+      "reference_oracle": false,
+      "has_target_compiler": true,
+      "has_materializer": true,
+      "semantic_operation_count": 358,
+      "artifact_schema_version": 18,
+      "payload_schema_version": 4
+    }
+  ],
+  "applications": [
+    {
+      "application_id": "vyre-libs::logical",
+      "stages": [
+        "vyre-libs::logical::nand",
+        "vyre-libs::logical::nor"
+      ],
+      "graph_node_count": 2,
+      "graph_internal_edge_count": 1,
+      "graph_closure_error": null,
+      "compile_request_error": null,
+      "compile_error": null,
+      "artifact_schema_version": 18,
+      "artifact_identity_stable": true,
+      "resource_roster": [
+        {
+          "name": "s0_a",
+          "element_count": 4,
+          "byte_count": 16,
+          "lifetime": "Invocation",
+          "first_stage": 0,
+          "last_stage": 0
+        },
+        {
+          "name": "s0_b",
+          "element_count": 4,
+          "byte_count": 16,
+          "lifetime": "Invocation",
+          "first_stage": 0,
+          "last_stage": 0
+        },
+        {
+          "name": "s0_out",
+          "element_count": 4,
+          "byte_count": 16,
+          "lifetime": "Invocation",
+          "first_stage": 0,
+          "last_stage": 0
+        },
+        {
+          "name": "s1_b",
+          "element_count": 4,
+          "byte_count": 16,
+          "lifetime": "Invocation",
+          "first_stage": 0,
+          "last_stage": 0
+        },
+        {
+          "name": "s1_out",
+          "element_count": 4,
+          "byte_count": 16,
+          "lifetime": "Output",
+          "first_stage": 0,
+          "last_stage": 0
+        }
+      ],
+      "unbound_graph_values": [],
+      "unresolved_abi_bindings": [],
+      "selected_topology": "topology:sequential",
+      "artifact_features": [
+        "fused",
+        "groups:1",
+        "topology:sequential"
+      ],
+      "targets": [
+        {
+          "backend_id": "cuda",
+          "target_format": "ptx",
+          "entry_point_count": 1,
+          "module_count": 1,
+          "arm_assignment_count": 1,
+          "bundle_topology": "topology:sequential",
+          "target_features": [
+            "fused",
+            "groups:1",
+            "topology:sequential"
+          ],
+          "envelope_admitted": true
+        },
+        {
+          "backend_id": "spirv",
+          "target_format": "spv",
+          "entry_point_count": 1,
+          "module_count": 1,
+          "arm_assignment_count": 1,
+          "bundle_topology": "topology:sequential",
+          "target_features": [
+            "fused",
+            "groups:1",
+            "topology:sequential"
+          ],
+          "envelope_admitted": true
+        },
+        {
+          "backend_id": "wgpu",
+          "target_format": "wgsl",
+          "entry_point_count": 1,
+          "module_count": 1,
+          "arm_assignment_count": 1,
+          "bundle_topology": "topology:sequential",
+          "target_features": [
+            "fused",
+            "groups:1",
+            "topology:sequential"
+          ],
+          "envelope_admitted": true
+        }
+      ],
+      "target_errors": [],
+      "device_certified_by": [
+        "cuda-conformance.json",
+        "wgpu-conformance.json"
+      ],
+      "uncertified_stages": []
+    }
+  ],
+  "device_execution_certificates": [
+    {
+      "certificate_file": "cuda-conformance.json",
+      "backend_id": "cuda",
+      "schema_version": 4,
+      "device_measured": true,
+      "devices": [
+        "NVIDIA GeForce RTX 4090"
+      ],
+      "total_pairs": 358,
+      "distinct_op_count": 358,
+      "catalog_required_op_count": 358,
+      "catalog_covered_op_count": 358,
+      "missing_catalog_ops": [],
+      "blockers": []
+    },
+    {
+      "certificate_file": "reference-conformance.json",
+      "backend_id": "reference-oracle",
+      "schema_version": 4,
+      "device_measured": false,
+      "devices": [],
+      "total_pairs": 358,
+      "distinct_op_count": 358,
+      "catalog_required_op_count": 358,
+      "catalog_covered_op_count": 358,
+      "missing_catalog_ops": [],
+      "blockers": []
+    },
+    {
+      "certificate_file": "wgpu-conformance.json",
+      "backend_id": "wgpu",
+      "schema_version": 4,
+      "device_measured": true,
+      "devices": [
+        "NVIDIA GeForce RTX 4090"
+      ],
+      "total_pairs": 358,
+      "distinct_op_count": 358,
+      "catalog_required_op_count": 358,
+      "catalog_covered_op_count": 358,
+      "missing_catalog_ops": [],
+      "blockers": []
+    }
+  ],
+  "benchmark_evidence": {
+    "read_error": null,
+    "required_closed_families": 14,
+    "matched_required_families": 14,
+    "release_suite_case_count": 24,
+    "missing_evidence_artifacts": [],
+    "missing_required_baseline_families": [],
+    "blockers": []
+  },
+  "blockers": []
+}

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A roofline memory fraction is derived from every measured sample against the run's device memory peak, so a scheduling outlier on the one sample that carried device telemetry no longer decides the reported fraction."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Every naga-derived backend now emits an f32 quotient that rounds to nearest, correcting a bare `OpFDiv` whose 2.5-ULP Vulkan accuracy requirement left five of eight measured quotients one ULP from the value the reference oracle and the PTX `div.rn.f32` lowering state, which composition amplified into a 164-ULP `tensor_train_decompose` divergence."

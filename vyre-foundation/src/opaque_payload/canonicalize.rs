@@ -39,8 +39,7 @@ pub fn canonical_regex_flags(flags: &str) -> String {
 /// bit-distinct" shape common enough to justify canonicalising at the
 /// wire layer.
 ///
-/// See F-IR-37 in CRITIQUE_IR_SOUNDNESS_2026-04-22.md for the full
-/// rationale. The 64-bit companion is [`canonical_f64_zero`]  -  every
+/// The 64-bit companion is [`canonical_f64_zero`]  -  every
 /// extension that wants cross-width sign-of-zero canonicalisation
 /// should use the helper matching the literal's width to avoid bit
 /// pattern drift between f32 and f64 encodings.
@@ -65,7 +64,7 @@ pub fn canonical_f32_zero(value: f32) -> f32 {
 /// that carry IEEE-754 semantic meaning (NaN payloads, signed zero in
 /// division, etc.).
 ///
-/// CRITIQUE_FIX_REVIEW_2026-04-23 Finding #11: without this helper,
+/// without this helper,
 /// f64 opaque extensions had no canonicalisation path, so two
 /// semantically-equal programs differing only by `-0.0f64 → +0.0f64`
 /// would hash distinctly and defeat CSE / cache lookups.

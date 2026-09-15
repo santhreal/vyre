@@ -1,4 +1,4 @@
-//! vyre-foundation  -  substrate-neutral compiler foundation.
+//! vyre-foundation - substrate-neutral compiler foundation.
 //!
 //! Defines the vyre IR (`Expr`, `Node`, `Program`), the type system, the
 //! memory model, the wire format, visitor traits, and extension resolvers.
@@ -6,27 +6,45 @@
 //! `vyre-spec`, `vyre-macros`, and lightweight third-party data crates.
 //! It never knows about concrete driver APIs, a dialect, or a backend.
 
-// Foundation owns the IR arena (`ir_inner::model::arena`), which uses two
-// `unsafe` blocks to extend bumpalo lifetimes inside a single arena owner.
-// Every other unsafe usage is forbidden by `check_lib_rs_headers.sh`.
-#![allow(unsafe_code)]
-#![allow(
-    clippy::duplicate_mod,
-    clippy::too_many_arguments,
-    clippy::double_must_use,
-    clippy::module_inception,
-    clippy::should_implement_trait,
-    clippy::type_complexity
-)]
-
 extern crate self as vyre;
+
+#[doc(hidden)]
+pub use inventory;
 
 /// Shared structured diagnostic protocol.
 pub mod diagnostics;
+/// Strict-IEEE f32 expansion of the approximable transcendentals.
+pub mod fp_expansion;
 /// Shared floating-point parity policy and typed buffer comparison.
 pub mod fp_parity;
+/// Target-neutral launch geometry requirements and lowering strategy.
+pub(crate) mod geometry;
+/// Versioned schedule-free logical algorithm stage.
+pub mod logical;
+/// Schedule-free partition and exchange facts of the logical stage.
+pub(crate) mod logical_partition;
+/// What a numeric result is allowed to be, and what a schedule may do to it.
+pub mod numeric;
 /// Canonical semantic operation registration and target facet views.
 pub mod operation;
+/// Versioned backend-neutral selected schedule stage.
+pub mod schedule;
+pub use geometry::{
+    admitted_logical_span, axis_coverage, guarded_logical_span, launch_covers_full_input_span,
+    logical_points_per_element, CooperativeWidth, ElementPolicy, GeometryConstraintConflict,
+    GeometryRequirements, LaunchGeometry, Uniformity,
+};
+
+/// Canonical binary codec and verification for schema registry records.
+mod canonical_codec;
+/// Typed configuration schema and resolution.
+pub mod config_schema;
+/// Explicit failure domains and recovery classes.
+pub mod failure_domain;
+/// Typed region-based SSA intermediate representation.
+pub mod region_ssa;
+/// Compiler data substrate, arenas, interners, and query engine.
+pub mod substrate;
 
 pub mod ir {
     //! The vyre intermediate representation.
@@ -40,21 +58,39 @@ pub mod ir {
             fold_unary_literal,
         };
     }
-    pub use crate::ir_inner::model;
-    pub use crate::ir_inner::model::arena::{ArenaProgram, ExprArena, ExprRef};
     pub use crate::ir_inner::model::expr::{Expr, ExprNode, Ident};
-    pub use crate::ir_inner::model::node::{Node, NodeExtension};
+    pub use crate::ir_inner::model::generated::{
+        expr_variant_name, node_variant_name, EXPR_VARIANT_NAMES, NODE_VARIANT_NAMES,
+    };
+    pub use crate::ir_inner::model::node::{node_op_id, Node, NodeExtension};
     pub use crate::ir_inner::model::node_kind::{
-        EvalError, InterpCtx, NodeId, NodeStorage, OpId, RegionId, Value, VarId,
+        ByteRegionId, EvalError, InterpCtx, NodeId, NodeStorage, OpId, Value, VarId,
     };
     pub use crate::ir_inner::model::program::{
-        BufferDecl, CacheLocality, LinearType, MemoryHints, MemoryKind, Program, ShapePredicate,
-        NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION,
+        BufferDecl, CacheLocality, LinearType, MemoryHints, MemoryKind, Program, Scope,
+        ShapePredicate, NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION, PORTABLE_WORKGROUP_INVOCATIONS,
     };
     pub use crate::ir_inner::model::program_graph::{
-        GraphInput, GraphNodeId, GraphOutput, GraphValueId, LivenessInterval, ProgramGraph,
-        ProgramGraphError, ProgramGraphNode, ProgramGraphValue, ShapeDim, ValueContract,
-        ValueLifetime,
+        ControlBounds, ExternalEffect, GraphInput, GraphNodeId, GraphOutput, GraphValueId,
+        LivenessInterval, ProgramGraph, ProgramGraphBuilder, ProgramGraphError, ProgramGraphNode,
+        ProgramGraphSharingMetrics, ProgramGraphTemplate, ProgramGraphValue, ShapeDim,
+        ValueContract, ValueLifetime,
+    };
+    pub use crate::ir_inner::model::program_graph_delta::{
+        AffectedGraphClosure, GenerationTracker, GraphDelta, GraphDeltaError, GraphDeltaOp,
+        GRAPH_DELTA_VERSION,
+    };
+    pub use crate::ir_inner::model::program_graph_identity::{
+        ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
+    };
+    pub use crate::ir_inner::model::resource_abi::{
+        AdmittedResourceRecord, ColorSpace, ExternalMemoryDescriptor, ExternalMemoryKind,
+        ExternalResourceCapability, ExternalSyncProtocol, ImageAspect, ImageDimension, ImageExtent,
+        ImageFormat, PlaneDescriptor, ResourceAbiError, ResourceUsageFlags, SamplerAddressMode,
+        SamplerDescriptor, SamplerFilter, SubresourceRange, ViewDescriptor,
+    };
+    pub use crate::ir_inner::model::tile::{
+        row_major_coords, Layout, Layout as TileLayout, Residency, Tile, Tile as TileType,
     };
     /// Per-Node-variant bit-position constants for `ProgramStats::node_kinds_present`.
     /// Compose with `ProgramStats::has_any_node_kind` for O(1) `analyze_impl` gates.
@@ -65,80 +101,92 @@ pub mod ir {
             NODE_KIND_BROADCAST, NODE_KIND_EXPRESSION_BEARING_MASK, NODE_KIND_IF,
             NODE_KIND_INDIRECT_DISPATCH, NODE_KIND_LET, NODE_KIND_LOOP, NODE_KIND_OPAQUE,
             NODE_KIND_REDUCE_SCATTER, NODE_KIND_REGION, NODE_KIND_RESUME, NODE_KIND_RETURN,
-            NODE_KIND_STORE, NODE_KIND_TRAP,
+            NODE_KIND_STORE, NODE_KIND_TILE_DECL, NODE_KIND_TILE_ELEMENTWISE, NODE_KIND_TILE_LOAD,
+            NODE_KIND_TILE_MATMUL, NODE_KIND_TILE_REDUCE, NODE_KIND_TILE_STORE, NODE_KIND_TRAP,
         };
     }
-    pub use crate::ir_inner::model::program::ProgramStats;
-    pub use crate::ir_inner::model::types::{
+    pub use crate::ir_inner::model::op_signature::{
         AtomicOp, BinOp, BufferAccess, CollectiveOp, CommGroup, Convention, DataType, OpSignature,
         SubgroupReduceOp, UnOp,
     };
-    pub use crate::memory_model;
-    pub use crate::memory_model::MemoryOrdering;
-    pub use crate::optimizer::passes::fusion_cse::{cse, dce};
-    pub use crate::serial::text;
-    pub use crate::transform::inline::{
-        inline_calls, inline_calls_with_mode, inline_calls_with_resolver, inline_composite_calls,
-        OpResolver, UnresolvedCalls,
+    pub use crate::ir_inner::model::program::ProgramStats;
+    pub use crate::memory_model::{
+        exhaustiveness_check_async_transaction_lifecycle, exhaustiveness_check_atomic_ordering,
+        exhaustiveness_check_barrier_participation, exhaustiveness_check_collective_group,
+        exhaustiveness_check_execution_scope, exhaustiveness_check_failure_cancellation_behavior,
+        exhaustiveness_check_fence_semantics, exhaustiveness_check_memory_scope,
+        exhaustiveness_check_storage_domain, verify_program_obligations, AliasDiscipline,
+        AliasToken, AsyncTransactionLifecycle, AtomicOrdering, BarrierParticipation, BorrowKind,
+        BorrowToken, CapabilityToken, CollectiveGroup, EffectKind, EffectToken, ExecutionScope,
+        FailureCancellationBehavior, FenceSemantics, MemoryCapability, MemoryOrdering, MemoryScope,
+        Obligation, ObligationError, ObligationKind, ObligationTracker, OwnershipKind,
+        OwnershipToken, StateEpoch, StorageDomain,
     };
-    pub use crate::validate::depth::{
-        LimitState, DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_NESTING_DEPTH, DEFAULT_MAX_NODE_COUNT,
-    };
-    pub use crate::validate::validate::validate;
-    pub use crate::validate::validation_error::ValidationError;
 }
 
+/// Causal Introspection & Unified Causal-Span Schema.
+pub mod causal;
 /// CPU reference registration contract.
 pub mod cpu_op;
 /// Backend-neutral literal evaluation used by IR optimization and lowering.
 pub(crate) mod ir_eval;
+/// Program → data-derived loop bound analysis.
+pub mod loop_bounds;
 /// Domain-neutral byte-range result types.
 pub mod match_result;
 /// Substrate-neutral memory ordering.
-pub mod memory_model;
+mod memory_model;
 /// Optimizer performance counters.
 pub mod perf;
+/// Source-derived platform support matrix, wire types, and adapters.
+pub mod platform;
 /// Program capability analysis.
 pub mod program_caps;
+/// Single owner of scalar operator semantics, shared by the literal folder
+/// and the reference interpreter.
+pub(crate) mod scalar_ops;
+/// Security, Tenant Isolation, Capability Handles & Quota Authority.
+pub mod security;
+/// Closed orthogonal semantic type system.
+pub mod types;
+/// Single declarative verifier and certified compilation gate.
+pub mod verifier;
 
-/// Operation schema and opaque IR extension surfaces.
-pub mod dispatch;
+/// Inventory-registered algebraic-law registry (`algebraic_law_registry::laws_for_op`).
+pub mod algebraic_law_registry;
 
-/// Algebraic-laws surface (algebraic_law_registry, composition).
-pub mod algebra;
+/// Whether a schedule may reorder the combines a program performs
+/// (`algebraic_reordering::reordering_class`).
+pub mod algebraic_reordering;
 
-/// Static-analysis surface (graph_view).
-pub mod analysis;
+/// Region composition: region wrappers, program tagging, self-exclusive expansion.
+pub mod composition;
+
+/// Read-only adjacency view over a `Program` for analyses.
+pub mod graph_view;
+
+/// Callable operation signature types and identifier interning.
+pub mod dialect_lookup;
+
+/// Declarative, versioned dialect specification and registration framework.
+pub mod dialect;
+
+/// Inventory-registered extension hooks (`OpaqueExprResolver`, `OpaqueNodeResolver`).
+pub mod extension;
 
 /// Substrate-neutral allocation reservation arithmetic shared by hot paths.
 pub mod allocation;
 
-pub use algebra::algebraic_law_registry;
-pub use algebra::algebraic_law_registry::{
-    has_law, is_associative, is_commutative, laws_for_op, AlgebraicLaw, AlgebraicLawRegistration,
-};
-pub use analysis::graph_view;
-pub use dispatch::dialect_lookup;
-pub use memory_model::MemoryOrdering;
-
 /// Endian-fixed encode/decode helpers for `Expr::Opaque` / `Node::Opaque` payloads.
 pub mod opaque_payload;
 
-/// Packed AST (VAST) wire layout + host-side tree walks (`docs/ARCHITECTURE.md`).
+/// Packed AST (VAST) wire layout plus host-side tree walks.
 pub mod vast;
-
-pub use analysis::graph_view::{
-    from_graph, to_graph, DataEdge, DataflowKind, EdgeKind, GraphNode, GraphValidateError,
-    NodeGraph,
-};
-pub use dispatch::dialect_lookup::{AttrSchema, AttrType, Signature, TypedParam};
 
 // The generated AST is owner-local; public consumers use `pub mod ir`.
 mod ir_inner {
-    pub mod model;
+    pub(crate) mod model;
 }
-pub use algebra::composition;
-pub use dispatch::extension;
 
 /// Deterministic field framing for content-addressed hashes.
 pub mod hashing;
@@ -148,6 +196,8 @@ pub mod lower;
 pub mod optimizer;
 /// Binary wire format + canonical text serialization.
 pub mod serial;
+/// Digest of a package's own source tree, for artifact-cache identity.
+pub mod source_digest;
 /// IR → IR passes: inline, cse, dce, parallelism, compiler primitives.
 pub mod transform;
 /// Structural + semantic validation of vyre `Program`s.
@@ -155,20 +205,32 @@ pub mod validate;
 /// Visitor traits + blanket adapters routing Expr/Node variants.
 pub mod visit;
 
-/// Self-substrate primitives that the optimizer + scheduler call into.
-/// Moved in-tree from vyre-libs to break a cross-workspace dep cycle.
-pub mod pass_substrate;
+/// CPU pass math the optimizer and scheduler call into.
+/// Kept in foundation because a dependency on `vyre-libs` would cycle.
+pub mod pass_math;
 
 /// Program → substrate-neutral execution planning for fusion, readback,
 /// provenance, autotune, and accuracy guard decisions.
 pub mod execution_plan;
 
 /// Foundation-owned IR and Program wire failures.
-pub mod error;
+pub(crate) mod error;
 pub use error::{IrError, IrResult};
 
 /// Test utilities shared across optimizer and transform test suites.
 /// `pub(crate)` because they are an internal contract  -  no consumer
 /// outside vyre-foundation should depend on these helpers.
 #[cfg(test)]
-pub(crate) mod test_util;
+pub(crate) mod test_ir_inspect;
+pub use canonical_codec::{
+    CanonicalDecoder, CanonicalEncoder, CanonicalRecord, CanonicalSigner, CanonicalValue,
+    CodecError,
+};
+pub use vyre_spec::schema_registry::{
+    CanonicalField, DefaultsPolicy, FieldType, SchemaBounds, SchemaDefinition, SchemaId,
+    SchemaRegistry, CANONICAL_SCHEMA_REGISTRY,
+};
+pub use vyre_spec::{
+    CompatibilityCell, CompatibilityDisposition, CompatibilityMatrix, NegotiatedContract,
+    NegotiationError, ProtocolDomain, ProtocolVersion, CANONICAL_COMPATIBILITY_CELLS,
+};

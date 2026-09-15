@@ -1,0 +1,2 @@
+category = "Added"
+text = "Every semantic operation carries a generated contract record with exact signature, effects, aliasing, shape and index relations, numerical behavior, determinism, and either proof-producing guarded laws or an explicit exhaustive opaque/no-transform decision across vyre-spec and vyre-foundation."

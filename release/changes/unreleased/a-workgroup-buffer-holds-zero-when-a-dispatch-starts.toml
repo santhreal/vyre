@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A CUDA dispatch zeroes every workgroup buffer before the body runs, so an element the program does not write reads back as zero instead of whatever the previous block on that streaming multiprocessor left in shared memory."

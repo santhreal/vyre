@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The sentence that declares a recorded artifact stale is now formed and recognised through one constant in xtask::source_provenance, so the four producers and the recogniser cannot drift apart."

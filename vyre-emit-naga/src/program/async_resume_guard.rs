@@ -16,7 +16,6 @@
 
 use std::ops::ControlFlow::{self, Break, Continue};
 
-use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::Node;
 use vyre_foundation::ir::{Expr, Ident, NodeExtension, Program};
 use vyre_foundation::visit::{visit_node_preorder, NodeVisitor};
@@ -120,6 +119,9 @@ impl NodeVisitor for AsyncResumeRejector {
     fn visit_barrier(&mut self, _: &Node) -> ControlFlow<&'static str> {
         Continue(())
     }
+    fn visit_logical_barrier(&mut self, _: &Node) -> ControlFlow<&'static str> {
+        Continue(())
+    }
 
     fn visit_block(&mut self, _: &Node, _: &[Node]) -> ControlFlow<&'static str> {
         Continue(())
@@ -129,7 +131,7 @@ impl NodeVisitor for AsyncResumeRejector {
         &mut self,
         _: &Node,
         _: &Ident,
-        _: &Option<GeneratorRef>,
+        _: &Option<Ident>,
         _: &[Node],
     ) -> ControlFlow<&'static str> {
         Continue(())

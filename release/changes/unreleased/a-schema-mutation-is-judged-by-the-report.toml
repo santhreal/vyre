@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The operation-schema contract tests read the validator's report. A delegated gate binary returns findings as JSON and exits zero, because the dispatcher treats a non-zero exit as a gate that could not run, so eleven mutation tests asserting a non-zero exit could never fail and passed against a committed schema that already disagreed with the live registry. The schema is regenerated from the 359 live registrations."

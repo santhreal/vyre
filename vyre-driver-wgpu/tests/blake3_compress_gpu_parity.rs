@@ -11,10 +11,12 @@
 //! every BLAKE3 hash computed on the GPU would be silently wrong and NO test
 //! would catch it, because the KAT never dispatches to a backend.
 //!
-//! This runs the real shipped BLAKE3 single-block compression on the 5090 and
+//! This runs the real shipped BLAKE3 single-block compression on the live GPU and
 //! asserts the 8-word chaining output bit-matches `blake3::hash`: a real-
 //! workload end-to-end check, the strongest possible verification of the
 //! rotate/xor/add lowering chain under load.
+
+#![cfg(feature = "device-tests")]
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
@@ -75,20 +77,15 @@ fn gpu_compress(backend: &WgpuBackend, input: &[u8]) -> [u32; 8] {
     let cv_in = u32_le_bytes(&IV);
     let msg_b = u32_le_bytes(&msg);
     let params_b = u32_le_bytes(&params);
-    let cv_out_init = u32_le_bytes(&[0u32; 8]);
 
     // Buffers in binding order: 0=cv_in(RO), 1=msg(RO), 2=params(RO),
-    // 3=cv_out(ReadWrite/output). The readback returns the output buffer(s),
-    // so outputs[0] is cv_out (the same shape `reference_eval` returns).
+    // 3=cv_out(backend-allocated output). A backend-allocated output takes no
+    // host input slot, so three inputs are passed. The readback returns the
+    // output buffer(s), so outputs[0] is cv_out.
     let outputs = backend
         .dispatch_borrowed(
             &program,
-            &[
-                cv_in.as_slice(),
-                msg_b.as_slice(),
-                params_b.as_slice(),
-                cv_out_init.as_slice(),
-            ],
+            &[cv_in.as_slice(), msg_b.as_slice(), params_b.as_slice()],
             &DispatchConfig::default(),
         )
         .expect("Fix: WGPU must dispatch the BLAKE3 compression program.");

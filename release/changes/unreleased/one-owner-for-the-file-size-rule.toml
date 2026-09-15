@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`scripts/check_max_file_size.sh` is gone. It was a second implementation of the per-file line cap with its own table of exemptions, invoked by no workflow and no gate, so the two owners of one rule could disagree without anything noticing. The `file-size` gate is the only owner; the script's section left `xtask/script-assertion-ledger.md` by deletion."

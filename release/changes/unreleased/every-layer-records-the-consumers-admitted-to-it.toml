@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every `[[layer]]` row in the architecture manifest records the closed set of consumer layers admitted to it, and `crate-ownership` rejects a production edge across a layer pair no row records, including one inside a single layer."

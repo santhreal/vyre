@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A resident batch is submitted in full before any item is awaited, so consecutive launches run back to back on one stream and each item's device time covers its own launch instead of a host round trip."

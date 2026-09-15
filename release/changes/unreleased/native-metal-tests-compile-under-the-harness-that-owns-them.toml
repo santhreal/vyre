@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The native Metal device tests compile again: each module imports the driver items it names from the shared prelude of its own subtree instead of a harness root that exports none, and the one case that asserts a private resident-table emitter is compiled by the library that owns it."

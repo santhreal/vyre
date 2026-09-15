@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The `lint-liveness-evasion` gate counts an inline format capture as a reference, so an item named only inside `format!(\"{NAME}\")` is no longer reported as referenced by tests alone."

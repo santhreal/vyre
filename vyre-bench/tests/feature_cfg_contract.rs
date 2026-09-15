@@ -70,7 +70,7 @@ fn rust_files(root: &Path) -> Vec<PathBuf> {
 /// Prevents an unreachable benchmark module from hiding behind an undeclared Cargo feature.
 #[test]
 fn every_benchmark_feature_guard_is_declared() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let root = vyre_test_support::monorepo::vyre_workspace_root().join("vyre-bench");
     let manifest_source =
         fs::read_to_string(root.join("Cargo.toml")).expect("read vyre-bench manifest");
     let manifest: toml::Value =

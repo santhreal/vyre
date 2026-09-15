@@ -1,5 +1,5 @@
 #![no_main]
-//! P1 inventory #98  -  fuzz target for registry TOML loading.
+//! Fuzz target for registry TOML loading.
 //!
 //! Random bytes shaped like TOML  -  including syntactically invalid,
 //! structurally-fine-but-semantically-wrong, and oversize files  -  must
@@ -15,7 +15,9 @@ fuzz_target!(|data: &[u8]| {
     if data.len() > 64 * 1024 {
         return;
     }
-    let Ok(s) = std::str::from_utf8(data) else { return; };
+    let Ok(s) = std::str::from_utf8(data) else {
+        return;
+    };
     // The TOML decoder is the moral equivalent of the registry loader's
     // first stage. A panic here is a real finding  -  every invalid TOML
     // must surface as a structured `Err`.

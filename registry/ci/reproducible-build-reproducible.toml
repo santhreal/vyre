@@ -1,0 +1,34 @@
+lane = "reproducible-build-reproducible"
+workflow = ".github/workflows-paused/reproducible-build.yml"
+job = "reproducible"
+state = "paused"
+reason = "a full clean release build twice per run exceeds the runner time budget for a nightly schedule"
+returns_when = "the second pass reuses a warm cache, or a hosted runner with a larger time budget is available"
+required_status = "Reproducible Build / reproducible"
+triggers = ["schedule", "workflow_dispatch"]
+steps = [
+  { command = '''cargo clean
+cargo build --workspace --release
+mkdir -p /tmp/pass1
+find target/release -name '*.rlib' -exec cp --parents {} /tmp/pass1 \;
+find /tmp/pass1 -name '*.rlib' | sort | xargs sha256sum > /tmp/sums1.txt''' },
+  { command = '''cargo clean
+cargo build --workspace --release
+mkdir -p /tmp/pass2
+find target/release -name '*.rlib' -exec cp --parents {} /tmp/pass2 \;
+find /tmp/pass2 -name '*.rlib' | sort | xargs sha256sum > /tmp/sums2.txt''' },
+  { command = '''echo "=== Pass 1 ==="
+cat /tmp/sums1.txt
+echo ""
+echo "=== Pass 2 ==="
+cat /tmp/sums2.txt
+diff /tmp/sums1.txt /tmp/sums2.txt && echo "Reproducible: PASS" || {
+  echo "Reproducible: FAIL  -  .rlib checksums differ between identical builds"
+  exit 1
+}''' },
+  { command = '''if command -v diffoscope >/dev/null 2>&1; then
+  echo "diffoscope is available; manual inspection of .rlib differences may be needed"
+else
+  echo "diffoscope not installed"
+fi''' },
+]

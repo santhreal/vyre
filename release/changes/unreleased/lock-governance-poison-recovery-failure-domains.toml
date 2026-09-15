@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Driver and backend lock sites are migrated to governed lock APIs with explicit RecoveryClass contracts, replacing silent registry drift and text scans with closed compile-time policy enforcement."

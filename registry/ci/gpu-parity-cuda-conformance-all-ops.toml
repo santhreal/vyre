@@ -1,0 +1,9 @@
+lane = "gpu-parity-cuda-conformance-all-ops"
+workflow = ".github/workflows/gpu-parity.yml"
+job = "cuda-conformance-all-ops"
+state = "live"
+required_status = "GPU Parity + Determinism / CUDA conformance all ops"
+triggers = ["pull_request", "push", "workflow_dispatch"]
+steps = [
+  { command = "./cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all" },
+]

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The duplication baseline records the measured tree for three more crates: vyre-driver 1112 to 1082 and vyre-driver-wgpu 5710 to 5709 after their lanes merged, and vyre-foundation 5443 to 5339. Duplication is cross-file, so a crate's count moves when a sibling lands or drops a copy of its text, and each pin is measured against the merged tree rather than carried over from the branch that lowered it."

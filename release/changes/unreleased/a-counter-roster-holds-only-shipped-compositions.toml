@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The composition-call counters `megakernel_schedule_calls` and `level_wave_pass_calls` are dropped from `vyre-libs` telemetry because no module increments them and neither owning composition ships."

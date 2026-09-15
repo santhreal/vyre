@@ -5,23 +5,33 @@
 //! against the static `count` declared on that buffer. Buffers
 //! without a predicate (the default) are always accepted.
 //!
-//! Wired into `validate::validate` so backends never see a program
+//! Wired into `validate::rule_pipeline` so backends never see a program
 //! whose declared shape contradicts the static count.
 
 use crate::ir_inner::model::program::Program;
 use crate::validate::{err, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
 
-/// Evaluate every buffer's `shape_predicate` against its static `count`.
+/// Evaluate every buffer's `shape_predicate` against its static `count` using the canonical shape interner.
 /// Returns one validation error per violation.
 #[must_use]
 pub fn check_shape_predicates(program: &Program) -> Vec<ValidationError> {
+    let interner = crate::types::ShapeInterner::new();
+    check_shape_predicates_with_interner(program, &interner)
+}
+
+/// Evaluate every buffer's `shape_predicate` against its static `count` with an explicit [`ShapeInterner`](crate::types::ShapeInterner).
+#[must_use]
+pub fn check_shape_predicates_with_interner(
+    program: &Program,
+    interner: &crate::types::ShapeInterner,
+) -> Vec<ValidationError> {
     let mut errors = Vec::new();
     for buffer in program.buffers() {
         let Some(predicate) = buffer.shape_predicate() else {
             continue;
         };
-        if !predicate.holds(buffer.count()) {
+        if !predicate.evaluate_with_interner(interner, buffer.count()) {
             errors.push(err(
                 "V083",
                 ValidationPhase::Program,

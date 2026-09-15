@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The source-derived variant enumeration records a variant that carries an attribute, so a closure test over an enum whose variants declare `#[error(..)]` derives the full member set instead of an empty one."

@@ -1,0 +1,7 @@
+lane = "random-order"
+workflow = ".github/workflows-paused/random-order.yml"
+state = "unprotected"
+file = "deleted"
+reason = "the surviving randomized-order lane, test-random-order.yml, is itself paused, so nothing in CI runs the suite in a randomized order"
+unprotected_class = "the test suite executed in a randomized order, so an ordering dependency between tests fails rather than passing on the declared order"
+steps = []

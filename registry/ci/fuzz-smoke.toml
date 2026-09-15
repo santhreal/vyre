@@ -1,0 +1,11 @@
+lane = "fuzz-smoke"
+workflow = ".github/workflows/fuzz.yml"
+job = "smoke"
+state = "live"
+required_status = "Fuzz / smoke"
+triggers = ["pull_request", "push", "schedule", "workflow_dispatch"]
+steps = [
+  { command = "cargo +stable install --locked cargo-fuzz" },
+  { command = '''cd vyre-foundation/fuzz
+../../cargo_full fuzz run ${{ matrix.target }} --release -- -max_total_time=60''' },
+]

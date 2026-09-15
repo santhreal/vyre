@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The release and CI evidence contracts now invoke version, metadata, feature, package-readiness, conformance, and launch-state producers through their fixed --write paths instead of obsolete caller-selected output paths."

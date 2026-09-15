@@ -1,0 +1,2 @@
+category = "Added"
+text = "The foundation compiler layer now provides a typed region-based SSA intermediate representation with dominance verification and Program lowering alongside declarative catalog bundle extension schemas with namespace, semver, and digest identity."

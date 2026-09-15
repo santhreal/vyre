@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A program requiring whole-grid synchronization now compiles and emits a target payload on the Naga route, lowering each dispatch segment to its own compute entry point instead of refusing the fence."

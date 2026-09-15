@@ -1,6 +1,6 @@
 //! Backend-neutral dispatch shape comparison helpers.
 //!
-//! CUDA graph replay, pipeline cache reuse, and future backend command replay
+//! Native graph replay, pipeline cache reuse, and future backend command replay
 //! all need the same answer to two questions: do these borrowed input batches
 //! have the same byte shape, and does a runtime [`DispatchConfig`] preserve the
 //! launch-relevant shape captured at compile time?
@@ -39,8 +39,9 @@ pub fn dispatch_configs_share_launch_shape(
     compiled.profile == runtime.profile
         && ulp_budgets_share_launch_shape(compiled, runtime)
         && compiled.max_output_bytes == runtime.max_output_bytes
-        && compiled.workgroup_override == runtime.workgroup_override
-        && compiled.grid_override == runtime.grid_override
+        && compiled.launch_workgroup() == runtime.launch_workgroup()
+        && compiled.launch_grid() == runtime.launch_grid()
+        && compiled.launch_dynamic_shared_bytes() == runtime.launch_dynamic_shared_bytes()
         && fixpoint_iterations_share_launch_shape(compiled, runtime)
         && compiled.speculation == runtime.speculation
         && compiled.persistent_thread == runtime.persistent_thread
@@ -64,6 +65,8 @@ fn ulp_budgets_share_launch_shape(compiled: &DispatchConfig, runtime: &DispatchC
     compiled.ulp_budget.unwrap_or(0) == runtime.ulp_budget.unwrap_or(0)
 }
 
+// Inline: `vyre_driver::dispatch_shape` is `pub(crate)`, so no integration test can reach what this
+// suite exercises.
 #[cfg(test)]
 mod tests {
     use super::{

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The reference oracle is recorded as its own executor rather than as a backend, so a release no longer requires `cpu-ref` as a dispatch backend the registry is built to refuse. A conformance row carries `executor_id`, `vyre-driver-reference` owns the single `reference-oracle` id, `vyre-conform dispatch` selects the oracle with `--oracle` instead of a backend spelling, and the release gate converts the legacy `cpu-ref` label where it reads a recorded report."

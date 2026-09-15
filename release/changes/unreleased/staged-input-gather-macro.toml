@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre_driver::staged_input_gather!` implements the `core` accessor and the staged-input `gather` for a materialized instance whose module carries `input_slots`, so every driver resolves inter-module values in target binding order."

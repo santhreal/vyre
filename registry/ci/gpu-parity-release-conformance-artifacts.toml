@@ -1,0 +1,9 @@
+lane = "gpu-parity-release-conformance-artifacts"
+workflow = ".github/workflows/gpu-parity.yml"
+job = "release-conformance-artifacts"
+state = "live"
+required_status = "GPU Parity + Determinism / Release conformance artifacts"
+triggers = ["pull_request", "push", "workflow_dispatch"]
+steps = [
+  { gate = "release-conformance", args = ["--backend", "all", "--write"] },
+]

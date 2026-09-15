@@ -1,10 +1,8 @@
 #![allow(missing_docs)]
 
-extern crate self as vyre;
+use crate::expansion_fixtures;
 
-mod support;
-
-pub use support::{ir, optimizer};
+pub use expansion_fixtures::{ir, optimizer};
 
 use vyre_macros::vyre_pass;
 
@@ -46,11 +44,7 @@ impl GeneratedSelectivePass {
 )]
 pub struct GeneratedAlwaysPass;
 
-impl GeneratedAlwaysPass {
-    fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::unchanged(program)
-    }
-}
+crate::define_unchanged_pass_body!(GeneratedAlwaysPass);
 
 #[vyre_pass(
     name = "generated.matrix.dense_metadata",
@@ -87,11 +81,7 @@ impl GeneratedAlwaysPass {
 )]
 pub struct GeneratedDenseMetadataPass;
 
-impl GeneratedDenseMetadataPass {
-    fn transform(program: ir::Program) -> optimizer::PassResult {
-        optimizer::unchanged(program)
-    }
-}
+crate::define_unchanged_pass_body!(GeneratedDenseMetadataPass);
 
 struct PassCase {
     pass: &'static dyn optimizer::ProgramPass,

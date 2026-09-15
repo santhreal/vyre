@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Seven public builders of the multi-block prefix scan were never executed: the two geometry spellings, the exclusive explicit-lane spelling, and Pass A and Pass C in both their portable and explicit-lane form. Each is now driven through the reference interpreter and checked against the prefix-sum witness, with Pass A and Pass C composed by hand through the block-total scan so a per-block total written by the wrong lane or a carry read one block off is a failure rather than a hidden detail of the fused build."

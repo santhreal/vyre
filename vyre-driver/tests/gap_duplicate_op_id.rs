@@ -14,23 +14,23 @@ fn duplicate_program() -> Program {
 }
 
 inventory::submit! {
-    OperationRegistration::new(
+    OperationRegistration::new_unconstrained(
         DUPLICATE_ID,
         OperationTier::External,
         Some(duplicate_program),
         None,
         None,
-    )
+    ).with_uncharacterized()
 }
 
 inventory::submit! {
-    OperationRegistration::new(
+    OperationRegistration::new_unconstrained(
         DUPLICATE_ID,
         OperationTier::External,
         Some(duplicate_program),
         None,
         None,
-    )
+    ).with_uncharacterized()
 }
 
 /// WHY: one semantic identity must never depend on linked-inventory order.

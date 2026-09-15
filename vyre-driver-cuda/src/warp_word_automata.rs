@@ -462,6 +462,8 @@ fn mix_warp_word_layout_digest(mut digest: u64, value: u64) -> u64 {
     digest
 }
 
+// Inline: `vyre_driver_cuda::warp_word_automata` is `pub(crate)`, so no integration test can reach
+// what this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::{

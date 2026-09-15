@@ -7,11 +7,11 @@ use smallvec::SmallVec;
 use vyre_driver::BackendError;
 
 use super::allocations::cuda_check;
-use super::cuda_graph::{CachedCudaGraph, GraphExecGuard, StreamGuard};
+use super::cuda_graph_lifecycle::{CachedCudaGraph, GraphExecGuard, StreamGuard};
 use super::dispatch::CudaBackend;
 use super::ordering::{classify_dense_permutation, DensePermutationDefect};
 use super::staging_reserve::{reserve_smallvec, reserve_vec, reserved_vec, resize_vec_slots};
-use crate::input_identity::{exact_input_key, ExactInputKey};
+use vyre_driver::input_identity::{exact_input_key, ExactInputKey};
 
 impl CachedCudaGraph {
     pub(crate) fn input_shape_matches(&self, inputs: &[&[u8]]) -> bool {
@@ -26,14 +26,6 @@ impl CachedCudaGraph {
                         .get(*input_index)
                         .is_some_and(|input| input.len() == *expected)
                 })
-    }
-
-    pub(crate) fn materialized_output_cache_matches(
-        &self,
-        inputs: &[&[u8]],
-    ) -> Result<bool, BackendError> {
-        let input_state = prepare_cuda_graph_replay_input_state(self, inputs)?;
-        self.materialized_output_cache_matches_with_input_state(inputs, &input_state)
     }
 
     pub(crate) fn materialized_output_cache_matches_with_input_state(
@@ -118,14 +110,6 @@ fn synchronize_cuda_graph_replay_stream(cached: &CachedCudaGraph) -> Result<(), 
     )
 }
 
-fn cached_input_bytes_match(
-    cached: &CachedCudaGraph,
-    inputs: &[&[u8]],
-) -> Result<bool, BackendError> {
-    let input_key = exact_input_key(inputs)?;
-    cached_input_bytes_match_with_key(cached, inputs, &input_key)
-}
-
 fn cached_input_bytes_match_with_key(
     cached: &CachedCudaGraph,
     inputs: &[&[u8]],
@@ -182,21 +166,6 @@ fn cached_input_bytes_match_after_key_match(
 }
 
 impl CudaBackend {
-    pub(crate) fn try_cuda_graph_materialized_cache_into(
-        &self,
-        cached: &mut CachedCudaGraph,
-        inputs: &[&[u8]],
-        outputs: &mut Vec<Vec<u8>>,
-    ) -> Result<bool, BackendError> {
-        let input_state = self.prepare_cuda_graph_replay_input_state(cached, inputs)?;
-        self.try_cuda_graph_materialized_cache_with_input_state_into(
-            cached,
-            inputs,
-            &input_state,
-            outputs,
-        )
-    }
-
     pub(crate) fn try_cuda_graph_materialized_cache_with_input_state_into(
         &self,
         cached: &mut CachedCudaGraph,
@@ -212,15 +181,6 @@ impl CudaBackend {
         Ok(false)
     }
 
-    pub(crate) fn enqueue_cuda_graph_replay(
-        &self,
-        cached: &mut CachedCudaGraph,
-        inputs: &[&[u8]],
-    ) -> Result<CudaGraphReplayStats, BackendError> {
-        let input_state = self.prepare_cuda_graph_replay_input_state(cached, inputs)?;
-        self.enqueue_cuda_graph_replay_with_input_state(cached, inputs, &input_state)
-    }
-
     pub(crate) fn enqueue_cuda_graph_replay_with_input_state(
         &self,
         cached: &mut CachedCudaGraph,
@@ -229,7 +189,11 @@ impl CudaBackend {
     ) -> Result<CudaGraphReplayStats, BackendError> {
         let prepared = prepare_cuda_graph_replay_launch(cached, inputs, input_state)?;
         launch_prepared_cuda_graph_replay(cached, &prepared, "cuGraphLaunch")?;
-        self.telemetry.record_cuda_graph_launch();
+        self.telemetry.record_cuda_graph_launch(
+            cached.replay_kernel_launches,
+            cached.replay_scheduled_thread_slots,
+            cached.replay_launched_elements,
+        );
         Ok(prepared.stats)
     }
 
@@ -302,12 +266,8 @@ impl CudaBackend {
 
     /// Replay a cached CUDA graph with CUDA event timing.
     ///
-    /// Returns `Some(device_ns)` when a kernel was actually dispatched and CUDA
-    /// event timing measured its device execution time.  Returns `None` when the
-    /// materialized output cache was served directly (no kernel launched, no
-    /// device timing available).  Callers must route `None` to
-    /// `timed_dispatches_missing_device_time` rather than treating it as a
-    /// 0-nanosecond measurement.
+    /// Dispatches the graph on the GPU and measures device execution time via
+    /// CUDA timing events. Returns `Some(device_ns)` of measured device time.
     pub(crate) fn dispatch_via_cuda_graph_timed_into(
         &self,
         cached: &mut CachedCudaGraph,
@@ -330,23 +290,14 @@ impl CudaBackend {
         input_state: &CudaGraphReplayInputState,
         outputs: &mut Vec<Vec<u8>>,
     ) -> Result<Option<u64>, BackendError> {
-        if self.try_cuda_graph_materialized_cache_with_input_state_into(
-            cached,
-            inputs,
-            &input_state,
-            outputs,
-        )? {
-            // Materialized output cache hit: outputs were copied from host-side
-            // cache without launching any kernel.  Zero kernels launched means
-            // the device performed exactly zero work, so report Some(0) -- the
-            // exact, non-fabricated device time for a hit.  None would mean
-            // "device time unknown" and route this to
-            // timed_dispatches_missing_device_time, which is wrong: we know the
-            // device did nothing.  Some(0) also lets the release perf gate see
-            // the cache eliminate device work (0 ns) rather than an ambiguous
-            // missing measurement.
-            return Ok(Some(0));
-        }
+        // No materialized-output-cache probe here, unlike the untimed twin
+        // above. The cache answers "what does this graph produce for these
+        // bytes", which is the whole question for a correctness caller and
+        // half of it for a timing caller: skipping the launch and reporting
+        // zero device nanoseconds hands a benchmark a kernel that ran
+        // infinitely fast. A benchmark replays one input set every sample, so
+        // the first sample launched and every later one was answered at 0 ns.
+        // A caller that asked how long the launch takes gets a launch.
         self.warmup()?;
         let prepared = prepare_cuda_graph_replay_launch(cached, inputs, &input_state)?;
 
@@ -356,7 +307,11 @@ impl CudaBackend {
             let (start, end) = timing_events.events()?;
             start.record(cached.stream.ptr().as_ptr())?;
             launch_prepared_cuda_graph_replay(cached, &prepared, "cuGraphLaunch")?;
-            self.telemetry.record_cuda_graph_launch();
+            self.telemetry.record_cuda_graph_launch(
+                cached.replay_kernel_launches,
+                cached.replay_scheduled_thread_slots,
+                cached.replay_launched_elements,
+            );
             end.record(cached.stream.ptr().as_ptr())?;
             end.synchronize()?;
         }
@@ -389,13 +344,9 @@ impl CudaBackend {
             .elapsed_nanos_u64(started, "timed cuda graph replay wall latency")?;
         self.telemetry
             .record_timed_dispatch(wall_ns, device_ns, None, None);
-        Ok(vyre_driver::TimedDispatchResult {
-            outputs,
-            wall_ns,
-            device_ns,
-            enqueue_ns: None,
-            wait_ns: None,
-        })
+        Ok(vyre_driver::TimedDispatchResult::device_timed(
+            outputs, wall_ns, device_ns,
+        ))
     }
 
     /// Convenience wrapper that allocates the output `Vec` internally.
@@ -723,6 +674,8 @@ impl CudaBackend {
     }
 }
 
+// Inline: covers `cached_graph_input`, `validate_cached_graph_input_index_map`,
+// `validate_cached_graph_output_index_map`, which no integration test can name.
 #[cfg(test)]
 mod source_contract_tests {
     use super::{

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A global atomic whose value operand is a literal zero lowers to a coherent load instead of a read-modify-write, so resident control-word reads no longer serialize on the L2 atomic unit."

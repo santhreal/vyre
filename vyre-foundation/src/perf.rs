@@ -44,7 +44,7 @@ impl PerfScope {
     /// Finish this scope and accumulate its elapsed time.
     #[must_use]
     pub fn finish(self) -> PerfMeasurement {
-        let elapsed_ns = self.start.elapsed().as_nanos() as u64;
+        let elapsed_ns = narrow_nanos(self.start.elapsed().as_nanos());
         METRICS.with(|metrics| {
             let mut map = metrics.borrow_mut();
             *map.entry(self.name).or_insert(0) += elapsed_ns;
@@ -55,12 +55,23 @@ impl PerfScope {
 
 impl Drop for SpanGuard {
     fn drop(&mut self) {
-        let elapsed = self.start.elapsed().as_nanos() as u64;
+        let elapsed = narrow_nanos(self.start.elapsed().as_nanos());
         METRICS.with(|metrics| {
             let mut map = metrics.borrow_mut();
             *map.entry(self.name).or_insert(0) += elapsed;
         });
     }
+}
+
+/// The one narrowing of a nanosecond count to the `u64` a metric carries.
+///
+/// `Duration::as_nanos` answers a `u128`. Both accumulation sites cast it, and a
+/// cast discards the high bits instead of clamping, so a count past `u64::MAX`
+/// nanoseconds would be recorded as an unrelated small number and read as a fast
+/// span. Saturating keeps the ordering of the recorded numbers, which is the only
+/// property a metric is read for.
+fn narrow_nanos(nanos: u128) -> u64 {
+    u64::try_from(nanos).unwrap_or(u64::MAX)
 }
 
 /// Start a performance span. When the returned guard is dropped, the elapsed time

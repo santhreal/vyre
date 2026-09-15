@@ -1,0 +1,5 @@
+name = "vyre-driver-reference"
+concern = "Adapt the reference interpreter to the backend contract for deterministic conformance execution."
+pages = { spec = "vyre-driver-reference/SPEC.md", readme = "vyre-driver-reference/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-driver", "vyre-foundation", "vyre-reference"]

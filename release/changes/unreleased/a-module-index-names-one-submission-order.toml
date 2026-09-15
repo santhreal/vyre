@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Every per-module array a submission indexes is built in dependency-stage then fusion-group order, so a graph whose arms record before the group that joins them no longer resolves one module's program buffers against another module's resources and fails with `Program buffer is absent from the canonical artifact ABI`."

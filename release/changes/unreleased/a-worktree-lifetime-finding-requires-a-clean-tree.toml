@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The worktree lifetime gate reports a merged worktree only when its tree carries no modified, staged, or untracked file, so it no longer asks for the removal of a checkout holding the only copy of uncommitted work."

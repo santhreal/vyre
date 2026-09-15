@@ -6,24 +6,25 @@
 //! and the wgpu backend, and assert byte-identity (int) or within-ULP
 //! (float) equivalence.
 
+#![cfg(feature = "device-tests")]
 #![allow(clippy::filter_map_bool_then, clippy::unnecessary_map_or)]
 #![allow(deprecated)]
 use std::sync::OnceLock;
 
 use proptest::test_runner::{Config, TestRunner};
+use vyre::ir::Program;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
-use vyre_foundation::optimizer::optimize;
 use vyre_libs::operation_catalog::fixture_entries;
 use vyre_reference::value::Value;
 
-mod common;
+use crate::harness;
 
-use common::every_op_random_inputs::{
-    compare_outputs, gpu_dispatch_inputs, is_program_graph_frontier, missing_capability_reason,
-    op_seed, random_amg_v_cycle_inputs, random_buffer_for, random_program_graph_frontier,
-    randomize_buffer,
+use harness::bounded_oracle::{bounded_oracle, unbounded_reason, Oracle};
+use harness::every_op_random_inputs::{
+    compare_outputs, is_program_graph_frontier, missing_capability_reason, op_seed,
+    random_amg_v_cycle_inputs, random_buffer_for, random_program_graph_frontier, randomize_buffer,
 };
 
 fn require_backend() -> &'static WgpuBackend {
@@ -32,6 +33,15 @@ fn require_backend() -> &'static WgpuBackend {
         WgpuBackend::acquire().expect(
             "every_op_random_input_stress: GPU adapter probe failed. Fix: verify nvidia-smi, WGPU_BACKEND, Vulkan drivers, and wgpu adapter selection.",
         )
+    })
+}
+
+/// Evaluate one case on the reference under the interpreter's work ceiling.
+fn bounded_reference_eval(program: &Program, inputs: &[Value]) -> Oracle<Vec<Vec<u8>>> {
+    bounded_oracle(|| {
+        vyre_reference::ReferenceRequest::standard(program, inputs)
+            .outputs()
+            .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
     })
 }
 
@@ -89,6 +99,28 @@ fn every_op_random_input_stress() {
         }
         let fixture_case = &fixture_inputs[0];
         let buffer_lens: Vec<usize> = fixture_case.iter().map(|b| b.len()).collect();
+        // One fixture value per buffer the dispatch stages from the host, in
+        // declaration order, which is the ABI `is_reference_input` states and
+        // the order `reference_eval` and every backend bind. The slot a value
+        // occupies is NOT its buffer index: an op that declares an intermediate
+        // before a staged buffer carries staged buffers at 0,1,3..7,8,10, and
+        // indexing the fixture by buffer index read past its end for the last
+        // one and silently dropped it, which reached the device as a dispatch
+        // that was one buffer short.
+        let input_buffers: Vec<(usize, &vyre::ir::BufferDecl)> = program
+            .buffers()
+            .iter()
+            .enumerate()
+            .filter(|(_, buffer)| vyre_reference::is_reference_input(buffer))
+            .collect();
+        assert_eq!(
+            input_buffers.len(),
+            fixture_case.len(),
+            "{} declares {} host-staged buffer(s) and its fixture case carries {} value(s). Fix: give the fixture one value per buffer `is_reference_input` admits, in declaration order.",
+            entry.id,
+            input_buffers.len(),
+            fixture_case.len()
+        );
 
         let seed = op_seed(entry.id);
         println!(
@@ -101,53 +133,62 @@ fn every_op_random_input_stress() {
         };
         let mut runner = TestRunner::new(config);
 
-        let lowered = optimize(program.clone()).expect("registered optimizer must converge");
+        let lowered = harness::device_program(&program);
         let mut op_cases = 0u64;
         let mut op_failures = 0usize;
+        let mut op_unbounded = 0usize;
 
         for case_idx in 0..count {
+            let mut randomized: Vec<&str> = Vec::new();
             let random_inputs = if entry.id.contains("amg_v_cycle") {
                 random_amg_v_cycle_inputs(fixture_case, &mut runner)
             } else {
                 let mut random_inputs = Vec::with_capacity(buffer_lens.len());
-                for (buffer_idx, &len) in buffer_lens.iter().enumerate() {
+                for (slot, &(buffer_idx, buffer)) in input_buffers.iter().enumerate() {
+                    let len = buffer_lens[slot];
                     if randomize_buffer(entry.id, &program, buffer_idx) {
-                        let buffer = program
-                            .buffers()
-                            .get(buffer_idx)
-                            .expect("fixture input index must match program buffer index");
                         let random = if is_program_graph_frontier(&program, buffer_idx) {
                             random_program_graph_frontier(&program, len, &mut runner)
                         } else {
                             random_buffer_for(entry.id, buffer, len, &mut runner)
                         };
+                        randomized.push(buffer.name());
                         random_inputs.push(random);
                     } else {
-                        random_inputs.push(fixture_case[buffer_idx].clone());
+                        random_inputs.push(fixture_case[slot].clone());
                     }
                 }
                 random_inputs
             };
 
             let cpu_values: Vec<Value> = random_inputs.iter().cloned().map(Value::from).collect();
-            let cpu_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                vyre_reference::reference_eval(&program, &cpu_values)
-            }));
-
-            let cpu_outputs = match cpu_result {
-                Ok(Ok(outputs)) => outputs
-                    .into_iter()
-                    .map(|v| v.to_bytes())
-                    .collect::<Vec<_>>(),
-                Ok(Err(_)) | Err(_) => {
-                    // Reference rejected or panicked  -  no oracle for this input.
-                    continue;
+            let cpu_outputs = match bounded_reference_eval(&program, &cpu_values) {
+                Oracle::Answered(outputs) => outputs,
+                // Reference rejected or panicked  -  no oracle for this input.
+                Oracle::Declined(_) => continue,
+                Oracle::Unbounded {
+                    program: refused,
+                    ceiling,
+                } => {
+                    op_unbounded += 1;
+                    failures.push(unbounded_reason(
+                        &refused,
+                        ceiling,
+                        &format!(
+                            "{} seed={seed} case={case_idx} random [{}]",
+                            entry.id,
+                            randomized.join(", ")
+                        ),
+                    ));
+                    break;
                 }
             };
 
-            let gpu_inputs = gpu_dispatch_inputs(&program, &random_inputs);
+            // The reference and the device bind the same list, so the values
+            // built above are already the dispatch inputs. Filtering them a
+            // second time is what dropped one.
             let gpu_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                backend.dispatch(&lowered, &gpu_inputs, &DispatchConfig::default())
+                backend.dispatch(&lowered, &random_inputs, &DispatchConfig::default())
             }));
             let gpu_outputs = match gpu_result {
                 Ok(Ok(o)) => o,
@@ -193,8 +234,8 @@ fn every_op_random_input_stress() {
 
         total_cases += op_cases;
         println!(
-            "stress: {}  -  {} random cases evaluated, {} failures",
-            entry.id, op_cases, op_failures
+            "stress: {}  -  {} random cases evaluated, {} failures, {} unbounded refusals",
+            entry.id, op_cases, op_failures, op_unbounded
         );
     }
 

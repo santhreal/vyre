@@ -1,0 +1,15 @@
+lane = "gates-tree-rules"
+workflow = ".github/workflows/gates.yml"
+job = "tree-rules"
+state = "live"
+required_status = "gates / Rules the sweep owns, named by domain"
+triggers = ["pull_request", "push"]
+steps = [
+  { command = "rustup component add rustfmt" },
+  { subset = "manifest-rules" },
+  { subset = "source-rules" },
+  { subset = "hot-path-rules" },
+  { subset = "lint-rules" },
+  { subset = "contract-rules" },
+  { subset = "repo-rules" },
+]

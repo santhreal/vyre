@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The batched packed-activation INT4 matmul and its top-1 routing variant carried the same nine-node inner product, the same nibble select, and the same row-and-batch scale product, differing only in the prefix on every binding name. Both now build them from one parameterized helper in the quantized expression module. Both emitted programs are unchanged. Six duplicated doc summaries in the same file are gone."

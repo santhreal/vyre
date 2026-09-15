@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The shared verification fixture layer is ranked above the driver boundary it states contracts against, so the workspace layer direction rule accepts the driver-registry fixtures instead of reporting them as an upward dependency."

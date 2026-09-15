@@ -8,9 +8,8 @@
 ///
 /// These constants bound the size and depth of programs that the
 /// validator will accept.
-pub use super::depth::{DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_NESTING_DEPTH, DEFAULT_MAX_NODE_COUNT};
 use crate::ir_inner::model::expr::Ident;
-use crate::ir_inner::model::types::DataType;
+use crate::ir_inner::model::op_signature::DataType;
 use crate::validate::{err, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashSet;
@@ -22,7 +21,7 @@ use rustc_hash::FxHashSet;
 /// declared as mutable (for assignment validation), and whether
 /// it holds a value that is *uniform* across every invocation in
 /// the same workgroup. The uniformity bit feeds the relaxed
-/// barrier-placement rule: a `Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst }` inside a `Node::Loop`
+/// barrier-placement rule: a `Node::Barrier { ordering: vyre_foundation::ir::MemoryOrdering::SeqCst }` inside a `Node::Loop`
 /// or `Node::If` is legal when the loop bounds (or `If` condition)
 /// are uniform, because every invocation reaches the barrier
 /// through the same iteration count and branch.
@@ -35,7 +34,7 @@ use rustc_hash::FxHashSet;
 /// positive (fabricated sentinel ≠ real type) or silently pass a
 /// genuinely wrong assignment (fabricated sentinel = real type by
 /// coincidence).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Binding {
     /// Declared type of the variable.
     ///
@@ -74,9 +73,7 @@ pub(crate) fn check_sibling_duplicate(
     format!(
         "duplicate sibling let binding `{name}` in the same region"
     ),
-    format!(
-        "rename one binding or move one declaration into an inner Block/Region/Loop if a new scope is intended."
-    )
+    "rename one binding or move one declaration into an inner Block/Region/Loop if a new scope is intended.".to_string()
 ));
     true
 }

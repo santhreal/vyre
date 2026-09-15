@@ -1,21 +1,27 @@
-//! Execute one or more bench cases. Audit-fix A29 split this module by
-//! concern: stats helpers in `stats.rs`, the per-case driver in `run_case.rs`,
-//! sample collection in `collect.rs`, metric-key plumbing in `metric_keys.rs`,
-//! and report formatting in `report.rs`.
+//! Execute one or more bench cases, split by concern: stats helpers in
+//! `stats.rs`, the per-case driver in `run_case.rs`, sample collection in
+//! `collect.rs`, metric-key plumbing in `metric_keys.rs`, metric
+//! normalization in `metric_normalize.rs`, contract evaluation in
+//! `contract_eval.rs`, and report formatting in `report.rs`.
 
 mod collect;
+mod contract_eval;
 mod metric_keys;
+mod metric_normalize;
 mod report;
 mod run_case;
 mod stats;
 
 pub use report::print_report;
 
+use crate::api::metric::elapsed_ns;
+#[cfg(test)]
+pub(crate) use contract_eval::evaluate_contract;
 use run_case::run_case;
 
 use crate::api::case::{BenchContext, BenchError, Correctness, PerformanceContract};
 use crate::api::suite::SuiteKind;
-use crate::probes::environment::{capture_environment, EnvironmentData};
+use crate::probes::environment::{build_profile, capture_environment, EnvironmentData};
 use crate::registry::BenchRegistry;
 use crate::report::json::{
     benchmark_held_out_corpus_id, CaseReport, ReportBackendProfile, ReportSchema, ReportSummary,
@@ -69,6 +75,12 @@ pub fn run_suite(registry: &BenchRegistry, suite: &SuiteKind, format: &str) {
         eprintln!("Warning: failed to write chrome trace report: {error}");
     }
 
+    // Write content-addressed evidence store receipts
+    let evidence_dir = std::path::Path::new("release/evidence/benchmarks");
+    if let Err(error) = crate::evidence::record_suite_evidence(&report, Some(evidence_dir)) {
+        eprintln!("Warning: failed to write content-addressed evidence receipts: {error}");
+    }
+
     if let Err(error) = print_report(&report, format, false) {
         eprintln!("failed to render benchmark report: {error}");
         std::process::exit(1);
@@ -78,11 +90,33 @@ pub fn run_suite(registry: &BenchRegistry, suite: &SuiteKind, format: &str) {
     }
 }
 
+/// Refuse to measure the release suite with a build that carries debug checks.
+///
+/// The release suite is the one whose numbers are published, and an unoptimized
+/// harness inflates every speedup it reports: the CPU baseline runs the scan
+/// without optimization while device time is set by the device. A run that
+/// cannot be published must not produce a document that looks publishable, so
+/// it fails before the first sample.
+pub fn refuse_unoptimized_release_measurement(suite: &SuiteKind) -> anyhow::Result<()> {
+    if matches!(suite, SuiteKind::Release) && build_profile() != "release" {
+        anyhow::bail!(
+            "the release suite measures published numbers and this harness is a {} build. Fix: \
+             rerun with `--release`.",
+            build_profile()
+        );
+    }
+    Ok(())
+}
+
 pub fn execute_suite(
     registry: &BenchRegistry,
     suite: &SuiteKind,
     config: &RunConfig,
 ) -> ReportSchema {
+    if let Err(error) = refuse_unoptimized_release_measurement(suite) {
+        eprintln!("vyre-bench fatal error: {error}");
+        std::process::exit(1);
+    }
     let environment = capture_environment().unwrap_or_else(|error| {
         eprintln!(
             "vyre-bench fatal error: benchmark environment probe failed: {error}. Fix: repair GPU/NVIDIA provenance before collecting performance evidence."
@@ -91,8 +125,6 @@ pub fn execute_suite(
     });
     let started = Instant::now();
     let mut cases_report = Vec::with_capacity(registry.len());
-    let mut passed = 0;
-    let mut failed = 0;
     let mut selected_backend_profile = None;
 
     let selected_cases: Vec<_> = registry
@@ -107,10 +139,8 @@ pub fn execute_suite(
         .collect();
 
     for case in selected_cases.iter().copied() {
-        let meta = case.metadata();
         let requirements = case.requirements();
         if let Err(error) = validate_requirements(&environment, &requirements) {
-            failed += 1;
             cases_report.push(case_failure(
                 case,
                 None,
@@ -124,7 +154,6 @@ pub fn execute_suite(
             match acquire_backend(config.backend_id.as_deref()) {
                 Ok(backend) => backend,
                 Err(error) => {
-                    failed += 1;
                     cases_report.push(case_failure(
                         case,
                         None,
@@ -134,24 +163,22 @@ pub fn execute_suite(
                     continue;
                 }
             };
-        let preferred_registration =
-            match vyre_driver::backend::backend_registration(preferred_backend.id()) {
-                Ok(registration) => registration,
-                Err(error) => {
-                    failed += 1;
-                    cases_report.push(case_failure(
-                        case,
-                        None,
-                        format!("Backend registration error: {error}"),
-                        case.performance_contract(),
-                    ));
-                    continue;
-                }
-            };
+        let preferred_registration = match vyre_driver::backend_registration(preferred_backend.id())
+        {
+            Ok(registration) => registration,
+            Err(error) => {
+                cases_report.push(case_failure(
+                    case,
+                    None,
+                    format!("Backend registration error: {error}"),
+                    case.performance_contract(),
+                ));
+                continue;
+            }
+        };
         let materializer = match preferred_registration.materializer() {
             Ok(materializer) => Arc::from(materializer),
             Err(error) => {
-                failed += 1;
                 cases_report.push(case_failure(
                     case,
                     Some(preferred_backend.id().to_string()),
@@ -185,7 +212,6 @@ pub fn execute_suite(
         let mut prepared = match case.prepare(&mut ctx) {
             Ok(prepared) => prepared,
             Err(error) => {
-                failed += 1;
                 cases_report.push(case_failure(
                     case,
                     Some(ctx.preferred_backend.id().to_string()),
@@ -202,7 +228,6 @@ pub fn execute_suite(
             .or_else(|| case.program(&prepared))
         {
             if let Err(error) = ctx.prepare_artifact(program) {
-                failed += 1;
                 cases_report.push(case_failure(
                     case,
                     Some(ctx.preferred_backend.id().to_string()),
@@ -214,16 +239,8 @@ pub fn execute_suite(
         }
 
         match run_case(case, &mut ctx, &mut prepared, suite, config) {
-            Ok(case_report) => {
-                if case_report.passes_summary_evidence() {
-                    passed += 1;
-                } else {
-                    failed += 1;
-                }
-                cases_report.push(case_report);
-            }
+            Ok(case_report) => cases_report.push(case_report),
             Err(error) => {
-                failed += 1;
                 cases_report.push(case_failure(
                     case,
                     Some(ctx.preferred_backend.id().to_string()),
@@ -246,6 +263,9 @@ pub fn execute_suite(
             workgroup[0], workgroup[1], workgroup[2]
         ));
     }
+    if config.enforce_budgets {
+        features.push("budgets:enforced".to_string());
+    }
 
     let selected_backend = config.backend_id.clone().or_else(|| {
         cases_report
@@ -261,6 +281,7 @@ pub fn execute_suite(
         .iter()
         .flat_map(CaseReport::evidence_blockers)
         .collect();
+    let summary = ReportSummary::from_cases(&cases_report, elapsed_ns(started), cache_hit_rate);
     let report = ReportSchema {
         schema: "vyre-bench.result.v1".to_string(),
         run_id: format!("vyre-bench.{}", suite.as_str()),
@@ -273,13 +294,7 @@ pub fn execute_suite(
         environment,
         features,
         cases: cases_report,
-        summary: ReportSummary {
-            total_cases: selected_cases.len(),
-            passed,
-            failed,
-            total_time_ns: started.elapsed().as_nanos() as u64,
-            cache_hit_rate,
-        },
+        summary,
         blockers,
     };
 
@@ -370,9 +385,9 @@ fn acquire_backend(
     }
 
     let backend: Arc<dyn vyre_driver::VyreBackend> = match backend_id {
-        Some(id) => vyre_driver::backend::acquire(id)
+        Some(id) => vyre_driver::acquire(id)
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
-        None => vyre_driver::backend::acquire_preferred_dispatch_backend()
+        None => vyre_driver::acquire_preferred_dispatch_backend()
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
     }
     .into();
@@ -439,7 +454,7 @@ pub fn evaluate_candidate_headless(
     let preferred_backend: Arc<dyn vyre_driver::VyreBackend> =
         acquire_backend(config.backend_id.as_deref())
             .map_err(|error| format!("Backend error: {}", error))?;
-    let preferred_registration = vyre_driver::backend::backend_registration(preferred_backend.id())
+    let preferred_registration = vyre_driver::backend_registration(preferred_backend.id())
         .map_err(|error| format!("Backend registration error: {error}"))?;
     let materializer = Arc::from(
         preferred_registration
@@ -475,4 +490,50 @@ pub fn evaluate_candidate_headless(
     }
 
     run_case(case, &mut ctx, &mut prepared, &SuiteKind::Evolve, config)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The release suite is refused unless the harness is optimized, and every
+    /// other suite is unaffected.
+    ///
+    /// The generator that writes `release/evidence/benchmarks` spawned this
+    /// harness without `--release`, so it published a CPU baseline that was
+    /// mostly missing optimization. The refusal lives at the runner entry point
+    /// every path passes through, so a caller that does not go through the CLI
+    /// cannot measure the release suite in a debug build. One assertion per
+    /// branch: the refusal fires exactly when the profile is not `release`, and
+    /// never for another suite.
+    #[test]
+    fn only_an_optimized_build_may_measure_the_release_suite() {
+        let release = refuse_unoptimized_release_measurement(&SuiteKind::Release);
+        if build_profile() == "release" {
+            assert!(
+                release.is_ok(),
+                "Fix: an optimized build must be allowed to measure the release suite."
+            );
+        } else {
+            let error = release.expect_err(
+                "Fix: a debug build must be refused before it writes release evidence.",
+            );
+            assert!(
+                error.to_string().contains("--release"),
+                "Fix: the refusal must name the flag that repairs it, got `{error}`."
+            );
+        }
+        for suite in [
+            SuiteKind::Smoke,
+            SuiteKind::Deep,
+            SuiteKind::Gpu,
+            SuiteKind::Sweep,
+        ] {
+            assert!(
+                refuse_unoptimized_release_measurement(&suite).is_ok(),
+                "Fix: only the release suite publishes numbers; `{suite:?}` must run under any \
+                 profile."
+            );
+        }
+    }
 }

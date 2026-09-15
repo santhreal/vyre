@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A whole-buffer output byte range is read from the buffer declaration through BufferDecl::with_full_output_byte_range, and a byte extent travels as u64 from the helper that computes it. vyre-libs-text, vyre-libs-graph, vyre-libs-nn and the wgpu demo no longer restate a buffer's byte length beside its element count."

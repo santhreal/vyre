@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre_foundation::optimizer::algebraic_rules::ScalarLiteral` is deleted and its predicates are inherent methods on `region_ssa::ScalarLiteral`, which carries all seven widths. Lowering a 64-bit literal to statement IR now returns `RegionSsaError::UnrepresentableLiteral` when the 32-bit narrowing is a different value, where it previously truncated with `as`."

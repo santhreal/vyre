@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Split program_graph, logical, and node_lowering modules in vyre-foundation and vyre-lower into focused submodule hierarchies to satisfy the file size cap while preserving all public and in-crate APIs."

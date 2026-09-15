@@ -12,11 +12,10 @@ use smallvec::SmallVec;
 use vyre_driver::accounting::{
     checked_add_u64_lazy, checked_add_usize_lazy, checked_atomic_add_u64_guarded_with_order,
     checked_atomic_add_usize_with_order, checked_atomic_next_u64_with_order,
-    checked_atomic_sub_usize_with_order,
+    checked_atomic_sub_u64 as checked_sub_u64, checked_atomic_sub_usize_with_order,
 };
 use vyre_driver::{BackendError, ResidentHandle, ResidentOwner};
 
-use super::accounting::checked_sub_u64;
 use super::allocations::{alloc_cuda_ptr, free_cuda_ptr};
 use super::staging_reserve::{reserve_hash_map, reserve_smallvec};
 
@@ -49,6 +48,50 @@ pub(crate) struct ResidentBufferView {
     pub(crate) byte_len: usize,
 }
 
+impl ResidentBufferView {
+    /// Check this view against the binding declaration it was resolved for.
+    ///
+    /// Two facts, and both are the whole reason a resident launch argument can
+    /// be trusted: the allocation is at least as large as the declared extent,
+    /// and its device pointer is not null. Resident, resident-batch and
+    /// resident-sequence dispatch each proved them separately with the same two
+    /// diagnostics, and a launch that skips either passes a short or null
+    /// pointer to a kernel that indexes it.
+    ///
+    /// A larger allocation than declared is accepted: a resident buffer is
+    /// uploaded once and bound to many programs, so a declared extent is a
+    /// minimum rather than an exact size.
+    ///
+    /// `subject` names the dispatch path and `binding` the declared binding,
+    /// both only for the diagnostic.
+    pub(crate) fn validate_binding(
+        self,
+        subject: &str,
+        binding: &str,
+        static_byte_len: Option<usize>,
+        handle: ResidentHandle,
+    ) -> Result<(), BackendError> {
+        if let Some(expected) = static_byte_len {
+            if self.byte_len < expected {
+                return Err(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: CUDA {subject} binding `{binding}` expected at least {expected} bytes but handle {handle} has {} bytes.",
+                        self.byte_len
+                    ),
+                });
+            }
+        }
+        if self.ptr == 0 {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: CUDA {subject} binding `{binding}` resolved to a null device pointer; resident launch arguments must preserve descriptor order."
+                ),
+            });
+        }
+        Ok(())
+    }
+}
+
 /// Stable CUDA-resident buffer handle owned by [`crate::backend::CudaBackend`].
 ///
 /// The handle names its owning backend instance, so presenting it to a
@@ -79,17 +122,6 @@ pub(crate) enum CudaDispatchBinding<'a> {
     /// Host bytes staged into a transient device allocation for this dispatch
     /// only, exactly as a fully borrowed dispatch stages its inputs.
     Borrowed(&'a [u8]),
-}
-
-impl CudaDispatchBinding<'_> {
-    /// Resident handle behind this binding, or `None` when it is staged from
-    /// host bytes and therefore has no device identity that outlives the call.
-    pub(crate) fn resident(self) -> Option<CudaResidentBuffer> {
-        match self {
-            Self::Resident(handle) => Some(handle),
-            Self::Borrowed(_) => None,
-        }
-    }
 }
 
 pub(crate) type ResidentViewCache = SmallVec<[(CudaResidentBuffer, ResidentBufferView); 8]>;
@@ -504,6 +536,25 @@ pub(crate) fn resident_bindings_from_handles(
     Ok(bindings)
 }
 
+/// Lift an all-resident handle list into dispatch resources.
+///
+/// The grid-sync split dispatches its segments through the `VyreBackend`
+/// resource contract, so a route selected from resident handles states the
+/// same buffers in the type that contract takes. Resident resources name
+/// device memory by handle, so this copies no bytes.
+pub(crate) fn resident_resources_from_handles(
+    handles: &[CudaResidentBuffer],
+) -> Result<SmallVec<[vyre_driver::Resource; 8]>, BackendError> {
+    let mut resources = SmallVec::new();
+    reserve_smallvec(&mut resources, handles.len(), "resident dispatch resources")?;
+    resources.extend(
+        handles
+            .iter()
+            .map(|handle| vyre_driver::Resource::Resident(handle.handle)),
+    );
+    Ok(resources)
+}
+
 fn allocate_resident_handle_id(next_id: &AtomicU64) -> Result<u64, BackendError> {
     checked_atomic_next_u64_with_order(
         next_id,
@@ -578,6 +629,8 @@ pub(crate) fn validate_resident_allocation_budget(
     Ok(())
 }
 
+// Inline: covers `CudaResidentStore`, `ResidentBuffer`, `ResidentViewCache`, `resident` and 2 more
+// items this module keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{
@@ -640,6 +693,15 @@ mod tests {
                 assert!(fix.contains("inconsistent byte lengths 64 and 32"));
             }
             other => panic!("expected InvalidProgram, got {other:?}"),
+        }
+
+        // The fixture invented this device address, and `ResidentBuffer::drop`
+        // hands whatever it holds to `cuMemFree_v2`, which needs a loaded
+        // driver to report that nothing ever allocated it. Taking the entry out
+        // and forgetting it leaks no real allocation and keeps this a host-side
+        // metadata contract.
+        if let Some((_, fabricated)) = store.buffers.remove(&owned) {
+            std::mem::forget(fabricated);
         }
     }
 }

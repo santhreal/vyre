@@ -128,7 +128,7 @@ fn validate_context(
         .flat_map(|value| &value.contract.shape)
         .filter_map(|dimension| match dimension {
             ShapeDim::Symbol(symbol) => Some(symbol.as_str()),
-            ShapeDim::Known(_) => None,
+            ShapeDim::Known(_) | ShapeDim::Unresolved | ShapeDim::Expr(_) => None,
         })
         .collect::<BTreeSet<_>>();
     for symbol in &symbols {

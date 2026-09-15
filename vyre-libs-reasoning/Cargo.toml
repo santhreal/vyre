@@ -1,0 +1,42 @@
+[package]
+name = "vyre-libs-reasoning"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Compiler-internal logic, causal reasoning, categorical rewrites, and knowledge compilation"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-reasoning"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.vyre]
+publication_class = "internal-engine"
+publication_contract = "closure:vyre-libs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["reasoning"]
+reasoning = []
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-megakernel.workspace = true
+vyre-libs-builder = { workspace = true }
+vyre-libs-graph = { workspace = true, features = ["impact-mask"] }
+vyre-libs-analysis = { workspace = true }
+
+[dev-dependencies]
+proptest.workspace = true
+vyre-test-support = { workspace = true, features = ["semantic-parity"] }
+vyre-reference = { workspace = true }
+vyre-driver-reference = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

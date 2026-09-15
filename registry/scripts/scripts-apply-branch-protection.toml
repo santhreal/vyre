@@ -1,0 +1,4 @@
+path = "scripts/apply-branch-protection.sh"
+state = "operator"
+gate = "ci-required"
+reason = "applies the required status contexts in .github/CI_REQUIRED.md to a branch through the GitHub API, and refuses until the ci-required gate passes"

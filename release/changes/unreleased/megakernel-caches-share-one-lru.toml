@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The megakernel empty-template cache and the resident launch recommendation cache now share one bounded least-recently-used map, so eviction order and tick saturation are decided in one place instead of two."

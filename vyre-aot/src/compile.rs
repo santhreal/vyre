@@ -1,16 +1,14 @@
 //! Program to canonical neutral artifact plus attached target payload.
 
-use std::collections::BTreeMap;
-
 use thiserror::Error;
-use vyre_foundation::ir::{inline_calls_with_resolver, OpResolver, Program, ProgramGraph};
+use vyre_foundation::diagnostics::{
+    CauseKind, CompilerLevel, Diagnostic, DiagnosticStage, RetryClass,
+};
 use vyre_megakernel::{
-    Artifact, ArtifactEnvelope, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetCompiler,
+    ArtifactEnvelope, TargetCompileError, TargetCompiler, ValidatedCompileRequest,
 };
 
 use crate::artifact::{registration, TargetId};
-
-const MAX_NEUTRAL_ARTIFACT_BYTES: u64 = 64 * 1024 * 1024;
 
 /// Errors returned by [`compile`].
 #[derive(Debug, Error)]
@@ -21,18 +19,9 @@ pub enum CompileError {
     )]
     TargetNotEnabled(TargetId),
 
-    /// Frontend call expansion failed.
-    #[error("vyre-aot: frontend Program preparation failed: {0}")]
-    ProgramPreparation(String),
-
-    /// The Program cannot be represented accurately in the canonical graph.
-    #[error("vyre-aot: artifact graph rejected Program: {0}")]
-    ArtifactLayout(String),
-
     /// The selected target compiler rejected the canonical artifact.
     #[error("vyre-aot: target compiler rejected artifact: {0}")]
-    TargetCompilation(String),
-
+    TargetCompilation(#[source] TargetCompileError),
     /// Canonical artifact construction or payload association failed.
     #[error("vyre-aot: canonical artifact stage `{stage}` failed: {source}")]
     CanonicalArtifact {
@@ -44,26 +33,56 @@ pub enum CompileError {
     },
 }
 
-/// Compile a `Program` through the canonical graph compiler and a registered target facet.
-pub fn compile(program: &Program, target: TargetId) -> Result<ArtifactEnvelope, CompileError> {
-    compile_with_resolver(program, target, None)
+impl CompileError {
+    /// Project this error into the versioned structured diagnostic contract.
+    #[must_use]
+    pub fn diagnostic(&self) -> Diagnostic {
+        match self {
+            Self::TargetNotEnabled(target) => Diagnostic::error(
+                "AOT001_TARGET_NOT_ENABLED",
+                format!("target `{target}` has no linked target compiler"),
+            )
+            .with_stage(DiagnosticStage::Admit)
+            .with_compiler_level(CompilerLevel::ToolingEvidence)
+            .with_target(target.as_str())
+            .with_fix("link the concrete driver crate that registers this target")
+            .with_cause(
+                CauseKind::Configuration,
+                "unregistered_target",
+                format!("target `{target}`"),
+            )
+            .with_retry(RetryClass::Never)
+            .with_context_value("target", target.as_str()),
+            Self::TargetCompilation(compile_err) => compile_err
+                .diagnostic()
+                .with_note("during AOT target compilation"),
+            Self::CanonicalArtifact { stage, source } => source
+                .diagnostic
+                .clone()
+                .with_note(format!("during AOT stage `{stage}`")),
+        }
+    }
 }
 
-/// Compile with a caller-supplied resolver to inline `Expr::Call` nodes.
-pub fn compile_with_resolver(
-    program: &Program,
+/// Compile one validated compiler request through the canonical graph compiler
+/// and a registered target facet.
+///
+/// The request is the caller's, whole: its graph, external facts, device facts,
+/// objective and search budget reach the canonical compiler unchanged, and this
+/// crate states none of them. An ahead-of-time compile and a direct one over
+/// the same request therefore produce one artifact identity.
+pub fn compile(
+    request: &ValidatedCompileRequest,
     target: TargetId,
-    resolver: Option<OpResolver>,
 ) -> Result<ArtifactEnvelope, CompileError> {
-    let inlined = match resolver {
-        Some(resolver) => inline_calls_with_resolver(program, resolver)
-            .map_err(|error| CompileError::ProgramPreparation(format!("{error:?}")))?,
-        None => program.clone(),
-    };
-    let neutral = compile_neutral_artifact(&inlined)?;
+    let artifact =
+        vyre_megakernel::compile(request).map_err(|source| CompileError::CanonicalArtifact {
+            stage: "canonical-compile",
+            source,
+        })?;
     let compiler = registered_target_compiler(&target)?;
-    vyre_megakernel::attach_target(neutral, compiler.as_ref())
-        .map_err(|error| CompileError::TargetCompilation(error.to_string()))
+    vyre_megakernel::attach_target(artifact, compiler.as_ref())
+        .map_err(CompileError::TargetCompilation)
 }
 
 fn registered_target_compiler(target: &TargetId) -> Result<Box<dyn TargetCompiler>, CompileError> {
@@ -72,74 +91,4 @@ fn registered_target_compiler(target: &TargetId) -> Result<Box<dyn TargetCompile
         .target_compiler()
         .map_err(|_| CompileError::TargetNotEnabled(target.clone()))
 }
-
-fn compile_neutral_artifact(program: &Program) -> Result<Artifact, CompileError> {
-    let graph = ProgramGraph::from_program("main", program.clone()).map_err(|error| {
-        CompileError::ArtifactLayout(format!("Program cannot enter the canonical graph: {error}"))
-    })?;
-    let request = CompileRequest::new(
-        graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
-        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
-        MAX_NEUTRAL_ARTIFACT_BYTES,
-    )
-    .validate()
-    .map_err(|source| CompileError::CanonicalArtifact {
-        stage: "neutral-request",
-        source,
-    })?;
-    vyre_megakernel::compile(&request).map_err(|source| CompileError::CanonicalArtifact {
-        stage: "neutral-compile",
-        source,
-    })
-}
-
-#[cfg(test)]
-pub(crate) fn artifact_fixture(
-    program: &Program,
-    payload_format: &str,
-    target_bytes: Vec<u8>,
-) -> ArtifactEnvelope {
-    use vyre_megakernel::{
-        TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess,
-        TargetResourceBinding, TargetResourceMemory,
-    };
-
-    let neutral = compile_neutral_artifact(program).expect("test Program must compile neutrally");
-    let entry = TargetEntryPoint {
-        name: "main".to_string(),
-        node: neutral.nodes()[0].id,
-        workgroup_size: program.workgroup_size,
-        grid_size: [1, 1, 1],
-        dynamic_shared_bytes: 0,
-        resource_bindings: neutral
-            .abi()
-            .resources
-            .iter()
-            .map(|resource| TargetResourceBinding {
-                resource: resource.value,
-                group: 0,
-                slot: resource.slot,
-                memory: TargetResourceMemory::Global,
-                access: match resource.access {
-                    vyre_megakernel::AbiAccess::ReadOnly | vyre_megakernel::AbiAccess::Uniform => {
-                        TargetResourceAccess::ReadOnly
-                    }
-                    vyre_megakernel::AbiAccess::WriteOnly => TargetResourceAccess::WriteOnly,
-                    vyre_megakernel::AbiAccess::ReadWrite => TargetResourceAccess::ReadWrite,
-                },
-            })
-            .collect(),
-    };
-    let payload = TargetPayload::new(
-        &neutral,
-        TargetPayloadFormat::new(payload_format, 1).unwrap(),
-        TargetProfile::new(payload_format, 1, [1_024, 1_024, 64], 1_024, 65_536, 0).unwrap(),
-        vec![entry],
-        target_bytes,
-    )
-    .unwrap();
-    let mut envelope = ArtifactEnvelope::new(neutral);
-    envelope.attach_target_payload(payload).unwrap();
-    envelope
-}
+vyre_foundation::diagnostic_conversions!(CompileError, diagnostic);

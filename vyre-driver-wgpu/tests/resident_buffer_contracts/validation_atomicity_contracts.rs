@@ -48,12 +48,7 @@ fn wgpu_backend_rejects_stale_and_borrowed_resident_handles() {
 #[test]
 fn wgpu_backend_batch_upload_validates_before_any_write() {
     let backend = backend();
-    let first = backend
-        .allocate_resident(4)
-        .expect("WGPU backend must allocate first resident buffer");
-    let second = backend
-        .allocate_resident(4)
-        .expect("WGPU backend must allocate second resident buffer");
+    let (first, second) = alloc_pair(&backend, 4);
     backend
         .upload_resident_many(&[(&first, &[9]), (&second, &[8])])
         .expect("initial resident uploads must succeed");
@@ -77,23 +72,13 @@ fn wgpu_backend_batch_upload_validates_before_any_write() {
         "batch upload must not partially update earlier resources when a later upload is invalid"
     );
 
-    backend
-        .free_resident(first)
-        .expect("first resident buffer must free cleanly");
-    backend
-        .free_resident(second)
-        .expect("second resident buffer must free cleanly");
+    free_pair(&backend, first, second);
 }
 
 #[test]
 fn wgpu_backend_ranged_batch_upload_validates_before_any_write() {
     let backend = backend();
-    let first = backend
-        .allocate_resident(16)
-        .expect("WGPU backend must allocate first resident buffer");
-    let second = backend
-        .allocate_resident(16)
-        .expect("WGPU backend must allocate second resident buffer");
+    let (first, second) = alloc_pair(&backend, 16);
     backend
         .upload_resident_many(&[(&first, &[9; 16]), (&second, &[8; 16])])
         .expect("initial resident uploads must succeed");
@@ -119,23 +104,13 @@ fn wgpu_backend_ranged_batch_upload_validates_before_any_write() {
         "ranged batch upload must not partially update earlier resources when a later range is invalid"
     );
 
-    backend
-        .free_resident(first)
-        .expect("first resident buffer must free cleanly");
-    backend
-        .free_resident(second)
-        .expect("second resident buffer must free cleanly");
+    free_pair(&backend, first, second);
 }
 
 #[test]
 fn wgpu_backend_ranged_batch_alignment_error_writes_nothing() {
     let backend = backend();
-    let first = backend
-        .allocate_resident(16)
-        .expect("WGPU backend must allocate first resident buffer");
-    let second = backend
-        .allocate_resident(16)
-        .expect("WGPU backend must allocate second resident buffer");
+    let (first, second) = alloc_pair(&backend, 16);
     backend
         .upload_resident_many(&[(&first, &[3; 16]), (&second, &[4; 16])])
         .expect("initial resident uploads must succeed");
@@ -165,24 +140,14 @@ fn wgpu_backend_ranged_batch_alignment_error_writes_nothing() {
         "alignment rejection must not update the invalid second range"
     );
 
-    backend
-        .free_resident(first)
-        .expect("first resident buffer must free cleanly");
-    backend
-        .free_resident(second)
-        .expect("second resident buffer must free cleanly");
+    free_pair(&backend, first, second);
 }
 
 #[test]
 
 fn wgpu_backend_ranged_batch_download_validates_before_any_readback() {
     let backend = backend();
-    let first = backend
-        .allocate_resident(16)
-        .expect("WGPU backend must allocate first resident buffer");
-    let second = backend
-        .allocate_resident(16)
-        .expect("WGPU backend must allocate second resident buffer");
+    let (first, second) = alloc_pair(&backend, 16);
     backend
         .upload_resident_many(&[(&first, &[1; 16]), (&second, &[2; 16])])
         .expect("initial resident uploads must succeed");
@@ -210,10 +175,5 @@ fn wgpu_backend_ranged_batch_download_validates_before_any_readback() {
         "ranged batch download must not mutate the invalid output"
     );
 
-    backend
-        .free_resident(first)
-        .expect("first resident buffer must free cleanly");
-    backend
-        .free_resident(second)
-        .expect("second resident buffer must free cleanly");
+    free_pair(&backend, first, second);
 }

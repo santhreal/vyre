@@ -3,29 +3,37 @@
 Run the default crate suite from the workspace root:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support
+./cargo_full test -p vyre-test-support
 ```
 
 Provide shared deterministic fixtures and assertions for workspace tests.
 
-The crate lives at `vyre-test-support`. The `test-support` owner maintains its
-`test-tooling` testing contract.
+The crate lives at `vyre-test-support` and owns the `test-support` seam in the `test-tooling` layer.
 
 ## Commands
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support
+./cargo_full test -p vyre-test-support
+```
+
+```console
+./cargo_full test -p vyre-test-support --all-features
 ```
 
 ## Feature sets
 
-This crate declares no Cargo features.
+- Default feature members: None
+- Available manifest features: `default`, `driver-artifact-contracts`, `driver-contracts`, `golden-corpus`, `host-input-abi`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests`, `spec-strategies`
+- Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_test_support` | `vyre-test-support/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-test-support` |
+| `lib` | `vyre_test_support` | `vyre-test-support/src/lib.rs` | None | `./cargo_full test -p vyre-test-support` |
+| `test` | `all_tests` | `vyre-test-support/tests/all_tests.rs` | None | `./cargo_full test -p vyre-test-support --test all_tests` |
+| `test` | `all_tests_ir_fixtures` | `vyre-test-support/tests/all_tests_ir_fixtures.rs` | `ir-fixtures`, `parity-oracles` | `./cargo_full test -p vyre-test-support --test all_tests_ir_fixtures` |
+| `test` | `workspace_root_follows_the_working_directory` | `vyre-test-support/tests/workspace_root_follows_the_working_directory.rs` | None | `./cargo_full test -p vyre-test-support --test workspace_root_follows_the_working_directory` |
 
 ## Test classes
 

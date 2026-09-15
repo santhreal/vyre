@@ -1,21 +1,17 @@
-//! CRITIQUE_VISION_ALIGNMENT_2026-04-23 V7 (CI gate half): every
-//! registered Tier-3 / Tier-2.5 op must expose a Region chain whose
-//! generator names resolve back to registered ops. A non-leaf op
-//! whose every `Node::Region` names an unregistered generator is a
-//! *black box*  -  opaque provenance that defeats the vision's
-//! auditability promise.
+//! Every registered op exposes a Region chain whose generator names resolve
+//! back to registered ops. A non-leaf op whose every `Node::Region` names an
+//! unregistered generator is a black box: opaque provenance, and nothing an
+//! audit can follow.
 //!
-//! The test walks every op in `vyre_libs::operation_catalog::all_entries()`,
+//! The test walks every op in `vyre_libs::operation_catalog::library_entries()`,
 //! builds its Program, collects the set of generator names referenced
 //! anywhere in the Region chain, and asserts every generator name
 //! either (a) resolves to a registered op id, or (b) is an
 //! anonymous / inline region (empty generator, or opens with
 //! `anonymous::` / `inline::`).
 //!
-//! When this test fails, the offending op has either introduced a
-//! typo'd generator id or landed a black-box composition that
-//! shouldn't be Tier 3. Either is a vision-alignment regression and
-//! must be closed before the PR merges.
+//! A failure means the offending op carries a typo'd generator id, or is a
+//! composition that named no building block.
 
 use std::collections::BTreeSet;
 use vyre::ir::{Node, Program};
@@ -65,13 +61,10 @@ fn walk(node: &Node, out: &mut BTreeSet<String>) {
 
 fn registered_op_ids() -> BTreeSet<String> {
     let mut out = BTreeSet::new();
-    for entry in vyre_libs::operation_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::library_entries() {
         out.insert(entry.id.to_string());
     }
-    for entry in vyre_intrinsics::operation_catalog::all_entries() {
-        out.insert(entry.id.to_string());
-    }
-    for entry in vyre_primitives::operation_catalog::all_entries() {
+    for entry in vyre_primitives::operation_catalog::intrinsic_entries() {
         out.insert(entry.id.to_string());
     }
     out
@@ -104,7 +97,6 @@ fn generator_is_allowed(generator: &str, registered: &BTreeSet<String>) -> bool 
     if generator.is_empty()
         || generator.starts_with("anonymous")
         || generator.starts_with("inline")
-        || generator == "vyre.program.root"
         || generator.starts_with("vyre-runtime::")
     {
         return true;
@@ -113,10 +105,20 @@ fn generator_is_allowed(generator: &str, registered: &BTreeSet<String>) -> bool 
 }
 
 #[test]
+fn only_the_canonical_root_generator_is_an_anonymous_boundary() {
+    let registered = BTreeSet::new();
+    assert!(!generator_is_allowed("vyre.program.root", &registered));
+    assert!(generator_is_allowed(
+        Program::ROOT_REGION_GENERATOR,
+        &registered
+    ));
+}
+
+#[test]
 fn every_tier3_op_region_chain_resolves_to_registered_generators() {
     let registered = registered_op_ids();
     let mut offenders: Vec<(String, Vec<String>)> = Vec::new();
-    for entry in vyre_libs::operation_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::library_entries() {
         let program = entry
             .program()
             .expect("Fix: registered library operation must provide a neutral builder");
@@ -131,11 +133,11 @@ fn every_tier3_op_region_chain_resolves_to_registered_generators() {
     }
     assert!(
         offenders.is_empty(),
-        "Fix: CRITIQUE_VISION_ALIGNMENT_2026-04-23 V7 regression  -  {} \
+        "Fix: black-box composition  -  {} \
          registered op(s) name a generator in their Region chain that \
          does not resolve to a registered op id. Every generator must \
          either (a) be a known op id or (b) open with anonymous / \
-         inline / vyre.program.root / vyre-runtime::. Offenders:\n{}",
+         inline / vyre-runtime::. Offenders:\n{}",
         offenders.len(),
         offenders
             .iter()

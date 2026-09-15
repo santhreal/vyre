@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The naga vec-packing audit refuses a fusion candidate whose members are separated by a barrier, an atomic, a vector access to the same binding, a branch, a loop-carrier boundary, or a cross-lane op; its hazard check scanned the access list, which by construction held nothing but the two members it was asked about, so it reported no hazard on any body."

@@ -2,46 +2,50 @@ use super::*;
 
 #[test]
 fn release_suite_proves_compiler_grade_gpu_thesis_axes() {
-    let manifest_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Fix: vyre-bench must live under the workspace root")
-        .join("release/evidence/benchmarks/compiler-grade-thesis-workloads.json");
-    let manifest: Value = serde_json::from_str(
+    let manifest_path = workspace_root().join("docs/testing/THESIS_AXES.toml");
+    let manifest: toml::Table = toml::from_str(
         &std::fs::read_to_string(&manifest_path)
-            .expect("Fix: compiler-grade thesis benchmark manifest must be readable"),
+            .expect("Fix: compiler-grade thesis workload contract must be readable"),
     )
-    .expect("Fix: compiler-grade thesis benchmark manifest must be valid JSON");
-    let axes = manifest["axes"]
+    .expect("Fix: compiler-grade thesis workload contract must be valid TOML");
+    let axes = manifest["axis"]
         .as_array()
-        .expect("Fix: compiler-grade thesis benchmark manifest must define an axes array");
+        .expect("Fix: compiler-grade thesis workload contract must define `[[axis]]` blocks");
     assert!(
-        axes.len() >= manifest["minimum_axes"].as_u64().unwrap_or(7) as usize,
-        "Fix: compiler-grade thesis benchmark manifest has too few axes."
+        axes.len()
+            >= manifest["minimum_axes"]
+                .as_integer()
+                .unwrap_or(7)
+                .unsigned_abs() as usize,
+        "Fix: compiler-grade thesis workload contract has too few axes."
     );
 
     let registry = vyre_bench::registry::collect_all();
     for axis in axes {
         let axis_id = axis["id"]
             .as_str()
-            .expect("Fix: every thesis benchmark axis needs an id");
+            .expect("Fix: every thesis workload axis needs an id");
         let terms = axis["terms"]
             .as_array()
-            .expect("Fix: every thesis benchmark axis needs search terms")
+            .expect("Fix: every thesis workload axis needs search terms")
             .iter()
             .map(|term| {
                 term.as_str()
-                    .expect("Fix: thesis benchmark axis terms must be strings")
+                    .expect("Fix: thesis workload axis terms must be strings")
             })
             .collect::<Vec<_>>();
-        let minimum_matching_cases = axis["minimum_matching_cases"].as_u64().unwrap_or(1) as usize;
-        let minimum_input_bytes = axis["minimum_input_bytes"].as_u64().unwrap_or(1_048_576);
+        let minimum_matching_cases = axis["minimum_matching_cases"]
+            .as_integer()
+            .unwrap_or(1)
+            .unsigned_abs() as usize;
+        let minimum_input_bytes = axis["minimum_input_bytes"]
+            .as_integer()
+            .unwrap_or(1_048_576)
+            .unsigned_abs();
         let evidence_artifact = axis["evidence_artifact"]
             .as_str()
-            .expect("Fix: every thesis benchmark axis needs an evidence artifact");
-        let artifact_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("Fix: vyre-bench must live under the workspace root")
-            .join(evidence_artifact);
+            .expect("Fix: every thesis workload axis needs an evidence artifact");
+        let artifact_path = workspace_root().join(evidence_artifact);
         assert!(
             artifact_path.exists(),
             "Fix: thesis benchmark axis `{axis_id}` references missing artifact `{evidence_artifact}`."

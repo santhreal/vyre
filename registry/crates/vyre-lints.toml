@@ -1,0 +1,5 @@
+name = "vyre-lints"
+concern = "Enforce source-level project policies without depending on runtime crates."
+pages = { spec = "vyre-lints/SPEC.md", readme = "vyre-lints/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = []

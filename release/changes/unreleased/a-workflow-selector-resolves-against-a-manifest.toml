@@ -1,0 +1,2 @@
+category = "Added"
+text = "The ci-steps gate resolves every package, test, bench, example, binary and feature token in the workflow steps and the scripts against the workspace manifests, so a step that silently selects nothing fails."

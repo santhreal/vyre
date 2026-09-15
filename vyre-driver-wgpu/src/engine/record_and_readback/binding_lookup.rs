@@ -78,6 +78,7 @@ impl BindingLookup {
     }
 }
 
+// Inline: covers `BindingLookup`, `clear`, `push`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The hygiene scanner recognises a source read resolved from a declaration marker and a search written with `match_indices`, so a test that walks the checkout through either is no longer classified as inspecting nothing."

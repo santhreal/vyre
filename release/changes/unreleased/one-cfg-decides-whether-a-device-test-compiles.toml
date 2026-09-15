@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A device test gated itself with a bare `#![cfg(feature = \"device-tests\")]` and a separate `#![cfg(test)]`. Two independent inner attributes deciding one question is two places to edit and two ways to get it half right, so each target now states the admission once as `#![cfg(all(test, feature = \"device-tests\"))]`."

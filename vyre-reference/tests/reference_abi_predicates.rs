@@ -9,11 +9,11 @@
 //! ran past, which points nowhere near the copy that drifted.
 //!
 //! The restatement that actually shipped was `!decl.is_output()`, in the
-//! pairwise composition harness. See BACKLOG.md R72.
+//! pairwise composition harness.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 use vyre_reference::value::Value;
-use vyre_reference::{is_reference_input, is_reference_output, reference_eval};
+use vyre_reference::{is_reference_input, is_reference_output};
 
 fn read_only(name: &str, binding: u32) -> BufferDecl {
     BufferDecl::read(name, binding, DataType::U32).with_count(4)
@@ -124,8 +124,12 @@ fn the_predicates_predict_the_shapes_reference_eval_uses() {
     );
 
     let pack = |words: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(words));
-    let outputs = reference_eval(&program, &[pack(&[1, 2, 3, 4]), pack(&[0, 0, 0, 0])])
-        .expect("one Value per is_reference_input decl is exactly what the interpreter wants");
+    let outputs = vyre_reference::ReferenceRequest::standard(
+        &program,
+        &[pack(&[1, 2, 3, 4]), pack(&[0, 0, 0, 0])],
+    )
+    .outputs()
+    .expect("one Value per is_reference_input decl is exactly what the interpreter wants");
     assert_eq!(
         outputs.len(),
         expected_outputs,
@@ -155,7 +159,7 @@ fn supplying_one_value_too_many_is_rejected() {
     )];
     let program = Program::wrapped(buffers, [4, 1, 1], body);
     let pack = |words: &[u32]| Value::from(vyre_primitives::wire::pack_u32_slice(words));
-    let error = reference_eval(
+    let error = vyre_reference::ReferenceRequest::standard(
         &program,
         &[
             pack(&[1, 2, 3, 4]),
@@ -163,9 +167,152 @@ fn supplying_one_value_too_many_is_rejected() {
             pack(&[9, 9, 9, 9]),
         ],
     )
+    .outputs()
     .expect_err("three values for two input decls is a contract violation");
     assert!(
         error.to_string().contains("unused input"),
         "the diagnostic must say the extra value went unused: {error}"
     );
+}
+
+/// Every buffer shape a caller can declare, so a selection that is right for a
+/// plain read-only input and wrong for a `Shared`, a `Persistent`, or a
+/// live-out cannot pass.
+fn every_declared_shape() -> Vec<BufferDecl> {
+    vec![
+        read_only("fed", 0),
+        read_write("acc", 1),
+        BufferDecl::storage("shared_tier", 2, BufferAccess::ReadOnly, DataType::U32)
+            .with_kind(MemoryKind::Shared)
+            .with_count(4),
+        BufferDecl::storage("persist", 3, BufferAccess::ReadOnly, DataType::U32)
+            .with_kind(MemoryKind::Persistent)
+            .with_count(4),
+        BufferDecl::storage("carried", 4, BufferAccess::ReadOnly, DataType::U32)
+            .with_pipeline_live_out(true)
+            .with_count(4),
+        BufferDecl::output("out", 5, DataType::U32).with_count(4),
+        BufferDecl::workgroup("scratch", 6, DataType::U32).with_count(4),
+    ]
+}
+
+/// WHY: two callers holding borrowed bytes walked `Program::buffers` and
+/// selected inputs as `access() != Workgroup && !is_backend_allocated_output()`.
+/// That form admits the `Shared`, `Persistent`, and non-read-write live-out
+/// declarations below, so it consumed three values `reference_eval` never
+/// reads and every later buffer received the bytes of the one before it. The
+/// expected count is derived from the predicate here rather than written down,
+/// so a shape added to `BufferDecl` widens this case with it.
+#[test]
+fn the_borrowed_input_walk_consumes_exactly_the_predicate_inputs() {
+    let buffers = every_declared_shape();
+    let expected = buffers.iter().filter(|d| is_reference_input(d)).count();
+    assert!(
+        expected < buffers.len(),
+        "the fixture must declare a buffer the caller does not supply, or it \
+         cannot tell the predicate apart from `every declaration`"
+    );
+    let program = Program::wrapped(
+        buffers,
+        [4, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::gid_x(),
+            Expr::load("fed", Expr::gid_x()),
+        )],
+    );
+
+    let bytes = vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 4]);
+    let supplied: Vec<&[u8]> = vec![bytes.as_slice(); expected];
+    let values = vyre_reference::reference_input_values(&program, &supplied)
+        .expect("one value per predicate input is the contract");
+    assert_eq!(values.len(), expected);
+}
+
+/// WHY: the walk is the ABI boundary, so an off-by-one has to be refused by
+/// name rather than absorbed. The refusal names the buffer it is short of,
+/// because a bare count points at no declaration.
+#[test]
+fn a_short_borrowed_input_list_names_the_buffer_it_is_missing() {
+    let buffers = every_declared_shape();
+    let expected = buffers.iter().filter(|d| is_reference_input(d)).count();
+    let short = expected - 1;
+    let missing = buffers
+        .iter()
+        .filter(|d| is_reference_input(d))
+        .nth(short)
+        .expect("the fixture declares more than one reference input")
+        .name()
+        .to_string();
+    let program = Program::wrapped(
+        buffers,
+        [4, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::gid_x(),
+            Expr::load("fed", Expr::gid_x()),
+        )],
+    );
+
+    let bytes = vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 4]);
+    let supplied: Vec<&[u8]> = vec![bytes.as_slice(); short];
+    let mismatch = vyre_reference::reference_input_values(&program, &supplied)
+        .expect_err("one value short of the predicate count is a contract violation");
+    assert_eq!(mismatch.expected, expected);
+    assert_eq!(mismatch.received, short);
+    assert_eq!(mismatch.missing.as_deref(), Some(missing.as_str()));
+    assert!(
+        mismatch.to_string().contains(&missing),
+        "the refusal must name the buffer: {mismatch}"
+    );
+}
+
+/// WHY: a trailing buffer is the other half of the off-by-one and is the shape
+/// that silently feeds a device more than the oracle reads.
+#[test]
+fn a_long_borrowed_input_list_is_refused_with_both_counts() {
+    let buffers = every_declared_shape();
+    let expected = buffers.iter().filter(|d| is_reference_input(d)).count();
+    let program = Program::wrapped(
+        buffers,
+        [4, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::gid_x(),
+            Expr::load("fed", Expr::gid_x()),
+        )],
+    );
+
+    let bytes = vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 4]);
+    let supplied: Vec<&[u8]> = vec![bytes.as_slice(); expected + 1];
+    let mismatch = vyre_reference::reference_input_values(&program, &supplied)
+        .expect_err("a trailing buffer is a contract violation");
+    assert_eq!(mismatch.expected, expected);
+    assert_eq!(mismatch.received, expected + 1);
+    assert_eq!(mismatch.missing, None);
+}
+
+/// WHY: the walk exists so a caller does not restate the selection, which is
+/// only true if what it returns is what `reference_eval` accepts.
+#[test]
+fn the_borrowed_walk_produces_the_vector_reference_eval_accepts() {
+    let buffers = vec![read_only("in", 0), read_write("acc", 1)];
+    let program = Program::wrapped(
+        buffers,
+        [4, 1, 1],
+        vec![Node::store(
+            "acc",
+            Expr::gid_x(),
+            Expr::load("in", Expr::gid_x()),
+        )],
+    );
+    let input = vyre_primitives::wire::pack_u32_slice(&[1, 2, 3, 4]);
+    let seed = vyre_primitives::wire::pack_u32_slice(&[0, 0, 0, 0]);
+    let supplied: Vec<&[u8]> = vec![input.as_slice(), seed.as_slice()];
+    let values = vyre_reference::reference_input_values(&program, &supplied)
+        .expect("two values for two predicate inputs");
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &values)
+        .outputs()
+        .expect("the walk must produce a vector the interpreter accepts");
+    assert_eq!(outputs.len(), 1);
 }

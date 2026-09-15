@@ -1,0 +1,2 @@
+category = "Added"
+text = "Domain-neutral external resource capabilities, zero-copy import and export negotiation, pre-allocation rejection, schedule transition execution, and timeline synchronization across CUDA, Metal, and WGPU drivers."

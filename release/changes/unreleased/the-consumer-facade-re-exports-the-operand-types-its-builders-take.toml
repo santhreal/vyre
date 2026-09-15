@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The consumer facade re-exports TensorRef, TensorRefError, and the buffer_names module, so a caller can name the operand types every Cat-A builder takes without depending on the builder package directly."

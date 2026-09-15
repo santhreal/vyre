@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A library composition whose writable footprint exceeds one workgroup now confines its serial body to workgroup zero, so the FFT convolution, the radix-2 transform, the BLAKE3 quartet, round and compression, the AMG V-cycle phase, the 2x2 Strassen contraction and the UTF-8 shape counter no longer repeat their global writes in every workgroup of the grid a backend derives from the output length."

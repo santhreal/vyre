@@ -1,0 +1,412 @@
+//! Runtime allocation and binding of the workspace an artifact recorded.
+//!
+//! WHY: a multi-entry artifact records one allocation region per value it
+//! produces for itself, with the offset and byte count the selected schedule
+//! assigned. Nothing read that plan: the runtime allocated whatever a caller
+//! asked for and bound whatever a caller supplied, so a cross-entry value could
+//! be sized by the caller, shared with an unrelated value, or replaced by a
+//! buffer the compiler never planned for. These contracts pin the plan as the
+//! only authority over that storage.
+
+use std::sync::Arc;
+
+use vyre_driver::{BackendRegistration, BoundResource};
+
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
+    ShapeDim, ValueContract, ValueLifetime,
+};
+use vyre_megakernel::{Artifact, ArtifactEnvelope, ArtifactValueId};
+use vyre_runtime::artifact_admission::{ArtifactSession, TypedResource, TypedResourceDataset};
+
+use vyre_test_support::artifact_fixtures;
+
+use crate::artifact_session_fixtures::{
+    fixture_backend_registration, fixture_target_payload, SessionFixtureMaterializer,
+};
+
+const FORMAT: &str = "workspace.target";
+const MIDDLE: &str = "middle";
+const OUTPUT: &str = "out";
+static WORKSPACE_REGISTRATION: BackendRegistration =
+    fixture_backend_registration("workspace-artifact");
+
+/// A two-stage artifact: the first entry's output is the second entry's input.
+///
+/// The intermediate value is the whole point. It is produced inside the artifact
+/// and read inside the artifact, so nothing outside owns it and the compiler
+/// places it in an artifact-owned region.
+fn two_stage_artifact() -> Artifact {
+    let mut graph = ProgramGraph::new();
+    let (_, produced) = graph
+        .add_node(
+            "first",
+            Program::wrapped(
+                vec![BufferDecl::output(OUTPUT, 0, DataType::U32).with_count(1)],
+                [1, 1, 1],
+                vec![Node::store(OUTPUT, Expr::u32(0), Expr::u32(1))],
+            ),
+            Vec::new(),
+            vec![GraphOutput {
+                buffer: OUTPUT.into(),
+                name: MIDDLE.into(),
+                contract: value(BufferAccess::ReadWrite, ValueLifetime::Invocation),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("the workspace fixture must accept its producer");
+    let middle = *produced
+        .first()
+        .expect("the producer declares one output value");
+    graph
+        .add_node(
+            "second",
+            Program::wrapped(
+                vec![
+                    BufferDecl::storage(MIDDLE, 0, BufferAccess::ReadOnly, DataType::U32)
+                        .with_count(1),
+                    BufferDecl::output(OUTPUT, 1, DataType::U32).with_count(1),
+                ],
+                [1, 1, 1],
+                vec![Node::store(
+                    OUTPUT,
+                    Expr::u32(0),
+                    Expr::load(MIDDLE, Expr::u32(0)),
+                )],
+            ),
+            vec![GraphInput {
+                buffer: MIDDLE.into(),
+                value: middle,
+                contract: value(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+            }],
+            vec![GraphOutput {
+                buffer: OUTPUT.into(),
+                name: OUTPUT.into(),
+                contract: value(BufferAccess::WriteOnly, ValueLifetime::Output),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("the workspace fixture must accept its consumer");
+    artifact_fixtures::compile_graph(graph, 0)
+}
+
+fn value(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
+    ValueContract {
+        dtype: DataType::U32,
+        shape: vec![ShapeDim::Known(1)],
+        access,
+        lifetime,
+    }
+}
+
+/// A session over the two-stage artifact and the recording materializer.
+fn session() -> (Artifact, Arc<SessionFixtureMaterializer>, ArtifactSession) {
+    let artifact = two_stage_artifact();
+    assert!(
+        artifact.allocation().owned().next().is_some(),
+        "Fix: the fixture must record at least one artifact-owned region, or every contract here \
+         is vacuous."
+    );
+    let mut envelope = ArtifactEnvelope::new(artifact.clone());
+    envelope
+        .attach_target_payload(fixture_target_payload(&artifact, FORMAT, vec![1, 2, 3, 4]))
+        .expect("the fixture payload must attach");
+    let materializer =
+        SessionFixtureMaterializer::new("workspace-artifact", "workspace-device", FORMAT);
+    let session = ArtifactSession::from_envelope_with_materializer(
+        &WORKSPACE_REGISTRATION,
+        envelope,
+        materializer.clone(),
+    )
+    .expect("the two-stage envelope must materialize");
+    (artifact, materializer, session)
+}
+
+/// Canonical value the fixture artifact produces for itself.
+fn workspace_value(artifact: &Artifact) -> ArtifactValueId {
+    artifact
+        .allocation()
+        .owned()
+        .flat_map(|region| region.placements.iter())
+        .next()
+        .expect("the fixture places one artifact-owned value")
+        .value
+}
+
+/// WHY: the plan states one region per cross-entry value, with the byte count
+/// the schedule assigned. A runtime that rounded, merged, or padded an
+/// allocation binds a buffer of a size nothing compiled against.
+#[test]
+fn the_runtime_allocates_exactly_the_recorded_workspace() {
+    let (artifact, materializer, session) = session();
+
+    let workspace = session
+        .allocate_workspace()
+        .expect("the recorded workspace must allocate");
+
+    let plan = artifact.allocation();
+    assert_eq!(workspace.total_bytes(), plan.owned_bytes());
+    assert_eq!(
+        materializer
+            .allocated
+            .lock()
+            .expect("the allocation log must not be poisoned")
+            .as_slice(),
+        plan.owned()
+            .map(|region| usize::try_from(region.bytes).expect("fixture regions are small"))
+            .collect::<Vec<_>>()
+            .as_slice(),
+        "one allocation per artifact-owned region, of exactly the recorded byte count, in recorded \
+         order"
+    );
+    assert_eq!(workspace.buffers().len(), plan.owned().count());
+    for region in plan.owned() {
+        for placement in &region.placements {
+            assert!(
+                workspace.owns(placement.value),
+                "the workspace must own every value the plan places in its own region"
+            );
+        }
+    }
+    assert_eq!(
+        workspace.bindings().len(),
+        plan.owned()
+            .map(|region| region.placements.len())
+            .sum::<usize>(),
+        "every placed value binds a buffer"
+    );
+
+    let allocated = workspace.buffers().to_vec();
+    session
+        .free_workspace(workspace)
+        .expect("the workspace must release");
+    assert_eq!(
+        materializer
+            .freed
+            .lock()
+            .expect("the release log must not be poisoned")
+            .as_slice(),
+        allocated.as_slice(),
+        "every allocated buffer is released, and nothing else"
+    );
+}
+
+/// WHY: the artifact allocated its own storage for the values its entries pass
+/// between themselves. A caller buffer in that place is a wrong bind, not a
+/// substitution, and silently preferring either side is how the compiler stops
+/// owning cross-entry storage.
+#[test]
+fn a_caller_cannot_rebind_a_workspace_owned_value() {
+    let (artifact, _materializer, session) = session();
+    let workspace = session
+        .allocate_workspace()
+        .expect("the recorded workspace must allocate");
+    let owned = workspace_value(&artifact);
+    let caller = session
+        .allocate_resident(4)
+        .expect("the fixture materializer must allocate");
+
+    let mut dataset = TypedResourceDataset::new();
+    dataset
+        .insert(TypedResource::resident(owned, caller))
+        .expect("insert dataset");
+
+    let error = session
+        .ingest_with_workspace(&workspace, &dataset)
+        .expect_err("a caller must not rebind a workspace-owned value");
+
+    let text = error.to_string();
+    assert!(
+        text.contains("workspace-owned") && text.contains(&format!("canonical value {}", owned.0)),
+        "the refusal must name the value and why it is refused; got `{text}`"
+    );
+}
+
+/// WHY: binding over a workspace must still supply every value the entries
+/// declare. The workspace covers what the artifact produces for itself and
+/// nothing else, so a graph input or a public output left out is refused rather
+/// than launched unbound.
+#[test]
+fn workspace_bindings_cover_the_workspace_and_demand_the_rest() {
+    let (artifact, _materializer, session) = session();
+    let workspace = session
+        .allocate_workspace()
+        .expect("the recorded workspace must allocate");
+    let owned = workspace_value(&artifact);
+    let caller_values = artifact
+        .resources()
+        .iter()
+        .filter(|resource| resource.value != owned)
+        .map(|resource| resource.value)
+        .collect::<Vec<_>>();
+    assert!(
+        !caller_values.is_empty(),
+        "Fix: the fixture must carry a caller-owned resource beside its workspace."
+    );
+    let caller = session
+        .allocate_resident(4)
+        .expect("the fixture materializer must allocate");
+
+    let missing = session
+        .ingest_with_workspace(&workspace, &TypedResourceDataset::new())
+        .expect_err("a caller-owned value must not be defaulted");
+    assert!(
+        missing.to_string().contains("requires resident resource")
+            || missing.to_string().contains("missing required resource"),
+        "the refusal must name the unbound entry resource; got `{missing}`"
+    );
+
+    let mut dataset = TypedResourceDataset::new();
+    for &val in &caller_values {
+        dataset.add_resident(val, caller.clone());
+    }
+
+    let bound = session
+        .ingest_with_workspace(&workspace, &dataset)
+        .expect("the workspace plus every caller-owned value must bind");
+
+    assert_eq!(
+        bound.resources().get(&owned),
+        workspace
+            .bindings()
+            .get(&owned)
+            .map(|resource| BoundResource::Resident(resource.clone()))
+            .as_ref(),
+        "the workspace's own region must reach the binding set"
+    );
+    for value in &caller_values {
+        assert_eq!(
+            bound.resources().get(value),
+            Some(&BoundResource::Resident(caller.clone()))
+        );
+    }
+}
+
+const STATE: &str = "state";
+
+/// A two-stage artifact whose second entry advances the retained state the
+/// first published.
+///
+/// The successor is the whole point. It is a distinct canonical value that
+/// holds the storage of the value it replaces, so the plan places both in one
+/// region and the runtime must bind both to one buffer.
+fn retained_chain_artifact() -> Artifact {
+    let mut graph = ProgramGraph::new();
+    let (_, produced) = graph
+        .add_node(
+            "publish",
+            Program::wrapped(
+                vec![
+                    BufferDecl::storage(STATE, 0, BufferAccess::ReadWrite, DataType::U32)
+                        .with_count(1),
+                ],
+                [1, 1, 1],
+                vec![Node::store(STATE, Expr::u32(0), Expr::u32(7))],
+            ),
+            Vec::new(),
+            vec![GraphOutput {
+                buffer: STATE.into(),
+                name: STATE.into(),
+                contract: value(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                retained_successor_of: None,
+            }],
+        )
+        .expect("the chain fixture must accept its producer");
+    let state = *produced
+        .first()
+        .expect("the producer declares one retained value");
+    graph
+        .add_node(
+            "advance",
+            Program::wrapped(
+                vec![
+                    BufferDecl::storage(STATE, 0, BufferAccess::ReadWrite, DataType::U32)
+                        .with_count(1),
+                    BufferDecl::output(OUTPUT, 1, DataType::U32).with_count(1),
+                ],
+                [1, 1, 1],
+                vec![
+                    Node::store(STATE, Expr::u32(0), Expr::load(STATE, Expr::u32(0))),
+                    Node::store(OUTPUT, Expr::u32(0), Expr::load(STATE, Expr::u32(0))),
+                ],
+            ),
+            vec![GraphInput {
+                buffer: STATE.into(),
+                value: state,
+                contract: value(BufferAccess::ReadWrite, ValueLifetime::Retained),
+            }],
+            vec![
+                GraphOutput {
+                    buffer: STATE.into(),
+                    name: "state__next".into(),
+                    contract: value(BufferAccess::ReadWrite, ValueLifetime::Retained),
+                    retained_successor_of: Some(state),
+                },
+                GraphOutput {
+                    buffer: OUTPUT.into(),
+                    name: OUTPUT.into(),
+                    contract: value(BufferAccess::WriteOnly, ValueLifetime::Output),
+                    retained_successor_of: None,
+                },
+            ],
+        )
+        .expect("the chain fixture must accept its consumer");
+    artifact_fixtures::compile_graph(graph, 0)
+}
+
+/// WHY: a retained successor advances the storage of the value it replaces. A
+/// runtime that allocated a second buffer for it would hand the entry after a
+/// kernel cut an allocation nothing wrote, and the reduction that published its
+/// partials before the cut would read zeros. One chain is one buffer.
+#[test]
+fn every_value_of_a_retained_chain_binds_one_buffer() {
+    let artifact = retained_chain_artifact();
+    let chain: Vec<ArtifactValueId> = artifact
+        .resources()
+        .iter()
+        .filter_map(|resource| {
+            resource
+                .retained_predecessor
+                .map(|predecessor| (predecessor, resource.value))
+        })
+        .flat_map(|(predecessor, successor)| [predecessor, successor])
+        .collect();
+    assert!(
+        !chain.is_empty(),
+        "Fix: the fixture must record a retained successor, or this contract is vacuous."
+    );
+
+    let mut envelope = ArtifactEnvelope::new(artifact.clone());
+    envelope
+        .attach_target_payload(fixture_target_payload(&artifact, FORMAT, vec![1, 2, 3, 4]))
+        .expect("the fixture payload must attach");
+    let materializer =
+        SessionFixtureMaterializer::new("workspace-artifact", "workspace-device", FORMAT);
+    let session = ArtifactSession::from_envelope_with_materializer(
+        &WORKSPACE_REGISTRATION,
+        envelope,
+        materializer,
+    )
+    .expect("the chain envelope must materialize");
+    let workspace = session
+        .allocate_workspace()
+        .expect("the recorded workspace must allocate");
+
+    let bound: Vec<_> = chain
+        .iter()
+        .map(|value| {
+            workspace
+                .bindings()
+                .get(value)
+                .unwrap_or_else(|| panic!("value {} of the chain is unbound", value.0))
+                .clone()
+        })
+        .collect();
+    for (value, resource) in chain.iter().zip(&bound) {
+        assert_eq!(
+            resource, &bound[0],
+            "value {} of the chain binds a second buffer",
+            value.0
+        );
+    }
+}

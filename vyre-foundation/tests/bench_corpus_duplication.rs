@@ -6,35 +6,49 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::process::Command;
+use vyre_test_support::monorepo::vyre_workspace_root;
 
+/// WHY: this rule ran as a Python script the test spawned, and the test asserted
+/// the script file was present before running it. The script returned success
+/// whenever the corpus directory was absent, which it is, so the contract read
+/// as covered while nothing hashed a byte. The rule is the same one the fixture
+/// half already implements in this file, over the same hashes.
 #[test]
-fn checked_in_corpus_duplicates_match_manifest_policy() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
-    let checker = workspace_root.join("benches/competition/scripts/check_corpora.py");
+fn checked_in_corpus_carries_each_program_once() {
+    let workspace_root = vyre_workspace_root();
+    let corpus = workspace_root.join("benches/competition/corpora");
+    let mut hashes: HashMap<String, Vec<PathBuf>> = HashMap::new();
+    if corpus.is_dir() {
+        collect_hashes(&corpus, &mut hashes);
+    }
+
+    let duplicates = hashes
+        .values()
+        .filter(|paths| paths.len() > 1)
+        .map(|paths| {
+            paths
+                .iter()
+                .map(|path| {
+                    path.strip_prefix(&workspace_root)
+                        .unwrap_or(path)
+                        .display()
+                        .to_string()
+                })
+                .collect::<Vec<_>>()
+                .join(" == ")
+        })
+        .collect::<Vec<_>>();
+
     assert!(
-        checker.is_file(),
-        "bench corpus checker is missing at {}. Fix: restore benches/competition/scripts/check_corpora.py or replace this contract with an equivalent release benchmark corpus verifier.",
-        checker.display()
-    );
-    let output = Command::new("python3")
-        .arg(&checker)
-        .current_dir(workspace_root)
-        .output()
-        .expect("python3 must be available to run corpus manifest checker");
-    assert!(
-        output.status.success(),
-        "bench corpus duplicate policy failed.\nstdout:\n{}\nstderr:\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        duplicates.is_empty(),
+        "bench corpus entries must be distinct by content. Duplicates:\n{}",
+        duplicates.join("\n")
     );
 }
 
 #[test]
 fn bench_corpus_does_not_duplicate_test_fixtures() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
+    let workspace_root = vyre_workspace_root();
 
     let bench_corpus = workspace_root.join("benches/competition/corpora");
     let fixture_dirs = [
@@ -64,8 +78,8 @@ fn bench_corpus_does_not_duplicate_test_fixtures() {
                 for fp in fix_paths {
                     duplicates.push(format!(
                         "{} duplicates {}",
-                        bp.strip_prefix(workspace_root).unwrap().display(),
-                        fp.strip_prefix(workspace_root).unwrap().display()
+                        bp.strip_prefix(&workspace_root).unwrap().display(),
+                        fp.strip_prefix(&workspace_root).unwrap().display()
                     ));
                 }
             }

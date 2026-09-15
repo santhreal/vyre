@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The test-harness isolation gate reports a fixture that submits an inventory registration and is reached twice by one test binary, the arrangement that made four wire suites share one opaque resolver registration and fail eleven cases on the rejected table."

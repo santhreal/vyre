@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre-libs` asserts its own contract: every module a `vyre-libs-<domain>` crate publishes is re-exported by the facade, and every partition crate is referenced by `link_anchor` so the linker retains its operation registrations. The roster comes from `workspace.members` and each crate's published module list from its own `src/lib.rs`, so a new partition crate or a new published module fails the suite until the facade carries it."

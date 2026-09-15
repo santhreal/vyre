@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The clone-family structural IR golden matches the Go extractors again. Folding four out-of-bounds loads back inside their buffers added the clamp expressions and the enclosing branch that admit them, and the golden still carried the pre-fix digests, so the guard reported a drift for `go/packages_and_imports` and `go/declarations` on every run."

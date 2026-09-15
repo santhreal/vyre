@@ -57,11 +57,13 @@ impl BodyCtx<'_> {
     /// Called for every op as it is emitted. The descriptor is SSA-ordered, so
     /// each operand is already classified when its consumer arrives.
     ///
-    /// Only [`Self::emit_return`] consumes this, and it needs a proof rather
-    /// than a guess, so every unlisted op kind is treated as varying. Being
-    /// wrong in the permissive direction here produces a divergent branch and a
-    /// hung kernel; being wrong in the conservative direction produces a
-    /// compile-time refusal, so the default is deliberately `false`.
+    /// [`Self::emit_return`] needs a proof rather than a guess, so every
+    /// unlisted op kind is treated as varying. Being wrong in the permissive
+    /// direction there produces a divergent branch and a hung kernel; being
+    /// wrong in the conservative direction produces a compile-time refusal, so
+    /// the default is deliberately `false`. Identity-atomic lowering reads the
+    /// same set to tell a contended address from a per-invocation one, where a
+    /// missing proof costs only the rewrite.
     pub(super) fn record_uniformity(&mut self, op: &KernelOp) {
         let Some(result) = op.result else {
             return;
@@ -77,7 +79,8 @@ impl BodyCtx<'_> {
             | KernelOpKind::UnOpKind(_)
             | KernelOpKind::BinOpKind(_)
             | KernelOpKind::Fma
-            | KernelOpKind::Select => self.operands_uniform(&op.operands),
+            | KernelOpKind::Select
+            | KernelOpKind::ExtractLane { .. } => self.operands_uniform(&op.operands),
             // Global and constant memory is one address space for the entire
             // grid, so every invocation reading a grid-uniform address observes
             // the same value. Operand 0 is an inline binding slot, not a result
@@ -92,7 +95,9 @@ impl BodyCtx<'_> {
             // `LoadShared` is deliberately absent: shared memory is per-CTA, so
             // equal addresses in different CTAs are different storage and the
             // value is not grid-uniform.
-            KernelOpKind::LoadGlobal | KernelOpKind::LoadConstant => op
+            KernelOpKind::LoadGlobal
+            | KernelOpKind::LoadConstant
+            | KernelOpKind::VectorLoadGlobal { .. } => op
                 .operands
                 .get(1)
                 .is_some_and(|index| self.is_uniform(*index)),
@@ -138,7 +143,7 @@ impl BodyCtx<'_> {
                  memory, or an atomic's returned value is treated as varying. Fix: gate the exit \
                  on a grid-uniform value (the established shape is a flag word written with \
                  `atomic_or` and read back after a barrier, as \
-                 vyre_primitives::fixpoint::persistent_fixpoint::persistent_fixpoint_grid does), \
+                 vyre_libs::fixpoint::persistent_fixpoint::persistent_fixpoint_grid does), \
                  or express the per-invocation case as a guarded body instead of an early return."
                     .to_string(),
             ));
@@ -336,6 +341,23 @@ impl BodyCtx<'_> {
             ))
         })?;
         self.bind_result(op, reg)
+    }
+
+    /// Close the kernel: complete any native transfer the descriptor never
+    /// waited on, then land the single exit label and `ret`.
+    pub(super) fn finish_with_return(&mut self) {
+        if !self.pending_transfers.is_empty() {
+            let _ = writeln!(
+                self.text,
+                "    // implicit transfer completion for descriptors missing a wait"
+            );
+            let _ = writeln!(self.text, "    cp.async.wait_group 0;");
+            let _ = writeln!(self.text, "    membar.cta;");
+            let _ = writeln!(self.text, "    bar.sync 0;");
+            self.pending_transfers.clear();
+        }
+        self.text.push_str("$L_exit:\n");
+        self.text.push_str("    ret;\n");
     }
 }
 

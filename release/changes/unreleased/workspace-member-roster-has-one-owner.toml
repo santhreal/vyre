@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The workspace member roster has one reader, `structure_gate::workspace_members`. It was parsed out of the root manifest three times, once inside `structure-gate` and once in each of two gates, and every copy carried its own filter over the member list, so a member added under a path one copy accepted and another skipped would be gated by one and invisible to the other. The CI reference gate resolves a package's directory through `structure_gate::member_directory` for the same reason instead of walking the roster itself."

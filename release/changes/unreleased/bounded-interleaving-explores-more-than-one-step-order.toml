@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The bounded-interleaving schedule policy runs the forward, reversed, and rotated step orders derived from the declared workgroup extent and refuses when two orders disagree on an output, instead of running the forward order alone."

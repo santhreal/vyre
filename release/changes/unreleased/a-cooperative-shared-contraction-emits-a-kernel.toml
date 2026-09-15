@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A cooperative shared-memory two-dimensional contraction emits a tiled kernel instead of failing with a shape mismatch, and masks ragged edge tiles so a contraction whose dimensions are not multiples of the tile computes the same values as the untiled reference."

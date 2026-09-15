@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-libs/src/math/fractional.rs` and `vyre-libs/src/topology/betti_persistence.rs` moved to `vyre-libs/tests/`. Both were built entirely from `vyre-reference` composition witnesses behind `cfg(test)`, so no build shipped a line of either, and the `math-kernels` feature advertised a fractional-calculus kernel that did not exist outside the test binary."

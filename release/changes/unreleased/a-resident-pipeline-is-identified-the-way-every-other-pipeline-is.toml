@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The WGPU resident pipeline cache keys entries by canonical pipeline identity instead of a 64-bit FxHash of the program wire, so a resident dispatch cannot be answered by a pipeline compiled for another adapter, ABI, naga build or emitter lowering digest."

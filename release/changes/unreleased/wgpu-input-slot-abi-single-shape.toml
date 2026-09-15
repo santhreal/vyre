@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The wgpu record-and-readback path binds exactly one input slot per host-consuming binding and refuses an input list of any other length with a named error stating the expected and received counts."

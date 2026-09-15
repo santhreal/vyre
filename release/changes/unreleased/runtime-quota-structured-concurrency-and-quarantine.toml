@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Runtime enforces mandatory finite session quotas across all subsystems without unbounded constructors, moves low-level unsafe io_uring and mmap operations into private raw_platform abstractions with exclusive aliasing, provides structured concurrency with bounded cancellation and worker quarantine for unreturnable driver calls, and validates recovery artifact identity parity."

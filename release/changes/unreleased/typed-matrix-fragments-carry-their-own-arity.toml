@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A descriptor matrix multiply-accumulate states tile extents and one typed fragment per operand, so operand arity and result span are derived from the declaration and a target rejects a form it has no instruction for instead of receiving a single hardcoded shape."

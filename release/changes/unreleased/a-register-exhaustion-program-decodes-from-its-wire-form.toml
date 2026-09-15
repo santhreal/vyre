@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The register-exhaustion benchmark reduces its live values through a balanced tree, so its program stays within the IR wire format decode depth and reaches the device instead of failing artifact preparation."

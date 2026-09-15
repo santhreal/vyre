@@ -1,0 +1,4 @@
+path = "scripts/check_feature_msrv.sh"
+state = "retired"
+gate = "feature-isolation"
+reason = "the MSRV class is `feature-isolation --sweep --msrv`, which reads [workspace.package].rust-version and compiles the derived axis on that toolchain"

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A load from a binding declared read-only lowers to `ld.global.nc`, so read-only tables are served by the read-only data cache instead of the coherent load path."

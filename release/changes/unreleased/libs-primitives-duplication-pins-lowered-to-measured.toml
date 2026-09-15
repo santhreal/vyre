@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Two duplication pins record what the tree measures: `vyre-libs` 11425 to 10453 duplicated lines and `vyre-primitives` 6981 to 6384, each with `total_lines` measured. Collapsing one side of a copy lowers both crates' counts, and a pin with room under it hides the next copy."

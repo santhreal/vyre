@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre_foundation::algebra::composition::single_invocation` and `single_invocation_region` build the entry of a serial kernel: one anonymous composition region whose body runs on invocation zero of axis zero. The shape was written out by hand in every serial primitive."

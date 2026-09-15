@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The release launch and publish helpers read `release/release-train.toml` and `release/repo-boundary.toml` in bash instead of shelling into `python3`, so a host whose Python predates `tomllib` no longer leaves the loader with an unset version or tag."

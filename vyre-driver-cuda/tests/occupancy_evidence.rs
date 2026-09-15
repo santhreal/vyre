@@ -3,9 +3,11 @@
 //! Every kernel launch now records its DRIVER-measured achieved occupancy (via
 //! `cuOccupancyMaxActiveBlocksPerMultiprocessor`, cached per kernel shape) into
 //! the telemetry snapshot as an aggregate mean plus measured/unmeasured launch
-//! counts. This test proves the evidence is real on the RTX 5090: it runs a
+//! counts. This test proves the evidence is real on live CUDA hardware: it runs a
 //! dispatch loop and asserts the snapshot reports measured launches with a
 //! plausible occupancy fraction and NO unmeasured launches.
+
+#![cfg(feature = "device-tests")]
 
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;

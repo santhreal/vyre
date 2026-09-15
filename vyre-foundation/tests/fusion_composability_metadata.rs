@@ -8,12 +8,12 @@
 //! `reject_non_composable_self_fusion` could no longer see it: fusing the fused
 //! program with another copy of the same arm was accepted.
 //!
-//! See BACKLOG.md R74. The sibling failure one layer up, where the pairwise
-//! test harness lost the same flag through its own `Program::wrapped` rebuilds,
-//! is R70.
+//! The sibling failure one layer up, where the pairwise test harness lost the
+//! same flag through its own `Program::wrapped` rebuilds, is covered by
+//! `program_rebuild_preserves_metadata.rs`.
 
 use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// A minimal arm. `flag` sets whether it may appear twice in one kernel.
 fn arm(name: &str, non_composable: bool) -> Program {
@@ -103,5 +103,56 @@ fn a_lone_arm_keeps_its_own_flag() {
     assert!(
         fused.is_non_composable_with_self(),
         "returning the input verbatim must return its metadata too"
+    );
+}
+
+/// WHY: a carrier produced before its first fused read needs device allocation,
+/// while the reverse order still needs caller-owned initial bytes.
+#[test]
+fn fused_first_write_carriers_keep_their_allocation_direction() {
+    let producer = Program::wrapped(
+        vec![
+            BufferDecl::storage("carrier", 0, BufferAccess::WriteOnly, DataType::U32).with_count(4),
+        ],
+        [4, 1, 1],
+        vec![Node::store("carrier", Expr::gid_x(), Expr::u32(0))],
+    );
+    let consumer = Program::wrapped(
+        vec![
+            BufferDecl::storage("carrier", 0, BufferAccess::ReadOnly, DataType::U32).with_count(4),
+            BufferDecl::storage("result", 1, BufferAccess::WriteOnly, DataType::U32).with_count(4),
+        ],
+        [4, 1, 1],
+        vec![Node::store(
+            "result",
+            Expr::gid_x(),
+            Expr::load("carrier", Expr::gid_x()),
+        )],
+    );
+
+    let produced_then_read =
+        fuse_programs(&[producer.clone(), consumer.clone()]).expect("ordered carrier must fuse");
+    let carrier = produced_then_read
+        .buffers()
+        .iter()
+        .find(|buffer| buffer.name() == "carrier")
+        .expect("fused carrier must remain declared");
+    assert_eq!(carrier.access(), BufferAccess::ReadWrite);
+    assert!(
+        carrier.is_backend_allocated_output(),
+        "the launch must allocate a carrier initialized by an earlier fused arm"
+    );
+
+    let read_then_produced =
+        fuse_programs(&[consumer, producer]).expect("reverse ordered carrier must fuse");
+    let carrier = read_then_produced
+        .buffers()
+        .iter()
+        .find(|buffer| buffer.name() == "carrier")
+        .expect("reverse fused carrier must remain declared");
+    assert_eq!(carrier.access(), BufferAccess::ReadWrite);
+    assert!(
+        !carrier.is_backend_allocated_output(),
+        "a carrier read before its first fused write must still consume host bytes"
     );
 }

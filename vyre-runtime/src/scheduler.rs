@@ -1,4 +1,4 @@
-//! Multi-GPU work stealing scheduler (Innovation I.7).
+//! Multi-GPU work stealing scheduler.
 //!
 //! Partitions a large Program or batch of Programs across all
 //! registered physical devices.
@@ -38,12 +38,13 @@ impl WorkStealingScheduler {
     }
 
     /// Partition a large haystack across available GPUs.
-    pub fn partition(&self, total_len: usize) -> Vec<Shard> {
-        self.try_partition(total_len).unwrap_or_default()
-    }
-
-    /// Partition a large haystack across available GPUs with explicit staging
-    /// allocation failure reporting.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`BackendError`] when shard staging cannot reserve. There is
+    /// no infallible form: an empty shard list is what a zero-length haystack
+    /// produces, so allocation pressure returned as one schedules no work and
+    /// reports success.
     pub fn try_partition(&self, total_len: usize) -> Result<Vec<Shard>, BackendError> {
         let mut shards = Vec::new();
         self.try_partition_into(total_len, &mut shards)?;
@@ -153,6 +154,8 @@ fn partition_ranges(total_len: usize, backend_count: usize) -> Vec<Range<usize>>
     ranges
 }
 
+// Inline: the suite drives the `#[cfg(test)]` `partition_ranges`, which an integration test does
+// not compile.
 #[cfg(test)]
 mod tests {
     use super::{partition_ranges, WorkStealingScheduler};

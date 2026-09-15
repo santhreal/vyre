@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The vyre crate manifest no longer carries an empty [build-dependencies] table."

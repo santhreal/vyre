@@ -1,0 +1,3 @@
+path = "vyre-bench/scripts/fetch_honest_corpus.sh"
+state = "retired"
+reason = "every honest workload corpus is synthesized in prepare(), so the fetcher downloaded nothing"

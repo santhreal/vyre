@@ -1,13 +1,16 @@
 //! Subgroup collective semantics for the HashMap interpreter.
 //!
-//! These helpers operate on immutable invocation snapshots so collectives
-//! observe a stable workgroup lane view.
+//! These helpers read every lane from an immutable snapshot, so a collective
+//! observes a stable workgroup lane view. They hold the live memory mutably
+//! because one evaluator owns expression semantics and that evaluator writes;
+//! a collective argument that would write across more than one lane is
+//! refused before it runs.
 
 #[cfg(feature = "subgroup-ops")]
 use super::{
+    invocation::{HashmapInvocation, HashmapInvocationSnapshot},
     memory::HashmapMemory,
-    state::{HashmapInvocation, HashmapInvocationSnapshot},
-    step::eval_expr_snapshot,
+    step::{eval_expr_snapshot, refuse_effectful_collective_argument},
 };
 #[cfg(feature = "subgroup-ops")]
 use crate::ReferenceError;
@@ -26,6 +29,12 @@ pub(crate) fn subgroup_simulator() -> &'static SubgroupSimulator {
     SIMULATOR.get_or_init(SubgroupSimulator::default)
 }
 
+/// Lanes in one subgroup of the simulated device.
+#[cfg(feature = "subgroup-ops")]
+pub(crate) fn subgroup_width() -> usize {
+    subgroup_simulator().width()
+}
+
 #[cfg(feature = "subgroup-ops")]
 pub(crate) fn subgroup_slice(
     snapshots: &[HashmapInvocationSnapshot],
@@ -42,7 +51,7 @@ pub(crate) fn eval_subgroup_ballot(
     cond: &Expr,
     invocation: &HashmapInvocation<'_>,
     snapshots: &[HashmapInvocationSnapshot],
-    memory: &HashmapMemory,
+    memory: &mut HashmapMemory,
 ) -> Result<Value, ReferenceError> {
     let mask = collect_lane_bools(cond, invocation.linear_local_index, snapshots, memory)?;
     Ok(Value::U32(subgroup_simulator().ballot_slice(&mask)))
@@ -54,7 +63,7 @@ pub(crate) fn eval_subgroup_shuffle(
     lane: &Expr,
     invocation: &HashmapInvocation<'_>,
     snapshots: &[HashmapInvocationSnapshot],
-    memory: &HashmapMemory,
+    memory: &mut HashmapMemory,
 ) -> Result<Value, ReferenceError> {
     let values = collect_lane_values(value, invocation.linear_local_index, snapshots, memory)?;
     let src_lanes = collect_lane_u32s(
@@ -65,20 +74,47 @@ pub(crate) fn eval_subgroup_shuffle(
         "subgroup_shuffle lane index is not a u32. Fix: use a scalar u32 lane argument.",
     )?;
     let local_offset = (invocation.linear_local_index as usize) % subgroup_simulator().width();
-    let src_lane = src_lanes.get(local_offset).copied().unwrap_or(u32::MAX) as usize;
+    // One validation for both value paths. A lane index outside the active
+    // subgroup used to become `u32::MAX`, miss the lookup, and be absorbed as
+    // `0.0` on the float path and `0` on the u32 path, so a program that
+    // shuffled from an out-of-range lane got a zero the hardware never
+    // produces and the oracle certified it.
+    let src_lane = *src_lanes.get(local_offset).ok_or_else(|| {
+        ReferenceError::out_of_bounds(format!(
+            "subgroup_shuffle evaluated {} lane indices but lane {local_offset} needs one. \
+             Fix: evaluate the lane argument on every active lane.",
+            src_lanes.len()
+        ))
+    })? as usize;
+    if src_lane >= values.len() {
+        return Err(ReferenceError::out_of_bounds(format!(
+            "subgroup_shuffle reads lane {src_lane} of {} active lanes. \
+             Fix: clamp the lane argument to the active subgroup width.",
+            values.len()
+        )));
+    }
     if values.iter().all(|value| matches!(value, Value::U32(_))) {
         let lanes = values
             .iter()
             .filter_map(Value::try_as_u32)
             .collect::<SmallVec<[u32; 32]>>();
         let shuffled = subgroup_simulator().shuffle(&lanes, &src_lanes);
-        return Ok(Value::U32(shuffled.get(local_offset).copied().unwrap_or(0)));
+        return shuffled
+            .get(local_offset)
+            .copied()
+            .map(Value::U32)
+            .ok_or_else(|| {
+                ReferenceError::out_of_bounds(format!(
+                    "subgroup_shuffle produced {} results but lane {local_offset} needs one. \
+                     Fix: shuffle across the full active subgroup.",
+                    shuffled.len()
+                ))
+            });
     }
-    if values.iter().all(|value| matches!(value, Value::Float(_))) {
-        return match values.get(src_lane) {
-            Some(Value::Float(value)) => Ok(Value::Float(*value)),
-            _ => Ok(Value::Float(0.0)),
-        };
+    if let Some(Value::Float(value)) = values.get(src_lane) {
+        if values.iter().all(|value| matches!(value, Value::Float(_))) {
+            return Ok(Value::Float(*value));
+        }
     }
     Err(ReferenceError::new("subgroup_shuffle lanes have mixed or unsupported value types. Fix: cast every lane value to the same primitive u32 or f32 type before the subgroup collective."))
 }
@@ -89,10 +125,24 @@ pub(crate) fn eval_subgroup_reduce(
     value: &Expr,
     invocation: &HashmapInvocation<'_>,
     snapshots: &[HashmapInvocationSnapshot],
-    memory: &HashmapMemory,
+    memory: &mut HashmapMemory,
 ) -> Result<Value, ReferenceError> {
-    let values = collect_lane_values(value, invocation.linear_local_index, snapshots, memory)?;
+    let mut values = collect_lane_values(value, invocation.linear_local_index, snapshots, memory)?;
     let width = subgroup_simulator().width();
+    // A reduction states no lane order, so the order its lanes combine in is
+    // the explored schedule's to choose. `Add` and `Mul` are not associative
+    // over f32, so a program whose result depends on that choice produces
+    // different output bytes under two explored orders and the exploration
+    // reports the disagreement. Every integer operator and f32 `Min`/`Max`
+    // are associative and commutative, so permuting them changes nothing and
+    // they stay clean. Ballot and shuffle are deliberately not permuted:
+    // both address lanes by identity, so a permutation there would move the
+    // ballot bit or the shuffle source rather than reassociate a fold.
+    super::apply_step_order(
+        &mut values,
+        memory.collective_fold_order,
+        super::StepAxis::Lane,
+    );
     if values.iter().all(|value| matches!(value, Value::U32(_))) {
         let lanes = values.iter().filter_map(Value::try_as_u32).take(width);
         // SubgroupReduceOp::reduce_u32 is the single source of truth for the
@@ -121,11 +171,15 @@ fn collect_lane_bools(
     expr: &Expr,
     linear_local_index: u32,
     snapshots: &[HashmapInvocationSnapshot],
-    memory: &HashmapMemory,
+    memory: &mut HashmapMemory,
 ) -> Result<SmallVec<[bool; 32]>, ReferenceError> {
-    subgroup_slice(snapshots, linear_local_index)
+    let window = subgroup_slice(snapshots, linear_local_index);
+    refuse_effectful_collective_argument(expr, window.len())?;
+    window
         .iter()
-        .map(|lane| eval_expr_snapshot(expr, lane, snapshots, memory).map(|value| value.truthy()))
+        .map(|lane| {
+            eval_expr_snapshot(expr, lane, snapshots, &mut *memory).map(|value| value.truthy())
+        })
         .collect()
 }
 
@@ -134,13 +188,15 @@ fn collect_lane_u32s(
     expr: &Expr,
     linear_local_index: u32,
     snapshots: &[HashmapInvocationSnapshot],
-    memory: &HashmapMemory,
+    memory: &mut HashmapMemory,
     error: &'static str,
 ) -> Result<SmallVec<[u32; 32]>, ReferenceError> {
-    subgroup_slice(snapshots, linear_local_index)
+    let window = subgroup_slice(snapshots, linear_local_index);
+    refuse_effectful_collective_argument(expr, window.len())?;
+    window
         .iter()
         .map(|lane| {
-            eval_expr_snapshot(expr, lane, snapshots, memory)?
+            eval_expr_snapshot(expr, lane, snapshots, &mut *memory)?
                 .try_as_u32()
                 .ok_or_else(|| ReferenceError::new(error))
         })
@@ -152,11 +208,13 @@ fn collect_lane_values(
     expr: &Expr,
     linear_local_index: u32,
     snapshots: &[HashmapInvocationSnapshot],
-    memory: &HashmapMemory,
+    memory: &mut HashmapMemory,
 ) -> Result<SmallVec<[Value; 32]>, ReferenceError> {
-    subgroup_slice(snapshots, linear_local_index)
+    let window = subgroup_slice(snapshots, linear_local_index);
+    refuse_effectful_collective_argument(expr, window.len())?;
+    window
         .iter()
-        .map(|lane| eval_expr_snapshot(expr, lane, snapshots, memory))
+        .map(|lane| eval_expr_snapshot(expr, lane, snapshots, &mut *memory))
         .collect()
 }
 
@@ -197,40 +255,52 @@ mod tests {
         ];
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let value = eval_subgroup_shuffle(
             &Expr::var("lane_value"),
             &Expr::var("source_lane"),
             &invocation,
             &snapshots,
-            &memory,
+            &mut memory,
         )
         .expect("Fix: f32 subgroup shuffle must evaluate.");
 
         assert_eq!(value, Value::Float(3.75));
     }
 
+    /// A shuffle whose source lane is outside the active subgroup used to
+    /// return `0.0` on the float path and `0` on the u32 path. No hardware
+    /// produces that value: the ISA leaves the result of an out-of-range
+    /// shuffle undefined, so an absorbed zero is an answer the oracle
+    /// invented and then certified. Both value paths now refuse.
     #[test]
-    fn f32_shuffle_zeroes_out_of_range_lane() {
-        let snapshots = vec![
-            snapshot_lane(0, Value::Float(1.25), 9),
-            snapshot_lane(1, Value::Float(2.5), 0),
-        ];
+    fn shuffle_refuses_an_out_of_range_source_lane_on_both_value_paths() {
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
-        let value = eval_subgroup_shuffle(
-            &Expr::var("lane_value"),
-            &Expr::var("source_lane"),
-            &invocation,
-            &snapshots,
-            &memory,
-        )
-        .expect("Fix: f32 subgroup shuffle must evaluate.");
+        for (label, first, second) in [
+            ("f32", Value::Float(1.25), Value::Float(2.5)),
+            ("u32", Value::U32(1), Value::U32(2)),
+        ] {
+            let snapshots = vec![snapshot_lane(0, first, 9), snapshot_lane(1, second, 0)];
 
-        assert_eq!(value, Value::Float(0.0));
+            let error = eval_subgroup_shuffle(
+                &Expr::var("lane_value"),
+                &Expr::var("source_lane"),
+                &invocation,
+                &snapshots,
+                &mut memory,
+            )
+            .expect_err("Fix: an out-of-range shuffle source lane must be refused.");
+
+            assert_eq!(
+                error.error_class(),
+                crate::error::ReferenceErrorClass::OutOfBoundsAccess,
+                "Fix: the {label} shuffle path must refuse lane 9 of 2 as out of bounds, got {error:?}."
+            );
+        }
     }
 
     fn reduce_snapshots(values: &[Value]) -> Vec<HashmapInvocationSnapshot> {
@@ -246,14 +316,14 @@ mod tests {
         let snapshots = reduce_snapshots(&[Value::U32(3), Value::U32(9), Value::U32(1)]);
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Max,
             &Expr::var("lane_value"),
             &invocation,
             &snapshots,
-            &memory,
+            &mut memory,
         )
         .expect("u32 subgroup max must evaluate");
 
@@ -265,14 +335,14 @@ mod tests {
         let snapshots = reduce_snapshots(&[Value::U32(0b1100), Value::U32(0b1010)]);
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Xor,
             &Expr::var("lane_value"),
             &invocation,
             &snapshots,
-            &memory,
+            &mut memory,
         )
         .expect("u32 subgroup xor must evaluate");
 
@@ -287,14 +357,14 @@ mod tests {
             reduce_snapshots(&[Value::U32(2), Value::U32(3), Value::U32(5), Value::U32(7)]);
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Mul,
             &Expr::var("lane_value"),
             &invocation,
             &snapshots,
-            &memory,
+            &mut memory,
         )
         .expect("u32 subgroup mul must evaluate");
 
@@ -308,14 +378,14 @@ mod tests {
         let snapshots = reduce_snapshots(&[Value::Float(-5.0), Value::Float(-2.0)]);
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Max,
             &Expr::var("lane_value"),
             &invocation,
             &snapshots,
-            &memory,
+            &mut memory,
         )
         .expect("f32 subgroup max must evaluate");
 
@@ -327,14 +397,14 @@ mod tests {
         let snapshots = reduce_snapshots(&[Value::Float(1.0)]);
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let error = eval_subgroup_reduce(
             SubgroupReduceOp::And,
             &Expr::var("lane_value"),
             &invocation,
             &snapshots,
-            &memory,
+            &mut memory,
         )
         .expect_err("bitwise reduction on f32 must fail loud, not silently degrade");
 
@@ -358,14 +428,14 @@ mod tests {
         ]);
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Mul,
             &Expr::var("lane_value"),
             &invocation,
             &snapshots,
-            &memory,
+            &mut memory,
         )
         .expect("f32 subgroup mul must evaluate");
 
@@ -379,14 +449,14 @@ mod tests {
             reduce_snapshots(&[Value::Float(1.0), Value::Float(2.5), Value::Float(3.5)]);
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Add,
             &Expr::var("lane_value"),
             &invocation,
             &snapshots,
-            &memory,
+            &mut memory,
         )
         .expect("f32 subgroup add must evaluate");
 

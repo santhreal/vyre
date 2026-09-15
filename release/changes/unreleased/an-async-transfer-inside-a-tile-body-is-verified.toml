@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Memory-model verification walks every nested body. The obligation walk named `Loop`, `Block`, and `Region` explicitly and descended into nothing else, so an `AsyncLoad` with no matching `AsyncWait` inside a `TileElementwise` body reached the end of verification unreported. Descent now comes from the per-variant `child_bodies` decision, so a body added to any node variant is walked without a second edit."

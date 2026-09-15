@@ -18,6 +18,7 @@ pub struct TextureCandidate {
 /// Texture-promotion candidates for one kernel.
 pub type TexturePromotionPlan = CandidatePlan<TextureCandidate>;
 
+// Inline: covers items in the crate-private `analyses::texture_promote` module, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

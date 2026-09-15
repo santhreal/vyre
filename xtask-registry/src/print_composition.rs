@@ -1,0 +1,136 @@
+//! `print-composition` - walk the Region decomposition chain of every
+//! registered operation.
+//!
+//! The chain is what makes a public operation a composition of registered
+//! primitives rather than a hand-written body, so an operation that cannot be
+//! walked has no chain to audit. The gate resolves the Program of every
+//! registered operation and recurses into every `Node::Region` in its entry
+//! body. A registered operation whose builder yields no Program is a finding,
+//! and so is a Region that composes nothing, because an empty composition
+//! boundary claims a decomposition step that does not exist. `--op-id ID`
+//! narrows the corpus to one operation. The tree itself is context, so it is
+//! reported as notes and never counted.
+
+use vyre::ir::Node;
+use xtask::gate::{Finding, GateCtx, GateError, Report};
+
+/// Walks the composition chain of the registered operations.
+pub struct PrintComposition;
+
+impl xtask::gate::GateBehavior for PrintComposition {
+    fn usage(&self) -> &'static [&'static str] {
+        &["--op-id ID narrows the walk to one registered operation"]
+    }
+
+    fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
+        let selected = ctx.flag("--op-id");
+        let mut report = Report::clean();
+        let ops = vyre_registry_link::operation::live_operation_registry();
+        report.cover_complete("registered operations", ops.iter().count());
+        let mut walked = 0usize;
+        let mut matched = false;
+        for entry in vyre_registry_link::operation::live_operation_registry().iter() {
+            if let Some(op_id) = selected {
+                if entry.id != op_id {
+                    continue;
+                }
+            }
+            matched = true;
+            let Some(program) = entry.program() else {
+                report.find(Finding::new(
+                format!(
+                    "registered operation `{}` provides no neutral builder, so its composition chain cannot be walked",
+                    entry.id
+                ),
+                "give the canonical registration a neutral builder, or withdraw the registration",
+            ));
+                continue;
+            };
+            walked += 1;
+            report.note(format!(
+                "{}  [{} top-level Nodes]",
+                entry.id,
+                program.entry().len()
+            ));
+            for node in program.entry() {
+                walk(entry.id, node, 1, &mut report);
+            }
+        }
+        if let Some(op_id) = selected {
+            if !matched {
+                return Err(GateError::new(
+                    format!("op id `{op_id}` is not registered"),
+                    "run the gate without --op-id to list every registered operation",
+                ));
+            }
+        }
+        report.note(format!("{walked} composition chain(s) walked"));
+        Ok(report)
+    }
+}
+
+fn walk(op_id: &str, node: &Node, depth: usize, report: &mut Report) {
+    let indent = "  ".repeat(depth);
+    match node {
+        Node::Region {
+            generator, body, ..
+        } => {
+            report.note(format!(
+                "{indent}{}  [{} Nodes]",
+                generator.as_str(),
+                body.len()
+            ));
+            if body.is_empty() {
+                report.find(Finding::new(
+                    format!(
+                        "operation `{op_id}` opens region `{}` with an empty body",
+                        generator.as_str()
+                    ),
+                    "emit the region body from its generator, or drop the region so the chain reports what it really composes",
+                ));
+            }
+            for child in body.iter() {
+                walk(op_id, child, depth + 1, report);
+            }
+        }
+        Node::Block(children) => {
+            for child in children {
+                walk(op_id, child, depth, report);
+            }
+        }
+        Node::If {
+            then, otherwise, ..
+        } => {
+            for child in then {
+                walk(op_id, child, depth, report);
+            }
+            for child in otherwise {
+                walk(op_id, child, depth, report);
+            }
+        }
+        Node::Loop { body, .. } => body
+            .iter()
+            .for_each(|child| walk(op_id, child, depth, report)),
+        _ => {}
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_region_bodies_are_detected_as_findings() {
+        let mut report = Report::clean();
+        let empty_region = Node::Region {
+            generator: vyre::ir::Ident::from("vyre-libs::math::empty_subregion"),
+            source_region: None,
+            body: std::sync::Arc::new(Vec::new()),
+        };
+
+        walk("vyre-libs::math::parent_op", &empty_region, 1, &mut report);
+
+        assert_eq!(report.findings.len(), 1);
+        let finding = &report.findings[0];
+        assert!(finding.message.contains("operation `vyre-libs::math::parent_op` opens region `vyre-libs::math::empty_subregion` with an empty body"));
+    }
+}

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The reference oracle is entered only through `ReferenceRequest`, which borrows the program and inputs and carries a mandatory work, memory, and recursion budget; the untyped free evaluation functions are removed and permissive diagnostics are a separate method that issues no output and no certificate."

@@ -10,6 +10,7 @@ pub(super) fn pool_backend_error(error: impl std::fmt::Display) -> BackendError 
 pub(super) fn write_padded_input(
     queue: &wgpu::Queue,
     buffer: &wgpu::Buffer,
+    binding_name: &str,
     bytes: &[u8],
     size: usize,
 ) -> Result<Option<(u64, u64)>, BackendError> {
@@ -20,7 +21,7 @@ pub(super) fn write_padded_input(
     // overrun is caught here and returned as a vyre error instead.
     if bytes.len() > size {
         return Err(BackendError::new(format!(
-            "dispatch supplied {} input byte(s) for a binding whose device buffer is {size} byte(s), so the upload would overrun it. Fix: match the input length to the buffer's declared .with_count(n), or declare the buffer runtime-sized (no .with_count) and let the backend size it from these bytes.",
+            "dispatch supplied {} input byte(s) for binding `{binding_name}`, whose device buffer is {size} byte(s), so the upload would overrun it. Fix: match the input length to the buffer's declared .with_count(n), or declare the buffer runtime-sized (no .with_count) and let the backend size it from these bytes.",
             bytes.len()
         )));
     }

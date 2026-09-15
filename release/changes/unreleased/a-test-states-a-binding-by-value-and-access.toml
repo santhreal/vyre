@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A materialize test states a binding by the value it names and the access it declares. materialize_test_fixtures::global_bindings derives the bind group and the slot index from position, so a test no longer restates group 0 and a slot number per binding."

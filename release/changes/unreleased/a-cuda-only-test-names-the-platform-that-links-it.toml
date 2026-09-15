@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Three vyre-bench tests named vyre_driver_cuda, which the crate depends on only under cfg(not(target_os = \"macos\")). The macOS lane failed to resolve the crate and the whole benchmark harness stopped compiling there. Each test now carries the same target condition its dependency does."

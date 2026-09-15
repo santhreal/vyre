@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The GPU e-graph mirror is split into the refusals, the columnar snapshot, the device image, the row signature, the merge and the measured bridge, and its suite moved to an integration test."

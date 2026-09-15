@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre-libs` gates its shared composition skeletons behind an internal `builder` feature that every dialect feature names. A selection that compiles no dialect, such as a consumer that wants only the optimizer namespace, no longer compiles builder helpers nothing calls."

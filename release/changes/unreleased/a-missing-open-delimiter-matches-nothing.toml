@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The Python delimiter matcher started its scan one token past the opening position, and a missing opening position is the `u32::MAX` sentinel, which wraps to zero. A caller that passed the sentinel therefore scanned the whole token stream and reported the first unmatched closing token as the match. Every caller happens to discard that result, so no output changed, but the scan now starts at the end of the stream when the opening position is absent, which matches nothing and reads nothing."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The host-oracle elimination gate now covers driver sources, cross-file dispatch helpers, strict little-endian decoder boundaries, and post-dispatch semantic dataflow."

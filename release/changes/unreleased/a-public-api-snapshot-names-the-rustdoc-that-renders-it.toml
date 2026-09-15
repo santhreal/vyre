@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The public-API snapshot is rendered by a dated nightly rather than whatever nightly the workflow resolved that morning. rustdoc's item paths move with the compiler, and the release that re-homed std::io::Error under core rewrote nine committed snapshots with no source change behind them. RUSTDOC_TOOLCHAIN declares the date, the extraction exports it, the workflow installs it, and a contract fails when the two drift."

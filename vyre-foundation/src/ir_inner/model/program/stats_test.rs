@@ -215,5 +215,29 @@ fn node_kinds_present_bit_positions_match_program_soa_node_kind() {
         super::stats::NODE_KIND_BROADCAST,
         kind_mask(NodeKind::Broadcast)
     );
+    assert_eq!(
+        super::stats::NODE_KIND_TILE_LOAD,
+        kind_mask(NodeKind::TileLoad)
+    );
+    assert_eq!(
+        super::stats::NODE_KIND_TILE_STORE,
+        kind_mask(NodeKind::TileStore)
+    );
+    assert_eq!(
+        super::stats::NODE_KIND_TILE_MATMUL,
+        kind_mask(NodeKind::TileMatmul)
+    );
+    assert_eq!(
+        super::stats::NODE_KIND_TILE_REDUCE,
+        kind_mask(NodeKind::TileReduce)
+    );
+    assert_eq!(
+        super::stats::NODE_KIND_TILE_ELEMENTWISE,
+        kind_mask(NodeKind::TileElementwise)
+    );
+    assert_eq!(
+        super::stats::NODE_KIND_TILE_DECL,
+        kind_mask(NodeKind::TileDecl)
+    );
     assert_eq!(super::stats::NODE_KIND_OPAQUE, kind_mask(NodeKind::Opaque));
 }

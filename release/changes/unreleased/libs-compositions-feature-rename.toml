@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The `self-substrate-adapters` feature of `vyre-driver` and `vyre-runtime` is now `libs-compositions`. It was named for `vyre-self-substrate`, which is now `vyre-pass-engine`, and it never depended on that crate; it selects the `vyre-libs` composition domains behind driver cache invalidation, substrate telemetry, and the megakernel planner's program builders. Pre-1.0 rename with no alias."

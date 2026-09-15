@@ -12,13 +12,13 @@
 //! (`vyre-libs::math::scan_prefix_sum`, workgroup 4) fused behind a 256-wide
 //! elementwise arm returned the wrong final lane on roughly one dispatch in
 //! ten. It was intermittent, so it read as flakiness rather than as the
-//! unsound fusion it was. See BACKLOG.md R73.
+//! unsound fusion it was.
 
 use std::sync::Arc;
 
 use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::memory_model::MemoryOrdering;
 
 /// An arm with the given workgroup size whose invocations are independent.
 ///
@@ -80,6 +80,49 @@ fn workgroup_memory_arm(name: &str, workgroup: u32) -> Program {
             Expr::load(scratch.as_str(), Expr::gid_x()),
         ),
     ];
+    Program::wrapped(buffers, [workgroup, 1, 1], body)
+}
+
+/// An arm whose serial body is admitted by its workgroup identity alone.
+///
+/// No workgroup memory and no barrier: the running result lives in read-write
+/// storage, and `workgroup_id.x == 0` is exact only while the workgroup holds
+/// one invocation.
+fn serial_workgroup_guard_arm(name: &str, workgroup: u32) -> Program {
+    serial_arm(name, workgroup, Expr::is_first_workgroup())
+}
+
+/// The same arm, admitted by its invocation instead.
+///
+/// The same lane in a one-wide geometry and the only lane in any other, so this
+/// one is safe to widen.
+fn serial_invocation_guard_arm(name: &str, workgroup: u32) -> Program {
+    serial_arm(name, workgroup, Expr::is_first_invocation())
+}
+
+fn serial_arm(name: &str, workgroup: u32, guard: Expr) -> Program {
+    let input = format!("{name}_in");
+    let output = format!("{name}_out");
+    let buffers = vec![
+        BufferDecl::read(&input, 0, DataType::U32).with_count(4),
+        BufferDecl::read_write(&output, 1, DataType::U32).with_count(4),
+    ];
+    let body = vec![Node::if_then(
+        guard,
+        vec![Node::loop_for(
+            "idx",
+            Expr::u32(0),
+            Expr::u32(4),
+            vec![Node::store(
+                output.as_str(),
+                Expr::u32(0),
+                Expr::add(
+                    Expr::load(output.as_str(), Expr::u32(0)),
+                    Expr::load(input.as_str(), Expr::var("idx")),
+                ),
+            )],
+        )],
+    )];
     Program::wrapped(buffers, [workgroup, 1, 1], body)
 }
 
@@ -231,4 +274,95 @@ fn a_widening_on_a_different_axis_is_refused_too() {
         message.contains("[4, 8, 1]"),
         "the fused geometry on the changed axis belongs in the message: {message}"
     );
+}
+
+/// A serial body admitted by workgroup identity is the third unsafe shape.
+///
+/// Measured divergence this locks out: `vyre-libs::nn::top_k`, workgroup
+/// [1, 1, 1], fused behind a 256-wide elementwise arm returned index 7 where
+/// the reference returned index 6. Every invocation of workgroup 0 passed the
+/// guard and ran the same insertion scan over the same scratch, so the result
+/// named one input lane twice. Nothing in the arm declares workgroup memory or
+/// a barrier, so the first two shapes do not see it.
+#[test]
+fn a_serial_arm_guarded_on_its_workgroup_is_not_widened() {
+    let message = geometry_error(fuse_programs(&[
+        independent_arm("wide", 256),
+        serial_workgroup_guard_arm("serial", 1),
+    ]));
+    assert!(
+        message.contains("arm 1")
+            && message.contains("[256, 1, 1]")
+            && message.contains("[1, 1, 1]"),
+        "the refusal must name the arm and both geometries: {message}"
+    );
+    assert!(
+        message.contains("read-write storage") && message.contains("workgroup identity"),
+        "the refusal must say what makes the widening unsafe: {message}"
+    );
+}
+
+/// The same arm guarded on its invocation is widened.
+///
+/// This is the fix the refusal asks for, so it has to be accepted. A rule that
+/// refused both forms would make every serial arm permanently unfusable and
+/// leave a caller no way out.
+#[test]
+fn a_serial_arm_guarded_on_its_invocation_is_still_widened() {
+    let fused = fuse_programs(&[
+        independent_arm("wide", 256),
+        serial_invocation_guard_arm("serial", 1),
+    ])
+    .expect("an invocation-exact serial arm is safe under any workgroup");
+    assert_eq!(
+        fused.workgroup_size(),
+        [256, 1, 1],
+        "the fused launch is the axis-wise maximum over the arms"
+    );
+}
+
+/// WHY: widening a logical-tile guard changes which physical workgroups may
+/// enter the stateful arm, the same hazard as a physical workgroup guard.
+#[test]
+fn a_serial_arm_guarded_on_its_logical_tile_is_not_widened() {
+    let message = geometry_error(fuse_programs(&[
+        independent_arm("wide_logical", 256),
+        serial_arm("serial_logical", 1, Expr::is_first_logical_tile()),
+    ]));
+    assert!(
+        message.contains("read-write storage") && message.contains("workgroup identity"),
+        "a logical tile guard has the same widening hazard as a physical workgroup guard: {message}"
+    );
+}
+
+/// WHY: a logical point guard makes a logical-tile-gated arm exact after
+/// workgroup widening and must override the conservative tile-only rule.
+#[test]
+fn a_serial_arm_guarded_on_its_logical_point_is_still_widened() {
+    let fused = fuse_programs(&[
+        independent_arm("wide_logical", 256),
+        serial_arm(
+            "serial_logical",
+            1,
+            Expr::and(
+                Expr::is_first_logical_tile(),
+                Expr::is_first_logical_point(),
+            ),
+        ),
+    ])
+    .expect("a logical-point-exact serial arm is safe under any workgroup");
+    assert_eq!(fused.workgroup_size(), [256, 1, 1]);
+}
+
+/// Read-write storage alone is not the hazard.
+///
+/// `independent_arm` writes read-write storage at its own global index. Every
+/// invocation addressing its own element is exactly what a wider workgroup is
+/// for, so treating the buffer access as the hazard would refuse every fusion
+/// this fuser exists to make.
+#[test]
+fn read_write_storage_without_an_identity_guard_is_widened() {
+    let fused = fuse_programs(&[independent_arm("wide", 256), independent_arm("narrow", 4)])
+        .expect("independent arms fuse regardless of buffer access");
+    assert_eq!(fused.workgroup_size(), [256, 1, 1]);
 }

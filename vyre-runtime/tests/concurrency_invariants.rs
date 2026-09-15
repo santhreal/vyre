@@ -1,4 +1,4 @@
-//! P1 inventory #91  -  schedule/concurrency invariants.
+//! Schedule/concurrency invariants.
 //!
 //! The vyre runtime exposes pipeline-cache + tenant-queue surfaces
 //! that must survive poisoned locks, abrupt worker shutdown, and

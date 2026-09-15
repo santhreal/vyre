@@ -14,9 +14,9 @@
 use crate::ir::Ident;
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
+use crate::visit::any_descendant;
 use crate::visit::bound_names::count_bound_names;
 use rustc_hash::FxHashMap;
-use smallvec::SmallVec;
 use std::sync::Arc;
 
 /// Default node-count threshold. Regions whose bodies count ≤ this many
@@ -184,36 +184,26 @@ fn inline_nodes_into(nodes: Vec<Node>, threshold: usize, out: &mut Vec<Node>) {
     }
 }
 
+/// How many nodes `nodes` holds at any nesting depth, stopping at
+/// `threshold + 1`.
+///
+/// Descent comes from [`any_descendant`], the one owner of which node variants
+/// nest, used here as the short-circuiting walk the cap needs: the predicate
+/// counts and asks to stop once the cap is reached. The hand-written worklist
+/// this replaces ended in `_ => {}`, so a body inside a fifth body-bearing
+/// variant counted as one node and a region far over the threshold inlined.
 fn count_nodes_capped(nodes: &[Node], threshold: usize) -> usize {
     let cap = threshold.saturating_add(1);
     let mut count = 0usize;
-    let mut stack: SmallVec<[&[Node]; 16]> = SmallVec::new();
-    stack.push(nodes);
-
-    while let Some(nodes) = stack.pop() {
-        for node in nodes {
+    for node in nodes {
+        let hit_cap = any_descendant(node, &mut |_| {
             count = count.saturating_add(1);
-            if count >= cap {
-                return cap;
-            }
-            match node {
-                Node::Block(children) | Node::Loop { body: children, .. } => {
-                    stack.push(children);
-                }
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    stack.push(otherwise);
-                    stack.push(then);
-                }
-                Node::Region { body, .. } => {
-                    stack.push(body);
-                }
-                _ => {}
-            }
+            count >= cap
+        });
+        if hit_cap {
+            return cap;
         }
     }
-
     count
 }
 

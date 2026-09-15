@@ -1,0 +1,9 @@
+lane = "gpu-parity-determinism-stress-gpu"
+workflow = ".github/workflows/gpu-parity.yml"
+job = "determinism-stress-gpu"
+state = "live"
+required_status = "GPU Parity + Determinism / Determinism stress on real GPU"
+triggers = ["pull_request", "push", "workflow_dispatch"]
+steps = [
+  { command = "./cargo_full test -p vyre-driver-wgpu --release --test determinism_contract -- --nocapture" },
+]

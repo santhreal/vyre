@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A conformance submission returns a retained read-write buffer instead of refusing it as an undeclared output value, because the boundary now drains the canonical writable set rather than the node output ports a host-fed read-write buffer never appears in."

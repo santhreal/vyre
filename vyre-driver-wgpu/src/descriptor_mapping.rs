@@ -13,6 +13,14 @@ pub(crate) fn descriptor_bind_group(memory_class: vyre_lower::MemoryClass) -> Op
     }
 }
 
+/// Return the `(group, slot)` key for a lowered memory class and binding slot.
+pub(crate) fn descriptor_binding_key(
+    memory_class: vyre_lower::MemoryClass,
+    slot: u32,
+) -> Option<(u32, u32)> {
+    descriptor_bind_group(memory_class).map(|group| (group, slot))
+}
+
 /// Convert lowered binding visibility into core IR buffer access.
 pub(crate) fn descriptor_buffer_access(
     visibility: vyre_lower::BindingVisibility,

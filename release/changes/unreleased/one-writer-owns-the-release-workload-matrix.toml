@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The release-workload-matrix gate is the only writer of release/evidence/benchmarks/release-workload-matrix.json, vyre-bench release-matrix prints and no longer writes, and a test compares the committed body against what the case registry derives."

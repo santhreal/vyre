@@ -2,13 +2,12 @@
 
 use std::hash::Hash;
 
-use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
+use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::{Array, SmallVec};
 use vyre_driver::{
     reservation_policy::{
-        reserve_typed_hash_map_to_capacity, reserve_typed_hash_set_and_vec_to_capacity,
-        reserve_typed_hash_set_to_capacity, reserve_typed_vec_to_capacity,
-        reserved_typed_vec as driver_reserved_typed_vec, ReservationPolicy, ReusableIndexScratch,
+        reserve_typed_hash_map_to_capacity, reserved_typed_vec as driver_reserved_typed_vec,
+        ReservationPolicy,
     },
     BackendError,
 };
@@ -33,14 +32,6 @@ pub(crate) fn reserved_vec<T>(
     let mut vec = Vec::new();
     reserve_vec(&mut vec, capacity, field)?;
     Ok(vec)
-}
-
-pub(crate) fn ensure_vec_slots_at_least<T>(
-    slots: &mut Vec<Vec<T>>,
-    slot_count: usize,
-    field: &'static str,
-) -> Result<(), BackendError> {
-    CUDA_STAGING.ensure_vec_slots_at_least(slots, slot_count, field)
 }
 
 pub(crate) fn resize_vec_slots<T>(
@@ -94,6 +85,9 @@ pub(crate) trait CudaStorageReserveFailure: Sized {
     fn storage_reserve_failed(field: &'static str, requested: usize, message: String) -> Self;
 }
 
+#[cfg(test)]
+use vyre_driver::reservation_policy::reserve_typed_vec_to_capacity;
+#[cfg(test)]
 pub(crate) fn reserve_typed_vec<T, E>(
     vec: &mut Vec<T>,
     capacity: usize,
@@ -118,68 +112,6 @@ where
     driver_reserved_typed_vec(CUDA_STAGING, capacity, field, E::storage_reserve_failed)
 }
 
-pub(crate) fn reserve_typed_hash_set<T, E>(
-    set: &mut FxHashSet<T>,
-    capacity: usize,
-    field: &'static str,
-) -> Result<(), E>
-where
-    T: Eq + Hash,
-    E: CudaStorageReserveFailure,
-{
-    reserve_typed_hash_set_to_capacity(
-        CUDA_STAGING,
-        set,
-        capacity,
-        field,
-        E::storage_reserve_failed,
-    )
-}
-
-pub(crate) fn reserve_typed_hash_set_and_vec<K, V, E>(
-    set: &mut FxHashSet<K>,
-    vec: &mut Vec<V>,
-    capacity: usize,
-    set_field: &'static str,
-    vec_field: &'static str,
-) -> Result<(), E>
-where
-    K: Eq + Hash,
-    E: CudaStorageReserveFailure,
-{
-    reserve_typed_hash_set_and_vec_to_capacity(
-        CUDA_STAGING,
-        set,
-        vec,
-        capacity,
-        set_field,
-        vec_field,
-        E::storage_reserve_failed,
-    )
-}
-
-/// Reusable CUDA planner scratch for duplicate detection plus stable index ordering.
-pub(crate) type CudaReusableIndexScratch<K> = ReusableIndexScratch<K, FxBuildHasher>;
-
-pub(crate) fn reserve_index_scratch<K, E>(
-    scratch: &mut CudaReusableIndexScratch<K>,
-    capacity: usize,
-    seen_field: &'static str,
-    ordered_indices_field: &'static str,
-) -> Result<(), E>
-where
-    K: Eq + Hash,
-    E: CudaStorageReserveFailure,
-{
-    scratch.try_reserve_with(
-        CUDA_STAGING,
-        capacity,
-        seen_field,
-        ordered_indices_field,
-        E::storage_reserve_failed,
-    )
-}
-
 pub(crate) fn reserve_typed_hash_map<K, V, E>(
     map: &mut FxHashMap<K, V>,
     capacity: usize,
@@ -198,17 +130,17 @@ where
     )
 }
 
+// Inline: covers `CudaStorageReserveFailure`, `reserve_smallvec`, `reserve_typed_hash_map`,
+// `reserve_typed_vec` and 3 more items this module keeps private, which no integration test can
+// name.
 #[cfg(test)]
 mod tests {
-    use std::cell::Cell;
-
-    use rustc_hash::{FxHashMap, FxHashSet};
+    use rustc_hash::FxHashMap;
     use smallvec::SmallVec;
 
     use super::{
-        reserve_index_scratch, reserve_smallvec, reserve_typed_hash_map, reserve_typed_hash_set,
-        reserve_typed_hash_set_and_vec, reserve_typed_vec, reserve_vec, resize_vec_slots,
-        CudaReusableIndexScratch, CudaStorageReserveFailure,
+        reserve_smallvec, reserve_typed_hash_map, reserve_typed_vec, reserve_vec, resize_vec_slots,
+        CudaStorageReserveFailure,
     };
 
     #[derive(Debug, Eq, PartialEq)]
@@ -259,94 +191,15 @@ mod tests {
     }
 
     #[test]
-    fn typed_cuda_reservations_share_vec_set_and_map_growth() {
+    fn typed_cuda_reservations_share_vec_and_map_growth() {
         let mut bytes = Vec::<u8>::new();
-        let mut ids = FxHashSet::<u32>::default();
         let mut map = FxHashMap::<u32, u32>::default();
 
         reserve_typed_vec::<_, TypedReserveError>(&mut bytes, 32, "typed bytes").unwrap();
-        reserve_typed_hash_set::<_, TypedReserveError>(&mut ids, 32, "typed ids").unwrap();
         reserve_typed_hash_map::<_, _, TypedReserveError>(&mut map, 32, "typed map").unwrap();
-        reserve_typed_hash_set_and_vec::<_, _, TypedReserveError>(
-            &mut ids,
-            &mut bytes,
-            64,
-            "typed paired ids",
-            "typed paired bytes",
-        )
-        .unwrap();
 
-        assert!(bytes.capacity() >= 64);
-        assert!(ids.capacity() >= 64);
+        assert!(bytes.capacity() >= 32);
         assert!(map.capacity() >= 32);
-    }
-
-    #[test]
-    fn reusable_index_scratch_clears_entries_without_releasing_capacity() {
-        let mut scratch = CudaReusableIndexScratch::<u32>::new();
-
-        reserve_index_scratch::<_, TypedReserveError>(
-            &mut scratch,
-            32,
-            "test seen",
-            "test ordered indices",
-        )
-        .unwrap();
-        assert!(scratch.insert_seen(7));
-        assert!(!scratch.insert_seen(7));
-        scratch.push_index(2);
-        scratch.push_index(1);
-        scratch.ordered_indices_mut().sort_unstable();
-        let seen_capacity = scratch.seen_capacity();
-        let ordered_capacity = scratch.ordered_index_capacity();
-
-        assert_eq!(scratch.ordered_indices(), &[1, 2]);
-
-        scratch.clear();
-        reserve_index_scratch::<_, TypedReserveError>(
-            &mut scratch,
-            4,
-            "test seen",
-            "test ordered indices",
-        )
-        .unwrap();
-        assert!(scratch.seen_capacity() >= seen_capacity);
-        assert!(scratch.ordered_index_capacity() >= ordered_capacity);
-        assert!(scratch.ordered_indices().is_empty());
-        assert!(scratch.insert_seen(7));
-    }
-
-    #[test]
-    fn reusable_index_scratch_skips_sort_when_keys_are_monotonic() {
-        let mut scratch = CudaReusableIndexScratch::<u32>::new();
-        scratch.push_index(0);
-        scratch.push_index(1);
-        scratch.push_index(2);
-
-        let key_calls = Cell::new(0);
-        scratch.sort_indices_unstable_by_key_if_needed(|index| {
-            key_calls.set(key_calls.get() + 1);
-            [10_u32, 20, 30][index]
-        });
-
-        assert_eq!(scratch.ordered_indices(), &[0, 1, 2]);
-        assert_eq!(
-            key_calls.get(),
-            4,
-            "Fix: monotonic CUDA planner indices must not call sort_unstable_by_key on already ordered release-path batches."
-        );
-    }
-
-    #[test]
-    fn reusable_index_scratch_sorts_when_keys_are_not_monotonic() {
-        let mut scratch = CudaReusableIndexScratch::<u32>::new();
-        scratch.push_index(2);
-        scratch.push_index(0);
-        scratch.push_index(1);
-
-        scratch.sort_indices_unstable_by_key_if_needed(|index| [10_u32, 20, 30][index]);
-
-        assert_eq!(scratch.ordered_indices(), &[0, 1, 2]);
     }
 
     #[test]

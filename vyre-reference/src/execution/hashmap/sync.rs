@@ -3,12 +3,14 @@
 //! The executor calls these helpers between round-robin steps to preserve the
 //! reference interpreter's workgroup-wide barrier semantics.
 
-use super::state::HashmapInvocation;
+use super::invocation::HashmapInvocation;
 use crate::ReferenceError;
 use smallvec::SmallVec;
 use vyre_foundation::ir::BufferDecl;
 
-pub(crate) use crate::execution::node_tree::{contains_barrier, node_id};
+#[cfg(feature = "subgroup-ops")]
+pub(crate) use crate::execution::node_tree::node_reads_peer_lanes;
+pub(crate) use crate::execution::node_tree::{contains_rendezvous, node_id, RendezvousKind};
 
 pub(crate) fn release_barrier_if_ready(invocations: &mut [HashmapInvocation<'_>]) -> bool {
     let active = invocations.iter().filter(|inv| !inv.done()).count();
@@ -30,22 +32,115 @@ pub(crate) fn live_waiting_count(invocations: &[HashmapInvocation<'_>]) -> usize
         .count()
 }
 
+/// Release every lane holding for its collective peers, once each live lane of
+/// the workgroup has arrived at a rendezvous.
+///
+/// A lane parked at a `Barrier` counts as arrived, so a program that holds one
+/// lane at a barrier while another holds at a collective still converges: the
+/// collective runs first, and its lanes then reach the barrier themselves. A
+/// lane held at a grid fence is not counted, because the dispatch driver, not
+/// this workgroup, releases it.
+pub(crate) fn release_collective_rendezvous(invocations: &mut [HashmapInvocation<'_>]) -> bool {
+    let live = invocations
+        .iter()
+        .filter(|inv| !inv.done() && !inv.waiting_at_grid_fence)
+        .count();
+    let arrived = invocations
+        .iter()
+        .filter(|inv| {
+            !inv.done()
+                && !inv.waiting_at_grid_fence
+                && (inv.waiting_for_collective_peers || inv.waiting_at_barrier)
+        })
+        .count();
+    let holding = invocations
+        .iter()
+        .any(|inv| !inv.done() && inv.waiting_for_collective_peers);
+    if !holding || live == 0 || live != arrived {
+        return false;
+    }
+    for invocation in invocations.iter_mut() {
+        if invocation.waiting_for_collective_peers {
+            invocation.waiting_for_collective_peers = false;
+            invocation.collective_peers_arrived = true;
+        }
+    }
+    true
+}
+
+pub(crate) fn live_collective_waiting_count(invocations: &[HashmapInvocation<'_>]) -> usize {
+    invocations
+        .iter()
+        .filter(|inv| !inv.done() && inv.waiting_for_collective_peers)
+        .count()
+}
+
+/// Reject a branch whose condition differs across a rendezvous's own scope
+/// while its body can reach that rendezvous.
+///
+/// Every lane that entered such a branch waits for peers that the diverged
+/// lanes never send: the rendezvous releases once the diverged lane retires,
+/// so accepting it would have the oracle issue a result computed over a subset
+/// of the lanes the construct is defined over, which no target guarantees.
+///
+/// The scope is the construct's own, not the workgroup's in both cases. A
+/// barrier synchronizes the workgroup, so its condition must agree across
+/// every lane of the workgroup. A subgroup collective reads only its own
+/// subgroup, so its condition must agree across that subgroup and may differ
+/// between subgroups. Holding a collective to workgroup uniformity refuses the
+/// standard shape where each subgroup owns one output and the tail workgroup
+/// masks the subgroups that have none.
 pub(crate) fn verify_uniform_control_flow(
     invocations: &[HashmapInvocation<'_>],
 ) -> Result<(), ReferenceError> {
-    let mut observed = SmallVec::<[(usize, bool); 8]>::new();
+    let mut observed = SmallVec::<[(usize, usize, bool); 8]>::new();
     for invocation in invocations.iter().filter(|inv| !inv.done()) {
-        for (id, value) in &invocation.uniform_checks {
-            if let Some((_, previous)) = observed.iter().find(|(seen_id, _)| seen_id == id) {
+        for (id, value, rendezvous) in &invocation.uniform_checks {
+            let scope = rendezvous_scope(*rendezvous, invocation.linear_local_index);
+            if let Some((_, _, previous)) = observed
+                .iter()
+                .find(|(seen_scope, seen_id, _)| *seen_scope == scope && seen_id == id)
+            {
                 if previous != value {
-                    return Err(ReferenceError::new("program violates uniform-control-flow rule: Barrier appears inside an If whose condition differs across the workgroup. Fix: make the condition uniform or move Barrier outside the branch."));
+                    return Err(ReferenceError::new(format!(
+                        "program violates uniform-control-flow rule: {} appears inside an If whose condition differs across the {}. Fix: make the condition uniform or move {} outside the branch.",
+                        rendezvous.describe(),
+                        rendezvous.scope_name(),
+                        rendezvous.describe(),
+                    )));
                 }
             } else {
-                observed.push((*id, *value));
+                observed.push((scope, *id, *value));
             }
         }
     }
     Ok(())
+}
+
+/// Which set of lanes a rendezvous of this kind agrees over, for the lane at
+/// `linear_local_index`.
+///
+/// A barrier's scope is the whole workgroup, so every lane reports the same
+/// one. A subgroup collective's scope is the subgroup the lane sits in.
+#[cfg(feature = "subgroup-ops")]
+fn rendezvous_scope(rendezvous: RendezvousKind, linear_local_index: u32) -> usize {
+    match rendezvous {
+        RendezvousKind::Barrier => 0,
+        RendezvousKind::SubgroupCollective => {
+            linear_local_index as usize / crate::execution::hashmap::subgroup::subgroup_width()
+        }
+    }
+}
+
+/// Which set of lanes a rendezvous of this kind agrees over.
+///
+/// Without the subgroup model `RendezvousKind` declares only `Barrier`, whose
+/// scope is the whole workgroup, so the lane index selects nothing.
+#[cfg(not(feature = "subgroup-ops"))]
+fn rendezvous_scope(rendezvous: RendezvousKind, _linear_local_index: u32) -> usize {
+    match rendezvous {
+        RendezvousKind::Barrier => 0,
+    }
 }
 
 pub(crate) fn element_count(decl: &BufferDecl, byte_len: usize) -> Result<u32, ReferenceError> {
@@ -81,6 +176,7 @@ pub(crate) fn element_count(decl: &BufferDecl, byte_len: usize) -> Result<u32, R
     u32 :: try_from (elements) . map_err (| _ | { ReferenceError::new(format ! ("buffer `{}` has {} bytes for stride {} and overflows u32 elements. Fix: shrink declaration footprint or split work." , decl . name () , byte_len , stride ,)) })
 }
 
+// Inline: covers the crate-private `element_count`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

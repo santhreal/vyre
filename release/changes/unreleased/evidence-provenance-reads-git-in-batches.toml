@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The evidence provenance gate resolves the commit carrying every committed artifact from one history walk, reads every committed artifact through one `git cat-file --batch`, and computes each base-carrier fingerprint once, so judging the evidence set costs a fixed handful of git processes instead of four per artifact."

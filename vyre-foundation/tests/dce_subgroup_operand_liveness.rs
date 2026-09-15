@@ -42,7 +42,8 @@ fn dce_keeps_let_used_only_inside_subgroup_op() {
     let program = program_let_used_only_in_subgroup();
     let inputs = [Value::from(7u32.to_le_bytes().to_vec())]; // buf = [7]
 
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original program is well-scoped and must run");
     assert_eq!(
         original,
@@ -51,10 +52,12 @@ fn dce_keeps_let_used_only_inside_subgroup_op() {
     );
 
     let optimized = dce(program);
-    let after = vyre_reference::reference_eval(&optimized, &inputs).expect(
-        "DCE must keep `let x` -- it is referenced inside `subgroup_add(x)`; \
+    let after = vyre_reference::ReferenceRequest::standard(&optimized, &inputs)
+        .outputs()
+        .expect(
+            "DCE must keep `let x` -- it is referenced inside `subgroup_add(x)`; \
          dropping it dangles the use",
-    );
+        );
     assert_eq!(
         after, original,
         "DCE must treat a subgroup operand as a use of its inner variables",

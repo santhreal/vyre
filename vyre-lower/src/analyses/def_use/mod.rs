@@ -18,7 +18,7 @@ use rustc_hash::FxHashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::operand_semantics::operand_is_result_reference;
+use crate::operand_class::operand_is_result_reference;
 use crate::{KernelBody, KernelDescriptor};
 
 /// Where in the descriptor a result-id is referenced.
@@ -122,25 +122,31 @@ fn walk(body: &KernelBody, path: &mut Vec<usize>, report: &mut DefUseReport) {
     }
 }
 
+// Inline: covers the crate-private `analyze`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
-    };
+    use crate::descriptor_builder::{binop, body, descriptor, effect, if_then, lit, op};
+    use crate::{KernelOp, KernelOpKind, LiteralValue};
     use vyre_foundation::ir::BinOp;
 
     fn empty_desc(ops: Vec<KernelOp>, literals: Vec<LiteralValue>) -> KernelDescriptor {
-        KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops,
-                child_bodies: vec![],
-                literals,
-            },
-        }
+        descriptor("k")
+            .body(body().literals(literals).ops(ops))
+            .build()
+    }
+
+    /// r0 = Lit, r1 = Lit, r2 = Add(r0, r1), r3 = Mul(r2, r0).
+    fn add_then_mul() -> KernelDescriptor {
+        empty_desc(
+            vec![
+                lit(0, 0),
+                lit(1, 1),
+                binop(BinOp::Add, 0, 1, 2),
+                binop(BinOp::Mul, 2, 0, 3),
+            ],
+            vec![LiteralValue::U32(3), LiteralValue::U32(4)],
+        )
     }
 
     #[test]
@@ -154,33 +160,7 @@ mod tests {
 
     #[test]
     fn linear_chain_traces_correctly() {
-        // r0 = Lit, r1 = Lit, r2 = Add(r0, r1), r3 = Mul(r2, r0)
-        let desc = empty_desc(
-            vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                    operands: vec![2, 0],
-                    result: Some(3),
-                },
-            ],
-            vec![LiteralValue::U32(3), LiteralValue::U32(4)],
-        );
-        let r = analyze(&desc);
+        let r = analyze(&add_then_mul());
         let chains = &r.bodies[0];
         assert_eq!(chains.def_count, 4);
         // r0 used by Add (op 2 pos 0) and Mul (op 3 pos 1).
@@ -195,20 +175,9 @@ mod tests {
 
     #[test]
     fn dead_def_visible_with_empty_chain() {
-        // r0 = Lit, r1 = Lit (unused).
+        // r0 = Lit, r1 = Lit, neither used.
         let desc = empty_desc(
-            vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-            ],
+            vec![lit(0, 0), lit(1, 1)],
             vec![LiteralValue::U32(0), LiteralValue::U32(7)],
         );
         let r = analyze(&desc);
@@ -216,32 +185,18 @@ mod tests {
         assert_eq!(r.bodies[0].uses[&1].len(), 0);
 
         let dead = dead_by_no_use(&desc);
-        // Both are dead.
         assert_eq!(dead.len(), 2);
     }
 
     #[test]
     fn store_operands_classified_correctly() {
-        // r0 = Lit, r1 = Lit, Store(0, 0, 1)
-        // Store operand 0 = slot (not ref), operand 1 = idx (ref → r0),
-        // operand 2 = val (ref → r1)
+        // Store operand 0 is the slot (not a ref), operand 1 the index (r0),
+        // operand 2 the value (r1).
         let desc = empty_desc(
             vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 0, 1],
-                    result: None,
-                },
+                lit(0, 0),
+                lit(1, 1),
+                effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
             ],
             vec![LiteralValue::U32(0), LiteralValue::U32(7)],
         );
@@ -258,47 +213,21 @@ mod tests {
     fn child_bodies_get_separate_chains() {
         // Parent body has just an If pointing at a child body that
         // does its own arithmetic.
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StructuredIfThen,
-                        operands: vec![0, 0],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![KernelBody {
-                    ops: vec![
-                        KernelOp {
-                            kind: KernelOpKind::Literal,
-                            operands: vec![0],
-                            result: Some(0),
-                        },
-                        KernelOp {
-                            kind: KernelOpKind::Literal,
-                            operands: vec![1],
-                            result: Some(1),
-                        },
-                        KernelOp {
-                            kind: KernelOpKind::BinOpKind(BinOp::Add),
-                            operands: vec![0, 1],
-                            result: Some(2),
-                        },
-                    ],
-                    child_bodies: vec![],
-                    literals: vec![LiteralValue::U32(3), LiteralValue::U32(4)],
-                }],
-                literals: vec![LiteralValue::U32(1)],
-            },
-        };
+        let desc = descriptor("k")
+            .body(
+                body()
+                    .literals([LiteralValue::U32(1)])
+                    .op(lit(0, 0))
+                    .op(if_then(0, 0))
+                    .child(
+                        body()
+                            .literals([LiteralValue::U32(3), LiteralValue::U32(4)])
+                            .op(lit(0, 0))
+                            .op(lit(1, 1))
+                            .op(binop(BinOp::Add, 0, 1, 2)),
+                    ),
+            )
+            .build();
         let r = analyze(&desc);
         assert_eq!(r.bodies.len(), 2);
         assert_eq!(r.bodies[0].body_path, Vec::<usize>::new());
@@ -313,32 +242,7 @@ mod tests {
 
     #[test]
     fn use_count_matches_sum_of_chain_lengths() {
-        let desc = empty_desc(
-            vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                    operands: vec![2, 0],
-                    result: Some(3),
-                },
-            ],
-            vec![LiteralValue::U32(3), LiteralValue::U32(4)],
-        );
-        let r = analyze(&desc);
+        let r = analyze(&add_then_mul());
         let chains = &r.bodies[0];
         let total_uses: usize = chains.uses.values().map(|v| v.len()).sum();
         assert_eq!(total_uses, chains.use_count);
@@ -349,26 +253,10 @@ mod tests {
         // Select takes 3 result-id operands.
         let desc = empty_desc(
             vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![2],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Select,
-                    operands: vec![0, 1, 2],
-                    result: Some(3),
-                },
+                lit(0, 0),
+                lit(1, 1),
+                lit(2, 2),
+                op(KernelOpKind::Select, [0, 1, 2], 3),
             ],
             vec![
                 LiteralValue::Bool(true),
@@ -385,25 +273,13 @@ mod tests {
 
     #[test]
     fn dce_replacement_could_use_chains() {
-        // Demonstrates the analysis is enough to drive DCE: any def
-        // with empty uses AND op produces no side effect IS dead.
+        // The analysis is enough to drive DCE: a def with no uses whose op has
+        // no side effect is dead.
         let desc = empty_desc(
             vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                }, // dead lit
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                }, // used
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 1, 1],
-                    result: None,
-                },
+                lit(0, 0),
+                lit(1, 1),
+                effect(KernelOpKind::StoreGlobal, [0, 1, 1]),
             ],
             vec![LiteralValue::U32(99), LiteralValue::U32(0)],
         );

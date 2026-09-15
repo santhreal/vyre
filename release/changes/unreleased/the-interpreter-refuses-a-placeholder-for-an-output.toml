@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The reference interpreter takes one value per reference input and refuses a longer argument list. A zeroed placeholder for a backend-allocated output is what the artifact ABI rejects on a device, and accepting it on CPU let a malformed fixture pass everywhere except hardware. Fixtures across the workspace now supply exactly the buffers the ABI accepts."

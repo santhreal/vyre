@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The grid-sync split fixtures read a segment body through `visit::child_bodies` instead of a hand-written match with a catch-all arm. The walk applies each literal store a test backend stands in for, so a nesting form it does not descend into makes a store invisible and a split that dropped a write looks correct. The catch-all meant a statement variant that gains a body would have been skipped silently; the nesting is now stated once, in the crate that owns the IR."

@@ -19,6 +19,6 @@ fn backend_capability_digests_unify_docs_dispatch_and_benchmarks() {
         );
     }
 
-    assert!(DIGESTS.contains("cuda-rtx5090-capabilities"));
+    assert!(DIGESTS.contains("cuda-rtx4090-capabilities"));
     assert!(DIGESTS.contains("wgpu-vulkan-generic-capabilities"));
 }

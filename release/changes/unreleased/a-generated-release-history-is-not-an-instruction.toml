@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The command-hygiene scan reads authored documents only. CHANGELOG.md and the release notes beside it are generated from release/changes, and a released entry records what a version did rather than telling a reader what to run, so twenty bare-cargo mentions in frozen history were recorded with line numbers that every added fragment moved. The evidence artifact went red for documents nobody had edited, and the text could not be fixed where it was reported."

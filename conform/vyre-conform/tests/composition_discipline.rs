@@ -14,7 +14,9 @@
 //! grows organically, and every new composition automatically benefits
 //! every pipeline that calls it.
 //!
-//! Implementation lives in two `include!`-d chunks under `contract_cases/`.
+//! Implementation lives in two chunks under `contract_cases/`:
+//! `composition_discipline__measure_program.rs` and its child
+//! `composition_discipline__every_op_is_under_complexity_budget.rs`.
 
-include!("contract_cases/composition_discipline__measure_program.rs");
-include!("contract_cases/composition_discipline__every_op_is_under_complexity_budget.rs");
+#[path = "contract_cases/composition_discipline__measure_program.rs"]
+mod composition_discipline_measure_program;

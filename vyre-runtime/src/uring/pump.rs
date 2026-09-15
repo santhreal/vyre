@@ -41,9 +41,10 @@
 //! surface itself is Linux-specific. Callers gate their pipeline
 //! code the same way.
 
+use super::buffer::Iovec;
 use crate::resident_work_queue::ResidentWorkQueue;
 use crate::uring::stream::AsyncUringStream;
-use crate::PipelineError;
+use crate::{PipelineError, RequestFault};
 use core::sync::atomic::Ordering;
 use std::collections::VecDeque;
 
@@ -62,7 +63,7 @@ struct PendingPublish {
     args: [u32; 3],
 }
 
-/// Compose an [`AsyncUringStream`] with the megakernel ring-slot writer so the
+/// Compose an [`AsyncUringStream`] with the resident-work-queue ring-slot writer so the
 /// host can drive the compatibility mapped-read ingest loop with one compact
 /// pump. Native NVMe → BAR1 ingest is owned by
 /// [`super::driver::NvmeGpuIngestDriver::new_gpudirect`].
@@ -73,14 +74,16 @@ pub struct UringResidentQueuePump<'a> {
     chunk_bytes: u32,
     /// Scratch storage for `submit_read_to_gpu` iovecs. Each boxed iovec has a
     /// stable address for the SQE's raw pointer and is retired FIFO with the
-    /// matching CQE.
-    iovec_scratch: VecDeque<Box<super::stream::Iovec>>,
+    /// matching CQE. Bounded by the ring's submission entries: one entry per
+    /// outstanding iovec, and a submission without an SQ slot is rejected.
+    iovec_scratch: VecDeque<Box<Iovec>>,
     /// Reusable stable iovec boxes retired from completed CQEs.
     // Boxes keep every SQE-visible iovec address stable across free-list growth.
     #[allow(clippy::vec_box)]
-    iovec_free: Vec<Box<super::stream::Iovec>>,
+    iovec_free: Vec<Box<Iovec>>,
     /// Chunks submitted and pending drain, in submission order.
-    /// Iterated FIFO by `drain_into_ring` as each CQE arrives.
+    /// Iterated FIFO by `drain_into_ring` as each CQE arrives. Bounded by the
+    /// ring's submission entries for the same reason as `iovec_scratch`.
     pending: VecDeque<PendingPublish>,
 }
 
@@ -91,27 +94,31 @@ impl<'a> UringResidentQueuePump<'a> {
     ///
     /// The pump takes ownership of `stream`; reclaim it via
     /// [`into_stream`](Self::into_stream) on shutdown.
+    ///
+    /// Every queue is sized to the ring's submission entries at construction,
+    /// which is both their bound and the reason no submission reallocates.
     #[must_use]
     pub fn new(stream: AsyncUringStream<'a>, chunk_bytes: u32) -> Self {
+        let depth = stream.submission_entries() as usize;
         Self {
             stream,
             chunk_bytes,
-            iovec_scratch: VecDeque::new(),
-            iovec_free: Vec::new(),
-            pending: VecDeque::new(),
+            iovec_scratch: VecDeque::with_capacity(depth),
+            iovec_free: Vec::with_capacity(depth),
+            pending: VecDeque::with_capacity(depth),
         }
     }
 
-    fn acquire_iovec(&mut self) -> Box<super::stream::Iovec> {
+    fn acquire_iovec(&mut self) -> Box<Iovec> {
         self.iovec_free.pop().unwrap_or_else(|| {
-            Box::new(super::stream::Iovec {
+            Box::new(Iovec {
                 iov_base: core::ptr::null_mut(),
                 iov_len: 0,
             })
         })
     }
 
-    fn release_iovec(&mut self, mut iovec: Box<super::stream::Iovec>) {
+    fn release_iovec(&mut self, mut iovec: Box<Iovec>) {
         iovec.iov_base = core::ptr::null_mut();
         iovec.iov_len = 0;
         self.iovec_free.push(iovec);
@@ -140,8 +147,10 @@ impl<'a> UringResidentQueuePump<'a> {
     ///
     /// # Errors
     ///
-    /// - [`PipelineError::QueueFull`] if the io_uring SQ or the
-    ///   GPU-side destination buffer is out of room.
+    /// - [`PipelineError::InvalidRequest`] if `len` does not equal the
+    ///   `chunk_bytes` this pump is bound to.
+    /// - [`PipelineError::IntegerWidth`] if `chunk_idx` does not fit the host
+    ///   index width.
     /// - Arbitrary [`PipelineError`] variants from the underlying
     ///   syscall wrappers.
     ///
@@ -149,10 +158,9 @@ impl<'a> UringResidentQueuePump<'a> {
     ///
     /// `fd` must be an open file descriptor the pump's io_uring
     /// ring can read from. The caller retains ownership  -  the pump
-    /// does not close it. `len` must equal `self.chunk_bytes`;
-    /// mismatches are rejected with `PipelineError::QueueFull`.
+    /// does not close it.
     #[allow(clippy::too_many_arguments)]
-    pub unsafe fn submit_file_scan(
+    pub fn submit_file_scan(
         &mut self,
         fd: i32,
         file_offset: u64,
@@ -163,46 +171,33 @@ impl<'a> UringResidentQueuePump<'a> {
         opcode: u32,
         args: [u32; 3],
     ) -> Result<(), PipelineError> {
-        if len != self.chunk_bytes {
-            return Err(PipelineError::QueueFull {
-                queue: "submission",
-                fix: "submit_file_scan len must equal pump's chunk_bytes; construct a new pump for a different chunk size",
-            });
-        }
+        validate_chunk_len(len, self.chunk_bytes)?;
+        let chunk_idx_usize =
+            usize::try_from(chunk_idx).map_err(|_| PipelineError::IntegerWidth {
+                quantity: "io_uring pump chunk index",
+                value: u128::from(chunk_idx),
+                bits: usize::BITS,
+                fix: "shard io_uring megakernel pump chunks",
+            })?;
 
-        // Preserve one stable iovec slot alive for the whole in-flight window.
-        let scratch = self.acquire_iovec();
-        self.iovec_scratch.push_back(scratch);
-
-        // Delegate the actual SQE population to the stream.
-        let submit_result = {
-            let slot = self
-                .iovec_scratch
-                .back_mut()
-                .ok_or(PipelineError::QueueFull {
-                    queue: "submission",
-                    fix: "just-pushed iovec scratch slot is missing; keep io_uring scratch ownership synchronized with submit staging",
-                })?;
-            // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
-            unsafe {
-                self.stream.submit_read_to_gpu(
-                    fd,
-                    file_offset,
-                    len,
-                    usize::try_from(chunk_idx).map_err(|_| PipelineError::QueueFull {
-                        queue: "submission",
-                        fix: "chunk_idx cannot fit host usize; shard io_uring megakernel pump chunks",
-                    })?,
-                    std::slice::from_mut(slot.as_mut()),
-                )
-            }
-        };
+        // One stable iovec allocation stays live for the whole in-flight
+        // window. The box moves into `iovec_scratch` only once the SQE is
+        // committed, so a rejected submission cannot leave a staged slot
+        // behind and the staging order cannot disagree with `pending`.
+        let mut scratch = self.acquire_iovec();
+        // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
+        let submit_result = self.stream.submit_read_to_gpu(
+            fd,
+            file_offset,
+            len,
+            chunk_idx_usize,
+            std::slice::from_mut(&mut *scratch),
+        );
         if let Err(error) = submit_result {
-            if let Some(iovec) = self.iovec_scratch.pop_back() {
-                self.release_iovec(iovec);
-            }
+            self.release_iovec(scratch);
             return Err(error);
         }
+        self.iovec_scratch.push_back(scratch);
 
         self.pending.push_back(PendingPublish {
             chunk_idx,
@@ -227,21 +222,19 @@ impl<'a> UringResidentQueuePump<'a> {
     /// # Errors
     ///
     /// - [`PipelineError::IoUringSyscall`] on the first failed CQE.
-    /// - [`PipelineError::QueueFull`] if [`ResidentWorkQueue::publish_slot`]
-    ///   rejects the published slot (e.g., `slot_idx` still in-flight
-    ///   on the GPU side  -  caller must wait for the kernel to drain).
+    /// - [`PipelineError::CounterOrder`] if a completion is reaped with no
+    ///   inflight submission left to account it against.
+    /// - Whatever [`ResidentWorkQueue::publish_slot`] rejects the published
+    ///   slot with, such as [`PipelineError::IllegalSlotTransition`] when
+    ///   `slot_idx` is still in flight on the GPU side.
     pub fn drain_into_ring(&mut self, ring_bytes: &mut [u8]) -> Result<u32, PipelineError> {
         let mut completed: u32 = 0;
         let mut first_error: Option<PipelineError> = None;
 
         while let Some(cqe) = self.stream.ring_state.peek_cqe() {
             let res = cqe.res;
-            self.stream.ring_state.advance_cq();
-            self.stream.inflight = self.stream.inflight.checked_sub(1).ok_or_else(|| {
-                PipelineError::Backend(
-                    "io_uring pump completion arrived with zero inflight submissions. Fix: audit submit/drain accounting before reusing this pump.".to_string(),
-                )
-            })?;
+            self.stream
+                .reap_completion("audit submit and drain accounting before reusing this pump")?;
 
             let publish = self.pending.pop_front();
             if let Some(iovec) = self.iovec_scratch.pop_front() {
@@ -305,6 +298,22 @@ impl<'a> UringResidentQueuePump<'a> {
     }
 }
 
+/// Reject a read whose length does not equal the `chunk_bytes` the pump was
+/// constructed with, before the request reaches the io_uring SQ.
+fn validate_chunk_len(len: u32, chunk_bytes: u32) -> Result<(), PipelineError> {
+    if len == chunk_bytes {
+        return Ok(());
+    }
+    Err(PipelineError::InvalidRequest {
+        fault: RequestFault::LengthMismatch,
+        quantity: "io_uring pump read length",
+        observed: u64::from(len),
+        bound: u64::from(chunk_bytes),
+        fix: "submit exactly chunk_bytes per read, or construct a pump for this chunk size",
+    })
+}
+
+// Inline: covers `PendingPublish`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -336,16 +345,26 @@ mod tests {
         let err =
             ResidentWorkQueue::publish_slot(&mut ring, p.slot_idx, p.tenant_id, p.opcode, &p.args)
                 .expect_err("second publish on in-flight slot must reject");
-        assert!(matches!(err, PipelineError::QueueFull { .. }));
+        assert!(
+            matches!(
+                err,
+                PipelineError::IllegalSlotTransition {
+                    transition: "publish",
+                    ..
+                }
+            ),
+            "Fix: a republish over an in-flight slot must report the illegal transition and the \
+             status the slot held, not a full io_uring queue: {err}"
+        );
     }
 
     #[test]
     fn iovec_pool_reuses_stable_box_without_retaining_stale_pointer() {
-        let mut iovec = Box::new(super::super::stream::Iovec {
+        let mut iovec = Box::new(super::super::buffer::Iovec {
             iov_base: core::ptr::dangling_mut::<core::ffi::c_void>(),
             iov_len: 4096,
         });
-        let original_addr = (&*iovec as *const super::super::stream::Iovec) as usize;
+        let original_addr = (&*iovec as *const super::super::buffer::Iovec) as usize;
         iovec.iov_len = 8192;
 
         let mut free = Vec::new();
@@ -355,7 +374,7 @@ mod tests {
         let reused = free.pop().expect("Fix: released iovec must be reusable");
 
         assert_eq!(
-            (&*reused as *const super::super::stream::Iovec) as usize,
+            (&*reused as *const super::super::buffer::Iovec) as usize,
             original_addr
         );
         assert!(reused.iov_base.is_null());
@@ -363,21 +382,32 @@ mod tests {
     }
 
     /// The pump requires callers to match `len` to the bound
-    /// `chunk_bytes`  -  length drift must surface as a structured
-    /// error before we ever touch the io_uring SQ.
+    /// `chunk_bytes`. Length drift is rejected before the request
+    /// reaches the io_uring SQ, so the guard is exercised here without
+    /// a live ring; the end-to-end submit path is covered by
+    /// `tests/uring_smoke.rs`.
     #[test]
-    #[cfg(target_os = "linux")]
     fn submit_rejects_mismatched_len() {
-        // This test does not spin up a live ring; it only exercises
-        // the length guard. Constructing an AsyncUringStream
-        // requires a real `IoUringState`, so instead we exercise
-        // the guard on a spare pump built via a minimal harness double that
-        // lives in the uring smoke-test harness.
-        //
-        // The length guard runs first in `submit_file_scan`; any
-        // pump instance whose chunk_bytes differs from the
-        // caller's `len` argument returns `QueueFull` without
-        // touching the ring state. A full end-to-end test is in
-        // `tests/uring_smoke.rs`.
+        let error = validate_chunk_len(8192, 4096)
+            .expect_err("a read length that is not the bound chunk size must be rejected");
+
+        assert!(
+            matches!(
+                error,
+                PipelineError::InvalidRequest {
+                    fault: RequestFault::LengthMismatch,
+                    quantity: "io_uring pump read length",
+                    observed: 8192,
+                    bound: 4096,
+                    ..
+                }
+            ),
+            "Fix: a chunk-length mismatch must report both lengths, not a full queue: {error}"
+        );
+    }
+
+    #[test]
+    fn submit_accepts_the_bound_chunk_len() {
+        validate_chunk_len(4096, 4096).expect("Fix: the bound chunk length must be accepted.");
     }
 }

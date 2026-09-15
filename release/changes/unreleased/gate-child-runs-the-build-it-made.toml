@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A delegated gate ran the binary at the shared `target/debug/<package>` path, which every checkout building this workspace overwrites, so a sweep that took minutes could execute another checkout's gate code against this tree. The child now runs from a copy made when the build finished."

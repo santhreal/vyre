@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Standard routing states that every production compile emits a megakernel artifact instead of consulting a foundation predicate that ignored its node count and always answered the same route."

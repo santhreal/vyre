@@ -1,0 +1,2 @@
+category = "Changed"
+text = "vyre-aot, vyre-debug, vyre-driver-spirv, vyre-driver-wgpu, vyre-emit-naga, vyre-grammar-gen, vyre-megakernel, vyre-reference and vyre-runtime publish each item at one path; submodules that exist because a file was split are private and their owning module re-exports what it holds."

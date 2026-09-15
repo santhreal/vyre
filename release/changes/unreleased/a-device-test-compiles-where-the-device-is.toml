@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A conformance lens contract acquired a real backend on every runner. `vyre-conform`'s `lens_parity` reached hardware through `production::live_test_backend`, which a default test run compiles everywhere, and acquiring CUDA without a driver aborts the process from inside the dependency rather than returning an error. `live_test_backend` now compiles only under `device-tests`, so the compiler refuses an unadmitted caller; the two contracts that acquire a backend moved to `lens_parity_device` and `ulp_audit` gained the same admission."

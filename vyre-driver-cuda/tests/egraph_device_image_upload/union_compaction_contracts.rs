@@ -132,7 +132,7 @@ fn egraph_union_compaction_plan_splits_oversized_merge_batches() {
 #[test]
 fn egraph_union_compaction_plan_rejects_zero_launch_dimensions() {
     let pair = [Equivalence { left: 1, right: 2 }];
-    use vyre_driver_cuda::egraph_kernel_plan::CudaEGraphKernelPlanError;
+    use vyre_driver_cuda::CudaEGraphKernelPlanError;
     assert_eq!(
         plan_cuda_egraph_union_compaction(
             &pair,

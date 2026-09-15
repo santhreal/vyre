@@ -1,12 +1,5 @@
 schema_version = 1
 
-[[binary]]
-package = "vyre-grammar-gen"
-name = "vyre-grammar-gen"
-readme = "vyre-grammar-gen/README.md"
-audience = "public"
-hardware = "No accelerator is required."
-environment = "No environment variables alter CLI behavior."
 config = "Input and output paths are explicit command-line arguments."
 failure = "Invalid JSON, malformed LR data, unsupported formats, and filesystem errors return a non-zero status with context."
 exit_codes = "0 on success, 1 on generation or I/O failure, 2 on invalid arguments."
@@ -21,6 +14,14 @@ environment = "Backend diagnostics honor the driver crate's VYRE_WGPU_TIMESTAMPS
 config = "The demo has no config file. Device and dispatch configuration come from the WGPU backend defaults."
 failure = "Invalid arguments, missing devices, lowering failures, dispatch failures, and malformed output return status 1 with an actionable error."
 exit_codes = "0 on help, version, or exact demo success; 1 on argument, device, dispatch, or output failure."
+example = """
+Run the real GPU smoke path:
+
+```console
+./cargo_full run -p vyre-driver-wgpu --bin vyre-wgpu -- demo
+# vyre demo gpu_u32=42
+```
+"""
 
 [[binary]]
 package = "vyre-conform"
@@ -40,11 +41,20 @@ readme = "xtask/README.md"
 audience = "internal"
 hardware = "No accelerator is required."
 environment = "No environment variables alter CLI behavior."
-config = "The command reads the enclosing Santh rules/launch and tests/launch_rule_truth trees."
+config = "The command reads the rules/launch tree in this repository, resolved from the repository root."
 failure = "A missing rules tree or incomplete rule contract returns status 1."
 exit_codes = "0 on complete contracts or help, 1 on contract failure, 2 on invalid arguments."
 
-
+[[binary]]
+package = "xtask"
+name = "publishable_packages"
+readme = "xtask/README.md"
+audience = "internal"
+hardware = "No accelerator is required."
+environment = "No environment variables alter CLI behavior."
+config = "The command reads the workspace manifests, resolved from the repository root."
+failure = "An unreadable workspace manifest returns status 1."
+exit_codes = "0 on a printed roster or help, 1 on a manifest read failure, 2 on invalid arguments."
 
 [[binary]]
 package = "xtask"
@@ -53,20 +63,42 @@ readme = "xtask/README.md"
 audience = "internal"
 hardware = "No accelerator is required."
 environment = "No environment variables alter CLI behavior."
-config = "The slug selects directories in the enclosing Santh rule and truth-test trees."
+config = "The slug names a directory under rules/launch in this repository, resolved from the repository root."
 failure = "Missing slugs and filesystem creation failures return non-zero without claiming success."
 exit_codes = "0 on scaffold creation or help, 1 on filesystem failure, 2 on invalid arguments."
 
 [[binary]]
-package = "xtask"
+package = "xtask-registry"
 name = "vyre_new_op"
-readme = "xtask/README.md"
+readme = "xtask-registry/README.md"
 audience = "internal"
 hardware = "No accelerator is required."
 environment = "VYRE_SPEC_MAINTAINER=1 permits reserved internal. and test. operation identifiers."
 config = "Operation id, archetype, display name, summary, and category are explicit arguments."
 failure = "Invalid identifiers, archetypes, categories, collisions, and write failures return non-zero."
 exit_codes = "0 on scaffold creation or help, 1 on validation or write failure, 2 on invalid arguments."
+
+[[binary]]
+package = "xtask-registry"
+name = "xtask-registry"
+readme = "xtask-registry/README.md"
+audience = "internal"
+hardware = "No accelerator is required; a missing device is reported, not assumed."
+environment = "No environment variables alter CLI behavior."
+config = "The command reads the same repository manifests the dispatched subcommand reads."
+failure = "A subcommand this crate does not implement returns status 1 with a Fix: message."
+exit_codes = "0 on success, 1 on a gate finding or an unowned subcommand, 2 on invalid arguments."
+
+[[binary]]
+package = "xtask-evidence"
+name = "xtask-evidence"
+readme = "xtask-evidence/README.md"
+audience = "internal"
+hardware = "No accelerator is required; a missing device is reported, not assumed."
+environment = "No environment variables alter CLI behavior."
+config = "The command reads recorded evidence under release/evidence/ and the release manifests."
+failure = "A subcommand this crate does not implement returns status 1 with a Fix: message."
+exit_codes = "0 on success, 1 on a gate finding or an unowned subcommand, 2 on invalid arguments."
 
 [[binary]]
 package = "xtask"
@@ -111,3 +143,14 @@ environment = "No environment variables alter CLI behavior."
 config = "Workspace root, allowlist, format, library roots, and evidence outputs are explicit options."
 failure = "Malformed configuration, unreadable sources, and lint findings return non-zero with file and rule context."
 exit_codes = "0 with no blocking findings or on help, 1 on lint or I/O failure, 2 on invalid arguments."
+
+[[binary]]
+package = "structure-gate"
+name = "structure-gate"
+readme = "structure-gate/README.md"
+audience = "internal"
+hardware = "No accelerator is required."
+environment = "No environment variables alter CLI behavior."
+config = "The command reads the workspace manifests, the ownership registry, structure-gate/backend-vocabulary.toml, and the Rust sources under the repository root. It takes no arguments other than help."
+failure = "A workspace member outside the reviewed roster, an operation identity registered more than once, a concept with more than one home, a src/ module file beside a directory of its own name, a file, module or binary name that states no contract, sibling files told apart only by a number, a file that repeats the directory holding it, a glob re-export of another workspace crate, a concrete backend name in production source of a substrate-neutral crate, or a vocabulary row that no longer describes the tree returns status 1 with the offending paths."
+exit_codes = "0 when the structure is clean or on help, 1 on a structural finding."

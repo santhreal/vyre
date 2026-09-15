@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The nn-attention clone-family IR invariance gate pins the canonicalized IR model instead of a BLAKE3 digest of the wire encoding. Wire bytes open with the wire format version, so every serialization revision moved all 26 pinned entry points at once while no program changed, and the table was re-pinned by hand from the failure report each time; the gate now reports a changed operand, a dropped node or a reordered data dependence as a diff naming the entry point, and a serialization revision leaves it green."

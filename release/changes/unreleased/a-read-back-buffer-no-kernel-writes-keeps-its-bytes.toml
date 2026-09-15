@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A dispatch records a read-back buffer no module writes under the identity that module read it from, so a program whose kernel loads from a read-write host-staged buffer without storing to it submits instead of being refused for an unbound write direction."

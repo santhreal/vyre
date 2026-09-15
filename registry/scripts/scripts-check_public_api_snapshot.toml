@@ -1,0 +1,4 @@
+path = "scripts/check_public_api_snapshot.sh"
+state = "retired"
+gate = "public-api-snapshot"
+reason = "--refresh became the gate's --write"

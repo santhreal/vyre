@@ -16,8 +16,11 @@ use vyre_lower::KernelDescriptor;
 
 /// Unified naga-side pattern audit. Runs every shipped naga pattern
 /// against the descriptor and bundles the reports. Mirror of
-/// `vyre_emit_ptx::patterns::audit` and `vyre_lower::audit::audit`,
+/// `vyre_emit_ptx::patterns::audit` and `vyre_lower::audit`,
 /// but for naga-specific patterns (vec packing, pipeline prewarm).
+///
+/// Finding totals, the clean/any predicates, and the one-line summary come
+/// from [`PatternAudit`]; import that trait to reach them.
 #[must_use]
 pub fn audit(desc: &KernelDescriptor) -> NagaAuditReport {
     NagaAuditReport {
@@ -64,27 +67,6 @@ impl PatternAudit for NagaAuditReport {
 }
 
 impl NagaAuditReport {
-    /// Sum of actionable findings across the per-kernel patterns.
-    /// Pre-warm contributes 1 if recommended.
-    pub fn total_candidates(&self) -> usize {
-        PatternAudit::finding_count(self)
-    }
-
-    /// Return whether any Naga-specific optimization is actionable.
-    pub fn has_any(&self) -> bool {
-        PatternAudit::has_any(self)
-    }
-
-    /// One-line human-readable summary suitable for log lines.
-    pub fn format_short(&self) -> String {
-        PatternAudit::format_short(self)
-    }
-
-    /// True iff no naga-specific optimization opportunities found.
-    pub fn is_clean(&self) -> bool {
-        PatternAudit::is_clean(self)
-    }
-
     /// Identity element for `merge`  -  empty report. Useful as the
     /// seed of a corpus fold.
     pub fn zero() -> Self {
@@ -116,69 +98,5 @@ impl NagaAuditReport {
 impl std::fmt::Display for NagaAuditReport {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.write_short(f)
-    }
-}
-
-#[cfg(test)]
-mod audit_tests {
-    use super::*;
-    use vyre_foundation::ir::DataType;
-    use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit};
-    use vyre_lower::{KernelOpKind, LiteralValue};
-
-    #[test]
-    fn empty_kernel_yields_zero_candidates() {
-        let desc = descriptor("empty").build();
-        let report = audit(&desc);
-        assert_eq!(report.kernel_id, "empty");
-        assert_eq!(report.total_candidates(), 0);
-        assert!(!report.has_any());
-    }
-
-    #[test]
-    fn merge_aggregates_findings() {
-        let mut acc = NagaAuditReport::zero();
-        let desc = descriptor("k").dispatch(64, 1, 1).build();
-        let r1 = audit(&desc);
-        let r2 = audit(&desc);
-        acc.merge(r1);
-        acc.merge(r2);
-        // No findings on empty kernels  -  sums to 0.
-        assert_eq!(acc.total_candidates(), 0);
-    }
-
-    #[test]
-    fn format_short_and_is_clean_on_empty() {
-        let desc = descriptor("k").build();
-        let r = audit(&desc);
-        assert!(r.is_clean());
-        let s = r.format_short();
-        assert!(s.contains("k (naga)"));
-        assert!(s.contains("0 candidates"));
-    }
-
-    #[test]
-    fn nonempty_kernel_audit_doesnt_panic() {
-        let desc = descriptor("k")
-            .slot(global_rw(0, DataType::U32, "buf"))
-            .dispatch(64, 1, 1)
-            .body(
-                body()
-                    .ops([
-                        lit(0, 0),
-                        lit(1, 1),
-                        effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
-                    ])
-                    .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
-            )
-            .build();
-        let report = audit(&desc);
-        assert_eq!(report.kernel_id, "k");
-        // 3-op, 1-binding kernel sits below every naga pattern threshold
-        // (vec_pack needs Load/Store fusion groups, prewarm needs
-        // ops >= 50 or bindings >= 4).
-        // The contract this test enforces is "audit returns cleanly on
-        // a real kernel without panicking", not a non-zero candidate count.
-        assert_eq!(report.total_candidates(), 0);
     }
 }

@@ -97,6 +97,7 @@ impl PackingPlan {
     }
 }
 
+// Inline: covers the private `estimated_savings_score`, `lane_count` and the plan accessors, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre-reference` publishes `MemoryAccessRecord`, the access the interleaving oracle records per invocation, and `verify_closed_type_coverage_in_oracle`, which reports whether that oracle handles every closed memory model type."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The combined memory ordering model derives its wire tags and its join from the closed atomic ordering, so the five orderings both models name can no longer encode to different tags."

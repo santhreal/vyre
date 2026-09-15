@@ -1,0 +1,40 @@
+[package]
+name = "vyre-libs-visual"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Visual rendering and compositing effects: blur, shadow, filters, gradients, glass"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-visual"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "closure:vyre-libs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["visual"]
+visual = []
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+inventory.workspace = true
+vyre-libs-builder = { workspace = true }
+vyre-libs-math = { workspace = true }
+
+[dev-dependencies]
+vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-reference = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

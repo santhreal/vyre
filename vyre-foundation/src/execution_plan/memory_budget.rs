@@ -1,8 +1,14 @@
-//! Device-memory budget enforcement for execution planning.
+//! Device-memory legality of one Program's declared buffers.
 //!
-//! This module owns the budget decision. Buffer enumeration stays in
-//! `execution_plan::memory_plan`; backends then receive an already-bounded
-//! plan instead of discovering oversize allocations during dispatch.
+//! This module answers whether the buffers a Program declares fit the device at
+//! all: one buffer against the per-binding limit, and their total against the
+//! adapter's static budget. Buffer enumeration stays in
+//! `execution_plan::memory_plan`.
+//!
+//! Nothing here decides physical placement. Which bytes are held at once, where
+//! they live, and which storage is reused belong to the allocation plan the
+//! selected schedule produces, so no second answer to those questions exists in
+//! this crate.
 
 use super::{MemoryPlan, PlanError};
 use crate::optimizer::AdapterCaps;
@@ -14,8 +20,12 @@ pub struct DeviceMemoryBudget {
     pub backend: &'static str,
     /// Maximum bytes allowed for one storage/output/uniform buffer.
     pub per_buffer_bytes: u64,
-    /// Maximum statically planned bytes across all buffers in one Program.
-    pub peak_static_bytes: u64,
+    /// Maximum static bytes the buffers of one Program may declare together.
+    ///
+    /// This bounds what one Program declares. The bytes a selected schedule
+    /// holds resident at once are the allocation plan's peak, which is decided
+    /// where the schedule is selected and is not this number.
+    pub declared_static_bytes: u64,
 }
 
 impl DeviceMemoryBudget {
@@ -26,7 +36,7 @@ impl DeviceMemoryBudget {
         Self {
             backend: caps.backend,
             per_buffer_bytes,
-            peak_static_bytes: per_buffer_bytes.saturating_mul(16),
+            declared_static_bytes: per_buffer_bytes.saturating_mul(16),
         }
     }
 
@@ -55,17 +65,17 @@ impl DeviceMemoryBudget {
                 });
             }
         }
-        if plan.static_bytes > self.peak_static_bytes {
-            return Err(PlanError::PeakBudgetExceeded {
+        if plan.static_bytes > self.declared_static_bytes {
+            return Err(PlanError::DeclaredBudgetExceeded {
                 backend: self.backend,
-                planned_bytes: plan.static_bytes,
-                budget_bytes: self.peak_static_bytes,
+                declared_bytes: plan.static_bytes,
+                budget_bytes: self.declared_static_bytes,
             });
         }
         Ok(MemoryBudgetReport {
             backend: self.backend,
             static_bytes: plan.static_bytes,
-            peak_budget_bytes: self.peak_static_bytes,
+            declared_budget_bytes: self.declared_static_bytes,
             largest_buffer_name: largest_buffer_name.to_owned(),
             largest_buffer_bytes,
             per_buffer_budget_bytes: self.per_buffer_bytes,
@@ -81,8 +91,8 @@ pub struct MemoryBudgetReport {
     pub backend: &'static str,
     /// Program static bytes.
     pub static_bytes: u64,
-    /// Peak budget used for validation.
-    pub peak_budget_bytes: u64,
+    /// Total declared-static-byte budget used for validation.
+    pub declared_budget_bytes: u64,
     /// Name of the largest statically sized buffer, or empty for none.
     pub largest_buffer_name: String,
     /// Byte size of the largest statically sized buffer.
@@ -127,7 +137,7 @@ mod tests {
         let budget = DeviceMemoryBudget {
             backend: "test-gpu",
             per_buffer_bytes: 1024,
-            peak_static_bytes: 4096,
+            declared_static_bytes: 4096,
         };
         let report = budget
             .validate(&plan(&[128, 512, 256]))
@@ -143,7 +153,7 @@ mod tests {
         let budget = DeviceMemoryBudget {
             backend: "test-gpu",
             per_buffer_bytes: 1024,
-            peak_static_bytes: 4096,
+            declared_static_bytes: 4096,
         };
         let error = budget
             .validate(&plan(&[128, 2048]))
@@ -160,20 +170,20 @@ mod tests {
     }
 
     #[test]
-    fn rejects_peak_static_bytes_over_budget() {
+    fn rejects_declared_static_bytes_over_budget() {
         let budget = DeviceMemoryBudget {
             backend: "test-gpu",
             per_buffer_bytes: 1024,
-            peak_static_bytes: 1500,
+            declared_static_bytes: 1500,
         };
         let error = budget
             .validate(&plan(&[800, 800]))
             .expect_err("aggregate peak memory must be bounded");
         assert!(matches!(
             error,
-            PlanError::PeakBudgetExceeded {
+            PlanError::DeclaredBudgetExceeded {
                 backend: "test-gpu",
-                planned_bytes: 1600,
+                declared_bytes: 1600,
                 budget_bytes: 1500,
             }
         ));

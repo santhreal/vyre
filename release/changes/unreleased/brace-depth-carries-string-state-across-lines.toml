@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The hygiene scan carries plain-string state across lines, so a fixture literal continued with a backslash no longer closes the enclosing `#[cfg(test)]` module early and no longer reports test assertions as production panics."

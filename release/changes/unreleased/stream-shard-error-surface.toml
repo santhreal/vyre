@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The WGPU stream-sharding error is now nameable as `engine::multi_gpu::StreamShardError` without changing existing signatures."

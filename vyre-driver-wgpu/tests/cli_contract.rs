@@ -1,5 +1,6 @@
 //! Operator-facing `vyre-wgpu` command contracts.
 
+#![cfg(feature = "device-tests")]
 #![forbid(unsafe_code)]
 
 use std::process::{Command, Output};

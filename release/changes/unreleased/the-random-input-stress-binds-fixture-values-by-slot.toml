@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The every-op random-input stress sweep binds each fixture value to the buffer that occupies its input slot rather than to the buffer at the same index, so an operation that declares an intermediate before a host-staged buffer is no longer dispatched with one input missing."

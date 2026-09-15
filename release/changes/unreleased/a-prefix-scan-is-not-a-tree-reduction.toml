@@ -1,0 +1,2 @@
+category = "Changed"
+text = "reduce::workgroup_scan owns the Blelloch sweep, BlockScanPass and their lane addressing, which reduce::workgroup_tree carried alongside the sum/max/min folds until the file passed the thousand-line cap. A scan leaves every lane holding a prefix; a tree reduction leaves one value. They share a staging convention and nothing else."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The crates whose suites workspace-tests runs are read from the ownership registry by layer at run time, so a crate added to a contract layer is tested instead of silently uncovered, and a layer that names no crate is a finding rather than an empty roster."

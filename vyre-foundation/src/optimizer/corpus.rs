@@ -12,6 +12,23 @@ use crate::optimizer::{registered_passes_for_profile, OptimizerProfile, PassSche
 /// Minimum generated cases required by the release optimization gate.
 pub const RELEASE_MIN_OPTIMIZATION_CASES: usize = 4_096;
 
+/// The semantic optimization families the release corpus generates, and the
+/// set every release consumer of that corpus checks its evidence against.
+///
+/// The corpus generator and each evidence reader used to restate these eight
+/// names, so a family added to the generator was silently uncovered by the
+/// gates that were supposed to demand it. They read the list from here.
+pub const RELEASE_OPTIMIZATION_FAMILIES: [&str; 8] = [
+    "scalar-algebra",
+    "strength-reduction",
+    "fusion-cse",
+    "dead-code",
+    "memory-dataflow",
+    "loop-transform",
+    "control-flow",
+    "canonicalization",
+];
+
 /// One deterministic semantic optimizer case.
 #[derive(Debug, Clone)]
 pub struct OptimizationCorpusCase {
@@ -64,19 +81,9 @@ pub struct OptimizationCorpusManifest {
 /// Generate the deterministic semantic release corpus.
 #[must_use]
 pub fn generate_release_corpus() -> Vec<OptimizationCorpusCase> {
-    const FAMILIES: [&str; 8] = [
-        "scalar-algebra",
-        "strength-reduction",
-        "fusion-cse",
-        "dead-code",
-        "memory-dataflow",
-        "loop-transform",
-        "control-flow",
-        "canonicalization",
-    ];
     let mut cases = Vec::with_capacity(RELEASE_MIN_OPTIMIZATION_CASES);
     for seed in 0..512u32 {
-        for family in FAMILIES {
+        for family in RELEASE_OPTIMIZATION_FAMILIES {
             cases.push(OptimizationCorpusCase {
                 id: format!("foundation.optimizer.{family}.{seed:04}"),
                 family: family.to_string(),
@@ -94,7 +101,8 @@ pub fn manifest_for(cases: &[OptimizationCorpusCase]) -> OptimizationCorpusManif
         Ok(passes) => passes,
         Err(error) => {
             return OptimizationCorpusManifest {
-                schema_version: 2,
+                schema_version: vyre_spec::schema_registry::SchemaId::ConformanceCertificate
+                    .version_u32(),
                 required_min_cases: RELEASE_MIN_OPTIMIZATION_CASES,
                 generated_cases: cases.len(),
                 verified_cases: 0,
@@ -119,7 +127,8 @@ pub fn manifest_for(cases: &[OptimizationCorpusCase]) -> OptimizationCorpusManif
             .with_shape_predicate_enforcement(true),
         Err(error) => {
             return OptimizationCorpusManifest {
-                schema_version: 2,
+                schema_version: vyre_spec::schema_registry::SchemaId::ConformanceCertificate
+                    .version_u32(),
                 required_min_cases: RELEASE_MIN_OPTIMIZATION_CASES,
                 generated_cases: cases.len(),
                 verified_cases: 0,
@@ -176,7 +185,7 @@ pub fn manifest_for(cases: &[OptimizationCorpusCase]) -> OptimizationCorpusManif
     }
 
     OptimizationCorpusManifest {
-        schema_version: 2,
+        schema_version: vyre_spec::schema_registry::SchemaId::ConformanceCertificate.version_u32(),
         required_min_cases: RELEASE_MIN_OPTIMIZATION_CASES,
         generated_cases: cases.len(),
         verified_cases,

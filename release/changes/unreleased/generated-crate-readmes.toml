@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Every workspace crate README now carries a manifest-backed contract for purpose, boundaries, a runnable example, features, errors, testing, release status, and ownership. Retired 0.4.x package claims and README drift fail the documentation gate."

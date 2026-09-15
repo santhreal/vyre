@@ -19,6 +19,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
       - name: Install cargo-udeps
-        run: cargo install cargo-udeps --locked
+        run: cargo +nightly install cargo-udeps --locked
       - name: Run
         run: ./cargo_full +nightly udeps --workspace --all-targets --all-features

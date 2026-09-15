@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Operation registrations pack their fixture bytes with the vyre-primitives wire encoder. Registrations in vyre-libs-math, vyre-libs-nn and vyre-libs-pattern reached a vyre-test-support encoder from product code, which a published build does not link, and the test-material-placement gate reports a production line that names the test support crate."

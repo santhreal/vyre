@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The strict-float verdict map is created with one slot per adapter the runtime enumerates, which is the number of entries it can ever hold."

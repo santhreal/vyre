@@ -5,7 +5,7 @@
 //! contract metadata, and missing optional fields must deserialize to `None`
 //! rather than inventing implicit requirements.
 
-use vyre_spec::op_signature::SignatureParam;
+use vyre_spec::SignatureParam;
 use vyre_spec::{
     CapabilityId, CostHint, DataType, DeterminismClass, OpSignature, OperationContract,
     SideEffectClass, TypeId,

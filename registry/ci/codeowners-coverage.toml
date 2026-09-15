@@ -1,0 +1,7 @@
+lane = "codeowners-coverage"
+workflow = ".github/workflows-paused/codeowners-coverage.yml"
+state = "unprotected"
+file = "deleted"
+reason = "the coverage test it ran was deleted with the conformance suite, and repo-hygiene requires the CODEOWNERS file to exist without reading a path in it"
+unprotected_class = "every path inside the trust boundary resolves to a CODEOWNERS owner"
+steps = []

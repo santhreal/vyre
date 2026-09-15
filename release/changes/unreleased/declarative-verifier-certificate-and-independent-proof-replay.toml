@@ -1,0 +1,2 @@
+category = "Added"
+text = "The declarative verifier constructs Verified<SemanticModule> artifacts with cryptographic verification certificates covering twelve canonical invariant categories, solver proof objects, and resource bounds, enabling independent proof replay before optimization, lowering, and remote acceptance without rerunning ad hoc walks."

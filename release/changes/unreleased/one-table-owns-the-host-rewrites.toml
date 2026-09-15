@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The host-side IR rewrites the resident pipeline runs are declared once in vyre_foundation::transform::HOST_REWRITES, in pipeline order, and the pipeline walks that table instead of naming each function. A rewrite absent from the table does not run, and the firing-case suite reads the table rather than scanning the source directory at test time."

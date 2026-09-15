@@ -1,5 +1,7 @@
 //! Cuda scan memory pool registry test suite.
 
+#![cfg(feature = "device-tests")]
+
 const POOLS: &str = include_str!("../../docs/optimization/CUDA_SCAN_MEMORY_POOLS.toml");
 
 const REQUIRED_POOLS: &[&str] = [

@@ -1,0 +1,3 @@
+path = "benches/competition/scripts/check_corpora.py"
+state = "retired"
+reason = "vyre-foundation/tests/bench_corpus_duplication.rs hashes the corpus in Rust; the script returned success whenever the corpus directory was absent"

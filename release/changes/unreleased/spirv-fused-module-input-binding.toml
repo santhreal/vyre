@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A fused SPIR-V module receives every input the target binding declares. Inputs were supplied in the order the host `Program` declared them, so a megakernel whose stages consume intermediate buffers bound the wrong resource for seven operations and diverged from the reference. Modules now stage intermediate values by name, gather them by the descriptor bindings the emitted module carries, and bind the reserved trap sidecar descriptor extracted from the module decorations."

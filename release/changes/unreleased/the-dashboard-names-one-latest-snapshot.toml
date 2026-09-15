@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The bench dashboard breaks a timestamp tie by file name, so a fresh checkout, where every snapshot carries the same timestamp, reports the same latest snapshot on every machine."

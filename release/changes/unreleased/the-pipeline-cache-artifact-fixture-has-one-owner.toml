@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The pipeline-cache artifact fixtures moved to `vyre_test_support::artifact_fixtures`, so `vyre-runtime` no longer ships a test-only module in `src/` and its integration test no longer reaches into the crate with a `#[path]` include."

@@ -1,0 +1,5 @@
+name = "vyre-debug"
+concern = "Inspect, explain, and diagnose typed programs, lowering, and product-library composition."
+pages = { spec = "vyre-debug/SPEC.md", readme = "vyre-debug/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre", "vyre-emit-naga", "vyre-foundation", "vyre-libs", "vyre-lower", "vyre-primitives"]

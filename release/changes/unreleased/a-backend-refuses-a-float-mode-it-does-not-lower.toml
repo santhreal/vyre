@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A dispatch requesting a float lowering mode the selected backend does not lower is refused by name instead of answered with the mode the backend does lower; `VyreBackend::honors_float_lowering` states the modes a backend implements, the reference oracle lowers the strict mode through the same neutral expansion a strict device kernel runs, and the registry wrapper judges every dispatch that carries a `DispatchConfig`."

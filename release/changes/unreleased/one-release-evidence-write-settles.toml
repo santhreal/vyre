@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`xtask release-evidence --write` records the digest of the registry it writes, so one run settles instead of reporting its own output as stale until a second and third."

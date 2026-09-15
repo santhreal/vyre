@@ -1,0 +1,14 @@
+lane = "architectural-invariants-architecture-release-gate"
+workflow = ".github/workflows/architectural-invariants.yml"
+job = "architecture-release-gate"
+state = "live"
+required_status = "architectural-invariants / Architecture release gate"
+triggers = ["pull_request", "push"]
+steps = [
+  { gate = "neutral-crates" },
+  { gate = "layering" },
+  { gate = "architecture-contract" },
+  { gate = "docs-references" },
+  { command = "./cargo_full test -p xtask --test tree_contracts" },
+  { gate = "op-matrix", args = ["--check"] },
+]

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A launch span derived from declared buffers now scales each declaration by the logical points the program addresses per element, so a byte scan over a packed `u32` haystack covers every byte instead of the first quarter and reports the whole match set, and the irregular AC scan benchmarks bind the haystack extent they upload so their logical domain resolves."
