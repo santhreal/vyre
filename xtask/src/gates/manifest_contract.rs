@@ -45,27 +45,64 @@ impl crate::gate::GateBehavior for WorkspaceMembership {
                 continue;
             };
             counted += 1;
-            if declared.contains(&directory) || excluded.contains(&directory) {
+            if declared.contains(&directory) {
                 continue;
             }
             let table = tree.read_toml(&manifest)?;
-            if table.contains_key("workspace") {
+            let standalone = table.contains_key("workspace");
+            if !standalone && !excluded.contains(&directory) {
+                report.find(Finding::in_file(
+                    &manifest,
+                    "crate is in neither workspace.members nor workspace.exclude and \
+                     declares no [workspace] of its own",
+                    "add the directory to workspace.members, or give the crate its own \
+                     [workspace] table so cargo treats it as separate",
+                ));
                 continue;
             }
-            report.find(Finding::in_file(
-                &manifest,
-                "crate is in neither workspace.members nor workspace.exclude and \
-                 declares no [workspace] of its own",
-                "add the directory to workspace.members, or give the crate its own \
-                 [workspace] table so cargo treats it as separate",
-            ));
+            // Outside `workspace.members`, whether by exclusion or by its own
+            // root: the supported-API manifest classifies members, so nothing
+            // classifies this crate's exports and no publication class covers
+            // it. Publishing one would ship an unclassified public surface.
+            // Every example, consumer and fuzz crate out here is a
+            // demonstration or a harness rather than a deliverable.
+            if !declares_unpublishable(&table) {
+                report.find(Finding::in_file(
+                    &manifest,
+                    "crate sits outside workspace.members and is publishable, so it carries a \
+                     public surface no publication class classifies",
+                    "add `publish = false` under [package], or make the crate a workspace \
+                     member so the supported-API manifest classifies its exports",
+                ));
+            }
         }
+        report.cover_complete("non-member manifests", counted - declared.len());
 
         report.note(format!("{counted} manifest(s) accounted for"));
         if let Some(note) = tree.absence_note() {
             report.note(note);
         }
         Ok(report)
+    }
+}
+
+/// Whether `table` declares a `[package]` cargo refuses to publish.
+///
+/// `publish = false` and an empty registry list both mean no registry accepts
+/// the crate. A named registry list is still a publishable surface, so it does
+/// not satisfy the rule.
+fn declares_unpublishable(table: &toml::value::Table) -> bool {
+    let Some(publish) = table
+        .get("package")
+        .and_then(toml::Value::as_table)
+        .and_then(|package| package.get("publish"))
+    else {
+        return false;
+    };
+    match publish {
+        toml::Value::Boolean(allowed) => !allowed,
+        toml::Value::Array(registries) => registries.is_empty(),
+        _ => false,
     }
 }
 

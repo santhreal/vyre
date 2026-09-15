@@ -86,7 +86,6 @@ exclude = [
     "examples/libs-template",
     "fuzz",
     "vyre-foundation/fuzz",
-    "fuzz",
     "consumers/vyre-model-compiler",
     "consumers/vyre-graphics-app",
 ]
