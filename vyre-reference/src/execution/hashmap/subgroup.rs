@@ -3,13 +3,14 @@
 //! These helpers read every lane from an immutable snapshot, so a collective
 //! observes a stable workgroup lane view. They hold the live memory mutably
 //! because one evaluator owns expression semantics and that evaluator writes;
-//! a collective argument that would write is refused before it runs.
+//! a collective argument that would write across more than one lane is
+//! refused before it runs.
 
 #[cfg(feature = "subgroup-ops")]
 use super::{
     invocation::{HashmapInvocation, HashmapInvocationSnapshot},
     memory::HashmapMemory,
-    step::eval_expr_snapshot,
+    step::{eval_expr_snapshot, refuse_effectful_collective_argument},
 };
 #[cfg(feature = "subgroup-ops")]
 use crate::ReferenceError;
@@ -172,7 +173,9 @@ fn collect_lane_bools(
     snapshots: &[HashmapInvocationSnapshot],
     memory: &mut HashmapMemory,
 ) -> Result<SmallVec<[bool; 32]>, ReferenceError> {
-    subgroup_slice(snapshots, linear_local_index)
+    let window = subgroup_slice(snapshots, linear_local_index);
+    refuse_effectful_collective_argument(expr, window.len())?;
+    window
         .iter()
         .map(|lane| {
             eval_expr_snapshot(expr, lane, snapshots, &mut *memory).map(|value| value.truthy())
@@ -188,7 +191,9 @@ fn collect_lane_u32s(
     memory: &mut HashmapMemory,
     error: &'static str,
 ) -> Result<SmallVec<[u32; 32]>, ReferenceError> {
-    subgroup_slice(snapshots, linear_local_index)
+    let window = subgroup_slice(snapshots, linear_local_index);
+    refuse_effectful_collective_argument(expr, window.len())?;
+    window
         .iter()
         .map(|lane| {
             eval_expr_snapshot(expr, lane, snapshots, &mut *memory)?
@@ -205,7 +210,9 @@ fn collect_lane_values(
     snapshots: &[HashmapInvocationSnapshot],
     memory: &mut HashmapMemory,
 ) -> Result<SmallVec<[Value; 32]>, ReferenceError> {
-    subgroup_slice(snapshots, linear_local_index)
+    let window = subgroup_slice(snapshots, linear_local_index);
+    refuse_effectful_collective_argument(expr, window.len())?;
+    window
         .iter()
         .map(|lane| eval_expr_snapshot(expr, lane, snapshots, &mut *memory))
         .collect()

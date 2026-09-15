@@ -15,6 +15,10 @@
 //! of how the interpreter gathers lanes rather than of the program, so this
 //! returns a structured refusal and no expected output.
 //!
+//! A window of ONE lane is exempt and is issued: the argument is evaluated
+//! once, commits once, and the device commits once, so the reduction over
+//! that single value is exact and there is nothing to refuse.
+//!
 //! What this does NOT catch: an effectful expression reaching a collective
 //! through an operation the registry declares pure. The refusal reads the
 //! expression tree, so a `Call` whose registered CPU reference writes through a
@@ -42,14 +46,14 @@ fn words(values: &[Value], index: usize) -> Vec<u32> {
 /// the number of times the interpreter evaluated that argument. Validation
 /// admits one output buffer, so the gathered value lands in a read-write
 /// storage buffer and the counter is the one result read back.
-fn collective_over_an_atomic() -> Program {
+fn collective_over_an_atomic_across(lanes: u32) -> Program {
     Program::wrapped(
         vec![
             BufferDecl::storage("sink", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(LANES),
+                .with_count(lanes),
             BufferDecl::output("counter", 1, DataType::U32).with_count(1),
         ],
-        [LANES, 1, 1],
+        [lanes, 1, 1],
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
             Node::let_bind(
@@ -64,10 +68,18 @@ fn collective_over_an_atomic() -> Program {
     )
 }
 
-/// Zeroed inputs for the one non-output buffer `collective_over_an_atomic`
-/// declares.
+/// The 32-lane program, which is the shape the refusal covers.
+fn collective_over_an_atomic() -> Program {
+    collective_over_an_atomic_across(LANES)
+}
+
+/// Zeroed inputs for the one non-output buffer the atomic programs declare.
+fn atomic_program_inputs_for(lanes: u32) -> Vec<Value> {
+    vec![Value::from(vec![0u8; (lanes * 4) as usize])]
+}
+
 fn atomic_program_inputs() -> Vec<Value> {
-    vec![Value::from(vec![0u8; (LANES * 4) as usize])]
+    atomic_program_inputs_for(LANES)
 }
 
 /// A pure argument keeps working, so the refusal is scoped to the effect and
@@ -153,6 +165,36 @@ fn a_pure_collective_argument_still_evaluates() {
         words(&outputs, 0),
         vec![sum; LANES as usize],
         "every lane in the one subgroup must read the same reduction of every lane's value"
+    );
+}
+
+/// A one-lane window admits the write, and issues the device's own answer.
+///
+/// WHY: the refusal exists because a `width`-lane gather evaluates the
+/// argument `width * width` times, and because evaluating each lane's
+/// argument once instead would still leave the per-lane values decided by the
+/// order the atomics commit. A window of one lane has neither. Refusing it
+/// anyway rejects a program with one defined answer, which is what a
+/// predicate reading only the argument tree does, and which left a valid
+/// `subgroupAdd(atomicAdd(..))` under a single-invocation dispatch
+/// unexecutable.
+#[test]
+fn a_single_lane_window_admits_a_write_and_issues_the_device_answer() {
+    let outputs = vyre_reference::ReferenceRequest::standard(
+        &collective_over_an_atomic_across(1),
+        &atomic_program_inputs_for(1),
+    )
+    .outputs()
+    .expect("a one-lane gather evaluates the argument once, so the reduction is exact");
+    assert_eq!(
+        words(&outputs, 1),
+        vec![1],
+        "one lane commits the atomic exactly once, as the device does"
+    );
+    assert_eq!(
+        words(&outputs, 0),
+        vec![0],
+        "the lane reduces the pre-increment value the atomic returned, which is the zero it read"
     );
 }
 

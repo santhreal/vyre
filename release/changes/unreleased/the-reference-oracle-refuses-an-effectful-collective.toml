@@ -11,5 +11,9 @@ sum. How many commits land is a property of how the interpreter gathers lanes \
 rather than of the program, so the request returns an incomplete-dispatch \
 refusal and no expected output, in strict and diagnostic permissive mode \
 alike. A pure argument is unaffected, and the lane gather no longer copies \
-both buffer maps once per lane because the copy isolated nothing.
+both buffer maps once per lane because the copy isolated nothing. A dispatch \
+that gathers a single lane is also unaffected: the argument is evaluated once, \
+commits once, and the device commits once, so the reduction over that one \
+value is exact and is issued. The refusal is decided once per collective from \
+the gathered lane count rather than once per lane.
 """
