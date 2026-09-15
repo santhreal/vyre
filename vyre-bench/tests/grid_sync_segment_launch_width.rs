@@ -36,7 +36,7 @@ fn widest_referenced(program: &Program) -> u32 {
         .iter()
         .filter(|buffer| buffer.access() != BufferAccess::Workgroup)
         .filter(|buffer| referenced.iter().any(|name| name.as_ref() == buffer.name()))
-        .map(|buffer| u32::try_from(buffer.count()).unwrap_or(u32::MAX))
+        .map(|buffer| buffer.count())
         .max()
         .unwrap_or(0)
 }
@@ -47,7 +47,7 @@ fn widest_declared(program: &Program) -> u32 {
         .buffers()
         .iter()
         .filter(|buffer| buffer.access() != BufferAccess::Workgroup)
-        .map(|buffer| u32::try_from(buffer.count()).unwrap_or(u32::MAX))
+        .map(|buffer| buffer.count())
         .max()
         .unwrap_or(0)
 }
