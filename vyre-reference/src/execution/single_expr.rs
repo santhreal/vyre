@@ -85,7 +85,10 @@ pub fn reference_eval_expr(
     expr: &Expr,
 ) -> Result<Value, ReferenceError> {
     let budget = super::step_budget::arm(program)?;
-    let mut hashmap_memory = HashmapMemory::new(std::mem::take(&mut memory.storage));
+    let mut hashmap_memory = HashmapMemory::new(
+        std::mem::take(&mut memory.storage),
+        crate::execution::hashmap::LaneOrder::Forward,
+    );
     let result = super::hashmap::eval_expr_public(expr, ids, program.entry(), &mut hashmap_memory);
     memory.storage = hashmap_memory.into_storage();
     drop(budget);

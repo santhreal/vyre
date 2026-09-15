@@ -780,7 +780,7 @@ mod tests {
 
         let mut storage = FxHashMap::default();
         storage.insert("src".to_string(), buffer);
-        let memory = HashmapMemory::new(storage);
+        let memory = HashmapMemory::new(storage, crate::execution::hashmap::LaneOrder::Forward);
 
         let result = std::panic::catch_unwind(|| {
             // `read_bytes` acquires buffer.bytes.read(); it must panic, not recover.
@@ -817,7 +817,7 @@ mod tests {
 
         let mut storage = FxHashMap::default();
         storage.insert("dst".to_string(), buffer);
-        let mut memory = HashmapMemory::new(storage);
+        let mut memory = HashmapMemory::new(storage, crate::execution::hashmap::LaneOrder::Forward);
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             super::apply_async_transfer(

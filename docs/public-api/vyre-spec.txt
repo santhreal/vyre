@@ -818,6 +818,7 @@ pub fn vyre_spec::StaleGenerationError::fmt(&self, f: &mut core::fmt::Formatter<
 pub fn vyre_spec::SubgroupReduceOp::combine_f32(self, acc: f32, lane: f32) -> core::option::Option<f32>
 pub fn vyre_spec::SubgroupReduceOp::f32_identity(self) -> core::option::Option<f32>
 pub fn vyre_spec::SubgroupReduceOp::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_spec::SubgroupReduceOp::is_f32_order_independent(self) -> core::option::Option<bool>
 pub fn vyre_spec::SubgroupReduceOp::reduce_u32(self, lanes: impl core::iter::traits::collect::IntoIterator<Item = u32>) -> u32
 pub fn vyre_spec::TransformDecision::absence_class(&self) -> core::option::Option<vyre_spec::AbsenceClass>
 pub fn vyre_spec::TransformDecision::has_decision(&self) -> bool

@@ -180267,7 +180267,7 @@ seam = "specification"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre"
 stability = "extension"
-exported_item_count = 2017
+exported_item_count = 2018
 
   [[package.item]]
   path = "F::available(&self, op: &str) -> bool"
@@ -190575,6 +190575,13 @@ exported_item_count = 2017
 
   [[package.item]]
   path = "vyre_spec::SubgroupReduceOp::is_bitwise(self) -> bool"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "wire-bound"
+
+  [[package.item]]
+  path = "vyre_spec::SubgroupReduceOp::is_f32_order_independent(self) -> core::option::Option<bool>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"

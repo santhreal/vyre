@@ -47,6 +47,10 @@ pub mod byte_prefix_property_contracts;
 #[path = "collective_argument_effects.rs"]
 pub mod collective_argument_effects;
 
+/// Integration tests from `tests/collective_fold_order.rs`.
+#[path = "collective_fold_order.rs"]
+pub mod collective_fold_order;
+
 /// Integration tests from `tests/collective_in_divergent_control_flow.rs`.
 #[path = "collective_in_divergent_control_flow.rs"]
 pub mod collective_in_divergent_control_flow;

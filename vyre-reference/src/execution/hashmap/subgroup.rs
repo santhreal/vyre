@@ -126,8 +126,22 @@ pub(crate) fn eval_subgroup_reduce(
     snapshots: &[HashmapInvocationSnapshot],
     memory: &mut HashmapMemory,
 ) -> Result<Value, ReferenceError> {
-    let values = collect_lane_values(value, invocation.linear_local_index, snapshots, memory)?;
+    let mut values = collect_lane_values(value, invocation.linear_local_index, snapshots, memory)?;
     let width = subgroup_simulator().width();
+    // A reduction states no lane order, so the order its lanes combine in is
+    // the explored schedule's to choose. `Add` and `Mul` are not associative
+    // over f32, so a program whose result depends on that choice produces
+    // different output bytes under two explored orders and the exploration
+    // reports the disagreement. Every integer operator and f32 `Min`/`Max`
+    // are associative and commutative, so permuting them changes nothing and
+    // they stay clean. Ballot and shuffle are deliberately not permuted:
+    // both address lanes by identity, so a permutation there would move the
+    // ballot bit or the shuffle source rather than reassociate a fold.
+    super::apply_step_order(
+        &mut values,
+        memory.collective_fold_order,
+        super::StepAxis::Lane,
+    );
     if values.iter().all(|value| matches!(value, Value::U32(_))) {
         let lanes = values.iter().filter_map(Value::try_as_u32).take(width);
         // SubgroupReduceOp::reduce_u32 is the single source of truth for the
@@ -234,7 +248,7 @@ mod tests {
         ];
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let mut memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let value = eval_subgroup_shuffle(
             &Expr::var("lane_value"),
@@ -257,7 +271,7 @@ mod tests {
     fn shuffle_refuses_an_out_of_range_source_lane_on_both_value_paths() {
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let mut memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         for (label, first, second) in [
             ("f32", Value::Float(1.25), Value::Float(2.5)),
@@ -295,7 +309,7 @@ mod tests {
         let snapshots = reduce_snapshots(&[Value::U32(3), Value::U32(9), Value::U32(1)]);
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let mut memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Max,
@@ -314,7 +328,7 @@ mod tests {
         let snapshots = reduce_snapshots(&[Value::U32(0b1100), Value::U32(0b1010)]);
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let mut memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Xor,
@@ -336,7 +350,7 @@ mod tests {
             reduce_snapshots(&[Value::U32(2), Value::U32(3), Value::U32(5), Value::U32(7)]);
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let mut memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Mul,
@@ -357,7 +371,7 @@ mod tests {
         let snapshots = reduce_snapshots(&[Value::Float(-5.0), Value::Float(-2.0)]);
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let mut memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Max,
@@ -376,7 +390,7 @@ mod tests {
         let snapshots = reduce_snapshots(&[Value::Float(1.0)]);
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let mut memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let error = eval_subgroup_reduce(
             SubgroupReduceOp::And,
@@ -407,7 +421,7 @@ mod tests {
         ]);
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let mut memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Mul,
@@ -428,7 +442,7 @@ mod tests {
             reduce_snapshots(&[Value::Float(1.0), Value::Float(2.5), Value::Float(3.5)]);
         let entry: &[Node] = &[];
         let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
-        let mut memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
 
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Add,

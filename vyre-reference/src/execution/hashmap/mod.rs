@@ -448,7 +448,7 @@ pub(crate) fn run_hashmap_reference(
     // has arrived. The fence is a node the invocation state machine waits on,
     // so nothing rewrites the program on the way in and the oracle's fence
     // semantics are not borrowed from the lowering it exists to check.
-    let mut memory = HashmapMemory::new(storage);
+    let mut memory = HashmapMemory::new(storage, lane_order);
     let mut suspended: Vec<GridFenceHold<'_>> = Vec::new();
     for &wg in &wg_coords {
         memory.reset_workgroup(program)?;

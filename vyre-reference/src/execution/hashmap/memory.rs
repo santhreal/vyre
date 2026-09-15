@@ -12,13 +12,24 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, Program};
 pub(crate) struct HashmapMemory {
     pub(crate) storage: FxHashMap<String, Buffer>,
     pub(crate) workgroup: FxHashMap<String, Buffer>,
+    /// Order the explored schedule folds subgroup reduction lanes in.
+    ///
+    /// A subgroup reduction states no lane order, so the order the lanes are
+    /// combined in is part of the schedule rather than part of the program.
+    /// It travels with the memory because the reduction helpers already hold
+    /// this mutably and nothing else reaches them.
+    pub(crate) collective_fold_order: super::LaneOrder,
 }
 
 impl HashmapMemory {
-    pub(crate) fn new(storage: FxHashMap<String, Buffer>) -> Self {
+    pub(crate) fn new(
+        storage: FxHashMap<String, Buffer>,
+        collective_fold_order: super::LaneOrder,
+    ) -> Self {
         Self {
             storage,
             workgroup: FxHashMap::default(),
+            collective_fold_order,
         }
     }
 
@@ -207,7 +218,7 @@ mod tests {
     #[test]
     fn reset_workgroup_reuses_matching_buffers_and_zeroes_in_place() {
         let program = workgroup_program(4);
-        let mut memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
         memory
             .reset_workgroup(&program)
             .expect("Fix: first workgroup allocation must succeed.");
@@ -242,7 +253,7 @@ mod tests {
 
     #[test]
     fn reset_workgroup_reallocates_when_layout_changes() {
-        let mut memory = HashmapMemory::new(FxHashMap::default());
+        let mut memory = HashmapMemory::new(FxHashMap::default(), crate::execution::hashmap::LaneOrder::Forward);
         memory.reset_workgroup(&workgroup_program(4)).unwrap();
         let before = memory.workgroup.get("scratch").unwrap().bytes.clone();
         memory.reset_workgroup(&workgroup_program(8)).unwrap();

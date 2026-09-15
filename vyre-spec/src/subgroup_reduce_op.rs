@@ -113,6 +113,35 @@ impl SubgroupReduceOp {
         }
     }
 
+    /// Whether folding f32 lanes under this operator gives the same result
+    /// for every lane order, or `None` for the bitwise operators
+    /// (`And`/`Or`/`Xor`), which are integer-only.
+    ///
+    /// A subgroup reduction has no lane order in the program. Hardware picks
+    /// one, and a shuffle-down tree is the common pick, so a host evaluator
+    /// that folds ascending lane index answers one association out of many a
+    /// conforming device may produce. `Add` and `Mul` are not associative
+    /// over f32, so those answers differ and the difference is a property of
+    /// the fold rather than of the program. `Min` and `Max` are associative
+    /// and commutative, so every order agrees on them.
+    ///
+    /// Integer reductions are order-independent for every operator, which is
+    /// why [`Self::reduce_u32`] takes an unordered iterator and this question
+    /// is asked only of f32.
+    ///
+    /// What this does not cover: `Min` and `Max` over both zeros. IEEE 754
+    /// `minimum` orders `-0.0` below `+0.0`, `f32::min` returns either operand
+    /// when they compare equal, and the two zeros carry different bits. The
+    /// answer here is about the operator's association, not about that tie.
+    #[must_use]
+    pub fn is_f32_order_independent(self) -> Option<bool> {
+        match self {
+            Self::Add | Self::Mul => Some(false),
+            Self::Min | Self::Max => Some(true),
+            Self::And | Self::Or | Self::Xor => None,
+        }
+    }
+
     /// Combine one f32 lane into a running accumulator, or `None` for the
     /// bitwise operators (`And`/`Or`/`Xor`), which are integer-only.
     #[must_use]
