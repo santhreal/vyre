@@ -7341,7 +7341,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "DigestAlgorithm"
 variant_name = "Blake3_256"
-declaration_site = "vyre-foundation/src/serial/schema_authority.rs:73"
+declaration_site = "vyre-foundation/src/serial/schema_authority.rs:88"
 constructors = ["DigestAlgorithm::Blake3_256"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)"
@@ -29563,7 +29563,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaAuthorityError"
 variant_name = "DecodeFailure"
-declaration_site = "vyre-foundation/src/serial/schema_authority.rs:205"
+declaration_site = "vyre-foundation/src/serial/schema_authority.rs:250"
 constructors = ["SchemaAuthorityError::DecodeFailure"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -29573,7 +29573,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaAuthorityError"
 variant_name = "DigestMismatch"
-declaration_site = "vyre-foundation/src/serial/schema_authority.rs:213"
+declaration_site = "vyre-foundation/src/serial/schema_authority.rs:258"
 constructors = ["SchemaAuthorityError::DigestMismatch"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -29583,7 +29583,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaAuthorityError"
 variant_name = "IncompatibleVersion"
-declaration_site = "vyre-foundation/src/serial/schema_authority.rs:193"
+declaration_site = "vyre-foundation/src/serial/schema_authority.rs:238"
 constructors = ["SchemaAuthorityError::IncompatibleVersion"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -29593,7 +29593,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaAuthorityError"
 variant_name = "InvalidUtf8"
-declaration_site = "vyre-foundation/src/serial/schema_authority.rs:185"
+declaration_site = "vyre-foundation/src/serial/schema_authority.rs:230"
 constructors = ["SchemaAuthorityError::InvalidUtf8"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
@@ -29603,7 +29603,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SchemaAuthorityError"
 variant_name = "PayloadTooLarge"
-declaration_site = "vyre-foundation/src/serial/schema_authority.rs:173"
+declaration_site = "vyre-foundation/src/serial/schema_authority.rs:218"
 constructors = ["SchemaAuthorityError::PayloadTooLarge"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone, PartialEq, Eq, Error)"
