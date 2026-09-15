@@ -34598,7 +34598,7 @@ seam = "foundation-ir"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 8815
+exported_item_count = 8818
 
   [[package.item]]
   path = "alloc::string::String::from(err: vyre_foundation::serial::wire::encode::WireEncodeErr) -> alloc::string::String"
@@ -38298,6 +38298,13 @@ exported_item_count = 8815
 
   [[package.item]]
   path = "impl vyre_foundation::serial::SchemaAuthority"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "impl vyre_foundation::serial::SchemaDescriptor"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -85701,6 +85708,13 @@ exported_item_count = 8815
   wire_compatibility = "wire-bound"
 
   [[package.item]]
+  path = "vyre_foundation::serial::SchemaDescriptor::admits(&self, encoded: &vyre_foundation::serial::CanonicalSchemaVersion) -> bool"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "wire-bound"
+
+  [[package.item]]
   path = "vyre_foundation::serial::SchemaDescriptor::canonical_name: &'static str"
   kind = "field"
   stability = "extension"
@@ -85748,6 +85762,13 @@ exported_item_count = 8815
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "wire-bound"
+
+  [[package.item]]
+  path = "vyre_foundation::serial::SchemaId::ALL: &'static [Self]"
+  kind = "const"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
 
   [[package.item]]
   path = "vyre_foundation::serial::SchemaId::CompilationArtifact"

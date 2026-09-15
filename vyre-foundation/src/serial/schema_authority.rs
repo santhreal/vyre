@@ -36,6 +36,21 @@ pub enum SchemaId {
 }
 
 impl SchemaId {
+    /// Every schema this authority recognizes.
+    ///
+    /// Callers that must act on all of them enumerate this rather than
+    /// restating the list, so a new variant reaches them without an edit.
+    pub const ALL: &'static [Self] = &[
+        Self::ConformanceCertificate,
+        Self::ReplayCapsule,
+        Self::CompilationArtifact,
+        Self::OptimizationProof,
+        Self::TelemetryEvent,
+        Self::PersistentCacheEntry,
+        Self::WirePayload,
+        Self::TargetFacetMatrix,
+    ];
+
     /// Canonical string identifier for this schema.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -89,6 +104,36 @@ pub struct SchemaDescriptor {
     pub max_payload_bytes: usize,
     /// Digest algorithm required for signatures.
     pub digest_algorithm: DigestAlgorithm,
+}
+
+impl SchemaDescriptor {
+    /// True when a record declaring `encoded` may be interpreted under this
+    /// descriptor.
+    ///
+    /// Two bounds apply, and a record outside either one means something
+    /// different from what its fields will be read as. The ceiling is
+    /// [`CanonicalSchemaVersion::is_compatible_with`]: a different major
+    /// renamed or repurposed fields, and a higher minor added fields this
+    /// build would drop. The floor is `min_compatible_version`, which retires
+    /// a version whose fields still parse but no longer mean the same thing.
+    ///
+    /// The floor compares minors alone. The ceiling already requires `encoded`
+    /// to carry the descriptor's own major, and
+    /// [`SchemaAuthority::descriptor_for`] states one major per schema, so a
+    /// major comparison here could never decide a case. That precondition is
+    /// not assumed: `every_descriptor_states_a_readable_range` holds every
+    /// registered descriptor to it, and a descriptor that broke it would turn
+    /// that test red rather than silently widen what this admits.
+    ///
+    /// The decision is named rather than written inline in the decoder so both
+    /// bounds can be exercised directly. No registered schema sets a floor
+    /// above `x.0.0` today, so routing every case through
+    /// [`SchemaAuthority::descriptor_for`] would leave the floor untested.
+    #[must_use]
+    pub const fn admits(&self, encoded: &CanonicalSchemaVersion) -> bool {
+        encoded.minor >= self.min_compatible_version.minor
+            && self.current_version.is_compatible_with(encoded)
+    }
 }
 
 /// Authoritative schema registry.
@@ -222,11 +267,54 @@ pub enum SchemaAuthorityError {
     },
 }
 
+/// The one field every record of a registered schema carries.
+///
+/// Only `schema_version` is read here, and unknown fields are ignored on
+/// purpose: this peek decides whether the rest of the payload may be
+/// interpreted at all, so it must succeed on a record whose other fields this
+/// build has never heard of.
+#[derive(Deserialize)]
+struct VersionEnvelope {
+    /// Version the payload states for itself, as `Major.Minor.Patch`.
+    schema_version: String,
+}
+
+/// Parse a `Major.Minor.Patch` triple, rejecting anything else.
+///
+/// A shorter or longer form is refused rather than padded, because a record
+/// that states `2` or `2.0.0.1` was not written against this contract and
+/// guessing the missing components would invent a version nobody encoded.
+fn parse_version(text: &str) -> Option<CanonicalSchemaVersion> {
+    let mut parts = text.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next()?.parse().ok()?;
+    let patch = parts.next()?.parse().ok()?;
+    if parts.next().is_some() {
+        return None;
+    }
+    Some(CanonicalSchemaVersion::new(major, minor, patch))
+}
+
 /// Bounded decoder enforcing byte size, version compatibility, and strict field constraints.
 pub struct BoundedDecoder;
 
 impl BoundedDecoder {
-    /// Decode a JSON payload with strict size limits and deserialization.
+    /// Decode a JSON payload, refusing one this build cannot read.
+    ///
+    /// The size limit is checked before the payload is looked at, and the
+    /// version it declares is checked before it is decoded into `T`. A record
+    /// written by another build states its own version, so decoding first and
+    /// checking after would hand the caller a `T` assembled from fields that
+    /// mean something else.
+    ///
+    /// # Errors
+    ///
+    /// [`SchemaAuthorityError::PayloadTooLarge`] above the descriptor limit,
+    /// [`SchemaAuthorityError::InvalidUtf8`] for non-UTF-8 bytes,
+    /// [`SchemaAuthorityError::IncompatibleVersion`] when the declared version
+    /// is outside the range this build reads, and
+    /// [`SchemaAuthorityError::DecodeFailure`] when `schema_version` is absent
+    /// or unparseable, or the payload does not deserialize into `T`.
     pub fn decode_json<T: DeserializeOwned>(
         schema_id: SchemaId,
         bytes: &[u8],
@@ -244,6 +332,32 @@ impl BoundedDecoder {
             schema_name: desc.canonical_name,
             details: e.to_string(),
         })?;
+
+        let declared: VersionEnvelope =
+            serde_json::from_str(s).map_err(|error| SchemaAuthorityError::DecodeFailure {
+                schema_name: desc.canonical_name,
+                details: format!(
+                    "payload states no readable `schema_version`: {error}. \
+                     Every record of this schema carries one, so a payload \
+                     without it is not an instance of the schema."
+                ),
+            })?;
+        let found = parse_version(&declared.schema_version).ok_or_else(|| {
+            SchemaAuthorityError::DecodeFailure {
+                schema_name: desc.canonical_name,
+                details: format!(
+                    "`schema_version` is `{}`, which is not a Major.Minor.Patch triple",
+                    declared.schema_version
+                ),
+            }
+        })?;
+        if !desc.admits(&found) {
+            return Err(SchemaAuthorityError::IncompatibleVersion {
+                schema_name: desc.canonical_name,
+                found,
+                min_required: desc.min_compatible_version,
+            });
+        }
 
         let mut deserializer = serde_json::Deserializer::from_str(s);
         let value =

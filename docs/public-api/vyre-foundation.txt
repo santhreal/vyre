@@ -582,6 +582,7 @@ impl vyre_foundation::serial::BoundedDecoder
 impl vyre_foundation::serial::CanonicalDigest
 impl vyre_foundation::serial::CanonicalSchemaVersion
 impl vyre_foundation::serial::SchemaAuthority
+impl vyre_foundation::serial::SchemaDescriptor
 impl vyre_foundation::serial::SchemaId
 impl vyre_foundation::serial::WireWriter
 impl vyre_foundation::serial::output_set::OutputSet
@@ -974,6 +975,7 @@ pub const fn vyre_foundation::security::UnforgeableCapability::resource_id(&self
 pub const fn vyre_foundation::security::UnforgeableCapability::tenant_id(&self) -> vyre_foundation::security::TenantId
 pub const fn vyre_foundation::serial::CanonicalSchemaVersion::is_compatible_with(&self, encoded_version: &Self) -> bool
 pub const fn vyre_foundation::serial::CanonicalSchemaVersion::new(major: u32, minor: u32, patch: u32) -> Self
+pub const fn vyre_foundation::serial::SchemaDescriptor::admits(&self, encoded: &vyre_foundation::serial::CanonicalSchemaVersion) -> bool
 pub const fn vyre_foundation::serial::SchemaId::as_str(self) -> &'static str
 pub const fn vyre_foundation::serial::wire::decode::ScanConstructDecodeBudgetEvidence::within_budget(&self) -> bool
 pub const fn vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudgetEvidence::within_budget(&self) -> bool
@@ -1180,6 +1182,7 @@ pub const vyre_foundation::schedule::SCHEDULE_IR_VERSION: u16
 pub const vyre_foundation::security::GenerationId::INITIAL: Self
 pub const vyre_foundation::security::TenantId::ANONYMOUS: Self
 pub const vyre_foundation::security::TenantId::SYSTEM: Self
+pub const vyre_foundation::serial::SchemaId::ALL: &'static [Self]
 pub const vyre_foundation::serial::text::MAX_TEXT_WIRE_BYTES: usize
 pub const vyre_foundation::serial::text::TEXT_FORMAT_HEADER: &str
 pub const vyre_foundation::serial::text::WIRE_BYTES_PER_LINE: usize

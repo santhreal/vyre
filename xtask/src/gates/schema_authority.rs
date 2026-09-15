@@ -30,7 +30,7 @@ impl GateBehavior for SchemaAuthorityGate {
                 || path_str.contains("/test_fixtures/")
                 || path_str.contains("/fixtures/")
                 || path_str.ends_with("/tests.rs")
-                || path_str.ends_with("vyre-spec/src/schema_registry.rs")
+                || path_str.ends_with("vyre-spec/src/schema_registry/mod.rs")
                 || path_str.ends_with("vyre-spec/src/compatibility.rs")
                 || path_str.ends_with("vyre-foundation/src/serial/schema_authority.rs")
                 || path_str.starts_with("xtask")
