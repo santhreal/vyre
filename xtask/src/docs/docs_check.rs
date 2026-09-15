@@ -523,23 +523,42 @@ fn page_findings(docs: &Path, owners: &BTreeMap<String, String>, page: &Page) ->
         );
     }
 
-    if page.is_active()
-        && EXTERNAL_AUDIENCES.contains(&page.audience.as_str())
-        && page.generation == "manual"
-    {
+    if page.is_active() && EXTERNAL_AUDIENCES.contains(&page.audience.as_str()) {
         if let Ok(content) = fs::read_to_string(docs.join(path)) {
             for marker in MARKERS {
                 if (marker.matches)(&content) {
                     findings.push(Finding::in_file(
                         format!("{DOCS}/{path}"),
                         format!("{} document leaks {}", page.audience, marker.label),
-                        "state the product fact without the process that produced it; a reader outside this repository cannot act on it",
+                        leak_fix(page),
                     ));
                 }
             }
         }
     }
     findings
+}
+
+/// Where the repair for a leaked internal-process vocabulary belongs.
+///
+/// An authored page is edited in place. A generated page is overwritten on the
+/// next run of its generator, so editing the page repairs nothing: the
+/// vocabulary arrives from the source the generator reads, and the fix names
+/// that generator so the reader does not edit a file that will be rewritten.
+fn leak_fix(page: &Page) -> String {
+    let stem = "state the product fact without the process that produced it";
+    if page.generation == "generated" {
+        let generator = if page.generator.is_empty() {
+            "its generator"
+        } else {
+            page.generator.as_str()
+        };
+        format!(
+            "{stem}; this page is written by {generator}, so correct the source that generator reads rather than the page"
+        )
+    } else {
+        format!("{stem}; a reader outside this repository cannot act on it")
+    }
 }
 
 /// One vocabulary of internal process a published page must not carry.
@@ -1152,6 +1171,85 @@ mod tests {
         assert!(
             reported.contains("leaks internal phase identifier"),
             "{reported}"
+        );
+    }
+
+    /// WHY: the leak rule is about the audience, so it must read a page however
+    /// that page is written. Reading only `manual` rows left the `generated`
+    /// half of the generation union unread, so a generator that interpolated a
+    /// private plan into a user-facing page published it with nothing red. The
+    /// cases come from `GENERATIONS` rather than a list here, so a third
+    /// generation mode turns this red until it is decided.
+    ///
+    /// What this does NOT catch: a leak reaching a page through a marker no
+    /// `MARKERS` entry names.
+    #[test]
+    fn every_generation_mode_of_an_external_page_is_read_for_internal_process() {
+        for generation in GENERATIONS {
+            let temporary = fixture();
+            let docs = temporary.path().join("docs");
+            fs::write(
+                docs.join("public.md"),
+                "# Public\n\nRead BACKLOG.md during Phase 3.\n",
+            )
+            .expect("a page");
+            let mut row = page("public.md");
+            row.audience = "extension".to_string();
+            row.generation = generation.to_string();
+            if generation == "generated" {
+                row.status = "generated".to_string();
+                row.authority = "owner.md".to_string();
+                row.generator = "owner.md".to_string();
+            }
+
+            let findings = validate(
+                &docs,
+                &owners(),
+                &[row],
+                &BTreeSet::from(["public.md".to_string()]),
+            );
+            let reported = messages(&findings);
+
+            assert!(
+                reported.contains("leaks execution backlog"),
+                "a {generation} page must be read for the execution backlog, got: {reported}"
+            );
+            assert!(
+                reported.contains("leaks internal phase identifier"),
+                "a {generation} page must be read for a phase identifier, got: {reported}"
+            );
+        }
+    }
+
+    /// WHY: a generated page is rewritten on the next run of its generator, so
+    /// a repair that tells the reader to edit the page sends them to a file
+    /// that will be overwritten and leaves the vocabulary in the source.
+    #[test]
+    fn a_generated_page_is_repaired_at_its_generator_and_an_authored_one_in_place() {
+        let mut generated = page("public.md");
+        generated.generation = "generated".to_string();
+        generated.generator = "xtask/src/gates/crate_registry/mod.rs".to_string();
+        let fix = leak_fix(&generated);
+        assert!(
+            fix.contains("xtask/src/gates/crate_registry/mod.rs")
+                && fix.contains("rather than the page"),
+            "{fix}"
+        );
+
+        let authored = leak_fix(&page("public.md"));
+        assert!(
+            !authored.contains("generator") && authored.contains("cannot act on it"),
+            "{authored}"
+        );
+
+        let unnamed = Page {
+            generation: "generated".to_string(),
+            generator: String::new(),
+            ..page("public.md")
+        };
+        assert!(
+            leak_fix(&unnamed).contains("its generator"),
+            "a generated page with no generator named still repairs at the generator"
         );
     }
 

@@ -1,0 +1,11 @@
+category = "Fixed"
+text = """
+`docs-check` reads an active page written for a reader outside this repository \
+for internal-process vocabulary whether that page is authored or generated. \
+The check ran only on authored pages, so the generated half of the generation \
+union went unread and a generator that wrote a private plan name, a `local://` \
+target or a numbered phase into a user-facing page published it with no \
+finding. A generated page is rewritten on the next run of its generator, so \
+the repair for one names that generator and the source it reads rather than \
+the page.
+"""
