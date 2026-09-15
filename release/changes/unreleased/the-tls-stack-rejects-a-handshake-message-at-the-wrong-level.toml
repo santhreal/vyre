@@ -1,0 +1,12 @@
+category = "Security"
+text = """
+The pinned rustls moves from 0.23.40 to 0.23.45, which rejects a TLS 1.3 \
+handshake message sent at the wrong encryption level. The earlier release \
+accepted a handshake message that followed a key-changing message in the same \
+record, so a plaintext `EncryptedExtensions` packed into the `ServerHello` \
+record was accepted where RFC 8446 section 5.1 requires an \
+`unexpected_message` alert. The transcript stays authenticated, so the \
+handshake could not be altered or completed by a network-position attacker. \
+rustls reaches this workspace through ureq in the runtime crate. See \
+RUSTSEC-2026-0285.
+"""
