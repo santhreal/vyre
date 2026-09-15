@@ -193,8 +193,8 @@ total_lines = 23761
 
 [[crate]]
 name = "vyre-libs-parsing"
-duplicate_lines = 112
-total_lines = 8333
+duplicate_lines = 94
+total_lines = 8344
 
 [[crate]]
 name = "vyre-libs-pattern"
