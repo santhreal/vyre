@@ -25,10 +25,9 @@ pub(crate) struct HashmapMemory {
 impl HashmapMemory {
     pub(crate) fn new(
         storage: FxHashMap<String, Buffer>,
+        #[cfg_attr(not(feature = "subgroup-ops"), allow(unused_variables))]
         collective_fold_order: super::LaneOrder,
     ) -> Self {
-        #[cfg(not(feature = "subgroup-ops"))]
-        let _ = collective_fold_order;
         Self {
             storage,
             workgroup: FxHashMap::default(),

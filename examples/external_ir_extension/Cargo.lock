@@ -638,7 +638,6 @@ version = "0.8.0"
 dependencies = [
  "blake3",
  "bytemuck",
- "dashmap",
  "libc",
  "rustc-hash",
  "serde",

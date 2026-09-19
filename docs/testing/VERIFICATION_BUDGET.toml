@@ -62,7 +62,7 @@ disk_use_bytes = 77252
 compile_units = 3
 link_units = 6
 duplicate_source_bytes = 0
-disk_use_bytes = 2733155
+disk_use_bytes = 2733178
 
 [tier.libraries]
 compile_units = 32
@@ -110,7 +110,7 @@ disk_use_bytes = 635953
 compile_units = 1
 link_units = 2
 duplicate_source_bytes = 0
-disk_use_bytes = 588912
+disk_use_bytes = 590639
 
 [tier.standalone-tooling]
 compile_units = 2
@@ -122,10 +122,10 @@ disk_use_bytes = 164739
 compile_units = 3
 link_units = 4
 duplicate_source_bytes = 0
-disk_use_bytes = 64330
+disk_use_bytes = 64492
 
 [tier.tooling]
 compile_units = 9
 link_units = 20
 duplicate_source_bytes = 1172
-disk_use_bytes = 1034831
+disk_use_bytes = 1036334
