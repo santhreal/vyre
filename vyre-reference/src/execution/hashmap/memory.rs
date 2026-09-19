@@ -25,7 +25,13 @@ pub(crate) struct HashmapMemory {
 impl HashmapMemory {
     pub(crate) fn new(
         storage: FxHashMap<String, Buffer>,
-        #[cfg_attr(not(feature = "subgroup-ops"), allow(unused_variables))]
+        #[cfg_attr(
+            not(feature = "subgroup-ops"),
+            expect(
+                unused_variables,
+                reason = "the fold order is schedule state for subgroup reductions, which this build compiles out"
+            )
+        )]
         collective_fold_order: super::LaneOrder,
     ) -> Self {
         Self {
