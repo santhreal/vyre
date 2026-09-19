@@ -42,6 +42,7 @@ public-api-tool = []
 [dependencies]
 sha2.workspace = true
 blake3.workspace = true
+ed25519-dalek.workspace = true
 
 toml.workspace = true
 jiff.workspace = true

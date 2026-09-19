@@ -258,14 +258,14 @@ fn fingerprint_of(commit: &str, changed: &[ChangedPath]) -> String {
 
 /// Paths no source digest covers, because writing them is what a generator does.
 ///
-/// `release/evidence/**` is the corpus itself. The release provenance document
-/// is a projection of the stamps in that corpus and holds nothing a generator
-/// reads, so counting it as source made recording evidence change the source
-/// the recording names: every capture dirtied the next one and no sequence of
-/// commits reached a matching fingerprint.
-pub(crate) const EXCLUDED_FROM_SOURCE: [&str; 2] = [
+/// `release/evidence/**` contains recorded evidence. The release provenance
+/// document and engineering scorecard are projections of that evidence, not
+/// generator inputs. Excluding the projections prevents their regeneration
+/// from invalidating the source identity of their input records.
+pub(crate) const EXCLUDED_FROM_SOURCE: [&str; 3] = [
     ":!release/evidence/**",
     ":!docs/generated/release-provenance.toml",
+    ":!docs/generated/engineering-scorecard.toml",
 ];
 
 /// The label the source-difference digest is taken under.
@@ -628,9 +628,11 @@ mod tests {
     #[test]
     fn capture_refuses_a_directory_git_names_no_commit_for() {
         let dir = tempfile::tempdir().expect("Fix: create a temporary directory.");
+        // Stop Git discovery before it can inherit a parent checkout.
+        crate::fixture_checkout::empty(dir.path());
 
         let error = capture(dir.path())
-            .expect_err("Fix: a directory outside any checkout identifies no source tree.");
+            .expect_err("Fix: a repository without a commit identifies no source tree.");
 
         assert!(
             error.contains("git names no commit"),
@@ -716,7 +718,7 @@ mod tests {
         );
     }
 
-    /// The exclusion covers one named projection, not every generated document.
+    /// The exclusion covers evidence projections, not every generated document.
     ///
     /// A generated document that a compile reads is source to every record
     /// that names it. Widening the exclusion to `docs/generated/**` would let
@@ -735,8 +737,68 @@ mod tests {
 
         assert!(
             fingerprint.contains(":dirty=true:worktree="),
-            "Fix: only the release provenance projection is excluded; every other generated document is source; fingerprint={fingerprint}"
+            "Fix: a generated compiler input must remain part of the source identity; fingerprint={fingerprint}"
         );
+    }
+
+    /// WHY: qualification projections must not invalidate their evidence,
+    /// while changing the policy must invalidate every prior qualification.
+    #[test]
+    fn scorecard_projection_is_excluded_but_qualification_policy_is_source() {
+        let dir = tempfile::tempdir().unwrap();
+        crate::fixture_checkout::seeded(dir.path());
+        std::fs::create_dir_all(dir.path().join("docs/generated")).unwrap();
+        std::fs::write(
+            dir.path().join("docs/generated/engineering-scorecard.toml"),
+            "schema_version = 2\n",
+        )
+        .unwrap();
+        assert!(capture(dir.path()).unwrap().ends_with(":dirty=false"));
+        std::fs::create_dir_all(dir.path().join("release")).unwrap();
+        std::fs::write(
+            dir.path().join("release/engineering-qualification.toml"),
+            "schema_version = 1\n",
+        )
+        .unwrap();
+        assert!(capture(dir.path())
+            .unwrap()
+            .contains(":dirty=true:worktree="));
+    }
+
+    /// WHY: excluding a path from the source digest must reject a record that
+    /// counted it, never silently accept one, so widening the exclusion set
+    /// cannot resurrect an attribution taken under the narrower set.
+    #[test]
+    fn a_digest_that_counted_an_excluded_projection_is_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        crate::fixture_checkout::seeded(dir.path());
+        let base = crate::fixture_checkout::head(dir.path());
+        std::fs::write(dir.path().join("tracked.txt"), "changed\n").unwrap();
+        std::fs::create_dir_all(dir.path().join("docs/generated")).unwrap();
+        std::fs::write(
+            dir.path().join("docs/generated/engineering-scorecard.toml"),
+            "schema_version = 2\n",
+        )
+        .unwrap();
+        let mut counted = blake3::Hasher::new();
+        hash_field(&mut counted, b"format", SOURCE_DIFF_FORMAT);
+        hash_field(
+            &mut counted,
+            b"path",
+            b"docs/generated/engineering-scorecard.toml",
+        );
+        hash_field(&mut counted, b"content", b"schema_version = 2\n");
+        hash_field(&mut counted, b"path", b"tracked.txt");
+        hash_field(&mut counted, b"content", b"changed\n");
+        let stale = format!(
+            "git:{base}:dirty=true:worktree={}",
+            counted.finalize().to_hex()
+        );
+        let current = capture(dir.path()).unwrap();
+        crate::fixture_checkout::commit_worktree(dir.path(), "record source exclusion fixture");
+        let carrier = crate::fixture_checkout::head(dir.path());
+        assert!(resolves_against(dir.path(), &stale, &carrier).is_err());
+        resolves_against(dir.path(), &current, &carrier).unwrap();
     }
 
     #[test]

@@ -587,7 +587,7 @@ pub const GATES_A_G: [GateDescriptor; 57] = [
     },
     GateDescriptor {
         name: "engineering-scorecard",
-        help: "Generate and enforce the all-axis engineering scorecard dynamically from live registries",
+        help: "Report the all-axis engineering scorecard from live registries, qualified only by signed measurements registered in release/engineering-qualification.toml",
         package: "xtask",
         areas: &["release-evidence"],
         subject: "all-axis engineering scorecard",
@@ -595,7 +595,7 @@ pub const GATES_A_G: [GateDescriptor; 57] = [
         artifacts: &["docs/generated/engineering-scorecard.toml"],
         prerequisites: &["public-api-snapshot", "testing-guides", "verification-budget"],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::scorecard::tests::newly_added_crate_dynamically_appears_in_scorecard",
+        proof: "crate::gates::scorecard::evidence::tests::every_axis_rejects_missing_failed_and_undermeasured_cells",
     },
     GateDescriptor {
         name: "error-codes",
