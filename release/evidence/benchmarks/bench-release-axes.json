@@ -1,11 +1,11 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"54097570d35a55d13ecdbf9a41bbf52d2b9fbb85","commit_timestamp":"1789421683","parent_commit":"6c1dfae77c445ebdc033229a738876896df8b7ed","dirty":false,"source_fingerprint":"git:54097570d35a55d13ecdbf9a41bbf52d2b9fbb85:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"afc3515fbbb04ab656f9de34f31449506d3aff9f","commit_timestamp":"1789843089","parent_commit":"b824f7f7972dea37215efee40f9a485cd3cc571f","dirty":false,"source_fingerprint":"git:afc3515fbbb04ab656f9de34f31449506d3aff9f:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 5090","driver_version":"580.178.04"}]}},
   "schema_version": 1,
-  "warm_us_per_file": 4.646,
-  "cold_pipeline_build_ms": 1.145295,
-  "gbs_scan_throughput": 762.924,
+  "warm_us_per_file": 3.17,
+  "cold_pipeline_build_ms": 0.794858,
+  "gbs_scan_throughput": 1165.84,
   "ulp_drift_max": 0,
-  "max_vram_mib": 24564,
+  "max_vram_mib": 32607,
   "source_artifacts": [
     "release/evidence/benchmarks/workload-01-condition-eval.json",
     "release/evidence/benchmarks/workload-02-string-bitmap-scatter.json",
