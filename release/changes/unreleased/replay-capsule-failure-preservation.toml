@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Replay capsule minimization preserves the recorded mismatch through bounded replay checks instead of truncating inputs without verification."

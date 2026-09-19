@@ -9381,6 +9381,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   through each gate's canonical --write path.
 - The benchmark inventory no longer advertises or retains evidence for the
   paged literal-set scanner archived with the removed scan product.
+- Replay capsule minimization preserves the recorded mismatch through bounded
+  replay checks instead of truncating inputs without verification.
 - The `ci-required` gate resolves every workflow file name
   `.github/CI_REQUIRED.md` quotes, not only the ones under a blocking heading.
   The contexts under a heading were resolved against real workflows and a file

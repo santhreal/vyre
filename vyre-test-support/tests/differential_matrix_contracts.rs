@@ -45,7 +45,7 @@ fn replay_capsule_persists_and_minimizes() {
         "ir-fixtures",
         42,
         vec![0x56, 0x49, 0x52, 0x30],
-        vec![vec![1; 32]],
+        vec![(0u8..32).collect()],
         4,
         "test mismatch",
     );
@@ -54,6 +54,12 @@ fn replay_capsule_persists_and_minimizes() {
     let recovered = ReplayCapsule::from_json(&json).expect("json deserialize");
     assert_eq!(capsule, recovered);
 
-    let minimized = capsule.minimize_inputs();
-    assert_eq!(minimized.input_bytes[0].len(), 16);
+    let minimized = capsule
+        .minimize_inputs(32, |candidate| {
+            Ok((candidate.input_bytes[0].len() >= 17).then(|| candidate.mismatch_identity.clone()))
+        })
+        .expect("the recorded failure remains reproducible");
+    let mut expected = capsule.clone();
+    expected.input_bytes[0].truncate(17);
+    assert_eq!(minimized, expected);
 }
