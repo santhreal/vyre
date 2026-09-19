@@ -26,7 +26,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 5
     steps:
@@ -45,7 +44,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 20
     steps:
@@ -86,7 +84,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 20
     steps:
@@ -109,7 +106,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 90
     steps:
@@ -133,7 +129,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 30
     steps:
@@ -151,7 +146,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 30
     steps:
@@ -167,7 +161,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 60
     steps:
@@ -192,7 +185,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 15
     steps:
@@ -211,7 +203,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 45
     steps:
@@ -227,7 +218,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 45
     steps:
@@ -245,7 +235,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 60
     steps:
@@ -266,7 +255,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 90
     steps:
@@ -319,7 +307,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 5
     steps:

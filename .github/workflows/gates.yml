@@ -23,7 +23,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     steps:
       # docs-coupling compares this head against the base branch, so this job
@@ -105,7 +104,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     steps:
       - uses: actions/checkout@v4
@@ -184,7 +182,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     steps:
       - uses: actions/checkout@v4
@@ -216,7 +213,6 @@ jobs:
     runs-on: [self-hosted, gpu, santhserver]
     env:
       CARGO_BUILD_JOBS: "1"
-      RAYON_NUM_THREADS: "1"
       RUST_TEST_THREADS: "1"
     steps:
       - uses: actions/checkout@v4
