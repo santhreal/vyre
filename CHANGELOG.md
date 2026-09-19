@@ -10074,6 +10074,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A corpus read spreads over at most 32 lanes instead of eight per core, so a
   ten-core host no longer exhausts its 256 process descriptors and fails every
   tree contract in the binary with `Too many open files`.
+- Differential verification preserves output-buffer boundaries and rejects
+  integer drift and finite-to-infinite substitutions.
 - The reference interpreter evaluates `BinOp::WrappingAdd` and
   `BinOp::WrappingSub` on `u32` and `i32` operands. Both are aliases of `Add`
   and `Sub`, which the interpreter already evaluates with wrapping arithmetic

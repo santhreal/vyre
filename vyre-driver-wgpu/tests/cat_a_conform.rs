@@ -62,83 +62,15 @@ fn assert_gpu_matches_fixture(id: &'static str) {
             .unwrap_or_else(|error| {
                 panic!("Fix: GPU dispatch failed for {id} case {case_index}: {error}")
             });
-        let tolerance = fp_parity::effective_tolerance(entry.id, &program);
-        assert_outputs_match(&entry, tolerance, &outputs, expected_outputs, case_index);
-    }
-}
-
-fn assert_outputs_match(
-    entry: &SemanticOperation,
-    tolerance: u32,
-    actual: &[Vec<u8>],
-    expected: &[Vec<u8>],
-    case_index: usize,
-) {
-    assert_eq!(
-        actual.len(),
-        expected.len(),
-        "Fix: output buffer count mismatch for {} case {}",
-        entry.id,
-        case_index
-    );
-    for (buffer_index, (actual_bytes, expected_bytes)) in
-        actual.iter().zip(expected.iter()).enumerate()
-    {
-        assert_eq!(
-            actual_bytes.len(),
-            expected_bytes.len(),
-            "Fix: output byte count mismatch for {} case {} buffer {}",
-            entry.id,
-            case_index,
-            buffer_index
-        );
-        if tolerance == 0 {
-            assert_eq!(
-                actual_bytes, expected_bytes,
-                "GPU witness drift for {} case {} buffer {}",
-                entry.id, case_index, buffer_index
-            );
-            continue;
-        }
-
+        let parity =
+            fp_parity::compare_operation_outputs(entry.id, &program, &outputs, expected_outputs);
         assert!(
-            f32_buffer_matches(actual_bytes, expected_bytes, tolerance),
-            "GPU witness drift for {} case {} buffer {} exceeded {} ULPs",
+            matches!(&parity, fp_parity::BufferParity::Ok),
+            "GPU fixture drift for {} case {}: {:?}",
             entry.id,
             case_index,
-            buffer_index,
-            tolerance
+            parity
         );
-    }
-}
-
-fn f32_buffer_matches(actual: &[u8], expected: &[u8], max_ulp: u32) -> bool {
-    actual
-        .chunks_exact(4)
-        .zip(expected.chunks_exact(4))
-        .all(|(left, right)| {
-            let left = f32::from_bits(u32::from_le_bytes(left.try_into().expect("4 bytes")));
-            let right = f32::from_bits(u32::from_le_bytes(right.try_into().expect("4 bytes")));
-            left.to_bits() == right.to_bits()
-                || ulp_distance(left, right).is_some_and(|distance| distance <= max_ulp)
-        })
-}
-
-fn ulp_distance(left: f32, right: f32) -> Option<u32> {
-    if left.is_nan() || right.is_nan() {
-        return None;
-    }
-    let left = ordered_bits(left);
-    let right = ordered_bits(right);
-    Some(left.abs_diff(right))
-}
-
-fn ordered_bits(value: f32) -> u32 {
-    let bits = value.to_bits();
-    if bits & 0x8000_0000 != 0 {
-        !bits
-    } else {
-        bits | 0x8000_0000
     }
 }
 

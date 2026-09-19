@@ -706,9 +706,9 @@ pub fn f32_buffer_matches(bytes_a: &[u8], bytes_b: &[u8], tolerance: u32) -> boo
 }
 
 /// Sign-aware ULP distance between two same-signed finite f32 values.
-/// Returns `None` for NaN on either side.
+/// Returns `None` when either value is non-finite.
 pub fn ulp_distance(left: f32, right: f32) -> Option<u32> {
-    if left.is_nan() || right.is_nan() {
+    if !left.is_finite() || !right.is_finite() {
         return None;
     }
     let left = ordered_f32_bits(left);
@@ -783,6 +783,58 @@ mod output_ulp_tests {
             max_output_ulp(&program, &opposed_left, &opposed_right),
             Some(u32::MAX)
         );
+    }
+
+    /// WHY: adjacent IEEE encodings do not make a finite value equivalent to
+    /// infinity. Exercise both signs and argument orders at every ULP budget.
+    #[test]
+    fn finite_infinite_boundaries_are_never_rounding_drift() {
+        let program = one_f32_output_program();
+        for (finite, infinite) in [(f32::MAX, f32::INFINITY), (-f32::MAX, f32::NEG_INFINITY)] {
+            for (left, right) in [(finite, infinite), (infinite, finite)] {
+                assert_eq!(ulp_distance(left, right), None);
+                let a = vec![f32_bytes([left, 0.0])];
+                let b = vec![f32_bytes([right, 0.0])];
+                assert_eq!(max_output_ulp(&program, &a, &b), Some(u32::MAX));
+                for tolerance in [0, 1, BACKEND_TRANSCENDENTAL_ULP_BUDGET, u32::MAX] {
+                    assert!(!f32_buffer_matches(&a[0], &b[0], tolerance));
+                    assert!(matches!(
+                        compare_output_buffers_with_tolerance(&program, &a, &b, tolerance),
+                        BufferParity::Mismatch(_)
+                    ));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn nonfinite_identity_and_finite_neighbors_keep_their_declared_policy() {
+        for value in [f32::INFINITY, f32::NEG_INFINITY, f32::NAN, -f32::NAN] {
+            let bytes = value.to_le_bytes();
+            assert_eq!(ulp_distance(value, value), None);
+            assert!(f32_buffer_matches(&bytes, &bytes, 0));
+            assert!(f32_buffer_matches(&bytes, &bytes, 1));
+        }
+        for value in [1.0f32, -1.0, f32::MAX, -f32::MAX] {
+            let neighbor = f32::from_bits(value.to_bits() - 1);
+            assert_eq!(ulp_distance(value, neighbor), Some(1));
+            assert!(!f32_buffer_matches(
+                &value.to_le_bytes(),
+                &neighbor.to_le_bytes(),
+                0
+            ));
+            assert!(f32_buffer_matches(
+                &value.to_le_bytes(),
+                &neighbor.to_le_bytes(),
+                1
+            ));
+        }
+        let nan = f32::NAN.to_bits();
+        assert!(!f32_buffer_matches(
+            &nan.to_le_bytes(),
+            &(nan + 1).to_le_bytes(),
+            u32::MAX
+        ));
     }
 
     #[test]
