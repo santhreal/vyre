@@ -22,7 +22,9 @@
 //! widths of a program that carries no fence: a program whose every declared
 //! buffer is referenced is decided exactly as it was before.
 
-use vyre_driver::{dispatch_element_count_for_program, grid_sync::try_split_on_grid_sync, BindingPlan};
+use vyre_driver::{
+    dispatch_element_count_for_program, grid_sync::try_split_on_grid_sync, BindingPlan,
+};
 use vyre_foundation::ir::{BufferAccess, Program};
 
 /// Elements the chain decomposes into more than one pass at.

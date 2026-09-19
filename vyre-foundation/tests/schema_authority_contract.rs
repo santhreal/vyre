@@ -127,10 +127,13 @@ fn a_record_this_build_cannot_read_is_refused_for_every_schema() {
         let desc = SchemaAuthority::descriptor_for(id);
         let current = desc.current_version;
 
-        let accepted: TestRecord = BoundedDecoder::decode_json(id, &payload_at(&current.to_string()))
-            .unwrap_or_else(|error| {
-                panic!("{id:?} must read a record at its own current version {current}: {error}")
-            });
+        let accepted: TestRecord = BoundedDecoder::decode_json(
+            id,
+            &payload_at(&current.to_string()),
+        )
+        .unwrap_or_else(|error| {
+            panic!("{id:?} must read a record at its own current version {current}: {error}")
+        });
         assert_eq!(accepted.schema_version, current.to_string());
 
         for newer in [

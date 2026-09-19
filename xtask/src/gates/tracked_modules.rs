@@ -115,14 +115,14 @@ fn judge(
                 match present {
                     Some(path) => format!(
                         "stage it by name in the same commit as this declaration: git add -- {}",
-                        path.display()
+                        path.to_string_lossy().replace('\\', "/")
                     ),
                     None => format!(
                         "write {} or delete the declaration; a declaration with no file is a \
                          build failure for every checkout but this one",
                         candidates
                             .first()
-                            .map(|path| path.display().to_string())
+                            .map(|path| path.to_string_lossy().replace('\\', "/"))
                             .unwrap_or_else(|| name.clone())
                     ),
                 },

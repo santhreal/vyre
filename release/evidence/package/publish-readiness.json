@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"f260338e7befc5a1548808a1ba455fd7e98f74e9","commit_timestamp":"1789412520","parent_commit":"d721abc334867b0ecc75581a169a6a697304fe0a","dirty":false,"source_fingerprint":"git:f260338e7befc5a1548808a1ba455fd7e98f74e9:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"52d4eee74eb5d4e7b4d1d06af3d797fc32b9ee84","commit_timestamp":"1789455447","parent_commit":"f796abdf9925c597ae86cc5281497f156fc9e872","dirty":true,"source_fingerprint":"git:52d4eee74eb5d4e7b4d1d06af3d797fc32b9ee84:dirty=true:worktree=7ebac912d2e8dafb2bcb8f3a3f1bccb2f3018cc91e8cf2ca0946429adef143dc"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 3,
   "release_train": {
     "vyre": "0.8.0",
@@ -1977,8 +1977,8 @@
       "package": "vyre-reference",
       "manifest": "vyre-reference/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 156,
-      "file_list_digest": "blake3:5cdbdf31ada57aa327e35715c9010317cff60bc965fdfc78e653cc0c42d914ab",
+      "file_count": 159,
+      "file_list_digest": "blake3:51974ddb10e0912410d133807a6c76ce64b7b3352a4c3711cbf0cd140648ece6",
       "rust_source_count": 64,
       "missing_required_files": [],
       "forbidden_files": [],
@@ -2001,8 +2001,8 @@
       "package": "vyre-runtime",
       "manifest": "vyre-runtime/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 216,
-      "file_list_digest": "blake3:676ace910c63d7bf87749ea237e35ff202a9ced36cbb85888d4aac6e9ff9e9b8",
+      "file_count": 217,
+      "file_list_digest": "blake3:33be86c7ef99d35e40fa70092f947f25a7159902ed3d012ac74145906f7ae232",
       "rust_source_count": 128,
       "missing_required_files": [],
       "forbidden_files": [],

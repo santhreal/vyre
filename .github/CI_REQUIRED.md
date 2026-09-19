@@ -27,6 +27,8 @@ The `ci-required` gate holds this list to the workflows that define it, and
 ## From `gpu-parity.yml` (run on self-hosted GPU runner)
 - `GPU release gate`
 
+GPU workflows require the `self-hosted`, `gpu`, and `axiomexec` runner labels.
+
 ## Scheduled or Manual Deep Gates
 
 Not blocking on individual PRs. Tracked in cycle reports.

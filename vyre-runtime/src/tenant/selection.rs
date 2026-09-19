@@ -44,11 +44,10 @@ impl TenantRegistry {
     ) {
         out.clear();
         scratch.active_ids.clear();
-        scratch.active_ids.reserve(self.tenants.len());
-        self.tenants
-            .iter()
-            .map(|entry| entry.value().id())
-            .for_each(|id| scratch.active_ids.push(id));
+        let tenants = self.read_tenants();
+        scratch.active_ids.reserve(tenants.len());
+        scratch.active_ids.extend(tenants.keys().copied());
+        drop(tenants);
         scratch.active_ids.sort_unstable();
         let n = scratch.active_ids.len();
         if n == 0 {

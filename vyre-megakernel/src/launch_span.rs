@@ -66,9 +66,7 @@ fn declared_span(program: &Program) -> u32 {
             .filter(|buffer| {
                 buffer.kind() != MemoryKind::Shared && buffer.access() != BufferAccess::Workgroup
             })
-            .filter(|buffer| {
-                !named || referenced.iter().any(|name| name.as_ref() == buffer.name())
-            })
+            .filter(|buffer| !named || referenced.iter().any(|name| name.as_ref() == buffer.name()))
             .map(|buffer| {
                 buffer
                     .count()
@@ -236,11 +234,7 @@ mod tests {
                 Expr::lt(Expr::var("idx"), Expr::u32(domain)),
                 vec![Node::let_bind(
                     "prior",
-                    Expr::atomic_add(
-                        "sum",
-                        Expr::u32(0),
-                        Expr::load("values", Expr::var("idx")),
-                    ),
+                    Expr::atomic_add("sum", Expr::u32(0), Expr::load("values", Expr::var("idx"))),
                 )],
             ),
         ];
@@ -270,7 +264,10 @@ mod tests {
     /// invocation, so its count states nothing about how many run.
     #[test]
     fn coverage_ignores_a_declaration_no_statement_names() {
-        assert_eq!(required_coverage(&inherited_table(4096, 1 << 20, false)), 4096);
+        assert_eq!(
+            required_coverage(&inherited_table(4096, 1 << 20, false)),
+            4096
+        );
     }
 
     /// WHY: the filter above has to admit what the program does name, or a

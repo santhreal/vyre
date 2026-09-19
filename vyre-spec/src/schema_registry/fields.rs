@@ -18,6 +18,120 @@ pub(super) const SCHEMA_VERSION_FIELD: CanonicalField = CanonicalField {
     required: true,
 };
 
+/// Canonical field order of the shared structured diagnostic record.
+///
+/// `schema_version`, `severity`, `code` and `stage` form the identity: two
+/// renderings of one failure are the same record when those four agree, and
+/// every other field is context the surfaces render around them.
+pub(super) static DIAGNOSTIC_RECORD_FIELDS: &[CanonicalField] = &[
+    SCHEMA_VERSION_FIELD,
+    CanonicalField {
+        number: 2,
+        name: "severity",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 3,
+        name: "code",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 4,
+        name: "stage",
+        field_type: FieldType::Utf8String,
+        is_identity: true,
+        required: true,
+    },
+    CanonicalField {
+        number: 5,
+        name: "compiler_level",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 6,
+        name: "message",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: true,
+    },
+    CanonicalField {
+        number: 7,
+        name: "location",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 8,
+        name: "artifact_id",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 9,
+        name: "target",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 10,
+        name: "device",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 11,
+        name: "suggested_fix",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 12,
+        name: "cause_chain",
+        field_type: FieldType::List(&FieldType::Utf8String),
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 13,
+        name: "retry",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: true,
+    },
+    CanonicalField {
+        number: 14,
+        name: "context_values",
+        field_type: FieldType::List(&FieldType::Utf8String),
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 15,
+        name: "doc_url",
+        field_type: FieldType::Utf8String,
+        is_identity: false,
+        required: false,
+    },
+    CanonicalField {
+        number: 16,
+        name: "notes",
+        field_type: FieldType::List(&FieldType::Utf8String),
+        is_identity: false,
+        required: false,
+    },
+];
+
 pub(super) static CONFORMANCE_CERT_FIELDS: &[CanonicalField] = &[
     CanonicalField {
         number: 1,

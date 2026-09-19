@@ -1,9 +1,9 @@
 //! The registry that issues tenant ids and opcode windows.
 
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use dashmap::DashMap;
+use rustc_hash::FxHashMap;
 
 use crate::resident_work_queue::protocol::opcode::SHUTDOWN;
 use crate::{CounterArithmetic, CounterScope, PipelineError};
@@ -20,8 +20,8 @@ pub(super) const MAX_TENANT_OPCODE_WINDOWS: u32 =
 
 /// Thread-safe tenant registry. One per megakernel instance.
 pub struct TenantRegistry {
-    pub(super) tenants: DashMap<u32, TenantHandle>,
-    pub(super) generations: DashMap<u32, u32>,
+    tenants: RwLock<FxHashMap<u32, TenantHandle>>,
+    generations: Mutex<FxHashMap<u32, u32>>,
     pub(super) free_list: std::sync::Mutex<Vec<u32>>,
     pub(super) next_id: AtomicU32,
 }
@@ -29,8 +29,8 @@ pub struct TenantRegistry {
 impl Default for TenantRegistry {
     fn default() -> Self {
         Self {
-            tenants: DashMap::new(),
-            generations: DashMap::new(),
+            tenants: RwLock::new(FxHashMap::default()),
+            generations: Mutex::new(FxHashMap::default()),
             free_list: std::sync::Mutex::new(Vec::new()),
             next_id: AtomicU32::new(0),
         }
@@ -38,6 +38,32 @@ impl Default for TenantRegistry {
 }
 
 impl TenantRegistry {
+    /// Preserve issued handles across a panic; dropping the map would lose
+    /// the only record of handles that callers may still hold.
+    pub(super) fn read_tenants(&self) -> RwLockReadGuard<'_, FxHashMap<u32, TenantHandle>> {
+        vyre_foundation::failure_domain::reclaim_poisoned_read(
+            &self.tenants,
+            "runtime tenant registry",
+            "issued tenant handles",
+        )
+    }
+
+    fn write_tenants(&self) -> RwLockWriteGuard<'_, FxHashMap<u32, TenantHandle>> {
+        vyre_foundation::failure_domain::reclaim_poisoned_write(
+            &self.tenants,
+            "runtime tenant registry",
+            "issued tenant handles",
+        )
+    }
+
+    fn lock_generations(&self) -> MutexGuard<'_, FxHashMap<u32, u32>> {
+        vyre_foundation::failure_domain::reclaim_poisoned_mutex(
+            &self.generations,
+            "runtime tenant registry",
+            "issued tenant generations",
+        )
+    }
+
     /// Take the free list, rebuilding it from the live tenant map after a panic.
     ///
     /// The list is a derived index: the canonical input is `next_id` and the
@@ -51,8 +77,9 @@ impl TenantRegistry {
             |free_list| {
                 free_list.clear();
                 let current_next = self.next_id.load(Ordering::Relaxed);
+                let tenants = self.read_tenants();
                 for id in (1..current_next).rev() {
-                    if !self.tenants.contains_key(&id) {
+                    if !tenants.contains_key(&id) {
                         free_list.push(id);
                     }
                 }
@@ -143,7 +170,8 @@ impl TenantRegistry {
         let (id, generation) = {
             let mut free = self.lock_free_list();
             if let Some(recycled_id) = free.pop() {
-                let mut entry = self.generations.entry(recycled_id).or_insert(1);
+                let mut generations = self.lock_generations();
+                let entry = generations.entry(recycled_id).or_insert(1);
                 *entry = entry.wrapping_add(1).max(1);
                 (recycled_id, *entry)
             } else {
@@ -184,7 +212,7 @@ impl TenantRegistry {
                     },
                 )?;
                 let id = issued.max(1);
-                self.generations.insert(id, 1);
+                self.lock_generations().insert(id, 1);
                 (id, 1)
             }
         };
@@ -227,7 +255,7 @@ impl TenantRegistry {
                 label: label.into(),
             }),
         };
-        self.tenants.insert(id, handle.clone());
+        self.write_tenants().insert(id, handle.clone());
         Ok(handle)
     }
 
@@ -236,7 +264,7 @@ impl TenantRegistry {
     /// the GPU still execute  -  the host is responsible for
     /// quiescing before unregister if it needs that guarantee.
     pub fn unregister(&self, tenant_id: u32) -> Option<TenantHandle> {
-        let (_, handle) = self.tenants.remove(&tenant_id)?;
+        let handle = self.write_tenants().remove(&tenant_id)?;
         handle.state.revoked.store(1, Ordering::Release);
         handle.release_all_resource_reservations();
         let mut free = self.lock_free_list();
@@ -254,3 +282,7 @@ impl crate::StateOwnerRecovery for TenantRegistry {
         crate::RecoveryClass::RestartableFromCanonicalInput
     }
 }
+
+#[cfg(test)]
+#[path = "../../tests/internal/tenant_registry_synchronization.rs"]
+mod synchronization_tests;

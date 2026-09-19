@@ -82,7 +82,7 @@ pub fn sites(report: &crate::gate::Report) -> Vec<String> {
                 finding
                     .file
                     .as_ref()
-                    .map(|path| path.display().to_string())
+                    .map(|path| path.to_string_lossy().replace('\\', "/"))
                     .unwrap_or_default(),
                 finding.line.unwrap_or_default()
             )
@@ -102,7 +102,7 @@ pub fn files(report: &crate::gate::Report) -> Vec<String> {
             finding
                 .file
                 .as_ref()
-                .map(|path| path.display().to_string())
+                .map(|path| path.to_string_lossy().replace('\\', "/"))
                 .unwrap_or_default()
         })
         .collect()

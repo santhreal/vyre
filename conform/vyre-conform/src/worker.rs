@@ -28,6 +28,7 @@ pub const MAX_WORKER_REQUEST_BYTES: u64 = 67_108_864;
 pub const MAX_WORKER_BINARY_BYTES: u64 = 1_073_741_824;
 
 /// Bound on one `/proc` line read for a memory estimate.
+#[cfg(target_os = "linux")]
 const MAX_PROC_STATM_BYTES: u64 = 4_096;
 
 /// Run the worker stdio loop: read request from stdin, execute, write receipt to stdout.
@@ -325,6 +326,7 @@ fn estimate_process_memory() -> u64 {
     /// The resident-set estimate when `/proc` does not answer.
     const ASSUMED_RESIDENT_BYTES: u64 = 1_048_576;
     /// Bytes per page in the `statm` counts.
+    #[cfg(target_os = "linux")]
     const PAGE_BYTES: u64 = 4_096;
 
     #[cfg(target_os = "linux")]

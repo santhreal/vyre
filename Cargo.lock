@@ -4244,7 +4244,6 @@ version = "0.8.0"
 dependencies = [
  "blake3",
  "bytemuck",
- "dashmap",
  "libc",
  "proptest",
  "rustc-hash 2.1.3",

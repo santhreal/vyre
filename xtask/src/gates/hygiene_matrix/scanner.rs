@@ -61,7 +61,7 @@ pub(crate) const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
 /// a scan that answered it differently would hold one tree to a rule it did not
 /// hold the other to.
 pub(crate) fn is_test_source_path(path: &Path) -> bool {
-    let path = path.display().to_string();
+    let path = path.to_string_lossy().replace('\\', "/");
     path.contains("/tests/")
         || path.contains("/benches/")
         || path.contains("/examples/")
@@ -119,7 +119,7 @@ pub(crate) fn scan_source_inspection_test_files(
         if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
             continue;
         }
-        let path_string = path.display().to_string();
+        let path_string = path.to_string_lossy().replace('\\', "/");
         let is_test_file = path_string.contains("/tests/")
             || path_string.ends_with("/tests.rs")
             || path_string.ends_with("_test.rs")

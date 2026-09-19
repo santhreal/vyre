@@ -678,6 +678,7 @@ fn changed_shard_length_fails_before_digest_verification() {
 }
 
 /// Proves transactional checkpoint handles protect against symlink swaps after verification.
+#[cfg(unix)]
 #[test]
 fn symlink_swap_between_verification_and_binding_reads_original_verified_content() {
     let temp = tempfile::tempdir().expect("tempdir");

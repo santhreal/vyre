@@ -17,6 +17,7 @@
 
 #![forbid(unsafe_code)]
 
+#[cfg(unix)]
 use std::path::Path;
 #[cfg(target_os = "linux")]
 use std::process::Command;
@@ -42,6 +43,7 @@ fn fp_from_seed(seed: u8) -> PipelineFingerprint {
 }
 
 /// Fixed fingerprint for tests that need a stable path name.
+#[cfg(unix)]
 fn dead_fp() -> PipelineFingerprint {
     PipelineFingerprint([0u8; 32])
 }

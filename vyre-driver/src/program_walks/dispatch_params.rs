@@ -34,7 +34,11 @@ pub fn dispatch_element_count(bindings: &[Binding]) -> u32 {
 pub fn dispatch_element_count_for_program(program: &Program, bindings: &[Binding]) -> u32 {
     let full_span = vyre_foundation::launch_covers_full_input_span(program);
     let referenced = vyre_foundation::visit::referenced_buffers(program);
-    let names = |binding: &Binding| referenced.iter().any(|name| name.as_ref() == &*binding.name);
+    let names = |binding: &Binding| {
+        referenced
+            .iter()
+            .any(|name| name.as_ref() == &*binding.name)
+    };
     let count = match dispatch_element_count_over(bindings, full_span, &names) {
         // A plan whose names never meet the program's carries no narrowing, so
         // the whole plan decides it as it did before.

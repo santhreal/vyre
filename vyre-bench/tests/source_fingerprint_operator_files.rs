@@ -230,6 +230,47 @@ fn every_compiled_in_document_keys_the_measurement() {
     }
 }
 
+/// WHY: canonical include paths and lexical workspace paths differ on Windows
+/// and when the workspace path contains parent components.
+#[test]
+fn compiled_documents_use_the_same_path_identity_as_the_workspace() {
+    let workspace = workspace();
+    write_fixture(
+        workspace.path(),
+        "src/lib.rs",
+        b"const TEXT: &str = include_str!(\"../data/table.toml\");\n\
+          const BYTES: &[u8] = include_bytes!(\"../data/table.bin\");\n",
+    );
+    write_fixture(workspace.path(), "data/table.toml", b"value = 1\n");
+    write_fixture(workspace.path(), "data/table.bin", &[1, 2]);
+    let output = Command::new("git")
+        .args(["add", "--", "src/lib.rs"])
+        .current_dir(workspace.path())
+        .output()
+        .expect("Fix: track the compiled-document fixture.");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    for root in [
+        workspace.path().to_path_buf(),
+        workspace.path().join("src").join(".."),
+        workspace
+            .path()
+            .canonicalize()
+            .expect("Fix: resolve the fixture root."),
+    ] {
+        assert_eq!(
+            compiled_in_paths(&root),
+            ["data/table.bin", "data/table.toml"],
+            "compiled documents must be workspace-relative for {}",
+            root.display()
+        );
+    }
+}
+
 /// Workspace-relative paths a runtime crate compiles in with `include_str!` or
 /// `include_bytes!`, excluding a crate's own sources.
 ///
@@ -237,6 +278,10 @@ fn every_compiled_in_document_keys_the_measurement() {
 /// into a benchmarked binary, so what it compiles in does not key a
 /// measurement either.
 fn compiled_in_paths(root: &Path) -> Vec<String> {
+    let canonical_root = root
+        .canonicalize()
+        .expect("Fix: resolve the workspace root.");
+    let root = canonical_root.as_path();
     let mut found: Vec<String> = Vec::new();
     for source in runtime_rust_sources(root) {
         let text = fs::read_to_string(&source).unwrap_or_default();

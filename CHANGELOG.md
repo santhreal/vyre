@@ -6346,6 +6346,25 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A guard written against a logical-index local that a loop body reassigns no
   longer narrows the launch, so a program whose later iterations index beyond
   the guard keeps every lane it needs.
+- `BoundedDecoder::decode_json` refuses a payload whose declared
+  `schema_version` falls outside the range the descriptor reads, instead of
+  decoding it. The decoder checked only the payload's size, so every persisted,
+  cached, signed and transmitted schema in the authority was readable across a
+  version boundary and `SchemaAuthorityError::IncompatibleVersion` was never
+  returned, even though the exported JSON Schema declares `schema_version`
+  required and pinned. A payload that states no version, or one that is not a
+  `Major.Minor.Patch` triple, is refused rather than assumed current.
+  `SchemaDescriptor::admits` states the admission decision and `SchemaId::ALL`
+  enumerates the schemas it applies to.
+- `BundleCertificate` no longer declares `vyre-conformance-certificate-v1` as
+  one of its own retired record tags. That tag belongs to the conformance
+  certificate lineage, so two schemas retired one tag and neither recorded the
+  bundle's actual previous spelling, which is now `vyre-bundle-certificate-v1`.
+  `SchemaRegistry::tag_authority_violations` reports every way a
+  `domain_separator` and a `stale_fixtures` entry can collide in their shared
+  string namespace: a tag live for one schema and retired by another, two
+  schemas sharing a separator, one tag retired twice, and a `semver` bump that
+  never reached the version the separator carries into the digest.
 - A per-backend conformance artifact recorded under an older shape is now
   reported as stale, naming both the version it carries and the version the
   reader holds, instead of as unparseable JSON. Three committed artifacts
@@ -6711,6 +6730,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   branch whose condition is not lane-uniform reads its peers at the same
   program point instead of reading a value from another iteration or refusing a
   local the program binds.
+- A subgroup reduction now folds its lanes in the order the explored schedule
+  steps them, so an f32 `Add` or `Mul` reduction whose result depends on the
+  association is reported as a schedule disagreement instead of certified. The
+  interpreter folded ascending lane index under every explored order, which
+  made one association the expected output: a device that reduced in a
+  shuffle-down tree was graded against an answer no hardware has to produce.
+  `SubgroupReduceOp::is_f32_order_independent` records which operators may
+  disagree, and ballot and shuffle are unchanged because both address lanes by
+  identity rather than by fold position.
 - A workflow step that runs the gate sweep with --subset credits the gates in
   that subset and no others. Recording the bare sweep for it gave every
   registered gate a workflow, so a gate no workflow selects could not be
@@ -7082,6 +7110,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   declared. Each now names an exact byte constant, which also removes the codec
   and its sizing helpers from the set of host functions reachable from a
   registration.
+- `docs-check` reads an active page written for a reader outside this
+  repository for internal-process vocabulary whether that page is authored or
+  generated. The check ran only on authored pages, so the generated half of the
+  generation union went unread and a generator that wrote a private plan name,
+  a `local://` target or a numbered phase into a user-facing page published it
+  with no finding. A generated page is rewritten on the next run of its
+  generator, so the repair for one names that generator and the source it reads
+  rather than the page.
 - An f32 literal reaches a materializer with every bit intact.
   `LiteralValue::F32` was written as a JSON number inside the target-module
   bundle, and JSON has no non-finite number, so a lowering that seeds a running
@@ -9017,6 +9053,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre-driver-wgpu` and `vyre-runtime` now discard and clear half-mutated
   internal state on lock poison recovery instead of reusing unvalidated
   entries.
+- Host validation normalizes Windows paths, resolves baseline fixtures from the
+  active checkout, and excludes Linux-only worker constants from other platform
+  builds.
 - The structural-gate registry now declares every post-dispatch oracle mutation
   and decoder-boundary test added to the host-oracle elimination gate.
 - The `types` feature of `vyre-primitives` now depends on `vyre-foundation`,
@@ -9405,6 +9444,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   interpreter. The leaf table is checked against the operation ids declared
   under `vyre-libs/src/rule` on each run, so a twelfth predicate turns the
   suite red until it is pinned.
+- Runtime tenant registries and disk-cache flush queues use standard-library
+  locks, preserve pending state after lock poisoning, and retain writes queued
+  during a flush.
 - Retained artifact session submissions now hold the retained state mutex
   across submission to ensure serialized atomic transitions, tenant quiesce
   validates drain conditions before declaring a timeout and prevents
@@ -9587,6 +9629,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   registry at run time and run through every safety rule, including reversed
   and rotated lane orders, so a new intrinsic cannot arrive with a witness
   program no gate executes.
+- Tensor-train fusion rejects oversized ranks before allocating or modifying
+  caller-owned scratch storage.
 - The panic budget reads a module gated behind cfg(test) as test code, derived
   from the declarations the tree writes, so a fixture module no shipped build
   compiles no longer counts against its crate.
@@ -9844,6 +9888,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   operation it could not measure with its stage, its backend and its detail. It
   aborted on the first missing fixture or refused dispatch, so the summary
   counters described a sweep that had stopped early.
+- `DiagnosticPermissiveReport::output_digest` is now `run_digest` and is hashed
+  under a permissive-run label. Diagnostic permissive mode issues no expected
+  output, and an unlabeled blake3 over the output bytes was one: a caller
+  hashed a device's outputs the same way and compared, which grades that device
+  against a mode whose bytes were produced while out-of-bounds accesses were
+  absorbed rather than refused. The label is mixed in before any output byte,
+  so the published value is unreachable from a device's outputs, while two
+  permissive runs of one program still agree.
 - The persistent-engine ring resolves a slot through one masked index instead
   of four fallible array lookups that disagreed about a missing element: two
   reported a full queue, one reported an empty one, and none had observed
@@ -9890,6 +9942,22 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   dispatch` selects the oracle with `--oracle` instead of a backend spelling,
   and the release gate converts the legacy `cpu-ref` label where it reads a
   recorded report.
+- The reference oracle refuses a subgroup collective whose argument writes
+  memory instead of evaluating that argument once per lane per lane. A
+  collective gathers every lane in the subgroup and every lane reaches the
+  collective, so the argument ran width times per lane. Buffer bytes sit behind
+  a shared handle, so a 32-lane `subgroupAdd(atomicAdd(counter, 1))` committed
+  1024 times where a device commits 32, and each lane received a different
+  reduction (496, 1520, 2544, ...) where every lane of a subgroup reads the
+  same sum. How many commits land is a property of how the interpreter gathers
+  lanes rather than of the program, so the request returns an
+  incomplete-dispatch refusal and no expected output, in strict and diagnostic
+  permissive mode alike. A pure argument is unaffected, and the lane gather no
+  longer copies both buffer maps once per lane because the copy isolated
+  nothing. A dispatch that gathers a single lane is also unaffected: the
+  argument is evaluated once, commits once, and the device commits once, so the
+  reduction over that one value is exact and is issued. The refusal is decided
+  once per collective from the gathered lane count rather than once per lane.
 - The cpu-ref backend reports whole-grid synchronization. The interpreter
   already runs the whole grid through one inter-fence segment before the next,
   and reporting otherwise cut every fenced program into segments a one-shot
@@ -10298,6 +10366,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   arrayref release back to 0.3.5 was yanked, and it depends on proc-macro1,
   whose build script disables TLS verification, downloads a per-platform binary
   to /tmp/rust-setup, and spawns it.
+- The pinned rustls moves from 0.23.40 to 0.23.45, which rejects a TLS 1.3
+  handshake message sent at the wrong encryption level. The earlier release
+  accepted a handshake message that followed a key-changing message in the same
+  record, so a plaintext `EncryptedExtensions` packed into the `ServerHello`
+  record was accepted where RFC 8446 section 5.1 requires an
+  `unexpected_message` alert. The transcript stays authenticated, so the
+  handshake could not be altered or completed by a network-position attacker.
+  rustls reaches this workspace through ureq in the runtime crate. See
+  RUSTSEC-2026-0285.
 
 ## [0.7.1] - 2026-08-01
 

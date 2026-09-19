@@ -9,6 +9,36 @@
 use super::*;
 use std::path::Path;
 
+/// The scanner must classify and report the same path on Unix and Windows.
+/// This covers separator handling, not filesystem case sensitivity.
+#[test]
+fn source_inspection_paths_are_portable() {
+    let source = r#"
+        #[test]
+        fn inspects_source() {
+            let source = include_str!("owner.rs");
+            assert!(source.contains("fn helper"));
+        }
+    "#;
+    for relative in [
+        "pkg/tests/contract.rs",
+        "pkg/benches/contract.rs",
+        "pkg/examples/contract.rs",
+        "pkg/src/tests.rs",
+        "pkg/src/contract_tests.rs",
+    ] {
+        for spelling in [relative.to_string(), relative.replace('/', "\\")] {
+            let path = Path::new(&spelling);
+            assert!(is_test_source_path(path), "{spelling}");
+            let mut findings = Vec::new();
+            scan_source_inspection_tests(path, source, &mut findings);
+            assert_eq!(findings.len(), 1, "{spelling}");
+            assert_eq!(findings[0].path, relative);
+            assert_eq!(findings[0].pattern, "source_inspection_test");
+        }
+    }
+}
+
 #[test]
 fn source_inspection_test_scanner_is_syntax_aware_and_fail_closed() {
     let forbidden = r#"

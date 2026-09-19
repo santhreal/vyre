@@ -84,14 +84,15 @@ pub fn fusion_pressure_via_with_scratch(
         return Ok(0.0);
     }
 
-    scratch.acc.clear();
-    scratch.acc.push(1);
     let max_rank = shared_buffer_ranks
         .iter()
         .copied()
         .filter(|&rank| rank != 0)
         .max()
-        .unwrap_or(1) as usize;
+        .unwrap_or(1);
+    let max_rank = bounded_core_cells(1, max_rank, "maximum rank")?;
+    scratch.acc.clear();
+    scratch.acc.push(1);
     reserve_vec_capacity(
         &mut scratch.acc,
         max_rank,
@@ -366,6 +367,42 @@ mod tests {
             scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>(),
             input_capacities
         );
+    }
+
+    /// Reject oversized ranks before changing or reserving caller-owned scratch.
+    /// This covers allocator-independent admission, not backend execution errors.
+    #[test]
+    fn oversized_ranks_leave_scratch_unchanged() {
+        for ranks in [
+            vec![MAX_TT_DISPATCH_CELLS + 1],
+            vec![0, MAX_TT_DISPATCH_CELLS + 1],
+            vec![2, MAX_TT_DISPATCH_CELLS + 1, 0],
+            vec![u32::MAX],
+        ] {
+            let mut scratch = TensorTrainFusionGpuScratch {
+                acc: vec![7],
+                step_out: vec![9],
+                ..Default::default()
+            };
+            let capacities = (scratch.acc.capacity(), scratch.step_out.capacity());
+            let error = fusion_pressure_via_with_scratch(
+                &ReferenceDispatcher,
+                &vyre_test_support::test_parity_oracles::policy(),
+                &ranks,
+                &mut scratch,
+            )
+            .expect_err("oversized ranks must fail admission");
+            assert!(
+                matches!(&error, SemanticExecutionError::InvalidRequest(message)
+                if message.contains("maximum rank") && message.contains("refuses to allocate"))
+            );
+            assert_eq!(scratch.acc, [7]);
+            assert_eq!(scratch.step_out, [9]);
+            assert_eq!(
+                (scratch.acc.capacity(), scratch.step_out.capacity()),
+                capacities
+            );
+        }
     }
 
     #[test]

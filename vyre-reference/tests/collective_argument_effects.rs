@@ -143,23 +143,21 @@ fn the_permissive_mode_issues_no_output_for_an_effectful_collective() {
         &collective_over_an_atomic(),
         &atomic_program_inputs(),
     )
-        .execute_permissive()
-        .expect_err(
-            "permissive mode absorbs out-of-bounds access only, so an effectful collective \
+    .execute_permissive()
+    .expect_err(
+        "permissive mode absorbs out-of-bounds access only, so an effectful collective \
              argument stays a refusal rather than becoming a recorded anomaly",
-        );
+    );
 }
 
 /// A pure collective argument still evaluates, and still to the right value.
 #[test]
 fn a_pure_collective_argument_still_evaluates() {
     let src: Vec<u8> = (0..LANES).flat_map(|lane| lane.to_le_bytes()).collect();
-    let outputs = vyre_reference::ReferenceRequest::standard(
-        &collective_over_a_load(),
-        &[Value::from(src)],
-    )
-    .outputs()
-    .expect("a load under a collective is pure and has one defined answer");
+    let outputs =
+        vyre_reference::ReferenceRequest::standard(&collective_over_a_load(), &[Value::from(src)])
+            .outputs()
+            .expect("a load under a collective is pure and has one defined answer");
     let sum: u32 = (0..LANES).sum();
     assert_eq!(
         words(&outputs, 0),

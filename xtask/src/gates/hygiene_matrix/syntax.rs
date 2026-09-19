@@ -528,7 +528,7 @@ pub(crate) fn scan_source_inspection_tests(
     };
     for (line, test) in source_inspection_test_findings(&file) {
         findings.push(HygieneFinding {
-            path: path.display().to_string(),
+            path: path.to_string_lossy().replace('\\', "/"),
             line,
             pattern: "source_inspection_test",
             text: format!(

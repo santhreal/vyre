@@ -394,7 +394,8 @@ fn no_segment_inherits_the_whole_program_grid() {
                  it launches every pass at the widest pass's width"
             );
             assert_eq!(
-                *block, Some(workgroup),
+                *block,
+                Some(workgroup),
                 "{authority}: segment {index} lost the block shape the compiled module declares"
             );
         }

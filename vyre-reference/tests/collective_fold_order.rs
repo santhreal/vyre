@@ -102,7 +102,11 @@ fn pack_f32(lanes: &[f32]) -> Value {
 }
 
 /// Raw output bytes of the single declared output buffer.
-fn output_bytes(program: &Program, inputs: &[Value], policy: DeterministicSchedulePolicy) -> Vec<u8> {
+fn output_bytes(
+    program: &Program,
+    inputs: &[Value],
+    policy: DeterministicSchedulePolicy,
+) -> Vec<u8> {
     ReferenceRequest::standard(program, inputs)
         .with_schedule_policy(policy)
         .outputs()
