@@ -56,8 +56,8 @@ pub fn reference_mutation_observation(program: &Program) -> Result<MutationObser
         .with_grid([1, 1, 1])
         .outputs()
         .map_err(|error| error.to_string())?;
-    let request = ReferenceRequest::new(program, &[], ReferenceBudget::bounded(100_000))
-        .with_grid([1, 1, 1]);
+    let request =
+        ReferenceRequest::new(program, &[], ReferenceBudget::bounded(100_000)).with_grid([1, 1, 1]);
     let declared_orders = request.declared_race_exploration_orders();
     let races = request.explore_races().map_err(|error| error.to_string())?;
     if races.orders_explored != declared_orders {
