@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"956e5380ef0567214833a06e21d408b485495f5b","commit_timestamp":"1789106722","parent_commit":"7a6de622ef191cf7a9b79fca5d3d23f5f4ca6d97","dirty":false,"source_fingerprint":"git:956e5380ef0567214833a06e21d408b485495f5b:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"b8493856e921ee74bac1e52ea7150410f3f55737","commit_timestamp":"1789794388","parent_commit":"9307a159ffd9c00917510ac561f6bdda06c07eb1","dirty":false,"source_fingerprint":"git:b8493856e921ee74bac1e52ea7150410f3f55737:dirty=false"},"host":{"state":"recorded","hostname":"santhserver","os":"linux","architecture":"x86_64","cpu_model":"11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz","cpu_cores":1},"measurement":{"state":"host_only"}},
   "schema_version": 4,
   "backend_id": "reference-oracle",
   "command": "cargo_full run -p vyre-conform --release --bin vyre-conform -- dispatch --oracle --ops all",

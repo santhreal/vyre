@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"908172a2b7c535d690f0c4dc2a234a43b0e39699","commit_timestamp":"1789370872","parent_commit":"780f9ed27f41773b7128f3ea8ad552324771803f","dirty":false,"source_fingerprint":"git:908172a2b7c535d690f0c4dc2a234a43b0e39699:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"6e21d1295a1737d0521f84eb466ca869c78bb93a","commit_timestamp":"1789811415","parent_commit":"34e62e7fec6a3a11604739fdf6b8a682d165ec3f","dirty":false,"source_fingerprint":"git:6e21d1295a1737d0521f84eb466ca869c78bb93a:dirty=false"},"host":{"state":"recorded","hostname":"santhserver","os":"linux","architecture":"x86_64","cpu_model":"11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz","cpu_cores":1},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 3080 Ti","driver_version":"580.173.02"}]}},
   "schema_version": 3,
   "cuda_first": true,
   "wgpu_fallback_present": true,
@@ -8,15 +8,15 @@
   "gpu_probe": {
     "nvidia_smi_ok": true,
     "nvidia_smi_devices": [
-      "GPU 0: NVIDIA GeForce RTX 4090 (UUID: GPU-8859fa47-56e3-5c4c-27dd-f537b778ca37)"
+      "GPU 0: NVIDIA GeForce RTX 3080 Ti (UUID: GPU-1a712ff2-2809-aae9-3889-68a9e34c2a4e)"
     ],
     "nvidia_smi_device_details": [
       {
-        "name": "NVIDIA GeForce RTX 4090",
+        "name": "NVIDIA GeForce RTX 3080 Ti",
         "driver_version": "580.173.02",
-        "memory_total_mib": 24564,
+        "memory_total_mib": 12288,
         "compute_capability_major": 8,
-        "compute_capability_minor": 9
+        "compute_capability_minor": 6
       }
     ],
     "nvidia_driver_version": "580.173.02",
@@ -442,7 +442,7 @@
       "backend_id": "cuda",
       "capability_id": "live-sm-release-floor",
       "probe_source": "nvidia-smi --query-gpu=compute_cap",
-      "probed_value": "sm_89",
+      "probed_value": "sm_86",
       "supported": true,
       "unsupported_reason": null,
       "fix": "Fix: repair CUDA driver/device visibility or route release benchmarks to a supported NVIDIA GPU."
@@ -451,7 +451,7 @@
       "backend_id": "cuda",
       "capability_id": "live-memory-release-floor",
       "probe_source": "nvidia-smi --query-gpu=memory.total",
-      "probed_value": "24564 MiB",
+      "probed_value": "12288 MiB",
       "supported": true,
       "unsupported_reason": null,
       "fix": "Fix: run release benchmark evidence on a CUDA GPU with at least 2048 MiB VRAM, which is the largest registered workload plus its CUDA context."

@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"52d4eee74eb5d4e7b4d1d06af3d797fc32b9ee84","commit_timestamp":"1789455447","parent_commit":"f796abdf9925c597ae86cc5281497f156fc9e872","dirty":true,"source_fingerprint":"git:52d4eee74eb5d4e7b4d1d06af3d797fc32b9ee84:dirty=true:worktree=7ebac912d2e8dafb2bcb8f3a3f1bccb2f3018cc91e8cf2ca0946429adef143dc"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"6e21d1295a1737d0521f84eb466ca869c78bb93a","commit_timestamp":"1789811415","parent_commit":"34e62e7fec6a3a11604739fdf6b8a682d165ec3f","dirty":false,"source_fingerprint":"git:6e21d1295a1737d0521f84eb466ca869c78bb93a:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -1126,18 +1126,6 @@
       "text": "panic!(\"Fix: no `pub enum DataType` declaration in {path:?}; update this enumeration\")"
     },
     {
-      "path": "vyre-test-support/src/differential_matrix.rs",
-      "line": 71,
-      "pattern": "unwrap_call",
-      "text": "let r_bits = u32::from_le_bytes(ref_bytes[i * 4..(i + 1) * 4].try_into().unwrap());"
-    },
-    {
-      "path": "vyre-test-support/src/differential_matrix.rs",
-      "line": 72,
-      "pattern": "unwrap_call",
-      "text": "let b_bits = u32::from_le_bytes(back_bytes[i * 4..(i + 1) * 4].try_into().unwrap());"
-    },
-    {
       "path": "vyre-test-support/src/float_cast_closure.rs",
       "line": 37,
       "pattern": "documented_panic_contract",
@@ -1382,6 +1370,18 @@
       "line": 283,
       "pattern": "documented_panic_contract",
       "text": "panic!("
+    },
+    {
+      "path": "vyre-test-support/src/mutation_testing.rs",
+      "line": 280,
+      "pattern": "panic_macro",
+      "text": "panic!("
+    },
+    {
+      "path": "vyre-test-support/src/mutation_testing.rs",
+      "line": 311,
+      "pattern": "panic_macro",
+      "text": "panic!(\"{}: mutant execution failed: {error}\", mutation.id)"
     },
     {
       "path": "vyre-test-support/src/pass_programs.rs",
