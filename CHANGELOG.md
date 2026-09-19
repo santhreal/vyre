@@ -1142,15 +1142,6 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 
 ### Changed
 
-- The engineering scorecard reports `unqualified` unless every package, axis
-  and target cell is covered by a measurement signed by two distinct
-  registered reviewers on distinct hosts, taken on a clean checkout of the
-  recorded source fingerprint against thresholds registered in
-  `release/engineering-qualification.toml` before the holdouts were disclosed.
-  It previously reported 22 of 22 axes passing for every crate from the
-  registry listing alone, with no measurement behind any cell. The scorecard
-  artifact schema is version 2 and carries the qualification status and the
-  reason it was withheld.
 - DeviceProfile::from_backend is the one spelling of the neutral device
   profile. The backend trait default and the Metal runtime override now take it
   and restate only the fields the backend knows better, instead of each writing
@@ -4307,6 +4298,15 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The duplication scanner lists source files through the shared tree scanner
   instead of invoking git itself, so one rule decides what counts as a source
   file in the tree.
+- The engineering scorecard reports `unqualified` unless every package, axis
+  and target cell is covered by a measurement signed by two distinct registered
+  reviewers on distinct hosts, taken on a clean checkout of the recorded source
+  fingerprint against thresholds registered in
+  `release/engineering-qualification.toml` before the holdouts were disclosed.
+  It previously reported 22 of 22 axes passing for every crate from the
+  registry listing alone, with no measurement behind any cell. The scorecard
+  artifact schema is version 2 and carries the qualification status and the
+  reason it was withheld.
 - `vyre-libs` no longer carries 177 integration test files that already exist
   in the `vyre-libs-*` crate that owns the code they exercise, and 37 of its 46
   `[[test]]` targets go with them. Each removed file is content-identical to a
