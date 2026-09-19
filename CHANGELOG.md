@@ -10193,6 +10193,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   the `pipeline::AuthenticatedTarget` record rather than two loose arguments,
   and the dead parameter is gone from the three signatures and every caller.
   Public signatures and emitted pipelines are unchanged.
+- The WGPU demo allocates its output without host input and rejects malformed
+  output or values other than 42.
 - WGPU resident dispatch now splits `GridSync` programs at launch boundaries
   before compilation, preventing oversized resident fixed-point grids from
   deadlocking inside a software global barrier.
