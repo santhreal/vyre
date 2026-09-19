@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"6e21d1295a1737d0521f84eb466ca869c78bb93a","commit_timestamp":"1789811415","parent_commit":"34e62e7fec6a3a11604739fdf6b8a682d165ec3f","dirty":false,"source_fingerprint":"git:6e21d1295a1737d0521f84eb466ca869c78bb93a:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"b824f7f7972dea37215efee40f9a485cd3cc571f","commit_timestamp":"1789842754","parent_commit":"473c0a3cfb9706d1368d762cd7bdb576ea378d1e","dirty":true,"source_fingerprint":"git:b824f7f7972dea37215efee40f9a485cd3cc571f:dirty=true:worktree=059ab349375691f41493a25f026d8cb872fd039bf9e965947f981b3431e5848f"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 6,
   "total_commands": 15,
   "artifact_failures": 0,
@@ -987,14 +987,14 @@
         {
           "path": "release/evidence/metadata/metadata-matrix.json",
           "exists": true,
-          "bytes": 40126,
+          "bytes": 38437,
           "read_error": null,
           "owner_lane": "coordination",
           "generator_command": "xtask metadata-matrix",
           "command_mode": "spawned",
-          "content_sha256": "4619b1926d8ffff0e2f5f6460ed0bc5cc2da9c23f71d86f30f8a529401fb1817",
-          "source_fingerprint": "release-evidence-source:v1:13d19f48bd8e50f8974fc3e71792cbc0cbf0dddd5401fc55f7d3f32a6de34477",
-          "freshness_fingerprint": "release-evidence-freshness:v1:92efca5a82da4075e488fb9451263c4546a2d6babff8ca9e0837247e6950280d",
+          "content_sha256": "1c35a8441abf96a34881f5f956f36aa08c19a5e634170a888d53bfbcc13403da",
+          "source_fingerprint": "release-evidence-source:v1:a527e9ba6a8c53cec5765958649f291235a8be991d2300615f0d612ed8fdf2ac",
+          "freshness_fingerprint": "release-evidence-freshness:v1:c57f9e85d1a76c62c5a7b744f0dc3a59eda3a14657fd24f6dd5cf520407ba489",
           "blockers": []
         }
       ]
@@ -1012,14 +1012,14 @@
         {
           "path": "release/evidence/metadata/feature-matrix.json",
           "exists": true,
-          "bytes": 32059,
+          "bytes": 30762,
           "read_error": null,
           "owner_lane": "coordination",
           "generator_command": "xtask feature-matrix",
           "command_mode": "spawned",
-          "content_sha256": "b66b8fec06f2fbb0a580f790b4d7349348bd8f29d0904b37a4d9220f2a2dae80",
-          "source_fingerprint": "release-evidence-source:v1:b35a852c6dec9dc8042893bd3951729d1ed9edfdc1941e31b942a33cc2d4449a",
-          "freshness_fingerprint": "release-evidence-freshness:v1:19d1b5f7a0e61e768a0643246e972f9e90340c8c2d3df2feb025391692e92d14",
+          "content_sha256": "4b9ad68030653b40b499307738ebadb6a6d19996dbecea9cd4fe8aaa0a7a56b2",
+          "source_fingerprint": "release-evidence-source:v1:0afd89e9a2f53eee3e41772c73565376b359bf106b7e975c2dca000558a1c4fd",
+          "freshness_fingerprint": "release-evidence-freshness:v1:aa8a4a409b925a4958e3460310aa76c6aec99bb9296d1a685c52b029f53fad3c",
           "blockers": []
         }
       ]
@@ -1905,10 +1905,10 @@
         "owner_lane": "coordination",
         "generator_command": "xtask feature-matrix",
         "command_mode": "spawned",
-        "bytes": 32059,
-        "content_sha256": "b66b8fec06f2fbb0a580f790b4d7349348bd8f29d0904b37a4d9220f2a2dae80",
-        "source_fingerprint": "release-evidence-source:v1:b35a852c6dec9dc8042893bd3951729d1ed9edfdc1941e31b942a33cc2d4449a",
-        "freshness_fingerprint": "release-evidence-freshness:v1:19d1b5f7a0e61e768a0643246e972f9e90340c8c2d3df2feb025391692e92d14",
+        "bytes": 30762,
+        "content_sha256": "4b9ad68030653b40b499307738ebadb6a6d19996dbecea9cd4fe8aaa0a7a56b2",
+        "source_fingerprint": "release-evidence-source:v1:0afd89e9a2f53eee3e41772c73565376b359bf106b7e975c2dca000558a1c4fd",
+        "freshness_fingerprint": "release-evidence-freshness:v1:aa8a4a409b925a4958e3460310aa76c6aec99bb9296d1a685c52b029f53fad3c",
         "blockers": []
       },
       {
@@ -1916,10 +1916,10 @@
         "owner_lane": "coordination",
         "generator_command": "xtask metadata-matrix",
         "command_mode": "spawned",
-        "bytes": 40126,
-        "content_sha256": "4619b1926d8ffff0e2f5f6460ed0bc5cc2da9c23f71d86f30f8a529401fb1817",
-        "source_fingerprint": "release-evidence-source:v1:13d19f48bd8e50f8974fc3e71792cbc0cbf0dddd5401fc55f7d3f32a6de34477",
-        "freshness_fingerprint": "release-evidence-freshness:v1:92efca5a82da4075e488fb9451263c4546a2d6babff8ca9e0837247e6950280d",
+        "bytes": 38437,
+        "content_sha256": "1c35a8441abf96a34881f5f956f36aa08c19a5e634170a888d53bfbcc13403da",
+        "source_fingerprint": "release-evidence-source:v1:a527e9ba6a8c53cec5765958649f291235a8be991d2300615f0d612ed8fdf2ac",
+        "freshness_fingerprint": "release-evidence-freshness:v1:c57f9e85d1a76c62c5a7b744f0dc3a59eda3a14657fd24f6dd5cf520407ba489",
         "blockers": []
       },
       {

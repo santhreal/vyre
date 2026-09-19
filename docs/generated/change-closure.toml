@@ -7381,7 +7381,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "DiskCacheError"
 variant_name = "CacheDirUnknown"
-declaration_site = "vyre-runtime/src/pipeline_cache/disk.rs:303"
+declaration_site = "vyre-runtime/src/pipeline_cache/disk.rs:356"
 constructors = ["DiskCacheError::CacheDirUnknown"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug)"
@@ -7391,7 +7391,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "DiskCacheError"
 variant_name = "Io"
-declaration_site = "vyre-runtime/src/pipeline_cache/disk.rs:308"
+declaration_site = "vyre-runtime/src/pipeline_cache/disk.rs:361"
 constructors = ["DiskCacheError::Io"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug)"

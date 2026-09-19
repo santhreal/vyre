@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"6e21d1295a1737d0521f84eb466ca869c78bb93a","commit_timestamp":"1789811415","parent_commit":"34e62e7fec6a3a11604739fdf6b8a682d165ec3f","dirty":false,"source_fingerprint":"git:6e21d1295a1737d0521f84eb466ca869c78bb93a:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"b824f7f7972dea37215efee40f9a485cd3cc571f","commit_timestamp":"1789842754","parent_commit":"473c0a3cfb9706d1368d762cd7bdb576ea378d1e","dirty":true,"source_fingerprint":"git:b824f7f7972dea37215efee40f9a485cd3cc571f:dirty=true:worktree=059ab349375691f41493a25f026d8cb872fd039bf9e965947f981b3431e5848f"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
@@ -9,46 +9,8 @@
   "missing_required_release_packages": [],
   "packages": [
     {
-      "name": "mutation-detector-contract-proof",
-      "manifest": ".internal/ci-recovery/detector-mutants/Cargo.toml",
-      "feature_count": 2,
-      "has_default_feature": true,
-      "default_feature_members": [
-        "parity-oracles"
-      ],
-      "features": [
-        "default",
-        "parity-oracles"
-      ],
-      "malformed_features": [],
-      "unresolved_feature_members": [],
-      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
-    },
-    {
-      "name": "replay-capsule-mutation-proof",
-      "manifest": ".internal/ci-recovery/replay-mutants/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
-      "default_feature_members": [],
-      "features": [],
-      "malformed_features": [],
-      "unresolved_feature_members": [],
-      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
-    },
-    {
       "name": "structure-gate",
       "manifest": "structure-gate/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
-      "default_feature_members": [],
-      "features": [],
-      "malformed_features": [],
-      "unresolved_feature_members": [],
-      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
-    },
-    {
-      "name": "typed-parity-mutation-proof",
-      "manifest": ".internal/ci-recovery/parity-mutants/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
