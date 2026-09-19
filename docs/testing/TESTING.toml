@@ -119,3 +119,7 @@ hardware = "Reference and builder suites are host-capable. Tests that request co
 [package.vyre-primitives]
 commands = ["./cargo_full test -p vyre-primitives --all-features"]
 hardware = "Builder and reference suites are host-capable. Concrete backend parity tests require the selected device on the execution host and fail visibly when unavailable."
+[package.vyre-test-support]
+commands = ["./cargo_full test -p vyre-test-support --features ir-fixtures,parity-oracles"]
+test_classes = ["Fixture determinism", "Typed output boundaries and numerical comparison", "Failure-preserving bounded replay minimization", "Mutation detection with valid positive controls, exact diagnostic identities, output differences, and executed race findings", "Failure propagation and diagnostic contracts"]
+failure_behavior = "An invalid or incorrect positive control, an unchanged mutant, an unrelated validation error, incomplete race exploration, or an execution error fails the mutation proof. Mutation fixtures do not certify every optimizer branch or the full device interleaving space."

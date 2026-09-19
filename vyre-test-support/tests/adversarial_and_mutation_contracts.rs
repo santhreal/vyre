@@ -4,7 +4,7 @@ use vyre_test_support::adversarial_generators::{
     assert_adversarial_suite_validity, generate_adversarial_suite,
 };
 use vyre_test_support::mutation_testing::{
-    assert_mutations_are_detected, representative_mutations,
+    assert_mutations_are_detected, reference_mutation_observation,
 };
 
 #[test]
@@ -16,7 +16,5 @@ fn adversarial_suite_contracts_hold() {
 
 #[test]
 fn mutation_proof_suite_detects_all_invariants() {
-    let mutations = representative_mutations();
-    assert!(mutations.len() >= 3);
-    assert_mutations_are_detected();
+    assert_mutations_are_detected(reference_mutation_observation);
 }

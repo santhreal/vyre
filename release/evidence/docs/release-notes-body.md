@@ -7345,6 +7345,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Megakernel fusion admits two programs that synchronize at one shared
   workgroup geometry, and reports MKL006 only when the geometries differ and
   one program reasons about the size of its own workgroup.
+- Mutation verification requires valid positive controls and observed
+  diagnostic, output, or executed-race differences instead of accepting
+  nonempty programs.
 - `vyre_libs::math::bellman_shortest_path::BellmanBuffers` publishes
   `CANONICAL` and `TERSE` binding-name sets, matching the
   `SinkhornBuffers::CANONICAL` it already had. Four sites spelled the same six

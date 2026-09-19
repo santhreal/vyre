@@ -20,6 +20,10 @@ The crate lives at `vyre-test-support` and owns the `test-support` seam in the `
 ./cargo_full test -p vyre-test-support --all-features
 ```
 
+```console
+./cargo_full test -p vyre-test-support --features ir-fixtures,parity-oracles
+```
+
 ## Feature sets
 
 - Default feature members: None
@@ -38,7 +42,9 @@ The crate lives at `vyre-test-support` and owns the `test-support` seam in the `
 ## Test classes
 
 - Fixture determinism
-- Harness execution and comparison behavior
+- Typed output boundaries and numerical comparison
+- Failure-preserving bounded replay minimization
+- Mutation detection with valid positive controls, exact diagnostic identities, output differences, and executed race findings
 - Failure propagation and diagnostic contracts
 
 ## Hardware requirements
@@ -53,4 +59,4 @@ No accelerator is required for the default suite.
 
 The default command does not run tests marked `#[ignore]`. No executed test may silently treat a missing requested backend or device as success.
 
-A failed assertion, build error, backend acquisition error, or malformed fixture returns a nonzero status with the failing test and contract in the diagnostic.
+An invalid or incorrect positive control, an unchanged mutant, an unrelated validation error, incomplete race exploration, or an execution error fails the mutation proof. Mutation fixtures do not certify every optimizer branch or the full device interleaving space.
