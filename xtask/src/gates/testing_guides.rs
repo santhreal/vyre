@@ -49,13 +49,29 @@ impl Target {
     /// The command that runs this one target.
     fn command(&self, package: &str) -> String {
         let flag = match self.kind {
-            "test" => "--test",
-            "bin" => "--bin",
-            "example" => "--example",
-            "bench" => "--bench",
-            _ => return format!("./cargo_full test -p {package}"),
+            "test" => Some("--test"),
+            "bin" => Some("--bin"),
+            "example" => Some("--example"),
+            "bench" => Some("--bench"),
+            _ => None,
         };
-        format!("./cargo_full test -p {package} {flag} {}", self.name)
+        let mut command = format!("./cargo_full test -p {package}");
+        if let Some(flag) = flag {
+            command.push(' ');
+            command.push_str(flag);
+            command.push(' ');
+            command.push_str(&self.name);
+        }
+        if !self.required_features.is_empty() {
+            command.push_str(" --features ");
+            for (index, feature) in self.required_features.iter().enumerate() {
+                if index != 0 {
+                    command.push(',');
+                }
+                command.push_str(feature);
+            }
+        }
+        command
     }
 }
 
@@ -780,6 +796,22 @@ mod tests {
                 required_features: Vec::new(),
             };
             assert_eq!(target.command("demo"), expected, "for kind `{kind}`");
+            // A focused target must enable its declared feature requirements;
+            // enabling only the first one leaves multi-feature targets unrunnable.
+            for features in [vec!["ir-fixtures"], vec!["ir-fixtures", "parity-oracles"]] {
+                let target = Target {
+                    required_features: features
+                        .iter()
+                        .map(|feature| (*feature).to_owned())
+                        .collect(),
+                    ..target.clone()
+                };
+                assert_eq!(
+                    target.command("demo"),
+                    format!("{expected} --features {}", features.join(",")),
+                    "for kind `{kind}` and features {features:?}",
+                );
+            }
         }
     }
 

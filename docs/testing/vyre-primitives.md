@@ -35,7 +35,7 @@ The crate lives at `vyre-primitives` and owns the `primitive-library` seam in th
 | `example` | `wire_harness_smoke` | `vyre-primitives/examples/wire_harness_smoke.rs` | None | `./cargo_full test -p vyre-primitives --example wire_harness_smoke` |
 | `lib` | `vyre_primitives` | `vyre-primitives/src/lib.rs` | None | `./cargo_full test -p vyre-primitives` |
 | `test` | `all_tests` | `vyre-primitives/tests/all_tests.rs` | None | `./cargo_full test -p vyre-primitives --test all_tests` |
-| `test` | `all_tests_hardware` | `vyre-primitives/tests/all_tests_hardware.rs` | `hardware` | `./cargo_full test -p vyre-primitives --test all_tests_hardware` |
+| `test` | `all_tests_hardware` | `vyre-primitives/tests/all_tests_hardware.rs` | `hardware` | `./cargo_full test -p vyre-primitives --test all_tests_hardware --features hardware` |
 
 ## Test classes
 

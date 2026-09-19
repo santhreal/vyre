@@ -39,7 +39,7 @@ The crate lives at `conform/vyre-conform` and owns the `parity-harness` seam in 
 | `example` | `vyre_conform_runner_release_surface` | `conform/vyre-conform/examples/vyre_conform_runner_release_surface.rs` | None | `./cargo_full test -p vyre-conform --example vyre_conform_runner_release_surface` |
 | `lib` | `vyre_conform` | `conform/vyre-conform/src/lib.rs` | None | `./cargo_full test -p vyre-conform` |
 | `test` | `all_tests` | `conform/vyre-conform/tests/all_tests.rs` | None | `./cargo_full test -p vyre-conform --test all_tests` |
-| `test` | `all_tests_device_tests` | `conform/vyre-conform/tests/all_tests_device_tests.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test all_tests_device_tests` |
+| `test` | `all_tests_device_tests` | `conform/vyre-conform/tests/all_tests_device_tests.rs` | `device-tests` | `./cargo_full test -p vyre-conform --test all_tests_device_tests --features device-tests` |
 | `test` | `cert_regression_pin` | `conform/vyre-conform/tests/cert_regression_pin/main.rs` | None | `./cargo_full test -p vyre-conform --test cert_regression_pin` |
 | `test` | `operation_disposition_closure` | `conform/vyre-conform/tests/operation_disposition_closure.rs` | None | `./cargo_full test -p vyre-conform --test operation_disposition_closure` |
 

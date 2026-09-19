@@ -36,7 +36,7 @@ The crate lives at `vyre-test-support` and owns the `test-support` seam in the `
 | --- | --- | --- | --- | --- |
 | `lib` | `vyre_test_support` | `vyre-test-support/src/lib.rs` | None | `./cargo_full test -p vyre-test-support` |
 | `test` | `all_tests` | `vyre-test-support/tests/all_tests.rs` | None | `./cargo_full test -p vyre-test-support --test all_tests` |
-| `test` | `all_tests_ir_fixtures` | `vyre-test-support/tests/all_tests_ir_fixtures.rs` | `ir-fixtures`, `parity-oracles` | `./cargo_full test -p vyre-test-support --test all_tests_ir_fixtures` |
+| `test` | `all_tests_ir_fixtures` | `vyre-test-support/tests/all_tests_ir_fixtures.rs` | `ir-fixtures`, `parity-oracles` | `./cargo_full test -p vyre-test-support --test all_tests_ir_fixtures --features ir-fixtures,parity-oracles` |
 | `test` | `workspace_root_follows_the_working_directory` | `vyre-test-support/tests/workspace_root_follows_the_working_directory.rs` | None | `./cargo_full test -p vyre-test-support --test workspace_root_follows_the_working_directory` |
 
 ## Test classes

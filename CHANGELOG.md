@@ -8254,6 +8254,7 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   closure test.
 - The registered FMA fixture now records the exact fused result for the
   maximum-finite times one-half boundary case.
+- Generated focused Cargo test commands enable every required feature.
 - The frontier leaderboard reads a metric percentile through the same reader as
   every other artifact inspector. Its private copy accepted only an integer
   p50, so an artifact recording a float percentile was reported as missing the

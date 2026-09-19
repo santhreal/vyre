@@ -33,7 +33,7 @@ The crate lives at `vyre-driver` and owns the `backend-contract` seam in the `ba
 | `example` | `vyre_driver_release_surface` | `vyre-driver/examples/vyre_driver_release_surface.rs` | None | `./cargo_full test -p vyre-driver --example vyre_driver_release_surface` |
 | `lib` | `vyre_driver` | `vyre-driver/src/lib.rs` | None | `./cargo_full test -p vyre-driver` |
 | `test` | `all_tests` | `vyre-driver/tests/all_tests.rs` | None | `./cargo_full test -p vyre-driver --test all_tests` |
-| `test` | `all_tests_libs_compositions` | `vyre-driver/tests/all_tests_libs_compositions.rs` | `libs-compositions` | `./cargo_full test -p vyre-driver --test all_tests_libs_compositions` |
+| `test` | `all_tests_libs_compositions` | `vyre-driver/tests/all_tests_libs_compositions.rs` | `libs-compositions` | `./cargo_full test -p vyre-driver --test all_tests_libs_compositions --features libs-compositions` |
 | `test` | `backend_registry` | `vyre-driver/tests/backend_registry.rs` | None | `./cargo_full test -p vyre-driver --test backend_registry` |
 | `test` | `backend_registry_duplicate_provider` | `vyre-driver/tests/backend_registry_duplicate_provider.rs` | None | `./cargo_full test -p vyre-driver --test backend_registry_duplicate_provider` |
 | `test` | `gap_duplicate_op_id` | `vyre-driver/tests/gap_duplicate_op_id.rs` | None | `./cargo_full test -p vyre-driver --test gap_duplicate_op_id` |

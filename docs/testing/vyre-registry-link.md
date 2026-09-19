@@ -32,8 +32,8 @@ The crate lives at `vyre-registry-link` and owns the `registry-link` seam in the
 | --- | --- | --- | --- | --- |
 | `lib` | `vyre_registry_link` | `vyre-registry-link/src/lib.rs` | None | `./cargo_full test -p vyre-registry-link` |
 | `test` | `all_tests` | `vyre-registry-link/tests/all_tests.rs` | None | `./cargo_full test -p vyre-registry-link --test all_tests` |
-| `test` | `all_tests_device` | `vyre-registry-link/tests/all_tests_device.rs` | `device-tests` | `./cargo_full test -p vyre-registry-link --test all_tests_device` |
-| `test` | `all_tests_operations` | `vyre-registry-link/tests/all_tests_operations.rs` | `operations` | `./cargo_full test -p vyre-registry-link --test all_tests_operations` |
+| `test` | `all_tests_device` | `vyre-registry-link/tests/all_tests_device.rs` | `device-tests` | `./cargo_full test -p vyre-registry-link --test all_tests_device --features device-tests` |
+| `test` | `all_tests_operations` | `vyre-registry-link/tests/all_tests_operations.rs` | `operations` | `./cargo_full test -p vyre-registry-link --test all_tests_operations --features operations` |
 
 ## Test classes
 

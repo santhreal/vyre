@@ -33,8 +33,8 @@ The crate lives at `vyre-pass-engine` and owns the `pass-engine` seam in the `pa
 | `example` | `vyre_pass_engine_release_surface` | `vyre-pass-engine/examples/vyre_pass_engine_release_surface.rs` | None | `./cargo_full test -p vyre-pass-engine --example vyre_pass_engine_release_surface` |
 | `lib` | `vyre_pass_engine` | `vyre-pass-engine/src/lib.rs` | None | `./cargo_full test -p vyre-pass-engine` |
 | `test` | `all_tests` | `vyre-pass-engine/tests/all_tests.rs` | None | `./cargo_full test -p vyre-pass-engine --test all_tests` |
-| `test` | `all_tests_all_solvers` | `vyre-pass-engine/tests/all_tests_all_solvers.rs` | `all-solvers` | `./cargo_full test -p vyre-pass-engine --test all_tests_all_solvers` |
-| `test` | `all_tests_optimizer` | `vyre-pass-engine/tests/all_tests_optimizer.rs` | `optimizer` | `./cargo_full test -p vyre-pass-engine --test all_tests_optimizer` |
+| `test` | `all_tests_all_solvers` | `vyre-pass-engine/tests/all_tests_all_solvers.rs` | `all-solvers` | `./cargo_full test -p vyre-pass-engine --test all_tests_all_solvers --features all-solvers` |
+| `test` | `all_tests_optimizer` | `vyre-pass-engine/tests/all_tests_optimizer.rs` | `optimizer` | `./cargo_full test -p vyre-pass-engine --test all_tests_optimizer --features optimizer` |
 
 ## Test classes
 

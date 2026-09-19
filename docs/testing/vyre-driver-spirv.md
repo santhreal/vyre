@@ -33,8 +33,8 @@ The crate lives at `vyre-driver-spirv` and owns the `spirv-driver` seam in the `
 | `example` | `vulkan_probe` | `vyre-driver-spirv/examples/vulkan_probe.rs` | None | `./cargo_full test -p vyre-driver-spirv --example vulkan_probe` |
 | `lib` | `vyre_driver_spirv` | `vyre-driver-spirv/src/lib.rs` | None | `./cargo_full test -p vyre-driver-spirv` |
 | `test` | `all_tests` | `vyre-driver-spirv/tests/all_tests.rs` | None | `./cargo_full test -p vyre-driver-spirv --test all_tests` |
-| `test` | `all_tests_device_tests` | `vyre-driver-spirv/tests/all_tests_device_tests.rs` | `device-tests` | `./cargo_full test -p vyre-driver-spirv --test all_tests_device_tests` |
-| `test` | `all_tests_spirv_val` | `vyre-driver-spirv/tests/all_tests_spirv_val.rs` | `spirv-val` | `./cargo_full test -p vyre-driver-spirv --test all_tests_spirv_val` |
+| `test` | `all_tests_device_tests` | `vyre-driver-spirv/tests/all_tests_device_tests.rs` | `device-tests` | `./cargo_full test -p vyre-driver-spirv --test all_tests_device_tests --features device-tests` |
+| `test` | `all_tests_spirv_val` | `vyre-driver-spirv/tests/all_tests_spirv_val.rs` | `spirv-val` | `./cargo_full test -p vyre-driver-spirv --test all_tests_spirv_val --features spirv-val` |
 
 ## Test classes
 
