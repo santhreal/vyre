@@ -27,7 +27,8 @@ The `ci-required` gate holds this list to the workflows that define it, and
 ## From `gpu-parity.yml` (run on self-hosted GPU runner)
 - `GPU release gate`
 
-GPU workflows require the `self-hosted`, `gpu`, and `axiomexec` runner labels.
+GPU workflows require the `self-hosted`, `gpu`, and `santhserver` runner labels.
+These jobs use one Cargo build worker, one Rayon worker, and one Rust test thread.
 
 ## Scheduled or Manual Deep Gates
 

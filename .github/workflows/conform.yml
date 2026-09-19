@@ -28,7 +28,11 @@ jobs:
     # A public repository never executes fork code on the persistent GPU host.
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     needs: operation-registry
-    runs-on: [self-hosted, gpu, axiomexec]
+    runs-on: [self-hosted, gpu, santhserver]
+    env:
+      CARGO_BUILD_JOBS: "1"
+      RAYON_NUM_THREADS: "1"
+      RUST_TEST_THREADS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
