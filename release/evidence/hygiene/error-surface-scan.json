@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"28e23438eb470e90ab860f550072134152304572","commit_timestamp":"1789920513","parent_commit":"07e55c822659938861017d3d6584b72744a3c88e","dirty":false,"source_fingerprint":"git:28e23438eb470e90ab860f550072134152304572:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"bf7e919f6ee6b055d438bcd335eaabe4114bfcda","commit_timestamp":"1789921481","parent_commit":"28e23438eb470e90ab860f550072134152304572","dirty":true,"source_fingerprint":"git:bf7e919f6ee6b055d438bcd335eaabe4114bfcda:dirty=true:worktree=0309d1bcfa079d0674e75d65cfe9a3dfda1168f1c88f234915551c42d608e6cf"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "scan": "error-surface",
   "findings": [
@@ -1127,7 +1127,7 @@
     },
     {
       "path": "vyre-test-support/src/dense_matvec_cases.rs",
-      "line": 363,
+      "line": 362,
       "pattern": "panic_macro",
       "text": "panic!("
     },

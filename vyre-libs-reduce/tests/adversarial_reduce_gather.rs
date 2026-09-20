@@ -12,7 +12,6 @@
     clippy::assertions_on_constants
 )]
 
-
 use vyre_libs_reduce::reduce::gather::*;
 use vyre_reference::composition_witness::gather_witness as cpu_ref;
 

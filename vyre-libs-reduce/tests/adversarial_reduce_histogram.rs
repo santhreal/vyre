@@ -12,7 +12,6 @@
     clippy::assertions_on_constants
 )]
 
-
 use vyre_libs_reduce::reduce::histogram::*;
 use vyre_reference::composition_witness::histogram_witness as cpu_ref;
 

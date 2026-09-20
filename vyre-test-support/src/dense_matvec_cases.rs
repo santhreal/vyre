@@ -188,8 +188,7 @@ impl DenseMatvecCase {
     /// Source columns for this case: `tile_count * tile_width * dst_words`
     /// words, one per (source bit, destination word).
     pub fn columns(&self, geometry: &ByteTileGeometry) -> Vec<u32> {
-        let len =
-            self.tile_count as usize * geometry.tile_width as usize * self.dst_words as usize;
+        let len = self.tile_count as usize * geometry.tile_width as usize * self.dst_words as usize;
         (0..len)
             .map(|idx| mix(self.seed ^ (idx as u32).wrapping_mul(0x9E37_79B9)))
             .collect()

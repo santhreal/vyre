@@ -12,7 +12,6 @@
     clippy::assertions_on_constants
 )]
 
-
 use vyre_libs_reduce::reduce::radix_sort::*;
 use vyre_reference::composition_witness::radix_sort_masked_witness as cpu_ref;
 
