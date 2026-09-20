@@ -151316,7 +151316,7 @@ seam = "reference-semantics"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_backend_extension"
 stability = "extension"
-exported_item_count = 1133
+exported_item_count = 1134
 
   [[package.item]]
   path = "impl core::cmp::Eq for vyre_reference::composition_witness::RuleConditionWitness"
@@ -152084,6 +152084,13 @@ exported_item_count = 1133
   [[package.item]]
   path = "vyre_reference::OobReport"
   kind = "struct"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_reference::OobReport::clipped_spans: u64"
+  kind = "field"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"

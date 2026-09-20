@@ -18787,7 +18787,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "OobAccess"
 variant_name = "Atomic"
-declaration_site = "vyre-reference/src/oob.rs:92"
+declaration_site = "vyre-reference/src/oob.rs:107"
 constructors = ["OobAccess::Atomic"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy)"
@@ -18796,7 +18796,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "OobAccess"
 variant_name = "Load"
-declaration_site = "vyre-reference/src/oob.rs:90"
+declaration_site = "vyre-reference/src/oob.rs:105"
 constructors = ["OobAccess::Load"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy)"
@@ -18805,7 +18805,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "OobAccess"
 variant_name = "Store"
-declaration_site = "vyre-reference/src/oob.rs:91"
+declaration_site = "vyre-reference/src/oob.rs:106"
 constructors = ["OobAccess::Store"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy)"
