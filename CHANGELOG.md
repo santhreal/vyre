@@ -6167,6 +6167,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The Newton-Schulz emitter contract lowers its composition through schedule
   legalization, the route a device dispatch takes, instead of handing physical
   lowering a schedule-free program.
+- A target without Metal.framework registers the `metal` backend with no
+  materializer instead of one that returns an unsupported-feature error at
+  submit time, so a reader of the backend registry sees that this host does not
+  materialize Metal artifacts.
 - The contract that a failing xtask command says why it failed judges the exit
   itself. It used to match one shape of the original defect, an `if` whose
   condition named a blocker and whose branch exited, and the gate architecture
@@ -7038,6 +7042,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   repointed at another backend served an artifact compiled for the previous
   device facts, and the report named a device the measured artifact was never
   built for.
+- The reference oracle clips an async transfer byte span at the end of its
+  buffer and reads zero past the end of its source under both strictness modes,
+  matching what every backend lowers against the binding length, and counts the
+  clip in `OobReport::clipped_spans` instead of refusing the run.
 - The async dispatch contracts warm the pipeline before measuring, so a cold
   shader compile on the calling thread is not recorded as synchronous
   execution.
@@ -7265,6 +7273,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   answers the question, returning the reported count when there is one and no
   cap when there is not, and the reduction builder clamps the request to what
   the shape admits. The value is a ceiling and never an index.
+- Lifting a program into a graph refuses a backend-allocated output that has no
+  static element count, no caller bytes, and no runtime count, naming the
+  buffer and `.with_count(n)`, instead of producing a graph value with a zero
+  extent that the logical stage reported as an unresolved extent at a graph
+  value id.
 - `abstraction-gate` no longer demands an operation registration for a region
   that names no operation. Two prefixes mean the same thing: `inline::`, minted
   by `reparent_entry_node` for a body the composer reparented onto its caller,
@@ -9723,6 +9736,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   it could not compile. Its shape and element-count checks now call
   `check_same_shape` and `checked_element_count` instead of restating them, and
   its conformance test no longer uses a crate it did not declare.
+- `vyre_spec::expr_variants()` lists `LogicalIndex`, `LogicalTileId`, and
+  `LogicalWithinTileId`, and is checked against the `Expr` variant names the
+  AST registry emits, so a variant added to the enum can no longer stay out of
+  the catalog.
 - The feature-isolation gate no longer stores a compile outcome. Every row of
   xtask/feature-isolation.toml recorded whether the selection compiled and
   whether a sweep had ever measured it, so a fact that goes stale the moment a
