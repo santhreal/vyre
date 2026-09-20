@@ -125,11 +125,6 @@ const WAIVERS: &[Waiver] = &[
         reason: "conform harness walk, converted with the rest of the conform contract cases",
     },
     Waiver {
-        path: "conform/vyre-conform/tests/contract_cases/parity_matrix__synthetic_entries.rs",
-        seam: "parity-harness",
-        reason: "conform harness walk, converted with the rest of the conform contract cases",
-    },
-    Waiver {
         path: "vyre-driver-wgpu/tests/op_pairwise/all_entries_vec.rs",
         seam: "portable-driver",
         reason: "driver test walk, converted with the driver walker lane",
