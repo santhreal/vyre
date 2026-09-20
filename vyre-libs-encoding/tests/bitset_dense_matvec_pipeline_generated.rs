@@ -12,7 +12,8 @@
 
 use vyre_libs_bitset::bitset::four_russians::{
     dense_matvec_byte_lut as dense_boolean_matvec_lut,
-    dense_matvec_byte_lut_words as dense_matvec_lut_words,
+    dense_matvec_byte_lut_words as dense_matvec_lut_words, frontier_words_for_byte_tiles,
+    BYTE_TILE_STATES, BYTE_TILE_WIDTH,
 };
 use vyre_libs_encoding::encoding::bitset_transform_pipeline::{
     dense_matvec_frontier_words, four_russians_dense_matvec_program,
@@ -20,8 +21,15 @@ use vyre_libs_encoding::encoding::bitset_transform_pipeline::{
 use vyre_reference::composition_witness::dense_boolean_matvec_witness as reference_dense_boolean_matvec;
 
 use crate::dense_matvec_cases::{
-    arm_coverage, assert_program_overwrites_dirty_output, declared_groups, DenseMatvecCase,
-    LutCache,
+    arm_coverage, assert_program_overwrites_dirty_output, declared_groups, ByteTileGeometry,
+    DenseMatvecCase, LutCache,
+};
+
+/// The tiling this arm is measured against, as the primitive declares it.
+const GEOMETRY: ByteTileGeometry = ByteTileGeometry {
+    tile_width: BYTE_TILE_WIDTH,
+    tile_states: BYTE_TILE_STATES,
+    frontier_words: frontier_words_for_byte_tiles,
 };
 
 /// Every declared group has a substrate arm, and every case in it holds.
@@ -40,6 +48,7 @@ fn substrate_dense_matvec_arms_cover_every_declared_case_group() {
                 assert_program_overwrites_dirty_output(
                     "self-substrate",
                     &group.cases,
+                    &GEOMETRY,
                     dense_boolean_matvec_lut,
                     four_russians_dense_matvec_program,
                 );
@@ -56,14 +65,14 @@ fn substrate_dense_matvec_arms_cover_every_declared_case_group() {
 fn assert_transform_matches_naive(cases: &[DenseMatvecCase]) {
     let mut cache = LutCache::new();
     for case in cases {
-        let (columns, lut) = cache.get(case, dense_boolean_matvec_lut);
+        let (columns, lut) = cache.get(case, &GEOMETRY, dense_boolean_matvec_lut);
         assert_eq!(
             dense_matvec_lut_words(case.tile_count, case.dst_words) as usize,
             lut.len(),
             "Fix: self-substrate LUT sizing drifted for {}.",
             case.label()
         );
-        let frontier = case.frontier();
+        let frontier = case.frontier(&GEOMETRY);
         assert_eq!(
             dense_matvec_frontier_words(case.tile_count) as usize,
             frontier.len(),
@@ -72,7 +81,7 @@ fn assert_transform_matches_naive(cases: &[DenseMatvecCase]) {
         );
         assert_eq!(
             reference_dense_boolean_matvec(&frontier, lut, case.tile_count, case.dst_words),
-            case.naive(columns, &frontier),
+            case.naive(&GEOMETRY, columns, &frontier),
             "Fix: self-substrate dense matvec transform drifted for {}.",
             case.label()
         );

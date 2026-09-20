@@ -25,11 +25,24 @@
 
 use crate::case_table::ArmCoverage;
 
-use vyre_libs_bitset::bitset::four_russians::{
-    frontier_words_for_byte_tiles, BYTE_TILE_STATES, BYTE_TILE_WIDTH,
-};
 use vyre_primitives::wire::pack_u32_slice;
 use vyre_reference::value::Value;
+
+/// The byte-tile geometry a dense-matvec corpus is shaped by.
+///
+/// The library that declares the tiling supplies these; this table measures
+/// against them. Stating them here rather than importing them keeps a shared
+/// fixture out of the dependency graph of the compositions it serves, and
+/// makes an arm that disagrees with its own declaration fail as a mismatched
+/// constant rather than as a silently different corpus.
+pub struct ByteTileGeometry {
+    /// Source bits per tile.
+    pub tile_width: u32,
+    /// Distinct states one tile byte can hold.
+    pub tile_states: u32,
+    /// Frontier words needed to carry `tile_count` tiles.
+    pub frontier_words: fn(u32) -> u32,
+}
 
 /// Minimum declared group count, the floor [`arm_coverage`] enforces.
 ///
@@ -172,24 +185,27 @@ pub fn declared_groups() -> Vec<CaseGroup> {
 }
 
 impl DenseMatvecCase {
-    /// Source columns for this case: `tile_count * BYTE_TILE_WIDTH * dst_words`
+    /// Source columns for this case: `tile_count * tile_width * dst_words`
     /// words, one per (source bit, destination word).
-    pub fn columns(&self) -> Vec<u32> {
-        let len = self.tile_count as usize * BYTE_TILE_WIDTH as usize * self.dst_words as usize;
+    pub fn columns(&self, geometry: &ByteTileGeometry) -> Vec<u32> {
+        let len =
+            self.tile_count as usize * geometry.tile_width as usize * self.dst_words as usize;
         (0..len)
             .map(|idx| mix(self.seed ^ (idx as u32).wrapping_mul(0x9E37_79B9)))
             .collect()
     }
 
     /// Frontier words for this case, sized by
-    /// [`frontier_words_for_byte_tiles`] and filled per [`FrontierShape`].
-    pub fn frontier(&self) -> Vec<u32> {
-        let len = frontier_words_for_byte_tiles(self.tile_count) as usize;
+    /// [`ByteTileGeometry::frontier_words`] and filled per [`FrontierShape`].
+    pub fn frontier(&self, geometry: &ByteTileGeometry) -> Vec<u32> {
+        let len = (geometry.frontier_words)(self.tile_count) as usize;
         match self.frontier_shape {
             FrontierShape::Pseudorandom => (0..len)
-                .map(|idx| mix(self.seed ^ idx as u32) & self.covered_mask(idx))
+                .map(|idx| mix(self.seed ^ idx as u32) & self.covered_mask(geometry, idx))
                 .collect(),
-            FrontierShape::Saturated => (0..len).map(|idx| self.covered_mask(idx)).collect(),
+            FrontierShape::Saturated => (0..len)
+                .map(|idx| self.covered_mask(geometry, idx))
+                .collect(),
             FrontierShape::SingleTile { tile, active_byte } => {
                 let mut words = vec![0u32; len];
                 words[(tile / 4) as usize] = active_byte << ((tile % 4) * 8);
@@ -200,20 +216,25 @@ impl DenseMatvecCase {
 
     /// Boolean-semiring matvec computed straight from the source columns, with
     /// no LUT: the independent oracle both arms are measured against.
-    pub fn naive(&self, columns: &[u32], frontier: &[u32]) -> Vec<u32> {
+    pub fn naive(
+        &self,
+        geometry: &ByteTileGeometry,
+        columns: &[u32],
+        frontier: &[u32],
+    ) -> Vec<u32> {
         let mut out = vec![0u32; self.dst_words as usize];
         for tile in 0..self.tile_count {
             let active_byte = if frontier.is_empty() {
                 0
             } else {
-                (frontier[(tile / 4) as usize] >> ((tile % 4) * 8)) & (BYTE_TILE_STATES - 1)
+                (frontier[(tile / 4) as usize] >> ((tile % 4) * 8)) & (geometry.tile_states - 1)
             };
-            for source_bit in 0..BYTE_TILE_WIDTH {
+            for source_bit in 0..geometry.tile_width {
                 if (active_byte & (1 << source_bit)) == 0 {
                     continue;
                 }
                 for dst_word in 0..self.dst_words {
-                    let column_idx = ((tile * BYTE_TILE_WIDTH + source_bit) * self.dst_words
+                    let column_idx = ((tile * geometry.tile_width + source_bit) * self.dst_words
                         + dst_word) as usize;
                     out[dst_word as usize] |= columns[column_idx];
                 }
@@ -236,9 +257,9 @@ impl DenseMatvecCase {
     /// count is not a multiple of four, and a bit past the last tile is not a
     /// source the LUT has a column for, so leaving it set would ask the oracle
     /// and the LUT to agree about a tile that does not exist.
-    fn covered_mask(&self, idx: usize) -> u32 {
+    fn covered_mask(&self, geometry: &ByteTileGeometry, idx: usize) -> u32 {
         let covered_tiles = self.tile_count.saturating_sub((idx as u32) * 4).min(4);
-        let covered_bits = covered_tiles * BYTE_TILE_WIDTH;
+        let covered_bits = covered_tiles * geometry.tile_width;
         if covered_bits == 0 {
             0
         } else if covered_bits >= 32 {
@@ -282,11 +303,12 @@ impl LutCache {
     pub fn get(
         &mut self,
         case: &DenseMatvecCase,
+        geometry: &ByteTileGeometry,
         build: impl FnOnce(&[u32], u32, u32) -> Vec<u32>,
     ) -> (&[u32], &[u32]) {
         let key = (case.tile_count, case.dst_words, case.seed);
         if self.key != Some(key) {
-            self.columns = case.columns();
+            self.columns = case.columns(geometry);
             self.lut = build(&self.columns, case.tile_count, case.dst_words);
             self.key = Some(key);
         }
@@ -312,14 +334,15 @@ pub type MatvecProgramBuilder = fn(&str, &str, &str, u32, u32) -> vyre_foundatio
 pub fn assert_program_overwrites_dirty_output(
     arm: &str,
     cases: &[DenseMatvecCase],
+    geometry: &ByteTileGeometry,
     lut_of: LutBuilder,
     program_of: MatvecProgramBuilder,
 ) {
     for case in cases {
-        let columns = case.columns();
+        let columns = case.columns(geometry);
         let lut = lut_of(&columns, case.tile_count, case.dst_words);
-        let frontier = case.frontier();
-        let expected = case.naive(&columns, &frontier);
+        let frontier = case.frontier(geometry);
+        let expected = case.naive(geometry, &columns, &frontier);
         let program = program_of(
             "frontier",
             "tile_lut",

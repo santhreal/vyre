@@ -5,7 +5,7 @@ feature_ownership_findings = []
 forward_findings = []
 facade_findings = []
 unreachable_cfg_findings = []
-scheduled_cells = 301
+scheduled_cells = 302
 
 [[crates]]
 name = "structure-gate"
@@ -817,6 +817,7 @@ manifest_path = "vyre-test-support/Cargo.toml"
 publication_class = "private-test-support"
 features = [
     "default",
+    "dense-matvec-cases",
     "driver-artifact-contracts",
     "driver-contracts",
     "golden-corpus",
@@ -2593,6 +2594,7 @@ isolated_build_command = "./cargo_full check -p vyre-test-support --no-default-f
 [[covering_sets]]
 package = "vyre-test-support"
 enabled_features = [
+    "dense-matvec-cases",
     "driver-artifact-contracts",
     "driver-contracts",
     "golden-corpus",
@@ -2605,6 +2607,12 @@ enabled_features = [
 ]
 target_cell = "full_features"
 isolated_build_command = "./cargo_full check -p vyre-test-support --all-features"
+
+[[covering_sets]]
+package = "vyre-test-support"
+enabled_features = ["dense-matvec-cases"]
+target_cell = "isolated_dense-matvec-cases"
+isolated_build_command = "./cargo_full check -p vyre-test-support --no-default-features --features dense-matvec-cases"
 
 [[covering_sets]]
 package = "vyre-test-support"

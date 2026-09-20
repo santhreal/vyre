@@ -11,12 +11,20 @@
 
 use vyre_libs_bitset::bitset::four_russians::{
     dense_matvec_byte_lut, dense_matvec_byte_lut_words, four_russians_dense_matvec_byte_lut,
+    frontier_words_for_byte_tiles, BYTE_TILE_STATES, BYTE_TILE_WIDTH,
 };
 use vyre_reference::composition_witness::four_russians_dense_matvec_witness as dense_matvec_cpu_ref;
 
 use crate::dense_matvec_cases::{
-    arm_coverage, assert_program_overwrites_dirty_output, declared_groups, DenseMatvecCase,
-    LutCache,
+    arm_coverage, assert_program_overwrites_dirty_output, declared_groups, ByteTileGeometry,
+    DenseMatvecCase, LutCache,
+};
+
+/// The tiling this arm is measured against, as this crate declares it.
+const GEOMETRY: ByteTileGeometry = ByteTileGeometry {
+    tile_width: BYTE_TILE_WIDTH,
+    tile_states: BYTE_TILE_STATES,
+    frontier_words: frontier_words_for_byte_tiles,
 };
 
 /// Every declared group has a primitive arm, and every case in it holds.
@@ -35,6 +43,7 @@ fn primitive_dense_matvec_arms_cover_every_declared_case_group() {
                 assert_program_overwrites_dirty_output(
                     "primitive",
                     &group.cases,
+                    &GEOMETRY,
                     dense_matvec_byte_lut,
                     four_russians_dense_matvec_byte_lut,
                 );
@@ -51,17 +60,17 @@ fn primitive_dense_matvec_arms_cover_every_declared_case_group() {
 fn assert_lut_reduction_matches_naive(cases: &[DenseMatvecCase]) {
     let mut cache = LutCache::new();
     for case in cases {
-        let (columns, lut) = cache.get(case, dense_matvec_byte_lut);
+        let (columns, lut) = cache.get(case, &GEOMETRY, dense_matvec_byte_lut);
         assert_eq!(
             lut.len() as u32,
             dense_matvec_byte_lut_words(case.tile_count, case.dst_words),
             "Fix: LUT word-count helper drifted for {}.",
             case.label()
         );
-        let frontier = case.frontier();
+        let frontier = case.frontier(&GEOMETRY);
         assert_eq!(
             dense_matvec_cpu_ref(&frontier, lut, case.tile_count, case.dst_words),
-            case.naive(columns, &frontier),
+            case.naive(&GEOMETRY, columns, &frontier),
             "Fix: dense Four-Russians matvec drifted for {}.",
             case.label()
         );

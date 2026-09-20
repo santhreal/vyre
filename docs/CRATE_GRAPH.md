@@ -661,11 +661,11 @@ graph TD
 | `vyre-runtime` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-test-support` | `structure-gate` | `source-structure` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-test-support` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `driver-contracts`, `host-input-abi` |
-| `vyre-test-support` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `driver-contracts`, `golden-corpus`, `host-input-abi`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests` |
+| `vyre-test-support` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `true` | `true` | `dense-matvec-cases`, `driver-artifact-contracts`, `driver-contracts`, `golden-corpus`, `host-input-abi`, `ir-fixtures`, `parity-oracles`, `semantic-parity`, `semantic-requests` |
 | `vyre-test-support` | `vyre-lower` | `lowering` | `normal` | `always` | `test-fixtures` | `true` | `true` | `golden-corpus` |
 | `vyre-test-support` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `true` | `true` | `driver-artifact-contracts`, `semantic-parity`, `semantic-requests` |
-| `vyre-test-support` | `vyre-primitives` | `primitive-library` | `normal` | `always` | None | `true` | `false` | `semantic-parity` |
-| `vyre-test-support` | `vyre-reference` | `reference-semantics` | `normal` | `always` | None | `true` | `true` | `host-input-abi`, `parity-oracles`, `semantic-parity` |
+| `vyre-test-support` | `vyre-primitives` | `primitive-library` | `normal` | `always` | None | `true` | `false` | `dense-matvec-cases`, `semantic-parity` |
+| `vyre-test-support` | `vyre-reference` | `reference-semantics` | `normal` | `always` | None | `true` | `true` | `dense-matvec-cases`, `host-input-abi`, `parity-oracles`, `semantic-parity` |
 | `vyre-test-support` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `xtask` | `structure-gate` | `source-structure` | `normal` | `always` | None | `false` | `true` | None |
 | `xtask-evidence` | `vyre-bench` | `workload-benchmarks` | `normal` | `always` | None | `false` | `true` | None |

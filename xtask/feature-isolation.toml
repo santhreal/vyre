@@ -1209,6 +1209,10 @@ feature = "(default)"
 
 [[pair]]
 member = "vyre-test-support"
+feature = "(default),dense-matvec-cases,semantic-parity"
+
+[[pair]]
+member = "vyre-test-support"
 feature = "(default),driver-artifact-contracts,host-input-abi,ir-fixtures,parity-oracles,semantic-requests"
 
 [[pair]]
@@ -1241,6 +1245,14 @@ feature = "(default),ir-fixtures"
 
 [[pair]]
 member = "vyre-test-support"
+feature = "(default),ir-fixtures,parity-oracles,semantic-requests"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "(default),ir-fixtures,semantic-parity"
+
+[[pair]]
+member = "vyre-test-support"
 feature = "(default),ir-fixtures,semantic-requests"
 
 [[pair]]
@@ -1253,10 +1265,6 @@ feature = "(default),parity-oracles"
 
 [[pair]]
 member = "vyre-test-support"
-feature = "(default),parity-oracles,semantic-requests"
-
-[[pair]]
-member = "vyre-test-support"
 feature = "(default),semantic-parity"
 
 [[pair]]
@@ -1266,6 +1274,10 @@ feature = "(default),semantic-requests"
 [[pair]]
 member = "vyre-test-support"
 feature = "(none)"
+
+[[pair]]
+member = "vyre-test-support"
+feature = "dense-matvec-cases"
 
 [[pair]]
 member = "vyre-test-support"
