@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"884d55cb283969e65e562d0c6d32f52ce1afaf90","commit_timestamp":"1789892107","parent_commit":"9598dbf4854d1ebac169e9abd3ece7d271985da8","dirty":true,"source_fingerprint":"git:884d55cb283969e65e562d0c6d32f52ce1afaf90:dirty=true:worktree=96cadd5986c3315b579cb5f22b1546da4c82d75e25f50c1af3bf804bcffe5964"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"2f6563124dde4ef976a733019b59e5fb41a00cb5","commit_timestamp":"1789892650","parent_commit":"884d55cb283969e65e562d0c6d32f52ce1afaf90","dirty":false,"source_fingerprint":"git:2f6563124dde4ef976a733019b59e5fb41a00cb5:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 6,
   "total_commands": 15,
   "artifact_failures": 0,
@@ -1017,9 +1017,9 @@
           "owner_lane": "coordination",
           "generator_command": "xtask feature-matrix",
           "command_mode": "spawned",
-          "content_sha256": "41ebe33e97d5ee09b6146a1a54355d35f7d8124e52989bb68cdc1d7196268f29",
-          "source_fingerprint": "release-evidence-source:v1:3eb9e55412b032b18ab9dae6d38b3f6dd7e0bcf07fd67deda2fcb703cf89d38d",
-          "freshness_fingerprint": "release-evidence-freshness:v1:85eaa9dc1067192905e22de782cee895a7df7e9906940379a4517d1e542017ac",
+          "content_sha256": "ae0b27580cdf26502ef5960c466f3b69169a690f6d59ace0119cb269fc00df5b",
+          "source_fingerprint": "release-evidence-source:v1:6b056f491f71ce67674cafac7aed04e8a51798aa259373cf82dd087287006b04",
+          "freshness_fingerprint": "release-evidence-freshness:v1:75a5a02987e6555c3e10ba6f1fefb29c1b8cba63ccf7a3cc54e6f7e24770d514",
           "blockers": []
         }
       ]
@@ -1906,9 +1906,9 @@
         "generator_command": "xtask feature-matrix",
         "command_mode": "spawned",
         "bytes": 30690,
-        "content_sha256": "41ebe33e97d5ee09b6146a1a54355d35f7d8124e52989bb68cdc1d7196268f29",
-        "source_fingerprint": "release-evidence-source:v1:3eb9e55412b032b18ab9dae6d38b3f6dd7e0bcf07fd67deda2fcb703cf89d38d",
-        "freshness_fingerprint": "release-evidence-freshness:v1:85eaa9dc1067192905e22de782cee895a7df7e9906940379a4517d1e542017ac",
+        "content_sha256": "ae0b27580cdf26502ef5960c466f3b69169a690f6d59ace0119cb269fc00df5b",
+        "source_fingerprint": "release-evidence-source:v1:6b056f491f71ce67674cafac7aed04e8a51798aa259373cf82dd087287006b04",
+        "freshness_fingerprint": "release-evidence-freshness:v1:75a5a02987e6555c3e10ba6f1fefb29c1b8cba63ccf7a3cc54e6f7e24770d514",
         "blockers": []
       },
       {
