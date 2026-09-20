@@ -1,15 +1,15 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"0156a229d2527561a0e244e9032dda8598bc2c60","commit_timestamp":"1789881940","parent_commit":"b312718055b886010f0b2f8d601c71a56d180aab","dirty":false,"source_fingerprint":"git:0156a229d2527561a0e244e9032dda8598bc2c60:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 5090","driver_version":"580.178.04"}]}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"07e55c822659938861017d3d6584b72744a3c88e","commit_timestamp":"1789918913","parent_commit":"e336c09069e72286fec24dd38b86d1a90a207afd","dirty":false,"source_fingerprint":"git:07e55c822659938861017d3d6584b72744a3c88e:dirty=false"},"host":{"state":"recorded","hostname":"santhserver","os":"linux","architecture":"x86_64","cpu_model":"11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz","cpu_cores":8},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 3080 Ti","driver_version":"580.173.02"}]}},
   "schema_version": 2,
   "backend": "cuda",
   "selected_backend": "cuda",
-  "source_fingerprint": "git:0156a229d2527561a0e244e9032dda8598bc2c60:dirty=false",
-  "source_tree_fingerprint": "source-tree-v1:a1893604070795f8fb02db67be1ceecc2e76fe91599786bfa9ef128876b4791e",
+  "source_fingerprint": "git:07e55c822659938861017d3d6584b72744a3c88e:dirty=false",
+  "source_tree_fingerprint": "source-tree-v1:29b6394fc22a8f4944edd3457622394f63ee066334ab48c9aecf39b0e5488e99",
   "environment": {
     "architecture": "x86_64",
     "build_profile": "release",
-    "cpu_cores": 22,
-    "cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
+    "cpu_cores": 8,
+    "cpu_model": "11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz",
     "features": [
       "vyre-bench",
       "build.opt_level:3",
@@ -27,23 +27,23 @@
     ],
     "gpu_devices": [
       {
-        "compute_capability_major": 12,
-        "compute_capability_minor": 0,
-        "driver_version": "580.178.04",
-        "memory_total_mib": 32607,
-        "name": "NVIDIA GeForce RTX 5090"
+        "compute_capability_major": 8,
+        "compute_capability_minor": 6,
+        "driver_version": "580.173.02",
+        "memory_total_mib": 12288,
+        "name": "NVIDIA GeForce RTX 3080 Ti"
       }
     ],
     "has_gpu": true,
     "nvidia_cuda_version": "13.0",
-    "nvidia_driver_version": "580.178.04",
+    "nvidia_driver_version": "580.173.02",
     "os": "linux"
   },
   "summary": {
     "total_cases": 1,
     "passed": 1,
     "failed": 0,
-    "total_time_ns": 1068517399,
+    "total_time_ns": 2397881976,
     "cache_hit_rate": null
   },
   "required_case_count": 1,
@@ -98,14 +98,14 @@
       "read_error": null,
       "case_count": 1,
       "min_wall_samples": 30,
-      "min_wall_p50": 850624,
-      "min_wall_p95": 3086700,
-      "min_wall_p99": 3162734,
+      "min_wall_p50": 2123999,
+      "min_wall_p95": 2399515,
+      "min_wall_p99": 2686223,
       "min_baseline_wall_samples": 30,
-      "min_baseline_wall_p50": 1165588,
-      "min_baseline_wall_p95": 3407376,
-      "min_baseline_wall_p99": 3526260,
-      "min_wall_speedup_x1000": 1370,
+      "min_baseline_wall_p50": 2853015,
+      "min_baseline_wall_p95": 2904360,
+      "min_baseline_wall_p99": 2919299,
+      "min_wall_speedup_x1000": 1343,
       "missing_custom_metrics": [],
       "non_positive_required_metrics": [],
       "non_winning_cases": [],
