@@ -12,7 +12,6 @@ use std::sync::{
     atomic::{AtomicU32, AtomicU64, Ordering},
     Arc, Mutex, MutexGuard,
 };
-use std::time::Instant;
 
 use metal::Device;
 use vyre_driver::resident_transfer_fusion::fuse_resident_transfer_intervals;
@@ -23,10 +22,10 @@ use vyre_driver::{
     VyreBackend,
 };
 use vyre_driver::{sealed, BackendError, PendingDispatch};
-use vyre_foundation::ir::{OpId, Program};
+use vyre_foundation::ir::Program;
 
 use self::buffer_plan::{
-    metal_slot_map, output_layout_map, plan_buffers, plan_resident_buffers, resident_input_lengths,
+    metal_slot_map, output_layout_map, plan_resident_buffers, resident_input_lengths,
     PlannedBuffer,
 };
 use self::dispatch::{
@@ -36,7 +35,7 @@ use self::dispatch::{
 };
 pub(crate) use self::metrics::push_resident_table_metrics;
 use self::metrics::{
-    bytes_per_second_to_gbps, elapsed_ns, record_buffer_allocation, record_device_to_host_copy,
+    bytes_per_second_to_gbps, record_buffer_allocation, record_device_to_host_copy,
     record_host_to_device_copy, record_output_readback_metrics, record_planned_buffer_metrics,
     MetalMetricCounters, MetalMetrics, METAL_COUNTERS,
 };

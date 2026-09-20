@@ -35,6 +35,15 @@ fn emit_metal_module(
     Ok(EmittedDialectModule { entry_point, bytes })
 }
 
+/// The profile the materializer admits payloads against.
+///
+/// Only the Apple-native materializer reads it, so it compiles where that
+/// materializer does.
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+pub(crate) fn target_profile() -> Result<TargetProfile, BackendError> {
+    METAL_DIALECT.profile()
+}
+
 pub(crate) fn target_compiler_factory() -> Result<Box<dyn TargetCompiler>, BackendError> {
     METAL_DIALECT.compiler()
 }

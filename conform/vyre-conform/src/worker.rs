@@ -4,6 +4,7 @@
 //! executes under explicit budgets, and emits an authenticated execution receipt.
 
 use std::io::{Read, Write};
+use std::sync::LazyLock;
 use std::time::Instant;
 
 use vyre::ir::Program;
@@ -275,13 +276,12 @@ fn execute_production(request: &WorkerRequest) -> Result<WorkerSuccess, String> 
     })
 }
 
-/// Compute a canonical digest of the current binary.
+/// The digest of the running image, read once.
 ///
 /// The binary is hashed in fixed-size chunks, so the digest costs one buffer
 /// instead of a second copy of the executable in memory, and a file past
 /// [`MAX_WORKER_BINARY_BYTES`] is refused rather than read.
-#[must_use]
-pub fn current_binary_digest() -> String {
+static BINARY_DIGEST: LazyLock<String> = LazyLock::new(|| {
     if let Some(digest) = std::env::current_exe()
         .ok()
         .and_then(|exe_path| hash_file_bounded(&exe_path))
@@ -290,6 +290,19 @@ pub fn current_binary_digest() -> String {
     }
     let fallback = format!("vyre-conform-bin-{}", env!("CARGO_PKG_VERSION"));
     blake3::hash(fallback.as_bytes()).to_hex().to_string()
+});
+
+/// A canonical digest of the current binary.
+///
+/// The running image cannot change while the process runs, so the read happens
+/// once per process. Reading it per request put a full read of the executable
+/// inside every bounded request: a coordinator enforcing a 100 ms wall budget
+/// spent eleven seconds hashing a test binary before it spawned the worker, and
+/// the case after a reaped worker exceeded a fifteen-second budget without
+/// running anything.
+#[must_use]
+pub fn current_binary_digest() -> String {
+    BINARY_DIGEST.clone()
 }
 
 /// Hash one file in fixed-size chunks, refusing anything past the bound.

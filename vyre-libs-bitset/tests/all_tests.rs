@@ -1,5 +1,26 @@
 //! One binary for every integration test in this crate.
 
+/// WHY: a linker that drops unreferenced objects links no operation
+/// registration into a binary that never names a partition anchor, and every
+/// catalog read in it then walks an empty registry. The Apple linker does drop
+/// them, so catalog cases reported the registration missing instead of a wrong
+/// value, on that platform only.
+///
+/// # What it does not catch
+///
+/// The count proves the partition this binary anchors reached the registry. It
+/// does not prove another partition did.
+#[cfg(feature = "bitset")]
+#[test]
+fn the_operation_catalog_is_linked_into_this_binary() {
+    vyre_libs_bitset::link_anchor();
+    assert!(
+        vyre_libs_builder::plumbing::registration::operation_catalog::library_entries().count() > 0,
+        "Fix: name this crate's `link_anchor` in the harness root; the registry this binary links \
+         is empty, so every catalog case in it asserts over nothing"
+    );
+}
+
 #[macro_use]
 #[path = "gate_fixtures/mod.rs"]
 pub mod gate_fixtures;
