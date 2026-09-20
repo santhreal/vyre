@@ -288,10 +288,10 @@ pub(crate) fn step_nodes_frame<'a>(
                         "AllGather input buffer `{input}` not found"
                     ))
                 })?;
-                src.read_window(0, src.byte_len())?
+                src.read_window(0, src.byte_len())
             };
             let dst = buffer_mut(memory, output.as_str())?;
-            dst.write_window(0, &src_bytes)?;
+            dst.write_window(0, &src_bytes);
         }
         Node::ReduceScatter {
             input,
@@ -311,10 +311,10 @@ pub(crate) fn step_nodes_frame<'a>(
                         "ReduceScatter input buffer `{input}` not found"
                     ))
                 })?;
-                src.read_window(0, src.byte_len())?
+                src.read_window(0, src.byte_len())
             };
             let dst = buffer_mut(memory, output.as_str())?;
-            dst.write_window(0, &src_bytes)?;
+            dst.write_window(0, &src_bytes);
         }
         Node::Broadcast {
             buffer: _,
@@ -737,7 +737,7 @@ fn read_bytes(
     start: usize,
     byte_count: usize,
 ) -> Result<Vec<u8>, ReferenceError> {
-    super::super::memory::resolve_buffer(memory, source)?.read_window(start, byte_count)
+    Ok(super::super::memory::resolve_buffer(memory, source)?.read_window(start, byte_count))
 }
 
 fn ensure_buffer_exists(memory: &HashmapMemory, name: &str) -> Result<(), ReferenceError> {
@@ -749,7 +749,8 @@ fn apply_async_transfer(
     memory: &mut HashmapMemory,
 ) -> Result<(), ReferenceError> {
     let buffer = buffer_mut(memory, transfer.destination())?;
-    transfer.apply_to(buffer)
+    transfer.apply_to(buffer);
+    Ok(())
 }
 
 // Inline: covers the crate-private `apply_async_transfer` and `read_bytes`, which no integration test can reach.

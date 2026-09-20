@@ -17,7 +17,7 @@ fn cuda_preserves_final_store_when_same_lane_is_written_twice() {
     let backend = live_backend();
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(8)],
-        [64, 1, 1],
+        [8, 1, 1],
         vec![
             Node::store("out", Expr::gid_x(), Expr::u32(0)),
             Node::store("out", Expr::gid_x(), Expr::u32(1)),
@@ -47,7 +47,7 @@ fn cuda_store_then_load_from_backend_allocated_output_is_visible_in_kernel() {
                 .with_pipeline_live_out(true),
             BufferDecl::output("out", 1, DataType::U32).with_count(8),
         ],
-        [64, 1, 1],
+        [8, 1, 1],
         vec![
             Node::store("scratch", Expr::gid_x(), Expr::u32(7)),
             Node::store("out", Expr::gid_x(), Expr::load("scratch", Expr::gid_x())),
@@ -139,7 +139,7 @@ fn differentiable_fma_square_program(lanes: u32) -> Program {
             BufferDecl::storage("w", 1, BufferAccess::ReadOnly, DataType::F32).with_count(lanes),
             BufferDecl::output("out", 2, DataType::F32).with_count(lanes),
         ],
-        [128, 1, 1],
+        [lanes, 1, 1],
         vec![
             Node::let_bind("xx", Expr::mul(x.clone(), x)),
             Node::let_bind(

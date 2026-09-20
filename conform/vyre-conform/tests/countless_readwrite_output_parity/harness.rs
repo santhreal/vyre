@@ -9,10 +9,14 @@ pub(crate) const N: u32 = 64;
 
 /// Build the XOR program whose single writable buffer is declared by `out`.
 ///
-/// The store is gated on `idx < len` so the boundary cases (one element, zero
-/// elements) do not depend on a backend absorbing out-of-range stores. The
-/// expected bytes are a pure function of the input, so any disagreement between
-/// backends is a backend defect and not an ambiguity in the program.
+/// The store is gated on `idx < buf_len(out)`, the runtime extent of the buffer
+/// being written, so the boundary cases (one element, zero elements) do not
+/// depend on a backend absorbing an out-of-range store. A countless buffer
+/// takes that extent from the bytes the caller supplied, which is smaller than
+/// `len` whenever the seed under-supplies, so gating on `len` would write past
+/// the end of the very buffer these cases size. The expected bytes are a pure
+/// function of the input, so any disagreement between backends is a backend
+/// defect and not an ambiguity in the program.
 pub(crate) fn xor_program(out: BufferDecl, len: u32) -> Program {
     Program::wrapped(
         vec![
@@ -23,7 +27,12 @@ pub(crate) fn xor_program(out: BufferDecl, len: u32) -> Program {
         vec![
             Node::let_bind("idx", Expr::gid_x()),
             Node::if_then(
-                Expr::lt(Expr::var("idx"), Expr::u32(len)),
+                Expr::lt(
+                    Expr::var("idx"),
+                    Expr::BufLen {
+                        buffer: "out".into(),
+                    },
+                ),
                 vec![Node::store(
                     "out",
                     Expr::var("idx"),

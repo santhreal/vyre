@@ -1,3 +1,4 @@
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 use vyre_driver::{ArtifactMaterializer, BackendError};
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
@@ -168,16 +169,11 @@ mod native {
     }
 }
 
+/// Materialize an artifact on the Metal device this host exposes.
+///
+/// Only an Apple target registers this facet, so the non-Apple build has no
+/// factory rather than one that refuses every call.
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
-    {
-        native::factory()
-    }
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
-    {
-        Err(BackendError::UnsupportedFeature {
-            name: "Apple Metal.framework artifact materialization".to_string(),
-            backend: crate::METAL_BACKEND_ID.to_string(),
-        })
-    }
+    native::factory()
 }

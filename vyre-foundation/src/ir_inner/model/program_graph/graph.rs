@@ -78,6 +78,26 @@ impl ProgramGraph {
                 continue;
             }
             let element_count = if buffer.count() == 0 {
+                // A backend-allocated output is never seeded by caller bytes, so
+                // nothing downstream can size it: the graph value would carry a
+                // zero extent and the logical stage would report an unresolved
+                // extent at a graph value, naming neither the declaration that
+                // is wrong nor what to write instead. Rule `V130` already calls
+                // this program invalid; this states the same remedy at the one
+                // place the buffer is still in hand.
+                if buffer.is_backend_allocated_output()
+                    && buffer.output_byte_range().is_none()
+                    && !runtime_counts.contains_key(buffer.name())
+                {
+                    return Err(ProgramGraphError::BufferContract {
+                        node: node_name,
+                        buffer: buffer.name().to_string(),
+                        reason: format!(
+                            "backend-allocated output `{}` has no static element count and no caller bytes to size it. Fix: declare it with .with_count(n), or with .with_output_byte_range(0..0) if it is genuinely empty",
+                            buffer.name()
+                        ),
+                    });
+                }
                 runtime_counts.get(buffer.name()).copied().unwrap_or(0)
             } else {
                 u64::from(buffer.count())

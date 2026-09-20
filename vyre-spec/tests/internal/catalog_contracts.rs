@@ -92,28 +92,24 @@ fn i4_is_wire_format_not_bytecode() {
     );
 }
 
-/// Names the conform parity matrix keys its per-variant rows by. A catalog that
-/// shrinks silently drops rows from that matrix, and a name that is not an
-/// identifier can never match one.
-const EXPR_VARIANT_FLOOR: usize = 24;
-
-/// The catalog is the row key set of the conform parity matrix, so it must not
-/// shrink and every entry must be shaped like an `Expr` variant name.
+/// The catalog is the row key set of the conform parity matrix, and the AST
+/// registry macro emits `EXPR_VARIANT_NAMES` from the `Expr` enum itself, so the
+/// two must agree member for member and in order.
 ///
-/// This deliberately does not restate the list. A second copy of the same 24
-/// strings would fail only when someone edited one copy, which is a diff nobody
-/// can land by accident, while proving nothing about the catalog itself. A
-/// renamed variant is caught where it matters, by the parity matrix failing to
-/// find a row for the new key.
+/// A floor on the length used to stand here. It let three variants
+/// (`LogicalIndex`, `LogicalTileId`, `LogicalWithinTileId`) enter the enum and
+/// stay out of the catalog, which dropped their rows from the parity matrix
+/// without failing anything. Equality against the generated list fails the
+/// moment a variant is added, removed, renamed, or reordered.
 #[test]
-fn expr_variant_catalog_is_unique_and_well_formed() {
+fn expr_variant_catalog_matches_the_ast_registry() {
     let actual = expr_variants();
-    assert!(
-        actual.len() >= EXPR_VARIANT_FLOOR,
-        "Fix: the expr variant catalog lists {} names, below the {EXPR_VARIANT_FLOOR} the parity \
-         matrix expects rows for; restore the removed variant or lower the floor with the \
-         removal",
-        actual.len()
+    assert_eq!(
+        actual,
+        vyre_foundation::ir::EXPR_VARIANT_NAMES,
+        "Fix: the expr variant catalog and the `Expr` enum disagree; add the new variant to \
+         `vyre-spec` catalog_slices::EXPR_VARIANTS in enum order, and give the conform parity \
+         matrix a row that exercises it"
     );
     let unique = actual.iter().copied().collect::<BTreeSet<_>>();
     assert_eq!(

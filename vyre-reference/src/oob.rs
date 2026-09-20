@@ -14,6 +14,12 @@
 //! a scalar load, an empty slice for `Bytes`, and a dropped store. That mode
 //! measures how far a program relies on the absorption; it cannot issue an
 //! expected output.
+//!
+//! A byte span carried by an async transfer is not an element index and does
+//! not follow either rule: it reads as zero past the end of its source and is
+//! clipped at the end of its destination under both modes, because every
+//! backend lowers the copy against the binding length and that clipping is the
+//! contract the parity matrix grades. The span is still counted in the tally.
 
 use vyre_foundation::ir::DataType as IrDataType;
 
@@ -56,6 +62,14 @@ pub struct OobReport {
     pub oob_stores: u64,
     /// Atomic loads/stores whose index fell outside the buffer.
     pub oob_atomics: u64,
+    /// Async byte spans that ran past the end of their buffer and were clipped
+    /// there.
+    ///
+    /// A clipped span is the transfer's declared cross-backend behavior rather
+    /// than an absorbed index, so it stays out of [`OobReport::total`] and a
+    /// strict run does not refuse it. It is counted because a program that
+    /// relies on the clip is still worth seeing.
+    pub clipped_spans: u64,
 }
 
 impl OobReport {
@@ -76,6 +90,7 @@ thread_local! {
         oob_loads: 0,
         oob_stores: 0,
         oob_atomics: 0,
+        clipped_spans: 0,
     }) };
     /// Per-thread strictness. Strict is the default, so an entry point that
     /// states nothing refuses an out-of-bounds access rather than absorbing
@@ -106,7 +121,29 @@ impl OobAccess {
     }
 }
 
-/// Tally one out-of-bounds access, and refuse it under strict mode.
+/// Tally one out-of-bounds element access without deciding what happens next.
+fn tally_oob(access: OobAccess) {
+    OOB_COUNTS.with(|c| {
+        let mut r = c.get();
+        match access {
+            OobAccess::Load => r.oob_loads = r.oob_loads.saturating_add(1),
+            OobAccess::Store => r.oob_stores = r.oob_stores.saturating_add(1),
+            OobAccess::Atomic => r.oob_atomics = r.oob_atomics.saturating_add(1),
+        }
+        c.set(r);
+    });
+}
+
+/// Tally one async byte span that was clipped at the end of its buffer.
+fn tally_clipped_span() {
+    OOB_COUNTS.with(|c| {
+        let mut r = c.get();
+        r.clipped_spans = r.clipped_spans.saturating_add(1);
+        c.set(r);
+    });
+}
+
+/// Tally one out-of-bounds element access, and refuse it under strict mode.
 ///
 /// Absorbing the access is a diagnostic-mode behavior. Strict mode is the mode
 /// whose outputs a backend is graded against, so the access ends the run with
@@ -117,15 +154,7 @@ fn record_oob(
     index: u32,
     extent: u32,
 ) -> Result<(), ReferenceError> {
-    OOB_COUNTS.with(|c| {
-        let mut r = c.get();
-        match access {
-            OobAccess::Load => r.oob_loads = r.oob_loads.saturating_add(1),
-            OobAccess::Store => r.oob_stores = r.oob_stores.saturating_add(1),
-            OobAccess::Atomic => r.oob_atomics = r.oob_atomics.saturating_add(1),
-        }
-        c.set(r);
-    });
+    tally_oob(access);
     if !is_strict_mode() {
         return Ok(());
     }
@@ -271,57 +300,42 @@ impl Buffer {
     ///
     /// An async transfer names a byte span rather than an element index, so it
     /// reads through here instead of the element-indexed [`load`]. A span that
-    /// starts past the end, or runs off the end, is out of bounds: strict mode
-    /// refuses it and diagnostic mode zero-pads the part that is not backed by
-    /// bytes.
-    ///
-    /// # Errors
-    /// Returns an out-of-bounds error under strict mode when the span is not
-    /// fully backed by bytes.
+    /// starts past the end, or runs off the end, reads as zero there in both
+    /// strictness modes: every backend lowers the transfer against the binding
+    /// length, so clipping is the copy's cross-backend contract rather than an
+    /// absorption of an index the program failed to gate. The clip is counted
+    /// in [`OobReport::clipped_spans`], which stays out of the strict refusal.
     ///
     /// # Panics
     /// Panics when the byte lock is poisoned; see [`Buffer::read_bytes`].
-    pub(crate) fn read_window(
-        &self,
-        start: usize,
-        byte_count: usize,
-    ) -> Result<Vec<u8>, ReferenceError> {
+    pub(crate) fn read_window(&self, start: usize, byte_count: usize) -> Vec<u8> {
         let bytes_guard = self.read_bytes();
         let mut payload = vec![0; byte_count];
-        let available = bytes_guard.len().saturating_sub(start).min(byte_count);
+        let begin = start.min(bytes_guard.len());
+        let available = (bytes_guard.len() - begin).min(byte_count);
         if available < byte_count {
-            drop(bytes_guard);
-            record_oob(OobAccess::Load, self, span_index(start), self.len())?;
-            let bytes_guard = self.read_bytes();
-            let available = bytes_guard.len().saturating_sub(start).min(byte_count);
-            payload[..available].copy_from_slice(&bytes_guard[start..start + available]);
-            return Ok(payload);
+            tally_clipped_span();
         }
-        payload[..available].copy_from_slice(&bytes_guard[start..start + available]);
-        Ok(payload)
+        payload[..available].copy_from_slice(&bytes_guard[begin..begin + available]);
+        payload
     }
 
-    /// Write `payload` starting at `start`.
+    /// Write `payload` starting at `start`, dropping the part past the end.
     ///
-    /// # Errors
-    /// Returns an out-of-bounds error under strict mode when the span is not
-    /// fully backed by bytes. Diagnostic mode drops the part past the end.
+    /// The span is clipped at the end of the buffer in both strictness modes,
+    /// for the reason [`Buffer::read_window`] states. The clip is counted in
+    /// [`OobReport::clipped_spans`].
     ///
     /// # Panics
     /// Panics when the byte lock is poisoned; see [`Buffer::read_bytes`].
-    pub(crate) fn write_window(&self, start: usize, payload: &[u8]) -> Result<(), ReferenceError> {
+    pub(crate) fn write_window(&self, start: usize, payload: &[u8]) {
         let mut bytes_guard = self.write_bytes();
-        let available = bytes_guard.len().saturating_sub(start).min(payload.len());
+        let begin = start.min(bytes_guard.len());
+        let available = (bytes_guard.len() - begin).min(payload.len());
         if available < payload.len() {
-            drop(bytes_guard);
-            record_oob(OobAccess::Store, self, span_index(start), self.len())?;
-            let mut bytes_guard = self.write_bytes();
-            let available = bytes_guard.len().saturating_sub(start).min(payload.len());
-            bytes_guard[start..start + available].copy_from_slice(&payload[..available]);
-            return Ok(());
+            tally_clipped_span();
         }
-        bytes_guard[start..start + available].copy_from_slice(&payload[..available]);
-        Ok(())
+        bytes_guard[begin..begin + available].copy_from_slice(&payload[..available]);
     }
 
     /// Consume the buffer and return its bytes.
@@ -400,15 +414,6 @@ fn absorbed_load(ty: DataType) -> Result<Value, ReferenceError> {
              Fix: declare the buffer with an element type of fixed storage width."
         ))
     })
-}
-
-/// Element index a byte-span diagnostic reports.
-///
-/// A window names a byte offset rather than an element, and the diagnostic
-/// states element indices, so the offset is reported as itself rather than
-/// divided by a stride the span does not declare.
-fn span_index(start: usize) -> u32 {
-    u32::try_from(start).unwrap_or(u32::MAX)
 }
 
 /// Write `value` into element `index` of `buffer`.
@@ -746,6 +751,53 @@ mod tests {
         assert_eq!(oob_report().total(), 0, "reset clears the tally");
     }
 
+    /// An async transfer names a byte span, and every backend lowers that copy
+    /// against the binding length, so the oracle clips it instead of refusing
+    /// it. Routing the window through the element-index refusal made strict
+    /// mode reject the overrunning half of the async span parity matrix, which
+    /// is the coverage that caught two emitters dividing a byte offset by four.
+    /// The tally still counts the span, so a program that relies on the clip
+    /// remains visible.
+    #[test]
+    fn a_byte_span_clips_under_strict_mode_and_is_counted() {
+        reset_oob_report();
+        let _strict = enter_strictness(true);
+
+        let source = Buffer::new((0u8..8).collect(), DataType::U32);
+        assert_eq!(
+            source.read_window(6, 6),
+            vec![6, 7, 0, 0, 0, 0],
+            "a span past the end of the source must read as zero there"
+        );
+        assert_eq!(
+            source.read_window(64, 2),
+            vec![0, 0],
+            "a span starting past the end reads as zero rather than panicking"
+        );
+
+        let destination = Buffer::new(vec![0u8; 8], DataType::U32);
+        destination.write_window(6, &[1, 2, 3, 4]);
+        assert_eq!(
+            destination.clone().into_bytes(),
+            vec![0, 0, 0, 0, 0, 0, 1, 2],
+            "a span past the end of the destination must be clipped there"
+        );
+        destination.write_window(64, &[9]);
+        assert_eq!(
+            destination.into_bytes(),
+            vec![0, 0, 0, 0, 0, 0, 1, 2],
+            "a span starting past the end writes nothing"
+        );
+
+        let report = oob_report();
+        assert_eq!(report.clipped_spans, 4, "every clipped span is counted");
+        assert_eq!(
+            report.total(),
+            0,
+            "a clipped span is not an absorbed index, so a strict run does not refuse it"
+        );
+    }
+
     #[test]
     fn poisoned_reference_buffer_lock_is_not_silently_recovered() {
         // A writer that panics mid-store poisons the lock. The reference oracle
@@ -795,7 +847,7 @@ mod tests {
                 }) as fn(&Buffer),
             ),
             ("write_window", |buffer: &Buffer| {
-                let _ = buffer.write_window(0, &[1, 2, 3, 4]);
+                buffer.write_window(0, &[1, 2, 3, 4]);
             }),
         ] {
             let buffer = Buffer::new(vec![0u8; 8], DataType::U32);

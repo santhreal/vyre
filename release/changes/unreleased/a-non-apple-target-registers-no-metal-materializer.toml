@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A target without Metal.framework registers the `metal` backend with no materializer instead of one that returns an unsupported-feature error at submit time, so a reader of the backend registry sees that this host does not materialize Metal artifacts."

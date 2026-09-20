@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The reference oracle clips an async transfer byte span at the end of its buffer and reads zero past the end of its source under both strictness modes, matching what every backend lowers against the binding length, and counts the clip in `OobReport::clipped_spans` instead of refusing the run."

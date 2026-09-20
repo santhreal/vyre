@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Lifting a program into a graph refuses a backend-allocated output that has no static element count, no caller bytes, and no runtime count, naming the buffer and `.with_count(n)`, instead of producing a graph value with a zero extent that the logical stage reported as an unresolved extent at a graph value id."

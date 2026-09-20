@@ -60,14 +60,13 @@ impl AsyncTransfer {
 
     /// Apply the queued copy to its already-resolved destination buffer.
     ///
-    /// # Errors
-    /// Propagates an out-of-bounds refusal when the copy span is not fully
-    /// backed by the destination buffer.
+    /// A span that runs off the end of the destination is clipped there; see
+    /// [`Buffer::write_window`](crate::oob::Buffer::write_window).
     ///
     /// # Panics
     /// Panics when the buffer's byte lock is poisoned; see
     /// [`Buffer::read_window`](crate::oob::Buffer::read_window).
-    pub(crate) fn apply_to(&self, buffer: &Buffer) -> Result<(), crate::ReferenceError> {
+    pub(crate) fn apply_to(&self, buffer: &Buffer) {
         match self {
             Self::Copy { start, payload, .. } => buffer.write_window(*start, payload),
         }

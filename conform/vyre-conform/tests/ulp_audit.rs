@@ -27,24 +27,35 @@ type FixtureFn = fn() -> FixtureCases;
 
 struct UnifiedEntry {
     id: &'static str,
-    build: Option<fn() -> Program>,
+    build: fn() -> Program,
     test_inputs: Option<FixtureFn>,
     expected_output: Option<FixtureFn>,
 }
 
 impl UnifiedEntry {
-    fn program(&self) -> Option<Program> {
-        self.build.map(|build| build().with_entry_op_id(self.id))
+    fn program(&self) -> Program {
+        (self.build)().with_entry_op_id(self.id)
     }
 }
 
+/// Every registration that builds a neutral program.
+///
+/// A registration with no builder is a callee identity: it exists so
+/// `Expr::Call` resolves through the registry, and its signature is the whole
+/// contract. There is no program to dispatch and no output to measure a ULP
+/// delta against, so the audit takes the buildable ops as its subjects.
+/// `vyre_foundation::operation::OperationRegistry` refuses a registration that
+/// supplies neither a program nor a signature.
 fn all_entries() -> Vec<UnifiedEntry> {
     let registry = vyre_registry_link::operation::live_operation_registry();
     let mut entries = Vec::with_capacity(registry.iter().len());
     for entry in registry.iter() {
+        let Some(build) = entry.build else {
+            continue;
+        };
         entries.push(UnifiedEntry {
             id: entry.id,
-            build: entry.build,
+            build,
             test_inputs: entry.test_inputs,
             expected_output: entry.expected_output,
         });

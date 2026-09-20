@@ -1,5 +1,7 @@
 use super::parity_matrix_entries::{FixtureCases, SyntheticOpaqueExpr, UnifiedEntry};
 use super::*;
+use vyre_foundation::ir::expr_variant_name;
+use vyre_foundation::visit::for_each_expr;
 
 /// Op id of the callee the expr-variant bundle calls.
 ///
@@ -63,6 +65,7 @@ fn synthetic_expr_variant_contract_program() -> Program {
                 then: vec![
                     Node::let_bind("lit_i32", Expr::LitI32(-4)),
                     Node::let_bind("workgroup_id", Expr::WorkgroupId { axis: 0 }),
+                    Node::let_bind("local_id", Expr::LocalId { axis: 0 }),
                     Node::let_bind(
                         "call",
                         Expr::Call {
@@ -111,182 +114,22 @@ pub(crate) fn expr_variant_rows(
         .collect()
 }
 
+/// Every `Expr` variant name reachable anywhere in `program`.
+///
+/// Descent is `vyre_foundation::visit::for_each_expr` and naming is
+/// `expr_variant_name`; the AST registry macro emits both against the enum
+/// itself. Two hand-rolled matches used to stand here, one over `Node` and one
+/// over `Expr`, each ending in a catch-all arm that panicked on a variant it
+/// did not list. `Expr` gained `LogicalIndex`, `LogicalTileId` and
+/// `LogicalWithinTileId`, and the matrix panicked on the first registered op
+/// that used one; the `Node` match had eleven variants behind the same arm.
+/// A walk the IR owns reaches a new variant with no edit here.
 pub(crate) fn expr_variants_in_program(program: &Program) -> BTreeSet<&'static str> {
     let mut variants = BTreeSet::new();
-    for node in program.entry() {
-        collect_expr_variants_from_node(node, &mut variants);
-    }
+    for_each_expr(program.entry(), |expr| {
+        variants.insert(expr_variant_name(expr));
+    });
     variants
-}
-
-fn collect_expr_variants_from_node(node: &Node, variants: &mut BTreeSet<&'static str>) {
-    match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => {
-            collect_expr_variants(value, variants);
-        }
-        Node::Store { index, value, .. } => {
-            collect_expr_variants(index, variants);
-            collect_expr_variants(value, variants);
-        }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            collect_expr_variants(cond, variants);
-            for child in then {
-                collect_expr_variants_from_node(child, variants);
-            }
-            for child in otherwise {
-                collect_expr_variants_from_node(child, variants);
-            }
-        }
-        Node::Loop { from, to, body, .. } => {
-            collect_expr_variants(from, variants);
-            collect_expr_variants(to, variants);
-            for child in body {
-                collect_expr_variants_from_node(child, variants);
-            }
-        }
-        Node::Block(children) => {
-            for child in children {
-                collect_expr_variants_from_node(child, variants);
-            }
-        }
-        Node::Region { body, .. } => {
-            for child in body.iter() {
-                collect_expr_variants_from_node(child, variants);
-            }
-        }
-        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
-            collect_expr_variants(offset, variants);
-            collect_expr_variants(size, variants);
-        }
-        Node::Trap { address, .. } => collect_expr_variants(address, variants),
-        Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_) => {}
-        _ => panic!(
-            "Fix: parity_matrix node traversal is missing a non-exhaustive Node variant; update expr coverage recursion before landing new IR surface."
-        ),
-    }
-}
-
-fn collect_expr_variants(expr: &vyre::ir::Expr, variants: &mut BTreeSet<&'static str>) {
-    use vyre::ir::Expr;
-
-    match expr {
-        Expr::LitU32(_) => {
-            variants.insert("LitU32");
-        }
-        Expr::LitI32(_) => {
-            variants.insert("LitI32");
-        }
-        Expr::LitF32(_) => {
-            variants.insert("LitF32");
-        }
-        Expr::LitBool(_) => {
-            variants.insert("LitBool");
-        }
-        Expr::Var(_) => {
-            variants.insert("Var");
-        }
-        Expr::BufferRef { .. } => {
-            variants.insert("BufferRef");
-        }
-        Expr::Load { index, .. } => {
-            variants.insert("Load");
-            collect_expr_variants(index, variants);
-        }
-        Expr::BufLen { .. } => {
-            variants.insert("BufLen");
-        }
-        Expr::InvocationId { .. } => {
-            variants.insert("InvocationId");
-        }
-        Expr::WorkgroupId { .. } => {
-            variants.insert("WorkgroupId");
-        }
-        Expr::LocalId { .. } => {
-            variants.insert("LocalId");
-        }
-        Expr::BinOp { left, right, .. } => {
-            variants.insert("BinOp");
-            collect_expr_variants(left, variants);
-            collect_expr_variants(right, variants);
-        }
-        Expr::UnOp { operand, .. } => {
-            variants.insert("UnOp");
-            collect_expr_variants(operand, variants);
-        }
-        Expr::Call { args, .. } => {
-            variants.insert("Call");
-            for arg in args {
-                collect_expr_variants(arg, variants);
-            }
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            variants.insert("Select");
-            collect_expr_variants(cond, variants);
-            collect_expr_variants(true_val, variants);
-            collect_expr_variants(false_val, variants);
-        }
-        Expr::Cast { value, .. } => {
-            variants.insert("Cast");
-            collect_expr_variants(value, variants);
-        }
-        Expr::Fma { a, b, c } => {
-            variants.insert("Fma");
-            collect_expr_variants(a, variants);
-            collect_expr_variants(b, variants);
-            collect_expr_variants(c, variants);
-        }
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            variants.insert("Atomic");
-            collect_expr_variants(index, variants);
-            if let Some(expected) = expected {
-                collect_expr_variants(expected, variants);
-            }
-            collect_expr_variants(value, variants);
-        }
-        Expr::SubgroupBallot { cond } => {
-            variants.insert("SubgroupBallot");
-            collect_expr_variants(cond, variants);
-        }
-        Expr::SubgroupShuffle { value, lane } => {
-            variants.insert("SubgroupShuffle");
-            collect_expr_variants(value, variants);
-            collect_expr_variants(lane, variants);
-        }
-        Expr::SubgroupReduce { value, .. } => {
-            variants.insert("SubgroupReduce");
-            collect_expr_variants(value, variants);
-        }
-        Expr::SubgroupLocalId => {
-            variants.insert("SubgroupLocalId");
-        }
-        Expr::SubgroupSize => {
-            variants.insert("SubgroupSize");
-        }
-        Expr::Opaque(_) => {
-            variants.insert("Opaque");
-        }
-        _ => panic!(
-            "Fix: parity_matrix expr traversal is missing a non-exhaustive Expr variant; add it to vyre-spec expr_variants() and the coverage walker."
-        ),
-    }
 }
 
 /// Reject a program the semantic validator refuses, before it reaches a backend.

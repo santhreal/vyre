@@ -69,6 +69,24 @@ pub fn registered_backend_id() -> Option<&'static str> {
     Some(METAL_BACKEND_ID)
 }
 
+/// Device materialization facet this target registers.
+///
+/// Metal.framework exists only on an Apple target, so every other target
+/// registers the pure target compiler and no materializer. Registering one
+/// that always refuses made a reader of the registry treat `metal` as a
+/// backend that materializes here and fail at submit time with an unsupported
+/// feature.
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+const MATERIALIZER: Option<
+    fn() -> Result<Box<dyn vyre_driver::ArtifactMaterializer>, BackendError>,
+> = Some(materializer::materializer_factory);
+
+/// No device materialization facet: see the Apple-target constant above.
+#[cfg(not(any(target_os = "macos", target_os = "ios")))]
+const MATERIALIZER: Option<
+    fn() -> Result<Box<dyn vyre_driver::ArtifactMaterializer>, BackendError>,
+> = None;
+
 vyre_driver::register_backend! {
     id: METAL_BACKEND_ID,
     target_id: METAL_TARGET_ID,
@@ -76,7 +94,7 @@ vyre_driver::register_backend! {
     reference_oracle: false,
     factory: acquire,
     target_compiler: Some(target_compiler::target_compiler_factory),
-    materializer: Some(materializer::materializer_factory),
+    materializer: MATERIALIZER,
     rank: 25,
 }
 
