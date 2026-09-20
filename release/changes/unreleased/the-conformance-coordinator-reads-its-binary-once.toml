@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The conformance coordinator reads and hashes the running executable once per process instead of once per request, so a wall budget bounds the case rather than a full read of the binary."

@@ -6788,6 +6788,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   workspace-member pin the checkout cannot satisfy, and it resolves the
   rendered crate's lockfile explicitly before building it, because the
   workspace runner appends --locked and a template ships no lockfile.
+- A test binary that reads the operation catalog names a partition anchor, so a
+  linker that drops unreferenced objects no longer leaves it walking an empty
+  registry and reporting every registration missing.
 - wire_harness_smoke_test spawned an example binary that only cargo's default
   target selection builds. Every explicit selection, including the --tests the
   coverage lane runs under, compiles an example as a hashed test harness
@@ -9688,6 +9691,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - `xtask lego-trend --write-baseline` regenerates `audits/lego-composition.tsv`
   from the live registry, and refuses to record a baseline while the trend
   check reports a regression.
+- The conformance coordinator reads and hashes the running executable once per
+  process instead of once per request, so a wall budget bounds the case rather
+  than a full read of the binary.
 - The consumer facade re-exports TensorRef, TensorRefError, and the
   buffer_names module, so a caller can name the operand types every Cat-A
   builder takes without depending on the builder package directly.
@@ -9858,6 +9864,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   submodule when that file was split, and the gate then reported an empty
   subject universe instead of comparing the seventeen counters the driver
   publishes.
+- The Metal driver compiles on macOS and iOS: its materializer named a target
+  profile the Metal target compiler never declared, and its runtime module
+  carried four imports nothing reads.
 - The model compiler derives a constant's content identity from statically
   known extents and covers the unresolved, symbol, and interned-expression
   dimension forms explicitly.
