@@ -870,6 +870,7 @@ pub vyre_reference::MemoryAccessRecord::memory_scope: vyre_foundation::memory_mo
 pub vyre_reference::MemoryAccessRecord::sequence: u64
 pub vyre_reference::MemoryAccessRecord::storage_domain: vyre_foundation::memory_model::storage::StorageDomain
 pub vyre_reference::MemoryAccessRecord::workgroup: [u32; 3]
+pub vyre_reference::OobReport::clipped_spans: u64
 pub vyre_reference::OobReport::oob_atomics: u64
 pub vyre_reference::OobReport::oob_loads: u64
 pub vyre_reference::OobReport::oob_stores: u64
