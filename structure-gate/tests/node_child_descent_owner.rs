@@ -270,11 +270,6 @@ const WAIVERS: &[Waiver] = &[
         reason: "tile node contract descent verification oracle",
     },
     Waiver {
-        path: "vyre-libs/tests/ir_shape/mod.rs",
-        seam: "semantic-library",
-        reason: "shape oracle for the graph tests, independent of the production walker by design",
-    },
-    Waiver {
         path: "vyre-libs/tests/loop_back_edge_audit.rs",
         seam: "semantic-library",
         reason: "back edge audit oracle, independent of the production walker by design",
