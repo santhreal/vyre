@@ -15,7 +15,8 @@ use vyre_driver::{
 };
 
 use crate::engine::record_and_readback::timestamp::{
-    collect_timestamp_profile, PendingTimestampProfile, TimestampRecorder,
+    collect_timestamp_profile, device_records_timestamps, PendingTimestampProfile,
+    TimestampRecorder,
 };
 use crate::numeric::WGPU_NUMERIC;
 use crate::pipeline::output_slots::resize_vec_with;
@@ -160,8 +161,16 @@ impl WgpuPipeline {
             params: None,
             workgroups: self.workgroups_for_dispatch(config)?,
         };
-        let timestamp_recorder =
-            TimestampRecorder::new(device, queue, &self.persistent_pool, true, 0)?;
+        // Opportunistic, exactly as in `dispatch_persistent_handles_timed`:
+        // this backs an untimed submit whose completion carries an optional
+        // `device_ns`.
+        let timestamp_recorder = TimestampRecorder::new(
+            device,
+            queue,
+            &self.persistent_pool,
+            device_records_timestamps(device),
+            0,
+        )?;
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("vyre asynchronous persistent dispatch"),
         });
@@ -331,8 +340,20 @@ impl CompiledPipeline for WgpuPipeline {
             workgroups: self.workgroups_for_dispatch(config)?,
         };
 
-        let timestamp_recorder =
-            TimestampRecorder::new(device, queue, &self.persistent_pool, true, 0)?;
+        // The resident-handle family reports timing the backend already owns:
+        // its trait default is host wall time and `device_ns` is an `Option`,
+        // so an adapter with no timestamp query answers `None`. Requesting the
+        // queries unconditionally turned that into a refusal, and a retained
+        // execution through `launch_resident` failed on every adapter that
+        // advertises no timestamp pair. `dispatch_borrowed_timed` is the
+        // caller's explicit request for device time and still refuses.
+        let timestamp_recorder = TimestampRecorder::new(
+            device,
+            queue,
+            &self.persistent_pool,
+            device_records_timestamps(device),
+            0,
+        )?;
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("vyre timed persistent dispatch"),
         });

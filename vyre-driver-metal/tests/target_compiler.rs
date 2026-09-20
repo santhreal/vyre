@@ -65,16 +65,6 @@ fn registered_target_compiler_emits_selected_metal_bundle() {
     assert_eq!(payload.neutral_artifact(), artifact.digest());
 }
 
-/// WHY: non-Apple hosts must not publish a fake linked Metal backend.
-#[cfg(not(any(target_os = "macos", target_os = "ios")))]
-#[test]
-fn non_apple_hosts_publish_no_metal_registration() {
-    let registrations = vyre_driver::registered_backends().expect("valid backend registry");
-    assert!(registrations
-        .iter()
-        .all(|registration| registration.id != vyre_driver_metal::METAL_BACKEND_ID));
-}
-
 /// WHY: native Metal materialization must execute the authenticated structured MSL artifact.
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 #[test]

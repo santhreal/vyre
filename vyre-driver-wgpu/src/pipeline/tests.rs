@@ -59,6 +59,29 @@ impl PipelineHarness {
         }
     }
 
+    /// The same harness on a device that withholds every timestamp feature.
+    ///
+    /// `purpose` completes "Fix: GPU required for {purpose}" when no device
+    /// opens.
+    fn without_timestamps(purpose: &str) -> Self {
+        let ((device, queue), adapter_info, enabled_features) =
+            crate::runtime::device::init_device_without_timestamps()
+                .unwrap_or_else(|err| panic!("Fix: GPU required for {purpose}: {err:?}"));
+        Self {
+            device_queue: Arc::new((device, queue)),
+            adapter_info,
+            enabled_features,
+            config: DispatchConfig::default(),
+            pipeline_cache: Arc::new(LruPipelineCache::with_limits(
+                DEFAULT_PIPELINE_CACHE_ENTRIES as u32,
+                DEFAULT_PIPELINE_CACHE_BYTES,
+            )),
+            layout_cache: Arc::new(BindGroupLayoutCache::with_hasher(BuildHasherDefault::<
+                rustc_hash::FxHasher,
+            >::default())),
+        }
+    }
+
     /// A dispatch arena over this harness's device and queue.
     fn arena(&self) -> Arc<DispatchArena> {
         Arc::new(DispatchArena::new(
@@ -282,6 +305,78 @@ mod bind_group_cache_contracts {
         );
         assert!(timed.enqueue_ns.is_some_and(|ns| ns > 0));
         assert!(timed.wait_ns.is_some_and(|ns| ns > 0));
+    }
+
+    /// WHY: the resident-handle family reports timing the backend owns, and
+    /// its trait default is host wall time with `device_ns: None`. Requesting
+    /// the timestamp queries unconditionally turned an adapter without them
+    /// into a refusal, so a retained execution through `launch_resident`
+    /// failed on every such adapter instead of running and reporting no
+    /// device time. Both resident entries are covered because the async one
+    /// and the timed one construct the recorder separately.
+    ///
+    /// It does not catch a backend that reports a fabricated `device_ns` in
+    /// place of `None`; the value is asserted absent, not its provenance.
+    #[test]
+    fn resident_dispatch_without_timestamps_runs_and_reports_no_device_ns() {
+        use vyre_driver::{CompiledPipeline, PendingDispatch};
+
+        let harness = PipelineHarness::without_timestamps("timestamp-free resident dispatch test");
+        assert!(
+            !crate::engine::record_and_readback::timestamp::device_records_timestamps(
+                &harness.device_queue.0
+            ),
+            "Fix: this test needs a device that withholds both timestamp features."
+        );
+
+        let arena = harness.arena();
+        let program = stores_u32("out", 1, 7);
+        let pipeline = harness
+            .compile_on_arena(&program, &arena)
+            .expect("Fix: timestamp-free resident dispatch test pipeline must compile.");
+
+        // One resource per public binding, in `BufferDecl` order: `out` is the
+        // program's only one.
+        let resources = [vyre_driver::Resource::Borrowed(vec![0u8; 4])];
+
+        let timed = pipeline
+            .dispatch_persistent_handles_timed(&resources, &harness.config)
+            .expect(
+                "Fix: a resident dispatch must run on an adapter with no timestamp capability.",
+            );
+        assert_eq!(
+            u32::from_le_bytes(timed.outputs[0][0..4].try_into().unwrap()),
+            7
+        );
+        assert!(
+            timed.device_ns.is_none(),
+            "Fix: with no timestamp capability the resident dispatch must report no device time, got {:?}",
+            timed.device_ns
+        );
+
+        let pending = pipeline
+            .dispatch_persistent_handles_async(
+                &resources,
+                &harness.config,
+                std::time::Instant::now(),
+            )
+            .expect(
+                "Fix: an asynchronous resident dispatch must submit on an adapter with no timestamp capability.",
+            );
+        let outputs = Box::new(pending)
+            .await_result()
+            .expect("Fix: an asynchronous resident dispatch must complete.");
+        assert_eq!(u32::from_le_bytes(outputs[0][0..4].try_into().unwrap()), 7);
+
+        let error = pipeline
+            .dispatch_borrowed_timed(&[], &harness.config)
+            .expect_err(
+                "Fix: an explicitly timed dispatch must still be refused when the adapter carries no timestamp capability.",
+            );
+        assert!(
+            error.to_string().contains("no timestamp capability"),
+            "Fix: refusing an explicitly timed dispatch must name the missing capability, got {error}"
+        );
     }
 }
 

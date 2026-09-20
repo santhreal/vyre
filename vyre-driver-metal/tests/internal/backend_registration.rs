@@ -18,13 +18,25 @@ fn non_apple_acquire_fails_actionably() {
 
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
 #[test]
-fn non_apple_build_does_not_register_fake_backend() {
+fn non_apple_build_registers_a_compiler_facet_and_no_materializer() {
+    let registrations = vyre_driver::registered_backends().expect("valid backend registry");
+    let registration = registrations
+        .iter()
+        .find(|registration| registration.id == METAL_BACKEND_ID)
+        .expect("the pure Metal target compiler is linked on every host");
+
+    registration
+        .target_compiler()
+        .expect("a non-Apple host compiles MSL without Metal.framework");
+
+    let error = registration
+        .materializer()
+        .err()
+        .expect("a non-Apple host cannot materialize a Metal artifact");
+    let message = error.to_string();
     assert!(
-        vyre_driver::registered_backends()
-            .expect("valid backend registry")
-            .iter()
-            .all(|registration| registration.id != METAL_BACKEND_ID),
-        "non-Apple builds must not submit a fake `metal` backend registration"
+        message.contains("registered artifact materializer") && message.contains("Fix:"),
+        "an absent materializer facet must be reported as unregistered, not as a device failure: {message}"
     );
 }
 

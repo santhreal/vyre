@@ -198,6 +198,76 @@ pub(crate) fn cached_enabled_features() -> Result<&'static EnabledFeatures> {
         .map_err(Clone::clone)
 }
 
+/// Acquire a device on the best real adapter with every timestamp feature
+/// withheld.
+///
+/// An adapter that advertises no timestamp pair, and one whose resolve proves
+/// no monotonic pair, both reach dispatch as a device whose `features()` carry
+/// neither timestamp bit. Withholding the bits here reproduces that device on
+/// a host whose adapter does advertise them, which is what lets one GPU host
+/// exercise both branches of every timed dispatch path.
+///
+/// # Errors
+///
+/// Returns an error when no real adapter is available or device creation
+/// fails.
+#[cfg(all(test, feature = "device-tests"))]
+pub(crate) fn init_device_without_timestamps() -> Result<(
+    (wgpu::Device, wgpu::Queue),
+    wgpu::AdapterInfo,
+    EnabledFeatures,
+)> {
+    let instance = shared_instance();
+    let adapters = instance.enumerate_adapters(COMPUTE_BACKENDS);
+    let mut best: Option<(&wgpu::Adapter, wgpu::AdapterInfo, u128)> = None;
+    for adapter in adapters.iter() {
+        let info = adapter.get_info();
+        if !crate::capabilities::is_real_gpu(&info) {
+            continue;
+        }
+        let score = gpu_candidate_score(&info, adapter.features(), &adapter.limits());
+        if best.as_ref().is_none_or(|(_, _, seen)| score > *seen) {
+            best = Some((adapter, info, score));
+        }
+    }
+    let (adapter, adapter_info, _) = best.ok_or_else(|| {
+        BackendError::new(
+            "no real GPU adapter is available for a timestamp-free device. Fix: run this device test on a host with a discrete, integrated, or virtual GPU adapter."
+                .to_string(),
+        )
+    })?;
+
+    let adapter_limits = adapter.limits();
+    let (mut features, mut enabled) =
+        enabled_features_for_adapter(adapter.features(), &adapter_limits, adapter_info.backend);
+    features
+        .remove(wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS);
+    enabled.timestamp_query = false;
+    enabled.timestamp_query_inside_encoders = false;
+
+    let device_queue = wait_for_gpu(request_device_with(
+        adapter,
+        "vyre timestamp-free device",
+        features,
+        &enabled,
+        &adapter_limits,
+        &adapter_info,
+    ))?;
+
+    let device_limits = device_queue.0.limits();
+    enabled.max_workgroup_size = [
+        device_limits.max_compute_workgroup_size_x,
+        device_limits.max_compute_workgroup_size_y,
+        device_limits.max_compute_workgroup_size_z,
+    ];
+    enabled.max_storage_buffer_binding_size =
+        u64::from(device_limits.max_storage_buffer_binding_size);
+    enabled.max_subgroup_size = device_limits.max_subgroup_size;
+    enabled.min_subgroup_size = device_limits.min_subgroup_size;
+
+    Ok((device_queue, adapter_info, enabled))
+}
+
 /// Return true when the device is the singleton cached device.
 ///
 /// Asking the question initializes the singleton, because the cell holds its

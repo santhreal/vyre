@@ -1,5 +1,7 @@
 //! GPU device abstraction and initialization.
 
+#[cfg(all(test, feature = "device-tests"))]
+pub(crate) use acquire::init_device_without_timestamps;
 pub use acquire::{acquire_gpu, cached_adapter_info, cached_device, init_device};
 pub(crate) use acquire::{poll_device_once, poll_device_wait_for, pop_error_scope_now};
 pub use features::EnabledFeatures;

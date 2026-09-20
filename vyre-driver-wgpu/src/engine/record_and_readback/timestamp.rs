@@ -37,6 +37,19 @@ pub(crate) fn timestamp_ticks(mapped: &[u8]) -> [u64; TIMESTAMP_QUERY_COUNT as u
     ticks
 }
 
+/// True when this device can bracket a compute pass with timestamp queries.
+///
+/// Both features are required together: `TIMESTAMP_QUERY` creates the query
+/// set and `TIMESTAMP_QUERY_INSIDE_ENCODERS` writes the encoder pair the
+/// dispatch decodes. A device that carries one and not the other resolves no
+/// monotonic pair, which is the same as carrying neither.
+pub(crate) fn device_records_timestamps(device: &wgpu::Device) -> bool {
+    device.features().contains(wgpu::Features::TIMESTAMP_QUERY)
+        && device
+            .features()
+            .contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS)
+}
+
 pub(crate) struct TimestampRecorder {
     pub(crate) query_set: wgpu::QuerySet,
     resolve_buffer: GpuBufferHandle,
@@ -71,11 +84,7 @@ impl TimestampRecorder {
         if !requested {
             return Ok(None);
         }
-        if !device.features().contains(wgpu::Features::TIMESTAMP_QUERY)
-            || !device
-                .features()
-                .contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS)
-        {
+        if !device_records_timestamps(device) {
             return Err(BackendError::new(
                 "GPU timestamp profiling was requested and this adapter carries no timestamp capability: TIMESTAMP_QUERY and TIMESTAMP_QUERY_INSIDE_ENCODERS are not both enabled on the created device, either because the adapter did not advertise them or because device acquisition resolved them and got no monotonic pair. Fix: read `supports_device_timestamps` before requesting a timed dispatch; do not silently profile with host-only timing.",
             ));
