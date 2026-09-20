@@ -25,8 +25,7 @@ fn the_operation_catalog_is_linked_into_this_binary() {
 #[path = "gate_fixtures/mod.rs"]
 pub mod gate_fixtures;
 
-#[path = "dense_matvec_cases/mod.rs"]
-pub mod dense_matvec_cases;
+pub use vyre_test_support::dense_matvec_cases;
 
 #[path = "adversarial_bitset_contains.rs"]
 pub mod adversarial_bitset_contains;

@@ -1,7 +1,6 @@
 //! One binary for every integration test in this crate.
 
-#[path = "ir_shape/mod.rs"]
-pub mod ir_shape;
+pub use vyre_test_support::ir_shape;
 
 #[path = "text_char_class_runner/mod.rs"]
 pub mod text_char_class_runner;

@@ -76,6 +76,12 @@ host-input-abi = ["driver-contracts", "parity-oracles"]
 # unconditional; only the draw needs proptest, so a consumer that iterates a
 # table never builds a property-testing framework.
 spec-strategies = ["dep:proptest"]
+# The dense byte-tile matvec case table. It names the byte-tile geometry the
+# Four-Russians primitive declares, packs operands through the wire helpers and
+# measures a Program on the oracle, so it composes the primitive crate with
+# `parity-oracles`. Opt-in: a consumer of any other table never joins a
+# semantic library to its dev graph.
+dense-matvec-cases = ["parity-oracles", "dep:vyre-libs-bitset", "dep:vyre-primitives"]
 
 [dependencies]
 # The one owner of "which checkout am I reporting on". Resolved from the working
@@ -100,6 +106,7 @@ blake3 = { workspace = true, optional = true }
 smallvec = { workspace = true, optional = true }
 vyre-reference = { workspace = true, optional = true }
 vyre-primitives = { workspace = true, optional = true }
+vyre-libs-bitset = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 inventory = { workspace = true }

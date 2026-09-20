@@ -13,15 +13,17 @@
 //!
 //! This module owns which cases exist and what the answer is. What a crate
 //! asserts about a case stays in that crate: an arm names the API it pins.
-//! Consumers read this table from this module, the same way
-//! `vyre_test_support::sweep_rng` is shared.
+//! Consumers read this table from here, the same way
+//! [`crate::sweep_rng`] is shared. A copy of the table lived in each consumer's
+//! own `tests/` tree instead, which is the per-crate corpus this module was
+//! written to end.
 //!
 //! [`arm_coverage`] is why a case group cannot be declared and then quietly
 //! skipped: each arm records the groups it asserted and the ledger reads this
 //! table back at run time, so a group added below with no arm in a crate turns
 //! that crate's suite red instead of widening the table for nobody.
 
-use vyre_test_support::case_table::ArmCoverage;
+use crate::case_table::ArmCoverage;
 
 use vyre_libs_bitset::bitset::four_russians::{
     frontier_words_for_byte_tiles, BYTE_TILE_STATES, BYTE_TILE_WIDTH,

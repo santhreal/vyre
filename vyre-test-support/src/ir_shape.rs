@@ -10,34 +10,40 @@
 //! A suite that asked one question directly left the other walkers with no
 //! caller in that binary, so the shape is read whole and each suite states the
 //! facts it pins.
+//!
+//! One copy of this module lived in each consuming crate's own `tests/` tree.
+//! They drifted: one walked children through
+//! [`vyre_foundation::visit::any_descendant`], the other hand-rolled the
+//! descent behind a catch-all arm that answered "no" for every node kind it
+//! did not list.
 
 use std::fmt;
 use vyre_foundation::visit::{any_descendant, for_each_node};
 
 /// The structural facts a suite pins about a built program.
-pub(crate) struct ProgramShape {
+pub struct ProgramShape {
     /// Contains a loop at any nesting depth.
     ///
     /// A builder that lowers to a serial loop where the contract promises a
     /// parallel multi-block chain reports `true`.
-    pub(crate) loops: bool,
+    pub loops: bool,
     /// Reads `invocation_id` anywhere.
     ///
     /// A parallel builder must; a builder that lost its lane indexing reads
     /// none and would otherwise still pass a value comparison on a one-element
     /// input.
-    pub(crate) reads_invocation_id: bool,
+    pub reads_invocation_id: bool,
     /// Gates work behind `invocation_id.x == 0`.
     ///
     /// That gate serializes a dispatch onto one lane, so a builder that claims
     /// to expose parallel work must not contain one.
-    pub(crate) gates_on_invocation_zero: bool,
+    pub gates_on_invocation_zero: bool,
     /// Number of grid-wide barriers.
     ///
     /// The multi-block scan chain is exactly Pass-A / Pass-B / Pass-C, so it
     /// needs exactly two. A dropped barrier reads as a lost cross-block
     /// dependency.
-    pub(crate) grid_sync_barriers: usize,
+    pub grid_sync_barriers: usize,
 }
 
 impl fmt::Display for ProgramShape {
@@ -54,7 +60,7 @@ impl fmt::Display for ProgramShape {
 }
 
 /// Read every structural fact of `program` in one walk per question.
-pub(crate) fn shape_of(program: &vyre_foundation::ir::Program) -> ProgramShape {
+pub fn shape_of(program: &vyre_foundation::ir::Program) -> ProgramShape {
     ProgramShape {
         loops: program.entry().iter().any(node_contains_loop),
         reads_invocation_id: program.entry().iter().any(node_contains_invocation_id),

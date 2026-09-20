@@ -312,6 +312,10 @@ pub mod consumer_boundary;
 pub mod data_type_elements;
 #[cfg(feature = "ir-fixtures")]
 pub mod data_type_variants;
+/// The declared dense byte-tile matvec case table and its independent oracle,
+/// shared by the primitive and substrate arms that assert the same corpus.
+#[cfg(feature = "dense-matvec-cases")]
+pub mod dense_matvec_cases;
 #[cfg(feature = "parity-oracles")]
 pub mod differential_matrix;
 #[cfg(feature = "ir-fixtures")]
@@ -341,6 +345,10 @@ pub mod hardware_oracle;
 pub mod host_input_abi;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_regions;
+/// Structural queries over a built `Program`, shared by the suites that pin a
+/// builder's emitted shape rather than its values.
+#[cfg(feature = "ir-fixtures")]
+pub mod ir_shape;
 #[cfg(feature = "ir-fixtures")]
 pub mod ir_variants;
 pub mod le_words;

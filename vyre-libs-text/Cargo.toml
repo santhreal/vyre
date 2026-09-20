@@ -33,7 +33,10 @@ vyre-libs-reduce = { workspace = true }
 
 [dev-dependencies]
 proptest.workspace = true
-vyre-test-support = { workspace = true, features = ["semantic-parity"] }
+vyre-test-support = { workspace = true, features = [
+    "semantic-parity",
+    "ir-fixtures",
+] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
 

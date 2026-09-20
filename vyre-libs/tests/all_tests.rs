@@ -17,11 +17,9 @@ pub mod bitset_law_properties;
 #[path = "harness/mod.rs"]
 pub mod harness;
 
-/// Shared fixture module from `tests/ir_shape/mod.rs`.
+/// Shared fixture module from `vyre_test_support::ir_shape`.
 #[cfg(feature = "reduce")]
-#[allow(deprecated)]
-#[path = "ir_shape/mod.rs"]
-pub mod ir_shape;
+pub use vyre_test_support::ir_shape;
 
 /// Shared fixture module from `tests/succinct_words/mod.rs`.
 #[cfg(feature = "math-succinct")]

@@ -227,7 +227,11 @@ naga.workspace = true
 tree-sitter = { workspace = true }
 tree-sitter-go = { workspace = true }
 toml.workspace = true
-vyre-test-support = { workspace = true, features = ["semantic-requests", "parity-oracles"] }
+vyre-test-support = { workspace = true, features = [
+    "semantic-requests",
+    "parity-oracles",
+    "ir-fixtures",
+] }
 structure-gate = { path = "../structure-gate" }
 
 [package.metadata.vyre]
