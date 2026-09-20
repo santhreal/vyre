@@ -20,10 +20,6 @@ fn the_operation_catalog_is_linked_into_this_binary() {
     );
 }
 
-#[macro_use]
-#[path = "gate_fixtures/mod.rs"]
-pub mod gate_fixtures;
-
 #[path = "adversarial_reduce_gather.rs"]
 pub mod adversarial_reduce_gather;
 

@@ -285,6 +285,9 @@ macro_rules! u32_signature {
     };
 }
 
+/// The case loop the adversarial contract suites share.
+#[macro_use]
+pub mod adversarial_cases;
 #[cfg(feature = "ir-fixtures")]
 pub mod adversarial_generators;
 mod registry_closure;

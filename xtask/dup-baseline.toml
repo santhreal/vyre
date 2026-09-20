@@ -103,8 +103,8 @@ total_lines = 2249
 
 [[crate]]
 name = "vyre-driver-wgpu"
-duplicate_lines = 212
-total_lines = 34925
+duplicate_lines = 202
+total_lines = 34901
 
 [[crate]]
 name = "vyre-emit-metal"
@@ -133,8 +133,8 @@ total_lines = 148518
 
 [[crate]]
 name = "vyre-libs"
-duplicate_lines = 500
-total_lines = 17869
+duplicate_lines = 390
+total_lines = 17904
 
 [[crate]]
 name = "vyre-libs-analysis"
@@ -143,8 +143,8 @@ total_lines = 3908
 
 [[crate]]
 name = "vyre-libs-bitset"
-duplicate_lines = 326
-total_lines = 5745
+duplicate_lines = 64
+total_lines = 5496
 
 [[crate]]
 name = "vyre-libs-builder"
@@ -163,8 +163,8 @@ total_lines = 1271
 
 [[crate]]
 name = "vyre-libs-encoding"
-duplicate_lines = 360
-total_lines = 5375
+duplicate_lines = 113
+total_lines = 5178
 
 [[crate]]
 name = "vyre-libs-fixpoint"
@@ -183,7 +183,7 @@ total_lines = 4761
 
 [[crate]]
 name = "vyre-libs-math"
-duplicate_lines = 633
+duplicate_lines = 621
 total_lines = 24805
 
 [[crate]]
@@ -208,8 +208,8 @@ total_lines = 3221
 
 [[crate]]
 name = "vyre-libs-reduce"
-duplicate_lines = 74
-total_lines = 7195
+duplicate_lines = 56
+total_lines = 7217
 
 [[crate]]
 name = "vyre-libs-rule"
@@ -233,8 +233,8 @@ total_lines = 11611
 
 [[crate]]
 name = "vyre-libs-text"
-duplicate_lines = 166
-total_lines = 3530
+duplicate_lines = 40
+total_lines = 3336
 
 [[crate]]
 name = "vyre-libs-visual"

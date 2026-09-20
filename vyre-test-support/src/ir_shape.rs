@@ -18,7 +18,7 @@
 //! did not list.
 
 use std::fmt;
-use vyre_foundation::visit::{any_descendant, for_each_node};
+use vyre_foundation::visit::{any_descendant, any_expr_in, any_subexpr, for_each_node};
 
 /// The structural facts a suite pins about a built program.
 pub struct ProgramShape {
@@ -61,18 +61,14 @@ impl fmt::Display for ProgramShape {
 
 /// Read every structural fact of `program` in one walk per question.
 pub fn shape_of(program: &vyre_foundation::ir::Program) -> ProgramShape {
+    let entry = program.entry();
     ProgramShape {
-        loops: program.entry().iter().any(node_contains_loop),
-        reads_invocation_id: program.entry().iter().any(node_contains_invocation_id),
-        gates_on_invocation_zero: program
-            .entry()
-            .iter()
-            .any(node_contains_invocation_zero_gate),
-        grid_sync_barriers: program
-            .entry()
-            .iter()
-            .map(node_grid_sync_barrier_count)
-            .sum(),
+        loops: entry.iter().any(node_contains_loop),
+        reads_invocation_id: any_expr_in(entry, &mut |expr| {
+            matches!(expr, vyre_foundation::ir::Expr::LogicalIndex { .. })
+        }),
+        gates_on_invocation_zero: entry.iter().any(node_contains_invocation_zero_gate),
+        grid_sync_barriers: entry.iter().map(node_grid_sync_barrier_count).sum(),
     }
 }
 
@@ -89,105 +85,25 @@ fn node_contains_invocation_zero_gate(node: &vyre_foundation::ir::Node) -> bool 
     )
 }
 
+/// True when `expr` compares logical axis 0 against zero anywhere below it.
+///
+/// Sub-expressions come from the AST registry, so a new operand-carrying
+/// variant is searched without an edit here. A hand-rolled descent answered
+/// `false` for every variant it did not list, which turns a "does not gate on
+/// invocation zero" assertion green for the programs it cannot see into.
 fn expr_is_invocation_zero(expr: &vyre_foundation::ir::Expr) -> bool {
     use vyre_foundation::ir::{BinOp, Expr};
-    match expr {
-        Expr::BinOp { op, left, right } if *op == BinOp::Eq => matches!(
-            (&**left, &**right),
-            (Expr::LogicalIndex { axis: 0 }, Expr::LitU32(0))
-                | (Expr::LitU32(0), Expr::LogicalIndex { axis: 0 })
-        ),
-        Expr::BinOp { left, right, .. } => {
-            expr_is_invocation_zero(left) || expr_is_invocation_zero(right)
-        }
-        Expr::UnOp { operand, .. } | Expr::Cast { value: operand, .. } => {
-            expr_is_invocation_zero(operand)
-        }
-        Expr::Load { index, .. } => expr_is_invocation_zero(index),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_is_invocation_zero(cond)
-                || expr_is_invocation_zero(true_val)
-                || expr_is_invocation_zero(false_val)
-        }
-        Expr::Atomic {
-            index,
-            value,
-            expected,
-            ..
-        } => {
-            expr_is_invocation_zero(index)
-                || expr_is_invocation_zero(value)
-                || expected
-                    .as_ref()
-                    .is_some_and(|expr| expr_is_invocation_zero(expr))
-        }
-        Expr::Fma { a, b, c } => {
-            expr_is_invocation_zero(a) || expr_is_invocation_zero(b) || expr_is_invocation_zero(c)
-        }
-        Expr::Call { args, .. } => args.iter().any(expr_is_invocation_zero),
-        _ => false,
-    }
-}
-
-fn node_contains_invocation_id(node: &vyre_foundation::ir::Node) -> bool {
-    use vyre_foundation::ir::Node;
-    any_descendant(node, &mut |current| match current {
-        Node::Let { value, .. } | Node::Assign { value, .. } => expr_contains_invocation_id(value),
-        Node::Store { index, value, .. } => {
-            expr_contains_invocation_id(index) || expr_contains_invocation_id(value)
-        }
-        Node::If { cond, .. } => expr_contains_invocation_id(cond),
-        Node::Loop { from, to, .. } => {
-            expr_contains_invocation_id(from) || expr_contains_invocation_id(to)
-        }
-        _ => false,
+    any_subexpr(expr, &mut |current| {
+        matches!(
+            current,
+            Expr::BinOp { op: BinOp::Eq, left, right }
+                if matches!(
+                    (&**left, &**right),
+                    (Expr::LogicalIndex { axis: 0 }, Expr::LitU32(0))
+                        | (Expr::LitU32(0), Expr::LogicalIndex { axis: 0 })
+                )
+        )
     })
-}
-
-fn expr_contains_invocation_id(expr: &vyre_foundation::ir::Expr) -> bool {
-    use vyre_foundation::ir::Expr;
-    match expr {
-        Expr::LogicalIndex { .. } => true,
-        Expr::Load { index, .. } | Expr::UnOp { operand: index, .. } => {
-            expr_contains_invocation_id(index)
-        }
-        Expr::BinOp { left, right, .. } => {
-            expr_contains_invocation_id(left) || expr_contains_invocation_id(right)
-        }
-        Expr::Call { args, .. } => args.iter().any(expr_contains_invocation_id),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_contains_invocation_id(cond)
-                || expr_contains_invocation_id(true_val)
-                || expr_contains_invocation_id(false_val)
-        }
-        Expr::Atomic {
-            index,
-            value,
-            expected,
-            ..
-        } => {
-            expr_contains_invocation_id(index)
-                || expr_contains_invocation_id(value)
-                || expected
-                    .as_ref()
-                    .is_some_and(|expr| expr_contains_invocation_id(expr))
-        }
-        Expr::Cast { value, .. } => expr_contains_invocation_id(value),
-        Expr::Fma { a, b, c } => {
-            expr_contains_invocation_id(a)
-                || expr_contains_invocation_id(b)
-                || expr_contains_invocation_id(c)
-        }
-        _ => false,
-    }
 }
 
 fn node_grid_sync_barrier_count(node: &vyre_foundation::ir::Node) -> usize {
