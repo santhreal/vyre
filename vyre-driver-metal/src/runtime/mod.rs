@@ -25,8 +25,7 @@ use vyre_driver::{sealed, BackendError, PendingDispatch};
 use vyre_foundation::ir::Program;
 
 use self::buffer_plan::{
-    metal_slot_map, output_layout_map, plan_resident_buffers, resident_input_lengths,
-    PlannedBuffer,
+    metal_slot_map, output_layout_map, plan_resident_buffers, resident_input_lengths, PlannedBuffer,
 };
 use self::dispatch::{
     dispatch_planned_buffers_with_queue, start_validated_dispatch,
