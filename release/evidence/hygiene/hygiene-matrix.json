@@ -1,10 +1,10 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"6e21d1295a1737d0521f84eb466ca869c78bb93a","commit_timestamp":"1789811415","parent_commit":"34e62e7fec6a3a11604739fdf6b8a682d165ec3f","dirty":false,"source_fingerprint":"git:6e21d1295a1737d0521f84eb466ca869c78bb93a:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"28e23438eb470e90ab860f550072134152304572","commit_timestamp":"1789920513","parent_commit":"07e55c822659938861017d3d6584b72744a3c88e","dirty":false,"source_fingerprint":"git:28e23438eb470e90ab860f550072134152304572:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 6,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4855,
+  "scanned_files": 4853,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -58,7 +58,7 @@
     },
     {
       "pattern": "panic_macro",
-      "count": 43
+      "count": 44
     },
     {
       "pattern": "placeholder_text",
@@ -148,7 +148,7 @@
       "risk": "test_hygiene",
       "hot_path": false,
       "release_blocker": false,
-      "count": 165
+      "count": 166
     },
     {
       "owner_lane": "driver_cuda",
@@ -408,7 +408,7 @@
       "hot_path": false,
       "pattern": "panic_macro",
       "release_blocker": false,
-      "count": 43
+      "count": 44
     },
     {
       "owner_lane": "coordination",
@@ -3967,6 +3967,16 @@
       "release_blocker": false
     },
     {
+      "path": "vyre-test-support/src/dense_matvec_cases.rs",
+      "line": 363,
+      "pattern": "panic_macro",
+      "owner_lane": "coordination",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
       "path": "vyre-test-support/src/float_cast_closure.rs",
       "line": 37,
       "pattern": "documented_panic_contract",
@@ -4338,7 +4348,7 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 550,
+      "line": 556,
       "pattern": "unbounded_read",
       "owner_lane": "coordination",
       "surface": "test",
@@ -4348,7 +4358,7 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 551,
+      "line": 557,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -4358,7 +4368,7 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 553,
+      "line": 559,
       "pattern": "documented_panic_contract",
       "owner_lane": "coordination",
       "surface": "test",
@@ -5358,7 +5368,7 @@
     },
     {
       "path": "structure-gate/tests/node_child_descent_owner.rs",
-      "line": 541,
+      "line": 531,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "test",
@@ -8612,6 +8622,12 @@
       "text": "panic!(\"Fix: no `pub enum DataType` declaration in {path:?}; update this enumeration\")"
     },
     {
+      "path": "vyre-test-support/src/dense_matvec_cases.rs",
+      "line": 363,
+      "pattern": "panic_macro",
+      "text": "panic!("
+    },
+    {
       "path": "vyre-test-support/src/float_cast_closure.rs",
       "line": 37,
       "pattern": "documented_panic_contract",
@@ -8835,19 +8851,19 @@
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 550,
+      "line": 556,
       "pattern": "unbounded_read",
       "text": "let source = std::fs::read_to_string(&path)"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 551,
+      "line": 557,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|err| panic!(\"Fix: cannot read {path:?} to derive the level set: {err}\"));"
     },
     {
       "path": "vyre-test-support/src/lib.rs",
-      "line": 553,
+      "line": 559,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|| panic!(\"Fix: {path:?} no longer declares `pub enum IrLevel`\"));"
     },
@@ -9456,7 +9472,7 @@
     },
     {
       "path": "structure-gate/tests/node_child_descent_owner.rs",
-      "line": 541,
+      "line": 531,
       "pattern": "source_inspection_test",
       "text": "test `the_child_slot_vocabulary_is_read_off_the_enum_the_owner_walks` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "the_child_slot_vocabulary_is_read_off_the_enum_the_owner_walks"

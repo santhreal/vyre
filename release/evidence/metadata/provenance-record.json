@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"ea116cdfb43691f427b2ba58454171b43f78e385","commit_timestamp":"1789917832","parent_commit":"5a0a6194842f20ff9dc136d2e9c14df6af10f33f","dirty":false,"source_fingerprint":"git:ea116cdfb43691f427b2ba58454171b43f78e385:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"28e23438eb470e90ab860f550072134152304572","commit_timestamp":"1789920513","parent_commit":"07e55c822659938861017d3d6584b72744a3c88e","dirty":true,"source_fingerprint":"git:28e23438eb470e90ab860f550072134152304572:dirty=true:worktree=1b213fcc685160ef78865f22e737571c2d766172a1753355ca3c3b91fe8617ed"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "_type": "https://in-toto.io/Statement/v1",
   "predicate": {
     "buildDefinition": {
@@ -2955,7 +2955,7 @@
         },
         {
           "digest": {
-            "sha256": "4ade6a35a2065ee74213b3dde6f770f102fb33c98682fbebf446676533941cde"
+            "sha256": "877645b6d2e50fdb2e4a065a64a2beca2b993557e3ada14eacfe085a9ab1b970"
           },
           "name": "docs/generated/platform-support-matrix.toml"
         }
@@ -2975,7 +2975,7 @@
   "subject": [
     {
       "digest": {
-        "blake3": "70098f33aca1952c7d1c839adf80701de1c072886e8c94662c74d47ee14b7188"
+        "blake3": "19855145dbedc88d9f76a46545341b983a015933b4162eecb318afee87db5532"
       },
       "name": "vyre-release-archive"
     }

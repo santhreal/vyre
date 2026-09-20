@@ -1737,6 +1737,11 @@ publication_class = "private-test-support"
 
 [[package_features]]
 package = "vyre-test-support"
+feature = "dense-matvec-cases"
+publication_class = "private-test-support"
+
+[[package_features]]
+package = "vyre-test-support"
 feature = "driver-artifact-contracts"
 publication_class = "private-test-support"
 
