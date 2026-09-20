@@ -1,5 +1,5 @@
 schema_version = 2
-bom_timestamp = "2026-09-20T13:02:30Z"
+bom_timestamp = "2026-09-20T14:27:39Z"
 rustc_version = "1.86.0 (05f9846f8 2025-03-31)"
 cargo_version = "1.86.0 (adf9b6ad1 2025-02-28)"
 target_triples = [
@@ -9,9 +9,9 @@ target_triples = [
     "aarch64-apple-darwin",
     "aarch64-unknown-linux-gnu",
 ]
-lockfile_digest = "707803cbb50ba463ebd757b5e98b61d6116dbb3a68552377c0e42f3d9bdc46e6"
+lockfile_digest = "81e642902caabad53b6d6a3192e06798c0a6a9d49326b13d850bde13b1d875a3"
 is_offline_capable = true
-reproducible_archive_hash = "595bdf865dadec1f3ee7c8f856ab53268c3ace3789b705c15d98f4655adf601f"
+reproducible_archive_hash = "70098f33aca1952c7d1c839adf80701de1c072886e8c94662c74d47ee14b7188"
 
 [[dependencies]]
 name = "adler2"
@@ -4131,7 +4131,7 @@ digest = "5543ad1e235756185a27b4e82f27e8db0da8f6edf647de628a1f977818f41f9e"
 
 [[schemas]]
 path = "docs/generated/configuration-space.toml"
-digest = "ae6e88e9fe4d4299a7fad64644723840483d95f87d9442553e9e9777493882c0"
+digest = "ff5f13b8fab88adefd5ce70178eff5ec70997723a813188529920824d4626683"
 
 [[schemas]]
 path = "docs/generated/driver-error-codes.toml"
