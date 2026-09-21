@@ -370,7 +370,8 @@ fn declares_cases_text(text: &str) -> bool {
 /// attributes of the chain that reaches it, so the feature set is accumulated
 /// on the way down rather than read off the file that holds the `#[test]`.
 ///
-/// An empty set means a case runs whenever the harness does.
+/// An empty set means a case runs whenever the harness does, and no set at all
+/// means no file under the root states a case a reader can see.
 pub fn case_feature_sets(tree: &Tree, root: &str) -> Vec<BTreeSet<String>> {
     let mut sets = Vec::new();
     let mut seen: BTreeSet<(String, BTreeSet<String>)> = BTreeSet::new();
@@ -384,7 +385,7 @@ pub fn case_feature_sets(tree: &Tree, root: &str) -> Vec<BTreeSet<String>> {
         if !seen.insert((current.clone(), features.clone())) {
             continue;
         }
-        if declares_cases_text(&text) {
+        if may_declare_cases(&text) {
             sets.push(features.clone());
         }
         let base = parent_of(&current);
@@ -407,6 +408,30 @@ pub fn case_feature_sets(tree: &Tree, root: &str) -> Vec<BTreeSet<String>> {
         }
     }
     sets
+}
+
+/// Whether a file may contribute a case to the harness that compiles it.
+///
+/// Wider than `declares_cases`, and for the opposite reason. That one counts
+/// what a reader can attribute to a file, so a `#[test]` produced by expanding
+/// a shared macro belongs to the macro's own file and is not counted twice
+/// here. A caller asking whether a run proves anything is making the claim the
+/// other way round: a module holding an unexpanded macro invocation may hold
+/// every case in the harness, and reporting the run as empty on the strength
+/// of the literal text would be a finding against a suite that runs. A
+/// `macro_rules!` definition is not an invocation and expands to nothing where
+/// it stands.
+fn may_declare_cases(text: &str) -> bool {
+    if declares_cases_text(text) {
+        return true;
+    }
+    let Ok(syntax) = syn::parse_file(text) else {
+        return false;
+    };
+    syntax
+        .items
+        .iter()
+        .any(|item| matches!(item, syn::Item::Macro(invocation) if invocation.ident.is_none()))
 }
 
 /// Every file a test target compiles, the root included.
@@ -927,6 +952,37 @@ mod tests {
                     .collect(),
             ],
             "the chunk's cases sit behind the declaration and the module's own attribute"
+        );
+    }
+
+    /// WHY: a module whose cases come out of a shared assertion macro carries
+    /// no `#[test]` of its own, and the gate that asks whether a run proves
+    /// anything would read it as empty and report a suite that runs thousands
+    /// of cases. The claim being made is negative  -  no case here can run  -
+    /// so an unexpanded invocation has to count. A `macro_rules!` definition
+    /// expands to nothing where it stands and must not.
+    #[test]
+    fn a_module_whose_cases_come_from_a_macro_counts_as_holding_cases() {
+        let (_directory, root) = checkout(&[
+            ("Cargo.toml", WORKSPACE),
+            ("pkg/Cargo.toml", GROUPED),
+            ("pkg/tests/all_tests.rs", "mod expanded;\nmod defining;\n"),
+            (
+                "pkg/tests/expanded.rs",
+                "#![cfg(feature = \"kernels\")]\nvyre_test_support::cpu_ref_cases!(reduce);\n",
+            ),
+            (
+                "pkg/tests/defining.rs",
+                "#![cfg(feature = \"never\")]\nmacro_rules! cases {\n    () => {\n        #[test]\n        fn generated() {}\n    };\n}\n",
+            ),
+            (DECISIONS, NO_DECISIONS),
+        ]);
+        let tree = Tree::open(&root).expect("Fix: the fixture checkout must be a tree");
+
+        assert_eq!(
+            case_feature_sets(&tree, "pkg/tests/all_tests.rs"),
+            vec![["kernels".to_string()].into_iter().collect::<BTreeSet<_>>()],
+            "the invocation may hold every case in the harness; the definition holds none"
         );
     }
 }

@@ -6,7 +6,7 @@
 //! fixpoint convergence semantics. GPU acquisition: none  -  every
 //! assertion uses CPU reference oracles.
 //!
-//! Implementation lives in two `include!`-d chunks under `contract_cases/`.
+//! Cases live in the five contract modules declared at the end of this file.
 #![cfg(feature = "graph")]
 #![cfg(feature = "fixpoint")]
 #![cfg(feature = "math-kernels")]
