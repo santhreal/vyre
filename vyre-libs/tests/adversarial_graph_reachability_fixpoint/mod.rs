@@ -9,7 +9,7 @@
 //! Implementation lives in two `include!`-d chunks under `contract_cases/`.
 #![cfg(feature = "graph")]
 #![cfg(feature = "fixpoint")]
-#![cfg(feature = "math")]
+#![cfg(feature = "math-kernels")]
 
 use crate::wire_words;
 use wire_words::toposort;
