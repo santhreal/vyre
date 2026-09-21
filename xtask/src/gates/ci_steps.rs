@@ -17,12 +17,21 @@
 //! naming an assertion nobody runs, which is indistinguishable from coverage in
 //! every place a reader looks.
 //!
+//! The quiet one has a second shape that outlived the first fix. Integration
+//! tests are grouped into one harness per feature set, so a file that was a
+//! target is a module now, and a module sits behind the `cfg` attributes on
+//! the chain that reaches it. A run that satisfies the harness's
+//! `required-features` and not those attributes builds the harness, links
+//! modules with nothing in them, runs zero cases and exits zero. A conformance
+//! step named the graph and fixpoint suite and ran none of its 62 cases that
+//! way, with every manifest token correct.
+//!
 //! Both directions are one rule, because they are one question: does the step
 //! run what its text says it runs. The gate resolves every `-p`, `--package`,
 //! `--test`, `--bench`, `--example`, `--bin`, `--features` and `-F` token in
 //! every workflow step against the workspace manifests and the tracked sources,
-//! and reports a token the tree cannot satisfy and a named target the step's
-//! feature set leaves skipped.
+//! and reports a token the tree cannot satisfy, a named target the step's
+//! feature set leaves skipped, and a harness whose every case is compiled out.
 //!
 //! Paused workflows are read too. A workflow parked under
 //! `.github/workflows-paused` that names a target the checkout no longer
@@ -108,6 +117,10 @@ impl Kind {
 pub struct Target {
     /// Features that must all be enabled or cargo skips the target in silence.
     pub required_features: Vec<String>,
+    /// For a test target, the crate-level `cfg` features of each file it
+    /// compiles that declares test cases. An empty set is a file that compiles
+    /// under any feature selection.
+    pub case_features: Vec<BTreeSet<String>>,
 }
 
 /// One workspace member, as far as a workflow selector can see it.
@@ -192,6 +205,9 @@ pub fn packages(tree: &Tree) -> Result<BTreeMap<String, Package>, GateError> {
         for kind in Kind::all() {
             targets.insert(kind, named_targets(tree, &member, kind));
         }
+        if let Some(tests) = targets.get_mut(&Kind::Test) {
+            attach_case_features(tree, &member, tests);
+        }
         let default_run = member
             .manifest
             .get("package")
@@ -264,10 +280,33 @@ fn named_targets(
             name.to_string(),
             Target {
                 required_features: required,
+                case_features: Vec::new(),
             },
         );
     }
     targets
+}
+
+/// Record, for every test target, the feature sets its cases sit behind.
+///
+/// `required-features` is the only thing cargo checks before it runs a harness,
+/// and satisfying it is not the same as running anything. Each former test
+/// target is a module of a grouped harness now, and a module behind a
+/// `#![cfg(feature = "...")]` the run does not enable compiles to nothing while
+/// the harness exits zero. A step that names such a harness reports a suite it
+/// ran none of, which reads as coverage everywhere anybody looks.
+fn attach_case_features(
+    tree: &Tree,
+    member: &crate::gates::scan::Member,
+    targets: &mut BTreeMap<String, Target>,
+) {
+    for declared in crate::gates::test_target_membership::ownership(tree, member).targets {
+        let Some(target) = targets.get_mut(&declared.name) else {
+            continue;
+        };
+        target.case_features =
+            crate::gates::test_target_membership::case_feature_sets(tree, &declared.root);
+    }
 }
 
 /// One cargo invocation read out of a workflow or a script.
@@ -672,7 +711,7 @@ pub fn findings(step: &Step, packages: &BTreeMap<String, Package>) -> Vec<Findin
             else {
                 continue;
             };
-            if target.required_features.is_empty() || step.all_features {
+            if step.all_features {
                 continue;
             }
             let mut requested = step.features.clone();
@@ -686,18 +725,47 @@ pub fn findings(step: &Step, packages: &BTreeMap<String, Package>) -> Vec<Findin
                 .filter(|feature| !enabled.contains(feature.as_str()))
                 .map(String::as_str)
                 .collect();
-            if missing.is_empty() {
+            if !missing.is_empty() {
+                findings.push(Finding::at(
+                    step.origin.clone(),
+                    step.line,
+                    format!(
+                        "the step runs `{} {name}`, whose required-features {} are not enabled, so cargo skips it and the step passes without running it",
+                        kind.flag(),
+                        missing.join(", ")
+                    ),
+                    "add the features to the step, or drop the target from it",
+                ));
                 continue;
             }
+            if target.case_features.is_empty() {
+                continue;
+            }
+            if target.case_features.iter().any(|needed| {
+                needed
+                    .iter()
+                    .all(|feature| enabled.contains(feature.as_str()))
+            }) {
+                continue;
+            }
+            let mut unmet: Vec<&str> = target
+                .case_features
+                .iter()
+                .flatten()
+                .filter(|feature| !enabled.contains(feature.as_str()))
+                .map(String::as_str)
+                .collect();
+            unmet.sort_unstable();
+            unmet.dedup();
             findings.push(Finding::at(
                 step.origin.clone(),
                 step.line,
                 format!(
-                    "the step runs `{} {name}`, whose required-features {} are not enabled, so cargo skips it and the step passes without running it",
+                    "the step runs `{} {name}`, and every file in it that declares cases is behind {}, which the step does not enable, so the harness runs no case and exits zero",
                     kind.flag(),
-                    missing.join(", ")
+                    unmet.join(", ")
                 ),
-                "add the features to the step, or drop the target from it",
+                "enable the features the harness's own modules name, or drop the selector; a harness with every module compiled out reports coverage it does not have",
             ));
         }
     }
@@ -999,8 +1067,26 @@ mod tests {
             name.to_string(),
             Target {
                 required_features: required.iter().map(|value| (*value).to_string()).collect(),
+                case_features: Vec::new(),
             },
         );
+        package
+    }
+
+    fn with_cases(mut package: Package, name: &str, cases: &[&[&str]]) -> Package {
+        let target = package
+            .targets
+            .entry(Kind::Test)
+            .or_default()
+            .entry(name.to_string())
+            .or_default();
+        for case in cases {
+            target.case_features.push(
+                case.iter()
+                    .map(|feature| (*feature).to_string())
+                    .collect::<BTreeSet<String>>(),
+            );
+        }
         package
     }
 
@@ -1184,6 +1270,59 @@ mod tests {
             &set(vec![every]),
         );
         assert!(by_all.is_empty(), "{}", messages(&by_all));
+    }
+
+    /// WHY: satisfying a harness's required-features is not the same as
+    /// running anything in it. Every former test target is a module of a
+    /// grouped harness, and a module behind a crate-level cfg the step does not
+    /// enable compiles to nothing while cargo builds and runs the harness and
+    /// exits zero. A conformance step named the graph and fixpoint suite and
+    /// ran none of its 62 cases for exactly this reason, and the manifest read
+    /// alone reports that step as correct. One satisfied module is enough: a
+    /// harness groups modules with different feature sets on purpose.
+    #[test]
+    fn a_harness_whose_every_case_module_is_compiled_out_is_reported() {
+        let mut libs = with_cases(
+            with_test(package("vyre-libs"), "all_tests_fixpoint", &["fixpoint"]),
+            "all_tests_fixpoint",
+            &[&["math"]],
+        );
+        for feature in ["fixpoint", "math", "math-kernels"] {
+            libs.features.insert(feature.to_string(), Vec::new());
+        }
+        let empty = findings(
+            &read_command(
+                "conform.yml",
+                61,
+                "cargo test -p vyre-libs --features fixpoint,math-kernels --test all_tests_fixpoint",
+            )
+            .expect("a command"),
+            &set(vec![libs]),
+        );
+        assert!(
+            messages(&empty).contains("every file in it that declares cases is behind math"),
+            "{}",
+            messages(&empty)
+        );
+
+        let mut aligned = with_cases(
+            with_test(package("vyre-libs"), "all_tests_fixpoint", &["fixpoint"]),
+            "all_tests_fixpoint",
+            &[&["math"], &["math-kernels"]],
+        );
+        for feature in ["fixpoint", "math", "math-kernels"] {
+            aligned.features.insert(feature.to_string(), Vec::new());
+        }
+        let one_runs = findings(
+            &read_command(
+                "conform.yml",
+                61,
+                "cargo test -p vyre-libs --features fixpoint,math-kernels --test all_tests_fixpoint",
+            )
+            .expect("a command"),
+            &set(vec![aligned]),
+        );
+        assert!(one_runs.is_empty(), "{}", messages(&one_runs));
     }
 
     /// WHY: a feature turns on other features, so a required feature can be

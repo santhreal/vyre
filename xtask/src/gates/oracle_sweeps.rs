@@ -201,7 +201,7 @@ fn derive(
                     "declare the feature, or require the one the crate defines",
                 ));
             }
-            let gating = cfg_features(&tree.read(&source)?);
+            let gating = crate::gates::scan::crate_cfg_features(&tree.read(&source)?);
             let undefined: Vec<&String> = gating
                 .iter()
                 .filter(|feature| !defined.contains(*feature))
@@ -244,58 +244,6 @@ fn sweep_source(path: &Path) -> Option<(String, String)> {
         return None;
     }
     Some((crate_dir.to_string(), target.to_string()))
-}
-
-/// Every feature a sweep's own crate-level `cfg` requires to compile.
-///
-/// Two things decide whether a sweep runs, and the manifest states only one of
-/// them. `required-features` is what cargo demands before it builds the harness;
-/// the `#![cfg(feature = "...")]` at the top of the sweep is what decides
-/// whether the module inside that harness holds any case at all. A run that
-/// satisfies the manifest and not the source links an empty module, and the
-/// harness exits zero having proved nothing.
-///
-/// A feature named under `not(...)` is left out: enabling it would remove the
-/// module rather than compile it.
-fn cfg_features(text: &str) -> BTreeSet<String> {
-    let mut features = BTreeSet::new();
-    let Ok(file) = syn::parse_file(text) else {
-        return features;
-    };
-    for attr in &file.attrs {
-        if !attr.path().is_ident("cfg") {
-            continue;
-        }
-        let Ok(meta) = attr.parse_args::<syn::Meta>() else {
-            continue;
-        };
-        collect_features(&meta, &mut features);
-    }
-    features
-}
-
-/// Every feature a `cfg` predicate names outside a `not(...)`.
-fn collect_features(meta: &syn::Meta, features: &mut BTreeSet<String>) {
-    match meta {
-        syn::Meta::NameValue(pair) if pair.path.is_ident("feature") => {
-            if let syn::Expr::Lit(literal) = &pair.value {
-                if let syn::Lit::Str(name) = &literal.lit {
-                    features.insert(name.value());
-                }
-            }
-        }
-        syn::Meta::List(list) if list.path.is_ident("all") || list.path.is_ident("any") => {
-            let Ok(nested) = list.parse_args_with(
-                syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
-            ) else {
-                return;
-            };
-            for entry in &nested {
-                collect_features(entry, features);
-            }
-        }
-        _ => {}
-    }
 }
 
 /// Execute the selected partition, one cargo invocation per sweep.
@@ -529,33 +477,6 @@ mod tests {
             sweep_source(Path::new("vyre-libs/src/sweep_matching.rs")),
             None
         );
-    }
-
-    /// WHY: the manifest states what cargo needs to build the harness, and the
-    /// sweep's own `cfg` states what the module needs to hold a case. A run
-    /// that reads only the manifest compiles an empty module and reports the
-    /// parity as proven, which is the failure the roster exists to prevent. A
-    /// feature named under `not(...)` is the opposite requirement: enabling it
-    /// removes the module, so it is never passed to cargo.
-    #[test]
-    fn a_sweep_declares_the_features_its_own_cfg_requires() {
-        assert_eq!(
-            cfg_features("#![cfg(feature = \"graph-dispatch\")]\nfn a() {}\n"),
-            BTreeSet::from(["graph-dispatch".to_string()])
-        );
-        assert_eq!(
-            cfg_features(
-                "#![cfg(all(feature = \"device-tests\", any(feature = \"cuda\", feature = \"wgpu\")))]\n"
-            ),
-            BTreeSet::from([
-                "cuda".to_string(),
-                "device-tests".to_string(),
-                "wgpu".to_string()
-            ])
-        );
-        assert!(cfg_features("#![cfg(not(feature = \"slow\"))]\n").is_empty());
-        assert!(cfg_features("#![cfg(test)]\n#![forbid(unsafe_code)]\n").is_empty());
-        assert!(cfg_features("fn a() { #![cfg(feature = \"inner\")] }\n").is_empty());
     }
 
     /// WHY: every field the runner passes to cargo comes from one place, and a

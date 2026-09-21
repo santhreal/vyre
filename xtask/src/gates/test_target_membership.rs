@@ -38,6 +38,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
+use crate::gates::scan;
 use crate::gates::scan::{Member, Tree};
 
 /// The grouping decision record, which states which files stay their own target.
@@ -315,8 +316,12 @@ fn excluded(tree: &Tree, member: &Member, directory: &str) -> Result<BTreeSet<St
 /// case exists once per expansion, in whichever file invokes the macro. Counting
 /// those would report every shared assertion macro as a duplicated test.
 fn declares_cases(tree: &Tree, path: &str) -> Result<bool, GateError> {
-    let text = tree.read(path)?;
-    if let Ok(syntax) = syn::parse_file(&text) {
+    Ok(declares_cases_text(&tree.read(path)?))
+}
+
+/// Whether one file's own text declares a test case.
+fn declares_cases_text(text: &str) -> bool {
+    if let Ok(syntax) = syn::parse_file(text) {
         for item in &syntax.items {
             if let syn::Item::Fn(item_fn) = item {
                 let is_test = item_fn.attrs.iter().any(|attr| {
@@ -326,11 +331,11 @@ fn declares_cases(tree: &Tree, path: &str) -> Result<bool, GateError> {
                             && attr.path().segments[1].ident == "test")
                 });
                 if is_test {
-                    return Ok(true);
+                    return true;
                 }
             }
         }
-        return Ok(false);
+        return false;
     }
     let mut depth = 0_i32;
     let mut in_macro = false;
@@ -349,10 +354,59 @@ fn declares_cases(tree: &Tree, path: &str) -> Result<bool, GateError> {
         }
         let trimmed = line.trim();
         if trimmed.starts_with("#[test]") || trimmed.starts_with("#[tokio::test]") {
-            return Ok(true);
+            return true;
         }
     }
-    Ok(false)
+    false
+}
+
+/// Every distinct feature set a case in one test target sits behind.
+///
+/// A harness compiles under its manifest `required-features`, and the cases
+/// inside it compile under the `cfg` attributes on the files and module
+/// declarations between the root and the case. Those are different sets: a run
+/// that satisfies the manifest and not the source links a harness whose every
+/// module is empty, runs zero cases and exits zero. A case file inherits the
+/// attributes of the chain that reaches it, so the feature set is accumulated
+/// on the way down rather than read off the file that holds the `#[test]`.
+///
+/// An empty set means a case runs whenever the harness does.
+pub fn case_feature_sets(tree: &Tree, root: &str) -> Vec<BTreeSet<String>> {
+    let mut sets = Vec::new();
+    let mut seen: BTreeSet<(String, BTreeSet<String>)> = BTreeSet::new();
+    let mut queue = vec![(root.to_string(), BTreeSet::new())];
+    while let Some((current, inherited)) = queue.pop() {
+        let Ok(text) = tree.read(&current) else {
+            continue;
+        };
+        let mut features = inherited;
+        features.extend(scan::crate_cfg_features(&text));
+        if !seen.insert((current.clone(), features.clone())) {
+            continue;
+        }
+        if declares_cases_text(&text) {
+            sets.push(features.clone());
+        }
+        let base = parent_of(&current);
+        for declared in declarations(&text) {
+            let candidates = match &declared.target {
+                Module::Explicit(path) => vec![join(&base, path)],
+                Module::Named(name) => vec![
+                    join(&base, &format!("{name}.rs")),
+                    join(&base, &format!("{name}/mod.rs")),
+                ],
+            };
+            let mut child = features.clone();
+            child.extend(declared.features);
+            for candidate in candidates {
+                if tree.has(&candidate) {
+                    queue.push((candidate, child));
+                    break;
+                }
+            }
+        }
+    }
+    sets
 }
 
 /// Every file a test target compiles, the root included.
@@ -378,9 +432,9 @@ fn reachable(tree: &Tree, root: &str) -> BTreeSet<String> {
         };
         let base = parent_of(&current);
         for declared in declarations(&text) {
-            let candidates = match declared {
-                Declaration::Explicit(path) => vec![join(&base, &path)],
-                Declaration::Named(name) => vec![
+            let candidates = match declared.target {
+                Module::Explicit(path) => vec![join(&base, &path)],
+                Module::Named(name) => vec![
                     join(&base, &format!("{name}.rs")),
                     join(&base, &format!("{name}/mod.rs")),
                 ],
@@ -424,12 +478,21 @@ fn dedicated_to(target: &TestTarget, path: &str) -> bool {
         .is_some_and(|directory| path.starts_with(&format!("{directory}/")))
 }
 
-/// One module declaration, by explicit path or by name.
-enum Declaration {
+/// Where one module declaration sends the walk.
+enum Module {
     /// `#[path = "..."] mod name;`
     Explicit(String),
     /// `mod name;`
     Named(String),
+}
+
+/// One module declaration and the features it compiles under.
+struct Declaration {
+    /// The file the declaration names.
+    target: Module,
+    /// Features the `cfg` attributes on the declaration require, which the
+    /// whole subtree below it inherits.
+    features: BTreeSet<String>,
 }
 
 /// Every module declaration in one file, in source order.
@@ -453,11 +516,12 @@ fn declarations(text: &str) -> Vec<Declaration> {
                             }
                         }
                     }
-                    if let Some(path) = explicit_path {
-                        decls.push(Declaration::Explicit(path));
-                    } else {
-                        decls.push(Declaration::Named(item_mod.ident.to_string()));
-                    }
+                    let features = scan::attribute_cfg_features(&item_mod.attrs);
+                    let target = match explicit_path {
+                        Some(path) => Module::Explicit(path),
+                        None => Module::Named(item_mod.ident.to_string()),
+                    };
+                    decls.push(Declaration { target, features });
                 }
             }
         }
@@ -480,10 +544,14 @@ fn declarations(text: &str) -> Vec<Declaration> {
             }
             continue;
         };
-        match pending.take() {
-            Some(path) => declarations.push(Declaration::Explicit(path)),
-            None => declarations.push(Declaration::Named(name)),
-        }
+        let target = match pending.take() {
+            Some(path) => Module::Explicit(path),
+            None => Module::Named(name),
+        };
+        declarations.push(Declaration {
+            target,
+            features: BTreeSet::new(),
+        });
     }
     declarations
 }
@@ -818,5 +886,47 @@ mod tests {
             .run(&GateCtx::new(root, Vec::new()))
             .expect("Fix: the gate must read the fixture tree; check the fixture git step");
         assert!(report.findings.is_empty(), "{:?}", report.findings);
+    }
+
+    /// WHY: the feature a case runs under is almost never written on the file
+    /// that holds the case. A chunk file carries `#[test]` and no attribute at
+    /// all, while the module that declares it sits behind a crate-level
+    /// `#![cfg(feature = "...")]` and the declaration itself may carry another
+    /// `#[cfg]`. Reading a file's own attributes reports every such case as
+    /// unconditional, which is how a harness that runs 0 of 62 cases passed a
+    /// manifest-only read. The chain is what rustc applies, so the chain is
+    /// what accumulates here. A case reached with no attribute anywhere keeps
+    /// an empty set, which means it runs whenever the harness does.
+    #[test]
+    fn a_case_inherits_every_cfg_between_the_root_and_itself() {
+        let (_directory, root) = checkout(&[
+            ("Cargo.toml", WORKSPACE),
+            ("pkg/Cargo.toml", GROUPED),
+            (
+                "pkg/tests/all_tests.rs",
+                "mod always;\n#[cfg(feature = \"declared\")]\nmod gated;\n",
+            ),
+            ("pkg/tests/always.rs", "#[test]\nfn runs() {}\n"),
+            (
+                "pkg/tests/gated/mod.rs",
+                "#![cfg(feature = \"inner\")]\nmod chunk;\n",
+            ),
+            ("pkg/tests/gated/chunk.rs", "#[test]\nfn cases() {}\n"),
+            (DECISIONS, NO_DECISIONS),
+        ]);
+        let tree = Tree::open(&root).expect("Fix: the fixture checkout must be a tree");
+
+        let mut sets = case_feature_sets(&tree, "pkg/tests/all_tests.rs");
+        sets.sort();
+        assert_eq!(
+            sets,
+            vec![
+                BTreeSet::new(),
+                ["declared".to_string(), "inner".to_string()]
+                    .into_iter()
+                    .collect(),
+            ],
+            "the chunk's cases sit behind the declaration and the module's own attribute"
+        );
     }
 }

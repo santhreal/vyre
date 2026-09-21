@@ -1068,6 +1068,69 @@ fn meta_is_test_only(meta: &syn::Meta) -> bool {
     }
 }
 
+/// Every feature a file's own crate-level `cfg` requires before it compiles.
+///
+/// Two things decide whether an integration test runs, and the manifest states
+/// only one of them. A `[[test]]` harness's `required-features` is what cargo
+/// demands before it builds the target; the `#![cfg(feature = "...")]` at the
+/// top of a file is what decides whether the module inside that harness holds
+/// any case at all. A run that satisfies the manifest and not the source links
+/// an empty module, and the harness exits zero having proved nothing, so both
+/// gates that judge whether a run proves anything read this.
+///
+/// A feature named under `not(...)` is left out: enabling it would remove the
+/// module rather than compile it.
+#[must_use]
+pub fn crate_cfg_features(text: &str) -> BTreeSet<String> {
+    let Ok(file) = syn::parse_file(text) else {
+        return BTreeSet::new();
+    };
+    attribute_cfg_features(&file.attrs)
+}
+
+/// Every feature the `cfg` attributes on one item name outside a `not(...)`.
+///
+/// A module declaration carries the same power over its subtree that a
+/// crate-level attribute carries over a file, so both readings share this.
+#[must_use]
+pub fn attribute_cfg_features(attrs: &[syn::Attribute]) -> BTreeSet<String> {
+    let mut features = BTreeSet::new();
+    for attr in attrs {
+        if !attr.path().is_ident("cfg") {
+            continue;
+        }
+        let Ok(meta) = attr.parse_args::<syn::Meta>() else {
+            continue;
+        };
+        collect_cfg_features(&meta, &mut features);
+    }
+    features
+}
+
+/// Every feature a `cfg` predicate names outside a `not(...)`.
+fn collect_cfg_features(meta: &syn::Meta, features: &mut BTreeSet<String>) {
+    match meta {
+        syn::Meta::NameValue(pair) if pair.path.is_ident("feature") => {
+            if let syn::Expr::Lit(literal) = &pair.value {
+                if let syn::Lit::Str(name) = &literal.lit {
+                    features.insert(name.value());
+                }
+            }
+        }
+        syn::Meta::List(list) if list.path.is_ident("all") || list.path.is_ident("any") => {
+            let Ok(nested) = list.parse_args_with(
+                syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
+            ) else {
+                return;
+            };
+            for entry in &nested {
+                collect_cfg_features(entry, features);
+            }
+        }
+        _ => {}
+    }
+}
+
 /// A `mod name;` declaration in a parent file, with the `#[path]` override when
 /// one is present.
 struct DeclaredModule {
@@ -1415,6 +1478,37 @@ mod tests {
             "vyre-libs/src/graph/mod.rs"
         ));
         assert!(!glob_match("vyre-*/src/**/*.rs", "vyre-libs/tests/a.rs"));
+    }
+
+    /// WHY: the manifest states what cargo needs to build a test harness, and
+    /// the file's own `cfg` states what its module needs to hold a case. A gate
+    /// that reads only the manifest calls an empty module proven, which is what
+    /// let a conformance step name a suite it ran none of. A feature named
+    /// under `not(...)` is the opposite requirement: enabling it removes the
+    /// module, so it is never reported as one the run should turn on.
+    #[test]
+    fn a_file_declares_the_features_its_own_crate_level_cfg_requires() {
+        assert_eq!(
+            crate_cfg_features("#![cfg(feature = \"graph-dispatch\")]\nfn a() {}\n"),
+            BTreeSet::from(["graph-dispatch".to_string()])
+        );
+        assert_eq!(
+            crate_cfg_features(
+                "#![cfg(all(feature = \"device-tests\", any(feature = \"cuda\", feature = \"wgpu\")))]\n"
+            ),
+            BTreeSet::from([
+                "cuda".to_string(),
+                "device-tests".to_string(),
+                "wgpu".to_string()
+            ])
+        );
+        assert_eq!(
+            crate_cfg_features("#![cfg(feature = \"graph\")]\n#![cfg(feature = \"fixpoint\")]\n"),
+            BTreeSet::from(["fixpoint".to_string(), "graph".to_string()])
+        );
+        assert!(crate_cfg_features("#![cfg(not(feature = \"slow\"))]\n").is_empty());
+        assert!(crate_cfg_features("#![cfg(test)]\n#![forbid(unsafe_code)]\n").is_empty());
+        assert!(crate_cfg_features("fn a() { #![cfg(feature = \"inner\")] }\n").is_empty());
     }
 
     /// WHY: a substring search for a word is the defect that let the CI matrix
