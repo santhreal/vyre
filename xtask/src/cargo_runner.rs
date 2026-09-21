@@ -95,6 +95,52 @@ pub fn run_streaming(command: &mut Command) -> IoResult<(ExitStatus, String)> {
     Ok((status, diagnostics))
 }
 
+/// Run a long command, streaming both streams and keeping both texts.
+///
+/// `run_streaming` inherits standard output, which is right for a build whose
+/// text is only read for diagnostics. A test run answers a second question in
+/// the text libtest writes to standard output: how many cases a filter
+/// selected. A filter that selects none is the failure this distinction exists
+/// for, because a harness that runs nothing exits zero.
+///
+/// Both pipes are drained at once, standard error on a thread, so neither
+/// child write blocks on a pipe this process is not reading yet.
+pub fn run_captured(command: &mut Command) -> IoResult<(ExitStatus, String, String)> {
+    command.stdout(Stdio::piped());
+    command.stderr(Stdio::piped());
+    let mut child = command.spawn()?;
+    let errors = child.stderr.take();
+    let output = child.stdout.take();
+    std::thread::scope(|scope| -> IoResult<(ExitStatus, String, String)> {
+        let reader = scope.spawn(move || -> IoResult<String> {
+            let mut text = String::new();
+            if let Some(stream) = errors {
+                for line in BufReader::new(stream).lines() {
+                    let line = line?;
+                    eprintln!("{line}");
+                    text.push_str(&line);
+                    text.push('\n');
+                }
+            }
+            Ok(text)
+        });
+        let mut stdout = String::new();
+        if let Some(stream) = output {
+            for line in BufReader::new(stream).lines() {
+                let line = line?;
+                println!("{line}");
+                stdout.push_str(&line);
+                stdout.push('\n');
+            }
+        }
+        let diagnostics = reader
+            .join()
+            .unwrap_or_else(|_| Ok("the standard error reader panicked".to_string()))?;
+        let status = child.wait()?;
+        Ok((status, stdout, diagnostics))
+    })
+}
+
 /// Directory segments cargo writes inside a profile directory.
 const BUILD_SEGMENTS: &[&str] = &["/deps/", "/.fingerprint/", "/incremental/", "/build/"];
 

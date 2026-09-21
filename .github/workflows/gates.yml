@@ -188,13 +188,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       # ci.yml runs `./cargo_full test --workspace` with default features, so a
-      # sweep whose [[test]] required-features name a non-default feature is
+      # sweep whose harness or whose own cfg names a non-default feature is
       # skipped there, and strict.yml builds --all-targets without running
       # anything. These are the oracle-parity matrices, so a skipped one is
-      # unproven parity. Roster and per-crate features are derived inside the
-      # gate from tracked sources and each crate's own [[test]] entries, so a
-      # new sweep runs without an edit here and a stale [[test]] entry fails
-      # instead of reserving features for a target that cannot build.
+      # unproven parity. Roster, harness and features are derived inside the
+      # gate from tracked sources, each crate's [[test]] harnesses and each
+      # sweep's own cfg, so a new sweep runs without an edit here and a sweep
+      # no harness compiles fails instead of reporting a green suite.
       - name: Sweep oracle matrices
         run: ./cargo_full run -q -p xtask --bin xtask -- oracle-sweeps --run --partition matrix
 

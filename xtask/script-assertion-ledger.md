@@ -17,7 +17,7 @@ The counts below are generated from the rows and from the tracked files by the
 
 ## Totals
 
-- Rows: 35. Assertions: 140. Findings: 28.
+- Rows: 35. Assertions: 142. Findings: 28.
 - Tracked files: 8: 8 shell and 0 Python.
 - Rows whose script has left the tree: 27.
 - Tracked files nothing invokes: 2.
@@ -690,22 +690,24 @@ Exits nonzero on:
 
 ### scripts/lib/sweep_targets.py
 
-Subject: gone: the script is not in the tree. The sweep sources and the manifest entries that reserve features for them are tracked.
+Subject: gone: the script is not in the tree. The sweep sources, the harness each one is a module of, and the features that harness requires are tracked.
 
 Invoked by: nothing; `oracle-sweeps` derives the roster from the tree.
 
-Gate: `oracle-sweeps` derives every tracked sweep target and the features its crate reserves, and runs a partition behind --sweep.
+Gate: `oracle-sweeps` derives every tracked sweep source, the `[[test]]` harness that compiles it, and the features that harness requires, and runs a partition behind --run.
 
-Injection: Reserved features for a sweep target with no tracked source, and then required a feature the crate does not define; `oracle-sweeps` reported both, proved red.
+Injection: Pointed a harness at a feature the crate does not define, removed a sweep's module declaration from its harness, and gated a sweep on a feature name the crate does not define; `oracle-sweeps` reported all three, proved red.
 
 Assertions:
 
 - The root Cargo.toml declares workspace members.
 - Every tracked <crate>/tests/sweep_*.rs sits in a declared workspace member.
 - At least one tracked sweep source exists.
-- Every [[test]] entry named sweep_* has a tracked source file.
-- Every required-features entry names a feature the crate defines.
+- Exactly one declared [[test]] harness compiles each tracked sweep source.
+- Every required-features entry of that harness names a feature the crate defines.
+- Every feature the sweep's own crate-level cfg names is a feature the crate defines.
 - The requested partition is non-empty.
+- Every executed sweep ran at least one case.
 
 Exits nonzero on:
 
@@ -713,13 +715,15 @@ Exits nonzero on:
 - empty members
 - sweep source outside members
 - no tracked sweep source
-- [[test]] entry with no source
+- sweep source no harness compiles, or two harnesses compile
 - required-features naming an undefined feature
+- a sweep cfg naming an undefined feature
 - empty partition
+- a sweep whose run selected no case
 
 Findings:
 
-- Every one of its six refusals exists because a runner that silently runs nothing reports success forever. They are the model for the whole port and all six become findings.
+- Every one of its refusals exists because a runner that silently runs nothing reports success forever. They are the model for the whole port and each becomes a finding.
 
 ### `scripts/lib/toml_reader.sh`
 

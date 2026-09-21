@@ -1,15 +1,16 @@
 //! The oracle-matrix sweeps, and the partition that decides where each one runs.
 //!
-//! A `sweep_*` integration test whose `[[test]] required-features` name a
-//! non-default feature is skipped by a default `cargo test --workspace`, and an
-//! `--all-targets` build compiles it without running it. These sweeps are the
-//! oracle-parity matrices, so a skipped one is unproven parity that reports as
-//! a green suite.
+//! A `sweep_*` integration test is a module of the harness its package
+//! declares, and a harness whose `required-features` name a non-default feature
+//! is skipped by a default `cargo test --workspace`, while an `--all-targets`
+//! build compiles it without running it. These sweeps are the oracle-parity
+//! matrices, so a skipped one is unproven parity that reports as a green suite.
 //!
-//! The roster is derived from tracked sources and each crate's own manifest, so
-//! a sweep added later runs by being a tracked `<crate>/tests/sweep_*.rs` file.
-//! A written-down list of test binaries stops running the newest sweep in
-//! silence, which is the same failure as running nothing.
+//! The roster is derived from tracked sources, each package's own manifest, and
+//! the module graph that decides which harness compiles which file, so a sweep
+//! added later runs by being a tracked `<crate>/tests/sweep_*.rs` file a harness
+//! declares. A written-down list of test binaries stops running the newest sweep
+//! in silence, which is the same failure as running nothing.
 //!
 //! The roster splits in two. A target whose name carries `volume` is a wave of
 //! 16k cases and belongs to the sharded runner; every other target is a matrix
@@ -18,24 +19,29 @@
 //!
 //! Two modes:
 //!
-//!   - Default: the roster derives, both partitions are non-empty, every
-//!     `[[test]]` entry names a tracked source, and every `required-features`
-//!     entry names a feature the crate defines. No cargo.
-//!   - `--run`: executes one partition, one cargo invocation per crate with the
-//!     union of the required-features its selected targets declare, because
-//!     cargo refuses a `--test` whose required-features are unmet.
+//!   - Default: the roster derives, both partitions are non-empty, exactly one
+//!     declared harness compiles each tracked sweep source, and every
+//!     `required-features` entry of that harness, and every feature the sweep's
+//!     own `cfg` names, is a feature the crate defines. No cargo.
+//!   - `--run`: executes one partition, one cargo invocation per sweep, which
+//!     selects the sweep's own module inside its harness by name filter and
+//!     carries every feature the run needs: the harness `required-features`
+//!     cargo demands before it builds the target, and the features the sweep's
+//!     own crate-level `cfg` demands before the module holds a case.
 //!     `--partition volume --shard I --shards N` runs one wave shard; a shard
 //!     index outside the count, or a count larger than the roster, is an error
 //!     rather than a run that selects nothing and exits clean.
+//!
+//! A run that selects no case is a finding rather than a pass. A sweep whose
+//! body is behind a `cfg` the run does not satisfy compiles to an empty module,
+//! its harness exits zero, and the parity it states is unproven.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
-use crate::gates::scan::Tree;
-
-/// The manifest that declares the workspace members.
-const ROOT_MANIFEST: &str = "Cargo.toml";
+use crate::gates::scan::{Member, Tree};
+use crate::gates::test_target_membership::ownership;
 
 /// Name prefix every oracle-matrix sweep source carries.
 const SWEEP_PREFIX: &str = "sweep_";
@@ -43,16 +49,18 @@ const SWEEP_PREFIX: &str = "sweep_";
 /// Target-name fragment that marks a 16k-case volume wave.
 const VOLUME: &str = "volume";
 
-/// One tracked sweep target and the features its crate reserves for it.
+/// One tracked sweep, and the harness cargo runs it through.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SweepTarget {
-    /// Member directory the target lives in, relative to the checkout root.
+    /// Member directory the sweep lives in, relative to the checkout root.
     pub crate_dir: String,
     /// Package name, as `cargo -p` takes it.
     pub package: String,
-    /// Test target name, as `cargo --test` takes it.
-    pub target: String,
-    /// Features the crate's `[[test]]` entry requires for the target.
+    /// Sweep source stem, which is the module name inside the harness.
+    pub sweep: String,
+    /// Harness target compiling the sweep, as `cargo --test` takes it.
+    pub harness: String,
+    /// Features the crate's `[[test]]` harness entry requires.
     pub features: Vec<String>,
 }
 
@@ -60,7 +68,13 @@ impl SweepTarget {
     /// Whether this target is a volume wave rather than a matrix sweep.
     #[must_use]
     pub fn is_volume(&self) -> bool {
-        self.target.contains(VOLUME)
+        self.sweep.contains(VOLUME)
+    }
+
+    /// The libtest filter selecting this sweep's cases and no others.
+    #[must_use]
+    pub fn filter(&self) -> String {
+        format!("{}::", self.sweep)
     }
 }
 
@@ -70,7 +84,7 @@ pub struct OracleSweeps;
 impl crate::gate::GateBehavior for OracleSweeps {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
-        let members = workspace_members(&tree)?;
+        let members = tree.member_manifests()?;
         let mut report = Report::clean();
         let roster = derive(&tree, &members, &mut report)?;
         report.cover_complete("oracle sweep targets", roster.len());
@@ -111,114 +125,108 @@ impl crate::gate::GateBehavior for OracleSweeps {
     }
 }
 
-/// Every workspace member the root manifest declares.
-fn workspace_members(tree: &Tree) -> Result<BTreeSet<String>, GateError> {
-    let manifest = tree.read_toml(ROOT_MANIFEST)?;
-    let members = manifest
-        .get("workspace")
-        .and_then(|workspace| workspace.get("members"))
-        .and_then(toml::Value::as_array)
-        .ok_or_else(|| {
-            GateError::new(
-                format!("{ROOT_MANIFEST} declares no [workspace.members]"),
-                "declare the members; a roster derived from an empty workspace covers nothing",
-            )
-        })?;
-    Ok(members
-        .iter()
-        .filter_map(|value| value.as_str().map(str::to_string))
-        .collect())
-}
-
-/// The roster, recording every disagreement between sources and manifests.
+/// The roster, recording every disagreement between sources, manifests and the
+/// module graph.
 fn derive(
     tree: &Tree,
-    members: &BTreeSet<String>,
+    members: &[Member],
     report: &mut Report,
 ) -> Result<Vec<SweepTarget>, GateError> {
+    let directories: BTreeSet<&str> = members.iter().map(|member| member.path.as_str()).collect();
     let mut sources: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for path in tree.paths() {
-        let Some((crate_dir, target)) = sweep_source(path) else {
+        let Some((crate_dir, sweep)) = sweep_source(path) else {
             continue;
         };
-        if !members.contains(&crate_dir) {
+        if !directories.contains(crate_dir.as_str()) {
             report.find(Finding::in_file(
                 path.clone(),
                 format!(
-                    "`{target}` is a sweep in `{crate_dir}`, which is not a [workspace.members] entry, so no cargo invocation reaches it"
+                    "`{sweep}` is a sweep in `{crate_dir}`, which is not a [workspace.members] entry, so no cargo invocation reaches it"
                 ),
                 "add the crate to the workspace, or move the sweep into a member",
             ));
             continue;
         }
-        sources.entry(crate_dir).or_default().insert(target);
+        sources.entry(crate_dir).or_default().insert(sweep);
     }
 
     let mut roster = Vec::new();
-    for (crate_dir, targets) in &sources {
-        let manifest_path = format!("{crate_dir}/Cargo.toml");
-        let manifest = tree.read_toml(&manifest_path)?;
-        let defined: BTreeSet<String> = manifest
-            .get("features")
-            .and_then(toml::Value::as_table)
-            .map(|table| table.keys().cloned().collect())
-            .unwrap_or_default();
-        let declared = declared_tests(&manifest);
-        for (name, features) in &declared {
-            if !targets.contains(name) {
+    for member in members {
+        let Some(sweeps) = sources.get(&member.path) else {
+            continue;
+        };
+        let owned = ownership(tree, member);
+        let defined: BTreeSet<String> = member.features().into_iter().collect();
+        let manifest_path = format!("{}/Cargo.toml", member.path);
+        for sweep in sweeps {
+            let source = format!("{}/tests/{sweep}.rs", member.path);
+            let harnesses = owned.owners.get(&source).map_or(&[][..], Vec::as_slice);
+            let [harness] = harnesses else {
                 report.find(Finding::in_file(
-                    manifest_path.clone(),
-                    format!(
-                        "[[test]] `{name}` reserves features for a target with no tracked `{crate_dir}/tests/{name}.rs`"
-                    ),
-                    "restore the source, or delete the entry that reserves features for a target cargo cannot build",
+                    Path::new(&source).to_path_buf(),
+                    if harnesses.is_empty() {
+                        format!(
+                            "no [[test]] target of `{}` compiles `{sweep}`, so cargo has no selector that runs it",
+                            member.path
+                        )
+                    } else {
+                        format!(
+                            "{} [[test]] targets compile `{sweep}` ({}), so its cases run once per target and the roster cannot name one runner",
+                            harnesses.len(),
+                            harnesses.join(", ")
+                        )
+                    },
+                    "declare the sweep as a module of exactly one of the package's test harnesses",
                 ));
-            }
-            let unknown: Vec<&String> = features
+                continue;
+            };
+            let mut required = owned
+                .targets
+                .iter()
+                .find(|target| &target.name == harness)
+                .map(|target| target.required_features.clone())
+                .unwrap_or_default();
+            let unknown: Vec<&String> = required
                 .iter()
                 .filter(|feature| !defined.contains(*feature))
                 .collect();
             if !unknown.is_empty() {
                 report.find(Finding::in_file(
-                    manifest_path.clone(),
+                    Path::new(&manifest_path).to_path_buf(),
                     format!(
-                        "[[test]] `{name}` requires {unknown:?}, which `{crate_dir}` does not define in [features], so cargo refuses the target"
+                        "[[test]] `{harness}`, which compiles `{sweep}`, requires {unknown:?}, which `{}` does not define in [features], so cargo refuses the target",
+                        member.path
                     ),
                     "declare the feature, or require the one the crate defines",
                 ));
             }
-        }
-        let package = package_name(&manifest, &manifest_path)?;
-        for target in targets {
+            let gating = cfg_features(&tree.read(&source)?);
+            let undefined: Vec<&String> = gating
+                .iter()
+                .filter(|feature| !defined.contains(*feature))
+                .collect();
+            if !undefined.is_empty() {
+                report.find(Finding::in_file(
+                    Path::new(&source).to_path_buf(),
+                    format!(
+                        "`{sweep}` compiles only under {undefined:?}, which `{}` does not define in [features], so the module is empty in every build",
+                        member.path
+                    ),
+                    "gate the sweep on a feature the crate defines, or define the one it names",
+                ));
+            }
+            required.extend(gating);
             roster.push(SweepTarget {
-                crate_dir: crate_dir.clone(),
-                package: package.clone(),
-                target: target.clone(),
-                features: declared.get(target).cloned().unwrap_or_default(),
+                crate_dir: member.path.clone(),
+                package: member.name.clone(),
+                sweep: sweep.clone(),
+                harness: harness.clone(),
+                features: required.into_iter().collect(),
             });
         }
     }
     Ok(roster)
-}
-
-/// The package name a member manifest declares.
-///
-/// A directory name is not a package name, and `cargo -p` takes the package.
-/// Reading the directory worked for every member whose two names agree and
-/// would silently address another crate for one whose names differ, so the
-/// manifest answers and a manifest that declares no name fails closed.
-fn package_name(manifest: &toml::Table, manifest_path: &str) -> Result<String, GateError> {
-    manifest
-        .get("package")
-        .and_then(|package| package.get("name"))
-        .and_then(toml::Value::as_str)
-        .map(str::to_string)
-        .ok_or_else(|| {
-            GateError::new(
-                format!("{manifest_path} declares no [package] name"),
-                "name the package; a sweep is run by package name and a directory name is not one",
-            )
-        })
 }
 
 /// The member directory and target a tracked path names, when it is a sweep
@@ -238,35 +246,59 @@ fn sweep_source(path: &Path) -> Option<(String, String)> {
     Some((crate_dir.to_string(), target.to_string()))
 }
 
-/// Every `[[test]]` entry naming a sweep, with the features it requires.
-fn declared_tests(manifest: &toml::Table) -> BTreeMap<String, Vec<String>> {
-    let mut declared = BTreeMap::new();
-    let Some(entries) = manifest.get("test").and_then(toml::Value::as_array) else {
-        return declared;
+/// Every feature a sweep's own crate-level `cfg` requires to compile.
+///
+/// Two things decide whether a sweep runs, and the manifest states only one of
+/// them. `required-features` is what cargo demands before it builds the harness;
+/// the `#![cfg(feature = "...")]` at the top of the sweep is what decides
+/// whether the module inside that harness holds any case at all. A run that
+/// satisfies the manifest and not the source links an empty module, and the
+/// harness exits zero having proved nothing.
+///
+/// A feature named under `not(...)` is left out: enabling it would remove the
+/// module rather than compile it.
+fn cfg_features(text: &str) -> BTreeSet<String> {
+    let mut features = BTreeSet::new();
+    let Ok(file) = syn::parse_file(text) else {
+        return features;
     };
-    for entry in entries {
-        let Some(name) = entry.get("name").and_then(toml::Value::as_str) else {
-            continue;
-        };
-        if !name.starts_with(SWEEP_PREFIX) {
+    for attr in &file.attrs {
+        if !attr.path().is_ident("cfg") {
             continue;
         }
-        let features = entry
-            .get("required-features")
-            .and_then(toml::Value::as_array)
-            .map(|values| {
-                values
-                    .iter()
-                    .filter_map(|value| value.as_str().map(str::to_string))
-                    .collect()
-            })
-            .unwrap_or_default();
-        declared.insert(name.to_string(), features);
+        let Ok(meta) = attr.parse_args::<syn::Meta>() else {
+            continue;
+        };
+        collect_features(&meta, &mut features);
     }
-    declared
+    features
 }
 
-/// Execute the selected partition, one cargo invocation per crate.
+/// Every feature a `cfg` predicate names outside a `not(...)`.
+fn collect_features(meta: &syn::Meta, features: &mut BTreeSet<String>) {
+    match meta {
+        syn::Meta::NameValue(pair) if pair.path.is_ident("feature") => {
+            if let syn::Expr::Lit(literal) = &pair.value {
+                if let syn::Lit::Str(name) = &literal.lit {
+                    features.insert(name.value());
+                }
+            }
+        }
+        syn::Meta::List(list) if list.path.is_ident("all") || list.path.is_ident("any") => {
+            let Ok(nested) = list.parse_args_with(
+                syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
+            ) else {
+                return;
+            };
+            for entry in &nested {
+                collect_features(entry, features);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Execute the selected partition, one cargo invocation per sweep.
 fn run_partition(
     ctx: &GateCtx,
     roster: &[SweepTarget],
@@ -314,18 +346,13 @@ fn run_partition(
         ));
     }
 
-    let mut by_crate: BTreeMap<&str, (&str, Vec<&str>, BTreeSet<&str>)> = BTreeMap::new();
+    let mut shard_targets: Vec<&SweepTarget> = Vec::new();
     for (index, target) in selected.iter().enumerate() {
-        if index % shards != shard {
-            continue;
+        if index % shards == shard {
+            shard_targets.push(target);
         }
-        let entry = by_crate
-            .entry(target.crate_dir.as_str())
-            .or_insert_with(|| (target.package.as_str(), Vec::new(), BTreeSet::new()));
-        entry.1.push(target.target.as_str());
-        entry.2.extend(target.features.iter().map(String::as_str));
     }
-    if by_crate.is_empty() {
+    if shard_targets.is_empty() {
         return Err(GateError::new(
             format!(
                 "shard {shard} of {shards} selected none of the {} {partition} target(s)",
@@ -335,30 +362,30 @@ fn run_partition(
         ));
     }
 
-    let mut executed = 0usize;
-    for (crate_dir, (package, targets, features)) in &by_crate {
+    let mut crates: BTreeSet<&str> = BTreeSet::new();
+    for target in &shard_targets {
+        crates.insert(target.crate_dir.as_str());
         let mut command = crate::cargo_runner::command(&ctx.root);
-        command.args(["test", "-p", package]);
-        if !features.is_empty() {
+        command.args(["test", "-p", target.package.as_str()]);
+        if !target.features.is_empty() {
             command.arg("--features");
-            command.arg(features.iter().copied().collect::<Vec<_>>().join(","));
+            command.arg(target.features.join(","));
         }
-        for target in targets {
-            command.args(["--test", target]);
-        }
-        let (status, diagnostics) =
-            crate::cargo_runner::run_streaming(&mut command).map_err(|error| {
+        command.args(["--test", target.harness.as_str()]);
+        command.args(["--", target.filter().as_str()]);
+        let (status, output, diagnostics) = crate::cargo_runner::run_captured(&mut command)
+            .map_err(|error| {
                 GateError::new(
-                    format!("cannot run cargo test for `{crate_dir}`: {error}"),
+                    format!("cannot run cargo test for `{}`: {error}", target.crate_dir),
                     "install a cargo the runner can start, or set CARGO to one",
                 )
             })?;
-        executed += targets.len();
         if !status.success() {
             if let Some(missing) = crate::cargo_runner::unmeasured(&diagnostics) {
                 report.find(Finding::new(
                     format!(
-                        "`{crate_dir}` measured nothing: the build named `{missing}`, which the build directory does not carry"
+                        "`{}` measured nothing: the build named `{missing}`, which the build directory does not carry",
+                        target.crate_dir
                     ),
                     "run the sweep again against an intact build directory; a compile whose own inputs were deleted under it reports the state of the disk, and the sweep it was pointed at never ran",
                 ));
@@ -366,19 +393,51 @@ fn run_partition(
             }
             report.find(Finding::new(
                 format!(
-                    "`{crate_dir}` failed {} {partition} sweep target(s): {}",
-                    targets.len(),
-                    targets.join(", ")
+                    "`{}` failed the {partition} sweep `{}`, run as `--test {} -- {}`",
+                    target.crate_dir,
+                    target.sweep,
+                    target.harness,
+                    target.filter()
                 ),
                 "fix the parity failure the sweep reported; a skipped or failing oracle matrix is unproven parity",
+            ));
+            continue;
+        }
+        if cases_run(&output) == 0 {
+            report.find(Finding::new(
+                format!(
+                    "`{}` ran no case of the {partition} sweep `{}`: `--test {} -- {}` selected nothing and the harness exited zero",
+                    target.crate_dir,
+                    target.sweep,
+                    target.harness,
+                    target.filter()
+                ),
+                "compile the sweep under the features this partition runs with, or require them on the harness that declares it; an empty module proves no parity",
             ));
         }
     }
     report.note(format!(
-        "shard {shard} of {shards}: ran {executed} {partition} target(s) across {} crate(s)",
-        by_crate.len()
+        "shard {shard} of {shards}: ran {} {partition} target(s) across {} crate(s)",
+        shard_targets.len(),
+        crates.len()
     ));
     Ok(())
+}
+
+/// How many cases libtest reported running, across every harness in the output.
+///
+/// A filter that matches nothing is the failure this counts for, and libtest
+/// reports it the same way as a suite that passed: `running 0 tests`, then a
+/// zero exit. The count is taken from the harness's own line rather than from
+/// the result line, because a run with every case filtered out still prints a
+/// result line reading `ok`.
+fn cases_run(output: &str) -> usize {
+    output
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("running "))
+        .filter_map(|rest| rest.split_whitespace().next())
+        .filter_map(|count| count.parse::<usize>().ok())
+        .sum()
 }
 
 /// One numeric flag, defaulting when it is not passed.
@@ -403,20 +462,41 @@ mod tests {
     /// The predicate is crate-private, so no integration test reaches it.
     #[test]
     fn every_target_is_claimed_by_exactly_one_partition() {
-        let matrix = SweepTarget {
-            crate_dir: "vyre-libs".to_string(),
-            package: "vyre-libs".to_string(),
-            target: "sweep_matching_oracle".to_string(),
-            features: Vec::new(),
-        };
-        let wave = SweepTarget {
-            crate_dir: "vyre-libs".to_string(),
-            package: "vyre-libs".to_string(),
-            target: "sweep_matching_volume_wave".to_string(),
-            features: Vec::new(),
-        };
+        let matrix = target("sweep_matching_oracle");
+        let wave = target("sweep_matching_volume_wave");
         assert!(!matrix.is_volume());
         assert!(wave.is_volume());
+    }
+
+    /// WHY: a sweep is a module of a shared harness, so the only thing that
+    /// runs its cases and nothing else is a name filter scoped to the module.
+    /// A filter without the separator also selects a sibling whose name starts
+    /// with the same text, and running a neighbour's cases under this sweep's
+    /// name is how an empty sweep reports as covered.
+    #[test]
+    fn a_sweep_is_selected_by_its_own_module_path() {
+        assert_eq!(
+            target("sweep_bitset_oracle").filter(),
+            "sweep_bitset_oracle::"
+        );
+    }
+
+    /// WHY: a filter that matches no case exits zero, which is the same exit a
+    /// passing suite gives. The harness line is the only place the difference
+    /// is stated, and reading the result line instead reports `ok` for a run
+    /// that proved nothing.
+    #[test]
+    fn a_run_that_selected_no_case_is_counted_as_none() {
+        assert_eq!(
+            cases_run("running 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 412 filtered out\n"),
+            0
+        );
+        assert_eq!(
+            cases_run("running 12 tests\ntest sweep_a::one ... ok\n\ntest result: ok. 12 passed\n"),
+            12
+        );
+        assert_eq!(cases_run("running 3 tests\nrunning 4 tests\n"), 7);
+        assert_eq!(cases_run("Compiling vyre-libs v0.1.0\n"), 0);
     }
 
     /// WHY: a nested support module under `tests/` is not a target, and a
@@ -451,43 +531,43 @@ mod tests {
         );
     }
 
-    /// WHY: `cargo -p` takes a package name and the roster walks directories.
-    /// A member whose directory and package names differ was addressed by its
-    /// directory, which selects another crate or no crate at all, and a
-    /// manifest that names no package must not resolve to a guess.
+    /// WHY: the manifest states what cargo needs to build the harness, and the
+    /// sweep's own `cfg` states what the module needs to hold a case. A run
+    /// that reads only the manifest compiles an empty module and reports the
+    /// parity as proven, which is the failure the roster exists to prevent. A
+    /// feature named under `not(...)` is the opposite requirement: enabling it
+    /// removes the module, so it is never passed to cargo.
     #[test]
-    fn a_package_is_named_by_its_manifest_and_never_by_its_directory() {
-        let manifest: toml::Table =
-            toml::from_str("[package]\nname = \"vyre-conform\"\nversion = \"0.1.0\"\n")
-                .expect("table");
+    fn a_sweep_declares_the_features_its_own_cfg_requires() {
         assert_eq!(
-            package_name(&manifest, "conform/vyre-conform/Cargo.toml").expect("a named package"),
-            "vyre-conform"
+            cfg_features("#![cfg(feature = \"graph-dispatch\")]\nfn a() {}\n"),
+            BTreeSet::from(["graph-dispatch".to_string()])
         );
-        let anonymous: toml::Table = toml::from_str("[workspace]\n").expect("table");
-        let error = package_name(&anonymous, "conform/vyre-conform/Cargo.toml")
-            .expect_err("a manifest with no package name fails closed");
-        assert!(
-            error.message.contains("conform/vyre-conform/Cargo.toml"),
-            "{}",
-            error.message
+        assert_eq!(
+            cfg_features(
+                "#![cfg(all(feature = \"device-tests\", any(feature = \"cuda\", feature = \"wgpu\")))]\n"
+            ),
+            BTreeSet::from([
+                "cuda".to_string(),
+                "device-tests".to_string(),
+                "wgpu".to_string()
+            ])
         );
+        assert!(cfg_features("#![cfg(not(feature = \"slow\"))]\n").is_empty());
+        assert!(cfg_features("#![cfg(test)]\n#![forbid(unsafe_code)]\n").is_empty());
+        assert!(cfg_features("fn a() { #![cfg(feature = \"inner\")] }\n").is_empty());
     }
 
-    /// WHY: the features a target needs come from the crate's own `[[test]]`
-    /// entry. Reading them from anywhere else is how a runner passes cargo a
-    /// selection that cannot build.
-    #[test]
-    fn the_manifest_entry_supplies_the_required_features() {
-        let manifest: toml::Table = toml::from_str(
-            "[[test]]\nname = \"sweep_a\"\nrequired-features = [\"math-kernels\"]\n\n[[test]]\nname = \"wire\"\nrequired-features = [\"other\"]\n",
-        )
-        .expect("table");
-        let declared = declared_tests(&manifest);
-        assert_eq!(
-            declared.get("sweep_a"),
-            Some(&vec!["math-kernels".to_string()])
-        );
-        assert!(!declared.contains_key("wire"));
+    /// WHY: every field the runner passes to cargo comes from one place, and a
+    /// fixture that spells them inline drifts from the struct the derivation
+    /// fills.
+    fn target(sweep: &str) -> SweepTarget {
+        SweepTarget {
+            crate_dir: "vyre-libs".to_string(),
+            package: "vyre-libs".to_string(),
+            sweep: sweep.to_string(),
+            harness: "all_tests".to_string(),
+            features: Vec::new(),
+        }
     }
 }
