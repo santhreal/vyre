@@ -410,7 +410,7 @@ fn apple_repeated_resident_sequence_updates_read_write_handle() {
         vec![
             BufferDecl::storage("state", 0, BufferAccess::ReadWrite, DataType::U32)
                 .with_count(1)
-                .with_output_byte_range(0..4),
+                .with_output_byte_range(0u64..4),
         ],
         [1, 1, 1],
         vec![Node::store(

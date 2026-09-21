@@ -15,7 +15,7 @@ pub(super) fn one_word_output(workgroups: [u32; 3], body: Vec<Node>) -> Program 
         vec![
             BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
                 .with_count(1)
-                .with_output_byte_range(0..4),
+                .with_output_byte_range(0u64..4),
         ],
         workgroups,
         body,
@@ -46,7 +46,7 @@ pub(super) fn word_to_word(
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
             BufferDecl::storage(output, 1, BufferAccess::WriteOnly, DataType::U32)
                 .with_count(1)
-                .with_output_byte_range(0..4),
+                .with_output_byte_range(0u64..4),
         ],
         [1, 1, 1],
         vec![Node::store(

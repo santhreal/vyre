@@ -7,7 +7,7 @@
 
 use super::*;
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[test]
@@ -19,7 +19,7 @@ fn apple_native_metal_matches_wgpu_on_same_program_bytes() {
             BufferDecl::storage("b", 1, BufferAccess::ReadOnly, DataType::U32).with_count(8),
             BufferDecl::storage("out", 2, BufferAccess::WriteOnly, DataType::U32)
                 .with_count(8)
-                .with_output_byte_range(0..32),
+                .with_output_byte_range(0u64..32),
         ],
         [8, 1, 1],
         vec![

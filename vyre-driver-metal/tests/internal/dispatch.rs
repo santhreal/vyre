@@ -26,10 +26,10 @@ fn apple_dispatch_handles_empty_and_unaligned_output_ranges() {
         vec![
             BufferDecl::storage("empty", 0, BufferAccess::WriteOnly, DataType::U32)
                 .with_count(0)
-                .with_output_byte_range(0..0),
+                .with_output_byte_range(0u64..0),
             BufferDecl::storage("word", 1, BufferAccess::WriteOnly, DataType::U32)
                 .with_count(1)
-                .with_output_byte_range(1..2),
+                .with_output_byte_range(1u64..2),
         ],
         [1, 1, 1],
         vec![Node::store("word", Expr::u32(0), Expr::u32(0x1122_3344))],
@@ -87,7 +87,7 @@ fn apple_dispatch_grid_uses_declared_output_count_not_trimmed_readback() {
         vec![
             BufferDecl::storage("out", 0, BufferAccess::WriteOnly, DataType::U32)
                 .with_count(512)
-                .with_output_byte_range(0..8),
+                .with_output_byte_range(0u64..8),
         ],
         [256, 1, 1],
         vec![
@@ -128,7 +128,7 @@ fn apple_dispatch_allocates_threadgroup_memory() {
             BufferDecl::workgroup("scratch", 4, DataType::U32),
             BufferDecl::storage("out", 1, BufferAccess::WriteOnly, DataType::U32)
                 .with_count(1)
-                .with_output_byte_range(0..4),
+                .with_output_byte_range(0u64..4),
         ],
         [4, 1, 1],
         vec![
