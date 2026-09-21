@@ -1,5 +1,5 @@
 schema_version = 2
-bom_timestamp = "2026-09-21T10:17:40Z"
+bom_timestamp = "2026-09-21T10:28:05Z"
 rustc_version = "1.86.0 (05f9846f8 2025-03-31)"
 cargo_version = "1.86.0 (adf9b6ad1 2025-02-28)"
 target_triples = [
@@ -9,9 +9,9 @@ target_triples = [
     "aarch64-apple-darwin",
     "aarch64-unknown-linux-gnu",
 ]
-lockfile_digest = "8891b424b89d3cb20ad7ef827cb5c47d8d99e31c23e341d03f0a2b210e8ff9cf"
+lockfile_digest = "3503bc4a7db298c50f9e7add684cb93bf5d0e29da0c9fbd5e9ed259080e0fc73"
 is_offline_capable = true
-reproducible_archive_hash = "bb1d2743c4d704f73e1908207b5a36362607790db0eaa9c1ac0e8f2feb1f6a9d"
+reproducible_archive_hash = "c65edadb7f50b634837848176ba746bba20e6d486a671bb92d3dc40409a5ab40"
 
 [[dependencies]]
 name = "adler2"
@@ -251,14 +251,6 @@ version = "2.11.1"
 checksum = "c4512299f36f043ab09a583e57bceb5a5aab7a73db1805848e8fef3c9e8c78b3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 license = "MIT OR Apache-2.0"
-is_policy_approved = true
-
-[[dependencies]]
-name = "bitmaps"
-version = "3.2.1"
-checksum = "a1d084b0137aaa901caf9f1e8b21daa6aa24d41cd806e111335541eff9683bd6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-license = "MPL-2.0+"
 is_policy_approved = true
 
 [[dependencies]]
@@ -1319,16 +1311,16 @@ is_policy_approved = true
 
 [[dependencies]]
 name = "imbl"
-version = "7.0.1"
-checksum = "43ea8d4c37ee560727e824d62804183624d371e632019b0e9e3532bce64a33e5"
+version = "7.0.2"
+checksum = "46bad832b9b463ed9398b8506488cc2e3b897a9d44f13af115f382aac71f4fec"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 license = "MPL-2.0+"
 is_policy_approved = true
 
 [[dependencies]]
 name = "imbl-sized-chunks"
-version = "0.1.3"
-checksum = "8f4241005618a62f8d57b2febd02510fb96e0137304728543dfc5fd6f052c22d"
+version = "0.2.0"
+checksum = "2a0813be332553f857953298749fa19549e8b61b80589757c29b4e2a804fa9c6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 license = "MPL-2.0+"
 is_policy_approved = true

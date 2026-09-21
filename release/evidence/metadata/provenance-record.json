@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"90a8316bbfeccc9b5890446ddf8b44b85fd6ed2f","commit_timestamp":"1789985860","parent_commit":"dbee9a7e1d0f798ff81472665a06f4c4d8ff12f7","dirty":false,"source_fingerprint":"git:90a8316bbfeccc9b5890446ddf8b44b85fd6ed2f:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"6332832559a9d921a49d88e44c371df1cb762da5","commit_timestamp":"1789986485","parent_commit":"4eb2fbf5581572ddf174233cb4f901206921effb","dirty":false,"source_fingerprint":"git:6332832559a9d921a49d88e44c371df1cb762da5:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "_type": "https://in-toto.io/Statement/v1",
   "predicate": {
     "buildDefinition": {
@@ -196,12 +196,6 @@
             "sha256": "c4512299f36f043ab09a583e57bceb5a5aab7a73db1805848e8fef3c9e8c78b3"
           },
           "uri": "pkg:cargo/bitflags@2.11.1"
-        },
-        {
-          "digest": {
-            "sha256": "a1d084b0137aaa901caf9f1e8b21daa6aa24d41cd806e111335541eff9683bd6"
-          },
-          "uri": "pkg:cargo/bitmaps@3.2.1"
         },
         {
           "digest": {
@@ -997,15 +991,15 @@
         },
         {
           "digest": {
-            "sha256": "43ea8d4c37ee560727e824d62804183624d371e632019b0e9e3532bce64a33e5"
+            "sha256": "46bad832b9b463ed9398b8506488cc2e3b897a9d44f13af115f382aac71f4fec"
           },
-          "uri": "pkg:cargo/imbl@7.0.1"
+          "uri": "pkg:cargo/imbl@7.0.2"
         },
         {
           "digest": {
-            "sha256": "8f4241005618a62f8d57b2febd02510fb96e0137304728543dfc5fd6f052c22d"
+            "sha256": "2a0813be332553f857953298749fa19549e8b61b80589757c29b4e2a804fa9c6"
           },
-          "uri": "pkg:cargo/imbl-sized-chunks@0.1.3"
+          "uri": "pkg:cargo/imbl-sized-chunks@0.2.0"
         },
         {
           "digest": {
@@ -2966,7 +2960,7 @@
           "materials": true,
           "parameters": true
         },
-        "invocationId": "inv-8891b424b89d3cb20ad7ef827cb5c47d8d99e31c23e341d03f0a2b210e8ff9cf",
+        "invocationId": "inv-3503bc4a7db298c50f9e7add684cb93bf5d0e29da0c9fbd5e9ed259080e0fc73",
         "reproducible": true
       }
     }
@@ -2975,7 +2969,7 @@
   "subject": [
     {
       "digest": {
-        "blake3": "bb1d2743c4d704f73e1908207b5a36362607790db0eaa9c1ac0e8f2feb1f6a9d"
+        "blake3": "c65edadb7f50b634837848176ba746bba20e6d486a671bb92d3dc40409a5ab40"
       },
       "name": "vyre-release-archive"
     }
