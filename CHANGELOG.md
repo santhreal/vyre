@@ -24,6 +24,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A compile request may require the selected plan to exercise one schedule
   family, and a family no legal candidate reaches is refused rather than
   replaced by the family that ranked next.
+- The ci-steps gate reports a workflow step whose --test harness compiles none
+  of its cases. Satisfying a harness's required-features does not run anything
+  in it: a module behind a cfg the step does not enable compiles to nothing
+  while the harness exits zero. Each case is judged under the cfg attributes of
+  the whole chain that reaches it, so a chunk file carrying #[test] and no
+  attribute is credited with what its parents require.
 - `compile_portfolio` and `compile_portfolio_measured` jointly select the
   artifact set an objective's coverage policy retains, enumerating every legal
   partition of the stated workload classes under the variant and aggregate byte
@@ -127,6 +133,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   tests all read it from there.
 - Every emitted target module records the storage formats, conversions,
   approximable operations, and chunk width it was lowered under.
+- vyre-libs-graph publishes encode_node, decode_node, dense_to_encoded, and
+  encoded_to_dense from graph::exploded. The pair converts between the packed
+  (proc, block, fact) node id and the dense IR index, and consumers outside the
+  crate read both spaces.
 - A one-dimensional launch whose workgroup count exceeds a per-axis ceiling
   folds onto the y and z axes and the emitted kernel reads a grid-linearized
   element index, so a program above the single-axis limit dispatches instead of

@@ -8,8 +8,8 @@
 
 use vyre_foundation::execution_plan::fusion::{
     classify_program_handoff, earliest_region_handoff, fuse_programs, lower_fusion_candidate,
-    FusionCandidate, FusionCandidateKind, FusionCandidateSet, FusionError, HandoffLocation,
-    RegionDependenceGraph,
+    FusionCandidate, FusionCandidateKind, FusionCandidateSet, FusionError, FusionRejectionReason,
+    HandoffLocation, RegionDependenceGraph,
 };
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::logical::{
@@ -274,13 +274,32 @@ fn candidate_kinds_enumerated_from_source_and_require_legality_answers() {
         // Every kind produces an explicit legality answer without panicking.
         let legal_ans = kind.evaluate_legality(&region_a, &region_b);
         assert!(
-            legal_ans.is_ok() || legal_ans.is_err(),
-            "Candidate kind {} must provide a legality answer",
+            legal_ans.is_ok(),
+            "Candidate kind {} must be legal for congruent pointwise parallel regions: {legal_ans:?}",
             kind.name()
         );
 
         // Incompatible regions must be handled deterministically.
-        let _incompat_ans = kind.evaluate_legality(&region_a, &region_incompatible);
+        let incompat_ans = kind.evaluate_legality(&region_a, &region_incompatible);
+        match kind {
+            FusionCandidateKind::RegisterForwarding
+            | FusionCandidateKind::SharedMemoryForwarding
+            | FusionCandidateKind::PipelinedTiles => {
+                assert_eq!(
+                    incompat_ans,
+                    Err(FusionRejectionReason::IncompatibleIterationSpace),
+                    "Candidate kind {} must reject incompatible iteration spaces",
+                    kind.name()
+                );
+            }
+            _ => {
+                assert!(
+                    incompat_ans.is_ok(),
+                    "Candidate kind {} should accept incompatible regions",
+                    kind.name()
+                );
+            }
+        }
     }
 }
 

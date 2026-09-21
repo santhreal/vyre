@@ -105778,7 +105778,7 @@ seam = "libs-graph"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
 stability = "extension"
-exported_item_count = 1039
+exported_item_count = 1043
 
   [[package.item]]
   path = "impl core::convert::From<vyre_libs_graph::graph::reachable::UnknownNode> for vyre_libs_graph::graph::reachable::ReachableError"
@@ -110115,6 +110115,34 @@ exported_item_count = 1039
 
   [[package.item]]
   path = "vyre_libs_graph::graph::exploded::canonicalize_csr_within_rows_in_place(row_ptr: &[u32], col_idx: &mut [u32]) -> core::result::Result<(), alloc::string::String>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_graph::graph::exploded::decode_node(node_id: u32) -> (u32, u32, u32)"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_graph::graph::exploded::dense_to_encoded(dense: u32, blocks_per_proc: u32, facts_per_proc: u32) -> core::option::Option<u32>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_graph::graph::exploded::encode_node(proc_id: u32, block_id: u32, fact_id: u32) -> core::option::Option<u32>"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_graph::graph::exploded::encoded_to_dense(node_id: u32, blocks_per_proc: u32, facts_per_proc: u32) -> core::option::Option<u32>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"

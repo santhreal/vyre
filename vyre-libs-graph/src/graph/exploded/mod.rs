@@ -63,11 +63,9 @@ pub use dispatch_plan::{
     plan_ifds_csr_dispatch, split_ifds_rule_quads_into, split_ifds_rule_triples_into,
     IfdsCsrDispatchPlan, IfdsCsrRuleColumns,
 };
-#[cfg(test)]
-pub use encoding::{decode_node, dense_to_encoded, encode_node, encoded_to_dense};
 pub use encoding::{
-    fits, BLOCK_BITS, FACTS_PER_WORKGROUP, FACT_BITS, MAX_BLOCK_ID, MAX_FACT_ID, MAX_PROC_ID,
-    PROC_BITS,
+    decode_node, dense_to_encoded, encode_node, encoded_to_dense, fits, BLOCK_BITS,
+    FACTS_PER_WORKGROUP, FACT_BITS, MAX_BLOCK_ID, MAX_FACT_ID, MAX_PROC_ID, PROC_BITS,
 };
 pub use layout::{
     IfdsCsrLayout, IfdsCsrProgramCacheKey, IfdsCsrRuleInputFingerprint, IfdsCsrStaticInputKey,

@@ -1,0 +1,2 @@
+category = "Added"
+text = "The ci-steps gate reports a workflow step whose --test harness compiles none of its cases. Satisfying a harness's required-features does not run anything in it: a module behind a cfg the step does not enable compiles to nothing while the harness exits zero. Each case is judged under the cfg attributes of the whole chain that reaches it, so a chunk file carrying #[test] and no attribute is credited with what its parents require."

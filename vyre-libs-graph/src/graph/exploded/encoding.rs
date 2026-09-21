@@ -26,25 +26,20 @@ pub const MAX_FACT_ID: u32 = (1 << FACT_BITS) - 1;
 /// NFA window sizing in `nfa::subgroup_nfa` so both subsystems
 /// share occupancy budget.
 pub const FACTS_PER_WORKGROUP: usize = 1024;
-// Shift and mask decomposition of the public bit layout above, read only by the
-// test-only `encode_node` / `decode_node` pair; production packs the dense
-// `(proc, block, fact)` index in IR instead.
-#[cfg(test)]
+// Shift and mask decomposition of the public bit layout above, used by the
+// `encode_node` / `decode_node` pair. Production IR packs the dense
+// `(proc, block, fact)` index instead, and downstream consumers convert
+// between the two spaces through `dense_to_encoded` / `encoded_to_dense`.
 const BLOCK_SHIFT: u32 = FACT_BITS;
-#[cfg(test)]
 const PROC_SHIFT: u32 = FACT_BITS + BLOCK_BITS;
-#[cfg(test)]
 const FACT_MASK: u32 = MAX_FACT_ID;
-#[cfg(test)]
 const BLOCK_MASK: u32 = MAX_BLOCK_ID;
-#[cfg(test)]
 const PROC_MASK: u32 = MAX_PROC_ID;
 /// Pack a `(proc_id, block_id, fact_id)` triple into a 32-bit
 /// node id.
 ///
 /// Invalid triples have no non-aliasing `u32` representation, so the
 /// failure is explicit instead of silently clamping or masking.
-#[cfg(test)]
 #[must_use]
 pub fn encode_node(proc_id: u32, block_id: u32, fact_id: u32) -> Option<u32> {
     fits(proc_id, block_id, fact_id)
@@ -52,7 +47,6 @@ pub fn encode_node(proc_id: u32, block_id: u32, fact_id: u32) -> Option<u32> {
 }
 
 /// Unpack a node id back into `(proc_id, block_id, fact_id)`.
-#[cfg(test)]
 #[must_use]
 pub fn decode_node(node_id: u32) -> (u32, u32, u32) {
     let proc_id = (node_id >> PROC_SHIFT) & PROC_MASK;
@@ -71,7 +65,6 @@ pub fn fits(proc_id: u32, block_id: u32, fact_id: u32) -> bool {
 /// Convert a dense `(proc, block, fact)` index  -  the space
 /// the `vyre-reference` IFDS witness operates in  -  into the packed
 /// `encode_node` form for reporting or cross-subsystem handoff.
-#[cfg(test)]
 #[must_use]
 pub fn dense_to_encoded(dense: u32, blocks_per_proc: u32, facts_per_proc: u32) -> Option<u32> {
     let slots_per_proc = blocks_per_proc.checked_mul(facts_per_proc)?;
@@ -86,7 +79,6 @@ pub fn dense_to_encoded(dense: u32, blocks_per_proc: u32, facts_per_proc: u32) -
 }
 
 /// Inverse of [`dense_to_encoded`].
-#[cfg(test)]
 #[must_use]
 pub fn encoded_to_dense(node_id: u32, blocks_per_proc: u32, facts_per_proc: u32) -> Option<u32> {
     let (p, b, f) = decode_node(node_id);
