@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Validating an operation schema document now reports what the document gets wrong even when the live registry does not assemble, and names the field that differs rather than one sentence about the whole file."

@@ -1,26 +1,3 @@
-#![allow(
-    clippy::doc_lazy_continuation,
-    clippy::double_must_use,
-    clippy::manual_div_ceil,
-    clippy::needless_range_loop,
-    clippy::collapsible_if,
-    clippy::match_like_matches_macro,
-    clippy::redundant_closure,
-    clippy::too_many_arguments,
-    clippy::nonminimal_bool,
-    clippy::derivable_impls,
-    clippy::unnecessary_lazy_evaluations,
-    clippy::needless_lifetimes,
-    clippy::bind_instead_of_map,
-    clippy::needless_borrows_for_generic_args,
-    clippy::map_entry,
-    clippy::map_identity,
-    clippy::manual_map,
-    clippy::match_single_binding,
-    clippy::field_reassign_with_default,
-    dead_code,
-    unused_variables
-)]
 //! Naga IR emitter for vyre `KernelDescriptor`.
 //!
 //! Consumes a substrate-neutral `vyre_lower::KernelDescriptor` and
@@ -29,13 +6,34 @@
 //! `vyre-lower`.
 
 use std::sync::mpsc;
+use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_lower::KernelDescriptor;
 
 mod emitter;
 mod error;
+mod grid_segments;
 pub mod patterns;
 pub mod program;
 pub use error::EmitError;
+pub use grid_segments::grid_segment_entry_points;
+
+/// Digest of this emitter's source, stamped in at build time.
+///
+/// A pipeline cache keyed on the program and a hand-edited lowering label
+/// cannot see that the emitter changed: the key stays the same and a stale
+/// compiled pipeline answers for a fixed lowering. Mixing this into the key
+/// ties every cached artifact to the emitter that produced it, whether or not
+/// the label was edited.
+pub const LOWERING_DIGEST: &str = env!("VYRE_NAGA_LOWERING_DIGEST");
+
+/// Entry-point name prefix for every dispatch segment after the first.
+///
+/// A whole-grid fence is a launch boundary without a cooperative launch, so a
+/// fenced descriptor emits one compute entry point per segment: `main`, then
+/// this prefix followed by the segment index. A dispatch layer submits them in
+/// that order, and the boundary between two submissions publishes every write
+/// the earlier segment made.
+pub const GRID_SEGMENT_ENTRY_PREFIX: &str = "main_grid_segment_";
 
 /// Stable diagnostic row emitted when binding a lowered Vyre operation into a
 /// Naga module.
@@ -61,13 +59,35 @@ pub struct BindResultEntry {
 
 /// Emit a `naga::Module` from one verified `KernelDescriptor`.
 ///
+/// The module is emitted under [`FloatLoweringMode::Contracted`], which is
+/// what every caller got before the mode existed and what keeps the emitted
+/// text byte-identical for a program that states no rounding policy.
+///
 /// # Errors
 ///
 /// Returns [`EmitError`] when a binding layout cannot be represented in
 /// Naga IR or when the descriptor contains an operation outside this emitter's
 /// supported lowering set.
 pub fn emit(desc: &KernelDescriptor) -> Result<naga::Module, EmitError> {
-    emitter::emit_uncached(desc)
+    emit_with_float_mode(desc, FloatLoweringMode::Contracted)
+}
+
+/// Emit a `naga::Module` under an explicit f32 rounding policy.
+///
+/// Under [`FloatLoweringMode::StrictIeee`] every f32 multiply publishes its
+/// rounded result through an integer reinterpretation before an adjacent add
+/// reads it, so the target has no multiply-add pair left to contract and the
+/// emitted arithmetic rounds exactly where IEEE-754 says it does. The cost is
+/// paid only by a caller that asks for it.
+///
+/// # Errors
+///
+/// Same as [`emit`].
+pub fn emit_with_float_mode(
+    desc: &KernelDescriptor,
+    float_lowering: FloatLoweringMode,
+) -> Result<naga::Module, EmitError> {
+    emitter::emit_uncached(desc, float_lowering)
 }
 
 /// Emit a Naga module only when `target` supports every descriptor requirement.
@@ -153,6 +173,3 @@ fn emit_many_with(
         })
         .collect()
 }
-
-#[cfg(test)]
-mod tests;

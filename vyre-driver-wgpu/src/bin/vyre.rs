@@ -12,7 +12,7 @@
 use std::process::ExitCode;
 
 use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 fn main() -> ExitCode {
     match run() {
@@ -98,11 +98,9 @@ fn run_demo() -> Result<u32, String> {
     // kernel  -  the backend lowers this to a compute pipeline and
     // returns the bytes.
     let program = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1)
-                .with_output_byte_range(0..4),
-        ],
+        vec![BufferDecl::output("out", 0, DataType::U32)
+            .with_count(1)
+            .with_full_output_byte_range()],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
     );
@@ -122,11 +120,82 @@ fn run_demo() -> Result<u32, String> {
             format!("demo dispatch failed: {error}. Fix: inspect the GPU driver logs.")
         })?;
 
-    let bytes = outputs
-        .first()
-        .ok_or_else(|| "demo returned no output buffers; expected one.".to_string())?;
-    let slice: [u8; 4] = bytes[..4]
-        .try_into()
-        .map_err(|_| "demo output buffer shorter than 4 bytes.".to_string())?;
-    Ok(u32::from_le_bytes(slice))
+    validate_demo_outputs(&outputs)
+}
+
+fn validate_demo_outputs(outputs: &[Vec<u8>]) -> Result<u32, String> {
+    let [bytes] = outputs else {
+        return Err(format!(
+            "demo returned {} output buffers; expected one.",
+            outputs.len()
+        ));
+    };
+    let slice: [u8; 4] = bytes.as_slice().try_into().map_err(|_| {
+        format!(
+            "demo output buffer contains {} bytes; expected 4.",
+            bytes.len()
+        )
+    })?;
+    let value = u32::from_le_bytes(slice);
+    if value != 42 {
+        return Err(format!("demo returned {value}; expected 42."));
+    }
+    Ok(value)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_demo_outputs;
+
+    /// WHY: the demo must reject an incorrect result or output ABI instead of
+    /// reporting GPU success or panicking. These tests cover validation, not
+    /// device acquisition or dispatch, which require the real GPU demo.
+    #[test]
+    fn demo_requires_one_output_buffer() {
+        for count in 0..=3 {
+            let outputs = vec![42_u32.to_le_bytes().to_vec(); count];
+            let result = validate_demo_outputs(&outputs);
+            if count == 1 {
+                assert_eq!(result, Ok(42));
+            } else {
+                assert_eq!(
+                    result,
+                    Err(format!(
+                        "demo returned {count} output buffers; expected one."
+                    ))
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn demo_requires_exact_output_width() {
+        for width in 0..=8 {
+            let mut bytes = 42_u32.to_le_bytes().to_vec();
+            bytes.resize(width, 0);
+            let result = validate_demo_outputs(&[bytes]);
+            if width == 4 {
+                assert_eq!(result, Ok(42));
+            } else {
+                assert_eq!(
+                    result,
+                    Err(format!(
+                        "demo output buffer contains {width} bytes; expected 4."
+                    ))
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn demo_requires_the_expected_little_endian_value() {
+        for value in [0_u32, 1, 41, 42, 43, u32::MAX, 42_u32.swap_bytes()] {
+            let result = validate_demo_outputs(&[value.to_le_bytes().to_vec()]);
+            if value == 42 {
+                assert_eq!(result, Ok(42));
+            } else {
+                assert_eq!(result, Err(format!("demo returned {value}; expected 42.")));
+            }
+        }
+    }
 }

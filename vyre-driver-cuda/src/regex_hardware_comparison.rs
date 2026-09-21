@@ -5,10 +5,8 @@
 //! reusable compiled scan artifact, software path, and shared driver
 //! accelerator capability record for each comparison.
 
-use vyre_driver::backend::{
-    RegexAcceleratorCapability, RegexAcceleratorClass, RegexAcceleratorEvidence,
-};
 use vyre_driver::BackendError;
+use vyre_driver::{RegexAcceleratorCapability, RegexAcceleratorClass, RegexAcceleratorEvidence};
 
 use crate::CUDA_BACKEND_ID;
 
@@ -109,10 +107,12 @@ pub fn cuda_regex_software_fallback_comparison_evidence(
     )
 }
 
+// Inline: `vyre_driver_cuda::regex_hardware_comparison` is `pub(crate)`, so no integration test can
+// reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_driver::backend::{RegexAcceleratorMatchSchema, RegexAcceleratorStreamMode};
+    use vyre_driver::{RegexAcceleratorMatchSchema, RegexAcceleratorStreamMode};
 
     #[test]
     fn cuda_software_fallback_records_unsupported_hardware_fields() {

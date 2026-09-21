@@ -1,0 +1,2 @@
+category = "Added"
+text = "`xtask --help` is checked against the registered subcommand table rather than against four names written into a test. A help route that prints the header and a truncated table still exits zero and still contains `SUBCOMMANDS:`, so the previous route check passed while commands were unreachable."

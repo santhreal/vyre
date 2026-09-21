@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Each Metal dispatch path names its rejection and timing labels through one `MetalDispatchLabels` record, so the borrowed, authenticated and resident prologues share `start_validated_dispatch` instead of restating the same validation call with four literals."

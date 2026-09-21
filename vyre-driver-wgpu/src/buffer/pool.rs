@@ -5,7 +5,6 @@ use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 
-use crossbeam_channel::{bounded, Receiver, Sender, TrySendError};
 use crossbeam_queue::ArrayQueue;
 use vyre_driver::accounting::{
     pinning_atomic_add_usize_with_order, repair_atomic_sub_usize_fetch_with_order,
@@ -13,6 +12,7 @@ use vyre_driver::accounting::{
 use vyre_driver::{BackendError, DispatchConfig};
 
 use super::handle::GpuBufferHandle;
+use super::tiering::PoolTiering;
 
 #[derive(Debug, Default)]
 #[repr(align(64))]
@@ -54,16 +54,22 @@ impl PaddedAtomicUsize {
 /// Snapshot of [`BufferPool`] counters.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct BufferPoolStats {
-    /// docs
+    /// Buffers created on the device because no free entry matched.
     pub allocations: usize,
-    /// docs
+    /// Acquires served from a free entry instead of a new allocation.
     pub hits: usize,
-    /// docs
+    /// Buffers returned to the pool.
     pub releases: usize,
-    /// docs
+    /// Buffers dropped instead of retained, because the retention budget or
+    /// the size-class bucket was full.
     pub evictions: usize,
-    /// docs
+    /// Bytes currently held in free entries.
     pub retained_bytes: usize,
+    /// Tiering metadata events discarded because the event queue was full or
+    /// its worker was gone. Reuse accounting is behind by this many events, so
+    /// a rising count explains a hit rate that fell without an eviction. Zero
+    /// when the pool was built without tiering.
+    pub dropped_tiering_events: usize,
 }
 
 #[derive(Debug)]
@@ -154,142 +160,6 @@ fn canonical_usage_kind(usage: wgpu::BufferUsages) -> UsageKind {
     }
 }
 
-const TIERING_EVENT_CAPACITY_MIN: usize = 1024;
-const TIERING_EVENT_CAPACITY_MAX: usize = 65_536;
-
-/// Opt-in hot/cold tiered metadata layered over the power-of-two pool.
-///
-/// Off by default. Consumers that batch many small dispatches (inference
-/// servers, Karyx streaming scanners, Soleno batched probes) wire one
-/// via [`BufferPool::with_tiering`] and tag hot allocations through the
-/// returned handle. The tiering layer records allocation reuse through
-/// a bounded non-blocking event queue and drains it into `TieredCache`
-/// on a dedicated metadata worker. This keeps acquire/release free of
-/// a global mutex while preserving the cache policy's per-tier O(1)
-/// LRU accounting.
-///
-/// Kept as `pub(crate) Option<Arc<...>>` so the absence of a tiering
-/// policy costs exactly one `Option::is_none()` branch on the hot
-/// acquire path.
-pub(crate) struct PoolTiering {
-    events: Sender<TieringEvent>,
-    pending_events: Arc<AtomicUsize>,
-    dropped_events: AtomicUsize,
-}
-
-#[derive(Clone, Copy, Debug)]
-enum TieringEvent {
-    Retain { key: u64, size: u64 },
-    Access { key: u64 },
-}
-
-impl PoolTiering {
-    fn new(
-        cache: crate::runtime::cache::TieredCache,
-        capacity: usize,
-    ) -> Result<Self, BackendError> {
-        let capacity = capacity.clamp(TIERING_EVENT_CAPACITY_MIN, TIERING_EVENT_CAPACITY_MAX);
-        let (events, receiver) = bounded(capacity);
-        let pending_events = Arc::new(AtomicUsize::new(0));
-        let worker_pending = Arc::clone(&pending_events);
-        std::thread::Builder::new()
-            .name("vyre-buffer-tiering".to_string())
-            .spawn(move || drain_tiering_events(cache, receiver, worker_pending))
-            .map_err(|error| {
-                BackendError::new(format!(
-                    "failed to spawn vyre buffer tiering worker: {error}. Fix: raise process thread limits or disable buffer-pool tiering."
-                ))
-            })?;
-        Ok(Self {
-            events,
-            pending_events,
-            dropped_events: AtomicUsize::new(0),
-        })
-    }
-
-    #[inline]
-    fn record_retained(&self, key: u64, size: u64) {
-        self.enqueue(TieringEvent::Retain { key, size });
-    }
-
-    #[inline]
-    fn record_access(&self, key: u64) {
-        self.enqueue(TieringEvent::Access { key });
-    }
-
-    #[inline]
-    fn enqueue(&self, event: TieringEvent) {
-        self.pending_events.fetch_add(1, Ordering::Release);
-        match self.events.try_send(event) {
-            Ok(()) => {}
-            Err(TrySendError::Full(_)) | Err(TrySendError::Disconnected(_)) => {
-                self.pending_events.fetch_sub(1, Ordering::AcqRel);
-                self.dropped_events.fetch_add(1, Ordering::Relaxed);
-            }
-        }
-    }
-
-    #[cfg(test)]
-    fn drain_all_for_test(&self) {
-        // The metadata worker is woken via crossbeam channel; under
-        // contention from multiple acquire/release threads it can
-        // accumulate a backlog before the OS schedules it. Use bounded
-        // adaptive parking rather than a fixed millisecond sleep; fixed
-        // sleeps create thundering-herd latency under high test fanout.
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-        let mut backoff = crate::wait_backoff::AdaptiveWaitBackoff::from_micros(64, 2, 50, 5);
-        while std::time::Instant::now() < deadline {
-            if self.pending_events.load(Ordering::Acquire) == 0 {
-                return;
-            }
-            backoff.idle_until(deadline);
-        }
-        panic!("Fix: tiering metadata worker did not drain pending buffer-pool events");
-    }
-
-    #[cfg(test)]
-    fn dropped_events_for_test(&self) -> usize {
-        self.dropped_events.load(Ordering::Relaxed)
-    }
-}
-
-fn drain_tiering_events(
-    mut cache: crate::runtime::cache::TieredCache,
-    receiver: Receiver<TieringEvent>,
-    pending_events: Arc<AtomicUsize>,
-) {
-    while let Ok(event) = receiver.recv() {
-        match event {
-            TieringEvent::Retain { key, size } => {
-                if cache.get(key).is_none() {
-                    if let Err(error) = cache.insert(key, size) {
-                        tracing::warn!(
-                            "buffer pool tiering rejected retained buffer {key} ({size} bytes): {error}. Fix: increase tier capacity or disable tiering for oversized buffers."
-                        );
-                        pending_events.fetch_sub(1, Ordering::AcqRel);
-                        continue;
-                    }
-                }
-                cache.record_access(key);
-                if let Err(error) = cache.promote(key) {
-                    tracing::warn!(
-                        "buffer pool tier promotion failed for retained buffer {key}: {error}. Fix: repair tier sizing or promotion accounting."
-                    );
-                }
-            }
-            TieringEvent::Access { key } => {
-                cache.record_access(key);
-                if let Err(error) = cache.promote(key) {
-                    tracing::warn!(
-                        "buffer pool tier promotion failed for accessed buffer {key}: {error}. Fix: repair tier sizing or promotion accounting."
-                    );
-                }
-            }
-        }
-        pending_events.fetch_sub(1, Ordering::AcqRel);
-    }
-}
-
 struct PoolInner {
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -309,7 +179,8 @@ struct FreeEntry {
 
 impl BufferPool {
     #[must_use]
-    /// docs
+    /// Build a power-of-two free-list pool. `config.max_output_bytes` sets the
+    /// retention budget; above it a released buffer is dropped, not retained.
     pub fn new(device: wgpu::Device, queue: wgpu::Queue, config: &DispatchConfig) -> Self {
         let max_retained_bytes = config
             .max_output_bytes
@@ -354,8 +225,7 @@ impl BufferPool {
         let max_retained_bytes = config
             .max_output_bytes
             .unwrap_or(DEFAULT_MAX_RETAINED_BYTES);
-        let event_capacity =
-            free_bucket_capacity(max_retained_bytes).max(TIERING_EVENT_CAPACITY_MIN);
+        let event_capacity = free_bucket_capacity(max_retained_bytes);
         let tiering = Arc::new(PoolTiering::new(tiered, event_capacity)?);
         let inner = Arc::get_mut(&mut pool.inner).ok_or_else(|| {
             BackendError::new(
@@ -367,18 +237,21 @@ impl BufferPool {
     }
 
     #[must_use]
-    /// docs
+    /// The queue every buffer this pool hands out is submitted against.
     pub fn queue(&self) -> &wgpu::Queue {
         &self.inner.queue
     }
 
     #[must_use]
-    /// docs
+    /// The device every buffer this pool hands out was created on.
     pub fn device(&self) -> &wgpu::Device {
         &self.inner.device
     }
 
-    /// docs
+    /// Take a buffer of at least `len` bytes with exactly `usage`.
+    ///
+    /// Served from the free list when a retained entry matches the rounded size
+    /// class and the usage kind, otherwise newly allocated.
     pub fn acquire(
         &self,
         len: u64,
@@ -519,13 +392,15 @@ impl BufferPool {
         ))
     }
 
-    /// docs
+    /// Return a pooled buffer handle, retaining its allocation when the
+    /// retention budget allows.
     pub fn release(&self, handle: GpuBufferHandle) {
         drop(handle);
     }
 
     #[must_use]
-    /// docs
+    /// Read the pool's counters. Relaxed loads, so the fields are individually
+    /// current and not a consistent instant across all six.
     pub fn stats(&self) -> BufferPoolStats {
         BufferPoolStats {
             allocations: self.inner.stats.allocations.load(Ordering::Relaxed),
@@ -533,6 +408,11 @@ impl BufferPool {
             releases: self.inner.stats.releases.load(Ordering::Relaxed),
             evictions: self.inner.stats.evictions.load(Ordering::Relaxed),
             retained_bytes: self.inner.stats.retained_bytes.load(Ordering::Relaxed),
+            dropped_tiering_events: self
+                .inner
+                .tiering
+                .as_ref()
+                .map_or(0, |tiering| tiering.dropped_events()),
         }
     }
 
@@ -698,208 +578,8 @@ fn free_bucket_capacity(max_retained_bytes: usize) -> usize {
         .min(MAX_FREE_ENTRIES_PER_BUCKET)
 }
 
+// Inline: covers `class_index`, `free_bucket_capacity`, `release`, `size_class`, which no
+// integration test can name.
 #[cfg(test)]
-mod tests {
-    use super::{class_index, free_bucket_capacity, size_class, BufferPool};
-    use proptest::prelude::*;
-
-    #[test]
-    fn retained_byte_budget_is_not_used_as_queue_capacity() {
-        assert_eq!(
-            free_bucket_capacity(1 << 30),
-            1024,
-            "Fix: a 1 GiB byte budget must not allocate 1 GiB queue slots per bucket"
-        );
-        assert_eq!(
-            free_bucket_capacity(8),
-            2,
-            "Fix: tiny retained-byte budgets should still translate to bounded entry capacity"
-        );
-    }
-
-    #[test]
-    fn oversized_size_classes_return_errors_instead_of_panicking() {
-        let error = size_class((1u64 << 63) + 1)
-            .expect_err("oversized buffer length must be rejected before pool indexing");
-        assert!(
-            error
-                .to_string()
-                .contains("power-of-two persistent pool size class"),
-            "unexpected error: {error}"
-        );
-
-        assert_eq!(
-            class_index(0).expect("Fix: minimum size class should fit"),
-            2
-        );
-        let error =
-            class_index(u64::MAX).expect_err("invalid retained allocation length must be rejected");
-        assert!(
-            error.to_string().contains("not a power-of-two"),
-            "unexpected error: {error}"
-        );
-    }
-
-    #[test]
-    fn acquire_release_reuses_power_of_two_classes() {
-        let arc = crate::runtime::cached_device()
-            .expect("Fix: GPU device is required for persistent buffer pool test");
-        let (device, queue) = &*arc;
-        let config = vyre_driver::DispatchConfig::default();
-        let pool = BufferPool::new(device.clone(), queue.clone(), &config);
-        for len in 1..=1000 {
-            let handle = pool
-                .acquire(
-                    len,
-                    wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                )
-                .expect("Fix: pooled allocation should succeed");
-            pool.release(handle);
-        }
-        assert!(
-            pool.stats().allocations <= 16,
-            "Fix: pool should allocate by power-of-two classes, stats={:?}",
-            pool.stats()
-        );
-    }
-
-    #[test]
-    fn pooled_reuse_updates_logical_element_count() {
-        let arc = crate::runtime::cached_device()
-            .expect("Fix: GPU device is required for persistent buffer pool test");
-        let (device, queue) = &*arc;
-        let config = vyre_driver::DispatchConfig::default();
-        let pool = BufferPool::new(device.clone(), queue.clone(), &config);
-        let usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
-
-        let large = pool
-            .acquire(64, usage)
-            .expect("Fix: initial pooled allocation should succeed");
-        assert_eq!(large.element_count(), 64);
-        pool.release(large);
-
-        let small = pool
-            .acquire(7, usage)
-            .expect("Fix: pooled reuse should succeed");
-        assert_eq!(
-            small.element_count(),
-            7,
-            "Fix: reusing a larger allocation must not leak the previous logical element count"
-        );
-        assert_eq!(small.byte_len(), 7);
-    }
-
-    #[test]
-    fn tiering_acquire_release_is_nonblocking_under_contention() {
-        let arc = crate::runtime::cached_device()
-            .expect("Fix: GPU device is required for persistent buffer pool test");
-        let (device, queue) = &*arc;
-        let config = vyre_driver::DispatchConfig::default();
-        let pool = BufferPool::with_tiering(
-            device.clone(),
-            queue.clone(),
-            &config,
-            vec![crate::runtime::cache::CacheTier::new("hot", 1 << 20)],
-        )
-        .expect("Fix: tiered buffer pool construction should succeed");
-        let handle = pool
-            .acquire(
-                64,
-                wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            )
-            .expect("Fix: acquire before poisoning should succeed");
-        let tiering = pool
-            .inner
-            .tiering
-            .as_ref()
-            .expect("Fix: with_tiering must attach a tiering policy")
-            .clone();
-        pool.release(handle);
-        let mut workers = Vec::new();
-        for _ in 0..4 {
-            let pool = pool.clone();
-            workers.push(std::thread::spawn(move || {
-                for _ in 0..32 {
-                    let handle = pool
-                        .acquire(
-                            64,
-                            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                        )
-                        .expect("Fix: pooled allocation should not fail under tiering contention");
-                    pool.release(handle);
-                }
-            }));
-        }
-        for worker in workers {
-            worker
-                .join()
-                .expect("Fix: buffer-pool contention worker must not panic");
-        }
-        tiering.drain_all_for_test();
-        assert_eq!(
-            tiering.dropped_events_for_test(),
-            0,
-            "Fix: normal contention must not drop tiering metadata events"
-        );
-    }
-
-    proptest! {
-        #![proptest_config(ProptestConfig::with_cases(64))]
-
-        #[test]
-        fn alternating_usage_hit_rate(
-            sizes in prop::collection::vec(1u64..=65536, 20..=200),
-        ) {
-            let arc = crate::runtime::cached_device()
-                .expect("Fix: GPU device is required for persistent buffer pool test");
-            let (device, queue) = &*arc;
-            let config = vyre_driver::DispatchConfig::default();
-            let pool = BufferPool::new(device.clone(), queue.clone(), &config);
-
-            let usage_a = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
-            let usage_b = wgpu::BufferUsages::STORAGE
-                | wgpu::BufferUsages::COPY_SRC
-                | wgpu::BufferUsages::COPY_DST
-                | wgpu::BufferUsages::INDIRECT;
-
-            // Round 1: acquire alternating usages, then release everything.
-            let mut handles = Vec::with_capacity(sizes.len());
-            for (i, &len) in sizes.iter().enumerate() {
-                let usage = if i % 2 == 0 { usage_a } else { usage_b };
-                handles.push(pool.acquire(len, usage).unwrap());
-            }
-            for h in handles {
-                pool.release(h);
-            }
-
-            let stats_after_first = pool.stats();
-            prop_assert_eq!(
-                stats_after_first.hits, 0,
-                "first round should be 100% fresh allocations"
-            );
-
-            // Round 2: identical pattern.
-            let mut handles = Vec::with_capacity(sizes.len());
-            for (i, &len) in sizes.iter().enumerate() {
-                let usage = if i % 2 == 0 { usage_a } else { usage_b };
-                handles.push(pool.acquire(len, usage).unwrap());
-            }
-            for h in handles {
-                pool.release(h);
-            }
-
-            let stats_after_second = pool.stats();
-            let second_round_hits = stats_after_second.hits - stats_after_first.hits;
-            let total = sizes.len();
-            let hit_rate = second_round_hits as f64 / total as f64;
-            prop_assert!(
-                hit_rate >= 0.95,
-                "second round hit rate should be >= 95%, got {:.2}% ({}/{}), stats={:?}",
-                hit_rate * 100.0,
-                second_round_hits,
-                total,
-                stats_after_second
-            );
-        }
-    }
-}
+#[path = "pool_tests.rs"]
+mod tests;

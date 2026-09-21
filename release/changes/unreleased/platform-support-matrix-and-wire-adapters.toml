@@ -1,0 +1,2 @@
+category = "Added"
+text = "The foundation layer now provides a source-derived platform support matrix, checked fixed-width canonical wire conversions, and small typed platform adapters without path-string policy."

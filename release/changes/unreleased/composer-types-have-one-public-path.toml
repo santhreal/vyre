@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Shared composer types have one public path under `vyre-libs`: CSR types under `csr`, elementwise types under `elementwise`, contraction types under `gemm`, state-machine types under `state_machine`, and grid types under `stencil`. The duplicate crate-root and semiring-module re-exports are removed."

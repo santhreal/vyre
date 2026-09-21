@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A poisoned lock reports one of two declared domains through `vyre_driver::lock_policy`: state this process owns is recoverable and reaches the caller as `BackendError::PoisonedLock`, and state outside the process image ends the process naming the owner and the state, so the wgpu graphics-loader lock no longer recovers a half-written dispatch table into the next caller."

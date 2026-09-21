@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Ingestion reports a missing resource by the stable graph name the artifact records for it, not by canonical value number alone."

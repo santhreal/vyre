@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The CUDA grid-barrier arrival ceiling now reads the static barrier count off the module's cached globals instead of rescanning the PTX text on every dispatch. The scan cost 18 to 22 us of host time per grid-sync dispatch."

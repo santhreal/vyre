@@ -17,6 +17,46 @@ pub(super) struct ScanAcStats {
     pub(super) candidate_suffix3_lanes: u32,
 }
 
+impl ScanAcStats {
+    pub(super) fn from_fixture_and_masks(
+        haystack: &[u8],
+        planted_matches: u32,
+        expected_matches: u32,
+        ac: &vyre_libs::pattern::classic_ac::ClassicAcAutomaton,
+        candidate_end_mask: &[u32; 8],
+        candidate_suffix2_mask: &[u32; 2048],
+        candidate_suffix3_bloom: &[u32],
+    ) -> Self {
+        Self {
+            haystack_bytes: haystack.len() as u32,
+            packed_haystack_words: haystack.len().div_ceil(4) as u32,
+            patterns: super::PATTERNS.len() as u32,
+            dfa_states: ac.dfa.state_count,
+            max_pattern_len: ac.dfa.max_pattern_len,
+            output_records: ac.dfa.output_records.len() as u32,
+            expected_matches,
+            max_matches: super::MAX_MATCHES,
+            planted_matches,
+            candidate_end_bytes: super::count::candidate_end_byte_count(candidate_end_mask),
+            candidate_end_lanes: super::count::candidate_end_lane_count(
+                haystack,
+                candidate_end_mask,
+            ),
+            candidate_suffix2_lanes: super::count::candidate_suffix2_lane_count(
+                haystack,
+                candidate_end_mask,
+                candidate_suffix2_mask,
+            ),
+            candidate_suffix3_lanes: super::count::candidate_suffix3_lane_count(
+                haystack,
+                candidate_end_mask,
+                candidate_suffix2_mask,
+                candidate_suffix3_bloom,
+            ),
+        }
+    }
+}
+
 pub(super) fn scan_ac_metric_points(
     stats: ScanAcStats,
     baseline_wall_ns: u64,

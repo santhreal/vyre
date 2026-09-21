@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The `GeometryStrategy` trait and `GeometryLoweringError` are removed from `vyre-foundation`, and `vyre_driver::DeviceProfile::admissible_workgroup_widths` reports the workgroup widths a profile admits as an ascending legality fact instead of a ranked candidate list."

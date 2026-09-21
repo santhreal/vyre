@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The Windows leg of the hosted matrix selects its perl in bash. The PowerShell step it replaced could not run at all: the interpolation `$perl:` is a scope-qualified variable reference, so the step was a parse error on every Windows job and its failure said nothing about perl. The new `ci-shell` gate holds every step of a Windows-capable workflow to declaring `shell: bash`, because a step with no shell key runs under PowerShell on a Windows runner."

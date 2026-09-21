@@ -1,0 +1,5 @@
+name = "vyre-macros"
+concern = "Provide compile-time registration and declaration macros without depending on runtime crates."
+pages = { spec = "vyre-macros/SPEC.md", readme = "vyre-macros/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = []

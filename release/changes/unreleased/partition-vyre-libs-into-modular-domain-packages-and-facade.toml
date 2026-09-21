@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The monolithic vyre-libs library is partitioned into acyclic domain compilation packages with a shared builder substrate, a machine-readable domain roster, and a backwards-compatible facade."

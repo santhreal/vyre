@@ -1,5 +1,7 @@
 //! Wgpu command reuse classifier test suite.
 
+#![cfg(feature = "device-tests")]
+
 const CLASSIFIER: &str = include_str!("../../docs/optimization/WGPU_COMMAND_REUSE_CLASSIFIER.toml");
 
 #[test]

@@ -3,9 +3,7 @@
 //! The wire decoder must reject tampered or corrupted payloads with
 //! structured errors rather than panics or silent acceptance.
 
-mod wire_decode_support;
-
-use wire_decode_support::{decode_error_string, minimal_program_bytes};
+use vyre_test_support::wire_hostile_inputs::{decode_error_string, minimal_program_bytes};
 
 #[test]
 fn wire_decoder_rejects_corrupted_checksum() {
@@ -18,8 +16,10 @@ fn wire_decoder_rejects_corrupted_checksum() {
 
     let error = decode_error_string(&bytes, "corrupt checksum");
     assert!(
-        error.contains("IntegrityMismatch") || error.contains("Fix:"),
-        "corrupt checksum must produce IntegrityMismatch or actionable error, got: {error}"
+        error.contains("IntegrityMismatch"),
+        "a tampered body must be reported as an integrity mismatch. The previous form of this \
+         assertion also accepted any message containing `Fix:`, which every error in this \
+         decoder carries, so it passed whatever the decoder said. Got: {error}"
     );
 }
 
@@ -31,7 +31,12 @@ fn wire_decoder_rejects_truncated_body() {
     // hit EOF before finishing node parsing.
     let truncated = &bytes[..bytes.len().saturating_sub(4)];
 
-    decode_error_string(truncated, "truncated body");
+    let error = decode_error_string(truncated, "truncated body");
+    assert!(
+        error.contains("TruncatedPayload") || error.contains("IntegrityMismatch"),
+        "a body short of what the header covers must be reported as truncation or as an \
+         integrity mismatch, not as some other fault, got: {error}"
+    );
 }
 
 #[test]
@@ -47,14 +52,47 @@ fn wire_decoder_rejects_wrong_magic() {
 
     let error = decode_error_string(&bytes, "wrong magic");
     assert!(
-        error.contains("MagicMismatch") || error.contains("Fix:"),
-        "wrong magic must produce MagicMismatch or actionable error, got: {error}"
+        error.contains("MagicMismatch"),
+        "bytes that are long enough for a magic but do not carry VIR0 must be reported as a \
+         magic mismatch, not as truncation: the caller holds a complete blob of the wrong \
+         format and re-fetching it changes nothing. Got: {error}"
     );
 }
 
 #[test]
 fn wire_decoder_rejects_empty_input() {
-    decode_error_string(&[], "empty input");
+    let error = decode_error_string(&[], "empty input");
+    assert!(
+        error.contains("TruncatedPayload"),
+        "an input too short to hold the magic must be reported as truncation, not as a magic \
+         mismatch: there are no magic bytes to compare. Got: {error}"
+    );
+    assert!(
+        !error.contains("MagicMismatch"),
+        "truncation and magic mismatch are separate repairs and must not be reported \
+         together. Got: {error}"
+    );
+}
+
+/// WHY: the two reports are chosen by a length comparison against the magic,
+/// so the byte on each side of that comparison is where a `<` written as `<=`
+/// survives every other case in this file. One byte short is truncation; the
+/// exact length with wrong content is a mismatch and never truncation.
+#[test]
+fn the_byte_either_side_of_the_magic_length_picks_a_different_report() {
+    let magic = &minimal_program_bytes()[..4];
+
+    let short = decode_error_string(&magic[..3], "one byte short of the magic");
+    assert!(
+        short.contains("TruncatedPayload") && !short.contains("MagicMismatch"),
+        "one byte short of the magic is truncation, got: {short}"
+    );
+
+    let exact = decode_error_string(b"XXXX", "exactly the magic length, wrong content");
+    assert!(
+        exact.contains("MagicMismatch") && !exact.contains("TruncatedPayload"),
+        "a full-length wrong magic is a mismatch, not truncation, got: {exact}"
+    );
 }
 
 #[test]
@@ -63,5 +101,10 @@ fn wire_decoder_rejects_header_only() {
     // Keep only the 40-byte header, drop all body bytes.
     let header_only = &bytes[..40.min(bytes.len())];
 
-    decode_error_string(header_only, "header-only input");
+    let error = decode_error_string(header_only, "header-only input");
+    assert!(
+        error.contains("TruncatedPayload") || error.contains("IntegrityMismatch"),
+        "a header whose body is absent must be reported as truncation or as an integrity \
+         mismatch, got: {error}"
+    );
 }

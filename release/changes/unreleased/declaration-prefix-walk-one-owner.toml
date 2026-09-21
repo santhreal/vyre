@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The declaration-prefix walk in front of a VAST row is owned by `parsing::c::parse::vast::declaration_prefix_scan`. The precomputed-context declaration classifier walked the prefix forwards with no delimiter depth, so the `int` inside a cast reached the identifier after it and `(int) a;` classified `a` as an ordinary declarator; the self-contained classifier skipped balanced paren and brace groups. Both call the same walk."

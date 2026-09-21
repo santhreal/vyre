@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The integer-operand and constant f32 Fma programs the validation rule and the emit boundary are asserted against now come from one fixture owner."

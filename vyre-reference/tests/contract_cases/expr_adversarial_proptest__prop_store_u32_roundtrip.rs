@@ -12,19 +12,21 @@ proptest! {
                 Node::store("out", Expr::u32(0), Expr::u32(value)),
             ],
         );
-        let inputs = [Value::from(vec![0; 4])];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
+        let inputs: [Value; 0] = [];
+        let outputs = vyre_reference::ReferenceRequest::standard(&program, &inputs).outputs()
             .expect("Fix: store program must execute successfully");
         prop_assert_eq!(outputs.len(), 1);
         let bytes = outputs[0].to_bytes();
         prop_assert_eq!(bytes, value.to_le_bytes().to_vec());
     }
 
+    /// A store past the end of a one-element buffer is refused at the access
+    /// site for every index. The index is loaded at run time so this
+    /// exercises the store path rather than the validator's constant-index
+    /// rejection. This used to assert the store vanished and the output
+    /// stayed zero, which is an answer no device produces.
     #[test]
-    fn prop_store_oob_is_silent_noop(index in 1u32..) {
-        // Store past the end of a 1-element buffer must not panic or error.
-        // Use a runtime-loaded index so this exercises OOB store semantics
-        // instead of the validator's constant-index rejection.
+    fn prop_out_of_bounds_store_refuses(index in 1u32..) {
         let program = Program::wrapped(
             vec![
                 BufferDecl::read("idx", 0, DataType::U32).with_count(1),
@@ -35,10 +37,13 @@ proptest! {
                 Node::store("out", Expr::load("idx", Expr::u32(0)), Expr::u32(0xDEADBEEF)),
             ],
         );
-        let inputs = [Value::from(index.to_le_bytes().to_vec()), Value::from(vec![0; 4])];
-        let outputs = vyre_reference::reference_eval(&program, &inputs)
-            .expect("Fix: OOB store must be a silent no-op");
-        prop_assert_eq!(outputs[0].to_bytes(), vec![0; 4]);
+        let inputs = [Value::from(index.to_le_bytes().to_vec())];
+        let error = vyre_reference::ReferenceRequest::standard(&program, &inputs).outputs()
+            .expect_err("Fix: a store past the buffer must be refused.");
+        prop_assert_eq!(
+            error.error_class(),
+            vyre_reference::ReferenceErrorClass::OutOfBoundsAccess
+        );
     }
 }
 
@@ -65,7 +70,7 @@ proptest! {
             true_val: Box::new(Expr::u32(value)),
             false_val: Box::new(Expr::u32(0)),
         };
-        let result = eval_expr::eval(&expr, &mut zero_invocation(&program), &mut Memory::empty(), &program)
+        let result = reference_eval_expr(&program, &mut ReferenceMemory::empty(), InvocationIds::ZERO, &expr)
             .expect("Fix: Expr::Select must evaluate");
         let expected = if condition != 0 { Value::U32(value) } else { Value::U32(0) };
         prop_assert_eq!(result, expected);
@@ -83,7 +88,7 @@ proptest! {
     fn prop_opaque_errors_actionably(_dummy in any::<u32>()) {
         let program = empty_program();
         let expr = Expr::opaque(DummyOpaque);
-        let result = eval_expr::eval(&expr, &mut zero_invocation(&program), &mut Memory::empty(), &program);
+        let result = reference_eval_expr(&program, &mut ReferenceMemory::empty(), InvocationIds::ZERO, &expr);
         match result {
             Err(e) => {
                 let msg = e.to_string();

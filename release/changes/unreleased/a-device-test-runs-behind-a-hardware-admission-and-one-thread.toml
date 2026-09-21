@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A test target that acquires a device through the backend registry is admitted by the `device-tests` feature, and every workflow step that runs one passes `--test-threads=1`. The gate that checks both derived the packages carrying device tests from a hardcoded list and read only concrete backend types, so a target that reached hardware through `live_backend_registry` compiled on a runner with no device and drove a single device from several threads at once."

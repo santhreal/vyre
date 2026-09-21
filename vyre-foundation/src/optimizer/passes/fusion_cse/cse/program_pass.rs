@@ -5,7 +5,7 @@
 
 use super::engine;
 use crate::ir::Program;
-use crate::optimizer::{fingerprint_program, vyre_pass, PassAnalysis, PassResult};
+use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 
 #[vyre_pass(
     name = "cse",
@@ -35,12 +35,9 @@ impl CsePass {
     /// Run CSE over the program entry.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let before = fingerprint_program(&program);
+        let before = program.clone();
         let optimized = engine::cse(program);
-        PassResult {
-            changed: fingerprint_program(&optimized) != before,
-            program: optimized,
-        }
+        PassResult::from_programs(before, optimized)
     }
 }
 

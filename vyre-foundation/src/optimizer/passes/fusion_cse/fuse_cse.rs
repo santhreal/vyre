@@ -33,8 +33,8 @@
 //! delegated to `fuse_programs_vec` (which rejects self-aliasing
 //! pairs with `FusionError::SelfAliasing` and inherits the
 //! flag from inputs). Mixed workgroup sizes are rejected at this
-//! layer (returns `None`)  -  the caller is expected to normalise
-//! via the `autotune` pass first.
+//! layer (returns `None`): a caller with arms of different declared widths
+//! states one width before asking.
 
 use rustc_hash::FxHashSet;
 
@@ -57,8 +57,8 @@ pub fn fuse_cse(mut programs: Vec<Program>) -> Option<Program> {
         return programs.pop();
     }
 
-    // Reject conflicting workgroup sizes  -  the caller must run
-    // autotune first to normalise.
+    // Reject conflicting workgroup sizes: the caller states one declared
+    // width before asking.
     let wg0 = programs[0].workgroup_size;
     if programs.iter().any(|p| p.workgroup_size != wg0) {
         return None;

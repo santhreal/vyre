@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The `vyre-libs-builder` crate root no longer re-exports its plumbing. `telemetry`, `contracts` and `operation_catalog`, and the contents of `dispatch_buffers`, `program_cache`, `scratch`, `buffer_names`, `element_zero`, `shape`, `tensor_ref`, `attribution`, `descriptor`, `outputs` and `signatures`, are reachable only through `plumbing::host`, `plumbing::operand`, `plumbing::program` and `plumbing::registration`."

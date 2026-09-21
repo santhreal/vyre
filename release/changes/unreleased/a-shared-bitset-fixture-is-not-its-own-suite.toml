@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The bitset law fixtures move from `vyre-libs/tests/bitset_law_properties.rs` to a directory module, so cargo stops compiling the shared helper as a test target of its own in which nothing calls it and the ProgramGraph read-only buffer names are imported from the crate that declares them instead of copied into the wgpu random-input harness."

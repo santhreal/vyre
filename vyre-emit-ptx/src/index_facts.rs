@@ -19,7 +19,7 @@
 
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::BinOp;
-use vyre_lower::operand_semantics::operand_is_result_reference;
+use vyre_lower::operand_class::operand_is_result_reference;
 use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
 pub(crate) struct IndexFacts {
@@ -344,13 +344,13 @@ fn symbolic_affine_root(op: &KernelOp, result_id: u32) -> u32 {
     }
 }
 
+// Inline: covers the private `IndexFacts` and its index-shape predicates, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_lower::descriptor_builder::mma_f16_m16n8k16;
     use vyre_lower::descriptor_builder::{body, effect, lit, op};
-    use vyre_lower::{
-        KernelBody, KernelOp, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape,
-    };
+    use vyre_lower::{KernelBody, KernelOp, LiteralValue};
 
     fn body_with_add(
         operands: Vec<u32>,
@@ -366,7 +366,8 @@ mod tests {
                     result,
                 },
             ])
-            .literals(literals).build()
+            .literals(literals)
+            .build()
     }
 
     #[test]
@@ -384,7 +385,8 @@ mod tests {
     fn detects_adjacent_folded_literal_indices() {
         let body = body()
             .ops([lit(0, 10), lit(1, 11)])
-            .literals([LiteralValue::U32(8), LiteralValue::U32(9)]).build();
+            .literals([LiteralValue::U32(8), LiteralValue::U32(9)])
+            .build();
         let facts = IndexFacts::new(&body);
         assert!(facts.is_index_plus_one(&body, 11, 10));
         assert!(!facts.is_index_plus_one(&body, 10, 11));
@@ -399,7 +401,8 @@ mod tests {
                 op(KernelOpKind::BinOpKind(BinOp::Add), [7, 1], 9),
                 op(KernelOpKind::BinOpKind(BinOp::Add), [7, 2], 10),
             ])
-            .literals([LiteralValue::U32(1), LiteralValue::U32(2)]).build();
+            .literals([LiteralValue::U32(1), LiteralValue::U32(2)])
+            .build();
         let facts = IndexFacts::new(&body);
         assert!(facts.is_index_plus_one(&body, 10, 9));
         assert!(!facts.is_index_plus_one(&body, 9, 10));
@@ -413,7 +416,8 @@ mod tests {
                 op(KernelOpKind::BinOpKind(BinOp::Add), [7, 1], 9),
                 op(KernelOpKind::BinOpKind(BinOp::WrappingAdd), [9, 1], 10),
             ])
-            .literal(LiteralValue::U32(1)).build();
+            .literal(LiteralValue::U32(1))
+            .build();
         let facts = IndexFacts::new(&body);
         assert!(facts.is_index_plus_one(&body, 10, 9));
     }
@@ -443,7 +447,12 @@ mod tests {
                 lit(2, 2),
                 effect(KernelOpKind::StoreGlobal, [0, 1, 2]),
             ])
-            .literals([LiteralValue::U32(0), LiteralValue::U32(1), LiteralValue::U32(2)]).build();
+            .literals([
+                LiteralValue::U32(0),
+                LiteralValue::U32(1),
+                LiteralValue::U32(2),
+            ])
+            .build();
         let facts = IndexFacts::new(&body);
         assert_eq!(facts.result_use_count(0), 0);
         assert_eq!(facts.result_use_count(1), 1);
@@ -454,16 +463,10 @@ mod tests {
     fn matrix_mma_consecutive_fragment_results_are_producers() {
         let body = body()
             .ops([
-                op(KernelOpKind::MatrixMma {
-                        shape: MatrixMmaShape::M16N8K16,
-                        a_layout: MatrixMmaLayout::RowMajor,
-                        b_layout: MatrixMmaLayout::ColMajor,
-                        a_type: MatrixMmaElement::F16,
-                        b_type: MatrixMmaElement::F16,
-                        accum_type: MatrixMmaElement::F32,
-                    }, [0; 10], 10),
+                op(mma_f16_m16n8k16(), [0; 10], 10),
                 op(KernelOpKind::Copy, [12], 20),
-            ]).build();
+            ])
+            .build();
         let facts = IndexFacts::new(&body);
         assert_eq!(facts.producer_idx(12), Some(0));
         assert_eq!(facts.result_use_count(12), 1);
@@ -485,7 +488,8 @@ mod tests {
                 LiteralValue::U32(4),
                 LiteralValue::U32(10),
                 LiteralValue::U32(1),
-            ]).build();
+            ])
+            .build();
         let facts = IndexFacts::new(&body);
         assert!(facts.index_is_multiple_of(&body, 10, 4));
         assert!(facts.index_is_multiple_of(&body, 11, 2));
@@ -504,7 +508,12 @@ mod tests {
                 op(KernelOpKind::BinOpKind(BinOp::Shl), [99, 2], 11),
                 op(KernelOpKind::BinOpKind(BinOp::Add), [10, 3], 12),
             ])
-            .literals([LiteralValue::U32(2), LiteralValue::U32(1), LiteralValue::U32(1)]).build();
+            .literals([
+                LiteralValue::U32(2),
+                LiteralValue::U32(1),
+                LiteralValue::U32(1),
+            ])
+            .build();
         let facts = IndexFacts::new(&body);
         assert!(facts.index_is_multiple_of(&body, 10, 4));
         assert!(facts.index_is_multiple_of(&body, 11, 2));
@@ -515,7 +524,7 @@ mod tests {
     /// Resolution guard for the operand-namespace clone family.
     ///
     /// This crate used to carry its own operand classifier. Step 0 proved it
-    /// had drifted from `vyre_lower::operand_semantics`: on operand counts the
+    /// had drifted from `vyre_lower::operand_class`: on operand counts the
     /// op contracts forbid, the local copy dropped trailing operands from the
     /// use map (`take(2)` on `StructuredForLoop`, `skip(1)` on the loads)
     /// while the owner kept them. The owner won, because under-counting uses
@@ -532,12 +541,16 @@ mod tests {
                 lit(0, 1),
                 lit(1, 2),
                 lit(0, 3),
-                effect(KernelOpKind::StructuredForLoop {
+                effect(
+                    KernelOpKind::StructuredForLoop {
                         loop_var: "i".into(),
-                    }, [1, 2, 0, 3]),
+                    },
+                    [1, 2, 0, 3],
+                ),
             ])
             .child(body())
-            .literals([LiteralValue::U32(0), LiteralValue::U32(4)]).build();
+            .literals([LiteralValue::U32(0), LiteralValue::U32(4)])
+            .build();
         let facts = IndexFacts::new(&body);
         assert_eq!(facts.result_use_count(1), 1, "lo bound is a use");
         assert_eq!(facts.result_use_count(2), 1, "hi bound is a use");
@@ -553,15 +566,7 @@ mod tests {
     /// restating how wide the tuple is.
     #[test]
     fn mma_fragment_ids_resolve_to_the_producing_op() {
-        use vyre_lower::{MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape};
-        let mma = op(KernelOpKind::MatrixMma {
-                shape: MatrixMmaShape::M16N8K16,
-                a_layout: MatrixMmaLayout::RowMajor,
-                b_layout: MatrixMmaLayout::ColMajor,
-                a_type: MatrixMmaElement::F16,
-                b_type: MatrixMmaElement::F16,
-                accum_type: MatrixMmaElement::F32,
-            }, [], 10);
+        let mma = op(mma_f16_m16n8k16(), [], 10);
         let expected: Vec<u32> = mma.result_ids().collect();
         assert_eq!(expected, vec![10, 11, 12, 13]);
         let body = body().op(mma).build();

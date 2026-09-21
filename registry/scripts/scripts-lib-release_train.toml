@@ -1,0 +1,4 @@
+path = "scripts/lib/release_train.sh"
+state = "holds_logic"
+destination = "release-train"
+reason = "loads the release train versions and tags for the launch and publish scripts; xtask/src/release/release_train.rs pins its tag order against the Rust contract"

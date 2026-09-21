@@ -1,0 +1,2 @@
+category = "Removed"
+text = "vyre_lower::emit_adversarial_corpus no longer exports EmitAdversarialBackend, REQUIRED_BACKENDS or required_backends. Each emitter test asserted only that the hand-written list named its own variant while already running the corpus. The backend-extension gate now derives the roster from the vyre-emit-* workspace members and requires each one to consume emit_adversarial_corpus, and fails when the roster is empty."

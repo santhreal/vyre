@@ -18,13 +18,13 @@ required_fields = [
 
 [[backend]]
 backend = "cuda"
-device_id = "sm_120:rtx_5090"
+device_id = "sm_89:rtx_4090"
 feature_flags = ["graphs", "mempool", "cooperative_groups", "device_timestamps"]
 timing_capability = "device-and-host"
 graph_capability = "cuda-graph-capture"
 resident_capability = "cooperative-kernel"
 unsupported_reasons = []
-capability_digest = "sha256:cuda-rtx5090-capabilities"
+capability_digest = "sha256:cuda-rtx4090-capabilities"
 
 [[backend]]
 backend = "wgpu"

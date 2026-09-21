@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`scripts/check_no_string_wgsl.sh` and `scripts/check_gpu_test_loudness.sh` are gone. The `shader-source` and `gpu-loudness` gates own those rules. Both scripts had branches that could not fire: the shader guard compared a count against zero with `-lt`, and three of the loudness patterns required a literal backslash before `[cfg` in Rust source, so the cfg classes its own header claimed to cover were never checked."

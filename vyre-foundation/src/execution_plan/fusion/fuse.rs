@@ -3,14 +3,14 @@
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::execution_plan::SchedulingPolicy;
-use crate::ir::{BufferAccess, BufferDecl, Ident, Node, Program};
+use crate::ir::{BinOp, BufferAccess, BufferDecl, Expr, Ident, Node, Program};
+use crate::visit::{any_descendant, for_each_expr};
 
 use super::alpha_rename::{multiply_declared_names, push_alpha_renamed_arm_entry_node, ArmRenamer};
 use super::collectors::collect_buffer_targets;
 use super::divergence::{
     has_divergent_invocation_gated_store, has_launch_geometry_dependent_write,
 };
-use super::helpers::{fallback_composition_key, upgrade_buffer_access};
 use super::{
     FusionError, FusionOverDispatchError, FusionSelfAliasingError, FusionWorkgroupGeometryError,
 };
@@ -241,7 +241,7 @@ fn fuse_programs_multi_with(
         // writer arm's threads have completed their store, yielding
         // stale data and silently dropping rule findings (recall=0
         // mode previously observed on `stack_overflow_gets` for
-        // node ids past the warp boundary).
+        // node ids past the subgroup boundary).
         for read_buf in &arm_reads {
             if let Some(write_arms) = write_arms_per_buffer.get(read_buf) {
                 for &write_arm in write_arms {
@@ -323,6 +323,7 @@ fn classify_and_merge_arm_buffers(
         }
         if let Some(&idx) = name_to_index.get(&name) {
             let existing = &mut merged_buffers[idx];
+            let initialized_before_use = existing.is_backend_allocated_output();
             let access = buf.access();
             upgrade_buffer_access(existing, &access);
             if buf.count > existing.count {
@@ -330,6 +331,12 @@ fn classify_and_merge_arm_buffers(
             }
             if buf.is_output() {
                 existing.is_output = true;
+                existing.pipeline_live_out = true;
+            }
+            if initialized_before_use && existing.access() == BufferAccess::ReadWrite {
+                // A prior arm produced the storage before a later arm read it.
+                // Keep that first-write fact after access widening so launch
+                // planning allocates the carrier instead of demanding host bytes.
                 existing.pipeline_live_out = true;
             }
         } else {
@@ -378,6 +385,16 @@ fn reject_non_composable_self_fusion(programs: &[Program]) -> Result<(), FusionE
 /// reached by every invocation in the workgroup is undefined, and in practice
 /// the result is intermittently wrong rather than reliably wrong.
 ///
+/// The third shape needs no barrier and no workgroup memory. An arm can hold
+/// its running result in read-write storage and admit it with a guard on its
+/// workgroup identity alone, which is exact only while that workgroup is one
+/// invocation wide. Measured: `nn::top_k` declares `[1, 1, 1]` and guards its
+/// insertion scan on `workgroup_id.x == 0`; fused behind a 256-wide
+/// elementwise arm, all 256 invocations of workgroup 0 ran the same insertion
+/// and the result named one input lane twice. An arm that constrains the
+/// invocation as well, the `workgroup_id.x == 0 && local_id.x == 0` pattern, is
+/// exact under any width and stays fusable.
+///
 /// Failing closed is the only correct answer here. Fusion cannot rewrite the
 /// arm for the wider geometry, and quietly emitting the racy kernel gives the
 /// caller a program that passes most of the time.
@@ -395,11 +412,21 @@ fn reject_workgroup_geometry_change(
             .iter()
             .any(|buf| buf.access() == BufferAccess::Workgroup);
         let synchronizes = has_barrier(prog.entry());
-        let reason = match (uses_workgroup_memory, synchronizes) {
-            (true, true) => "keeps state in workgroup memory and synchronizes its workgroup",
-            (true, false) => "keeps state in workgroup memory sized for its own workgroup",
-            (false, true) => "synchronizes its workgroup with a barrier",
-            (false, false) => continue,
+        let serial_under_workgroup_guard = relies_on_single_invocation_workgroup(prog);
+        let reason = match (
+            uses_workgroup_memory,
+            synchronizes,
+            serial_under_workgroup_guard,
+        ) {
+            (true, true, _) => "keeps state in workgroup memory and synchronizes its workgroup",
+            (true, false, _) => "keeps state in workgroup memory sized for its own workgroup",
+            (false, true, _) => "synchronizes its workgroup with a barrier",
+            (false, false, true) => {
+                "keeps a running result in read-write storage under a guard on its workgroup \
+                 identity, so every invocation the wider workgroup adds repeats the same \
+                 read-modify-write"
+            }
+            (false, false, false) => continue,
         };
         return Err(FusionError::WorkgroupGeometry(
             FusionWorkgroupGeometryError {
@@ -415,16 +442,91 @@ fn reject_workgroup_geometry_change(
 }
 
 /// Is there a barrier anywhere in this node sequence?
+///
+/// Descent comes from [`any_descendant`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => false`, and a
+/// barrier hidden inside an unrecognised nesting variant makes a fused arm look
+/// unsynchronized when it is not.
 fn has_barrier(nodes: &[Node]) -> bool {
-    nodes.iter().any(|node| match node {
-        Node::Barrier { .. } => true,
-        Node::Region { body, .. } => has_barrier(body),
-        Node::Block(body) | Node::Loop { body, .. } => has_barrier(body),
-        Node::If {
-            then, otherwise, ..
-        } => has_barrier(then) || has_barrier(otherwise),
-        _ => false,
+    nodes.iter().any(|node| {
+        any_descendant(node, &mut |n| {
+            matches!(n, Node::Barrier { .. } | Node::LogicalBarrier { .. })
+        })
     })
+}
+
+/// Does this program's serial body rely on being one invocation wide?
+///
+/// A program that keeps a running result in read-write storage and admits that
+/// body on its workgroup identity alone is exact only while the workgroup holds
+/// one invocation. Run it wider, by fusion or by a rebuild, and every added
+/// invocation repeats the same read-modify-write over the same slots. Naming
+/// the invocation instead costs nothing in its own geometry and is exact in
+/// any, so this reports a program that has not done so.
+///
+/// Fusion refuses to widen such an arm, and the op catalog holds every
+/// registered single-invocation program to the invocation-exact form.
+#[must_use]
+pub fn relies_on_single_invocation_workgroup(prog: &Program) -> bool {
+    keeps_state_in_read_write_storage(prog)
+        && guards_on_workgroup_identity(prog)
+        && !guards_on_invocation_identity(prog)
+}
+
+/// Does this arm carry a result across invocations in read-write storage?
+///
+/// Read-write storage is the only place an arm can keep a running value that
+/// outlives one invocation without declaring workgroup memory, so it is what
+/// makes a repeated body observable rather than merely wasteful.
+fn keeps_state_in_read_write_storage(prog: &Program) -> bool {
+    prog.buffers()
+        .iter()
+        .any(|buf| buf.access() == BufferAccess::ReadWrite)
+}
+
+/// Does this arm decide what to run from its physical workgroup or logical tile
+/// identity?
+fn guards_on_workgroup_identity(prog: &Program) -> bool {
+    compares_against(prog, &|expr| {
+        matches!(expr, Expr::WorkgroupId { .. } | Expr::LogicalTileId { .. })
+    })
+}
+
+/// Does this arm decide what to run from its invocation identity?
+///
+/// Either id answers: a guard on the local invocation is exact inside one
+/// workgroup, and a guard on the global invocation is exact across the launch.
+fn guards_on_invocation_identity(prog: &Program) -> bool {
+    compares_against(prog, &|expr| {
+        matches!(
+            expr,
+            Expr::LocalId { .. }
+                | Expr::InvocationId { .. }
+                | Expr::LogicalIndex { .. }
+                | Expr::LogicalWithinTileId { .. }
+        )
+    })
+}
+
+/// Is any identity the predicate accepts an operand of a comparison?
+///
+/// A comparison is what turns an id into a decision. An id used as an index is
+/// not a guard: every invocation runs that body and addresses its own element,
+/// which is exactly the shape a wider workgroup is safe for.
+fn compares_against(prog: &Program, is_identity: &dyn Fn(&Expr) -> bool) -> bool {
+    let mut found = false;
+    for_each_expr(prog.entry(), |expr| {
+        if let Expr::BinOp { op, left, right } = expr {
+            if matches!(
+                op,
+                BinOp::Eq | BinOp::Ne | BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge
+            ) && (is_identity(left.as_ref()) || is_identity(right.as_ref()))
+            {
+                found = true;
+            }
+        }
+    });
+    found
 }
 
 fn flatten_arm_entries(
@@ -446,7 +548,7 @@ fn flatten_arm_entries(
             ArmNamespace::Shared => combined_entry.extend(segment),
         }
         if barrier_after_arm.contains(&arm_idx) {
-            // Workgroup `SeqCst` (`bar.sync 0`) is sufficient only when the
+            // Workgroup `SeqCst` is sufficient only when the
             // prior write is uniform across the launch. Launch-geometry
             // dependent writes must become a top-level `GridSync`, where the
             // runtime split pass can lower the fused program into globally
@@ -456,7 +558,7 @@ fn flatten_arm_entries(
             } else {
                 crate::memory_model::MemoryOrdering::SeqCst
             };
-            combined_entry.push(Node::barrier_with_ordering(ordering));
+            combined_entry.push(Node::logical_barrier(ordering));
         }
     }
     combined_entry
@@ -475,4 +577,41 @@ fn reject_overdispatch(fused_workgroup: [u32; 3], max_arm_threads: u64) -> Resul
         fused_threads,
         fix: "split the batch or use per-arm dispatch; axis-wise max exceeds the shared over-dispatch policy",
     }))
+}
+
+pub(super) fn fallback_composition_key(prog: &Program) -> String {
+    let mut hasher = blake3::Hasher::new();
+    for buf in prog.buffers() {
+        hasher.update(buf.name().as_bytes());
+        hasher.update(&[0]);
+    }
+    for dim in prog.workgroup_size() {
+        hasher.update(&dim.to_le_bytes());
+    }
+    hasher.update(&(prog.entry().len() as u64).to_le_bytes());
+    format!("{}", hasher.finalize().to_hex())
+}
+
+/// Upgrade `buffer.access` to the more permissive of the two modes.
+pub(super) fn upgrade_buffer_access(buffer: &mut BufferDecl, other: &BufferAccess) {
+    let current = buffer.access();
+    buffer.access = match (&current, &other) {
+        (BufferAccess::ReadWrite, _)
+        | (_, BufferAccess::ReadWrite)
+        | (BufferAccess::WriteOnly, BufferAccess::ReadOnly | BufferAccess::Uniform)
+        | (BufferAccess::ReadOnly | BufferAccess::Uniform, BufferAccess::WriteOnly) => {
+            BufferAccess::ReadWrite
+        }
+        (BufferAccess::WriteOnly, BufferAccess::WriteOnly) => BufferAccess::WriteOnly,
+        (BufferAccess::Uniform, _) | (_, BufferAccess::Uniform) => BufferAccess::Uniform,
+        (BufferAccess::Workgroup, _) | (_, BufferAccess::Workgroup) => BufferAccess::Workgroup,
+        _ => BufferAccess::ReadOnly,
+    };
+    // Keep kind in sync with the upgraded access.
+    buffer.kind = match buffer.access {
+        BufferAccess::ReadOnly => crate::ir::MemoryKind::Readonly,
+        BufferAccess::Uniform => crate::ir::MemoryKind::Uniform,
+        BufferAccess::Workgroup => crate::ir::MemoryKind::Shared,
+        _ => crate::ir::MemoryKind::Global,
+    };
 }

@@ -71,37 +71,6 @@ pub trait TypedDispatchExt: VyreBackend {
         decode_pod_outputs_into(raw_outputs, typed_outputs)
     }
 
-    /// Dispatch borrowed `u32` inputs and decode each output as `u32`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`BackendError`] on backend failure or malformed output length.
-    fn dispatch_u32(
-        &self,
-        program: &Program,
-        inputs: &[&[u32]],
-        config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u32>>, BackendError> {
-        self.dispatch_pod(program, inputs, config)
-    }
-
-    /// Dispatch borrowed `u32` inputs and decode outputs into caller-owned
-    /// typed storage.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`BackendError`] on backend failure or malformed output length.
-    fn dispatch_u32_into(
-        &self,
-        program: &Program,
-        inputs: &[&[u32]],
-        config: &DispatchConfig,
-        raw_outputs: &mut OutputBuffers,
-        typed_outputs: &mut Vec<Vec<u32>>,
-    ) -> Result<(), BackendError> {
-        self.dispatch_pod_into(program, inputs, config, raw_outputs, typed_outputs)
-    }
-
     /// Dispatch borrowed `f32` inputs and decode each output as `f32`.
     ///
     /// # Errors
@@ -233,6 +202,7 @@ fn decode_pod_output_into<T: Pod>(
     Ok(())
 }
 
+// Inline: covers `decode_pod_outputs`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
@@ -240,11 +210,11 @@ mod tests {
     use vyre_foundation::ir::{OpId, Program};
 
     use super::*;
-    use crate::backend::private;
+    use crate::backend::sealed;
 
     struct EchoBackend;
 
-    impl private::Sealed for EchoBackend {}
+    impl sealed::Sealed for EchoBackend {}
 
     impl VyreBackend for EchoBackend {
         fn id(&self) -> &'static str {
@@ -256,22 +226,22 @@ mod tests {
             OPS.get_or_init(HashSet::new)
         }
 
-        fn dispatch(
+        fn dispatch_borrowed(
             &self,
             _program: &Program,
-            inputs: &[Vec<u8>],
+            inputs: &[&[u8]],
             _config: &DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
-            Ok(inputs.to_vec())
+            Ok(inputs.iter().map(|row| row.to_vec()).collect())
         }
     }
 
     #[test]
-    fn dispatch_u32_packs_inputs_and_decodes_outputs() {
+    fn dispatch_pod_packs_inputs_and_decodes_outputs() {
         let backend = EchoBackend;
         let input = [1u32, 2, 0x0102_0304];
         let outputs = backend
-            .dispatch_u32(&Program::empty(), &[&input], &DispatchConfig::default())
+            .dispatch_pod(&Program::empty(), &[&input], &DispatchConfig::default())
             .unwrap_or_else(|error| panic!("typed u32 dispatch must succeed: {error}"));
 
         assert_eq!(outputs, vec![input.to_vec()]);
@@ -289,7 +259,7 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_u32_into_reuses_raw_and_typed_output_slots() {
+    fn dispatch_pod_into_reuses_raw_and_typed_output_slots() {
         let backend = EchoBackend;
         let input = [1u32, 2, 0x0102_0304];
         let mut raw_outputs = vec![Vec::with_capacity(16)];
@@ -300,7 +270,7 @@ mod tests {
         let typed_slot = typed_outputs[0].as_ptr();
 
         backend
-            .dispatch_u32_into(
+            .dispatch_pod_into(
                 &Program::empty(),
                 &[&input],
                 &DispatchConfig::default(),
@@ -315,7 +285,7 @@ mod tests {
         assert_eq!(typed_outputs[0].as_ptr(), typed_slot);
 
         backend
-            .dispatch_u32_into(
+            .dispatch_pod_into(
                 &Program::empty(),
                 &[&input],
                 &DispatchConfig::default(),

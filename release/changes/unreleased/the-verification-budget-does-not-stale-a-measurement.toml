@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The benchmark source-tree fingerprint excludes `docs/testing/`. Raising a verification-budget ceiling invalidated every recorded measurement in the tree."

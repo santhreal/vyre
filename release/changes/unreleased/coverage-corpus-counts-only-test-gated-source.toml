@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The registry-closure coverage corpus counts only test-gated source. It had treated every byte after the first `#[cfg(test)]` marker as test text, so a production re-export list covered 174 symbols by naming them, and a test module written in its own file counted as production code. A crate whose only builders are test fixtures now reports zero builders and is held honest by a production-file guard instead of a floor."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The crate ownership registry, the crate README contracts and the 34 per-crate testing guides are held by registered xtask gates instead of three Python generators under scripts/. crate-ownership, crate-readmes and testing-guides each render the same documents byte for byte, report every violation instead of raising on the first, and carry a pinned baseline; check-tier-deps no longer shells into python3 to validate the registry, so one owner answers for the contract."

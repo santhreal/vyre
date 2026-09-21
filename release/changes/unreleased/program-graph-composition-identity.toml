@@ -1,0 +1,2 @@
+category = "Added"
+text = "ProgramGraph now derives one versioned, domain-separated BLAKE3 identity from canonical topology and Programs, typed port contracts, artifact schema, validated model configuration, exact symbolic bindings, and verified immutable-weight identities. Mutable sequence-state contents are excluded, so cache growth reuses compiled artifacts while any executable or provenance change invalidates the key."

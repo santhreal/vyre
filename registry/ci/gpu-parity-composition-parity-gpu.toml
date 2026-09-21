@@ -1,0 +1,9 @@
+lane = "gpu-parity-composition-parity-gpu"
+workflow = ".github/workflows/gpu-parity.yml"
+job = "composition-parity-gpu"
+state = "live"
+required_status = "GPU Parity + Determinism / Composition parity on real GPU"
+triggers = ["pull_request", "push", "workflow_dispatch"]
+steps = [
+  { command = "./cargo_full test -p vyre-driver-wgpu --release --test op_pairwise pairwise_composition_parity -- --nocapture" },
+]

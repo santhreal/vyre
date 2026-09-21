@@ -12,7 +12,7 @@
 //! When the generator surfaces a real bug in an emitter, the test
 //! fails with a printable seed so the bug is reproducible.
 //!
-//! Source: ROADMAP T090.
+//! Source:
 
 use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::{
@@ -305,10 +305,11 @@ fn descriptor_verification_handles_random_descriptors_without_panic() {
 
 #[test]
 fn audit_handles_random_descriptors_without_panic() {
+    use vyre_lower::analyses::AnalysisFacts;
     use vyre_lower::audit;
     for seed in 600..650u64 {
         let desc = gen_descriptor(seed, 15);
-        let report = audit(&desc);
+        let report = audit(&desc, &AnalysisFacts::none());
         // waste_score should be finite and non-negative.
         assert!(
             report.waste_score >= 0.0 && report.waste_score.is_finite(),

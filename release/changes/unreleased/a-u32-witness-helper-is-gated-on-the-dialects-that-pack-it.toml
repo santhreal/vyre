@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The shared u32 witness helper is gated on the four dialect features whose registrations pack u32 bytes, so a selection that compiles none of them builds instead of failing on an unused helper."

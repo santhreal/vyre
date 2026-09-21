@@ -57,46 +57,15 @@
 
 use super::is_invocation_id_eq_constant;
 use crate::ir::{Expr, Node, Program};
+use crate::memory_model::AtomicOrdering;
 use crate::optimizer::RefusalReason;
-use vyre_spec::op_contract::SideEffectClass;
-
-/// Memory-ordering tag carried by `ReadWriteAtomic`. Mirrors the wire-frozen
-/// `MemoryOrdering` in `vyre-foundation::memory_model` but reduced to the
-/// orderings the lattice composition rules distinguish. `Relaxed` is treated
-/// as `Acquire` in lattice composition (conservative  -  no rule allows weaker).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[non_exhaustive]
-pub enum AtomicOrdering {
-    /// Acquire ordering  -  synchronizes with a Release on the same address.
-    Acquire,
-    /// Release ordering  -  synchronizes with an Acquire on the same address.
-    Release,
-    /// Acquire+Release combined.
-    AcqRel,
-    /// Sequentially consistent ordering  -  total order across all `SeqCst` ops.
-    SeqCst,
-}
-
-impl AtomicOrdering {
-    /// Join two orderings to the strongest of the pair. Used when composing
-    /// two `ReadWriteAtomic` effects.
-    #[must_use]
-    pub fn join(self, other: Self) -> Self {
-        use AtomicOrdering::{AcqRel, Acquire, Release, SeqCst};
-        match (self, other) {
-            (SeqCst, _) | (_, SeqCst) => SeqCst,
-            (AcqRel, _) | (_, AcqRel) | (Acquire, Release) | (Release, Acquire) => AcqRel,
-            (Acquire, Acquire) => Acquire,
-            (Release, Release) => Release,
-        }
-    }
-}
+use vyre_spec::SideEffectClass;
 
 /// Synchronization scope carried by `Synchronized`. Mirrors the wire-frozen
 /// barrier scope in `vyre-foundation::memory_model`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum SyncScope {
-    /// Subgroup-scope barrier (a single warp / wavefront).
+    /// Subgroup-scope barrier.
     Subgroup,
     /// Workgroup-scope barrier (one hardware workgroup/thread block).
     Workgroup,
@@ -297,7 +266,7 @@ pub fn node_effect_level(node: &Node) -> EffectLevel {
         Node::AsyncLoad { .. } => EffectLevel::ReadAtomic,
         Node::AsyncStore { .. } => EffectLevel::ReadWriteAtomic(AtomicOrdering::Release),
         Node::AsyncWait { .. } => EffectLevel::Synchronized(SyncScope::Workgroup),
-        Node::Barrier { ordering } => barrier_effect(*ordering),
+        Node::Barrier { ordering } | Node::LogicalBarrier { ordering } => barrier_effect(*ordering),
         Node::If {
             cond,
             then,
@@ -333,18 +302,24 @@ pub fn node_effect_level(node: &Node) -> EffectLevel {
         | Node::ReduceScatter { .. }
         | Node::Broadcast { .. } => EffectLevel::Synchronized(SyncScope::Grid),
         // A pure control-flow terminator: no memory or synchronization effect.
+        Node::TileLoad { .. } => EffectLevel::ReadAtomic,
+        Node::TileStore { .. } => EffectLevel::ReadWriteAtomic(AtomicOrdering::SeqCst),
+        Node::TileMatmul { .. } | Node::TileReduce { .. } | Node::TileDecl { .. } => {
+            EffectLevel::Pure
+        }
+        Node::TileElementwise { body, .. } => join_arms(body),
+        // A pure control-flow terminator: no memory or synchronization effect.
         Node::Return => EffectLevel::Pure,
         // Trap runs a host-side effect handler that may read or write any device
-        // memory; Resume continues from it; an Opaque extension node carries a
-        // backend-defined effect no analysis can name. Their effect is
-        // UNKNOWABLE, so they take the lattice top (`Diverging`): composing
-        // memory ops across them must REFUSE rather than silently treat them as
-        // `Pure` (the join identity), which would let a fusion pass reorder or
-        // fuse an effectful escape hatch as if it were a no-op, the exact
-        // silent miscompile this lattice exists to refuse. `Pure` here would also
-        // make a `Block`/`Region`/`Loop` whose only child is one of these
-        // summarise to `Pure`, hiding the effect from `program_effect_level`.
-        Node::Trap { .. } | Node::Resume { .. } | Node::Opaque(_) => EffectLevel::Diverging,
+        // memory; Resume continues from it.
+        Node::Trap { .. } | Node::Resume { .. } => EffectLevel::Diverging,
+        Node::Opaque(ext) => {
+            if ext.is_pure() {
+                EffectLevel::Pure
+            } else {
+                EffectLevel::Diverging
+            }
+        }
     }
 }
 
@@ -361,7 +336,7 @@ fn join_arms<'a>(nodes: impl IntoIterator<Item = &'a Node>) -> EffectLevel {
 }
 
 fn expr_effect_level(expr: &Expr) -> EffectLevel {
-    use crate::visit::expr::{visit_preorder, ExprVisitor};
+    use crate::visit::expr_visitor::{visit_preorder, ExprVisitor};
     use std::ops::ControlFlow;
 
     // A shallow top-level match summarises an effectful VALUE expression as

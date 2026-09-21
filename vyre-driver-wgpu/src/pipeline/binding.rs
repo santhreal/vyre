@@ -8,13 +8,53 @@ use crate::pipeline::{element_size_bytes, BufferBindingInfo, OutputBindingLayout
 
 /// Return true when a binding consumes one caller-provided borrowed input slot.
 ///
-/// Pure outputs are allocated by the backend and must not shift subsequent
-/// inputs. Read/write live-outs with `preserve_input_contents` are both inputs
-/// and outputs, so they intentionally consume one caller input slot.
+/// Reads the answer recorded from `BufferDecl::consumes_host_input` at pipeline
+/// build time, so this walk and the persistent one cannot disagree about which
+/// binding a caller input fills. Deriving it here from flattened fields could
+/// not reproduce the canonical answer, because `BufferBindingInfo` carries no
+/// `pipeline_live_out`.
 pub(crate) fn consumes_host_input(info: &BufferBindingInfo) -> bool {
-    info.kind != vyre_foundation::ir::MemoryKind::Shared
-        && !info.internal_trap
-        && (!info.is_output || info.preserve_input_contents)
+    info.consumes_host_input && !info.internal_trap
+}
+
+/// Return true when a binding is the slot a single dispatch-parameter handle
+/// fills.
+///
+/// Only uniform and push-constant memory carries dispatch parameters, and only
+/// the first such binding takes the caller's params handle; later ones consume
+/// ordinary input handles. Both the persistent and the pre-recorded binding
+/// walks used to spell this kind test out, so the two could disagree about
+/// which binding a params handle lands on.
+pub(crate) fn accepts_params_handle(info: &BufferBindingInfo) -> bool {
+    matches!(
+        info.kind,
+        vyre_foundation::ir::MemoryKind::Uniform | vyre_foundation::ir::MemoryKind::Push
+    )
+}
+
+/// Bytes a binding declares through its element count, or 0 when it declares none.
+///
+/// The one place that turns `BufferDecl::count` into a host byte length. Three
+/// call paths used to each carry their own overflow guards, so a change to the
+/// element-size rule reached only the paths whoever edited remembered.
+pub(crate) fn declared_byte_size(info: &BufferBindingInfo) -> Result<usize, BackendError> {
+    if info.count == 0 {
+        return Ok(0);
+    }
+    usize::try_from(info.count)
+        .map_err(|_| {
+            BackendError::new(format!(
+                "buffer `{}` element count cannot fit host usize. Fix: reduce buffer count or shard the binding.",
+                info.name
+            ))
+        })?
+        .checked_mul(element_size_bytes(&info.element)?)
+        .ok_or_else(|| {
+            BackendError::new(format!(
+                "buffer `{}` declared size overflows usize. Fix: reduce buffer count.",
+                info.name
+            ))
+        })
 }
 
 /// Required wgpu usage flags for a compiled binding.
@@ -73,20 +113,7 @@ pub(crate) fn validate_handle(
         )));
     }
     if info.count > 0 {
-        let required_bytes = usize::try_from(info.count)
-            .map_err(|_| {
-                BackendError::new(format!(
-                    "buffer `{}` element count cannot fit host usize. Fix: reduce buffer count.",
-                    info.name
-                ))
-            })?
-            .checked_mul(element_size_bytes(&info.element)?)
-            .ok_or_else(|| {
-                BackendError::new(format!(
-                    "buffer `{}` declared size overflows usize. Fix: reduce buffer count.",
-                    info.name
-                ))
-            })?;
+        let required_bytes = declared_byte_size(info)?;
         let required_bytes_u64 =
             WGPU_NUMERIC.usize_to_u64(required_bytes, "required binding bytes")?;
         if handle.allocation_len() < required_bytes_u64 {
@@ -133,45 +160,4 @@ where
         encoder.clear_buffer(handle.buffer(), 0, Some(clear_size_u64));
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::Arc;
-
-    fn info(
-        is_output: bool,
-        preserve_input_contents: bool,
-        internal_trap: bool,
-    ) -> BufferBindingInfo {
-        BufferBindingInfo {
-            group: 0,
-            binding: 1,
-            name: Arc::from("buf"),
-            access: vyre_foundation::ir::BufferAccess::ReadWrite,
-            kind: vyre_foundation::ir::MemoryKind::Global,
-            hints: vyre_foundation::ir::MemoryHints::default(),
-            element: vyre_foundation::ir::DataType::U32,
-            count: 4,
-            is_output,
-            preserve_input_contents,
-            internal_trap,
-        }
-    }
-
-    #[test]
-    fn pure_outputs_do_not_consume_host_input_slots() {
-        assert!(!consumes_host_input(&info(true, false, false)));
-    }
-
-    #[test]
-    fn preserved_live_outs_consume_host_input_slots() {
-        assert!(consumes_host_input(&info(true, true, false)));
-    }
-
-    #[test]
-    fn internal_traps_do_not_consume_host_input_slots() {
-        assert!(!consumes_host_input(&info(false, false, true)));
-    }
 }

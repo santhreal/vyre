@@ -256,25 +256,11 @@ fn var_of_undeclared_name_is_rejected() {
 fn opaque_node_with_empty_extension_kind_is_rejected() {
     use vyre_foundation::ir::NodeExtension;
 
-    #[derive(Debug)]
-    struct BadExtension;
-
-    impl NodeExtension for BadExtension {
-        fn extension_kind(&self) -> &'static str {
-            ""
-        }
-        fn debug_identity(&self) -> &str {
-            "bad"
-        }
-        fn stable_fingerprint(&self) -> [u8; 32] {
-            [0; 32]
-        }
-        fn validate_extension(&self) -> Result<(), String> {
-            Ok(())
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
+    vyre_test_support::test_node_extension! {
+        BadExtension,
+        kind: "",
+        identity: "bad",
+        fingerprint: 0,
     }
 
     let program = output_program(vec![Node::opaque(BadExtension)]);
@@ -292,25 +278,11 @@ fn opaque_node_with_empty_extension_kind_is_rejected() {
 fn opaque_node_with_empty_debug_identity_is_rejected() {
     use vyre_foundation::ir::NodeExtension;
 
-    #[derive(Debug)]
-    struct BadExtension;
-
-    impl NodeExtension for BadExtension {
-        fn extension_kind(&self) -> &'static str {
-            "test.ext"
-        }
-        fn debug_identity(&self) -> &str {
-            ""
-        }
-        fn stable_fingerprint(&self) -> [u8; 32] {
-            [0; 32]
-        }
-        fn validate_extension(&self) -> Result<(), String> {
-            Ok(())
-        }
-        fn as_any(&self) -> &dyn std::any::Any {
-            self
-        }
+    vyre_test_support::test_node_extension! {
+        BadExtension,
+        kind: "test.ext",
+        identity: "",
+        fingerprint: 0,
     }
 
     let program = output_program(vec![Node::opaque(BadExtension)]);

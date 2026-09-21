@@ -33,8 +33,6 @@ if [[ "$PREFLIGHT" != "1" && "${VYRE_RELEASE_APPROVED:-}" != "$APPROVAL_TOKEN" ]
     exit 2
 fi
 
-source scripts/lib/cargo_runner.sh
-vyre_select_cargo_runner
 PACKAGE_READINESS="release/evidence/package/publish-readiness.json"
 
 if ! command -v jq >/dev/null 2>&1; then
@@ -42,7 +40,7 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 2
 fi
 
-"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- package-readiness --output "$PACKAGE_READINESS"
+./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- package-readiness --write
 
 blocker_count="$(jq '.blockers | length' "$PACKAGE_READINESS")"
 if [[ "$blocker_count" != "0" ]]; then
@@ -51,7 +49,10 @@ if [[ "$blocker_count" != "0" ]]; then
     exit 1
 fi
 
-mapfile -t PUBLISH_ENTRIES < <(jq -r '.publish_order[] | [.package, .version, .manifest] | @tsv' "$PACKAGE_READINESS")
+PUBLISH_ENTRIES=()
+while IFS= read -r entry; do
+    PUBLISH_ENTRIES+=("$entry")
+done < <(jq -r '.publish_order[] | [.package, .version, .manifest] | @tsv' "$PACKAGE_READINESS")
 if [[ "${#PUBLISH_ENTRIES[@]}" -eq 0 ]]; then
     printf 'Fix: publish_order is empty in %s.\n' "$PACKAGE_READINESS" >&2
     exit 1
@@ -66,7 +67,7 @@ crate_version_visible() {
     local package="$1"
     local version="$2"
     local output
-    if output="$("$CARGO_RUNNER" search "$package" --limit 1 2>/dev/null)" \
+    if output="$(./cargo_full search "$package" --limit 1 2>/dev/null)" \
         && printf '%s\n' "$output" | grep -F "${package} = \"${version}\"" >/dev/null; then
         return 0
     fi
@@ -86,7 +87,7 @@ for entry in "${PUBLISH_ENTRIES[@]}"; do
         continue
     fi
     printf 'publishing %s %s from %s\n' "$package" "$version" "$manifest"
-    "$CARGO_RUNNER" publish --allow-dirty --manifest-path "$manifest"
+    ./cargo_full publish --allow-dirty --manifest-path "$manifest"
     if [[ "${VYRE_RELEASE_SKIP_INDEX_WAIT:-}" != "1" ]]; then
         bash scripts/wait-crates-index.sh "$package" "$version"
     fi

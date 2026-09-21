@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A row in .github/CI_REQUIRED.md naming a workflow the checkout does not carry fails the ci-required gate, and the workflows whose path filters and directories no longer exist are deleted rather than parked."

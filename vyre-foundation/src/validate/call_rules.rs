@@ -8,10 +8,10 @@
 
 use crate::dialect_lookup::Signature;
 use crate::ir_inner::model::expr::Expr;
+use crate::ir_inner::model::op_signature::DataType;
 use crate::ir_inner::model::program::BufferDecl;
-use crate::ir_inner::model::types::DataType;
 use crate::operation::OperationRegistry;
-use crate::validate::typecheck::expr_type;
+use crate::validate::typecheck::{expr_type, ScopeTypes};
 use crate::validate::{err, Binding, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;
@@ -41,9 +41,8 @@ pub(crate) fn validate_call(
             ValidationPhase::Expression,
             ValidationLocation::Program,
             format!("call references operation `{op_id}` without a callable signature"),
-            format!(
             "attach a Signature to its canonical OperationRegistration or inline the composition."
-        ),
+                .to_string(),
         ));
         return;
     };
@@ -92,7 +91,7 @@ fn validate_call_signature(
 ));
             continue;
         };
-        let Some(actual_ty) = expr_type(arg, buffers, scope) else {
+        let Some(actual_ty) = expr_type(arg, &mut ScopeTypes::new(buffers, scope)) else {
             continue;
         };
         if actual_ty != expected_ty {
@@ -139,24 +138,21 @@ fn validate_buffer_argument(
     format!(
             "call `{op_id}` signature input `{param_name}` uses unknown buffer element spelling `{element}`"
         ),
-    format!(
-            "use a foundation-known scalar/vector type spelling inside `buffer<...>`."
-        )
+    "use a foundation-known scalar/vector type spelling inside `buffer<...>`.".to_string()
 ));
         return;
     };
     let Expr::BufferRef { buffer } = arg else {
         errors.push(err(
-    "V053",
-    ValidationPhase::Expression,
-    ValidationLocation::Program,
-    format!(
-            "call `{op_id}` argument {index} (`{param_name}`) is declared `buffer<{element}>` but a value was passed"
-        ),
-    format!(
-            "pass `Expr::BufferRef {{ buffer }}` naming the buffer this op should read."
-        )
-));
+            "V053",
+            ValidationPhase::Expression,
+            ValidationLocation::Program,
+            format!(
+                "call `{op_id}` argument {index} (`{param_name}`) is declared `buffer<{element}>` but a value was passed"
+            ),
+            "pass `Expr::BufferRef { buffer }` naming the buffer this op should read."
+                .to_string(),
+        ));
         return;
     };
     let Some(decl) = buffers.get(buffer.as_str()) else {
@@ -165,7 +161,7 @@ fn validate_buffer_argument(
             ValidationPhase::Expression,
             ValidationLocation::Program,
             format!("call to `{op_id}` passes a reference to unknown buffer `{buffer}`"),
-            format!("declare it in Program::buffers."),
+            "declare it in Program::buffers.".to_string(),
         ));
         return;
     };
@@ -178,9 +174,7 @@ fn validate_buffer_argument(
     format!(
             "call `{op_id}` argument {index} (`{param_name}`) references buffer `{buffer}` with element type `{actual}` but the signature declares `buffer<{expected}>`"
         ),
-    format!(
-            "pass a buffer whose element type matches, or change the op signature."
-        )
+    "pass a buffer whose element type matches, or change the op signature.".to_string()
 ));
     }
 }

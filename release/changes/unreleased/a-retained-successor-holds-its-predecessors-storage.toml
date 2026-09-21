@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A retained successor is placed in the region its predecessor holds, so a graph split at a whole-grid fence reads the values the segment before the cut published instead of a second allocation."

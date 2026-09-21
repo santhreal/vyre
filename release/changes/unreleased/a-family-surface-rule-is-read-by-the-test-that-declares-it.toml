@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`vyre-lower/rules/kernel_family_surfaces.toml` declared `forbid_section_dividers` and `forbidden_private_import_prefixes` per family and nothing read either field, so both rules were inert. The surface contract test now scans every Rust source under each family root and reports a section-divider comment or a forbidden import prefix by file and line."

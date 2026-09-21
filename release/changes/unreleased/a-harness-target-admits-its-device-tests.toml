@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The device-test-gating gate reads required-features from each [[test]] entry, so a device test that is a module of a harness target the manifest admits is no longer reported as reaching hardware with nothing admitting it."

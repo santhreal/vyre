@@ -1,0 +1,2 @@
+category = "Added"
+text = "A `dialect-lowering` gate rejects a dialect operation that declares `is_composable` while registering no program builder, a class the operation registry cannot see because the dialect macro always emits a signature and so never trips the missing-semantics check."

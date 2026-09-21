@@ -1,8 +1,10 @@
 //! Live CUDA parity for sparse binding-slot launch parameters.
 
-mod common;
+#![cfg(feature = "device-tests")]
 
-use common::{bytes_u32, cuda_reference_outputs, live_backend, u32_bytes};
+use crate::harness;
+
+use harness::{bytes_u32, cuda_reference_outputs, live_backend, u32_bytes};
 use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
@@ -15,7 +17,7 @@ fn cuda_dynamic_buffer_lengths_are_indexed_by_binding_slot_not_buffer_index() {
             BufferDecl::read("input", 9, DataType::U32),
             BufferDecl::output("out", 2, DataType::U32).with_count(input.len() as u32),
         ],
-        [64, 1, 1],
+        [input.len() as u32, 1, 1],
         vec![Node::store(
             "out",
             Expr::gid_x(),
@@ -49,7 +51,7 @@ fn cuda_sparse_output_binding_slot_keeps_store_bounds_and_readback_correct() {
     let backend = live_backend();
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 11, DataType::U32).with_count(6)],
-        [64, 1, 1],
+        [6, 1, 1],
         vec![Node::store(
             "out",
             Expr::gid_x(),

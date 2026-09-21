@@ -8,6 +8,10 @@ on:
     - cron: "0 7 * * *"
   workflow_dispatch:
 
+concurrency:
+  group: fuzz-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -18,25 +22,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - decoder
-          - program_wire
-          - registry_toml
+        include:
+          - crate: vyre-foundation/fuzz
+            target: decoder
+          - crate: vyre-foundation/fuzz
+            target: program_wire
+          - crate: vyre-foundation/fuzz
+            target: registry_toml
+          - crate: fuzz
+            target: dispatch
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
       - name: Install cargo-fuzz
-        run: cargo install cargo-fuzz
+        run: cargo +nightly install --locked cargo-fuzz
       - name: Run smoke fuzz
         run: |
-          cd vyre-foundation/fuzz
-          ../../cargo_full fuzz run ${{ matrix.target }} --release -- -max_total_time=60
+          cd ${{ matrix.crate }}
+          "${GITHUB_WORKSPACE}/cargo_full" +nightly fuzz run ${{ matrix.target }} --release -- -max_total_time=60
       - name: Upload crash artifact
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: crash-smoke-${{ matrix.target }}
-          path: vyre-foundation/fuzz/artifacts/${{ matrix.target }}/
+          path: ${{ matrix.crate }}/artifacts/${{ matrix.target }}/
           if-no-files-found: ignore
 
   ci:
@@ -45,23 +54,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - decoder
-          - program_wire
-          - registry_toml
+        include:
+          - crate: vyre-foundation/fuzz
+            target: decoder
+          - crate: vyre-foundation/fuzz
+            target: program_wire
+          - crate: vyre-foundation/fuzz
+            target: registry_toml
+          - crate: fuzz
+            target: dispatch
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
       - name: Install cargo-fuzz
-        run: cargo install cargo-fuzz
+        run: cargo +nightly install --locked cargo-fuzz
       - name: Run CI fuzz
         run: |
-          cd vyre-foundation/fuzz
-          ../../cargo_full fuzz run ${{ matrix.target }} --release -- -max_total_time=600
+          cd ${{ matrix.crate }}
+          "${GITHUB_WORKSPACE}/cargo_full" +nightly fuzz run ${{ matrix.target }} --release -- -max_total_time=600
       - name: Upload crash artifact
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: crash-ci-${{ matrix.target }}
-          path: vyre-foundation/fuzz/artifacts/${{ matrix.target }}/
+          path: ${{ matrix.crate }}/artifacts/${{ matrix.target }}/
           if-no-files-found: ignore

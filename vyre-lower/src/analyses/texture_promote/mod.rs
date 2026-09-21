@@ -1,6 +1,5 @@
 //! Texture-memory promotion candidate detection.
 //!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section B.3 item B11.
 //!
 //! GPU texture memory provides hardware-accelerated read paths for
 //! 2D/3D spatially-coherent access patterns. Promoting a global
@@ -18,8 +17,8 @@
 //! loads. Phase 2 (follow-up): infer 2D/3D access pattern via index
 //! decomposition; emit substrate-specific texture binding decoration.
 
-pub mod analysis;
-pub mod plan;
+pub(crate) mod analysis;
+pub(crate) mod plan;
 
 pub use analysis::analyze;
 pub use plan::{TextureCandidate, TexturePromotionPlan};

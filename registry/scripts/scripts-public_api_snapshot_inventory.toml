@@ -1,0 +1,4 @@
+path = "scripts/public_api_snapshot_inventory.py"
+state = "retired"
+gate = "public-api-paths"
+reason = "the gate derives the same roster from the manifests it already walks"

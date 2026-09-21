@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The `ProgramDispatcher` seam in `vyre-foundation` is gone; `vyre_megakernel::SemanticExecutor` is the one boundary a program crosses to reach a backend, and the host-oracle gate derives its execution and input-binding method names from that trait instead."

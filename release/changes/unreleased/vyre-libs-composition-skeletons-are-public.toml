@@ -1,0 +1,2 @@
+category = "Added"
+text = "The Cat-A composition skeletons are public: `build_indexed_map`, `build_elementwise_binary`, `build_elementwise_unary`, the `strided_accumulate`/`strided_writeback` child builders, their op-id constants, the u32 and f32 elementwise builders, and the `reduction` composer. A dialect composes these rather than restating the loop, so they are API. Holding them crate-private also made each one dead code in every feature selection whose dialects happened not to call it, which is a property of the selection and not a defect in the helper."

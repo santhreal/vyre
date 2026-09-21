@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The `vyre_reference::workgroup::Invocation::bind` and `bind_loop_var` documentation examples name `vyre_reference::ReferenceError` instead of `crate::ReferenceError`. A doctest compiles as its own crate, so the old path resolved to nothing and both examples failed to build."

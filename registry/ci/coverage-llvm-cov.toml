@@ -1,0 +1,9 @@
+lane = "coverage-llvm-cov"
+workflow = ".github/workflows/coverage.yml"
+job = "llvm-cov"
+state = "live"
+required_status = "coverage / llvm-cov"
+triggers = ["push", "pull_request"]
+steps = [
+  { command = '''cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info --fail-under-lines "$COVERAGE_FLOOR_LINES"''' },
+]

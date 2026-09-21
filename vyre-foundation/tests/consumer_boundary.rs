@@ -8,11 +8,15 @@
 use vyre_test_support::consumer_boundary::{
     assert_source_does_not_name_downstream_consumers, ConsumerBoundaryScan,
 };
+use vyre_test_support::monorepo::vyre_workspace_root;
 
 #[test]
 fn foundation_source_does_not_name_downstream_consumers() {
     assert_source_does_not_name_downstream_consumers(
-        ConsumerBoundaryScan::for_crate("vyre-foundation", env!("CARGO_MANIFEST_DIR"))
-            .with_rationale("vyre-foundation is a platform crate"),
+        ConsumerBoundaryScan::for_crate(
+            "vyre-foundation",
+            vyre_workspace_root().join("vyre-foundation"),
+        )
+        .with_rationale("vyre-foundation is a platform crate"),
     );
 }

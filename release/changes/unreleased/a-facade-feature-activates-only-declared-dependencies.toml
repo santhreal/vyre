@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`configuration-model --write` refuses a facade roster row that activates a dependency the facade package does not declare, instead of writing a `[features]` table cargo cannot parse."

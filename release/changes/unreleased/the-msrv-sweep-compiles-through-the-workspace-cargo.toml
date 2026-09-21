@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The feature-msrv sweep compiles each selection through the workspace cargo with a leading toolchain argument, so the sweep builds into the target directory the checkout owns."

@@ -4,12 +4,13 @@ use smallvec::SmallVec;
 use vyre_foundation::ir::BinOp;
 use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
-use super::facts::EmitFacts;
+use super::operand_use_scan::body_descendants_read_operand;
 use super::schedule::{
     is_latency_load, is_schedulable_pure_op, is_scheduling_fence, op_reads_operand,
     operand_is_immediate,
 };
-use super::{body_descendants_read_operand, BodyCtx};
+use super::BodyCtx;
+use crate::index_facts::IndexFacts;
 use crate::reg::PtxType;
 use crate::EmitError;
 
@@ -17,7 +18,7 @@ const MAX_LOAD_GAP_FILLERS: usize = 3;
 
 impl BodyCtx<'_> {
     pub(super) fn emit_body(&mut self, body: &KernelBody) -> Result<(), EmitError> {
-        let facts = EmitFacts::new(body);
+        let facts = IndexFacts::new(body);
         let mut skip = vec![false; body.ops.len()];
         let mut idx = 0;
         while idx < body.ops.len() {
@@ -137,7 +138,7 @@ impl BodyCtx<'_> {
     fn find_latency_filler_avoiding_results(
         &self,
         body: &KernelBody,
-        facts: &EmitFacts,
+        facts: &IndexFacts,
         anchor_idx: usize,
         blocked_results: &[u32],
         skip: &[bool],
@@ -195,7 +196,7 @@ impl BodyCtx<'_> {
     fn should_defer_integer_mul_for_mad(
         &self,
         body: &KernelBody,
-        facts: &EmitFacts,
+        facts: &IndexFacts,
         op_idx: usize,
     ) -> bool {
         let Some(op) = body.ops.get(op_idx) else {
@@ -250,7 +251,7 @@ impl BodyCtx<'_> {
     fn emit_integer_mad_from_add(
         &mut self,
         body: &KernelBody,
-        facts: &EmitFacts,
+        facts: &IndexFacts,
         op: &KernelOp,
     ) -> Result<bool, EmitError> {
         if !matches!(
@@ -282,7 +283,7 @@ impl BodyCtx<'_> {
     fn integer_mad_parts(
         &self,
         body: &KernelBody,
-        facts: &EmitFacts,
+        facts: &IndexFacts,
         mul_result_id: u32,
         addend_id: u32,
     ) -> Option<(
@@ -319,7 +320,7 @@ impl BodyCtx<'_> {
     fn structural_integer_mad_type(
         &self,
         body: &KernelBody,
-        facts: &EmitFacts,
+        facts: &IndexFacts,
         mul_result_id: u32,
         addend_id: u32,
     ) -> Option<PtxType> {
@@ -347,7 +348,7 @@ impl BodyCtx<'_> {
     fn result_ptx_type(
         &self,
         body: &KernelBody,
-        facts: &EmitFacts,
+        facts: &IndexFacts,
         result_id: u32,
         depth: usize,
     ) -> Option<PtxType> {
@@ -370,7 +371,10 @@ impl BodyCtx<'_> {
                     LiteralValue::Bool(_) => Some(PtxType::Bool),
                 }
             }
-            KernelOpKind::LoadGlobal | KernelOpKind::LoadShared | KernelOpKind::LoadConstant => {
+            KernelOpKind::LoadGlobal
+            | KernelOpKind::LoadShared
+            | KernelOpKind::LoadConstant
+            | KernelOpKind::VectorLoadGlobal { .. } => {
                 let binding_slot = *producer.operands.first()?;
                 let binding = self.binding_for_slot(binding_slot).ok()?;
                 PtxType::from_dtype(&binding.element_type).ok()
@@ -383,7 +387,9 @@ impl BodyCtx<'_> {
             | KernelOpKind::SubgroupLocalId
             | KernelOpKind::SubgroupSize
             | KernelOpKind::SubgroupBallot => Some(PtxType::U32),
-            KernelOpKind::Copy | KernelOpKind::SubgroupReduce { .. } => {
+            KernelOpKind::Copy
+            | KernelOpKind::SubgroupReduce { .. }
+            | KernelOpKind::ExtractLane { .. } => {
                 self.result_ptx_type(body, facts, *producer.operands.first()?, depth + 1)
             }
             KernelOpKind::Cast { target } => PtxType::from_dtype(target).ok(),
@@ -414,7 +420,7 @@ impl BodyCtx<'_> {
                 let binding = self.binding_for_slot(binding_slot).ok()?;
                 PtxType::from_dtype(&binding.element_type).ok()
             }
-            KernelOpKind::MatrixMma { .. } => Some(PtxType::F32),
+            KernelOpKind::MatrixMma(_) => Some(PtxType::F32),
             _ => None,
         }
     }

@@ -1,0 +1,5 @@
+name = "vyre-emit-metal"
+concern = "Consume verified lowering products and emit native Apple shader source through the shared emitter path."
+pages = { spec = "vyre-emit-metal/SPEC.md", readme = "vyre-emit-metal/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-emit-naga", "vyre-foundation", "vyre-lower"]

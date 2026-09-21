@@ -1,0 +1,5 @@
+name = "vyre-reference"
+concern = "The only crate permitted to compute on the CPU: the pure-Rust IR oracle. Not a backend and not a fallback."
+pages = { spec = "vyre-reference/SPEC.md", readme = "vyre-reference/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-foundation", "vyre-primitives", "vyre-spec"]

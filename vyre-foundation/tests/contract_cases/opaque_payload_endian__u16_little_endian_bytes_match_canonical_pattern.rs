@@ -13,6 +13,9 @@
 // 3. Truncated inputs fail with an actionable diagnostic rather than
 //    silently reading garbage.
 
+#[path = "opaque_payload_endian__canonical_f32_zero_nonzero_with_sign_bit_set_passes_through.rs"]
+mod opaque_payload_endian_canonical_f32_zero_nonzero_with_sign_bit_set_passes_through;
+
 use proptest::prelude::*;
 use vyre_foundation::opaque_payload::canonicalize::{
     canonical_f32_zero, canonical_f64_zero, canonical_regex_flags,
@@ -182,7 +185,7 @@ proptest! {
         prop_assert!(tail.is_empty());
     }
 
-    // CRITIQUE_THIRD_PASS_2026-04-23 Finding 07: proptest over the
+    // Proptest over the
     // canonical_f64_zero contract across every u64 bit pattern. A
     // refactor that replaces `value == 0.0` with, say,
     // `value.is_subnormal()` would silently flip the mapping from
@@ -335,7 +338,7 @@ fn canonical_regex_flags_deduplicates_by_char() {
 
 #[test]
 fn canonical_regex_flags_stress_10mb_alternating_must_dedup_to_one_pair() {
-    // CRITIQUE_FIX_REVIEW_2026-04-23 Finding #21: existing coverage is
+    // Existing coverage is
     // limited to tiny inputs. A 10MB string of alternating 'a' and 'b'
     // probes both allocator stress and the O(n log n) sort path (a
     // naive O(n²) dedup would time out). The output must be exactly
@@ -421,4 +424,3 @@ fn canonical_f32_zero_negative_zero_normalises() {
     assert_eq!(canonical_f32_zero(-0.0).to_bits(), 0);
     assert_eq!(canonical_f32_zero(0.0).to_bits(), 0);
 }
-

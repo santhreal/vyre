@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Regex DFA replay now gives open-ended repetitions an explicit finite policy instead of treating their minimum as a maximum. Whole-buffer variable-length matches derive exact starts from candidate origins, and region evidence returns one longest extent per pattern and origin."

@@ -1,20 +1,16 @@
 //! CUDA stream/event ownership and pending-dispatch handles.
 
 use std::ptr::NonNull;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use crossbeam_queue::ArrayQueue;
-use cudarc::driver::{
-    sys::{CUevent, CUevent_flags, CUresult, CUstream, CUstream_flags, CUstream_st},
-    CudaContext,
+use cudarc::driver::sys::{
+    CUevent, CUevent_flags, CUresult, CUstream, CUstream_flags, CUstream_st,
 };
-use vyre_driver::{backend::private, BackendError, PendingDispatch};
+use vyre_driver::BackendError;
 
-use crate::backend::telemetry::CudaTelemetry;
-use crate::backend::{cuda_check, DispatchAllocations, HostTransferAllocations, ResidentUseGuard};
+use crate::backend::allocations::cuda_check;
 
 /// RAII owner for a CUDA stream.
 #[derive(Debug)]
@@ -108,8 +104,64 @@ pub(crate) fn query_raw_stream_ready(
     }
 }
 
+/// Attempts a wait spends querying before it starts sleeping.
+///
+/// A dispatch whose kernel already retired is the common case, so the first
+/// window is a plain query loop: a microsecond kernel pays the query and nothing
+/// else. Only a wait that outlives the window starts sleeping, where the sleep
+/// granularity is negligible against the work it is waiting for.
+const DEVICE_WAIT_SPIN_QUERIES: u32 = 256;
+
+/// Longest a bounded device wait sleeps between two readiness queries.
+const DEVICE_WAIT_MAX_SLEEP: Duration = Duration::from_millis(1);
+
+/// Shortest sleep a bounded device wait takes once the query window is spent.
+const DEVICE_WAIT_FIRST_SLEEP: Duration = Duration::from_micros(16);
+
+/// Wait until `ready` reports completion, or fail when `deadline` elapses.
+///
+/// `cuStreamSynchronize` and `cuEventSynchronize` carry no timeout. A kernel that
+/// never retires, a driver object freed under the stream, or a device that fell
+/// off the bus blocks the calling thread with no error, no CPU use and no device
+/// work, which is indistinguishable from a wedged process. Polling against an
+/// explicit ceiling turns that into a reported failure naming the wait and the
+/// backend.
+fn wait_for_device(
+    label: &'static str,
+    deadline: Duration,
+    mut ready: impl FnMut() -> Result<bool, BackendError>,
+) -> Result<(), BackendError> {
+    let started = Instant::now();
+    for _ in 0..DEVICE_WAIT_SPIN_QUERIES {
+        if ready()? {
+            return Ok(());
+        }
+        std::hint::spin_loop();
+    }
+    let mut sleep = DEVICE_WAIT_FIRST_SLEEP;
+    loop {
+        if ready()? {
+            return Ok(());
+        }
+        let waited = started.elapsed();
+        if waited >= deadline {
+            return Err(BackendError::DispatchFailed {
+                code: None,
+                message: format!(
+                    "{label} on backend `{backend}` did not complete within {seconds}s. Fix: the device wait is bounded on purpose; diagnose the kernel that never retires, or raise the ceiling with {env}=<seconds> for a dispatch that legitimately runs longer.",
+                    backend = crate::CUDA_BACKEND_ID,
+                    seconds = deadline.as_secs(),
+                    env = crate::instrumentation::CUDA_DEVICE_WAIT_TIMEOUT_ENV,
+                ),
+            });
+        }
+        std::thread::sleep(sleep.min(deadline - waited));
+        sleep = (sleep * 2).min(DEVICE_WAIT_MAX_SLEEP);
+    }
+}
+
 /// Synchronize a raw CUDA stream without ever falling through to the legacy
-/// null-stream global fence.
+/// null-stream global fence, and without an unbounded wait.
 pub(crate) fn synchronize_raw_stream(
     stream: CUstream,
     label: &'static str,
@@ -121,9 +173,11 @@ pub(crate) fn synchronize_raw_stream(
             ),
         });
     }
-    // SAFETY: CUDA validates the opaque stream handle and returns a CUresult;
-    // `cuda_check` converts non-success into a typed backend error.
-    unsafe { cuda_check(cudarc::driver::sys::cuStreamSynchronize(stream), label) }
+    wait_for_device(
+        label,
+        crate::instrumentation::cuda_device_wait_timeout(),
+        || query_raw_stream_ready(stream, label),
+    )
 }
 
 impl Drop for CudaStream {
@@ -196,21 +250,18 @@ impl CudaEvent {
         }
     }
 
-    /// Block until the event completes.
+    /// Wait until the event completes, or fail on the bounded device deadline.
     pub(crate) fn synchronize(&self) -> Result<(), BackendError> {
         if self.raw.is_null() {
             return Err(BackendError::InvalidProgram {
                 fix: "Fix: cuEventSynchronize received a null CUDA event; pending dispatches must own a recorded completion event before synchronization.".to_string(),
             });
         }
-        // SAFETY: stream / event handles are owned by &self; cuStream*/cuEvent* calls
-        // operate on those owned handles and the result is checked via cuda_check.
-        unsafe {
-            cuda_check(
-                cudarc::driver::sys::cuEventSynchronize(self.raw),
-                "cuEventSynchronize",
-            )
-        }
+        wait_for_device(
+            "cuEventSynchronize",
+            crate::instrumentation::cuda_device_wait_timeout(),
+            || self.query_ready(),
+        )
     }
 
     /// Elapsed time between two timing-enabled events, in nanoseconds.
@@ -521,388 +572,10 @@ impl CudaLaunchResourcePool {
     }
 }
 
-/// CUDA-backed pending dispatch whose result is fenced by a CUDA event.
-#[derive(Debug)]
-pub(crate) struct CudaPendingDispatch {
-    ctx: Arc<CudaContext>,
-    pool: Arc<CudaLaunchResourcePool>,
-    event: Option<CudaEvent>,
-    stream: Option<CudaStream>,
-    allocations: Option<DispatchAllocations>,
-    resident_use: Option<ResidentUseGuard>,
-    host_transfers: Option<HostTransferAllocations>,
-    outputs: Vec<Vec<u8>>,
-    timing_start: Option<CudaEvent>,
-    timing_end: Option<CudaEvent>,
-    ready_device_ns: Option<u64>,
-    telemetry: Arc<CudaTelemetry>,
-    completed: AtomicBool,
-}
+pub(crate) use crate::pending_dispatch::CudaPendingDispatch;
 
-impl CudaPendingDispatch {
-    /// Build an already-completed pending dispatch.
-    pub(crate) fn new_ready(
-        ctx: Arc<CudaContext>,
-        pool: Arc<CudaLaunchResourcePool>,
-        outputs: Vec<Vec<u8>>,
-        telemetry: Arc<CudaTelemetry>,
-    ) -> Self {
-        Self {
-            ctx,
-            pool,
-            event: None,
-            stream: None,
-            allocations: None,
-            resident_use: None,
-            host_transfers: None,
-            outputs,
-            timing_start: None,
-            timing_end: None,
-            ready_device_ns: None,
-            telemetry,
-            completed: AtomicBool::new(true),
-        }
-    }
-
-    /// Build an already-completed pending dispatch with measured device time.
-    pub(crate) fn new_ready_timed(
-        ctx: Arc<CudaContext>,
-        pool: Arc<CudaLaunchResourcePool>,
-        outputs: Vec<Vec<u8>>,
-        device_ns: Option<u64>,
-        telemetry: Arc<CudaTelemetry>,
-    ) -> Self {
-        Self {
-            ctx,
-            pool,
-            event: None,
-            stream: None,
-            allocations: None,
-            resident_use: None,
-            host_transfers: None,
-            outputs,
-            timing_start: None,
-            timing_end: None,
-            ready_device_ns: device_ns,
-            telemetry,
-            completed: AtomicBool::new(true),
-        }
-    }
-
-    /// Build a pending resident batch dispatch with no host output slots.
-    ///
-    /// Resident batch readback uses caller-owned resident handles; the pending
-    /// dispatch only fences parameter uploads and kernel launches.
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn new_resident_batch_pending(
-        ctx: Arc<CudaContext>,
-        pool: Arc<CudaLaunchResourcePool>,
-        event: CudaEvent,
-        stream: CudaStream,
-        allocations: DispatchAllocations,
-        resident_use: ResidentUseGuard,
-        host_transfers: HostTransferAllocations,
-        telemetry: Arc<CudaTelemetry>,
-    ) -> Self {
-        Self::new(
-            ctx,
-            pool,
-            event,
-            stream,
-            allocations,
-            Some(resident_use),
-            Some(host_transfers),
-            Vec::new(),
-            telemetry,
-        )
-    }
-
-    /// Build a pending dispatch after all GPU work has been enqueued.
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn new(
-        ctx: Arc<CudaContext>,
-        pool: Arc<CudaLaunchResourcePool>,
-        event: CudaEvent,
-        stream: CudaStream,
-        allocations: DispatchAllocations,
-        resident_use: Option<ResidentUseGuard>,
-        host_transfers: Option<HostTransferAllocations>,
-        outputs: Vec<Vec<u8>>,
-        telemetry: Arc<CudaTelemetry>,
-    ) -> Self {
-        Self {
-            ctx,
-            pool,
-            event: Some(event),
-            stream: Some(stream),
-            allocations: Some(allocations),
-            resident_use,
-            host_transfers,
-            outputs,
-            timing_start: None,
-            timing_end: None,
-            ready_device_ns: None,
-            telemetry,
-            completed: AtomicBool::new(false),
-        }
-    }
-
-    /// Build a pending dispatch with timing-enabled start/end events.
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn new_with_timing(
-        ctx: Arc<CudaContext>,
-        pool: Arc<CudaLaunchResourcePool>,
-        event: CudaEvent,
-        stream: CudaStream,
-        allocations: DispatchAllocations,
-        resident_use: Option<ResidentUseGuard>,
-        host_transfers: Option<HostTransferAllocations>,
-        outputs: Vec<Vec<u8>>,
-        timing_start: CudaEvent,
-        timing_end: CudaEvent,
-        telemetry: Arc<CudaTelemetry>,
-    ) -> Self {
-        Self {
-            ctx,
-            pool,
-            event: Some(event),
-            stream: Some(stream),
-            allocations: Some(allocations),
-            resident_use,
-            host_transfers,
-            outputs,
-            timing_start: Some(timing_start),
-            timing_end: Some(timing_end),
-            ready_device_ns: None,
-            telemetry,
-            completed: AtomicBool::new(false),
-        }
-    }
-
-    fn bind_context(&self) -> Result<(), BackendError> {
-        self.ctx
-            .bind_to_thread()
-            .map_err(|e| BackendError::DispatchFailed {
-                code: None,
-                message: format!("CUDA context bind failed: {e}"),
-            })
-    }
-
-    fn synchronize(&self) -> Result<(), BackendError> {
-        if self.completed.load(Ordering::Acquire) {
-            return Ok(());
-        }
-        self.bind_context()?;
-        let event = self
-            .event
-            .as_ref()
-            .ok_or_else(|| BackendError::DispatchFailed {
-                code: None,
-                message: "CUDA pending dispatch completion event was already released".to_string(),
-            })?;
-        event.synchronize()?;
-        self.telemetry.record_sync_point();
-        self.completed.store(true, Ordering::Release);
-        Ok(())
-    }
-
-    fn release_launch_resources(&mut self) {
-        if let Some(event) = self.event.take() {
-            self.pool.release_event(event);
-        }
-        if let Some(event) = self.timing_start.take() {
-            self.pool.release_timing_event(event);
-        }
-        if let Some(event) = self.timing_end.take() {
-            self.pool.release_timing_event(event);
-        }
-        if let Some(stream) = self.stream.take() {
-            self.pool.release_stream(stream);
-        }
-    }
-
-    fn force_completion_on_drop(&mut self) -> bool {
-        if self.completed.load(Ordering::Acquire) {
-            return true;
-        }
-        if let Err(error) = self.ctx.bind_to_thread() {
-            tracing::error!(
-                "Fix: failed to bind CUDA context while dropping pending dispatch: {error}. In-flight CUDA resources will not be recycled."
-            );
-            return false;
-        }
-        let Some(stream) = self.stream.as_ref() else {
-            tracing::error!(
-                "Fix: pending CUDA dispatch lost its stream before drop-time synchronization. In-flight CUDA resources will not be recycled."
-            );
-            return false;
-        };
-        if let Err(error) = stream.synchronize() {
-            tracing::error!(
-                "Fix: failed to synchronize CUDA stream while dropping pending dispatch: {error}. In-flight CUDA resources will not be recycled."
-            );
-            return false;
-        }
-        self.telemetry.record_sync_point();
-        self.completed.store(true, Ordering::Release);
-        true
-    }
-
-    fn leak_inflight_resources_after_drop_sync_failure(&mut self) {
-        tracing::error!(
-            "Fix: leaking CUDA pending-dispatch resources because completion could not be proven during drop; await the dispatch result before dropping it."
-        );
-        std::mem::forget(Arc::clone(&self.ctx));
-        if let Some(event) = self.event.take() {
-            std::mem::forget(event);
-        }
-        if let Some(event) = self.timing_start.take() {
-            std::mem::forget(event);
-        }
-        if let Some(event) = self.timing_end.take() {
-            std::mem::forget(event);
-        }
-        if let Some(stream) = self.stream.take() {
-            std::mem::forget(stream);
-        }
-        if let Some(allocations) = self.allocations.take() {
-            std::mem::forget(allocations);
-        }
-        if let Some(resident_use) = self.resident_use.take() {
-            std::mem::forget(resident_use);
-        }
-        if let Some(host_transfers) = self.host_transfers.take() {
-            std::mem::forget(host_transfers);
-        }
-    }
-
-    /// Await completion and return output buffers plus device elapsed time.
-    pub(crate) fn await_timed_result(
-        mut self,
-    ) -> Result<(Vec<Vec<u8>>, Option<u64>), BackendError> {
-        self.synchronize()?;
-        let device_ns = match self.ready_device_ns.take() {
-            Some(device_ns) => Some(device_ns),
-            None => match (self.timing_start.as_ref(), self.timing_end.as_ref()) {
-                (Some(start), Some(end)) => Some(start.elapsed_time_ns(end)?),
-                _ => None,
-            },
-        };
-        self.release_launch_resources();
-        self.allocations.take();
-        self.resident_use.take();
-        let outputs = self.collect_outputs()?;
-        self.host_transfers.take();
-        Ok((outputs, device_ns))
-    }
-
-    fn collect_outputs(&mut self) -> Result<Vec<Vec<u8>>, BackendError> {
-        if let Some(transfers) = self.host_transfers.as_ref() {
-            let mut outputs = std::mem::take(&mut self.outputs);
-            transfers.collect_outputs_into(&mut outputs)?;
-            Ok(outputs)
-        } else {
-            Ok(std::mem::take(&mut self.outputs))
-        }
-    }
-
-    fn collect_outputs_into(&mut self, outputs: &mut Vec<Vec<u8>>) -> Result<(), BackendError> {
-        if let Some(transfers) = self.host_transfers.as_ref() {
-            transfers.collect_outputs_into(outputs)?;
-        } else {
-            vyre_driver::replace_output_buffers_preserving_slots(
-                std::mem::take(&mut self.outputs),
-                outputs,
-            );
-        }
-        Ok(())
-    }
-}
-
-impl private::Sealed for CudaPendingDispatch {}
-
-impl PendingDispatch for CudaPendingDispatch {
-    fn is_ready(&self) -> bool {
-        if self.completed.load(Ordering::Acquire) {
-            return true;
-        }
-        if self.bind_context().is_err() {
-            return false;
-        }
-        let Some(event) = self.event.as_ref() else {
-            return true;
-        };
-        let ready = match event.query_ready() {
-            Ok(ready) => ready,
-            Err(error) => {
-                tracing::error!(
-                    "Fix: CUDA pending dispatch readiness query failed: {error}. Await the dispatch to surface synchronization failure details."
-                );
-                false
-            }
-        };
-        if ready {
-            self.completed.store(true, Ordering::Release);
-        }
-        ready
-    }
-
-    fn await_result(mut self: Box<Self>) -> Result<Vec<Vec<u8>>, BackendError> {
-        self.synchronize()?;
-        self.release_launch_resources();
-        self.allocations.take();
-        self.resident_use.take();
-        let outputs = self.collect_outputs()?;
-        self.host_transfers.take();
-        Ok(outputs)
-    }
-
-    fn await_timed_result(
-        self: Box<Self>,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
-        let started = std::time::Instant::now();
-        let (outputs, device_ns) = CudaPendingDispatch::await_timed_result(*self)?;
-        let wall_ns = u64::try_from(started.elapsed().as_nanos()).map_err(|_| {
-            BackendError::new(
-                "CUDA pending dispatch retirement exceeded the u64 nanosecond timing range",
-            )
-        })?;
-        Ok(vyre_driver::TimedDispatchResult {
-            outputs,
-            wall_ns,
-            device_ns,
-            enqueue_ns: None,
-            wait_ns: Some(wall_ns),
-        })
-    }
-
-    fn await_result_into(
-        mut self: Box<Self>,
-        outputs: &mut Vec<Vec<u8>>,
-    ) -> Result<(), BackendError> {
-        self.synchronize()?;
-        self.release_launch_resources();
-        self.allocations.take();
-        self.resident_use.take();
-        self.collect_outputs_into(outputs)?;
-        self.host_transfers.take();
-        Ok(())
-    }
-}
-
-impl Drop for CudaPendingDispatch {
-    fn drop(&mut self) {
-        if !self.force_completion_on_drop() {
-            self.leak_inflight_resources_after_drop_sync_failure();
-            return;
-        }
-        self.release_launch_resources();
-        self.allocations.take();
-        self.resident_use.take();
-        self.host_transfers.take();
-    }
-}
-
+// Inline: covers `events`, `query_raw_stream_ready`, `raw`, `record` and 3 more items this module
+// keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{query_raw_stream_ready, synchronize_raw_stream};

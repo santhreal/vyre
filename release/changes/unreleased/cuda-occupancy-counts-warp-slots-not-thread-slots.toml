@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "CUDA occupancy estimation divides the SM budget by warp slots instead of by block width, so a block width that is not a whole number of warps no longer reports more resident warps than the SM has slots for, and the theoretical estimate now agrees with the driver-measured one."

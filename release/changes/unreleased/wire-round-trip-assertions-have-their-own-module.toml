@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The wire-format round-trip and corruption assertions live in vyre_foundation::serial::wire_round_trip instead of a test_helpers module nested inside envelope.rs. vyre_primitives::serial_data re-exports the new module."

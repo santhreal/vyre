@@ -3,7 +3,7 @@
 use std::collections::BTreeSet;
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::MemoryOrdering;
+use vyre_foundation::ir::MemoryOrdering;
 
 #[test]
 fn memory_ordering_wire_tags_are_total_and_unique_for_known_values() {

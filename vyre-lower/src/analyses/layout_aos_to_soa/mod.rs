@@ -1,6 +1,5 @@
 //! Buffer layout transformation candidate detection (AoS → SoA).
 //!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section J item J1.
 //!
 //! On GPUs, "Structure of Arrays" (SoA) layout outperforms "Array of
 //! Structures" (AoS) for compute-bound workloads because consecutive
@@ -19,8 +18,8 @@
 //! candidates so the optimizer can decide whether to invoke the
 //! rewrite.
 
-pub mod analysis;
-pub mod plan;
+pub(crate) mod analysis;
+pub(crate) mod plan;
 
 pub use analysis::analyze;
 pub use plan::{LayoutCandidate, LayoutTransformPlan};

@@ -1,0 +1,33 @@
+[package]
+name = "vyre-libs-device"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Compiler-internal device boundary contracts, memory ownership, and resident graph layout"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-device"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.vyre]
+publication_class = "internal-engine"
+publication_contract = "closure:vyre-libs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["device"]
+device = []
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-libs-builder = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

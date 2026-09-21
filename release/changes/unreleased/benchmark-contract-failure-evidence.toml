@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Enforced benchmark contract failures now retain correctness, timing metrics, device identity, and measured speedup in the failed case report instead of collapsing into an unprobed error shell."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A gate run that mutated the workspace prints its report before failing, so the findings it computed are no longer discarded."

@@ -1,15 +1,14 @@
-use super::{eliminate_dead_lets, eliminate_unreachable};
-use crate::ir::{Ident, Program};
-use im::HashSet;
+use super::{eliminate_dead_lets, eliminate_unreachable, LiveSet};
+use crate::ir::Program;
 
 /// Remove unreachable statements and unused pure `let` bindings.
 #[must_use]
 #[inline]
 pub fn dce(program: Program) -> Program {
     program.map_entry(|entry| {
-        let entry = eliminate_dead_lets(entry, HashSet::<Ident>::new()).nodes;
+        let entry = eliminate_dead_lets(entry, LiveSet::new()).nodes;
         let entry = eliminate_unreachable(entry);
-        eliminate_dead_lets(entry, HashSet::<Ident>::new()).nodes
+        eliminate_dead_lets(entry, LiveSet::new()).nodes
     })
 }
 

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The grid-sync host split asks a caller for exactly the buffers `BufferDecl::consumes_host_input` admits, instead of the wider set a segment reads, so a program declaring a `Shared`-kind or `Persistent`-kind buffer is no longer refused for a dispatch input count that was correct."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Harness selection and convergence-flag width for the persistent fixpoint are one decision with one owner, `routed_persistent_fixpoint`, which returns both halves together. The grid form indexes `changed[iteration]`, so taking the harness without its flag width was an out-of-bounds atomic write on the second iteration."

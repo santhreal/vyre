@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre_libs::graph::program_graph::READ_ONLY_BUFFER_NAMES` states the five read-only ProgramGraph buffer names as one set, so a consumer recognises producer topology by name instead of by a position that moves when a primitive declares its own buffers first."

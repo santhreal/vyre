@@ -94,7 +94,8 @@ fn host_ring_done_count_oracle_matrix_matches_independent_status_scan() {
 #[test]
 fn host_ring_rejects_oracle_documented_misaligned_and_oob_cases() {
     let mut ring = HostRing::new(4).expect("Fix: ring must construct");
-    let encoded = protocol::encode_load_miss(7, false);
+    let encoded = protocol::try_encode_load_miss(7, false)
+        .expect("Fix: a load-miss slot must encode into its fixed 64-byte layout");
     let ring_bytes = ring.as_bytes().len();
     let oob_slot = 4u32;
     let oob_word = (oob_slot as usize) * 16;
@@ -163,7 +164,8 @@ fn oracle_done_count(bytes: &[u8], slot_count: u32) -> u32 {
 fn hostile_encoded_slot(seed: u32) -> ([u8; SLOT_BYTES], u32, bool) {
     let resource_id = seed.wrapping_mul(0x9E37_79B9);
     let prefetch = seed & 1 == 1;
-    let encoded = protocol::encode_load_miss(resource_id, prefetch);
+    let encoded = protocol::try_encode_load_miss(resource_id, prefetch)
+        .expect("Fix: a load-miss slot must encode into its fixed 64-byte layout");
     let mut slot = [0u8; SLOT_BYTES];
     slot.copy_from_slice(&encoded);
     (slot, resource_id, prefetch)

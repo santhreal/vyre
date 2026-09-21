@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`vyre_conform::fp_parity` is gone. It re-exported eleven names from `vyre_foundation::fp_parity` verbatim and added nothing, so the parity policy had two paths and a reader could not tell which was the owner. Every caller inside and outside the crate imports `vyre_foundation::fp_parity` directly; no alias remains."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "vyre-grammar-gen publishes each generator through its own module (dfa, lr, c11_lexer, wire, host_preprocess, lex_c11_max_munch, chunk_lexer_cpu, max_munch_cpu) instead of a flat crate-root re-export, because two sibling tables both define Action and a flat name cannot say which one it is."

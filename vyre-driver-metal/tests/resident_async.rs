@@ -1,5 +1,6 @@
 //! Native Metal resident asynchronous ownership and overlap contracts.
 
+#![cfg(feature = "device-tests")]
 #![cfg(any(target_os = "macos", target_os = "ios"))]
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

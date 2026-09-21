@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every synthetic release workload that writes a single scalar per launch now replays a resident batch, so the recorded wall time is the steady-state per-item cost instead of one host submit, one completion wait and one four-byte readback per measured sample. The scatter pattern is unchanged: its program already batches sixteen record sets into one launch."

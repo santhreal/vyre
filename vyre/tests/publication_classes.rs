@@ -1,0 +1,664 @@
+//! Publication class validation and release ordering derivation.
+//!
+//! Asserts that:
+//! 1. Every workspace member declares an explicit, valid publication class in
+//!    its own Cargo.toml under `[package.metadata.vyre.publication_class]`, has
+//!    a row in `docs/CRATE_OWNERSHIP.toml`, and that row does not restate the
+//!    class. One authority per fact.
+//! 2. No publishable package depends on an internal `publish = false` package via normal or
+//!    build dependencies.
+//! 3. Newly publishable packages are caught and validated against the declared class roster.
+//! 4. Release ordering of publishable packages is derived topologically from the dependency DAG.
+
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::path::{Path, PathBuf};
+
+use crate::collected_errors::collected;
+
+/// Valid publication classes for workspace members.
+pub(crate) const VALID_PUBLICATION_CLASSES: &[&str] = &[
+    "stable-consumer-sdk",
+    "extension-sdk",
+    "concrete-backend",
+    "internal-engine",
+    "conformance-tooling",
+    "private-test-support",
+];
+
+/// The publishable package roster.
+///
+/// Held here so that publishing a crate, and unpublishing one, each require a
+/// recorded decision. [`validate_publishable_roster`] compares it against the
+/// `publish` flags in both directions, so either edit turns this suite red
+/// until the roster records it.
+pub(crate) const EXPECTED_PUBLISHABLE_PACKAGES: &[&str] = &[
+    "vyre",
+    "vyre-foundation",
+    "vyre-megakernel",
+    "vyre-driver",
+    "vyre-driver-metal",
+    "vyre-driver-wgpu",
+    "vyre-driver-spirv",
+    "vyre-driver-cuda",
+    "vyre-driver-reference",
+    "vyre-reference",
+    "vyre-spec",
+    "vyre-macros",
+    "vyre-primitives",
+    "vyre-runtime",
+    "vyre-safetensors",
+    "vyre-libs-analysis",
+    "vyre-libs-bitset",
+    "vyre-libs-builder",
+    "vyre-libs-decode",
+    "vyre-libs-device",
+    "vyre-libs-encoding",
+    "vyre-libs-fixpoint",
+    "vyre-libs-graph",
+    "vyre-libs-hash",
+    "vyre-libs-math",
+    "vyre-libs-nn",
+    "vyre-libs-parsing",
+    "vyre-libs-pattern",
+    "vyre-libs-reasoning",
+    "vyre-libs-reduce",
+    "vyre-libs-rule",
+    "vyre-libs-scheduling",
+    "vyre-libs-security",
+    "vyre-libs-solvers",
+    "vyre-libs-text",
+    "vyre-libs-vfs",
+    "vyre-libs-visual",
+    "vyre-libs",
+    "vyre-lower",
+    "vyre-emit-naga",
+    "vyre-emit-ptx",
+    "vyre-emit-spirv",
+    "vyre-emit-metal",
+];
+
+/// The checkout this run is inside.
+///
+/// Resolved from the working directory: a compiled-in manifest path names
+/// whichever checkout last built this binary through the shared target
+/// directory, and the roster read would then be that tree's manifest.
+fn workspace_root() -> PathBuf {
+    vyre_test_support::monorepo::vyre_workspace_root()
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct MemberInfo {
+    pub(crate) path: String,
+    pub(crate) publication_class: Option<String>,
+    pub(crate) publish: bool,
+    pub(crate) normal_deps: Vec<String>,
+    pub(crate) build_deps: Vec<String>,
+    /// Dev-dependencies declared with no version.
+    pub(crate) versionless_dev_deps: Vec<String>,
+}
+
+/// Names in one dependency table whose declaration states no version.
+///
+/// Cargo strips a path dependency that states no version out of the published
+/// archive, so the archive carries the test sources that need it and not the
+/// dependency itself. `workspace = true` inherits the root declaration, so the
+/// root table is what decides for an inherited entry.
+fn versionless<'a>(
+    deps: &'a toml::value::Table,
+    workspace_deps: &'a toml::value::Table,
+) -> impl Iterator<Item = String> + 'a {
+    deps.iter().filter_map(move |(dep, value)| {
+        let table = value.as_table()?;
+        let declaration = if table.get("workspace").and_then(toml::Value::as_bool) == Some(true) {
+            workspace_deps.get(dep)?
+        } else {
+            value
+        };
+        match declaration {
+            toml::Value::String(_) => None,
+            other => (!other
+                .as_table()
+                .is_some_and(|table| table.contains_key("version")))
+            .then(|| dep.clone()),
+        }
+    })
+}
+
+pub(crate) fn load_workspace_members(root: &Path) -> BTreeMap<String, MemberInfo> {
+    let root_cargo_path = root.join("Cargo.toml");
+    let root_cargo_str = std::fs::read_to_string(&root_cargo_path)
+        .expect("root Cargo.toml must exist and be readable");
+    let root_toml: toml::Value = toml::from_str(&root_cargo_str).expect("parse root Cargo.toml");
+
+    let members = root_toml
+        .get("workspace")
+        .and_then(|w| w.get("members"))
+        .and_then(|m| m.as_array())
+        .expect("workspace.members must be an array");
+
+    let empty = toml::value::Table::new();
+    let workspace_deps = root_toml
+        .get("workspace")
+        .and_then(|w| w.get("dependencies"))
+        .and_then(toml::Value::as_table)
+        .unwrap_or(&empty);
+
+    let mut map = BTreeMap::new();
+
+    for m in members {
+        let member_path_str = m.as_str().expect("member must be a string");
+        let member_cargo_path = root.join(member_path_str).join("Cargo.toml");
+        let content = std::fs::read_to_string(&member_cargo_path)
+            .unwrap_or_else(|e| panic!("failed to read {}: {e}", member_cargo_path.display()));
+        let member_toml: toml::Value = toml::from_str(&content).expect("parse member Cargo.toml");
+
+        let pkg = member_toml.get("package").expect("package table");
+        let name = pkg
+            .get("name")
+            .and_then(|n| n.as_str())
+            .unwrap_or(member_path_str)
+            .to_string();
+
+        let publish = match pkg.get("publish") {
+            Some(toml::Value::Boolean(b)) => *b,
+            Some(toml::Value::Array(arr)) => !arr.is_empty(),
+            _ => true,
+        };
+
+        let pub_class = pkg
+            .get("metadata")
+            .and_then(|m| m.get("vyre"))
+            .and_then(|v| v.get("publication_class"))
+            .and_then(|c| c.as_str())
+            .map(|s| s.to_string());
+
+        let mut normal_deps = Vec::new();
+        let mut build_deps = Vec::new();
+        let mut versionless_dev_deps = Vec::new();
+
+        if let Some(deps) = member_toml.get("dependencies").and_then(|d| d.as_table()) {
+            normal_deps.extend(deps.keys().cloned());
+        }
+        if let Some(deps) = member_toml
+            .get("build-dependencies")
+            .and_then(|d| d.as_table())
+        {
+            build_deps.extend(deps.keys().cloned());
+        }
+        if let Some(deps) = member_toml
+            .get("dev-dependencies")
+            .and_then(|d| d.as_table())
+        {
+            versionless_dev_deps.extend(versionless(deps, workspace_deps));
+        }
+
+        if let Some(target) = member_toml.get("target").and_then(|t| t.as_table()) {
+            for (_, target_val) in target {
+                if let Some(deps) = target_val.get("dependencies").and_then(|d| d.as_table()) {
+                    normal_deps.extend(deps.keys().cloned());
+                }
+                if let Some(deps) = target_val
+                    .get("build-dependencies")
+                    .and_then(|d| d.as_table())
+                {
+                    build_deps.extend(deps.keys().cloned());
+                }
+                if let Some(deps) = target_val
+                    .get("dev-dependencies")
+                    .and_then(|d| d.as_table())
+                {
+                    versionless_dev_deps.extend(versionless(deps, workspace_deps));
+                }
+            }
+        }
+
+        map.insert(
+            name,
+            MemberInfo {
+                path: member_path_str.to_string(),
+                publication_class: pub_class,
+                publish,
+                normal_deps,
+                build_deps,
+                versionless_dev_deps,
+            },
+        );
+    }
+
+    map
+}
+
+/// The `publication_class` each `docs/CRATE_OWNERSHIP.toml` row restates, by package.
+///
+/// Schema 4 of that file states intent cargo does not carry: the layer, the
+/// seam, the interface and the responsibility. The publication class is a cargo
+/// fact, declared beside `publish` in each member's own manifest, so a row that
+/// carries one is a second authority and the value is returned here for
+/// [`validate_publication_classes`] to reject.
+fn load_ownership_classes(root: &Path) -> BTreeMap<String, Option<String>> {
+    let ownership_path = root.join("docs/CRATE_OWNERSHIP.toml");
+    let content =
+        std::fs::read_to_string(&ownership_path).expect("CRATE_OWNERSHIP.toml must exist");
+    let toml_val: toml::Value = toml::from_str(&content).expect("parse CRATE_OWNERSHIP.toml");
+
+    let mut map = BTreeMap::new();
+    if let Some(crates) = toml_val.get("crate").and_then(|c| c.as_array()) {
+        for c in crates {
+            let pkg = c.get("package").and_then(|p| p.as_str()).expect("package");
+            let restated = c
+                .get("publication_class")
+                .and_then(|p| p.as_str())
+                .map(str::to_string);
+            map.insert(pkg.to_string(), restated);
+        }
+    }
+    map
+}
+
+/// Validates that all members declare explicit and valid publication classes.
+pub(crate) fn validate_publication_classes(
+    members: &BTreeMap<String, MemberInfo>,
+    ownership_classes: &BTreeMap<String, Option<String>>,
+) -> Result<(), Vec<String>> {
+    let mut errors = Vec::new();
+
+    for (name, info) in members {
+        let Some(manifest_class) = &info.publication_class else {
+            errors.push(format!(
+                "member `{name}` ({}) does not declare `[package.metadata.vyre.publication_class]`",
+                info.path
+            ));
+            continue;
+        };
+
+        if !VALID_PUBLICATION_CLASSES.contains(&manifest_class.as_str()) {
+            errors.push(format!(
+                "member `{name}` declares invalid publication_class `{manifest_class}`; must be one of: {}",
+                VALID_PUBLICATION_CLASSES.join(", ")
+            ));
+        }
+
+        match ownership_classes.get(name) {
+            Some(Some(restated)) => errors.push(format!(
+                "member `{name}` has `publication_class = \"{restated}\"` in \
+                 docs/CRATE_OWNERSHIP.toml; the class is declared beside `publish` in \
+                 {}/Cargo.toml and that is its one home",
+                info.path
+            )),
+            Some(None) => {}
+            None => errors.push(format!(
+                "member `{name}` has no entry in docs/CRATE_OWNERSHIP.toml"
+            )),
+        }
+    }
+
+    collected(errors)
+}
+
+/// Validates that no publishable package depends on a non-publishable package via normal or build deps.
+pub(crate) fn validate_publishable_dependency_closure(
+    members: &BTreeMap<String, MemberInfo>,
+) -> Result<(), Vec<String>> {
+    let mut errors = Vec::new();
+
+    for (name, info) in members {
+        if !info.publish {
+            continue;
+        }
+
+        for dep in &info.normal_deps {
+            if let Some(dep_info) = members.get(dep) {
+                if !dep_info.publish {
+                    errors.push(format!(
+                        "publishable crate `{name}` has normal dependency on non-publishable crate `{dep}` (publish = false)"
+                    ));
+                }
+            }
+        }
+
+        for dep in &info.build_deps {
+            if let Some(dep_info) = members.get(dep) {
+                if !dep_info.publish {
+                    errors.push(format!(
+                        "publishable crate `{name}` has build-dependency on non-publishable crate `{dep}` (publish = false)"
+                    ));
+                }
+            }
+        }
+    }
+
+    collected(errors)
+}
+
+/// Validates that the publishable set and the roster are the same set.
+pub(crate) fn validate_publishable_roster(
+    members: &BTreeMap<String, MemberInfo>,
+) -> Result<(), Vec<String>> {
+    let mut errors = Vec::new();
+    let expected_set: BTreeSet<&str> = EXPECTED_PUBLISHABLE_PACKAGES.iter().copied().collect();
+
+    for (name, info) in members {
+        if info.publish && !expected_set.contains(name.as_str()) {
+            errors.push(format!(
+                "unexpected newly publishable package `{name}` appeared without updated roster and publication class policy"
+            ));
+        }
+    }
+
+    for expected in &expected_set {
+        match members.get(*expected) {
+            Some(info) if info.publish => {}
+            Some(_) => errors.push(format!(
+                "roster names `{expected}` as publishable and its manifest declares `publish = false`; \
+                 unpublishing a crate is a decision the roster has to record"
+            )),
+            None => errors.push(format!(
+                "roster names `{expected}`, which is not a workspace member"
+            )),
+        }
+    }
+
+    collected(errors)
+}
+
+/// Computes the topological release order for all publishable packages.
+pub(crate) fn derive_release_ordering(
+    members: &BTreeMap<String, MemberInfo>,
+) -> Result<Vec<String>, String> {
+    let publishable_names: BTreeSet<String> = members
+        .iter()
+        .filter(|(_, info)| info.publish)
+        .map(|(name, _)| name.clone())
+        .collect();
+
+    // in-degree and adjacency for the publishable subgraph
+    let mut in_degree: BTreeMap<String, usize> = BTreeMap::new();
+    let mut adj: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+
+    for name in &publishable_names {
+        in_degree.insert(name.clone(), 0);
+        adj.insert(name.clone(), BTreeSet::new());
+    }
+
+    for (name, info) in members {
+        if !info.publish {
+            continue;
+        }
+        let mut deps = BTreeSet::new();
+        for dep in &info.normal_deps {
+            if publishable_names.contains(dep) && dep != name {
+                deps.insert(dep.clone());
+            }
+        }
+        for dep in &info.build_deps {
+            if publishable_names.contains(dep) && dep != name {
+                deps.insert(dep.clone());
+            }
+        }
+
+        for dep in deps {
+            adj.get_mut(&dep).unwrap().insert(name.clone());
+            *in_degree.get_mut(name).unwrap() += 1;
+        }
+    }
+
+    // Kahn's algorithm
+    let mut queue: VecDeque<String> = in_degree
+        .iter()
+        .filter(|(_, &deg)| deg == 0)
+        .map(|(name, _)| name.clone())
+        .collect();
+
+    let mut order = Vec::new();
+
+    while let Some(node) = queue.pop_front() {
+        order.push(node.clone());
+        if let Some(neighbors) = adj.get(&node) {
+            for neighbor in neighbors {
+                let deg = in_degree.get_mut(neighbor).unwrap();
+                *deg -= 1;
+                if *deg == 0 {
+                    queue.push_back(neighbor.clone());
+                }
+            }
+        }
+    }
+
+    if order.len() != publishable_names.len() {
+        return Err(format!(
+            "cycle detected in publishable dependency graph; resolved only {} of {} packages",
+            order.len(),
+            publishable_names.len()
+        ));
+    }
+
+    Ok(order)
+}
+
+#[test]
+fn every_workspace_member_declares_explicit_valid_publication_class() {
+    let root = workspace_root();
+    let members = load_workspace_members(&root);
+    let ownership_classes = load_ownership_classes(&root);
+
+    assert!(
+        members.len() >= 30,
+        "expected at least 30 workspace members, found {}",
+        members.len()
+    );
+
+    let result = validate_publication_classes(&members, &ownership_classes);
+    if let Err(errors) = result {
+        panic!(
+            "publication class validation failed with {} error(s):\n  {}",
+            errors.len(),
+            errors.join("\n  ")
+        );
+    }
+}
+
+#[test]
+fn publishable_packages_depend_only_on_publishable_packages() {
+    let root = workspace_root();
+    let members = load_workspace_members(&root);
+
+    let result = validate_publishable_dependency_closure(&members);
+    if let Err(errors) = result {
+        panic!(
+            "publishable dependency closure check failed with {} error(s):\n  {}",
+            errors.len(),
+            errors.join("\n  ")
+        );
+    }
+}
+
+#[test]
+fn publishable_roster_matches_expected_packages() {
+    let root = workspace_root();
+    let members = load_workspace_members(&root);
+
+    let result = validate_publishable_roster(&members);
+    if let Err(errors) = result {
+        panic!(
+            "publishable roster check failed with {} error(s):\n  {}",
+            errors.len(),
+            errors.join("\n  ")
+        );
+    }
+}
+
+#[test]
+fn release_ordering_is_derivable_from_dependency_graph() {
+    let root = workspace_root();
+    let members = load_workspace_members(&root);
+
+    let order = derive_release_ordering(&members)
+        .expect("release ordering must derive cleanly without cycles");
+
+    let publishable: BTreeSet<&str> = members
+        .iter()
+        .filter(|(_, info)| info.publish)
+        .map(|(name, _)| name.as_str())
+        .collect();
+    let ordered: BTreeSet<&str> = order.iter().map(String::as_str).collect();
+
+    assert_eq!(
+        ordered, publishable,
+        "release order must cover exactly the publishable members this checkout declares"
+    );
+
+    // Verify topological property: for any package in the order, all its publishable dependencies appear earlier
+    let positions: BTreeMap<String, usize> = order
+        .iter()
+        .enumerate()
+        .map(|(idx, name)| (name.clone(), idx))
+        .collect();
+
+    for (name, info) in &members {
+        if !info.publish {
+            continue;
+        }
+        let pkg_pos = positions[name];
+        for dep in &info.normal_deps {
+            if let Some(&dep_pos) = positions.get(dep) {
+                assert!(
+                    dep_pos < pkg_pos,
+                    "release order violation: dependency `{dep}` (at {dep_pos}) must precede `{name}` (at {pkg_pos})"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn mutation_missing_publication_class_is_caught() {
+    let root = workspace_root();
+    let mut members = load_workspace_members(&root);
+    let ownership_classes = load_ownership_classes(&root);
+
+    // Mutate: strip publication class from vyre
+    if let Some(vyre_info) = members.get_mut("vyre") {
+        vyre_info.publication_class = None;
+    }
+
+    let result = validate_publication_classes(&members, &ownership_classes);
+    assert!(
+        result.is_err(),
+        "stripping publication class must fail validation"
+    );
+    let errors = result.unwrap_err();
+    assert!(errors
+        .iter()
+        .any(|e| e.contains("does not declare `[package.metadata.vyre.publication_class]`")));
+}
+
+#[test]
+fn mutation_invalid_publication_class_is_caught() {
+    let root = workspace_root();
+    let mut members = load_workspace_members(&root);
+    let ownership_classes = load_ownership_classes(&root);
+
+    // Mutate: set invalid publication class
+    if let Some(vyre_info) = members.get_mut("vyre") {
+        vyre_info.publication_class = Some("invalid-class-xyz".to_string());
+    }
+
+    let result = validate_publication_classes(&members, &ownership_classes);
+    assert!(
+        result.is_err(),
+        "invalid publication class must fail validation"
+    );
+    let errors = result.unwrap_err();
+    assert!(errors
+        .iter()
+        .any(|e| e.contains("declares invalid publication_class")));
+}
+
+#[test]
+fn mutation_unpublished_dependency_in_publishable_crate_is_caught() {
+    let root = workspace_root();
+    let mut members = load_workspace_members(&root);
+
+    // Mutate: make vyre depend on vyre-registry-link (publish = false)
+    if let Some(vyre_info) = members.get_mut("vyre") {
+        vyre_info.normal_deps.push("vyre-registry-link".to_string());
+    }
+
+    let result = validate_publishable_dependency_closure(&members);
+    assert!(
+        result.is_err(),
+        "depending on publish = false package must fail validation"
+    );
+    let errors = result.unwrap_err();
+    assert!(
+        errors
+            .iter()
+            .any(|e| e
+                .contains("has normal dependency on non-publishable crate `vyre-registry-link`"))
+    );
+}
+
+#[test]
+fn mutation_newly_publishable_unclassified_package_is_caught() {
+    let root = workspace_root();
+    let mut members = load_workspace_members(&root);
+
+    // Mutate: make a new package publishable
+    members.insert(
+        "vyre-unclassified-new-pkg".to_string(),
+        MemberInfo {
+            path: "vyre-unclassified-new-pkg".to_string(),
+            publication_class: Some("stable-consumer-sdk".to_string()),
+            publish: true,
+            normal_deps: vec![],
+            build_deps: vec![],
+            versionless_dev_deps: vec![],
+        },
+    );
+
+    let result = validate_publishable_roster(&members);
+    assert!(
+        result.is_err(),
+        "unexpected publishable package must fail validation"
+    );
+    let errors = result.unwrap_err();
+    assert!(errors
+        .iter()
+        .any(|e| e.contains("unexpected newly publishable package `vyre-unclassified-new-pkg`")));
+}
+
+/// WHY: cargo strips a path dependency that states no version out of the
+/// published archive, but the `[[test]]` targets that need it ship in that
+/// archive regardless. The result is a published crate whose own test sources
+/// cannot compile, which nothing else here observes: the workspace build
+/// resolves the path and stays green.
+///
+/// This closes the class rather than one member. Both sides are read at run
+/// time: the roster comes from `workspace.members`, so a package added to it
+/// is covered without an edit here, and a dependency is judged only when it
+/// is itself publishable, because a dev-dependency on a package that is never
+/// published is stripped by design.
+#[test]
+fn a_publishable_package_versions_every_internal_dev_dependency() {
+    let members = load_workspace_members(&workspace_root());
+
+    let mut stripped: Vec<String> = Vec::new();
+    for (name, info) in &members {
+        if !info.publish {
+            continue;
+        }
+        for dependency in &info.versionless_dev_deps {
+            if members.get(dependency).is_some_and(|member| member.publish) {
+                stripped.push(format!("{name} -> {dependency}"));
+            }
+        }
+    }
+
+    assert!(
+        stripped.is_empty(),
+        "Fix: state a version beside the path for each of these internal \
+         dev-dependencies. Cargo drops a versionless path dependency from the \
+         published archive while still shipping the tests that import it, so \
+         the archive does not build: {stripped:?}"
+    );
+}

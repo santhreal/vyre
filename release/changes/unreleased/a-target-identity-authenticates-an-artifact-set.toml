@@ -1,0 +1,2 @@
+category = "Added"
+text = "A guarded artifact set states the target identity it was compiled for, and admission rejects a set whose authenticated target is a different device or objective before any guard is evaluated."

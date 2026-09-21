@@ -4,7 +4,7 @@
 //! These tests exercise truncation, bad magic, version mismatch, and
 //! section-length overflow.
 
-use vyre_foundation::serial::{EnvelopeError, WireReader, WireWriter};
+use vyre_foundation::serial::{section_len, EnvelopeError, WireReader, WireWriter};
 
 const MAGIC: &[u8; 4] = b"TEST";
 const VERSION: u32 = 1;
@@ -162,20 +162,31 @@ fn envelope_rejects_header_only() {
 // Section-too-large
 // ------------------------------------------------------------------
 
+/// A count past the `u32` prefix is refused, and the largest that fits is not.
+///
+/// WHY: both writers derive their prefix from `section_len`, and the two
+/// tests this replaced reached it by allocating a slice longer than
+/// `u32::MAX`. That cost four and sixteen gibibytes on a 64-bit host and did
+/// not compile at all on a 32-bit one, where no slice is ever that long. The
+/// bound is a function of the count, so it is proved by value on every host.
 #[test]
-fn envelope_section_too_large_is_rejected_at_encode() {
-    let mut writer = WireWriter::new(MAGIC, VERSION);
-    let huge = vec![0u8; (u32::MAX as usize) + 1];
-    let err = writer.write_section(&huge).unwrap_err();
-    assert!(matches!(err, EnvelopeError::SectionTooLarge { .. }));
-}
+fn envelope_section_length_is_bounded_by_the_u32_prefix() {
+    assert_eq!(section_len(0).expect("an empty section fits the prefix"), 0);
+    assert_eq!(
+        section_len(u32::MAX as usize).expect("the largest section fits the prefix"),
+        u32::MAX
+    );
 
-#[test]
-fn envelope_words_too_large_is_rejected_at_encode() {
-    let mut writer = WireWriter::new(MAGIC, VERSION);
-    let huge = vec![0u32; (u32::MAX as usize) + 1];
-    let err = writer.write_words(&huge).unwrap_err();
-    assert!(matches!(err, EnvelopeError::SectionTooLarge { .. }));
+    let Some(past_bound) = (u32::MAX as usize).checked_add(1) else {
+        // A 32-bit host cannot express a count past the prefix, so the
+        // refusal is unreachable there rather than untested.
+        return;
+    };
+    assert!(matches!(
+        section_len(past_bound),
+        Err(EnvelopeError::SectionTooLarge { len, max })
+            if len == past_bound && max == u32::MAX as usize
+    ));
 }
 
 // ------------------------------------------------------------------
@@ -200,17 +211,6 @@ fn envelope_empty_words_round_trip() {
 
     let mut reader = WireReader::new(&bytes, MAGIC, VERSION).unwrap();
     assert_eq!(reader.read_words().unwrap(), Vec::<u32>::new());
-}
-
-#[test]
-fn envelope_max_u32_len_section_encodes() {
-    // u32::MAX bytes would OOM in debug tests, so we just verify the
-    // boundary at encode time with a smaller-but-still-large value.
-    let mut writer = WireWriter::new(MAGIC, VERSION);
-    let _big = vec![0u8; u32::MAX as usize];
-    // This should succeed (in theory) but we can't allocate that much.
-    // Instead we verify the error path for usize > u32::MAX above.
-    let _ = writer.write_section(&[1, 2, 3]);
 }
 
 #[test]

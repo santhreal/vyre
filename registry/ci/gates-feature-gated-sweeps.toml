@@ -1,0 +1,10 @@
+lane = "gates-feature-gated-sweeps"
+workflow = ".github/workflows/gates.yml"
+job = "feature-gated-sweeps"
+state = "live"
+required_status = "gates / Oracle-matrix sweeps ci.yml cannot reach"
+triggers = ["pull_request", "push"]
+steps = [
+  { script = "scripts/run_sweep_oracle_matrix.sh" },
+  { script = "scripts/run_volume_sweep_shard.sh", args = ["0", "1"] },
+]

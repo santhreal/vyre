@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Five checks that no workflow invoked now run in `.github/workflows/gates.yml`: the transitive layer closure, benchmark registry coverage, internal dependency versions, the feature-isolated MSRV sweep, and the oracle-matrix sweeps with their volume waves. Each step names the class it closes and why no other workflow sees it."

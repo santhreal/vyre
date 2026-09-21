@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Cross-entropy contributes a target logit of zero for a class label at or past the vocabulary size, matching its sequential reference, instead of reading the logits buffer past the end of the token's row."

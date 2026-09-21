@@ -48,7 +48,7 @@ proptest! {
 
     #[test]
     fn opaque_types_have_zero_min_bytes(name in "[a-z][a-z0-9_]{0,20}") {
-        use vyre_spec::extension::ExtensionDataTypeId;
+        use vyre_spec::ExtensionDataTypeId;
         let ty = DataType::Opaque(ExtensionDataTypeId::from_name(&name));
         prop_assert_eq!(ty.min_bytes(), 0);
         prop_assert!(ty.builtin_wire_tag().is_none());

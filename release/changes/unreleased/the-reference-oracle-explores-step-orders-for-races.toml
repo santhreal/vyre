@@ -1,0 +1,2 @@
+category = "Added"
+text = "`ReferenceRequest::explore_races` runs one dispatch under a bounded set of deterministic step orders with shadow memory recording every buffer access, and reports both an unsynchronized conflict inside one order and a byte disagreement between two orders."

@@ -27,11 +27,13 @@
 //! a program. Production mutation goes through the setters, which clear all six
 //! memos on purpose. Nothing here should be copied as a mutation pattern.
 
+#![cfg(feature = "device-tests")]
+
 use std::sync::Arc;
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::lower::lower_subgroup_reductions;
-use vyre_foundation::optimizer::ctx::AdapterCaps;
+use vyre_foundation::optimizer::AdapterCaps;
 
 fn caps() -> AdapterCaps {
     AdapterCaps {
@@ -55,7 +57,7 @@ fn wide_program(statements: u32) -> Program {
 }
 
 fn digest_of(program: &Program) -> [u8; 32] {
-    vyre_driver::pipeline::try_normalized_program_cache_digest(program)
+    vyre_driver::try_normalized_program_cache_digest(program)
         .expect("Fix: fixture program must produce a normalized cache digest")
 }
 
@@ -193,7 +195,7 @@ fn a_rewritten_program_does_not_share_the_unlowered_digest() {
         vec![BufferDecl::output("scratch", 0, DataType::U32).with_count(64)],
         [64, 1, 1],
         vec![Node::Region {
-            generator: "vyre-primitives::reduce::workgroup_sum_u32".into(),
+            generator: "vyre-libs::reduce::workgroup_sum_u32".into(),
             source_region: None,
             body: Arc::new(vec![Node::store("scratch", Expr::u32(0), Expr::u32(7))]),
         }],

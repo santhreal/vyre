@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`release_surface_coverage` in the hygiene matrix restated the three scan vocabularies as literal lists beside the constants that define them, which is the drift the constants were introduced to remove: a pattern added to the scan left the recorded coverage naming the older set. The record now reads `RESOURCE_BOUND_PATTERNS`, `HIDDEN_FALLBACK_PATTERNS` and `CARGO_WRAPPER_PATTERNS` directly."

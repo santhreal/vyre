@@ -1,0 +1,2 @@
+category = "Removed"
+text = "CpuOracleDispatcher is deleted. It matched Region generator ids onto vyre-primitives CPU functions, which made vyre-libs a second host execution path beside vyre-reference. Every parity suite that used it now dispatches through vyre_driver_reference::ReferenceEvalDispatcher, which moved out of vyre-libs into vyre-driver-reference."

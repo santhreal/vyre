@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The four Scallop lineage fixpoint bodies take one LineageFixpoint value instead of restating a nine-argument wiring list each, and the cell count, word count and per-lane chunk count are derived there. A relation cell is owned by one lane which walks the w words inside it, so the launch grid covers n*n*w words with n*n lanes, and the grid-sync fences the large-matrix path emits are cut into sequential dispatches rather than reaching an emitter."

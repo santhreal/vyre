@@ -1,5 +1,6 @@
 //! Operator-facing `vyre-wgpu` command contracts.
 
+#![cfg(feature = "device-tests")]
 #![forbid(unsafe_code)]
 
 use std::process::{Command, Output};
@@ -9,6 +10,21 @@ fn run(args: &[&str]) -> Output {
         .args(args)
         .output()
         .expect("Fix: vyre-wgpu binary must launch")
+}
+
+/// WHY: an input buffer declaration makes this command fail before dispatch,
+/// even when a real device is available. The generated program must execute
+/// without host inputs and return its declared result through the CLI.
+#[test]
+fn demo_executes_without_host_inputs() {
+    let output = run(&["demo"]);
+    assert!(
+        output.status.success(),
+        "demo failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(output.stdout, b"vyre demo gpu_u32=42\n");
+    assert!(output.stderr.is_empty());
 }
 
 /// Prevents top-level help from omitting the real GPU command, version route, or exit semantics.

@@ -1,0 +1,78 @@
+pub const fn vyre_libs_text::text::line_index_requirements() -> vyre_foundation::geometry::GeometryRequirements
+pub const vyre_libs_text::text::BYTE_HISTOGRAM_256_OP_ID: &str
+pub const vyre_libs_text::text::CHAR_CLASS_OP_ID: &str
+pub const vyre_libs_text::text::CHAR_CLASS_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_text::text::C_ALPHA: u32
+pub const vyre_libs_text::text::C_AMP: u32
+pub const vyre_libs_text::text::C_BACKSLASH: u32
+pub const vyre_libs_text::text::C_BANG: u32
+pub const vyre_libs_text::text::C_CARET: u32
+pub const vyre_libs_text::text::C_CLOSE_BRACE: u32
+pub const vyre_libs_text::text::C_CLOSE_BRACKET: u32
+pub const vyre_libs_text::text::C_CLOSE_PAREN: u32
+pub const vyre_libs_text::text::C_COMMA: u32
+pub const vyre_libs_text::text::C_DIGIT: u32
+pub const vyre_libs_text::text::C_DOT: u32
+pub const vyre_libs_text::text::C_DQUOTE: u32
+pub const vyre_libs_text::text::C_EOF: u32
+pub const vyre_libs_text::text::C_EQUALS: u32
+pub const vyre_libs_text::text::C_GT: u32
+pub const vyre_libs_text::text::C_HASH: u32
+pub const vyre_libs_text::text::C_LT: u32
+pub const vyre_libs_text::text::C_MINUS: u32
+pub const vyre_libs_text::text::C_NEWLINE: u32
+pub const vyre_libs_text::text::C_OPEN_BRACE: u32
+pub const vyre_libs_text::text::C_OPEN_BRACKET: u32
+pub const vyre_libs_text::text::C_OPEN_PAREN: u32
+pub const vyre_libs_text::text::C_OTHER: u32
+pub const vyre_libs_text::text::C_PERCENT: u32
+pub const vyre_libs_text::text::C_PIPE: u32
+pub const vyre_libs_text::text::C_PLUS: u32
+pub const vyre_libs_text::text::C_QUOTE: u32
+pub const vyre_libs_text::text::C_SEMICOLON: u32
+pub const vyre_libs_text::text::C_SLASH: u32
+pub const vyre_libs_text::text::C_STAR: u32
+pub const vyre_libs_text::text::C_TILDE: u32
+pub const vyre_libs_text::text::C_WS: u32
+pub const vyre_libs_text::text::ENCODING_CLASSIFY_OP_ID: &str
+pub const vyre_libs_text::text::ENCODING_CLASSIFY_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_text::text::ENC_ASCII: u32
+pub const vyre_libs_text::text::ENC_BINARY: u32
+pub const vyre_libs_text::text::ENC_ISO8859_1: u32
+pub const vyre_libs_text::text::ENC_UTF16BE: u32
+pub const vyre_libs_text::text::ENC_UTF16LE: u32
+pub const vyre_libs_text::text::ENC_UTF8: u32
+pub const vyre_libs_text::text::LINE_INDEX_OP_ID: &str
+pub const vyre_libs_text::text::UTF8_ASCII: u32
+pub const vyre_libs_text::text::UTF8_CONT: u32
+pub const vyre_libs_text::text::UTF8_INVALID: u32
+pub const vyre_libs_text::text::UTF8_LEAD_2: u32
+pub const vyre_libs_text::text::UTF8_LEAD_3: u32
+pub const vyre_libs_text::text::UTF8_LEAD_4: u32
+pub const vyre_libs_text::text::UTF8_SHAPE_COUNTS_OP_ID: &str
+pub const vyre_libs_text::text::UTF8_VALIDATE_WORKGROUP_SIZE: [u32; 3]
+pub fn vyre_libs_text::link_anchor()
+pub fn vyre_libs_text::text::build_char_class_table() -> [u32; 256]
+pub fn vyre_libs_text::text::byte_histogram_256(input: &str, histogram: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_text::text::byte_histogram_256_body(input: &str, histogram: &str, count: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_text::text::byte_histogram_256_child(parent_op_id: &str, input: &str, histogram: &str, count: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_text::text::byte_histogram_256_u8(input: &str, histogram: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_text::text::byte_histogram_256_u8_child(parent_op_id: &str, input: &str, histogram: &str, count: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_text::text::char_class(source: &str, classified: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_text::text::char_class_u8(source: &str, classified: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_text::text::encoding_classify(histogram: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_text::text::encoding_classify_body(histogram: &str, output: &str, count: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_text::text::encoding_classify_child(parent_op_id: &str, histogram: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_text::text::line_index(source: &str, lines: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_text::text::line_index_u8(source: &str, lines: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_text::text::line_index_u8_with_block_lanes(source: &str, lines: &str, n: u32, block_lanes: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_text::text::line_index_u8_with_geometry(source: &str, lines: &str, n: u32, geometry: &vyre_foundation::geometry::LaunchGeometry) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_text::text::line_index_with_block_lanes(source: &str, lines: &str, n: u32, block_lanes: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_text::text::line_index_with_geometry(source: &str, lines: &str, n: u32, geometry: &vyre_foundation::geometry::LaunchGeometry) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_text::text::utf8_shape_counts(histogram: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_text::text::utf8_shape_counts_body(histogram: &str, continuation_var: &str, expected_var: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_text::text::utf8_shape_counts_child(parent_op_id: &str, histogram: &str, continuation_var: &str, expected_var: &str) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_text::text::utf8_validate(source: &str, classes: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_text::text::utf8_validate_u8(source: &str, classes: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub mod vyre_libs_text
+pub mod vyre_libs_text::text

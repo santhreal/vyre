@@ -1,5 +1,7 @@
 //! End-to-end contract for GPU-side `Node::Trap` propagation.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
@@ -7,7 +9,7 @@ use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 #[test]
 fn dispatch_reports_node_trap_tag_and_address() {
     assert!(
-        !vyre_driver_wgpu::runtime::device::enumerate_adapters().is_empty(),
+        !vyre_driver_wgpu::runtime::enumerate_adapters().is_empty(),
         "Fix: trap propagation requires a live GPU adapter; adapter discovery returned none."
     );
     let backend =
@@ -36,7 +38,7 @@ fn dispatch_reports_node_trap_tag_and_address() {
 #[test]
 fn dispatch_async_reports_node_trap_tag_and_address() {
     assert!(
-        !vyre_driver_wgpu::runtime::device::enumerate_adapters().is_empty(),
+        !vyre_driver_wgpu::runtime::enumerate_adapters().is_empty(),
         "Fix: async trap propagation requires a live GPU adapter; adapter discovery returned none."
     );
     let backend = WgpuBackend::acquire()

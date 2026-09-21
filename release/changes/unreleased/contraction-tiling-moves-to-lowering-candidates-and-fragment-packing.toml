@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Logical contractions lower into scalar, SIMT tiled, and matrix-instruction candidate strategies in lowering rather than library builders, and TileMatmul bitwise-packs F16 fragment operand pairs across warp lanes."

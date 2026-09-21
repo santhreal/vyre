@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Compiled CUDA pipelines route trap-declaring and cooperative programs to direct stream-ordered dispatch instead of CUDA graph capture, preserving fail-closed trap readback without graph capture replay failures. Canonical text line indexing declares exact portable workgroup geometry requirements (256 invocations), validates explicit block lane powers of two, and propagates lowering widths uniformly across flag and scan passes so fusion never fails with workgroup geometry mismatches."

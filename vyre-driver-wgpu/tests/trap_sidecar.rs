@@ -1,13 +1,15 @@
 //! WGPU trap sidecar integration tests.
 
-use vyre_primitives::wire::pack_u32_slice as pack_words;
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_primitives::wire::pack_u32_slice as pack_words;
 
 #[test]
 fn inflate_fixed_huffman_reports_wgpu_trap_tag() {
     let backend = WgpuBackend::acquire().expect("Fix: GPU required for WGPU trap sidecar test");
-    let program = vyre_libs::decode::inflate_stored_block("input", "output", 5);
+    let program = vyre_libs::decode::inflate::inflate_stored_block("input", "output", 5);
     let input = pack_words(&[0x03, 0, 0, 0, 0]);
     let len_sidecar = vec![0u8; 4];
 
@@ -28,7 +30,7 @@ fn inflate_fixed_huffman_reports_wgpu_trap_tag() {
     // op and the remedy instead, which is strictly more useful to an operator.
     for needle in [
         "wgpu dispatch trapped",
-        "vyre-primitives::decode::inflate_stored",
+        "vyre-libs::decode::inflate_stored_block",
         "BTYPE=1",
         "Fix:",
     ] {

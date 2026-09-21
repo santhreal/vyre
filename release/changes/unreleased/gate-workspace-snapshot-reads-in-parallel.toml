@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The mutation snapshot every gate takes before and after it runs reads the checkout over bounded parallel lanes instead of one file at a time, so a gate on a network checkout spends its time in its own contract rather than in `fs::read`."

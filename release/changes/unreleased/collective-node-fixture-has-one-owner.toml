@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The four RFC-0004 collective nodes come from `vyre_test_support::collective_programs`, and `ValueContract::dense_1d` builds the one-dimensional graph-port contract every connected-graph suite states. A per-suite copy of either could drop a variant and assert a narrower contract under the same name."

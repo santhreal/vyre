@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The crate graph renderer reports a dependency that carries no registry record by name instead of panicking on the lookup."

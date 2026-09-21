@@ -28,12 +28,13 @@ fn nested_fixed_width_vectors_report_overflow_instead_of_variable_width() {
 
 #[test]
 fn nested_fixed_byte_arrays_report_overflow_instead_of_variable_width() {
-    let ty = DataType::Vec {
-        element: Box::new(DataType::Array {
-            element_size: usize::MAX,
-        }),
-        count: 2,
-    };
+    let ty = nested_vec(
+        DataType::Array {
+            element_size: u32::MAX,
+        },
+        8,
+        u8::MAX,
+    );
 
     assert_eq!(
         ty.size_bytes(),
@@ -120,12 +121,13 @@ fn generated_type(seed: u64) -> DataType {
             element: Box::new(DataType::F32),
         },
         10 => nested_vec(DataType::U64, 16, u8::MAX),
-        _ => DataType::Vec {
-            element: Box::new(DataType::Array {
-                element_size: usize::MAX,
-            }),
-            count: 2,
-        },
+        _ => nested_vec(
+            DataType::Array {
+                element_size: u32::MAX,
+            },
+            8,
+            u8::MAX,
+        ),
     }
 }
 
@@ -203,7 +205,6 @@ fn oracle_bit_width(ty: &DataType) -> Result<Option<usize>, String> {
         | DataType::SparseCoo { .. }
         | DataType::SparseBsr { .. }
         | DataType::Opaque(_) => Ok(None),
-        _ => Ok(None),
     }
 }
 
@@ -216,7 +217,7 @@ fn oracle_size_bytes(ty: &DataType) -> Result<Option<usize>, String> {
         DataType::Vec4U32 => Ok(Some(16)),
         DataType::Handle(_) => Ok(Some(4)),
         DataType::Bytes => Ok(Some(1)),
-        DataType::Array { element_size } => Ok(Some(*element_size)),
+        DataType::Array { element_size } => Ok(Some(*element_size as usize)),
         DataType::Vec { element, count } => {
             let Some(bytes) = oracle_size_bytes(element)? else {
                 return Ok(None);
@@ -235,6 +236,5 @@ fn oracle_size_bytes(ty: &DataType) -> Result<Option<usize>, String> {
         DataType::DeviceMesh { .. } => Ok(Some(4)),
         DataType::Quantized { storage, .. } => oracle_size_bytes(storage),
         DataType::Opaque(_) => Ok(None),
-        _ => Ok(None),
     }
 }

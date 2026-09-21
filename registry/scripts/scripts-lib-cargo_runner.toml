@@ -1,0 +1,3 @@
+path = "scripts/lib/cargo_runner.sh"
+state = "retired"
+reason = "xtask::cargo_runner::runner resolves which cargo the tooling starts, and every script runs the tracked ./cargo_full wrapper directly"

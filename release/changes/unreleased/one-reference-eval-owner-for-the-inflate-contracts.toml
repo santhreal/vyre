@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The stored-block inflate contracts call the reference interpreter through the one helper that owns that call instead of building Value vectors and unwrapping to_bytes at four separate sites. The module-local run helper that packed a fixture, evaluated it, and decoded the output is gone."

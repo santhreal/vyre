@@ -5,7 +5,6 @@
 //! `Program::wrapped`, statement execution, typed stores, and output readback.
 
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
 
 fn output_program(element: DataType, count: u32, body: Vec<Node>) -> Program {
@@ -21,7 +20,9 @@ fn run_output_bytes(program: &Program) -> Vec<u8> {
 }
 
 fn run_output_bytes_with_inputs(program: &Program, inputs: &[Value]) -> Vec<u8> {
-    let outputs = reference_eval(program, inputs).expect("Fix: oracle edge program must execute");
+    let outputs = vyre_reference::ReferenceRequest::standard(program, inputs)
+        .outputs()
+        .expect("Fix: oracle edge program must execute");
     assert_eq!(
         outputs.len(),
         1,
@@ -31,7 +32,8 @@ fn run_output_bytes_with_inputs(program: &Program, inputs: &[Value]) -> Vec<u8> 
 }
 
 fn run_program_error(program: &Program) -> String {
-    reference_eval(program, &[])
+    vyre_reference::ReferenceRequest::standard(program, &[])
+        .outputs()
         .expect_err("Fix: oracle edge fixture must fail")
         .to_string()
 }
@@ -150,6 +152,9 @@ fn f32_classification_ops_survive_bool_output_readback() {
 
 #[test]
 fn f32_comparison_ops_preserve_unordered_nan_and_signed_zero_semantics() {
+    // Stated here rather than called from `vyre_foundation::fp_parity`: this
+    // test judges the canonicalization the oracle applies, and a judge that
+    // calls the thing it judges agrees with a wrong rule.
     fn canonical_compare_input(value: f32) -> f32 {
         if value.is_nan() {
             f32::from_bits(0x7fc0_0000)

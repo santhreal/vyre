@@ -5,6 +5,8 @@ publish = false
 edition = "2021"
 repository = "https://github.com/santhreal/vyre"
 
+[workspace]
+
 [package.metadata]
 cargo-fuzz = true
 
@@ -20,5 +22,3 @@ name = "dispatch"
 path = "fuzz_targets/dispatch.rs"
 test = false
 doc = false
-
-[workspace]

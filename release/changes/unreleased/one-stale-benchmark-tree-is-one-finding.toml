@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The vyre-release-gate now collapses every stale-source benchmark verdict into one finding that states how many verdicts over how many artifacts stand behind it and names the command that re-measures each backend, with the verdicts kept as notes, because one commit invalidates every recorded benchmark at once and each invalidated artifact then failed several checks."

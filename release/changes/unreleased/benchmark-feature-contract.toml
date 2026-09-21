@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Removed the unreachable `vyre-bench` dataflow baseline module whose undeclared feature could never be enabled and whose engine dependency does not exist in this workspace. Benchmark feature guards now have a manifest agreement gate, so a hidden undeclared case cannot recur."

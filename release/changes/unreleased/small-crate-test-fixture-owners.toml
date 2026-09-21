@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The three `vyre-debug` descriptor and WGSL suites share one program fixture in `vyre-debug/tests/support/mod.rs`. The descriptor a dump renders, the descriptor a diff compares and the WGSL a backend emits are only comparable while their fixtures agree, and the fixture was previously copied byte for byte into each target. `vyre-macros` pass metadata is a table in `vyre-macros/src/pass.rs` rather than three parallel token functions, and the macro test suites take their pass bodies from `vyre-macros/tests/support/mod.rs`."

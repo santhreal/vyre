@@ -1,0 +1,2 @@
+category = "Added"
+text = "The foundation layer now provides a compositional schedule calculus with dependency preservation certificates and cost modeling alongside a proof-producing multi-level optimization framework with typed hardware rules, Pareto extraction, and replayable step proofs."

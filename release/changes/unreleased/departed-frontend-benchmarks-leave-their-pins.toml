@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The two benchmark pins that named the three `frontend.rust.*` cases record their departure. Those cases left with the Rust front end, so the registry stopped publishing them and both pins had been red since; the thesis-workload list now names the C parsing workloads that remain, and the release suite detects parsing evidence from a workload's own `parser`/`ast` tag rather than from an id prefix that no longer matches any case. The enumeration pin reports which ids appeared or vanished instead of printing two truncated lists."

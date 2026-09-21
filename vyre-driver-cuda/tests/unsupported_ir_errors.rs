@@ -1,5 +1,7 @@
 //! Integration test for the CUDA backend.
 
+#![cfg(feature = "device-tests")]
+
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_cuda::{codegen::program_to_ptx, CudaBackend, CudaBackendRegistration};
 use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};

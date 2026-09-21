@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The wrapper rule reads an instruction, not any sentence containing the word cargo. A comment is a finding when a run verb comes before the command and the command is quoted as code, because prose says a full cargo build while an instruction quotes what to type. Sentences describing what a build sees were previously findings whose only repair was to describe the build less precisely."

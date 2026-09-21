@@ -39,7 +39,8 @@ fn tail_duplication_preserves_arm_local_scope() {
 
     // The original program is well-scoped: `let y = t + 1` runs inside the
     // arm where `t` is bound. It must run cleanly.
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original program is well-scoped and must run");
 
     let result = TailDuplicationPass::transform(program);
@@ -49,10 +50,12 @@ fn tail_duplication_preserves_arm_local_scope() {
     // where `t` is out of scope, so reference_eval errors on the unbound
     // read and this `.expect` panics. Post-fix the pass declines (the tail
     // reads an arm-local binding), so the program is unchanged and runs.
-    let transformed = vyre_reference::reference_eval(&result.program, &inputs).expect(
-        "tail_duplication must not sink a tail that reads an arm-local binding \
+    let transformed = vyre_reference::ReferenceRequest::standard(&result.program, &inputs)
+        .outputs()
+        .expect(
+            "tail_duplication must not sink a tail that reads an arm-local binding \
          out of its scope (transformed program reads unbound `t`)",
-    );
+        );
 
     assert_eq!(
         transformed, original,

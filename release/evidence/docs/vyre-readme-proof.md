@@ -14,6 +14,6 @@ Release contract:
 
 - `README.md` must describe the current CUDA-first/WGPU-fallback release path.
 - `README.md` must reference concrete release evidence artifacts.
-- `python3 scripts/docs_manifest.py --check` must verify lifecycle, navigation, and generated provenance.
+- `xtask docs-check` must verify lifecycle, navigation, generated provenance, and that every published link resolves.
 - `README.md` must avoid unsupported claims that are not backed by benchmark, conformance, or parser evidence.
 - `vyre-readme-contracts.json` must prove release-specific tokens for `0.6.1`, CUDA, WGPU, GPU requirements, bytecode conditions, `vyre::Program`, concrete evidence paths, and at least one example block.

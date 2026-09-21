@@ -1,0 +1,2 @@
+category = "Added"
+text = "Add an independent interactive graphical consumer and generic compositions in vyre-libs for path and text rasterization, image conversions, resampling, clipping, blend modes, culling, layout scans, and retained dirty-region patching."

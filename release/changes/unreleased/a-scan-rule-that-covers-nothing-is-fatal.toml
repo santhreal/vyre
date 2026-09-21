@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A scanning rule whose skip predicate excludes every file under its roots now fails with the scope and the number of files the skip removed. A missing root was already fatal for the same reason: a rule that reads no file reports success forever. The lego audit also holds its shared-plumbing directory rows and its cross-dialect rule to the same standard, and the cross-dialect rule reports a violation instead of a note."

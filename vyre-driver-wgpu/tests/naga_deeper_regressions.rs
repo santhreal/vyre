@@ -1,12 +1,14 @@
-//! CRITIQUE_NAGA_DEEPER_2026-04-23 regression pins.
+//! Naga backend regression pins.
 //!
 //! These tests lock the four fixes that closed the silent-correctness
 //! hazards in the Naga emitter. Every test would have passed on the
 //! broken code by producing the WRONG output silently  -  so each one
 //! must assert a specific error shape, not a general success.
 
+#![cfg(feature = "device-tests")]
+
 use vyre::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::memory_model::MemoryOrdering;
+use vyre_foundation::ir::MemoryOrdering;
 
 use vyre_emit_naga::program as naga_emit;
 

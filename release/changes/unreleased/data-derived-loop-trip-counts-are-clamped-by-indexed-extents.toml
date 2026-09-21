@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Data-derived loop bounds across vyre-libs compositions are clamped by the extents of the indexed buffers so out-of-contract trip counts terminate in bounded time while preserving in-contract outputs."

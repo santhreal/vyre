@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-driver-spirv` uses the neutral instance-rejection record instead of a local copy of five entries. Three of its overrides restated the neutral requirement without naming a corrective action, one restated the neutral text, and one is now the neutral text. The crate carries no rejection wording of its own for the shared materializer contract, so the words a caller reads do not depend on which backend rejected the call."

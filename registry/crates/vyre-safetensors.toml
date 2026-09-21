@@ -1,0 +1,5 @@
+name = "vyre-safetensors"
+concern = "Validate safetensors metadata, shard indexes, compiler requirements, trusted shard digests, and immutable checkpoint identities without owning runtime residency."
+pages = { spec = "vyre-safetensors/SPEC.md", readme = "vyre-safetensors/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = []

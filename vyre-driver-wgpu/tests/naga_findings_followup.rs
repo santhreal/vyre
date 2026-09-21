@@ -1,11 +1,16 @@
 //! Regression tests for the post-audit Naga lowering follow-up.
 
-mod common;
+#![cfg(feature = "device-tests")]
 
-use common::emit_validated_wgsl as emit_wgsl;
+use crate::harness;
+
+use harness::emit_validated_wgsl as emit_wgsl;
 
 use vyre_emit_naga::program::emit_module;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_test_support::strict_float_programs::{
+    constant_f32_fma_program, integer_operand_fma_program,
+};
 
 const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 
@@ -87,18 +92,7 @@ fn buf_len_on_workgroup_buffer_lowers_to_static_count() {
 
 #[test]
 fn fma_rejects_non_f32_operands_with_actionable_message() {
-    let program = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32)],
-        [1, 1, 1],
-        vec![Node::let_bind(
-            "bad_fma",
-            Expr::Fma {
-                a: Box::new(Expr::u32(1)),
-                b: Box::new(Expr::u32(2)),
-                c: Box::new(Expr::u32(3)),
-            },
-        )],
-    );
+    let program = integer_operand_fma_program();
 
     let err = emit_module(&program, TEST_WORKGROUP_SIZE)
         .expect_err("Fix: Fma with integer operands must reject before emitting invalid Naga.");
@@ -111,19 +105,7 @@ fn fma_rejects_non_f32_operands_with_actionable_message() {
 
 #[test]
 fn f32_fma_lowers_to_naga_math_fma() {
-    let program = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::F32)],
-        [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::Fma {
-                a: Box::new(Expr::LitF32(2.0)),
-                b: Box::new(Expr::LitF32(3.0)),
-                c: Box::new(Expr::LitF32(4.0)),
-            },
-        )],
-    );
+    let program = constant_f32_fma_program();
 
     let wgsl = emit_wgsl(&program);
     assert!(

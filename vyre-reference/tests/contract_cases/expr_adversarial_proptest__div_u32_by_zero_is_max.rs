@@ -40,7 +40,7 @@ proptest! {
             left: Box::new(Expr::i32(a)),
             right: Box::new(Expr::i32(b)),
         };
-        let result = eval_expr::eval(&expr, &mut zero_invocation(&program), &mut Memory::empty(), &program);
+        let result = reference_eval_expr(&program, &mut ReferenceMemory::empty(), InvocationIds::ZERO, &expr);
         if b == 0 || (a == i32::MIN && b == -1) {
             prop_assert!(result.is_err(), "i32 division by zero or overflow must error, got: {result:?}");
         } else {
@@ -56,7 +56,7 @@ proptest! {
             left: Box::new(Expr::i32(a)),
             right: Box::new(Expr::i32(b)),
         };
-        let result = eval_expr::eval(&expr, &mut zero_invocation(&program), &mut Memory::empty(), &program);
+        let result = reference_eval_expr(&program, &mut ReferenceMemory::empty(), InvocationIds::ZERO, &expr);
         if b == 0 || (a == i32::MIN && b == -1) {
             prop_assert!(result.is_err(), "i32 remainder by zero or overflow must error, got: {result:?}");
         } else {
@@ -121,18 +121,5 @@ proptest! {
 
 #[test]
 fn div_i32_by_zero_errors() {
-    let program = empty_program();
-    let expr = Expr::BinOp {
-        op: BinOp::Div,
-        left: Box::new(Expr::i32(42)),
-        right: Box::new(Expr::i32(0)),
-    };
-    let result = eval_expr::eval(
-        &expr,
-        &mut zero_invocation(&program),
-        &mut Memory::empty(),
-        &program,
-    );
-    assert!(result.is_err(), "i32 division by zero must error");
+    assert_binop_i32_err(BinOp::Div, 42, 0, "i32 division by zero must error");
 }
-

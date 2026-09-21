@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The conformance worker bounds the request it reads from stdin, digests its own binary in fixed-size chunks, and reads a bounded prefix of the process memory record; an AOT bundle bounds both the compressed and the decompressed weight payload and decompresses through a streaming sink, so a hostile or truncated input cannot size an allocation."

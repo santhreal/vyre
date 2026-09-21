@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Host validation normalizes Windows paths, resolves baseline fixtures from the active checkout, and excludes Linux-only worker constants from other platform builds."

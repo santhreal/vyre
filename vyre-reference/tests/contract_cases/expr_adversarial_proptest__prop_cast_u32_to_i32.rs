@@ -91,18 +91,6 @@ proptest! {
 // Atomic – all ops on a ReadWrite buffer, monotonic increment for Add
 // ---------------------------------------------------------------------------
 
-fn eval_atomic(op: AtomicOp, buffer: &str, index: u32, expected: Option<u32>, value: u32) -> Value {
-    let expr = Expr::Atomic {
-        op,
-        buffer: buffer.into(),
-        index: Box::new(Expr::u32(index)),
-        expected: expected.map(|v| Box::new(Expr::u32(v))),
-        value: Box::new(Expr::u32(value)),
-        ordering: MemoryOrdering::SeqCst,
-    };
-    eval_expr_value(&expr)
-}
-
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(256))]
 
@@ -113,28 +101,17 @@ proptest! {
             [1, 1, 1],
             Vec::new(),
         );
-        let mut memory = Memory::empty()
+        let mut memory = ReferenceMemory::empty()
             .with_storage("counter", Buffer::new(vec![0; 4], DataType::U32));
-        let mut invocation = zero_invocation(&program);
 
         let mut running = 0u32;
         for v in &values {
-            let old = eval_expr::eval(
-                &Expr::atomic_add("counter", Expr::u32(0), Expr::u32(*v)),
-                &mut invocation,
-                &mut memory,
-                &program,
-            ).unwrap();
+            let old = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_add("counter", Expr::u32(0), Expr::u32(*v))).unwrap();
             prop_assert_eq!(old, Value::U32(running));
             running = running.wrapping_add(*v);
         }
         // Final buffer value must equal the accumulated sum.
-        let final_val = eval_expr::eval(
-            &Expr::load("counter", Expr::u32(0)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let final_val = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("counter", Expr::u32(0))).unwrap();
         prop_assert_eq!(final_val, Value::U32(running));
     }
 
@@ -145,23 +122,12 @@ proptest! {
             [1, 1, 1],
             Vec::new(),
         );
-        let mut memory = Memory::empty()
+        let mut memory = ReferenceMemory::empty()
             .with_storage("buf", Buffer::new(old.to_le_bytes().to_vec(), DataType::U32));
-        let mut invocation = zero_invocation(&program);
 
-        let result = eval_expr::eval(
-            &Expr::atomic_or("buf", Expr::u32(0), Expr::u32(value)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let result = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_or("buf", Expr::u32(0), Expr::u32(value))).unwrap();
         prop_assert_eq!(result, Value::U32(old));
-        let loaded = eval_expr::eval(
-            &Expr::load("buf", Expr::u32(0)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let loaded = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("buf", Expr::u32(0))).unwrap();
         prop_assert_eq!(loaded, Value::U32(old | value));
     }
 
@@ -172,23 +138,12 @@ proptest! {
             [1, 1, 1],
             Vec::new(),
         );
-        let mut memory = Memory::empty()
+        let mut memory = ReferenceMemory::empty()
             .with_storage("buf", Buffer::new(old.to_le_bytes().to_vec(), DataType::U32));
-        let mut invocation = zero_invocation(&program);
 
-        let result = eval_expr::eval(
-            &Expr::atomic_and("buf", Expr::u32(0), Expr::u32(value)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let result = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_and("buf", Expr::u32(0), Expr::u32(value))).unwrap();
         prop_assert_eq!(result, Value::U32(old));
-        let loaded = eval_expr::eval(
-            &Expr::load("buf", Expr::u32(0)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let loaded = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("buf", Expr::u32(0))).unwrap();
         prop_assert_eq!(loaded, Value::U32(old & value));
     }
 
@@ -199,23 +154,12 @@ proptest! {
             [1, 1, 1],
             Vec::new(),
         );
-        let mut memory = Memory::empty()
+        let mut memory = ReferenceMemory::empty()
             .with_storage("buf", Buffer::new(old.to_le_bytes().to_vec(), DataType::U32));
-        let mut invocation = zero_invocation(&program);
 
-        let result = eval_expr::eval(
-            &Expr::atomic_xor("buf", Expr::u32(0), Expr::u32(value)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let result = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_xor("buf", Expr::u32(0), Expr::u32(value))).unwrap();
         prop_assert_eq!(result, Value::U32(old));
-        let loaded = eval_expr::eval(
-            &Expr::load("buf", Expr::u32(0)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let loaded = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("buf", Expr::u32(0))).unwrap();
         prop_assert_eq!(loaded, Value::U32(old ^ value));
     }
 
@@ -226,23 +170,12 @@ proptest! {
             [1, 1, 1],
             Vec::new(),
         );
-        let mut memory = Memory::empty()
+        let mut memory = ReferenceMemory::empty()
             .with_storage("buf", Buffer::new(old.to_le_bytes().to_vec(), DataType::U32));
-        let mut invocation = zero_invocation(&program);
 
-        let result = eval_expr::eval(
-            &Expr::atomic_min("buf", Expr::u32(0), Expr::u32(value)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let result = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_min("buf", Expr::u32(0), Expr::u32(value))).unwrap();
         prop_assert_eq!(result, Value::U32(old));
-        let loaded = eval_expr::eval(
-            &Expr::load("buf", Expr::u32(0)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let loaded = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("buf", Expr::u32(0))).unwrap();
         prop_assert_eq!(loaded, Value::U32(old.min(value)));
     }
 
@@ -253,23 +186,12 @@ proptest! {
             [1, 1, 1],
             Vec::new(),
         );
-        let mut memory = Memory::empty()
+        let mut memory = ReferenceMemory::empty()
             .with_storage("buf", Buffer::new(old.to_le_bytes().to_vec(), DataType::U32));
-        let mut invocation = zero_invocation(&program);
 
-        let result = eval_expr::eval(
-            &Expr::atomic_max("buf", Expr::u32(0), Expr::u32(value)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let result = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_max("buf", Expr::u32(0), Expr::u32(value))).unwrap();
         prop_assert_eq!(result, Value::U32(old));
-        let loaded = eval_expr::eval(
-            &Expr::load("buf", Expr::u32(0)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let loaded = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("buf", Expr::u32(0))).unwrap();
         prop_assert_eq!(loaded, Value::U32(old.max(value)));
     }
 
@@ -280,23 +202,12 @@ proptest! {
             [1, 1, 1],
             Vec::new(),
         );
-        let mut memory = Memory::empty()
+        let mut memory = ReferenceMemory::empty()
             .with_storage("buf", Buffer::new(old.to_le_bytes().to_vec(), DataType::U32));
-        let mut invocation = zero_invocation(&program);
 
-        let result = eval_expr::eval(
-            &Expr::atomic_exchange("buf", Expr::u32(0), Expr::u32(value)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let result = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_exchange("buf", Expr::u32(0), Expr::u32(value))).unwrap();
         prop_assert_eq!(result, Value::U32(old));
-        let loaded = eval_expr::eval(
-            &Expr::load("buf", Expr::u32(0)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let loaded = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("buf", Expr::u32(0))).unwrap();
         prop_assert_eq!(loaded, Value::U32(value));
     }
 
@@ -307,23 +218,12 @@ proptest! {
             [1, 1, 1],
             Vec::new(),
         );
-        let mut memory = Memory::empty()
+        let mut memory = ReferenceMemory::empty()
             .with_storage("buf", Buffer::new(old.to_le_bytes().to_vec(), DataType::U32));
-        let mut invocation = zero_invocation(&program);
 
-        let result = eval_expr::eval(
-            &Expr::atomic_compare_exchange("buf", Expr::u32(0), Expr::u32(expected), Expr::u32(value)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let result = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::atomic_compare_exchange("buf", Expr::u32(0), Expr::u32(expected), Expr::u32(value))).unwrap();
         prop_assert_eq!(result, Value::U32(old));
-        let loaded = eval_expr::eval(
-            &Expr::load("buf", Expr::u32(0)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let loaded = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("buf", Expr::u32(0))).unwrap();
         let new_val = if old == expected { value } else { old };
         prop_assert_eq!(loaded, Value::U32(new_val));
     }
@@ -336,6 +236,9 @@ proptest! {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(256))]
 
+    /// An index inside the buffer loads its word; an index past the buffer is
+    /// refused. The out-of-range half used to expect `U32(0)`, the value the
+    /// interpreter absorbed, which no device produces.
     #[test]
     fn prop_load_u32(idx in any::<u32>()) {
         let data: Vec<u8> = vec![1, 2, 3, 4, 5, 6, 7, 8];
@@ -344,29 +247,29 @@ proptest! {
             [1, 1, 1],
             Vec::new(),
         );
-        let mut memory = Memory::empty()
+        let mut memory = ReferenceMemory::empty()
             .with_storage("buf", Buffer::new(data.clone(), DataType::U32));
-        let mut invocation = zero_invocation(&program);
 
-        let result = eval_expr::eval(
-            &Expr::load("buf", Expr::u32(idx)),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let result = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::load("buf", Expr::u32(idx)));
 
-        let expected = if (idx as usize) < (data.len() / 4) {
+        if (idx as usize) < (data.len() / 4) {
             let offset = idx as usize * 4;
-            Value::U32(u32::from_le_bytes([
-                data[offset],
-                data[offset + 1],
-                data[offset + 2],
-                data[offset + 3],
-            ]))
+            prop_assert_eq!(
+                result.expect("Fix: an in-bounds load must succeed."),
+                Value::U32(u32::from_le_bytes([
+                    data[offset],
+                    data[offset + 1],
+                    data[offset + 2],
+                    data[offset + 3],
+                ]))
+            );
         } else {
-            Value::U32(0)
-        };
-        prop_assert_eq!(result, expected);
+            let error = result.expect_err("Fix: a load past the buffer must be refused.");
+            prop_assert_eq!(
+                error.error_class(),
+                vyre_reference::ReferenceErrorClass::OutOfBoundsAccess
+            );
+        }
     }
 
     #[test]
@@ -376,16 +279,10 @@ proptest! {
             [1, 1, 1],
             Vec::new(),
         );
-        let mut memory = Memory::empty()
+        let mut memory = ReferenceMemory::empty()
             .with_storage("buf", Buffer::new(data.clone(), DataType::U32));
-        let mut invocation = zero_invocation(&program);
 
-        let result = eval_expr::eval(
-            &Expr::buf_len("buf"),
-            &mut invocation,
-            &mut memory,
-            &program,
-        ).unwrap();
+        let result = reference_eval_expr(&program, &mut memory, InvocationIds::ZERO, &Expr::buf_len("buf")).unwrap();
         let elements = (data.len() / 4) as u32;
         prop_assert_eq!(result, Value::U32(elements));
     }
@@ -394,4 +291,3 @@ proptest! {
 // ---------------------------------------------------------------------------
 // Store – exercised through top-level `run`
 // ---------------------------------------------------------------------------
-

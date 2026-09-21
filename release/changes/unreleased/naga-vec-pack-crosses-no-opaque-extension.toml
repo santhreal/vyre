@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The naga vector-packing analysis now states that a fused load or store crosses neither `KernelOpKind::OpaqueExpr` nor `KernelOpKind::OpaqueNode`. The reorder-safety match had no arm for either, so the crate stopped compiling when the extension escape hatches were added; an opaque payload carries a memory effect the analysis cannot read, so nothing is reordered across it."

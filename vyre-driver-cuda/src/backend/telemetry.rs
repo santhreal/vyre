@@ -2,10 +2,10 @@
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use vyre_driver::accounting::{atomic_max_u64, pinning_atomic_increment_u64};
+use vyre_driver::accounting::{
+    atomic_max_u64, checked_atomic_add_u64 as checked_add_u64, pinning_atomic_increment_u64,
+};
 use vyre_driver::LaunchPlan;
-
-use crate::backend::accounting::checked_add_u64;
 
 /// Point-in-time CUDA backend telemetry.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -442,8 +442,51 @@ impl CudaTelemetry {
         );
     }
 
-    pub(crate) fn record_cuda_graph_launch(&self) {
+    /// Record one CUDA graph replay and the kernel launches it executes.
+    ///
+    /// A graph replay executes the kernel nodes captured into the graph without
+    /// issuing `cuLaunchKernel` again, so counting only the replay leaves
+    /// `kernel_launches` at zero for a graph-dispatched program. The captured
+    /// count is a property of the fixed-shape graph, so every replay executes
+    /// exactly that many kernels.
+    ///
+    /// Capture fixes the launch geometry for the same reason: every replay
+    /// schedules `scheduled_thread_slots` thread slots and covers
+    /// `launched_elements` logical elements. Recording the launch without them
+    /// reported a graph-dispatched pipeline at zero occupancy over a device
+    /// that was fully scheduled, and `logical_thread_utilization_bps` is what
+    /// the megakernel scheduler reads as frontier density. A geometry too
+    /// large to count carries the same overflow accounting a direct launch
+    /// uses.
+    pub(crate) fn record_cuda_graph_launch(
+        &self,
+        kernel_launches: u64,
+        scheduled_thread_slots: Option<u64>,
+        launched_elements: u64,
+    ) {
         self.add("cuda_graph_launches", &self.cuda_graph_launches, 1);
+        self.add("kernel_launches", &self.kernel_launches, kernel_launches);
+        match scheduled_thread_slots {
+            Some(slots) => {
+                self.add(
+                    "scheduled_thread_slots",
+                    &self.scheduled_thread_slots,
+                    slots,
+                );
+            }
+            None => {
+                self.add(
+                    "scheduled_thread_slot_overflows",
+                    &self.scheduled_thread_slot_overflows,
+                    1,
+                );
+            }
+        }
+        self.add(
+            "launched_elements",
+            &self.launched_elements,
+            launched_elements,
+        );
     }
 
     pub(crate) fn record_cuda_graph_materialized_cache_hit(&self) {
@@ -508,7 +551,7 @@ impl CudaTelemetry {
                     &self.timed_device_ns_total,
                     device_ns,
                 );
-                self.record_max("timed_device_ns_max", &self.timed_device_ns_max, device_ns);
+                self.record_max(&self.timed_device_ns_max, device_ns);
             }
             None => {
                 self.add(
@@ -547,8 +590,9 @@ impl CudaTelemetry {
         true
     }
 
-    fn record_max(&self, name: &'static str, counter: &AtomicU64, value: u64) {
-        let _ = name;
+    /// A max cannot overflow, so this takes no counter name: the name exists in
+    /// `add` for the overflow message.
+    fn record_max(&self, counter: &AtomicU64, value: u64) {
         atomic_max_u64(counter, value, Ordering::Relaxed);
     }
 
@@ -566,7 +610,7 @@ impl CudaTelemetry {
     }
 }
 
-fn scheduled_thread_slots(launch: &LaunchPlan) -> Option<u64> {
+pub(super) fn scheduled_thread_slots(launch: &LaunchPlan) -> Option<u64> {
     let exact = launch
         .grid
         .iter()
@@ -591,6 +635,7 @@ fn elements_per_slot_bps(elements: u64, scheduled: u64) -> u64 {
     )
 }
 
+// Inline: covers `CudaTelemetry`, `snapshot`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{CudaTelemetry, CudaTelemetrySnapshot};
@@ -691,7 +736,7 @@ mod tests {
         telemetry.record_transient_allocation_bytes(32);
         telemetry.record_resident_allocation_bytes(64);
         telemetry.record_param_upload_bytes(4);
-        telemetry.record_cuda_graph_launch();
+        telemetry.record_cuda_graph_launch(3, Some(384), 192);
         telemetry.record_cuda_graph_materialized_cache_hit();
         telemetry.record_cuda_graph_batched_replay(4);
         telemetry.record_sync_point();
@@ -707,6 +752,7 @@ mod tests {
         assert_eq!(snapshot.resident_allocation_bytes_requested, 64);
         assert_eq!(snapshot.param_upload_bytes, 4);
         assert_eq!(snapshot.cuda_graph_launches, 1);
+        assert_eq!(snapshot.kernel_launches, 3);
         assert_eq!(snapshot.cuda_graph_materialized_cache_hits, 1);
         assert_eq!(snapshot.cuda_graph_batched_replay_chunks, 1);
         assert_eq!(snapshot.cuda_graph_batched_replay_lanes, 4);
@@ -721,12 +767,14 @@ mod tests {
         assert_eq!(snapshot.timed_device_ns_max, 40);
         assert_eq!(snapshot.timed_enqueue_ns_total, 25);
         assert_eq!(snapshot.timed_wait_ns_total, 35);
-        assert_eq!(snapshot.wasted_thread_slots, 0);
+        assert_eq!(snapshot.scheduled_thread_slots, 384);
+        assert_eq!(snapshot.launched_elements, 192);
+        assert_eq!(snapshot.wasted_thread_slots, 192);
         assert_eq!(snapshot.scheduled_thread_slot_overflows, 0);
         assert_eq!(snapshot.telemetry_counter_overflows, 0);
-        assert_eq!(snapshot.logical_thread_utilization_bps, 0);
-        assert_eq!(snapshot.logical_thread_waste_bps, 0);
-        assert_eq!(snapshot.logical_elements_per_thread_slot_bps, 0);
+        assert_eq!(snapshot.logical_thread_utilization_bps, 5_000);
+        assert_eq!(snapshot.logical_thread_waste_bps, 5_000);
+        assert_eq!(snapshot.logical_elements_per_thread_slot_bps, 5_000);
         let prometheus = snapshot.to_prometheus_text();
         assert!(prometheus.contains("vyre_cuda_graph_materialized_cache_hits_total 1\n"));
         assert!(prometheus.contains("vyre_cuda_graph_batched_replay_chunks_total 1\n"));
@@ -739,6 +787,22 @@ mod tests {
 
         telemetry.reset();
         assert_eq!(telemetry.snapshot(), Default::default());
+    }
+
+    /// WHY: a graph replay reports the geometry capture fixed, and a geometry
+    /// too large to count as slots takes the same overflow arm a direct launch
+    /// takes instead of contributing a wrong slot total.
+    #[test]
+    fn graph_replay_snapshot_reports_uncountable_geometry_as_an_overflow() {
+        let telemetry = CudaTelemetry::default();
+        telemetry.record_cuda_graph_launch(1, None, 64);
+        let snapshot = telemetry.snapshot();
+        assert_eq!(snapshot.cuda_graph_launches, 1);
+        assert_eq!(snapshot.kernel_launches, 1);
+        assert_eq!(snapshot.scheduled_thread_slots, 0);
+        assert_eq!(snapshot.scheduled_thread_slot_overflows, 1);
+        assert_eq!(snapshot.launched_elements, 64);
+        assert_eq!(snapshot.logical_thread_utilization_bps, 0);
     }
 
     #[test]

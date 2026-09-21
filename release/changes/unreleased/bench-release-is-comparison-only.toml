@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The bench-release gate now rejects the unsupported --write flag and describes its comparison-only contract; release-benchmarks remains the sole owner of measured artifacts."

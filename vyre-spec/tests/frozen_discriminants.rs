@@ -4,14 +4,14 @@
 //! must reject invalid discriminants, preserve high-bit invariants for
 //! extension ids, and return conservative sentinels for unbounded types.
 
-use vyre_spec::extension::{
-    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
-    ExtensionUnOpId,
-};
 use vyre_spec::{
     BufferAccess, CapabilityId, Category, CostHint, DataType, DeterminismClass, EngineInvariant,
-    FloatType, InvariantCategory, OpSignature, OperationContract, PgNodeKind, SideEffectClass,
-    Verification,
+    FloatType, InvariantCategory, OpSignature, OperationContract, PgNodeKind, ProofMethod,
+    SideEffectClass,
+};
+use vyre_spec::{
+    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
+    ExtensionUnOpId,
 };
 
 // ------------------------------------------------------------------
@@ -232,27 +232,44 @@ fn data_type_is_float_family_propagates_through_vec() {
 }
 
 // ------------------------------------------------------------------
-// Verification  -  witness_count contract
+// ProofMethod  -  witness_count contract
 // ------------------------------------------------------------------
 
 #[test]
-fn verification_witness_count_is_none_for_exhaustive_variants() {
-    assert!(Verification::ExhaustiveU8.witness_count().is_none());
-    assert!(Verification::ExhaustiveU16.witness_count().is_none());
-    assert!(Verification::ExhaustiveFloat {
-        typ: FloatType::F32,
+fn proof_method_witness_count_is_none_for_every_non_witnessed_method() {
+    for method in [
+        ProofMethod::ExhaustiveU8,
+        ProofMethod::ExhaustiveU16,
+        ProofMethod::ExhaustiveFloat {
+            typ: FloatType::F32,
+        },
+        ProofMethod::SmtQfBv {
+            logic: "QF_BV".to_owned(),
+        },
+        ProofMethod::DecisionProcedure {
+            name: "cooper".to_owned(),
+        },
+        ProofMethod::ReferenceOracleWitness {
+            witness: "add_commutes".to_owned(),
+        },
+        ProofMethod::None,
+    ] {
+        assert_eq!(
+            method.witness_count(),
+            None,
+            "{} is not witness-based and must report no count",
+            method.name()
+        );
     }
-    .witness_count()
-    .is_none());
 }
 
 #[test]
-fn verification_witness_count_matches_for_witnessed_u32() {
-    let v = Verification::WitnessedU32 {
+fn proof_method_witness_count_matches_for_witnessed_u32() {
+    let method = ProofMethod::WitnessedU32 {
         seed: 7,
         count: 1024,
     };
-    assert_eq!(v.witness_count(), Some(1024));
+    assert_eq!(method.witness_count(), Some(1024));
 }
 
 // ------------------------------------------------------------------

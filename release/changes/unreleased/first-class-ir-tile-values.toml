@@ -1,0 +1,2 @@
+category = "Added"
+text = "The IR now supports first-class Tile values with explicit element type, static extents, layout, and hardware residency, introducing dedicated TileLoad, TileStore, TileMatmul, TileReduce, TileElementwise, and TileDecl statement nodes, capability validation, reference interpreter execution, and VIR0 schema version 7 serialization."

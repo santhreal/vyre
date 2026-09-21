@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The alias dataflow barrier count reaches barriers under control flow. The count descended into `Region` only, so a barrier placed inside an `If` or a `Loop` was invisible and a read-after-write hazard separated by it was reported as unsynchronized. The count now walks every node in the program."

@@ -7,6 +7,7 @@
 //! or division by a power of two means.
 
 use crate::ir::BinOp;
+use crate::region_ssa::ScalarLiteral;
 
 /// Stable proof id for `x + 0 -> x`.
 pub const REWRITE_ID_IDENTITY_ELIM_ADD_ZERO: &str = "identity_elim_add_zero";
@@ -87,34 +88,62 @@ pub const fn arithmetic_rewrite_proof_contracts() -> &'static [ArithmeticRewrite
     ARITHMETIC_REWRITE_PROOF_CONTRACTS
 }
 
-/// Literal scalar value normalized across Program IR and lowered descriptor IR.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum ScalarLiteral {
-    /// Unsigned 32-bit integer.
-    U32(u32),
-    /// Signed 32-bit integer.
-    I32(i32),
-    /// 32-bit float.
-    F32(f32),
-    /// Boolean.
-    Bool(bool),
-}
-
+/// Algebraic facts about a scalar literal, over the crate's one literal value
+/// space in [`crate::region_ssa::ScalarLiteral`].
+///
+/// Every predicate answers for every width that literal space carries, and none
+/// has a catch-all arm, so a new width stops the build here instead of taking
+/// whichever answer a fallback happened to give.
 impl ScalarLiteral {
     /// Return true for numeric zero. Bool is deliberately excluded.
+    ///
+    /// Float zero is positive zero only. IEEE-754 addition and subtraction give
+    /// the two signed zeroes different identities, so `-0.0` is answered by
+    /// `is_float_negative_zero` instead.
     #[must_use]
     pub fn is_numeric_zero(self) -> bool {
-        self.is_numeric_value(0, 0, 0.0)
+        match self {
+            Self::U32(value) => value == 0,
+            Self::U64(value) => value == 0,
+            Self::I32(value) => value == 0,
+            Self::I64(value) => value == 0,
+            Self::F32(value) => value.to_bits() == 0.0f32.to_bits(),
+            Self::F64(value) => value.to_bits() == 0.0f64.to_bits(),
+            Self::Bool(_) => false,
+        }
     }
 
-    /// Return true for *integer* zero only (u32 0 or i32 0).
+    /// Return true for *integer* zero only, at any integer width.
     ///
     /// Float 0.0 is deliberately excluded because `NaN * 0.0 = NaN`
     /// and `Inf * 0.0 = NaN`; the `x * 0 → 0` absorber is only sound
     /// for integers.
     #[must_use]
     pub fn is_integer_zero(self) -> bool {
-        matches!(self, Self::U32(0) | Self::I32(0))
+        match self {
+            Self::U32(value) => value == 0,
+            Self::U64(value) => value == 0,
+            Self::I32(value) => value == 0,
+            Self::I64(value) => value == 0,
+            Self::F32(_) | Self::F64(_) | Self::Bool(_) => false,
+        }
+    }
+
+    // IEEE-754 addition and subtraction use opposite signed-zero identities.
+    fn is_float_negative_zero(self) -> bool {
+        match self {
+            Self::F32(value) => value.to_bits() == (-0.0f32).to_bits(),
+            Self::F64(value) => value.to_bits() == (-0.0f64).to_bits(),
+            Self::U32(_) | Self::U64(_) | Self::I32(_) | Self::I64(_) | Self::Bool(_) => false,
+        }
+    }
+
+    fn is_float_positive_zero(self) -> bool {
+        match self {
+            Self::F32(value) => value.to_bits() == 0.0f32.to_bits(),
+            Self::F64(value) => value.to_bits() == 0.0f64.to_bits(),
+            Self::U32(_) | Self::U64(_) | Self::I32(_) | Self::I64(_) | Self::Bool(_) => false,
+        }
     }
 
     /// Return true for a FINITE numeric literal: integers are always finite;
@@ -126,8 +155,9 @@ impl ScalarLiteral {
     #[must_use]
     pub fn is_finite_numeric(self) -> bool {
         match self {
-            Self::U32(_) | Self::I32(_) => true,
+            Self::U32(_) | Self::U64(_) | Self::I32(_) | Self::I64(_) => true,
             Self::F32(value) => value.is_finite(),
+            Self::F64(value) => value.is_finite(),
             Self::Bool(_) => false,
         }
     }
@@ -135,34 +165,47 @@ impl ScalarLiteral {
     /// Return true for numeric one. Bool is deliberately excluded.
     #[must_use]
     pub fn is_numeric_one(self) -> bool {
-        self.is_numeric_value(1, 1, 1.0)
-    }
-
-    fn is_numeric_value(self, unsigned: u32, signed: i32, float: f32) -> bool {
         match self {
-            Self::U32(value) => value == unsigned,
-            Self::I32(value) => value == signed,
-            Self::F32(value) => value.to_bits() == float.to_bits(),
+            Self::U32(value) => value == 1,
+            Self::U64(value) => value == 1,
+            Self::I32(value) => value == 1,
+            Self::I64(value) => value == 1,
+            Self::F32(value) => value.to_bits() == 1.0f32.to_bits(),
+            Self::F64(value) => value.to_bits() == 1.0f64.to_bits(),
             Self::Bool(_) => false,
         }
     }
 
-    /// Return true for integer all-ones bit patterns.
+    /// Return true for integer all-ones bit patterns, at any integer width.
     #[must_use]
     pub fn is_bit_all_ones(self) -> bool {
-        matches!(self, Self::U32(u32::MAX) | Self::I32(-1))
+        match self {
+            Self::U32(value) => value == u32::MAX,
+            Self::U64(value) => value == u64::MAX,
+            Self::I32(value) => value == -1,
+            Self::I64(value) => value == -1,
+            Self::F32(_) | Self::F64(_) | Self::Bool(_) => false,
+        }
     }
 
     /// Return true for bool true.
     #[must_use]
     pub fn is_true(self) -> bool {
-        matches!(self, Self::Bool(true))
+        match self {
+            Self::Bool(value) => value,
+            Self::U32(_) | Self::U64(_) | Self::I32(_) | Self::I64(_) => false,
+            Self::F32(_) | Self::F64(_) => false,
+        }
     }
 
     /// Return true for bool false.
     #[must_use]
     pub fn is_false(self) -> bool {
-        matches!(self, Self::Bool(false))
+        match self {
+            Self::Bool(value) => !value,
+            Self::U32(_) | Self::U64(_) | Self::I32(_) | Self::I64(_) => false,
+            Self::F32(_) | Self::F64(_) => false,
+        }
     }
 }
 
@@ -201,6 +244,11 @@ pub fn binop_identity_replacement(
 
     let lhs_is_zero = lhs_lit.is_some_and(ScalarLiteral::is_numeric_zero);
     let rhs_is_zero = rhs_lit.is_some_and(ScalarLiteral::is_numeric_zero);
+    let lhs_is_int_zero = lhs_lit.is_some_and(ScalarLiteral::is_integer_zero);
+    let rhs_is_int_zero = rhs_lit.is_some_and(ScalarLiteral::is_integer_zero);
+    let lhs_is_f32_neg_zero = lhs_lit.is_some_and(ScalarLiteral::is_float_negative_zero);
+    let rhs_is_f32_neg_zero = rhs_lit.is_some_and(ScalarLiteral::is_float_negative_zero);
+    let rhs_is_f32_pos_zero = rhs_lit.is_some_and(ScalarLiteral::is_float_positive_zero);
     let lhs_is_one = lhs_lit.is_some_and(ScalarLiteral::is_numeric_one);
     let rhs_is_one = rhs_lit.is_some_and(ScalarLiteral::is_numeric_one);
     let lhs_is_all_ones = lhs_lit.is_some_and(ScalarLiteral::is_bit_all_ones);
@@ -209,6 +257,23 @@ pub fn binop_identity_replacement(
     let rhs_is_true = rhs_lit.is_some_and(ScalarLiteral::is_true);
     let lhs_is_false = lhs_lit.is_some_and(ScalarLiteral::is_false);
     let rhs_is_false = rhs_lit.is_some_and(ScalarLiteral::is_false);
+
+    match op {
+        BinOp::Add => {
+            if rhs_is_int_zero || rhs_is_f32_neg_zero {
+                return Some(IdentityReplacement::Left);
+            }
+            if lhs_is_int_zero || lhs_is_f32_neg_zero {
+                return Some(IdentityReplacement::Right);
+            }
+        }
+        BinOp::Sub => {
+            if rhs_is_int_zero || rhs_is_f32_pos_zero {
+                return Some(IdentityReplacement::Left);
+            }
+        }
+        _ => {}
+    }
 
     match op {
         BinOp::And => {
@@ -260,9 +325,7 @@ pub fn binop_identity_replacement(
 
     let right_identity_when_zero = matches!(
         op,
-        BinOp::Add
-            | BinOp::Sub
-            | BinOp::WrappingAdd
+        BinOp::WrappingAdd
             | BinOp::WrappingSub
             | BinOp::SaturatingAdd
             | BinOp::SaturatingSub
@@ -280,7 +343,7 @@ pub fn binop_identity_replacement(
 
     let left_identity_when_zero = matches!(
         op,
-        BinOp::Add | BinOp::WrappingAdd | BinOp::SaturatingAdd | BinOp::BitOr | BinOp::BitXor
+        BinOp::WrappingAdd | BinOp::SaturatingAdd | BinOp::BitOr | BinOp::BitXor
     );
     let left_identity_when_one = matches!(op, BinOp::Mul | BinOp::SaturatingMul);
     if (left_identity_when_zero && lhs_is_zero) || (left_identity_when_one && lhs_is_one) {
@@ -290,8 +353,6 @@ pub fn binop_identity_replacement(
     // Mul/SaturatingMul absorber is restricted to *integer* zero because
     // float 0.0 × NaN = NaN, not 0.0  -  folding would change semantics.
     // BitAnd is fine with any zero (bitwise, type-safe).
-    let lhs_is_int_zero = lhs_lit.is_some_and(ScalarLiteral::is_integer_zero);
-    let rhs_is_int_zero = rhs_lit.is_some_and(ScalarLiteral::is_integer_zero);
     let absorbs_mul_to_zero = matches!(op, BinOp::Mul | BinOp::SaturatingMul);
     if absorbs_mul_to_zero {
         if rhs_is_int_zero {

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Artifact decode refuses a barrier record set that the recorded fusion stages and dependency edges contradict."

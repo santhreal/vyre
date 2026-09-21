@@ -1,0 +1,7 @@
+lane = "deny-deny"
+workflow = ".github/workflows/deny.yml"
+job = "deny"
+state = "live"
+required_status = "cargo-deny / deny"
+triggers = ["push", "pull_request", "schedule"]
+steps = []

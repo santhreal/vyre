@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The `full` feature of vyre-libs selects every domain the facade publishes, including analysis, device, encoding, graph-dispatch, reasoning, rule, scheduling, and solvers."

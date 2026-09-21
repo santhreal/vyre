@@ -1,4 +1,4 @@
-//! ROADMAP G1 / G5 foundation half  -  precision + transcendental
+//! precision + transcendental
 //! fast-path hints.
 //!
 //! Walks the entry tree and identifies expression contexts where
@@ -33,7 +33,8 @@
 //! budget. The hint records the candidate site + the polynomial
 //! the emitter should substitute.
 
-use crate::ir::{Expr, Node, Program, UnOp};
+use crate::ir::{Expr, Program, UnOp};
+use crate::visit::for_each_expr;
 use dashmap::DashMap;
 
 /// Per-site precision-hint entry. Recorded by the analysis and
@@ -125,55 +126,18 @@ impl PrecisionHints {
 
 /// Analyse the program and populate `hints` with G1/G5 candidates.
 /// Returns the number of hints recorded.
+///
+/// `analyse_node` used to enumerate `Node` here and ended in `_ => {}`, so an
+/// async copy's `offset` and `size` and a trap address were never analysed and a
+/// hint that belonged in one of those positions was simply never recorded. Node
+/// and operand descent is [`for_each_expr`]'s, the one walk that reaches every
+/// operand of every node.
 pub fn analyse_precision(program: &Program, hints: &PrecisionHints) -> usize {
     let mut count = 0usize;
-    for node in program.entry() {
-        analyse_node(node, hints, &mut count);
-    }
+    for_each_expr(program.entry(), |expr| {
+        analyse_expr(expr, hints, &mut count);
+    });
     count
-}
-
-fn analyse_node(node: &Node, hints: &PrecisionHints, count: &mut usize) {
-    match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => {
-            analyse_expr(value, hints, count);
-        }
-        Node::Store { index, value, .. } => {
-            analyse_expr(index, hints, count);
-            analyse_expr(value, hints, count);
-        }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            analyse_expr(cond, hints, count);
-            for n in then {
-                analyse_node(n, hints, count);
-            }
-            for n in otherwise {
-                analyse_node(n, hints, count);
-            }
-        }
-        Node::Loop { from, to, body, .. } => {
-            analyse_expr(from, hints, count);
-            analyse_expr(to, hints, count);
-            for n in body {
-                analyse_node(n, hints, count);
-            }
-        }
-        Node::Block(body) => {
-            for n in body {
-                analyse_node(n, hints, count);
-            }
-        }
-        Node::Region { body, .. } => {
-            for n in body.iter() {
-                analyse_node(n, hints, count);
-            }
-        }
-        _ => {}
-    }
 }
 
 fn analyse_expr(expr: &Expr, hints: &PrecisionHints, count: &mut usize) {
@@ -217,36 +181,10 @@ fn analyse_expr(expr: &Expr, hints: &PrecisionHints, count: &mut usize) {
             }
         }
     }
-    // Recurse into compound expressions.
-    match expr {
-        Expr::Load { index, .. } => analyse_expr(index, hints, count),
-        Expr::BinOp { left, right, .. } => {
-            analyse_expr(left, hints, count);
-            analyse_expr(right, hints, count);
-        }
-        Expr::UnOp { operand, .. } => analyse_expr(operand, hints, count),
-        Expr::Call { args, .. } => {
-            for arg in args {
-                analyse_expr(arg, hints, count);
-            }
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            analyse_expr(cond, hints, count);
-            analyse_expr(true_val, hints, count);
-            analyse_expr(false_val, hints, count);
-        }
-        Expr::Cast { value, .. } => analyse_expr(value, hints, count),
-        Expr::Fma { a, b, c } => {
-            analyse_expr(a, hints, count);
-            analyse_expr(b, hints, count);
-            analyse_expr(c, hints, count);
-        }
-        _ => {}
-    }
+    // Sub-expression descent belongs to the walk in `analyse_precision`, which
+    // offers every sub-expression separately. The enumeration that used to
+    // stand here ended in `_ => {}` and named neither `Expr::Atomic` nor the
+    // subgroup operands, so a hint inside one was never recorded.
 }
 
 fn literal_f32(expr: &Expr) -> Option<f32> {

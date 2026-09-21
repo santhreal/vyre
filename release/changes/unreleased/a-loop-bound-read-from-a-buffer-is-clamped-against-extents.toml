@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Loop trip counts read from producer buffers across CSR traversal, state machine scans, range ordering, graph passes, and reductions are clamped against the extents of the buffers their bodies index, so an out-of-contract count bounds its iterations in the reference interpreter and on devices."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The shader dump setting is `diag.dump_primary_text`, read from `VYRE_DUMP_PRIMARY_TEXT`. It dumps the primary text artifact of whichever backend is selected, and the previous spelling named one shader dialect."

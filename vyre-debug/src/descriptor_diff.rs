@@ -9,8 +9,8 @@ pub struct DescriptorDiff {
     /// Binding slots present only in the later descriptor.
     pub bindings_added: Vec<u32>,
     #[serde(
-        serialize_with = "crate::path_map_serde::serialize_i64",
-        deserialize_with = "crate::path_map_serde::deserialize_i64"
+        serialize_with = "crate::body_path_map::serialize",
+        deserialize_with = "crate::body_path_map::deserialize"
     )]
     /// Operation-count change for each child-body path.
     pub op_count_delta: BTreeMap<Vec<usize>, i64>,

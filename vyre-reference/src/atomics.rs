@@ -30,6 +30,8 @@ pub fn apply(
         AtomicOp::Exchange => Ok(atomic_exchange(old, value)),
         AtomicOp::CompareExchange => atomic_compare_exchange(old, expected, value),
         AtomicOp::LruUpdate => Ok(atomic_lru_update(old, value)),
+        // `AtomicOp` is `#[non_exhaustive]` in vyre-spec, so a match in this crate cannot be
+        // exhaustive; oracle_matches_are_exhaustive holds the named set to the declaration.
         _ => Err(ReferenceError::new(format!(
             "unsupported atomic op `{op:?}` reached the reference interpreter. Fix: define sequential semantics before constructing this AtomicOp."
         ))),

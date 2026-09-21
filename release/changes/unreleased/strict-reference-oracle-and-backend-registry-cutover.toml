@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Consolidated the reference interpreter onto strict budgeted ReferenceRequest execution with structured error handling, removed the CPU execution route from backend registration and dispatcher discovery, and migrated conformance evaluation to direct OracleSession."

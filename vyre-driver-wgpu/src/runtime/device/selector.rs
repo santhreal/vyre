@@ -1,6 +1,6 @@
-//! Adapter selection + enumeration (C5 refactor).
+//! Adapter selection and enumeration.
 //!
-//! The legacy [`super::device::cached_device`] singleton picks the
+//! The [`super::acquire::cached_device`] singleton picks the
 //! first adapter `wgpu::Instance::request_adapter` returns  -  fine for
 //! a single-GPU dev box, useless for multi-GPU servers that need to
 //! choose a specific device by vendor, index, or power preference.
@@ -28,10 +28,10 @@ use vyre_driver::BackendError;
 
 type Result<T, E = BackendError> = std::result::Result<T, E>;
 
-use crate::staging_reserve::reserve_backend_vec;
+use super::reserve_probe_vec;
 
 /// Stable adapter identity used for deterministic recovery.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct AdapterIdentity {
     name: String,
     vendor: u32,
@@ -135,8 +135,8 @@ pub fn enumerate_adapters() -> Vec<wgpu::AdapterInfo> {
 ///
 /// Returns `BackendError` when probe-result metadata cannot be reserved.
 pub(crate) fn try_enumerate_adapters() -> Result<Vec<wgpu::AdapterInfo>> {
-    let instance = wgpu::Instance::default();
-    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    let instance = super::acquire::shared_instance();
+    let adapters = instance.enumerate_adapters(super::acquire::COMPUTE_BACKENDS);
     let mut infos = Vec::new();
     reserve_probe_vec(&mut infos, adapters.len(), "adapter enumeration metadata")?;
     infos.extend(adapters.iter().map(wgpu::Adapter::get_info));
@@ -146,9 +146,9 @@ pub(crate) fn try_enumerate_adapters() -> Result<Vec<wgpu::AdapterInfo>> {
 /// Report whether the centralized adapter probe can see at least one real GPU.
 #[must_use]
 pub fn has_real_gpu_adapter() -> bool {
-    let instance = wgpu::Instance::default();
+    let instance = super::acquire::shared_instance();
     instance
-        .enumerate_adapters(wgpu::Backends::all())
+        .enumerate_adapters(super::acquire::COMPUTE_BACKENDS)
         .iter()
         .any(|adapter| crate::capabilities::is_real_gpu(&adapter.get_info()))
 }
@@ -163,8 +163,8 @@ pub fn has_real_gpu_adapter() -> bool {
 ///
 /// Returns `BackendError` when the adapter is no longer visible.
 pub fn adapter_for_info(expected: &wgpu::AdapterInfo) -> Result<wgpu::Adapter> {
-    let instance = wgpu::Instance::default();
-    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    let instance = super::acquire::shared_instance();
+    let adapters = instance.enumerate_adapters(super::acquire::COMPUTE_BACKENDS);
     let mut probed = Vec::new();
     reserve_probe_vec(&mut probed, adapters.len(), "adapter recovery probe report")?;
     for adapter in adapters {
@@ -206,8 +206,8 @@ fn adapter_info_matches(candidate: &wgpu::AdapterInfo, expected: &wgpu::AdapterI
 /// Build the centralized adapter diagnostic report used by acquisition errors.
 #[must_use]
 pub fn adapter_probe_report() -> AdapterProbeReport {
-    let instance = wgpu::Instance::default();
-    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    let instance = super::acquire::shared_instance();
+    let adapters = instance.enumerate_adapters(super::acquire::COMPUTE_BACKENDS);
     let mut report = AdapterProbeReport {
         probed: Vec::new(),
         missing: Vec::new(),
@@ -237,17 +237,19 @@ pub fn adapter_probe_report() -> AdapterProbeReport {
                 .push("TIMESTAMP_QUERY_INSIDE_ENCODERS".to_string());
         }
         let adapter_limits = adapter.limits();
-        if let Err(error) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-            label: Some("vyre probe"),
-            required_features: wgpu::Features::empty(),
-            required_limits: wgpu::Limits {
-                max_storage_buffers_per_shader_stage:
-                    adapter_limits.max_storage_buffers_per_shader_stage,
-                ..wgpu::Limits::default()
-            },
-            memory_hints: wgpu::MemoryHints::default(),
-            trace: wgpu::Trace::Off,
-        })) {
+        if let Err(error) =
+            super::acquire::wait_for_gpu(adapter.request_device(&wgpu::DeviceDescriptor {
+                label: Some("vyre probe"),
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits {
+                    max_storage_buffers_per_shader_stage:
+                        adapter_limits.max_storage_buffers_per_shader_stage,
+                    ..wgpu::Limits::default()
+                },
+                memory_hints: wgpu::MemoryHints::default(),
+                trace: wgpu::Trace::Off,
+            }))
+        {
             report
                 .missing
                 .push(format!("device request failed on {}: {error}", info.name));
@@ -264,8 +266,8 @@ pub fn adapter_probe_report() -> AdapterProbeReport {
 ///
 /// Returns `BackendError` when no adapter matches.
 pub fn select_adapter(criteria: &AdapterCriteria) -> Result<(usize, wgpu::AdapterInfo)> {
-    let instance = wgpu::Instance::default();
-    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    let instance = super::acquire::shared_instance();
+    let adapters = instance.enumerate_adapters(super::acquire::COMPUTE_BACKENDS);
     for (idx, adapter) in adapters.iter().enumerate() {
         let info = adapter.get_info();
         if adapter_is_selectable(&info, criteria) {
@@ -329,7 +331,7 @@ pub fn init_device_for_adapter(
     wgpu::AdapterInfo,
     crate::runtime::device::EnabledFeatures,
 )> {
-    super::device::wait_for_gpu(acquire_gpu_for_adapter(index))
+    super::acquire::wait_for_gpu(acquire_gpu_for_adapter(index))
 }
 
 /// Recreate a device on the same adapter identity used by an existing backend.
@@ -345,7 +347,7 @@ pub(crate) fn init_device_for_adapter_identity(
     wgpu::AdapterInfo,
     crate::runtime::device::EnabledFeatures,
 )> {
-    super::device::wait_for_gpu(acquire_gpu_for_adapter_identity(identity))
+    super::acquire::wait_for_gpu(acquire_gpu_for_adapter_identity(identity))
 }
 
 async fn acquire_gpu_for_adapter_identity(
@@ -355,8 +357,8 @@ async fn acquire_gpu_for_adapter_identity(
     wgpu::AdapterInfo,
     crate::runtime::device::EnabledFeatures,
 )> {
-    let instance = wgpu::Instance::default();
-    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    let instance = super::acquire::shared_instance();
+    let adapters = instance.enumerate_adapters(super::acquire::COMPUTE_BACKENDS);
     for adapter in &adapters {
         let info = adapter.get_info();
         if identity.matches(&info) {
@@ -366,7 +368,7 @@ async fn acquire_gpu_for_adapter_identity(
                     info.name, info.device_type
                 )));
             }
-            return super::device::request_device_for_adapter(adapter, "vyre device (recovered)")
+            return super::acquire::request_device_for_adapter(adapter, "vyre device (recovered)")
                 .await;
         }
     }
@@ -404,8 +406,8 @@ pub async fn acquire_gpu_for_adapter(
     wgpu::AdapterInfo,
     crate::runtime::device::EnabledFeatures,
 )> {
-    let instance = wgpu::Instance::default();
-    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    let instance = super::acquire::shared_instance();
+    let adapters = instance.enumerate_adapters(super::acquire::COMPUTE_BACKENDS);
     let adapter = adapters.get(index).ok_or_else(|| BackendError::new(format!(
         "adapter index {index} out of range (saw {} adapters). Fix: call enumerate_adapters() first to see valid indices.",
         adapters.len()
@@ -417,7 +419,7 @@ pub async fn acquire_gpu_for_adapter(
             info.name, info.device_type
         )));
     }
-    super::device::request_device_for_adapter(adapter, "vyre device (selected)").await
+    super::acquire::request_device_for_adapter(adapter, "vyre device (selected)").await
 }
 
 /// Read the `VYRE_ADAPTER_INDEX` env override. `None` when unset.
@@ -441,20 +443,86 @@ fn adapter_index_from_raw(raw: Option<&str>) -> Result<Option<usize>> {
     )))
 }
 
-fn reserve_probe_vec<T>(vec: &mut Vec<T>, additional: usize, context: &'static str) -> Result<()> {
-    reserve_backend_vec(vec, additional, context)
-        .map_err(|error| BackendError::new(error.to_string()))
+/// Rank a device type by whether it is a GPU at all, so a CPU adapter can
+/// never outscore hardware on features or limits alone.
+fn real_gpu_rank(device_type: wgpu::DeviceType) -> u8 {
+    match device_type {
+        wgpu::DeviceType::DiscreteGpu => 3,
+        wgpu::DeviceType::IntegratedGpu => 2,
+        wgpu::DeviceType::VirtualGpu => 1,
+        wgpu::DeviceType::Cpu | wgpu::DeviceType::Other => 0,
+    }
 }
 
+/// Order two adapters of the same class by compute capability.
+///
+/// The device rank occupies the high bits, so class dominates; features and
+/// limits break ties below it.
+pub(super) fn gpu_candidate_score(
+    info: &wgpu::AdapterInfo,
+    adapter_features: wgpu::Features,
+    adapter_limits: &wgpu::Limits,
+) -> u128 {
+    let mut feature_score = 0u128;
+    if crate::capabilities::supports_subgroup_for_adapter(adapter_features, adapter_limits) {
+        feature_score |= 1 << 7;
+    }
+    if adapter_features.contains(wgpu::Features::SUBGROUP_BARRIER) {
+        feature_score |= 1 << 6;
+    }
+    if adapter_features.contains(wgpu::Features::SHADER_F16) {
+        feature_score |= 1 << 5;
+    }
+    if adapter_features.contains(wgpu::Features::PIPELINE_CACHE) {
+        feature_score |= 1 << 4;
+    }
+    if adapter_features.contains(wgpu::Features::PUSH_CONSTANTS) {
+        feature_score |= 1 << 3;
+    }
+    if adapter_features.contains(wgpu::Features::INDIRECT_FIRST_INSTANCE) {
+        feature_score |= 1 << 2;
+    }
+    if adapter_features.contains(wgpu::Features::TIMESTAMP_QUERY) {
+        feature_score |= 1 << 1;
+    }
+    if adapter_features.contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS) {
+        feature_score |= 1;
+    }
+
+    let storage_binding_bits = u128::from(adapter_limits.max_storage_buffer_binding_size.ilog2());
+    let buffer_bits = u128::from(adapter_limits.max_buffer_size.max(1).ilog2());
+    let workgroup_invocations = u128::from(adapter_limits.max_compute_invocations_per_workgroup);
+    let workgroup_storage_bits = u128::from(
+        adapter_limits
+            .max_compute_workgroup_storage_size
+            .max(1)
+            .ilog2(),
+    );
+    let storage_buffers = u128::from(adapter_limits.max_storage_buffers_per_shader_stage);
+
+    (u128::from(real_gpu_rank(info.device_type)) << 120)
+        | (feature_score << 96)
+        | (storage_binding_bits << 88)
+        | (buffer_bits << 80)
+        | (workgroup_invocations << 56)
+        | (workgroup_storage_bits << 48)
+        | storage_buffers
+}
+
+// Inline: covers `AdapterIdentity`, `adapter_index_from_raw`, `adapter_is_selectable`,
+// `adapter_name_contains`, `gpu_candidate_score`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[cfg(feature = "device-tests")]
     #[test]
     fn enumerate_adapters_finds_required_gpu() {
         let adapters = enumerate_adapters();
-        assert_ne!(adapters.len(), 0,
-            "Fix: WGPU adapter enumeration returned no adapters on a GPU-required release host; repair driver/runtime configuration instead of accepting a CPU-only environment."
+        assert_ne!(
+            adapters.len(),
+            0,
+            "Fix: WGPU adapter enumeration returned no adapters; repair driver/runtime configuration instead of accepting a CPU-only environment."
         );
     }
 
@@ -543,5 +611,50 @@ mod tests {
         assert!(adapter_name_contains("NVIDIA GeForce RTX 5090", "RTX"));
         assert!(!adapter_name_contains("NVIDIA GeForce RTX 5090", "radeon"));
         assert!(adapter_name_contains("Mötley GPU", "mötley"));
+    }
+
+    #[test]
+    fn gpu_candidate_score_prefers_stronger_compute_adapter_within_same_class() {
+        let info = wgpu::AdapterInfo {
+            name: "gpu".to_string(),
+            vendor: 0x10de,
+            device: 0x2c02,
+            device_type: wgpu::DeviceType::DiscreteGpu,
+            driver: "nvidia".to_string(),
+            driver_info: "test".to_string(),
+            backend: wgpu::Backend::Vulkan,
+        };
+        let weak_limits = wgpu::Limits {
+            max_storage_buffer_binding_size: 1 << 20,
+            max_buffer_size: 1 << 28,
+            max_compute_invocations_per_workgroup: 256,
+            max_compute_workgroup_storage_size: 16 << 10,
+            max_storage_buffers_per_shader_stage: 8,
+            ..wgpu::Limits::default()
+        };
+        let strong_limits = wgpu::Limits {
+            max_storage_buffer_binding_size: 1 << 30,
+            max_buffer_size: 1 << 34,
+            max_compute_invocations_per_workgroup: 1024,
+            max_compute_workgroup_storage_size: 64 << 10,
+            max_storage_buffers_per_shader_stage: 16,
+            min_subgroup_size: 32,
+            max_subgroup_size: 32,
+            ..wgpu::Limits::default()
+        };
+        let weak = gpu_candidate_score(&info, wgpu::Features::empty(), &weak_limits);
+        let strong = gpu_candidate_score(
+            &info,
+            wgpu::Features::SUBGROUP
+                | wgpu::Features::SUBGROUP_BARRIER
+                | wgpu::Features::SHADER_F16
+                | wgpu::Features::PIPELINE_CACHE,
+            &strong_limits,
+        );
+
+        assert!(
+            strong > weak,
+            "Fix: automatic GPU acquisition must prefer the stronger same-class compute adapter."
+        );
     }
 }

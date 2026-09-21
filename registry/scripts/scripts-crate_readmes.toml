@@ -1,0 +1,4 @@
+path = "scripts/crate_readmes.py"
+state = "implements"
+gate = "doc-contract"
+reason = "generates the manifest-backed contract block in every crate README, which doc-contract regenerates under --write"

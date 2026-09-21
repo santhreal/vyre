@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre_reference::reference_eval_lane_rotated` executes a program with the workgroup and invocation step order rotated left by a caller-chosen amount. Reversal is a symmetric permutation, so an implementation that confuses lane identity with step position can be made reversal-symmetric and stay wrong; a rotation separates the two and catches a subgroup collective that resolves its peers by physical step position."

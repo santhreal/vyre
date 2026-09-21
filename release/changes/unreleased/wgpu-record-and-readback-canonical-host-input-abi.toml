@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The wgpu record-and-readback path binds exactly the host inputs `BufferDecl::consumes_host_input` admits and refuses any other input count, eliminating the length-based selection that accepted an output placeholder."

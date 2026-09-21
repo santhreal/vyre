@@ -9,17 +9,22 @@ use crate::reg::{PtxType, Reg};
 use crate::EmitError;
 
 /// A resolved atomic target: the PTX state space, the address register holding
-/// the element address in that space, and an optional bounds predicate.
+/// the element address in that space, and the bounds predicate the atomic is
+/// issued under.
 ///
 /// The state space is part of the instruction mnemonic in PTX
 /// (`atom.global.add.u32` vs `atom.shared.add.u32`) and an address is only
 /// meaningful in its own space, so the two must be produced together. Emitting
 /// `.global` against a shared address either faults with
 /// `CUDA_ERROR_ILLEGAL_ADDRESS` or silently reads unrelated global memory.
+///
+/// The predicate is not optional. Every atomic this emitter issues is bounded
+/// by its own binding's length, so an unpredicated form has nothing left to
+/// represent and is not offered.
 struct AtomicAddress {
     space: &'static str,
     addr: Reg,
-    in_bounds: Option<Reg>,
+    in_bounds: Reg,
 }
 
 impl BodyCtx<'_> {
@@ -79,23 +84,51 @@ impl BodyCtx<'_> {
         } = self.emit_atomic_address(binding_slot, index_reg, &element_type, memory_class)?;
         let type_suffix = atomic_type_suffix(atomic_op, elem_ty)?;
         let result_reg = self.alloc(elem_ty);
-        if let Some(in_bounds) = in_bounds {
+        let zero_lit = match elem_ty {
+            PtxType::F32 => "0f00000000",
+            _ => "0",
+        };
+        let _ = writeln!(
+            self.text,
+            "    mov.{}    {result_reg}, {zero_lit};",
+            elem_ty.ptx_type_str()
+        );
+        if space == "global" && self.atomic_value_is_identity(atomic_op, value_op_id) {
             let _ = writeln!(
                 self.text,
-                "    mov.{}    {result_reg}, 0;",
+                "    @{in_bounds} ld.global.cv.{}    {result_reg}, [{addr}];",
                 elem_ty.ptx_type_str()
             );
-            let _ = writeln!(
-                self.text,
-                "    @{in_bounds} atom.{space}.{mnemonic}.{type_suffix}    {result_reg}, [{addr}], {value_reg};"
-            );
-        } else {
-            let _ = writeln!(
-                self.text,
-                "    atom.{space}.{mnemonic}.{type_suffix}    {result_reg}, [{addr}], {value_reg};"
-            );
+            return self.bind_result(op, result_reg);
         }
+        // Reached only for an atomic that writes: the identity form above
+        // returns after emitting a load.
+        self.reject_store_to_read_only_slot(binding_slot, "a read-modify-write atomic")?;
+        let _ = writeln!(
+            self.text,
+            "    @{in_bounds} atom.{space}.{mnemonic}.{type_suffix}    {result_reg}, [{addr}], {value_reg};"
+        );
         self.bind_result(op, result_reg)
+    }
+
+    /// Whether this atomic's value operand makes the read-modify-write leave
+    /// memory unchanged, so the operation returns the current value and writes
+    /// nothing.
+    ///
+    /// `Add`, `Or`, and `Xor` against a literal zero are identities on every
+    /// integer width, and the literal table only records `u32` values, so a
+    /// float `add 0.0` (which is not an identity for a stored `-0.0`) cannot
+    /// reach this. The resident work queue reads its control and status words
+    /// this way.
+    ///
+    /// Left as `atom`, each one occupies an L2 atomic slot that a plain load
+    /// does not, and invocations sharing an address serialize on it.
+    /// `ld.global.cv` returns the same value, bypasses L1 for the same
+    /// freshness, is served by the load pipeline in parallel, and being
+    /// volatile is not hoisted out of a spin loop.
+    fn atomic_value_is_identity(&self, atomic_op: AtomicOp, value_op_id: u32) -> bool {
+        matches!(atomic_op, AtomicOp::Add | AtomicOp::Or | AtomicOp::Xor)
+            && self.u32_literals.get(&value_op_id) == Some(&0)
     }
 
     /// Resolve the address and state space for an atomic on `binding_slot`.
@@ -105,6 +138,12 @@ impl BodyCtx<'_> {
     /// predicate. Changing those to the clamping form used by plain loads would
     /// silently redirect an out-of-range atomic onto element 0 instead of
     /// predicating it off, corrupting that element.
+    ///
+    /// The predicate is unconditional. A kernel with no shared memory and no
+    /// barrier exits every lane whose global id reaches the dispatch element
+    /// count, which is the largest buffer's length; an atomic on a shorter
+    /// buffer in the same program is still out of range, and here the address is
+    /// not clamped either, so the access leaves the allocation entirely.
     ///
     /// Workgroup-shared bindings take the 32-bit shared-window path. Their
     /// length is NOT in the params buffer (`preload_bindings` skips shared
@@ -132,18 +171,15 @@ impl BodyCtx<'_> {
                     reason: "shared atomic address must resolve to a register".into(),
                 });
             };
-            let in_bounds = match (self.full_workgroup_entry, element_count) {
-                (true, Some(count)) => Some(self.emit_index_lt_immediate_pred(index_reg, count)),
-                (true, None) => {
-                    return Err(EmitError::InvalidBinding {
-                        slot: binding_slot,
-                        reason: "shared atomic binding must declare an element count so the \
-                                 bounds predicate has a bound"
-                            .into(),
-                    });
-                }
-                (false, _) => None,
+            let Some(count) = element_count else {
+                return Err(EmitError::InvalidBinding {
+                    slot: binding_slot,
+                    reason: "shared atomic binding must declare an element count so the bounds \
+                             predicate has a bound"
+                        .into(),
+                });
             };
+            let in_bounds = self.emit_index_lt_immediate_pred(index_reg, count);
             return Ok(AtomicAddress {
                 space: address.space,
                 addr,
@@ -165,9 +201,7 @@ impl BodyCtx<'_> {
                          be resolved to real storage before PTX emission."
                     ),
                 })?;
-        let in_bounds = self
-            .full_workgroup_entry
-            .then(|| self.emit_index_reg_in_bounds_pred(binding_slot, index_reg));
+        let in_bounds = self.emit_index_reg_in_bounds_pred(binding_slot, index_reg);
         let stride = element_type
             .size_bytes()
             .ok_or_else(|| EmitError::UnsupportedDataType(format!("{element_type:?}")))?;
@@ -240,6 +274,7 @@ impl BodyCtx<'_> {
             .operands
             .get(3)
             .ok_or_else(|| EmitError::InvalidDescriptor("AtomicCAS missing new value".into()))?;
+        self.reject_store_to_read_only_slot(binding_slot, "a compare-and-swap atomic")?;
         let binding = self.binding_for_slot(binding_slot)?;
         let element_type = binding.element_type.clone();
         let memory_class = binding.memory_class;
@@ -258,22 +293,19 @@ impl BodyCtx<'_> {
             in_bounds,
         } = self.emit_atomic_address(binding_slot, index_reg, &element_type, memory_class)?;
         let result_reg = self.alloc(elem_ty);
-        if let Some(in_bounds) = in_bounds {
-            let _ = writeln!(
-                self.text,
-                "    mov.{}    {result_reg}, 0;",
-                elem_ty.ptx_type_str()
-            );
-            let _ = writeln!(
-                self.text,
-                "    @{in_bounds} atom.{space}.cas.b32    {result_reg}, [{addr}], {cmp_reg}, {new_reg};"
-            );
-        } else {
-            let _ = writeln!(
-                self.text,
-                "    atom.{space}.cas.b32    {result_reg}, [{addr}], {cmp_reg}, {new_reg};"
-            );
-        }
+        let zero_lit = match elem_ty {
+            PtxType::F32 => "0f00000000",
+            _ => "0",
+        };
+        let _ = writeln!(
+            self.text,
+            "    mov.{}    {result_reg}, {zero_lit};",
+            elem_ty.ptx_type_str()
+        );
+        let _ = writeln!(
+            self.text,
+            "    @{in_bounds} atom.{space}.cas.b32    {result_reg}, [{addr}], {cmp_reg}, {new_reg};"
+        );
         self.bind_result(op, result_reg)
     }
 }
@@ -285,10 +317,19 @@ fn atomic_type_suffix(atomic_op: AtomicOp, elem_ty: PtxType) -> Result<&'static 
     ) {
         return match elem_ty {
             PtxType::U32 | PtxType::I32 => Ok("b32"),
+            PtxType::U64 => Ok("b64"),
             other => Err(EmitError::UnsupportedDataType(format!(
-                "atom.global bitwise/exchange requires a 32-bit integer element type; got {other:?}"
+                "atom.global bitwise/exchange requires a 32-bit or 64-bit integer element type; got {other:?}"
             ))),
         };
     }
-    Ok(elem_ty.ptx_type_str())
+    match elem_ty {
+        PtxType::U32 => Ok("u32"),
+        PtxType::I32 => Ok("s32"),
+        PtxType::U64 => Ok("u64"),
+        PtxType::F32 => Ok("f32"),
+        other => Err(EmitError::UnsupportedDataType(format!(
+            "atom.{atomic_op:?} requires a supported numeric element type; got {other:?}"
+        ))),
+    }
 }

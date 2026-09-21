@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The pipeline-cache persistence helper is selected by its module-qualified test name, so the helper process runs and writes its timing instead of libtest matching no test and exiting zero."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A compile that states no device capability snapshot no longer refuses a program for an unstated capability, so `vyre-aot` and the registry compile produce a device-neutral artifact for programs declaring workgroup scratch, tensor operands, binary16 arithmetic, indirect dispatch, or a whole-grid fence."

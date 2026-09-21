@@ -1,0 +1,2 @@
+category = "Added"
+text = "Recurrence, reduction, layout, and numerical laws now derive equivalent programs through a bounded composition of the registered rewrites that realize them, and a law family with no derivation fails its closure suite."

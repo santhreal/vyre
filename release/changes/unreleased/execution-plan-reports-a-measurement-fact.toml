@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The execution plan reports whether a target declares shapes worth measuring and no longer publishes a recommended workgroup, tile, vector width or unroll depth ranked against the adapter."

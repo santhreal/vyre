@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Tile IR lowering decomposes tile operations into neutral register SSA values matching the reference oracle, taking MatrixMma only for supported fragment shapes and supporting broadcast elementwise."

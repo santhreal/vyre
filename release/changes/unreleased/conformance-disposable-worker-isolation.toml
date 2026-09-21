@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Conformance schedules cases into disposable worker processes with explicit resource budgets and device leases, replacing thread-abandoned deadlines with process isolation and verified receipts."

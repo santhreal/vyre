@@ -1,0 +1,139 @@
+impl core::error::Error for vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError
+impl core::error::Error for vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError
+impl core::error::Error for vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError
+impl core::fmt::Display for vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError
+impl core::fmt::Display for vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError
+impl core::fmt::Display for vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError
+impl vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout
+impl vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphScratch
+impl vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdge
+impl vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNode
+pub const fn vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout::from_aggregate_fields(node_count: u64, edge_count: u64, node_record_bytes: u64, edge_record_bytes: u64, node_bytes: u64, edge_bytes: u64, payload_bytes: u64, resident_bytes: u64) -> Self
+pub const fn vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdge::new(from: u32, to: u32, kind: vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdgeKind) -> Self
+pub const fn vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNode::new(id: u32, kind: vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNodeKind, payload_offset: u64, payload_bytes: u64) -> Self
+pub const vyre_libs_device::device::device_resident_token_fact_graph::OP_ID: &str
+pub const vyre_libs_device::device::device_resident_token_fact_graph::TOKEN_FACT_DEGREE_PROFILE_BUCKETS: usize
+pub const vyre_libs_device::device::device_resident_token_fact_graph::TOKEN_FACT_DEGREE_PROFILE_RANKS: [u64; 16]
+pub enum vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError
+pub enum vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdgeKind
+pub enum vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNodeKind
+pub enum vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError
+pub enum vyre_libs_device::device::memory_ownership_contract::MemoryOwner
+pub enum vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError
+pub fn vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphScratch::new() -> Self
+pub fn vyre_libs_device::device::device_resident_token_fact_graph::device_resident_token_fact_graph_program(nodes: &[vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNode], edges: &[vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdge], payload_bytes: u64, node_record_bytes: u64, edge_record_bytes: u64, row_offsets_buf: &str, column_indices_buf: &str, out_buf: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError>
+pub fn vyre_libs_device::device::device_resident_token_fact_graph::plan_device_resident_token_fact_graph(nodes: &[vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNode], edges: &[vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdge], payload_bytes: u64) -> core::result::Result<vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph, vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError>
+pub fn vyre_libs_device::device::device_resident_token_fact_graph::plan_device_resident_token_fact_graph_layout(graph: &vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph, node_record_bytes: u64, edge_record_bytes: u64) -> core::result::Result<vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout, vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError>
+pub fn vyre_libs_device::device::device_resident_token_fact_graph::plan_device_resident_token_fact_graph_layout_with_scratch(graph: &vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph, node_record_bytes: u64, edge_record_bytes: u64, scratch: &mut vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphScratch) -> core::result::Result<vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout, vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError>
+pub fn vyre_libs_device::device::device_resident_token_fact_graph::plan_device_resident_token_fact_graph_with_scratch(nodes: &[vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNode], edges: &[vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdge], payload_bytes: u64, scratch: &mut vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphScratch) -> core::result::Result<vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph, vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError>
+pub fn vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_device::device::gpu_probe_contract::validate_gpu_probe_contract(records: &[vyre_libs_device::device::gpu_probe_contract::GpuProbeRecord<'_>]) -> core::result::Result<vyre_libs_device::device::gpu_probe_contract::GpuProbeContractProof, vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError>
+pub fn vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_device::device::memory_ownership_contract::validate_memory_ownership_contract(records: &[vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipRecord<'_>]) -> core::result::Result<vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipProof, vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError>
+pub fn vyre_libs_device::link_anchor()
+pub mod vyre_libs_device
+pub mod vyre_libs_device::device
+pub mod vyre_libs_device::device::device_resident_token_fact_graph
+pub mod vyre_libs_device::device::gpu_probe_contract
+pub mod vyre_libs_device::device::memory_ownership_contract
+pub struct vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph
+pub struct vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout
+pub struct vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphScratch
+pub struct vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdge
+pub struct vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNode
+pub struct vyre_libs_device::device::gpu_probe_contract::GpuProbeContractProof
+pub struct vyre_libs_device::device::gpu_probe_contract::GpuProbeRecord<'a>
+pub struct vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipProof
+pub struct vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipRecord<'a>
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph::column_indices: alloc::vec::Vec<u32>
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph::edge_kinds: alloc::vec::Vec<vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdgeKind>
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph::fact_nodes: u32
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph::node_ids: alloc::vec::Vec<u32>
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph::node_kinds: alloc::vec::Vec<vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNodeKind>
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph::payload_bytes: u64
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph::payload_lengths: alloc::vec::Vec<u64>
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph::payload_offsets: alloc::vec::Vec<u64>
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph::row_offsets: alloc::vec::Vec<u32>
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph::token_nodes: u32
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::ByteCountOverflow
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::ByteCountOverflow::field: &'static str
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::CsrIndexOverflow
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::DuplicateNode
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::DuplicateNode::id: u32
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::InvalidCsrShape
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::InvalidCsrShape::field: &'static str
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::PayloadOutOfBounds
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::PayloadOutOfBounds::end: u64
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::PayloadOutOfBounds::id: u32
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::PayloadOutOfBounds::payload_bytes: u64
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::PayloadOverflow
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::PayloadOverflow::id: u32
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::UnknownEdgeNode
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::UnknownEdgeNode::id: u32
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::ZeroRecordWidth
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::ZeroRecordWidth::field: &'static str
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout::edge_bytes: u64
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout::edge_count: u64
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout::edge_record_bytes: u64
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout::max_out_degree: u64
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout::node_bytes: u64
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout::node_count: u64
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout::node_record_bytes: u64
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout::payload_bytes: u64
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout::resident_bytes: u64
+pub vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout::top_out_degree_prefix_sums: [u64; 16]
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdge::from: u32
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdge::kind: vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdgeKind
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdge::to: u32
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdgeKind::DiagnosticProvenance
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdgeKind::FactDependency
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdgeKind::MacroExpansion
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdgeKind::SemanticFact
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdgeKind::TokenFlow
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNode::id: u32
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNode::kind: vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNodeKind
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNode::payload_bytes: u64
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNode::payload_offset: u64
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNodeKind::Diagnostic
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNodeKind::Fact
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNodeKind::MacroExpansion
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNodeKind::Semantic
+pub vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNodeKind::Token
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError::EmptyMetadata
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError::EmptyMetadata::field: &'static str
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError::EmptyMetadata::gate: alloc::string::String
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError::EmptyRecords
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError::MissingProbeFailureDetail
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError::MissingProbeFailureDetail::gate: alloc::string::String
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError::SkippedGpuGate
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeContractError::SkippedGpuGate::gate: alloc::string::String
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeContractProof::discovered_count: usize
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeContractProof::record_count: usize
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeRecord::detail: &'a str
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeRecord::gate: &'a str
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeRecord::gpu_discovered: bool
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeRecord::probe: &'a str
+pub vyre_libs_device::device::gpu_probe_contract::GpuProbeRecord::skipped: bool
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwner::BorrowedOutputSlot
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwner::DeviceResident
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwner::HostCaller
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwner::ParityOnly
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwner::PinnedStaging
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError::DuplicateResource
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError::DuplicateResource::resource: alloc::string::String
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError::EmptyMetadata
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError::EmptyMetadata::field: &'static str
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError::EmptyMetadata::resource: alloc::string::String
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError::EmptyRecords
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError::MissingBorrowedOutputSlots
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError::MissingDeviceResident
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError::ParityOnlyInProduction
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError::ParityOnlyInProduction::resource: alloc::string::String
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipProof::borrowed_output_slot_count: usize
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipProof::device_resident_count: usize
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipProof::record_count: usize
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipRecord::owner: vyre_libs_device::device::memory_ownership_contract::MemoryOwner
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipRecord::production: bool
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipRecord::resource: &'a str
+pub vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipRecord::subsystem: &'a str

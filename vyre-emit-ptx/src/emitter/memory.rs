@@ -103,13 +103,41 @@ impl BodyCtx<'_> {
         }
     }
 
+    /// Refuse a write to a slot whose loads take the read-only data cache.
+    ///
+    /// `ld.global.nc` reads a cache that is not coherent with stores issued by
+    /// the same kernel, so a slot that is both loaded through it and stored to
+    /// returns stale data with no diagnostic. The slot set is exactly the
+    /// `BindingVisibility::ReadOnly` declarations, so reaching this refusal
+    /// means the descriptor stores through a binding it declared read-only.
+    ///
+    /// Every store this backend emits passes through here, the vector-store
+    /// paths, or the atomic path; there is no fourth store emitter.
+    pub(super) fn reject_store_to_read_only_slot(
+        &self,
+        binding_slot: u32,
+        op: &'static str,
+    ) -> Result<(), EmitError> {
+        if !self.read_only_cache_slots.contains(&binding_slot) {
+            return Ok(());
+        }
+        Err(EmitError::InvalidBinding {
+            slot: binding_slot,
+            reason: format!(
+                "{op} writes a binding declared read-only, whose loads are emitted as ld.global.nc against a cache that is not coherent with this kernel's stores. Fix: declare the binding BufferAccess::ReadWrite, or write through a separate binding."
+            ),
+        })
+    }
+
     pub(super) fn emit_store_value(
         &mut self,
+        binding_slot: u32,
         guard: Option<(String, Reg)>,
         address: MemAddress,
         element_type: &DataType,
         value_reg: Reg,
     ) -> Result<(), EmitError> {
+        self.reject_store_to_read_only_slot(binding_slot, "a store")?;
         match element_type {
             DataType::U8 | DataType::I8 => self.emit_raw_store(guard, address, "u8", value_reg),
             DataType::U16 | DataType::I16 => self.emit_raw_store(guard, address, "u16", value_reg),
@@ -241,8 +269,19 @@ impl BodyCtx<'_> {
         element_type: &DataType,
         memory_class: MemoryClass,
     ) -> Result<MemAddress, EmitError> {
-        if let Some(byte_offset) = self.immediate_byte_offset(index_op_id, element_type)? {
-            return self.emit_memory_address_immediate(binding_slot, byte_offset, memory_class);
+        // The immediate path folds an element index straight into a byte
+        // offset, so a permuted binding folds the permuted index. When the
+        // offset does not fit an immediate this falls through to the register
+        // path, which permutes at the shared address site instead, so either
+        // route rewrites the index exactly once.
+        if let Some(index) = self.u32_literals.get(&index_op_id).copied() {
+            let addressed = match self.shared_permutation(binding_slot, memory_class) {
+                Some(permutation) => permutation.apply(index),
+                None => index,
+            };
+            if let Some(byte_offset) = self.byte_offset_of(addressed, element_type)? {
+                return self.emit_memory_address_immediate(binding_slot, byte_offset, memory_class);
+            }
         }
         let index_reg = self.lookup_operand(index_op_id)?;
         self.emit_memory_address_from_index_reg(binding_slot, index_reg, element_type, memory_class)
@@ -294,6 +333,16 @@ impl BodyCtx<'_> {
         let Some(index) = self.u32_literals.get(&index_op_id).copied() else {
             return Ok(None);
         };
+        self.byte_offset_of(index, element_type)
+    }
+
+    /// Byte offset of element `index`, or `None` when it does not fit the
+    /// immediate field an address operand carries.
+    fn byte_offset_of(
+        &self,
+        index: u32,
+        element_type: &DataType,
+    ) -> Result<Option<u64>, EmitError> {
         let stride = element_type
             .size_bytes()
             .ok_or_else(|| EmitError::UnsupportedDataType(format!("{element_type:?}")))?;
@@ -362,7 +411,8 @@ impl BodyCtx<'_> {
                         slot: binding_slot,
                         reason: "shared symbol not allocated".into(),
                     })?;
-                let byte_offset = self.emit_shared_byte_offset(index_reg, element_type)?;
+                let byte_offset =
+                    self.emit_shared_byte_offset(binding_slot, index_reg, element_type)?;
                 let base = self.alloc(PtxType::U32);
                 let addr = self.alloc(PtxType::U32);
                 let _ = writeln!(self.text, "    mov.u32    {base}, {symbol};");
@@ -389,6 +439,12 @@ impl BodyCtx<'_> {
     /// Lowered as: `safe = (idx < len) ? idx : 0`. When `len == 0` the
     /// dispatcher rejects the launch upstream, so the `0` fallback
     /// always points at a valid byte.
+    ///
+    /// This makes an out-of-range access fault-free, not correct. The folded
+    /// address is element 0, which a load may read and discard and a store may
+    /// not write: a store carries its own bounds predicate
+    /// (`store_guard::store_guard_for_index`) so the write is dropped rather
+    /// than redirected onto a live element.
     fn clamp_index_to_buffer_length(&mut self, binding_slot: u32, raw_idx: Reg) -> Reg {
         let len_reg = self.ensure_buffer_length_reg(binding_slot);
         let in_bounds = self.alloc(PtxType::Bool);
@@ -423,6 +479,22 @@ impl BodyCtx<'_> {
             "    setp.lt.u32    {in_bounds}, {raw_idx}, {len_reg};"
         );
         in_bounds
+    }
+
+    /// `reg = operand(index_op_id) + offset`, or the operand itself when
+    /// `offset` is zero.
+    pub(super) fn emit_index_plus_immediate(
+        &mut self,
+        index_op_id: u32,
+        offset: u32,
+    ) -> Result<Reg, EmitError> {
+        let base = self.lookup_operand(index_op_id)?;
+        if offset == 0 {
+            return Ok(base);
+        }
+        let reg = self.alloc(PtxType::U32);
+        let _ = writeln!(self.text, "    add.u32    {reg}, {base}, {offset};");
+        Ok(reg)
     }
 
     fn ensure_buffer_length_reg(&mut self, binding_slot: u32) -> Reg {
@@ -481,12 +553,14 @@ impl BodyCtx<'_> {
 
     fn emit_shared_byte_offset(
         &mut self,
+        binding_slot: u32,
         index_reg: Reg,
         element_type: &DataType,
     ) -> Result<Reg, EmitError> {
         let stride = element_type
             .size_bytes()
             .ok_or_else(|| EmitError::UnsupportedDataType(format!("{element_type:?}")))?;
+        let index_reg = self.emit_shared_permutation(binding_slot, index_reg);
         let byte_offset = self.alloc(PtxType::U32);
         let _ = writeln!(
             self.text,

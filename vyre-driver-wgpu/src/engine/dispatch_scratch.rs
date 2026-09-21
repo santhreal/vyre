@@ -1,6 +1,6 @@
 //! Per-thread scratch arenas for record/readback hot-path POD vectors.
 //!
-//! Audit P0 #9: dispatch-local `SmallVec` spills go through reusable
+//! dispatch-local `SmallVec` spills go through reusable
 //! thread-local `Vec<T>` capacity instead of heap-allocating fresh on every
 //! dispatch when the program exceeds the inline cap. Small programs still pay
 //! zero allocations because the scratch grows monotonically and is cleared
@@ -72,7 +72,7 @@ thread_local! {
 ///
 /// The scratch is `reset()` on entry so callers see empty vectors with
 /// retained capacity. Nested dispatch on the same thread is rejected loudly:
-/// allocating a second arena here would hide a hot-path ownership bug.
+/// Allocating a second arena here would hide a hot-path ownership bug.
 pub(crate) fn with_dispatch_scratch<F, R>(f: F) -> Result<R, BackendError>
 where
     F: FnOnce(&mut DispatchScratch) -> Result<R, BackendError>,
@@ -88,6 +88,7 @@ where
     })
 }
 
+// Inline: covers `with_dispatch_scratch`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The libs example template imports check_tensors, check_same_shape, checked_element_count and BuildOptions from vyre_libs::builder, which is where the builder feature publishes them."

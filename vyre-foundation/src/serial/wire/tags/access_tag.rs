@@ -25,6 +25,5 @@ pub(crate) fn access_tag(value: &BufferAccess) -> Result<u8, String> {
         BufferAccess::Uniform => Ok(2),
         BufferAccess::Workgroup => Ok(3),
         BufferAccess::WriteOnly => Ok(4),
-        _ => Err("unknown BufferAccess variant".to_string()),
     }
 }

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Eviction clearing both dependent indexes is now proven by a case that re-admits the evicted id, which the previous case could not observe."

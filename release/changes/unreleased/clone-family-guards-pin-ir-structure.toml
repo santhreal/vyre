@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The parsing and nn clone-family guards pin the canonicalized buffer roster and node tree of each entry point instead of a table of canonical wire digests, so a serialization revision no longer turns them red and a changed operand, dropped node, reordered data dependence or changed buffer reports which class of change moved."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A timed cudaGraph replay whose inputs already match the materialized host outputs returns those outputs with `device_ns = Some(0)` instead of launching the graph again to produce a timing. The untimed path already short-circuited on that cache, so the two replay routes disagreed about whether a cache hit costs device work."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A resident-ring geometry, capacity, overflow, bounds, or protocol fault reports `PipelineError::RingEncoding` with a typed `RingEncodingFault`, a host-protocol fault reports `PipelineError::Protocol` carrying the typed `ProtocolError`, and an illegal ring-slot transition reports `PipelineError::IllegalSlotTransition` with the transition, the statuses it permits, and the status the slot held; all of them previously rendered as `io_uring submission queue at capacity`."

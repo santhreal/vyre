@@ -1,0 +1,10 @@
+lane = "dependency-audit-machete"
+workflow = ".github/workflows/dependency-audit.yml"
+job = "machete"
+state = "live"
+required_status = "dependency-audit / cargo_full machete (unused deps)"
+triggers = ["push", "pull_request"]
+steps = [
+  { command = "cargo +stable install --locked cargo-machete" },
+  { command = "./cargo_full machete --with-metadata" },
+]

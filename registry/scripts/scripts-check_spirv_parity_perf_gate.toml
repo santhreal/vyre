@@ -1,0 +1,4 @@
+path = "scripts/check_spirv_parity_perf_gate.sh"
+state = "holds_logic"
+destination = "a parity gate parameterized by backend, which does not exist yet"
+reason = "requires spirv-val on PATH and runs the feature-gated spirv_parity target"

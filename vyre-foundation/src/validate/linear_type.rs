@@ -16,7 +16,7 @@
 //! `If::then` *and* `If::otherwise` is two uses even though only one
 //! path runs at dispatch time.
 //!
-//! Wired into `validate::validate` so backends never see a program
+//! Wired into `validate::rule_pipeline` so backends never see a program
 //! that violates declared discipline.
 
 use crate::ir_inner::model::program::{BufferDecl, LinearType, Program};

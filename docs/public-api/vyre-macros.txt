@@ -1,3 +1,4 @@
 pub mod vyre_macros
 pub proc macro vyre_macros::#[vyre_pass]
 pub proc macro vyre_macros::vyre_ast_registry!()
+pub proc macro vyre_macros::vyre_operation!()

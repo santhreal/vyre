@@ -147,6 +147,8 @@ pub(crate) unsafe fn unregister_host_buffer(
     }
 }
 
+// Inline: covers `alloc_pinned_host_buffer`, `register_host_buffer`, `unregister_host_buffer`,
+// which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::{alloc_pinned_host_buffer, register_host_buffer, unregister_host_buffer};

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The WGPU demo allocates its output without host input and rejects malformed output or values other than 42."

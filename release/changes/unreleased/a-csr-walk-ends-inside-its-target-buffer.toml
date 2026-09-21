@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`graph::dominator_frontier_pred_check` clamps both CSR loop ends to the extent of the buffer the loop indexes, so a caller or a fused producer cannot ask it for four billion iterations that had nothing to read."

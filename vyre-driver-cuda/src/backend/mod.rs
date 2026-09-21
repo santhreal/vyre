@@ -6,26 +6,27 @@
 //! `dispatch` owns the `CudaBackend` struct, launch geometry, and
 //! kernel-launch orchestration. The public surface is re-exported below.
 
-/// Shared non-wrapping atomic accounting primitives.
-pub(crate) mod accounting;
 /// Device-side allocation pools, pinned-host pools, and `cuda_check`.
-pub mod allocations;
+pub(crate) mod allocations;
 /// Capability, feature-flag, and validation-cache policy.
 pub(crate) mod capabilities;
 /// Checked CUDA copy primitives shared by host, resident, and graph paths.
 pub(crate) mod copy;
 /// cudaGraph capture-and-replay path. Records one full Program dispatch into
 /// a `CUgraph` then replays it on demand to reduce hot-path launch overhead.
-pub mod cuda_graph;
+pub(crate) mod cuda_graph;
+pub(crate) mod cuda_graph_lifecycle;
 /// cudaGraph replay path.
 pub(crate) mod cuda_graph_replay;
 /// CUDA backend handle, launch geometry, and kernel-launch orchestration  -
 /// including the cooperative-launch path that routes through
 /// `cuLaunchCooperativeKernel` when the caller opts in via
 /// `DispatchConfig::cooperative`.
-pub mod dispatch;
+pub(crate) mod dispatch;
 /// Per-dispatch host and device phase attribution for the timed dispatch path.
 pub(crate) mod dispatch_phase_probe;
+/// Release path shared by every dispatch enqueue that fails partway through.
+pub(crate) mod enqueue_cleanup;
 /// Host-borrowed buffer dispatch path.
 pub(crate) mod host_dispatch;
 /// Checked CUDA host-memory registration boundary.
@@ -36,10 +37,12 @@ pub(crate) mod launch;
 pub(crate) mod launch_params;
 /// Loaded PTX module cache and submodular eviction policy.
 pub(crate) mod module_cache;
+pub(crate) mod module_globals;
 /// Shared monotonic ordering helpers for staging hot paths.
 pub(crate) mod ordering;
 /// CUDA output readback range handling.
 pub(crate) mod output_range;
+pub(crate) mod pinned_allocations;
 /// Shared dispatch-plan assembly helpers.
 pub(crate) mod plan;
 /// PTX target probing against the live CUDA driver.
@@ -49,9 +52,10 @@ pub(crate) mod resident;
 /// Resident-buffer dispatch path.
 pub(crate) mod resident_dispatch;
 /// Shared resident-dispatch contracts and checked accounting.
-pub(crate) mod resident_dispatch_support;
+pub(crate) mod resident_dispatch_accounting;
 /// Host and device copies for resident buffers.
 pub(crate) mod resident_io;
+pub(crate) mod resident_io_download;
 /// Shared resident readback interval fusion.
 pub(crate) mod resident_readback_fusion;
 /// Shared resident upload interval fusion.
@@ -59,9 +63,10 @@ pub(crate) mod resident_upload_fusion;
 /// Shared fallible staging reservation helpers for backend hot paths.
 pub(crate) mod staging_reserve;
 /// Stream-ordered device allocator over the driver's default memory pool.
-pub mod stream_ordered_pool;
+pub(crate) mod stream_ordered_pool;
 /// Atomic CUDA runtime telemetry counters.
 pub(crate) mod telemetry;
+pub(crate) mod transient_memory_budget;
 
 fn required_input<'a>(
     inputs: &'a [&[u8]],
@@ -105,11 +110,10 @@ macro_rules! define_required_input {
 }
 pub(crate) use define_required_input;
 
-pub(crate) use allocations::*;
 pub(crate) use module_cache::ModuleCacheKey;
 pub(crate) use plan::CudaDispatchPlan;
-pub(crate) use resident::{resident_bindings_from_handles, ResidentUseGuard};
-pub(crate) use resident_dispatch_support::CudaResidentDispatchStep;
+pub(crate) use resident::resident_bindings_from_handles;
+pub(crate) use resident_dispatch_accounting::CudaResidentDispatchStep;
 // Public surface  -  these names appear on the crate root.
 pub use cuda_graph::CachedCudaGraph;
 pub use dispatch::CudaBackend;

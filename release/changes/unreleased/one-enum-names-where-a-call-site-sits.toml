@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The host-oracle elimination gate names a call site's context with an enum instead of restating a field list at every recording site, and asks one predicate per loop form whether that loop dispatches. The finding walk and the semantic operation scanner read the same predicates, and one builder produces the oracle fixture bodies the gate tests analyze."

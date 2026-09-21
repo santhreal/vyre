@@ -9,6 +9,8 @@
 
 mod acquire;
 mod grid_sync_split;
+#[cfg(test)]
+mod grid_sync_split_tests;
 mod inventory_streams;
 
 pub use acquire::{

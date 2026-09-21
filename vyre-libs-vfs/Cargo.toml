@@ -1,0 +1,34 @@
+[package]
+name = "vyre-libs-vfs"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Virtual filesystem DMA asynchronous block load and asset resolution compositions"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-vfs"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "closure:vyre-libs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["vfs"]
+vfs = []
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+inventory.workspace = true
+vyre-libs-builder = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

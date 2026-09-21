@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The 3-bit KV scoring op carried two schedules for the same function: a fully unrolled single-invocation form for sequences up to 8 and head widths up to 16, and a lane-parallel loop for everything else. Every test and the registered fixture fell inside the unrolled bound, so the schedule that runs on real shapes was the untested one. The unrolled form is gone. One schedule remains and the existing fixtures now exercise it."

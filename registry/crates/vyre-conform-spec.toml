@@ -1,0 +1,5 @@
+name = "vyre-conform-spec"
+concern = "Define conformance case, result, and certificate schemas against the public facade."
+pages = { spec = "conform/vyre-conform-spec/SPEC.md", readme = "conform/vyre-conform-spec/README.md" }
+tests = { placement = "tests", inline_exceptions = [] }
+depends_on = ["vyre-spec"]

@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The `vyre-spec` submodule visibility test read `lib.rs` as text and required every module declaration to be `pub mod`, which is the shape it inspected rather than a contract a caller can observe. The published surface is owned by the recorded `cargo-public-api` snapshot and the gate that reads it, which fails on an item reachable at two paths and on an item that disappears."

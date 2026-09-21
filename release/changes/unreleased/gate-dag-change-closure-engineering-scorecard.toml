@@ -1,0 +1,2 @@
+category = "Added"
+text = "Implemented a declarative gate DAG kernel with topological sorting, cycle detection, and prerequisite/cache enforcement; symbol-level IR change-closure manifest gate; and live-registry dynamic engineering scorecard."

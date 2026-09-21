@@ -1,15 +1,10 @@
 //! Integration test crate for the containing Vyre package.
 
+#![cfg(feature = "device-tests")]
 #![allow(deprecated)]
 use vyre_driver_wgpu::WgpuBackend;
 
-mod preferred_dispatch_contract {
-    include!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../tests/support/preferred_dispatch_backend_contract.rs"
-    ));
-}
-use preferred_dispatch_contract::{
+use vyre_test_support::preferred_dispatch_backend_contract::{
     assert_backend_registry_metadata, assert_preferred_dispatch_selects,
 };
 

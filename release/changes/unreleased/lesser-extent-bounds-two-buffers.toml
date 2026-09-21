@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre_foundation::composition::lesser_extent` yields the smaller of two buffer extents, so a composition that reads one buffer and writes another bounds its loop by both."

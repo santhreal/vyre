@@ -1,0 +1,421 @@
+//! Assembly of a tiled matmul program: buffers, tile shape, and the body the
+//! selected kernel path supplies.
+//!
+//! The tensor-core body is chosen only when the capability record admits it;
+//! the cooperative body is the path every device can run.
+
+use crate::math::semiring_gemm::OP_ID as SEMIRING_GEMM_OP_ID;
+use std::sync::Arc;
+use vyre_foundation::composition::{wrap_child_region, wrap_region};
+use vyre_foundation::ir::Ident;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
+
+use vyre_libs_builder::plumbing::operand::element_zero::element_zero;
+use vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError;
+
+use super::body::cooperative_matmul_body;
+use super::mma_body::cooperative_matmul_body_mma;
+use super::mma_fragment::{gate_mma_path, MmaCapabilityRecord};
+use super::tensor_core_policy::{select_matmul_kernel, MatmulKernelPath};
+use vyre_libs_builder::builder::matrix_tile::{
+    output_tile_shape, padded_tile_lane_count, MatrixShape, TileShape,
+};
+
+pub(crate) struct MatmulTiledProgramSpec<'a> {
+    pub(crate) op_id: &'static str,
+    pub(crate) a: &'a str,
+    pub(crate) b: &'a str,
+    pub(crate) bias: Option<&'a str>,
+    pub(crate) out: &'a str,
+    pub(crate) m: u32,
+    pub(crate) k: u32,
+    pub(crate) n: u32,
+    pub(crate) tile: u32,
+    pub(crate) workgroup: [u32; 3],
+    pub(crate) generator: &'static str,
+    pub(crate) dtype: DataType,
+    pub(crate) a_tile_name: &'a str,
+    pub(crate) b_tile_name: &'a str,
+    pub(crate) mma_capabilities: MmaCapabilityRecord,
+}
+
+pub(crate) fn build_matmul_tiled_program(
+    spec: MatmulTiledProgramSpec<'_>,
+) -> Result<Program, TensorRefError> {
+    let MatmulTiledProgramSpec {
+        op_id,
+        a,
+        b,
+        bias,
+        out,
+        m,
+        k,
+        n,
+        tile,
+        workgroup,
+        generator,
+        dtype,
+        a_tile_name,
+        b_tile_name,
+        mma_capabilities,
+    } = spec;
+
+    if tile == 0 {
+        return Err(TensorRefError::ShapeMismatch {
+            name: "tile".into(),
+            found: vec![0],
+            expected: vec![1],
+            op: op_id,
+        });
+    }
+
+    // A tiled contraction seeds an accumulator and pads a partial tile, so an
+    // element type with no scalar zero has no valid program on this path.
+    let zero = element_zero(&dtype).ok_or_else(|| TensorRefError::DtypeMismatch {
+        name: out.to_string(),
+        found: dtype.clone(),
+        expected: DataType::F32,
+        op: op_id,
+    })?;
+
+    let matrix_shape = MatrixShape { m, k, n };
+    let selected_kernel = select_matmul_kernel(&dtype, matrix_shape, tile);
+    let mma_gate = gate_mma_path(selected_kernel, mma_capabilities);
+    let (workgroup_tiles, padded_out_count, dispatch_wg, kernel_body) =
+        if mma_gate.selected_path == MatmulKernelPath::TensorCoreF16M16N8K16 {
+            let mma_wg = [32, 1, 1];
+            let mma_out_rows = 16u32;
+            let mma_out_cols = 8u32;
+            let mma_lanes = 32u32;
+            let mma_a_tile = mma_out_rows.checked_mul(tile).ok_or_else(|| {
+                TensorRefError::ElementCountOverflow {
+                    name: a_tile_name.to_string(),
+                    shape: vec![mma_out_rows, tile],
+                }
+            })?;
+            let mma_b_tile = tile.checked_mul(mma_out_cols).ok_or_else(|| {
+                TensorRefError::ElementCountOverflow {
+                    name: b_tile_name.to_string(),
+                    shape: vec![tile, mma_out_cols],
+                }
+            })?;
+            let out_count = checked_element_count(out, m, n)?;
+            let body_nodes = cooperative_matmul_body_mma(
+                a,
+                b,
+                bias,
+                out,
+                matrix_shape,
+                TileShape {
+                    k_tile: tile,
+                    out_rows: mma_out_rows,
+                    out_cols: mma_out_cols,
+                    x_lanes: mma_lanes,
+                    y_lanes: 1,
+                    lanes: mma_lanes,
+                    a_values: mma_a_tile,
+                    b_values: mma_b_tile,
+                },
+                dtype.clone(),
+            );
+            // The MMA body reads A and B from global memory, so this path
+            // stages no tiles and declares no workgroup buffers.
+            (None, out_count, mma_wg, body_nodes)
+        } else {
+            let (out_tile_cols, out_tile_rows, lane_count) = output_tile_shape(workgroup)?;
+            let a_tile_count = out_tile_rows.checked_mul(tile).ok_or_else(|| {
+                TensorRefError::ElementCountOverflow {
+                    name: a_tile_name.to_string(),
+                    shape: vec![out_tile_rows, tile],
+                }
+            })?;
+            let b_tile_count = tile.checked_mul(out_tile_cols).ok_or_else(|| {
+                TensorRefError::ElementCountOverflow {
+                    name: b_tile_name.to_string(),
+                    shape: vec![tile, out_tile_cols],
+                }
+            })?;
+            let padded_out_count =
+                padded_tile_lane_count(m, n, out_tile_rows, out_tile_cols, lane_count)?;
+            let flat_workgroup = [lane_count, 1, 1];
+            let body_nodes = cooperative_matmul_body(
+                a,
+                b,
+                bias,
+                out,
+                matrix_shape,
+                TileShape {
+                    k_tile: tile,
+                    out_rows: out_tile_rows,
+                    out_cols: out_tile_cols,
+                    x_lanes: lane_count,
+                    y_lanes: 1,
+                    lanes: lane_count,
+                    a_values: a_tile_count,
+                    b_values: b_tile_count,
+                },
+                a_tile_name,
+                b_tile_name,
+                &zero,
+            );
+            (
+                Some((a_tile_count, b_tile_count)),
+                padded_out_count,
+                flat_workgroup,
+                body_nodes,
+            )
+        };
+
+    let a_count = checked_element_count(a, m, k)?;
+    let b_count = checked_element_count(b, k, n)?;
+    let logical_out_count = checked_element_count(out, m, n)?;
+    let element_size = dtype
+        .size_bytes()
+        .ok_or_else(|| TensorRefError::ElementCountOverflow {
+            name: out.to_string(),
+            shape: vec![m, n],
+        })?;
+    let logical_output_bytes = u64::from(logical_out_count)
+        .checked_mul(element_size as u64)
+        .ok_or_else(|| TensorRefError::ElementCountOverflow {
+            name: out.to_string(),
+            shape: vec![m, n],
+        })?;
+    let body = vec![wrap_child_region(
+        SEMIRING_GEMM_OP_ID,
+        Ident::from(generator),
+        kernel_body,
+    )];
+
+    let mut buffers = vec![
+        BufferDecl::storage(a, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(a_count),
+        BufferDecl::storage(b, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(b_count),
+    ];
+    let out_slot = if let Some(bias) = bias {
+        buffers.push(
+            BufferDecl::storage(bias, 2, BufferAccess::ReadOnly, dtype.clone()).with_count(n),
+        );
+        3
+    } else {
+        2
+    };
+    if let Some((a_tile_count, b_tile_count)) = workgroup_tiles {
+        buffers.push(BufferDecl::workgroup(
+            a_tile_name,
+            a_tile_count,
+            dtype.clone(),
+        ));
+        buffers.push(BufferDecl::workgroup(
+            b_tile_name,
+            b_tile_count,
+            dtype.clone(),
+        ));
+    }
+    buffers.push(
+        BufferDecl::output(out, out_slot, dtype)
+            .with_count(padded_out_count)
+            .with_output_byte_range(0..logical_output_bytes),
+    );
+
+    Ok(Program::wrapped(
+        buffers,
+        dispatch_wg,
+        vec![wrap_region(generator, body, None)],
+    ))
+}
+
+/// State the registered semiring GEMM as the region that carries the
+/// contraction, for a tiled matmul program built by the shared composer.
+///
+/// `matmul_tiled` and `matmul_bias_tiled` assemble two kernel bodies for one
+/// operation id. The tensor-core body is assembled above and names
+/// `semiring_gemm` as the child region holding the accumulation. The
+/// cooperative body comes from `ContractionComposer`, which closes with a
+/// single region carrying no source, so the same operation attributed its
+/// contraction to the registered primitive on one path and claimed every node
+/// as own work on the other. This restores the child region on the composer
+/// path so both paths state the same edge.
+///
+/// The entry region keeps its generator and stays unattributed: it is the
+/// operation's own boundary. Only its body moves under the child. A region
+/// that already names a source is left alone, so applying this twice cannot
+/// nest one attribution inside another.
+pub(crate) fn attribute_contraction_to_semiring_gemm(program: Program) -> Program {
+    program.map_entry(|entry| {
+        entry
+            .into_iter()
+            .map(|node| match node {
+                Node::Region {
+                    generator,
+                    source_region: None,
+                    body,
+                } => {
+                    let parent = generator.duplicate_handle();
+                    let body = Arc::try_unwrap(body).unwrap_or_else(|shared| (*shared).clone());
+                    Node::Region {
+                        generator,
+                        source_region: None,
+                        body: Arc::new(vec![wrap_child_region(SEMIRING_GEMM_OP_ID, parent, body)]),
+                    }
+                }
+                other => other,
+            })
+            .collect()
+    })
+}
+
+fn checked_element_count(name: &str, rows: u32, cols: u32) -> Result<u32, TensorRefError> {
+    rows.checked_mul(cols)
+        .ok_or_else(|| TensorRefError::ElementCountOverflow {
+            name: name.to_string(),
+            shape: vec![rows, cols],
+        })
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn f16_mma_spec(capabilities: MmaCapabilityRecord) -> MatmulTiledProgramSpec<'static> {
+        MatmulTiledProgramSpec {
+            op_id: "matmul_tiled.test",
+            a: "a",
+            b: "b",
+            bias: None,
+            out: "out",
+            m: 32,
+            k: 16,
+            n: 16,
+            tile: 16,
+            workgroup: [16, 16, 1],
+            generator: "matmul_tiled.test",
+            dtype: DataType::F16,
+            a_tile_name: "matmul_a_tile",
+            b_tile_name: "matmul_b_tile",
+            mma_capabilities: capabilities,
+        }
+    }
+
+    #[test]
+    fn descriptor_mma_capabilities_emit_mma_body() {
+        let program = build_matmul_tiled_program(f16_mma_spec(
+            MmaCapabilityRecord::all_descriptor_mma_shapes(),
+        ))
+        .expect("Fix: an F16 M16N8K16 tiled matmul spec must build.");
+        let debug = format!("{:?}", program.entry());
+
+        assert!(debug.contains("mma_c0"));
+        assert_eq!(program.workgroup_size(), [32, 1, 1]);
+    }
+
+    #[test]
+    fn a_target_without_descriptor_mma_emits_the_cooperative_body() {
+        let program = build_matmul_tiled_program(f16_mma_spec(MmaCapabilityRecord {
+            descriptor_mma: false,
+            f16_m16n8k16: false,
+            bf16_m16n8k16: false,
+            tf32_m16n8k4: false,
+        }))
+        .expect("Fix: a target without descriptor MMA must fall back to cooperative.");
+        let debug = format!("{:?}", program.entry());
+
+        assert!(!debug.contains("mma_c0"));
+        assert_ne!(program.workgroup_size(), [32, 1, 1]);
+    }
+
+    /// A target that lowers descriptor MMA but not this precision takes the
+    /// cooperative body too. The gate is per shape, not per target.
+    #[test]
+    fn descriptor_mma_without_f16_support_emits_the_cooperative_body() {
+        let program = build_matmul_tiled_program(f16_mma_spec(MmaCapabilityRecord {
+            descriptor_mma: true,
+            f16_m16n8k16: false,
+            bf16_m16n8k16: true,
+            tf32_m16n8k4: true,
+        }))
+        .expect("Fix: a per-precision MMA gap must fall back, not fail the build.");
+        let debug = format!("{:?}", program.entry());
+
+        assert!(!debug.contains("mma_c0"));
+        assert_ne!(program.workgroup_size(), [32, 1, 1]);
+    }
+
+    /// A tiled program must declare exactly the workgroup buffers its body
+    /// stages tiles through, under the names the spec supplied.
+    ///
+    /// Every other test in this module passes the default `matmul_a_tile` and
+    /// `matmul_b_tile`, which a body hardcoding those names satisfies by
+    /// coincidence. Custom names are what separate a body reading its spec from
+    /// one ignoring it. The validator rejects an access to a buffer the program
+    /// never declared; the count assertion rejects the reverse, a workgroup
+    /// allocation no body reads.
+    #[test]
+    fn every_kernel_path_stages_tiles_through_the_buffers_the_spec_names() {
+        // Exhaustive with no catch-all: a new kernel path fails to compile here
+        // until its element type and capability record are recorded.
+        let paths = [
+            MatmulKernelPath::Cooperative,
+            MatmulKernelPath::TensorCoreF16M16N8K16,
+            MatmulKernelPath::TensorCoreBf16M16N8K16,
+            MatmulKernelPath::TensorCoreTf32M16N8K4,
+        ]
+        .map(|path| {
+            let (dtype, capabilities) = match path {
+                MatmulKernelPath::Cooperative => (
+                    DataType::U32,
+                    MmaCapabilityRecord {
+                        descriptor_mma: false,
+                        f16_m16n8k16: false,
+                        bf16_m16n8k16: false,
+                        tf32_m16n8k4: false,
+                    },
+                ),
+                MatmulKernelPath::TensorCoreF16M16N8K16 => (
+                    DataType::F16,
+                    MmaCapabilityRecord::all_descriptor_mma_shapes(),
+                ),
+                MatmulKernelPath::TensorCoreBf16M16N8K16 => (
+                    DataType::BF16,
+                    MmaCapabilityRecord::all_descriptor_mma_shapes(),
+                ),
+                MatmulKernelPath::TensorCoreTf32M16N8K4 => (
+                    DataType::F32,
+                    MmaCapabilityRecord::all_descriptor_mma_shapes(),
+                ),
+            };
+            (path, dtype, capabilities)
+        });
+
+        for (path, dtype, capabilities) in paths {
+            let mut spec = f16_mma_spec(capabilities);
+            spec.dtype = dtype;
+            spec.a_tile_name = "custom_a_stage";
+            spec.b_tile_name = "custom_b_stage";
+            let program = build_matmul_tiled_program(spec)
+                .unwrap_or_else(|error| panic!("Fix: {path:?} must build: {error}"));
+
+            // The MMA body reads A and B from global memory, so it stages
+            // nothing. Every other path stages both operand tiles.
+            let expected: &[&str] = if path == MatmulKernelPath::TensorCoreF16M16N8K16 {
+                &[]
+            } else {
+                &["custom_a_stage", "custom_b_stage"]
+            };
+            let workgroup: Vec<&str> = program
+                .buffers()
+                .iter()
+                .filter(|decl| matches!(decl.access, BufferAccess::Workgroup))
+                .map(|decl| decl.name())
+                .collect();
+            assert_eq!(
+                workgroup, expected,
+                "{path:?} must declare exactly the workgroup tiles its body stages"
+            );
+
+            let errors = vyre_foundation::validate::validate(&program);
+            assert!(
+                errors.is_empty(),
+                "{path:?} accessed a tile buffer it never declared: {errors:?}"
+            );
+        }
+    }
+}

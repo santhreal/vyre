@@ -1,7 +1,5 @@
 //! Command-line entry point for the workspace structural gate.
 
-#![forbid(unsafe_code)]
-
 use std::env;
 
 fn main() {

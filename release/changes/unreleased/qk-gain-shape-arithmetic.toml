@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Empty QK-gain tensor shapes now declare a zero-byte output range instead of an unknown-size backend allocation, while overflowing positive shapes fail closed with an actionable trap program instead of wrapping their element count."

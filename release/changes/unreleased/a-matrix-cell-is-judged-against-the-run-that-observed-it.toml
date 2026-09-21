@@ -1,0 +1,2 @@
+category = "Added"
+text = "`conformance-matrix` compares every `docs/optimization/OP_MATRIX.toml` backend cell against the recorded conformance run for that backend, in both directions: a cell claiming support the run does not cover or reports failing, and a cell denying support the run observes passing. Every other rule judged the matrix against itself, so a generated cell was reproducible without being true. A missing or mismatched artifact blocks rather than passing."

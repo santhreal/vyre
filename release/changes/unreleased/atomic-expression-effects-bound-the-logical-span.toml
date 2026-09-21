@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The guarded logical span counts an atomic read-modify-write in an operand expression as an effect, so a program whose every write is an atomic OR no longer reports that it affects no index."

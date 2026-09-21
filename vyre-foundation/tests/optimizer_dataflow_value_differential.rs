@@ -189,7 +189,8 @@ fn cse_oracle_computes_the_real_value() {
         .into_iter()
         .find(|(name, _)| *name == "cse")
         .expect("cse program present");
-    let out = vyre_reference::reference_eval(&cse, &[Value::U32(10)])
+    let out = vyre_reference::ReferenceRequest::standard(&cse, &[Value::U32(10)])
+        .outputs()
         .expect("cse program must run on the reference oracle");
     assert_eq!(
         out[0],
@@ -205,9 +206,11 @@ fn full_optimize_preserves_single_input_dataflow_value() {
             optimize::optimize(program.clone()).expect("registered optimizer must converge");
         for &v in PROBES {
             let inputs = [Value::U32(v)];
-            let base = vyre_reference::reference_eval(&program, &inputs)
+            let base = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+                .outputs()
                 .unwrap_or_else(|e| panic!("base `{name}` must run on the oracle: {e}"));
-            let opt = vyre_reference::reference_eval(&optimized, &inputs)
+            let opt = vyre_reference::ReferenceRequest::standard(&optimized, &inputs)
+                .outputs()
                 .unwrap_or_else(|e| panic!("optimized `{name}` must run on the oracle: {e}"));
             assert_eq!(
                 base, opt,
@@ -226,9 +229,11 @@ fn full_optimize_preserves_store_forward_value() {
             // [in, scratch] in declaration order; scratch is overwritten before
             // read, so its initial value is irrelevant.
             let inputs = [Value::U32(v), Value::U32(0)];
-            let base = vyre_reference::reference_eval(&program, &inputs)
+            let base = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+                .outputs()
                 .unwrap_or_else(|e| panic!("base `{name}` must run on the oracle: {e}"));
-            let opt = vyre_reference::reference_eval(&optimized, &inputs)
+            let opt = vyre_reference::ReferenceRequest::standard(&optimized, &inputs)
+                .outputs()
                 .unwrap_or_else(|e| panic!("optimized `{name}` must run on the oracle: {e}"));
             assert_eq!(
                 base, opt,

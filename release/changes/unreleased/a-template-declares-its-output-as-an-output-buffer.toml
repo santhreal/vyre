@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The libs example template declared its result as a read-write storage buffer, so the rendered crate's own test asked the dispatcher for an input the caller never supplies. The template now declares it with `BufferDecl::output`, which is the declaration a copy of the template should carry."

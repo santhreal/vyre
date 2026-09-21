@@ -5,7 +5,7 @@
 //! production GPU dispatch paths because a hidden reference path can turn a
 //! GPU regression into a green release.
 
-use crate::{paths::workspace_relative, Violation, ViolationKind};
+use crate::{scan, Violation, ViolationKind};
 use anyhow::{Context, Result};
 use proc_macro2::{Span, TokenTree};
 use std::path::Path;
@@ -30,6 +30,13 @@ const FORBIDDEN_SYMBOLS: &[&str] = &[
     "cpu_references",
 ];
 
+/// Crates permitted to name the `vyre_reference` oracle outside a parity path.
+///
+/// The oracle is the parity reference and the only CPU execution path in the
+/// workspace. A crate outside this set that names it has put CPU execution on
+/// a production route.
+const ORACLE_CONSUMER_PATHS: &[&str] = &["/vyre-test-support/", "/xtask-registry/", "/vyre-bench/"];
+
 const APPROVED_PARITY_PATHS: &[&str] = &[
     "/tests/",
     "/benches/",
@@ -43,22 +50,21 @@ const APPROVED_PARITY_PATHS: &[&str] = &[
 
 /// Scan a source tree for production calls into CPU reference execution.
 pub fn scan_tree(root: &Path) -> Result<Vec<Violation>> {
-    let mut all = Vec::new();
-    for entry in walkdir::WalkDir::new(root)
-        .into_iter()
-        .filter_map(|entry| entry.ok())
-    {
-        let path = entry.path();
-        if !path.is_file() || path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
-            continue;
-        }
-        let workspace_rel = workspace_relative(path);
-        if is_approved_parity_path(&workspace_rel) || is_approved_parity_file(&workspace_rel) {
-            continue;
-        }
-        all.extend(scan_file(path, &workspace_rel)?);
-    }
-    Ok(all)
+    scan::collect_violations(
+        root,
+        scan::RUST_SOURCE,
+        |workspace_rel| {
+            !is_approved_parity_path(workspace_rel) && !is_approved_parity_file(workspace_rel)
+        },
+        scan_file,
+    )
+}
+
+fn is_oracle_consumer_path(workspace_rel: &str) -> bool {
+    let wrapped = format!("/{workspace_rel}");
+    ORACLE_CONSUMER_PATHS
+        .iter()
+        .any(|approved| wrapped.contains(approved))
 }
 
 fn is_approved_parity_path(workspace_rel: &str) -> bool {
@@ -90,6 +96,7 @@ fn scan_file(path: &Path, workspace_rel: &str) -> Result<Vec<Violation>> {
 
     let mut visitor = CpuFallbackVisitor {
         file: workspace_rel,
+        oracle_consumer: is_oracle_consumer_path(workspace_rel),
         approved_depth: 0,
         violations: Vec::new(),
     };
@@ -132,7 +139,7 @@ fn cfg_requires_parity(meta: &Meta) -> bool {
     }
 }
 
-fn forbidden_path(path: &syn::Path) -> Option<String> {
+fn forbidden_path(path: &syn::Path, oracle_consumer: bool) -> Option<String> {
     let segments = path
         .segments
         .iter()
@@ -140,15 +147,25 @@ fn forbidden_path(path: &syn::Path) -> Option<String> {
         .collect::<Vec<_>>();
     let rendered = segments.join("::");
     if rendered.contains("vyre_driver_reference")
-        || rendered.ends_with("vyre_reference::reference_eval")
         || segments
             .iter()
-            .any(|segment| FORBIDDEN_SYMBOLS.contains(&segment.as_str()))
+            .any(|segment| forbidden_segment(segment, oracle_consumer))
     {
         Some(rendered)
     } else {
         None
     }
+}
+
+/// Whether one path segment names a forbidden CPU path.
+///
+/// `vyre_reference` is keyed by crate rather than by entry point, so renaming
+/// or adding an oracle function cannot reopen the route.
+fn forbidden_segment(segment: &str, oracle_consumer: bool) -> bool {
+    if segment == "vyre_reference" {
+        return !oracle_consumer;
+    }
+    FORBIDDEN_SYMBOLS.contains(&segment)
 }
 
 fn cpu_helper_name(name: &str) -> bool {
@@ -157,6 +174,7 @@ fn cpu_helper_name(name: &str) -> bool {
 
 struct CpuFallbackVisitor<'a> {
     file: &'a str,
+    oracle_consumer: bool,
     approved_depth: usize,
     violations: Vec<Violation>,
 }
@@ -230,10 +248,9 @@ impl CpuFallbackVisitor<'_> {
     fn inspect_segments(&mut self, span: Span, segments: &[String]) {
         let rendered = segments.join("::");
         if rendered.contains("vyre_driver_reference")
-            || rendered.ends_with("vyre_reference::reference_eval")
             || segments
                 .iter()
-                .any(|segment| FORBIDDEN_SYMBOLS.contains(&segment.as_str()))
+                .any(|segment| forbidden_segment(segment, self.oracle_consumer))
         {
             self.record_fallback(span, &rendered);
         }
@@ -246,8 +263,7 @@ impl CpuFallbackVisitor<'_> {
                 TokenTree::Ident(ident) => {
                     let name = ident.to_string();
                     if name == "vyre_driver_reference"
-                        || name == "reference_eval"
-                        || FORBIDDEN_SYMBOLS.contains(&name.as_str())
+                        || forbidden_segment(&name, self.oracle_consumer)
                     {
                         self.record_fallback(ident.span(), &name);
                     }
@@ -327,7 +343,7 @@ impl<'ast> Visit<'ast> for CpuFallbackVisitor<'_> {
     }
 
     fn visit_expr_path(&mut self, node: &'ast syn::ExprPath) {
-        if let Some(path) = forbidden_path(&node.path) {
+        if let Some(path) = forbidden_path(&node.path, self.oracle_consumer) {
             self.record_fallback(node.path.span(), &path);
         }
         syn::visit::visit_expr_path(self, node);

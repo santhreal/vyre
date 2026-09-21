@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A test binary that reads the operation catalog names a partition anchor, so a linker that drops unreferenced objects no longer leaves it walking an empty registry and reporting every registration missing."

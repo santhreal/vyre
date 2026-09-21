@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The native Metal against wgpu-on-Metal comparison lives in `vyre-driver-metal/src/tests/wgpu_differential.rs`. It was the second test in the one-shot dispatch module, whose subject is what Metal does with a program rather than whether two backends agree."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The benchmark evidence check reads the release-surface coverage flag names from the hygiene scan that records them instead of carrying a second list."

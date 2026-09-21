@@ -1,0 +1,2 @@
+category = "Added"
+text = "`scan_prefilter_width_closure` reads the `PrefilterWidth` variants out of the width table's own source at run time and fails when a width has no recorded dispatch ABI, when a recorded row names a width the source no longer declares, when a shipped program's bindings disagree with the row's counter, mask and sink layout, when a declared mask is never read by the emitted body, and when the widths stop forming a mask prefix chain. An empty or unparsable member set panics rather than passing, because an empty set makes every closure assertion vacuous."

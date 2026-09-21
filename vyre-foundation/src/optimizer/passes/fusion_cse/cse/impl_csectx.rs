@@ -1,5 +1,5 @@
 #![allow(clippy::expect_used)]
-use super::expr_key::ExprId;
+use super::expr_key::CseExprId;
 use super::{expr_has_effect, CseCtx, ScopeFrame, ScopedBinding};
 use crate::ir::{Expr, Ident, Node};
 use crate::optimizer::rewrite::{rewrite_binary, rewrite_fma, rewrite_select};
@@ -59,7 +59,7 @@ impl CseCtx {
     }
 
     #[inline]
-    fn record_insert(&mut self, key: ExprId, value: Ident) {
+    fn record_insert(&mut self, key: CseExprId, value: Ident) {
         let old = self.values.insert(
             key,
             ScopedBinding {
@@ -73,7 +73,7 @@ impl CseCtx {
     }
 
     #[inline]
-    fn visible_value(&self, key: ExprId) -> Option<&Ident> {
+    fn visible_value(&self, key: CseExprId) -> Option<&Ident> {
         let value = self.values.get(&key)?;
         (value.epoch == self.current_epoch).then_some(&value.name)
     }
@@ -179,57 +179,17 @@ impl CseCtx {
                 self.clear_observed_state();
                 Node::barrier_with_ordering(*ordering)
             }
-            Node::IndirectDispatch {
-                count_buffer,
-                count_offset,
-            } => {
+            Node::LogicalBarrier { ordering } => {
                 self.clear_observed_state();
-                Node::IndirectDispatch {
-                    count_buffer: count_buffer.clone(),
-                    count_offset: *count_offset,
-                }
+                Node::logical_barrier(*ordering)
             }
-            Node::AsyncLoad {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => {
-                self.clear_observed_state();
-                Node::async_load_ext(
-                    source.clone(),
-                    destination.clone(),
-                    (**offset).clone(),
-                    (**size).clone(),
-                    tag.clone(),
-                )
-            }
-            Node::AsyncStore {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => {
-                self.clear_observed_state();
-                Node::async_store(
-                    source.clone(),
-                    destination.clone(),
-                    (**offset).clone(),
-                    (**size).clone(),
-                    tag.clone(),
-                )
-            }
-            Node::AsyncWait { tag } => {
-                self.clear_observed_state();
-                Node::AsyncWait { tag: tag.clone() }
-            }
-            Node::Trap { .. } | Node::Resume { .. } => {
-                self.clear_observed_state();
-                node.clone()
-            }
-            Node::AllReduce { .. }
+            Node::IndirectDispatch { .. }
+            | Node::AsyncLoad { .. }
+            | Node::AsyncStore { .. }
+            | Node::AsyncWait { .. }
+            | Node::Trap { .. }
+            | Node::Resume { .. }
+            | Node::AllReduce { .. }
             | Node::AllGather { .. }
             | Node::ReduceScatter { .. }
             | Node::Broadcast { .. } => {
@@ -253,6 +213,66 @@ impl CseCtx {
                     body: std::sync::Arc::new(nodes),
                 }
             }
+            Node::TileLoad {
+                tile,
+                tile_type,
+                buffer,
+                origin,
+                layout,
+            } => {
+                self.clear_observed_state();
+                let origin = origin.iter().map(|e| self.expr(e).into_owned()).collect();
+                Node::TileLoad {
+                    tile: tile.clone(),
+                    tile_type: tile_type.clone(),
+                    buffer: buffer.clone(),
+                    origin,
+                    layout: layout.clone(),
+                }
+            }
+            Node::TileStore {
+                buffer,
+                origin,
+                tile,
+            } => {
+                self.clear_observed_state();
+                let origin = origin.iter().map(|e| self.expr(e).into_owned()).collect();
+                Node::TileStore {
+                    buffer: buffer.clone(),
+                    origin,
+                    tile: tile.clone(),
+                }
+            }
+            Node::TileMatmul { acc, a, b } => Node::TileMatmul {
+                acc: acc.clone(),
+                a: a.clone(),
+                b: b.clone(),
+            },
+            Node::TileReduce {
+                out,
+                tile,
+                op,
+                axis,
+            } => Node::TileReduce {
+                out: out.clone(),
+                tile: tile.clone(),
+                op: *op,
+                axis: *axis,
+            },
+            Node::TileElementwise { out, inputs, body } => {
+                self.enter_scope();
+                let body = self.nodes(body);
+                self.leave_scope();
+                Node::TileElementwise {
+                    out: out.clone(),
+                    inputs: inputs.clone(),
+                    body,
+                }
+            }
+            Node::TileDecl { name, tile } => Node::TileDecl {
+                name: name.clone(),
+                tile: tile.clone(),
+            },
             Node::Opaque(extension) => {
                 self.clear_observed_state();
                 Node::Opaque(extension.clone())
@@ -328,22 +348,7 @@ impl CseCtx {
                     ordering: *ordering,
                 })
             }
-            Expr::LitU32(_)
-            | Expr::LitI32(_)
-            | Expr::LitF32(_)
-            | Expr::LitBool(_)
-            | Expr::Var(_)
-            | Expr::BufferRef { .. }
-            | Expr::BufLen { .. }
-            | Expr::InvocationId { .. }
-            | Expr::WorkgroupId { .. }
-            | Expr::LocalId { .. }
-            | Expr::SubgroupBallot { .. }
-            | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupReduce { .. }
-            | Expr::SubgroupLocalId
-            | Expr::SubgroupSize
-            | Expr::Opaque(_) => Cow::Borrowed(expr),
+            _ => Cow::Borrowed(expr),
         };
 
         if matches!(rewritten.as_ref(), Expr::Var(_)) || expr_has_effect(rewritten.as_ref()) {
@@ -351,10 +356,10 @@ impl CseCtx {
         }
 
         // Soundness fix (S19): the previous pointer cache mapped
-        // `*const Expr → ExprId`, claiming the IR is immutable during
+        // `*const Expr → CseExprId`, claiming the IR is immutable during
         // a single CSE pass. That isn't safe  -  Box<Expr> sub-trees
         // freed by `Cow::Owned` rewrites can be reallocated at the
-        // same address by later sub-trees, so a stale ExprId from a
+        // same address by later sub-trees, so a stale CseExprId from a
         // prior expression flows through `values.get(stale_id)` and
         // CSE merges semantically distinct expressions (caught by
         // `full_optimize_is_idempotent_on_canonical_wire` regression

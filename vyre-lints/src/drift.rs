@@ -152,30 +152,38 @@ fn epoch_to_iso(ts: i64) -> String {
     iso_from_days(days)
 }
 
+/// Days in each month of `year`, in month order.
+///
+/// Three copies of this table used to sit in two files, and each carried its
+/// own leap-year test alongside it.
+fn month_lengths(year: i64) -> [i64; 12] {
+    if is_leap(year) {
+        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    } else {
+        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    }
+}
+
 /// Convert a count of days since the Unix epoch into a `YYYY-MM-DD`
 /// string. Avoids pulling in chrono.
-fn iso_from_days(mut days: i64) -> String {
-    let mut y = 1970i64;
+#[must_use]
+pub fn iso_from_days(mut days: i64) -> String {
+    let mut year = 1970i64;
     loop {
-        let len = if is_leap(y) { 366 } else { 365 };
+        let len = if is_leap(year) { 366 } else { 365 };
         if days < len {
             break;
         }
         days -= len;
-        y += 1;
+        year += 1;
     }
-    let months_in_year: [i64; 12] = if is_leap(y) {
-        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    } else {
-        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    };
-    let mut m = 0usize;
-    while days >= months_in_year[m] {
-        days -= months_in_year[m];
-        m += 1;
+    let months = month_lengths(year);
+    let mut month = 0usize;
+    while days >= months[month] {
+        days -= months[month];
+        month += 1;
     }
-    let d = days + 1;
-    format!("{y:04}-{:02}-{:02}", m + 1, d)
+    format!("{year:04}-{:02}-{:02}", month + 1, days + 1)
 }
 
 fn is_leap(y: i64) -> bool {
@@ -205,11 +213,7 @@ fn days_since_epoch(iso: &str) -> Option<i64> {
         days += if is_leap(iy) { 366 } else { 365 };
         iy += 1;
     }
-    let months: [i64; 12] = if is_leap(y) {
-        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    } else {
-        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    };
+    let months = month_lengths(y);
     for &month_days in months.iter().take((m - 1) as usize) {
         days += month_days;
     }

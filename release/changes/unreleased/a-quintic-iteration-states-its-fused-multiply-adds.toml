@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The Newton-Schulz quintic evaluated its polynomial as five multiplies and two adds per step, so five chained steps accumulated a rounding difference wherever a backend contracted a pair the reference did not. A composed rotation followed by the iteration measured 46 ULP against the reference. The polynomial is now stated in Horner form with explicit fused multiply-adds, which removes the freedom and costs four operations per step instead of seven."

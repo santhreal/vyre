@@ -1,6 +1,8 @@
 [package]
 name = "vyre-lints"
-version = "0.7.2"
+version = "0.8.0"
+publish = false
+autotests = false
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Lego-block enforcement lints for vyre. Forbids raw IR construction in dialect crates."
@@ -10,6 +12,9 @@ documentation = "https://docs.rs/vyre-lints"
 readme = "README.md"
 categories = ["development-tools", "compilers"]
 keywords = ["vyre", "lint", "ir", "compiler"]
+
+[package.metadata.vyre]
+publication_class = "conformance-tooling"
 
 [lints]
 workspace = true
@@ -33,7 +38,11 @@ clap = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 vyre-test-support.workspace = true
-# integration tests/benches assert against these crates' public APIs
-vyre = { path = "../vyre", default-features = false }
+# `vyre` appears only inside the fixture source text these tests feed to the
+# linter, never as a compiled call, so it is not a dependency of this crate.
 vyre-foundation = { path = "../vyre-foundation" }
 tempfile = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

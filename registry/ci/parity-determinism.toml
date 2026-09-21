@@ -1,0 +1,7 @@
+lane = "parity-determinism"
+workflow = ".github/workflows-paused/parity-determinism.yml"
+state = "unprotected"
+file = "deleted"
+reason = "the composition parity and determinism stress tests it ran were deleted, and the parity half is measured by the parity matrix that conform.yml and gpu-parity.yml run"
+unprotected_class = "byte-identical output across 100 repeat dispatches of one composition on CUDA"
+steps = []

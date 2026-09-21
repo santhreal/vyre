@@ -1,0 +1,2 @@
+category = "Added"
+text = "`BackendError::ExecutionAborted` with error code 1009 classifies a request abandoned by supersession or cancellation, separately from `InvalidProgram`. The program and the device are intact and the caller submits the next generation."

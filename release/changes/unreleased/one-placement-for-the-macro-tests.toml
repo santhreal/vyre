@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "vyre-macros keeps its unit tests in one placement beside the parser they cover, and each surviving inline module states why no integration test can reach it."

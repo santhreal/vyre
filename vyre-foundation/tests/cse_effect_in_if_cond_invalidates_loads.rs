@@ -103,9 +103,11 @@ fn program_with_barrier() -> Program {
 fn subgroup_hidden_atomic_after_load_is_rejected_without_a_barrier() {
     let program = program_without_barrier();
 
-    let err = vyre_reference::reference_eval(&program, &inputs()).expect_err(
-        "a non-atomic load + subgroup-hidden atomic on the same buffer must be rejected",
-    );
+    let err = vyre_reference::ReferenceRequest::standard(&program, &inputs())
+        .outputs()
+        .expect_err(
+            "a non-atomic load + subgroup-hidden atomic on the same buffer must be rejected",
+        );
     let message = format!("{err:?}");
     assert!(
         message.contains("fusion hazard on buffer `ctr`"),
@@ -120,7 +122,8 @@ fn barrier_makes_the_form_valid_and_cse_preserves_semantics() {
 
     // With the barrier the program is valid. The barrier clears CSE's observed
     // state, so the post-atomic `load(ctr,0)` is NOT aliased to the stale `a`.
-    let original = vyre_reference::reference_eval(&program, &inputs())
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs())
+        .outputs()
         .expect("with a barrier the access pattern is valid and must run");
     // `out` (the single result buffer) captures the post-increment load == 6.
     assert!(
@@ -129,7 +132,8 @@ fn barrier_makes_the_form_valid_and_cse_preserves_semantics() {
     );
 
     let optimized = cse(program);
-    let after = vyre_reference::reference_eval(&optimized, &inputs())
+    let after = vyre_reference::ReferenceRequest::standard(&optimized, &inputs())
+        .outputs()
         .expect("CSE-optimized program must still validate and run");
     assert_eq!(
         after, original,

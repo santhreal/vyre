@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A grid-stride tree reduction publishes its result buffer instead of reading it from the dispatch inputs, and the single-block and fused two-pass forms present the same signature, so one caller dispatch works at every count: pass the input values and nothing else, where the small-count form previously demanded a placeholder value for its own output."

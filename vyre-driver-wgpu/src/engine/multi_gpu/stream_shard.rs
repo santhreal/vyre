@@ -309,6 +309,8 @@ fn ensure_heap_spare(
         .map_err(|_| StreamShardError::AllocationFailed { label })
 }
 
+// Inline: `vyre_driver_wgpu::engine::multi_gpu::stream_shard` is `private`, so no integration test
+// can reach what this suite exercises.
 #[cfg(test)]
 mod tests {
     use super::*;

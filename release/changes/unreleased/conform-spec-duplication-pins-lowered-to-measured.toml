@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Four duplication pins record what the tree measures: `conform` 765 to 367 duplicated lines, `vyre-spec` 244 to 84, `vyre-foundation` 4342 to 4127, and `vyre-libs` 11446 to 11425, each with `total_lines` measured. A pin with room under it hides the next copy."

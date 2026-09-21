@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The workspace cargo runner no longer exports a workstation-specific target directory, so hosted CI and new checkouts use their own writable Cargo configuration."

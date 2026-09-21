@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-conform` depends on `vyre-libs` with `features = [\"full\"]` rather than restating ten of the aggregate's members by hand. A hand-kept list of aggregate members drifts silently against the aggregate, which is how the same shape on the registry walker's primitives edge lost four dialects and made three operations invisible."

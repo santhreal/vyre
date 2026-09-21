@@ -1,0 +1,118 @@
+//! Bounded SCC-local bitset fixpoint primitive.
+//!
+//! The primitive operates on a row-major bit-matrix where each row is a
+//! `u32` adjacency mask. Starting from `seed_mask`, it repeatedly expands
+//! reachable bits through rows inside `group_mask` and writes the final
+//! bounded closure to `out_mask[0]`.
+
+use vyre_foundation::composition::wrap_anonymous_region;
+
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
+/// Canonical op id.
+pub const OP_ID: &str = "vyre-libs::math::tensor_scc";
+
+/// Build a bounded SCC-local bitset fixpoint program.
+#[must_use]
+pub fn tensor_scc_fixpoint(
+    matrix_rows: &str,
+    seed_mask: &str,
+    group_mask: &str,
+    out_mask: &str,
+    row_count: u32,
+    iteration_limit: u32,
+) -> Program {
+    let row_count = row_count.max(1);
+    let iteration_limit = iteration_limit.max(1);
+    let body = vec![
+        // Mask the seed to the group BEFORE expansion: this is a group-LOCAL closure, so a
+        // seed node outside `group_mask` is not part of it and must not seed reachability
+        // through its row. `cpu_ref` masks the seed first (`seed_mask & group_mask`); seeding
+        // `active` unmasked let out-of-group seed bits (wrongly) follow their rows into the
+        // group, diverging from the reference. With this mask, `active ⊆ group` holds for the
+        // whole loop (every contribution is `& group_mask`), so the final out-mask is exact.
+        Node::let_bind(
+            "active",
+            Expr::bitand(
+                Expr::load(seed_mask, Expr::u32(0)),
+                Expr::load(group_mask, Expr::u32(0)),
+            ),
+        ),
+        Node::loop_for(
+            "iter",
+            Expr::u32(0),
+            Expr::u32(iteration_limit),
+            vec![
+                Node::let_bind("next", Expr::var("active")),
+                Node::loop_for(
+                    "row",
+                    Expr::u32(0),
+                    Expr::u32(row_count),
+                    vec![Node::if_then(
+                        Expr::ne(
+                            Expr::bitand(
+                                Expr::var("active"),
+                                Expr::shl(Expr::u32(1), Expr::var("row")),
+                            ),
+                            Expr::u32(0),
+                        ),
+                        vec![Node::assign(
+                            "next",
+                            Expr::bitor(
+                                Expr::var("next"),
+                                Expr::bitand(
+                                    Expr::load(matrix_rows, Expr::var("row")),
+                                    Expr::load(group_mask, Expr::u32(0)),
+                                ),
+                            ),
+                        )],
+                    )],
+                ),
+                Node::assign("active", Expr::var("next")),
+            ],
+        ),
+        Node::store(
+            out_mask,
+            Expr::u32(0),
+            Expr::bitand(Expr::var("active"), Expr::load(group_mask, Expr::u32(0))),
+        ),
+    ];
+
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(matrix_rows, 0, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(row_count),
+            BufferDecl::storage(seed_mask, 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+            BufferDecl::storage(group_mask, 2, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+            BufferDecl::storage(out_mask, 3, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+        ],
+        [1, 1, 1],
+        vec![wrap_anonymous_region(OP_ID, body)],
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vyre_reference::composition_witness::tensor_scc_witness as cpu_ref;
+
+    #[test]
+    fn cpu_ref_closes_cycle_inside_group() {
+        let rows = [0b0010, 0b0100, 0b0001, 0b1000];
+        assert_eq!(cpu_ref(&rows, 0b0001, 0b0111, 8), 0b0111);
+    }
+
+    #[test]
+    fn cpu_ref_masks_edges_outside_group() {
+        let rows = [0b1010, 0b0100, 0b0000, 0b0001];
+        assert_eq!(cpu_ref(&rows, 0b0001, 0b0011, 8), 0b0011);
+    }
+
+    #[test]
+    fn program_declares_bounded_matrix_buffers() {
+        let program = tensor_scc_fixpoint("rows", "seed", "group", "out", 4, 8);
+        assert_eq!(program.workgroup_size(), [1, 1, 1]);
+        assert_eq!(program.buffers()[0].count(), 4);
+        assert_eq!(program.buffers()[3].count(), 1);
+    }
+}

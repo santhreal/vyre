@@ -1,14 +1,14 @@
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
+    prepared_as_mut, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
     BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
-use crate::api::resident::{
-    dispatch_artifact_timed, input_bytes_total, transfer_accounting, ResidentInputPool,
-};
+use crate::api::resident::{dispatch_artifact_timed, ResidentInputPool};
+use crate::cases::reference_sample::timed_reference;
+use crate::cases::resident_queue::{account, queue_buffers, resident_pool_sets_metric};
 use std::sync::Arc;
-use std::time::Instant;
-use vyre_runtime::resident_work_queue::{self, protocol, ResidentWorkItem};
+use vyre_runtime::resident_work_queue::planner::ResidentWorkItem;
+use vyre_runtime::resident_work_queue::{self, protocol};
 
 pub struct MegakernelTruth;
 
@@ -58,16 +58,6 @@ impl BenchCase for MegakernelTruth {
         SUITES
     }
 
-    fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: None,
-            min_input_bytes: None,
-            feature_set: vec![],
-        }
-    }
-
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
         let work_items = make_work_items(WORK_ITEM_COUNT)?;
         let slot_count = u32::try_from(WORK_ITEM_COUNT).map_err(|source| {
@@ -80,8 +70,6 @@ impl BenchCase for MegakernelTruth {
             slot_count,
             &[],
         );
-        let control_bytes = resident_work_queue::encode_control(false, 1, 0)
-            .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
         let mut ring_words = Vec::new();
         vyre_runtime::resident_work_queue::ResidentWorkQueue::encode_work_items_ring_words_into(
             slot_count,
@@ -94,28 +82,18 @@ impl BenchCase for MegakernelTruth {
         for word in &ring_words {
             ring_bytes.extend_from_slice(&word.to_le_bytes());
         }
-        let debug_bytes = resident_work_queue::encode_empty_debug_log(
-            resident_work_queue::debug::RECORD_CAPACITY,
-        )
-        .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
-        let io_bytes = resident_work_queue::io::try_encode_empty_io_queue(
-            resident_work_queue::io::IO_SLOT_COUNT,
-        )
-        .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
-        let inputs = vec![control_bytes, ring_bytes, debug_bytes, io_bytes];
-        let input_bytes_total = input_bytes_total(&inputs);
-        let resident = ResidentInputPool::upload_optional(
+        let queue = queue_buffers(
             ctx,
-            &inputs,
+            ring_bytes,
             RESIDENT_SAMPLE_SETS,
             "megakernel truth bench",
         )?;
         Ok(Box::new(MegakernelTruthPrepared {
             program,
             work_items,
-            inputs,
-            input_bytes_total,
-            resident,
+            inputs: queue.inputs,
+            input_bytes_total: queue.input_bytes_total,
+            resident: queue.resident,
         }))
     }
 
@@ -128,13 +106,7 @@ impl BenchCase for MegakernelTruth {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_mut::<MegakernelTruthPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "megakernel truth prepared payload type mismatch".to_string(),
-                )
-            })?;
+        let prepared = prepared_as_mut::<MegakernelTruthPrepared>(prepared, "megakernel truth")?;
 
         let mut dispatch_config = ctx.dispatch_config.clone();
         dispatch_config.grid_override =
@@ -146,35 +118,26 @@ impl BenchCase for MegakernelTruth {
             &prepared.inputs,
             &dispatch_config,
         )?;
-        let resident_used = dispatch.resident_used;
-        let wall_ns = dispatch.timed.wall_ns;
-        let outputs = dispatch.timed.outputs;
-        let done_count = read_done_count(&outputs)?;
-        let baseline_start = Instant::now();
-        let baseline_processed = simulate_cpu_drain(&prepared.work_items);
-        let baseline_ns = u64::try_from(baseline_start.elapsed().as_nanos()).unwrap_or(u64::MAX);
-        let output_bytes_total = outputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let accounting = transfer_accounting(
-            prepared.input_bytes_total,
-            output_bytes_total,
-            resident_used,
-        );
+        let sample = account(dispatch, prepared.input_bytes_total);
+        let done_count = read_done_count(&sample.outputs)?;
+        let (baseline_processed, baseline_ns) =
+            timed_reference(|| simulate_cpu_drain(&prepared.work_items));
 
         Ok(BenchRun {
             metrics: BenchMetrics {
-                wall_ns: Some(wall_ns),
-                dispatch_ns: Some(wall_ns),
+                wall_ns: Some(sample.wall_ns),
+                dispatch_ns: Some(sample.wall_ns),
                 kernel_queue_submit_ns: Some(0),
                 input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(output_bytes_total),
-                bytes_read: Some(accounting.bytes_read),
-                bytes_written: Some(accounting.bytes_written),
-                bytes_touched: Some(accounting.bytes_touched),
+                output_bytes: Some(sample.output_bytes_total),
+                bytes_read: Some(sample.accounting.bytes_read),
+                bytes_written: Some(sample.accounting.bytes_written),
+                bytes_touched: Some(sample.accounting.bytes_touched),
                 atomic_op_count: Some((WORK_ITEM_COUNT as u64).saturating_mul(2)),
                 custom: vec![
                     MetricPoint {
                         name: "megakernel_backend_dispatch_ns".to_string(),
-                        value: wall_ns,
+                        value: sample.wall_ns,
                     },
                     MetricPoint {
                         name: "megakernel_published_items".to_string(),
@@ -192,14 +155,7 @@ impl BenchCase for MegakernelTruth {
                         name: "megakernel_kernel_launches".to_string(),
                         value: 1,
                     },
-                    MetricPoint {
-                        name: "megakernel_resident_input_pool_sets".to_string(),
-                        value: if resident_used {
-                            RESIDENT_SAMPLE_SETS as u64
-                        } else {
-                            0
-                        },
-                    },
+                    resident_pool_sets_metric(sample.resident_used, RESIDENT_SAMPLE_SETS),
                     MetricPoint {
                         name: "megakernel_backend_neutral_cuda_path".to_string(),
                         value: u64::from(ctx.preferred_backend.id() == "cuda"),
@@ -242,7 +198,7 @@ fn read_done_count(outputs: &[Vec<u8>]) -> Result<u64, BenchError> {
             "megakernel truth dispatch produced no control output".to_string(),
         )
     })?;
-    let done = vyre_runtime::resident_work_queue::try_read_done_count(control)
+    let done = vyre_runtime::resident_work_queue::protocol::try_read_done_count(control)
         .map_err(|error| BenchError::CorrectnessViolation(error.to_string()))?;
     Ok(u64::from(done))
 }

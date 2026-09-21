@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A loop bound read from a buffer is clamped to the extent of the buffers its body indexes, so an out-of-contract offset, count, or token total cannot request four billion iterations."

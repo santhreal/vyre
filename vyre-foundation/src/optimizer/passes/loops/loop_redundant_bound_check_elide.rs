@@ -49,6 +49,7 @@
 use super::substitution::body_writes_loop_var;
 use crate::ir::{BinOp, Expr, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::visit;
 
 /// Drop redundant `if loop_var < to { ... }` guards inside loops with
 /// matching literal upper bounds.
@@ -71,16 +72,15 @@ impl LoopRedundantBoundCheckElidePass {
         if !stats.has_any_node_kind(NODE_KIND_LOOP) || !stats.has_any_node_kind(NODE_KIND_IF) {
             return PassAnalysis::SKIP;
         }
-        if program.entry().iter().any(node_has_redundant_guard) {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        PassAnalysis::run_if(program.entry().iter().any(node_has_redundant_guard))
     }
 
     /// Walk the entry tree and elide redundant bound checks.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
+        if !Self::analyze_impl(&program).should_run {
+            return PassResult::unchanged(program);
+        }
         let mut changed = false;
         let program = program.map_entry(|entry| {
             entry
@@ -182,25 +182,15 @@ fn elide_in_node_with_ctx(node: Node, loop_ctx: Option<(&str, u32)>, changed: &m
             }
         }
         Node::Block(body) => Node::Block(elide_in_sequence(body, loop_ctx, changed)),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec: Vec<Node> = match std::sync::Arc::try_unwrap(body) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            // A Region is a fresh scope  -  drop the loop_ctx because the
-            // inner body's loop var is in a different binding scope.
-            let body_vec = elide_in_sequence(body_vec, None, changed);
-            Node::Region {
-                generator,
-                source_region,
-                body: std::sync::Arc::new(body_vec),
-            }
+        // A `Region` is a fresh scope, and so is every other body-bearing
+        // variant this match does not name: the inner body's loop variable is
+        // a different binding, so the enclosing loop context does not reach
+        // it. `map_body` owns which slots exist, so a new nesting variant is
+        // rewritten instead of handed back untouched, which keeps this
+        // transform reaching exactly as far as the analysis below.
+        other => {
+            visit::node_map::map_body(other, &mut |body| elide_in_sequence(body, None, changed))
         }
-        other => other,
     }
 }
 
@@ -247,15 +237,21 @@ fn has_redundant_guard_with_ctx(node: &Node, loop_ctx: Option<(&str, u32)>) -> b
         Node::Block(body) => body
             .iter()
             .any(|n| has_redundant_guard_with_ctx(n, loop_ctx)),
-        Node::Region { body, .. } => body.iter().any(|n| has_redundant_guard_with_ctx(n, None)),
-        _ => false,
+        // A `Region` is a fresh scope, and so is every other body-bearing
+        // variant this match does not name. `child_bodies` owns which slots
+        // exist, so a new nesting variant is searched instead of skipped. It
+        // carries no loop context: only the arms above establish one.
+        _ => visit::child_bodies(node)
+            .into_iter()
+            .flatten()
+            .any(|n| has_redundant_guard_with_ctx(n, None)),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::model::expr::Ident;
+    use crate::ir::Ident;
     use crate::ir::{BufferAccess, BufferDecl, DataType};
 
     fn buf() -> BufferDecl {

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The lock that serializes vendor runtime bring-up is held by a named type implementing StateOwnerRecovery, which reports the device-context failure domain and restart-from-canonical-input recovery."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Release evidence now tracks CUDA and WGPU benchmark invocations as distinct required producers with disjoint, exact artifact ownership."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Cache invalidation now projects impacted rules and provenance through lineage cells in a final GPU composition instead of post-processing dispatched results on the host."

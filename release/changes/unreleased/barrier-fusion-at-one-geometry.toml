@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Megakernel fusion admits two programs that synchronize at one shared workgroup geometry, and reports MKL006 only when the geometries differ and one program reasons about the size of its own workgroup."

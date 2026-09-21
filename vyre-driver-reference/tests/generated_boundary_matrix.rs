@@ -4,12 +4,12 @@
 //! harnesses, so this test drives the backend trait surface with thousands of
 //! generated edge-heavy inputs instead of only hand-picked examples.
 
-use vyre_driver::{DispatchConfig, VyreBackend};
-use vyre_driver_reference::CpuRefBackend;
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_driver::DispatchConfig;
+use vyre_driver_reference::CpuRefEvaluator;
+use vyre_foundation::ir::Expr;
 
-mod support;
-use support::{dispatch_with_inputs, u32_out_buffer};
+use crate::dispatch_fixtures;
+use dispatch_fixtures::{binary_program, dispatch_with_inputs};
 
 #[derive(Clone, Copy)]
 struct BinaryCase {
@@ -50,28 +50,6 @@ const BINARY_CASES: &[BinaryCase] = &[
         expected: |a, b| a | b,
     },
 ];
-
-fn binary_program(expr: fn(Expr, Expr) -> Expr) -> Program {
-    Program::wrapped(
-        vec![
-            BufferDecl::read("a", 0, DataType::U32),
-            BufferDecl::read("b", 1, DataType::U32),
-            u32_out_buffer("out", 2),
-        ],
-        [1, 1, 1],
-        vec![
-            Node::let_bind("idx", Expr::u32(0)),
-            Node::store(
-                "out",
-                Expr::var("idx"),
-                expr(
-                    Expr::load("a", Expr::var("idx")),
-                    Expr::load("b", Expr::var("idx")),
-                ),
-            ),
-        ],
-    )
-}
 
 fn generated_pair(seed: u32) -> (u32, u32) {
     let a = seed.wrapping_mul(0x9e37_79b9).rotate_left(seed & 31) ^ 0xa5a5_5a5a;
@@ -139,7 +117,7 @@ fn generated_binary_operation_matrix_matches_host_wrapping_semantics() {
 
 #[test]
 fn generated_borrowed_dispatch_matrix_matches_owned_dispatch() {
-    let backend = CpuRefBackend;
+    let evaluator = CpuRefEvaluator;
     let config = DispatchConfig::default();
     let mut assertions = 0usize;
 
@@ -149,16 +127,15 @@ fn generated_borrowed_dispatch_matrix_matches_owned_dispatch() {
             let (a, b) = generated_pair(seed ^ 0x55aa_33cc);
             let a_bytes = a.to_le_bytes();
             let b_bytes = b.to_le_bytes();
-            let owned = backend
-                .dispatch(&program, &[a_bytes.to_vec(), b_bytes.to_vec()], &config)
-                .expect("Fix: owned cpu-ref dispatch must accept generated inputs.");
-            let borrowed = backend
-                .dispatch_borrowed(&program, &[&a_bytes[..], &b_bytes[..]], &config)
-                .expect("Fix: borrowed cpu-ref dispatch must accept generated inputs.");
+            let evaluated = evaluator
+                .evaluate(&program, &[&a_bytes[..], &b_bytes[..]], &config)
+                .expect("Fix: cpu-ref evaluate must accept generated inputs.");
+            let expected = (case.expected)(a, b).to_le_bytes().to_vec();
 
             assert_eq!(
-                borrowed, owned,
-                "{} borrowed dispatch drifted from owned dispatch for seed {seed}",
+                evaluated,
+                vec![expected],
+                "{} evaluate drifted from expected arithmetic for seed {seed}",
                 case.name
             );
             assertions += 1;

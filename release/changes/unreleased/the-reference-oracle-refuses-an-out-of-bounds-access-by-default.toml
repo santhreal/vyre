@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The reference oracle refuses an out-of-bounds load, store, or atomic at the access site on every entry point; the diagnostic entry points that measure absorbed accesses keep the zero-fill and no-op behavior."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The standalone Quest KV-paging passes declare a 256-thread workgroup geometry matching their strided bodies instead of a single-thread workgroup, allowing the full declared output extent to execute on GPU backends."

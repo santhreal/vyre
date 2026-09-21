@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Validation rejects an async copy that restarts a tag still in flight (V131) and a wait with no transfer to wait for (V132), so a multi-stage pipeline that reuses one tag is caught before a backend copies over a live destination."

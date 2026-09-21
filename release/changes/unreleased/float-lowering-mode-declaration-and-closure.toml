@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "VyreBackend declares lowered FloatLoweringMode capabilities per driver, refusing unsupported modes by name at compilation with a runtime registry closure test."

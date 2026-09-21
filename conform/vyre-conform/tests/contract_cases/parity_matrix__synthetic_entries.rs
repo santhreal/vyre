@@ -1,3 +1,8 @@
+use super::parity_matrix_entries::{FixtureCases, SyntheticOpaqueExpr, UnifiedEntry};
+use super::*;
+use vyre_foundation::ir::expr_variant_name;
+use vyre_foundation::visit::for_each_expr;
+
 /// Op id of the callee the expr-variant bundle calls.
 ///
 /// `Expr::Call` is a real IR variant, so the coverage bundle has to carry one,
@@ -5,8 +10,21 @@
 /// identity with V016 before the unreachable branch reaches execution.
 const SYNTHETIC_CALLEE_OP_ID: &str = "vyre_conform::synthetic_callee";
 
+/// The callee takes a whole buffer, which is what makes `Expr::BufferRef`
+/// legal at the call site.
+///
+/// `Expr::BufferRef` is a real IR variant and a value nothing else can consume:
+/// `vyre_foundation::validate::expr_rules` rejects it everywhere except a call
+/// argument declared `buffer<T>`. So the only program that can carry the variant
+/// is one that calls an op whose signature declares a buffer parameter.
+const SYNTHETIC_CALLEE_INPUTS: &[vyre_foundation::dialect_lookup::TypedParam] =
+    &[vyre_foundation::dialect_lookup::TypedParam {
+        name: "source",
+        ty: "buffer<u32>",
+    }];
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::new(
+    vyre_foundation::operation::OperationRegistration::new_unconstrained(
         SYNTHETIC_CALLEE_OP_ID,
         vyre_foundation::operation::OperationTier::External,
         None,
@@ -14,18 +32,24 @@ inventory::submit! {
         None,
     )
     .with_signature(vyre_foundation::dialect_lookup::Signature {
-        inputs: &[],
+        inputs: SYNTHETIC_CALLEE_INPUTS,
         outputs: &[],
         attrs: &[],
         bytes_extraction: false,
     })
     .with_category("conform")
+    .with_uncharacterized()
 }
 
-fn synthetic_entries() -> Vec<UnifiedEntry> {
+/// Op id of the coverage bundle, named once so the entry, the validation exemption
+/// and the wire round-trip test cannot name different programs.
+pub(crate) const SYNTHETIC_BUNDLE_OP_ID: &str =
+    "vyre-conform::synthetic::expr_variant_contract_bundle";
+
+pub(crate) fn synthetic_entries() -> Vec<UnifiedEntry> {
     vec![UnifiedEntry {
-        id: "vyre-conform::synthetic::expr_variant_contract_bundle",
-        build: Some(synthetic_expr_variant_contract_program),
+        id: SYNTHETIC_BUNDLE_OP_ID,
+        build: synthetic_expr_variant_contract_program,
         test_inputs: Some(synthetic_scalar_inputs),
         expected_output: Some(synthetic_zero_output),
     }]
@@ -41,11 +65,12 @@ fn synthetic_expr_variant_contract_program() -> Program {
                 then: vec![
                     Node::let_bind("lit_i32", Expr::LitI32(-4)),
                     Node::let_bind("workgroup_id", Expr::WorkgroupId { axis: 0 }),
+                    Node::let_bind("local_id", Expr::LocalId { axis: 0 }),
                     Node::let_bind(
                         "call",
                         Expr::Call {
                             op_id: SYNTHETIC_CALLEE_OP_ID.into(),
-                            args: vec![],
+                            args: vec![Expr::buffer_ref("out")],
                         },
                     ),
                     Node::let_bind(
@@ -55,6 +80,7 @@ fn synthetic_expr_variant_contract_program() -> Program {
                         },
                     ),
                     Node::let_bind("subgroup_add", Expr::subgroup_add(Expr::LitU32(7))),
+                    Node::let_bind("subgroup_size", Expr::SubgroupSize),
                     Node::let_bind("opaque", Expr::Opaque(Arc::new(SyntheticOpaqueExpr))),
                 ],
                 otherwise: vec![],
@@ -73,14 +99,12 @@ fn synthetic_zero_output() -> FixtureCases {
     vec![vec![0_u32.to_le_bytes().to_vec()]]
 }
 
-fn expr_variant_rows(entries: &[UnifiedEntry]) -> BTreeMap<&'static str, Vec<&'static str>> {
+pub(crate) fn expr_variant_rows(
+    entries: &[UnifiedEntry],
+) -> BTreeMap<&'static str, Vec<&'static str>> {
     let mut rows = BTreeMap::<&'static str, BTreeSet<&'static str>>::new();
     for entry in entries {
-        let variants = expr_variants_in_program(
-            entry
-                .program()
-                .expect("Fix: conformance operation must provide a neutral builder"),
-        );
+        let variants = expr_variants_in_program(&entry.program());
         for variant in variants {
             rows.entry(variant).or_default().insert(entry.id);
         }
@@ -90,187 +114,35 @@ fn expr_variant_rows(entries: &[UnifiedEntry]) -> BTreeMap<&'static str, Vec<&'s
         .collect()
 }
 
-fn expr_variants_in_program(program: Program) -> BTreeSet<&'static str> {
+/// Every `Expr` variant name reachable anywhere in `program`.
+///
+/// Descent is `vyre_foundation::visit::for_each_expr` and naming is
+/// `expr_variant_name`; the AST registry macro emits both against the enum
+/// itself. Two hand-rolled matches used to stand here, one over `Node` and one
+/// over `Expr`, each ending in a catch-all arm that panicked on a variant it
+/// did not list. `Expr` gained `LogicalIndex`, `LogicalTileId` and
+/// `LogicalWithinTileId`, and the matrix panicked on the first registered op
+/// that used one; the `Node` match had eleven variants behind the same arm.
+/// A walk the IR owns reaches a new variant with no edit here.
+pub(crate) fn expr_variants_in_program(program: &Program) -> BTreeSet<&'static str> {
     let mut variants = BTreeSet::new();
-    for node in program.entry() {
-        collect_expr_variants_from_node(node, &mut variants);
-    }
+    for_each_expr(program.entry(), |expr| {
+        variants.insert(expr_variant_name(expr));
+    });
     variants
 }
 
-fn collect_expr_variants_from_node(node: &Node, variants: &mut BTreeSet<&'static str>) {
-    match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => {
-            collect_expr_variants(value, variants);
-        }
-        Node::Store { index, value, .. } => {
-            collect_expr_variants(index, variants);
-            collect_expr_variants(value, variants);
-        }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            collect_expr_variants(cond, variants);
-            for child in then {
-                collect_expr_variants_from_node(child, variants);
-            }
-            for child in otherwise {
-                collect_expr_variants_from_node(child, variants);
-            }
-        }
-        Node::Loop { from, to, body, .. } => {
-            collect_expr_variants(from, variants);
-            collect_expr_variants(to, variants);
-            for child in body {
-                collect_expr_variants_from_node(child, variants);
-            }
-        }
-        Node::Block(children) => {
-            for child in children {
-                collect_expr_variants_from_node(child, variants);
-            }
-        }
-        Node::Region { body, .. } => {
-            for child in body.iter() {
-                collect_expr_variants_from_node(child, variants);
-            }
-        }
-        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
-            collect_expr_variants(offset, variants);
-            collect_expr_variants(size, variants);
-        }
-        Node::Trap { address, .. } => collect_expr_variants(address, variants),
-        Node::Return
-        | Node::Barrier { .. }
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_) => {}
-        _ => panic!(
-            "Fix: parity_matrix node traversal is missing a non-exhaustive Node variant; update expr coverage recursion before landing new IR surface."
-        ),
-    }
-}
-
-fn collect_expr_variants(expr: &vyre::ir::Expr, variants: &mut BTreeSet<&'static str>) {
-    use vyre::ir::Expr;
-
-    match expr {
-        Expr::LitU32(_) => {
-            variants.insert("LitU32");
-        }
-        Expr::LitI32(_) => {
-            variants.insert("LitI32");
-        }
-        Expr::LitF32(_) => {
-            variants.insert("LitF32");
-        }
-        Expr::LitBool(_) => {
-            variants.insert("LitBool");
-        }
-        Expr::Var(_) => {
-            variants.insert("Var");
-        }
-        Expr::BufferRef { .. } => {
-            variants.insert("BufferRef");
-        }
-        Expr::Load { index, .. } => {
-            variants.insert("Load");
-            collect_expr_variants(index, variants);
-        }
-        Expr::BufLen { .. } => {
-            variants.insert("BufLen");
-        }
-        Expr::InvocationId { .. } => {
-            variants.insert("InvocationId");
-        }
-        Expr::WorkgroupId { .. } => {
-            variants.insert("WorkgroupId");
-        }
-        Expr::LocalId { .. } => {
-            variants.insert("LocalId");
-        }
-        Expr::BinOp { left, right, .. } => {
-            variants.insert("BinOp");
-            collect_expr_variants(left, variants);
-            collect_expr_variants(right, variants);
-        }
-        Expr::UnOp { operand, .. } => {
-            variants.insert("UnOp");
-            collect_expr_variants(operand, variants);
-        }
-        Expr::Call { args, .. } => {
-            variants.insert("Call");
-            for arg in args {
-                collect_expr_variants(arg, variants);
-            }
-        }
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            variants.insert("Select");
-            collect_expr_variants(cond, variants);
-            collect_expr_variants(true_val, variants);
-            collect_expr_variants(false_val, variants);
-        }
-        Expr::Cast { value, .. } => {
-            variants.insert("Cast");
-            collect_expr_variants(value, variants);
-        }
-        Expr::Fma { a, b, c } => {
-            variants.insert("Fma");
-            collect_expr_variants(a, variants);
-            collect_expr_variants(b, variants);
-            collect_expr_variants(c, variants);
-        }
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            variants.insert("Atomic");
-            collect_expr_variants(index, variants);
-            if let Some(expected) = expected {
-                collect_expr_variants(expected, variants);
-            }
-            collect_expr_variants(value, variants);
-        }
-        Expr::SubgroupBallot { cond } => {
-            variants.insert("SubgroupBallot");
-            collect_expr_variants(cond, variants);
-        }
-        Expr::SubgroupShuffle { value, lane } => {
-            variants.insert("SubgroupShuffle");
-            collect_expr_variants(value, variants);
-            collect_expr_variants(lane, variants);
-        }
-        Expr::SubgroupReduce { value, .. } => {
-            variants.insert("SubgroupReduce");
-            collect_expr_variants(value, variants);
-        }
-        Expr::SubgroupLocalId => {
-            variants.insert("SubgroupLocalId");
-        }
-        Expr::SubgroupSize => {
-            variants.insert("SubgroupSize");
-        }
-        Expr::Opaque(_) => {
-            variants.insert("Opaque");
-        }
-        _ => panic!(
-            "Fix: parity_matrix expr traversal is missing a non-exhaustive Expr variant; add it to vyre-spec expr_variants() and the coverage walker."
-        ),
-    }
-}
-
-fn assert_valid(op_id: &str, program: &Program, runners: &[BackendRunner]) {
-    if op_id == "vyre-conform::synthetic::expr_variant_contract_bundle" {
-        return;
+/// Reject a program the semantic validator refuses, before it reaches a backend.
+///
+/// The coverage bundle is exempt: it exists to carry every `Expr` variant in one
+/// program, including a call whose callee is a signature-only registration, and
+/// the validator resolves a call through its callee's program. What the bundle
+/// owes the matrix instead is the wire round trip
+/// [`super::parity_matrix_program::the_synthetic_opaque_extension_round_trips_through_the_wire`]
+/// asserts and the execution every backend gives it.
+pub(crate) fn validate_program(op_id: &str, program: &Program) -> Result<(), String> {
+    if op_id == SYNTHETIC_BUNDLE_OP_ID {
+        return Ok(());
     }
     let backend_capabilities = BackendCapabilities {
         // This pass validates semantic IR shape. Registered target compilation
@@ -289,35 +161,34 @@ fn assert_valid(op_id: &str, program: &Program, runners: &[BackendRunner]) {
         ValidationOptions::default().with_backend_capabilities(backend_capabilities),
     )
     .errors;
-    assert!(
-        errors.is_empty(),
-        "Fix: {} validation failed before parity run: {:?}",
-        op_id,
+    if errors.is_empty() {
+        return Ok(());
+    }
+    Err(format!(
+        "validation failed before the parity run: {:?}",
         errors
             .into_iter()
             .map(|error| error.message().to_string())
             .collect::<Vec<_>>()
-    );
+    ))
 }
 
-fn assert_region_chain(op_id: &str, program: &Program) {
-    let first = program.entry().first().unwrap_or_else(|| {
-        panic!(
-            "Fix: {} built an empty Program; the semantic operation builder must return a region-wrapped body.",
-            op_id
-        )
-    });
-    match first {
-        Node::Region { .. } => {}
-        other => panic!(
-            "Fix: {} top-level entry node must be Node::Region to preserve the region chain invariant, got {other:?}.",
-            op_id
+/// Reject a program whose top-level entry node is not a region.
+pub(crate) fn check_region_chain(program: &Program) -> Result<(), String> {
+    match program.entry().first() {
+        Some(Node::Region { .. }) => Ok(()),
+        Some(other) => Err(format!(
+            "top-level entry node must be Node::Region to preserve the region chain invariant, got {other:?}"
+        )),
+        None => Err(
+            "built an empty Program; the semantic operation builder must return a region-wrapped body"
+                .to_string(),
         ),
     }
 }
 
 #[allow(clippy::too_many_arguments)]
-fn compare_outputs(
+pub(crate) fn compare_outputs(
     op_id: &'static str,
     backend_a: &'static str,
     backend_b: &'static str,
@@ -346,14 +217,15 @@ fn compare_outputs(
     }
 }
 
-fn hash_program(program: &Program) -> Hash {
-    let wire = program.to_wire().unwrap_or_else(|error| {
-        panic!("Fix: failed to encode Program wire image for parity hash: {error}")
-    });
-    blake3::hash(&wire)
+/// Wire-image identity of `program`, used to prove a dispatch left it unmodified.
+pub(crate) fn hash_program(program: &Program) -> Result<Hash, String> {
+    program
+        .to_wire()
+        .map(|wire| blake3::hash(&wire))
+        .map_err(|error| format!("failed to encode the Program wire image: {error}"))
 }
 
-fn hash_buffers(buffers: &[Vec<u8>]) -> Hash {
+pub(crate) fn hash_buffers(buffers: &[Vec<u8>]) -> Hash {
     let mut hasher = blake3::Hasher::new();
     for buffer in buffers {
         hasher.update(&(buffer.len() as u64).to_le_bytes());
@@ -362,7 +234,7 @@ fn hash_buffers(buffers: &[Vec<u8>]) -> Hash {
     hasher.finalize()
 }
 
-fn format_divergences(divergences: &[Divergence]) -> String {
+pub(crate) fn format_divergences(divergences: &[Divergence]) -> String {
     let mut message = String::from("Cross-backend parity divergences detected:\n");
     for divergence in divergences {
         message.push_str(&format!(
@@ -379,12 +251,30 @@ fn format_divergences(divergences: &[Divergence]) -> String {
     message
 }
 
-fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
-    if let Some(message) = payload.downcast_ref::<&'static str>() {
-        (*message).to_string()
-    } else if let Some(message) = payload.downcast_ref::<String>() {
-        message.clone()
-    } else {
-        "non-string panic payload".to_string()
+/// Report every operation the sweep could not measure, and every disagreement it
+/// did measure, in one message.
+///
+/// One report per run, not one panic per operation: a run that aborts on the
+/// first broken operation says nothing about the rest of the registry, and the
+/// counters printed alongside it would describe a sweep that never happened.
+pub(crate) fn format_summary_failures(summary: &Summary) -> String {
+    let mut message = format!(
+        "parity matrix: {} operation(s) could not be measured and {} divergence(s) were recorded across {} operation(s).\n",
+        summary.failures.len(),
+        summary.divergences.len(),
+        summary.ops_total
+    );
+    for failure in &summary.failures {
+        message.push_str(&format!(
+            "unmeasured op_id={} backend={} stage={} detail={}\n",
+            failure.op_id, failure.backend, failure.stage, failure.detail
+        ));
     }
+    if !summary.divergences.is_empty() {
+        message.push_str(&format_divergences(&summary.divergences));
+    }
+    message.push_str(
+        "Fix: repair each operation or backend named above; every line is one independent defect.\n",
+    );
+    message
 }

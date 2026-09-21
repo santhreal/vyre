@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A guard written against a logical-index local that a loop body reassigns no longer narrows the launch, so a program whose later iterations index beyond the guard keeps every lane it needs."

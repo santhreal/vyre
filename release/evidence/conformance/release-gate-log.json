@@ -1,10 +1,11 @@
 {
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"afd5c979198a38438138283fdbdb73bedecfea19","commit_timestamp":"1789819662","parent_commit":"1e41e96148e96925b14f6f8f687e50cc867ce72c","dirty":false,"source_fingerprint":"git:afd5c979198a38438138283fdbdb73bedecfea19:dirty=false"},"host":{"state":"recorded","hostname":"santhserver","os":"linux","architecture":"x86_64","cpu_model":"11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz","cpu_cores":2},"measurement":{"state":"host_only"}},
   "schema_version": 2,
   "command": "cargo_full run --bin xtask -- release-conformance",
   "requested_backends": [
     "cuda",
     "wgpu",
-    "cpu-ref"
+    "reference-oracle"
   ],
   "required_artifacts": [
     "cuda-conformance.json",
@@ -15,19 +16,19 @@
     {
       "path": "cuda-conformance.json",
       "exists": true,
-      "bytes": 327443,
+      "bytes": 325453,
       "read_error": null
     },
     {
       "path": "wgpu-conformance.json",
       "exists": true,
-      "bytes": 327443,
+      "bytes": 325453,
       "read_error": null
     },
     {
       "path": "reference-conformance.json",
       "exists": true,
-      "bytes": 329588,
+      "bytes": 320355,
       "read_error": null
     }
   ],

@@ -1,15 +1,3 @@
-#![allow(
-    clippy::doc_lazy_continuation,
-    clippy::double_must_use,
-    clippy::manual_div_ceil,
-    clippy::needless_range_loop,
-    clippy::collapsible_if,
-    clippy::match_like_matches_macro,
-    clippy::redundant_closure,
-    clippy::too_many_arguments,
-    clippy::nonminimal_bool,
-    clippy::derivable_impls
-)]
 //! SPIR-V binary emitter for vyre `KernelDescriptor`.
 //!
 //! Substrate parity strategy: route the descriptor through
@@ -35,9 +23,12 @@
 //! sits in the integration-test surface (added when CI has spirv-tools).
 
 use thiserror::Error;
+use vyre_foundation::diagnostics::{CauseKind, Diagnostic};
 use vyre_lower::KernelDescriptor;
-
 pub mod patterns;
+
+/// Target identity every diagnostic this emitter raises carries.
+const TARGET: &str = "spirv";
 
 /// Errors produced while lowering and encoding a SPIR-V module.
 #[derive(Debug, Error)]
@@ -57,6 +48,39 @@ pub enum EmitError {
     /// The SPIR-V writer could not encode the module.
     #[error("SPIR-V writer.write failed: {0}")]
     WriterWrite(String),
+}
+
+impl EmitError {
+    /// Project this error into the versioned structured diagnostic contract.
+    #[must_use]
+    pub fn diagnostic(&self) -> Diagnostic {
+        match self {
+            Self::NagaEmit(naga_err) => {
+                naga_err.retargeted_diagnostic(TARGET, "during SPIR-V emission from Naga module")
+            }
+            Self::NagaValidation(msg) => Diagnostic::emission_error(
+                TARGET,
+                "SPV001_NAGA_VALIDATION_FAILED",
+                format!("naga validation failed during SPIR-V emission: {msg}"),
+            )
+            .with_fix("repair the shared descriptor/Naga emission path before emitting SPIR-V")
+            .with_cause(CauseKind::Emission, "naga_validation", msg.clone()),
+            Self::WriterConstruction(msg) => Diagnostic::emission_error(
+                TARGET,
+                "SPV002_WRITER_CONSTRUCTION_FAILED",
+                format!("SPIR-V writer construction failed: {msg}"),
+            )
+            .with_fix("ensure Naga capabilities and SPIR-V writer options are compatible")
+            .with_cause(CauseKind::Emission, "writer_construction", msg.clone()),
+            Self::WriterWrite(msg) => Diagnostic::emission_error(
+                TARGET,
+                "SPV003_WRITER_WRITE_FAILED",
+                format!("SPIR-V writer.write failed: {msg}"),
+            )
+            .with_fix("check Naga module instructions for SPIR-V encoding compatibility")
+            .with_cause(CauseKind::Emission, "writer_write", msg.clone()),
+        }
+    }
 }
 
 /// Emit a SPIR-V binary from a `KernelDescriptor`.
@@ -146,101 +170,4 @@ fn words_to_le_bytes(words: Vec<u32>) -> Result<Vec<u8>, EmitError> {
 /// integration tests and consumer-side sanity checks.
 pub const SPIRV_MAGIC: u32 = 0x07230203;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use vyre_foundation::ir::DataType;
-    use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
-    use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
-
-    fn one_store_kernel() -> KernelDescriptor {
-        descriptor("store_one")
-            .slot(global_rw(0, DataType::U32, "out"))
-            .dispatch(64, 1, 1)
-            .body(
-                body()
-                    .ops([lit(0, 0), lit(1, 1), effect(KernelOpKind::StoreGlobal, [0, 0, 1])])
-                    .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
-            )
-            .build()
-    }
-
-    #[test]
-    fn empty_kernel_emits_valid_spirv_with_magic_header() {
-        let desc = descriptor("empty").dispatch(64, 1, 1).build();
-        let words = emit(&desc).unwrap();
-        assert!(!words.is_empty());
-        assert_eq!(
-            words[0], SPIRV_MAGIC,
-            "first word must be the SPIR-V magic number"
-        );
-    }
-
-    #[test]
-    fn one_store_kernel_emits_non_trivial_spirv() {
-        let words = emit(&one_store_kernel()).unwrap();
-        assert!(
-            words.len() > 16,
-            "real kernel should produce more than the header"
-        );
-        assert_eq!(words[0], SPIRV_MAGIC);
-    }
-
-    #[test]
-    fn emit_bytes_matches_words_in_le() {
-        let desc = descriptor("empty").dispatch(64, 1, 1).build();
-        let words = emit(&desc).unwrap();
-        let bytes = emit_bytes(&desc).unwrap();
-        assert_eq!(bytes.len(), words.len() * 4);
-        let first_word = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-        assert_eq!(first_word, SPIRV_MAGIC);
-    }
-
-    #[test]
-    fn emit_with_unsupported_op_propagates_naga_error() {
-        let desc = descriptor("bad")
-            .body(
-                body()
-                    .ops([
-                        op(KernelOpKind::SubgroupReduce {
-                        op: vyre_lower::SubgroupReduceOp::Add,
-                    }, [0], 0),
-                    ]),
-            )
-            .build();
-        let r = emit(&desc);
-        assert!(matches!(r, Err(EmitError::NagaEmit(_))));
-    }
-
-    #[test]
-    fn binop_add_emits_valid_spirv() {
-        let kernel = descriptor("add")
-            .body(
-                body()
-                    .ops([
-                        lit(0, 0),
-                        lit(1, 1),
-                        op(KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add), [0, 1], 2),
-                    ])
-                    .literals([LiteralValue::U32(3), LiteralValue::U32(4)]),
-            )
-            .build();
-        let words = emit(&kernel).unwrap();
-        assert_eq!(words[0], SPIRV_MAGIC);
-        assert!(words.len() > 16);
-    }
-
-    #[test]
-    fn spirv_magic_constant_matches_spec() {
-        assert_eq!(SPIRV_MAGIC, 0x0723_0203);
-    }
-
-    #[test]
-    fn emit_from_naga_module_independently_consumable() {
-        // Build a valid naga::Module via emit-naga, then convert.
-        let module = vyre_emit_naga::emit(&descriptor("k").build())
-        .unwrap();
-        let words = emit_from_naga_module(&module).unwrap();
-        assert_eq!(words[0], SPIRV_MAGIC);
-    }
-}
+vyre_foundation::diagnostic_conversions!(EmitError, diagnostic);

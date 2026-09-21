@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The release gate no longer replays an aggregate's recorded freshness verdicts as live findings. Thirty-seven of the thirty-eight blockers stored in `cuda-release-suite.json`, `bench-release-axes.json` and `cpu-only-100x-proof.json` embed a hash labelled \"current workspace source\" that was current when the aggregate was written, so the gate printed a value no reader can resolve and that disagrees with the one the same run computes. Freshness is recomputed against the tree the gate is running on; every other recorded verdict is replayed unchanged."

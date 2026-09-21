@@ -1,0 +1,2 @@
+category = "Added"
+text = "The `test-harness-isolation` gate derives every integration test that names a process-global API from source and requires a recorded `isolated` or `grouped` decision in `xtask/test-harness-isolation.toml`, so a test that cannot share a harness binary is known before the grouping runs."

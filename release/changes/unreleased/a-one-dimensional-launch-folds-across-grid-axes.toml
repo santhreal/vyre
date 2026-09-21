@@ -1,0 +1,2 @@
+category = "Added"
+text = "A one-dimensional launch whose workgroup count exceeds a per-axis ceiling folds onto the y and z axes and the emitted kernel reads a grid-linearized element index, so a program above the single-axis limit dispatches instead of being refused; `DispatchConfig::max_workgroups_per_axis` pins the ceiling the launch is planned against."

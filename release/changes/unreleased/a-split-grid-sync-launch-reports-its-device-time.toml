@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A grid-sync program split into one kernel launch per segment reports the total device, enqueue, and wait time across those launches instead of host wall time alone, and reports none at all when a segment measured none."

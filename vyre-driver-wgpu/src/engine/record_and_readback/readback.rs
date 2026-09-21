@@ -2,6 +2,7 @@ use super::timestamp::{collect_timestamp_profile, PendingTimestampProfile};
 use super::trap;
 use crate::buffer::GpuBufferHandle;
 use crate::pipeline::OutputBindingLayout;
+use crate::runtime::readback_ring::MapResult;
 use crossbeam_channel::Receiver;
 use smallvec::SmallVec;
 use std::ops::Range;
@@ -13,7 +14,6 @@ use std::time::{Duration, Instant};
 use vyre_driver::BackendError;
 use vyre_emit_naga::program::TrapTag;
 
-type MapResult = Result<(), wgpu::BufferAsyncError>;
 pub(super) type PendingMap = (Option<usize>, PendingReadback);
 pub(super) type SubmittedMap = (Option<usize>, SubmittedReadback);
 
@@ -38,7 +38,7 @@ pub(crate) enum PendingReadback {
     Ring {
         ring: Arc<crate::runtime::readback_ring::ReadbackRing>,
         ticket: crate::runtime::readback_ring::ReadbackTicket,
-        receiver: Receiver<crate::runtime::readback_ring::MapResult>,
+        receiver: Receiver<MapResult>,
         ready: Arc<AtomicBool>,
     },
 }

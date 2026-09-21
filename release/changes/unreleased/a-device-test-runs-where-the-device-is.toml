@@ -1,0 +1,13 @@
+category = "Fixed"
+text = """
+A benchmark test that dispatches on a GPU runs where a GPU is. The two \
+bytecode-VM stack-carrier parity tests in `vyre-bench` loaded a CUDA driver and \
+opened a Vulkan adapter from the hosted CI matrix, which has neither, so they \
+reported the absence of hardware as a parity defect and poisoned the shared \
+adapter lock on the way out. They now sit behind a default-off `device-tests` \
+feature that `gpu-parity.yml` turns on, and the GPU release gate blocks on that \
+job, so the coverage moved to the runner that owns the device instead of being \
+dropped. The pinned benchmark case enumeration and the release evidence classes \
+likewise subtract exactly the ids `cases::nvme_gpu_ingest` cannot register off \
+Linux, rather than asserting io_uring exists on macOS.
+"""

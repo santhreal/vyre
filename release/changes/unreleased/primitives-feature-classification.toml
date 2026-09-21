@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-primitives` classifies every Cargo feature in one place, `src/organization.rs`. Marker types and `hardware` belong. The other domain features are compositions parked pending a move to `vyre-libs`. `tests/feature_classification.rs` fails if `Cargo.toml` grows a feature that is not on exactly one of those lists, or if `hardware` is no longer the only intrinsic domain."

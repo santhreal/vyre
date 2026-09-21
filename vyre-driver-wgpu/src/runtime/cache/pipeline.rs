@@ -1,6 +1,6 @@
 //! Bounded cache for WGPU pipeline artifacts.
 
-use crate::pipeline::CachedPipelineArtifact;
+use crate::pipeline::artifact::CachedPipelineArtifact;
 use crate::staging_reserve::reserve_backend_vec;
 use dashmap::DashMap;
 use rustc_hash::FxHasher;
@@ -45,12 +45,6 @@ impl std::fmt::Debug for LruPipelineCache {
 }
 
 impl LruPipelineCache {
-    /// Create a cache capped at `max_entries`.
-    #[cfg(test)]
-    pub(crate) fn new(max_entries: u32) -> Self {
-        Self::with_limits(max_entries, 256 * 1024 * 1024)
-    }
-
     /// Create a cache capped by entry count and estimated artifact bytes.
     pub(crate) fn with_limits(max_entries: u32, max_bytes: usize) -> Self {
         Self {
@@ -290,7 +284,7 @@ impl LruPipelineCache {
 
     /// Invalidate entries impacted by a change in the rule dependency graph.
     ///
-    /// This implements the #36 recursion thesis: vyre using its own
+    /// This implements the recursion thesis: vyre using its own
     /// `do_calculus` primitive to perform formal causal change-impact
     /// analysis on its own rule graph.
     pub(crate) fn invalidate_impacted(&self, impact_mask: &[u32], keys: &[[u8; 32]]) {
@@ -418,6 +412,7 @@ fn rebasing_atomic_add_u64(counter: &AtomicU64, value: u64, label: &'static str)
     }
 }
 
+// Inline: covers `EvictionEntry`, `LruPipelineCache`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,0 +1,51 @@
+[package]
+name = "vyre-libs-parsing"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Lexer drivers, LR(1) table walkers, and language-specific AST construction kernels"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-parsing"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "closure:vyre-libs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["parsing"]
+parsing = ["go-parser", "python-parser"]
+"parsing-kernels" = []
+"go-parser" = []
+"python-parser" = ["parsing-kernels"]
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-spec.workspace = true
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+inventory.workspace = true
+rustc-hash.workspace = true
+blake3.workspace = true
+rayon.workspace = true
+vyre-libs-builder = { workspace = true }
+vyre-libs-reduce = { workspace = true }
+vyre-libs-text = { workspace = true }
+vyre-libs-hash = { workspace = true }
+
+[dev-dependencies]
+proptest.workspace = true
+vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests", "golden-corpus"] }
+vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-reference = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

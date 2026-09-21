@@ -3,7 +3,23 @@ use crate::serial::wire::encode::WireEncodeErr;
 use crate::serial::wire::framing::{put_u32, put_u8};
 use crate::serial::wire::{MAX_MESH_AXES, MAX_TENSOR_RANK};
 
+/// Wire tag reserved for extension `DataTypes`. The tag byte is `0x80`;
+/// the u32 extension id follows immediately (little-endian). Ids below
+/// `0x8000_0000` collide with core IR and are rejected.
+pub(crate) const DATA_TYPE_TAG_OPAQUE: u8 = 0x80;
+
 /// Encode a [`DataType`] into its stable VIR0 wire-format tag byte.
+///
+/// # Role
+///
+/// The one owner of the `DataType` to numeric-tag mapping. The wire envelope,
+/// the AOT artifact identity, and the driver's specialization cache key all
+/// read the same table here, so a cache key cannot describe a different type
+/// than the blob it is filed under. Two copies of this table existed before:
+/// one in the dense memory-region encoder and one in
+/// `vyre_driver::specialization`, and the driver's had already lost
+/// `DataType::Quantized`, which therefore collapsed onto the unknown-variant
+/// sentinel and shared a cache key with every other unmapped type.
 ///
 /// # Preconditions
 ///
@@ -15,19 +31,14 @@ use crate::serial::wire::{MAX_MESH_AXES, MAX_TENSOR_RANK};
 ///
 /// `Ok(u8)` containing the tag value. Scalar and tensor types map to a single
 /// byte; `Array` maps to tag `12` and the caller must follow up with the
-/// `element_size` payload via [`put_data_type`].
+/// `element_size` payload via the crate-private `put_data_type` encoder.
 ///
-/// # Failure mode
+/// # Errors
 ///
 /// Returns `Err("unknown DataType variant")` when the variant has no
 /// registered tag, preventing silent data loss on round-trip.
-/// Wire tag reserved for extension `DataTypes`. The tag byte is `0x80`;
-/// the u32 extension id follows immediately (little-endian). See
-/// `docs/wire-format.md` §Extensions.
-pub(crate) const DATA_TYPE_TAG_OPAQUE: u8 = 0x80;
-
 #[inline]
-pub(crate) fn data_type_tag(value: &DataType) -> Result<u8, WireEncodeErr> {
+pub fn data_type_tag(value: &DataType) -> Result<u8, WireEncodeErr> {
     match value {
         DataType::U32 => Ok(0x01),
         DataType::I32 => Ok(0x02),
@@ -61,7 +72,6 @@ pub(crate) fn data_type_tag(value: &DataType) -> Result<u8, WireEncodeErr> {
         DataType::DeviceMesh { .. } => Ok(0x1E),
         DataType::Quantized { .. } => Ok(0x1F),
         DataType::Opaque(_) => Ok(DATA_TYPE_TAG_OPAQUE),
-        _ => Err(WireEncodeErr::static_msg("unknown DataType variant")),
     }
 }
 
@@ -87,14 +97,7 @@ pub(crate) fn put_data_type(out: &mut Vec<u8>, value: &DataType) -> Result<(), W
     put_u8(out, data_type_tag(value)?);
     match value {
         DataType::Array { element_size } => {
-            let encoded = u32::try_from(*element_size).map_err(|_| {
-                WireEncodeErr::fmt_usize(
-                    "Fix: array element_size ",
-                    *element_size,
-                    " cannot fit the VIR0 u32 payload; cap the element size or extend the wire format.",
-                )
-            })?;
-            put_u32(out, encoded);
+            put_u32(out, *element_size);
         }
         DataType::Opaque(id) => {
             // Opaque payload = u32 extension id (little-endian).
@@ -207,15 +210,6 @@ pub(crate) fn put_data_type(out: &mut Vec<u8>, value: &DataType) -> Result<(), W
         | DataType::I4
         | DataType::FP4
         | DataType::NF4 => {}
-        // `DataType` is `#[non_exhaustive]` in vyre-spec; extension
-        // variants added there must not break the existing encoder. Any
-        // new variant must also add a payload-emission arm above before
-        // being released, or encoding will fail fast here.
-        _ => {
-            return Err(WireEncodeErr::static_msg(
-                "Fix: unknown DataType variant has no wire-format payload emitter. Add a match arm in put_data_type when the variant is introduced in vyre-spec.",
-            ));
-        }
     }
     Ok(())
 }
@@ -296,69 +290,56 @@ mod tests {
     /// the on-disk wire format silently corrupts buffer-element types
     /// across encode/decode  -  a contract-invariant the optimizer cache
     /// and AOT artifact format both rely on.
+    ///
+    /// The one-per-variant half of the set is
+    /// [`vyre_test_support::data_type_variants::data_type_variant_samples`],
+    /// which is held to the `pub enum DataType` declaration at run time. This
+    /// case listed the variants itself, so a variant added to the spec left the
+    /// list one short in silence, and the wire format is exactly where a
+    /// variant nobody encoded reads back as a different one. The payloads below
+    /// are what this table can get wrong beyond the discriminant: a
+    /// multi-dimensional shape, a mesh of several axes, and a quantization
+    /// carrying both a scale axis and a zero point.
     #[test]
     fn every_supported_data_type_round_trips_through_the_wire() {
-        let cases: Vec<DataType> = vec![
-            DataType::U8,
-            DataType::U16,
-            DataType::U32,
-            DataType::U64,
-            DataType::I8,
-            DataType::I16,
-            DataType::I32,
-            DataType::I64,
-            DataType::F16,
-            DataType::BF16,
-            DataType::F32,
-            DataType::F64,
-            DataType::Bool,
-            DataType::Bytes,
-            DataType::Tensor,
-            DataType::Vec2U32,
-            DataType::Vec4U32,
-            DataType::F8E4M3,
-            DataType::F8E5M2,
-            DataType::I4,
-            DataType::FP4,
-            DataType::NF4,
-            DataType::Array { element_size: 16 },
-            DataType::Handle(vyre_spec::data_type::TypeId(0xDEAD_BEEF)),
-            DataType::Vec {
-                element: Box::new(DataType::F32),
-                count: 4,
-            },
-            DataType::TensorShaped {
-                element: Box::new(DataType::F32),
-                shape: smallvec![32, 32],
-            },
-            DataType::SparseCsr {
-                element: Box::new(DataType::F32),
-            },
-            DataType::SparseCoo {
-                element: Box::new(DataType::F32),
-            },
-            DataType::SparseBsr {
-                element: Box::new(DataType::F32),
-                block_rows: 8,
-                block_cols: 8,
-            },
-            DataType::DeviceMesh {
-                axes: smallvec![4, 8, 16],
-            },
-            DataType::Quantized {
-                storage: Box::new(DataType::I4),
-                scale: vyre_spec::QuantizationScale::PerGroup { group_size: 128 },
-                zero_point: vyre_spec::QuantizationZeroPoint::Absent,
-            },
-            DataType::Quantized {
-                storage: Box::new(DataType::I8),
-                scale: vyre_spec::QuantizationScale::PerChannel { axis: 1 },
-                zero_point: vyre_spec::QuantizationZeroPoint::PerChannel { axis: 1 },
-            },
-            // Extension ids must have the high bit set per
-            // reject_reserved_extension_id (low half is reserved for core IR).
-            DataType::Opaque(vyre_spec::extension::ExtensionDataTypeId(0x8000_0001)),
-        ];
+        let samples = vyre_test_support::data_type_variants::data_type_variant_samples();
+        vyre_test_support::data_type_variants::assert_covers_every_data_type_variant(&samples);
+        let cases: Vec<DataType> = samples
+            .into_iter()
+            .chain([
+                DataType::Array { element_size: 16 },
+                DataType::Handle(vyre_spec::TypeId(0xDEAD_BEEF)),
+                DataType::Vec {
+                    element: Box::new(DataType::F32),
+                    count: 4,
+                },
+                DataType::TensorShaped {
+                    element: Box::new(DataType::F32),
+                    shape: smallvec![32, 32],
+                },
+                DataType::SparseBsr {
+                    element: Box::new(DataType::F32),
+                    block_rows: 8,
+                    block_cols: 8,
+                },
+                DataType::DeviceMesh {
+                    axes: smallvec![4, 8, 16],
+                },
+                DataType::Quantized {
+                    storage: Box::new(DataType::I4),
+                    scale: vyre_spec::QuantizationScale::PerGroup { group_size: 128 },
+                    zero_point: vyre_spec::QuantizationZeroPoint::Absent,
+                },
+                DataType::Quantized {
+                    storage: Box::new(DataType::I8),
+                    scale: vyre_spec::QuantizationScale::PerChannel { axis: 1 },
+                    zero_point: vyre_spec::QuantizationZeroPoint::PerChannel { axis: 1 },
+                },
+                // Extension ids must have the high bit set per
+                // reject_reserved_extension_id (low half is reserved for core IR).
+                DataType::Opaque(vyre_spec::ExtensionDataTypeId(0x8000_0001)),
+            ])
+            .collect();
 
         for ty in &cases {
             let mut encoded = Vec::new();

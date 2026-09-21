@@ -1,0 +1,47 @@
+[package]
+name = "vyre-libs-decode"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Base64, hex, DEFLATE, and encodex data decoding and decompression compositions"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-decode"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "closure:vyre-libs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["decode"]
+decode = []
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+inventory.workspace = true
+thiserror.workspace = true
+vyre-libs-builder = { workspace = true }
+vyre-libs-pattern = { workspace = true }
+vyre-libs-text = { workspace = true }
+
+[dev-dependencies]
+proptest.workspace = true
+vyre-test-support = { workspace = true, features = ["semantic-parity"] }
+vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-reference = { workspace = true }
+# The IR aliasing suite fuses a decode program with a parser scanner to prove
+# their generic buffer names stay disjoint.
+vyre-libs-parsing = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

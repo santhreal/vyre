@@ -1,0 +1,42 @@
+[package]
+name = "vyre-libs-hash"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3"
+readme = "README.md"
+documentation = "https://docs.rs/vyre-libs-hash"
+exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "closure:vyre-libs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["hash"]
+hash = []
+"crypto-blake3" = ["hash"]
+
+[dependencies]
+vyre-foundation = { workspace = true, features = ["serde"] }
+vyre-primitives = { workspace = true, features = ["inventory-registry"] }
+inventory.workspace = true
+vyre-libs-builder = { workspace = true }
+
+[dev-dependencies]
+proptest.workspace = true
+vyre-test-support = { workspace = true, features = ["semantic-parity"] }
+vyre-primitives = { workspace = true, features = ["hardware"] }
+vyre-reference = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

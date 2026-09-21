@@ -4,14 +4,14 @@
 //! `<root>/<hex>.bin`. Readers reject stale schemas, torn writes, bit rot, and
 //! tampering before returning payload bytes.
 
+use rustc_hash::FxHashSet;
 use std::fs::{self, File};
 use std::io::Read;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::OnceLock;
 
-use dashmap::DashMap;
+use std::sync::{Mutex, MutexGuard};
 
 use super::fingerprint::PipelineFingerprint;
 use super::metrics::{PipelineCacheCounters, PipelineCacheMetrics};
@@ -25,14 +25,42 @@ use super::store::PipelineCacheStore;
 #[derive(Debug)]
 pub struct DiskCache {
     root: PathBuf,
-    pending_flushes: DashMap<PathBuf, ()>,
+    pending_flushes: Mutex<PendingFlushes>,
+    flush_order: Mutex<()>,
     metrics: PipelineCacheCounters,
+}
+
+#[derive(Debug, Default)]
+struct PendingFlushes {
+    queued: FxHashSet<PathBuf>,
+    syncing: usize,
+}
+
+/// An unfinished batch remains pending after an I/O error or unwinding.
+struct FlushBatch<'a> {
+    cache: &'a DiskCache,
+    paths: Vec<PathBuf>,
+    committed: bool,
+}
+
+impl Drop for FlushBatch<'_> {
+    fn drop(&mut self) {
+        let mut pending = self.cache.lock_pending_flushes();
+        pending.syncing -= self.paths.len();
+        if !self.committed {
+            pending.queued.extend(self.paths.drain(..));
+            self.cache
+                .metrics
+                .flush_errors
+                .fetch_add(1, Ordering::Relaxed);
+        }
+    }
 }
 
 /// Crash-durability evidence for disk cache artifacts.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct DiskCacheDurabilityReport {
-    /// Entries installed by rename but not yet explicitly flushed.
+    /// Queued or in-flight entries awaiting successful synchronization.
     pub pending_flushes: u64,
     /// True when no installed artifacts are waiting on file and parent-dir
     /// fsync evidence.
@@ -73,7 +101,8 @@ impl DiskCache {
         fs::create_dir_all(&root).map_err(DiskCacheError::Io)?;
         Ok(Self {
             root,
-            pending_flushes: DashMap::new(),
+            pending_flushes: Mutex::new(PendingFlushes::default()),
+            flush_order: Mutex::new(()),
             metrics: PipelineCacheCounters::default(),
         })
     }
@@ -103,14 +132,51 @@ impl DiskCache {
     /// durability boundary.
     #[must_use]
     pub fn durability_report(&self) -> DiskCacheDurabilityReport {
-        let pending_flushes = match u64::try_from(self.pending_flushes.len()) {
-            Ok(pending_flushes) => pending_flushes,
-            Err(_) => u64::MAX,
-        };
+        let pending = self.lock_pending_flushes();
+        let pending_flushes =
+            match u64::try_from(pending.queued.len().saturating_add(pending.syncing)) {
+                Ok(pending_flushes) => pending_flushes,
+                Err(_) => u64::MAX,
+            };
         DiskCacheDurabilityReport {
             pending_flushes,
             durable: pending_flushes == 0,
         }
+    }
+
+    /// Keep installed paths after a panic: discarding them would claim
+    /// durability for files that have not been synchronized.
+    fn lock_pending_flushes(&self) -> MutexGuard<'_, PendingFlushes> {
+        vyre_foundation::failure_domain::reclaim_poisoned_mutex(
+            &self.pending_flushes,
+            "runtime disk pipeline cache",
+            "installed artifacts pending synchronization",
+        )
+    }
+
+    fn flush_with(&self, sync: impl FnOnce(&[PathBuf]) -> io::Result<()>) -> io::Result<()> {
+        self.metrics.flushes.fetch_add(1, Ordering::Relaxed);
+        // A later flush must include the durability result of earlier accepted
+        // writes, even when another caller already removed them from the queue.
+        let _order = vyre_foundation::failure_domain::reclaim_poisoned_mutex(
+            &self.flush_order,
+            "runtime disk pipeline cache",
+            "flush completion ordering",
+        );
+        let mut batch = {
+            let mut pending = self.lock_pending_flushes();
+            let mut paths = Vec::with_capacity(pending.queued.len());
+            paths.extend(pending.queued.drain());
+            pending.syncing += paths.len();
+            FlushBatch {
+                cache: self,
+                paths,
+                committed: false,
+            }
+        };
+        sync(&batch.paths)?;
+        batch.committed = true;
+        Ok(())
     }
 
     fn path_for(&self, fp: &PipelineFingerprint) -> PathBuf {
@@ -190,7 +256,7 @@ impl PipelineCacheStore for DiskCache {
                 }
             }
             fs::rename(&tmp_path, &final_path)?;
-            self.pending_flushes.insert(final_path, ());
+            self.lock_pending_flushes().queued.insert(final_path);
             Ok(())
         };
         if write_rename().is_err() {
@@ -212,21 +278,7 @@ impl PipelineCacheStore for DiskCache {
     }
 
     fn flush(&self) -> io::Result<()> {
-        self.metrics.flushes.fetch_add(1, Ordering::Relaxed);
-        let paths: Vec<PathBuf> = self
-            .pending_flushes
-            .iter()
-            .map(|entry| entry.key().clone())
-            .collect();
-        self.pending_flushes.clear();
-        if let Err(error) = flush_paths(&paths) {
-            self.metrics.flush_errors.fetch_add(1, Ordering::Relaxed);
-            for path in paths {
-                self.pending_flushes.insert(path, ());
-            }
-            return Err(error);
-        }
-        Ok(())
+        self.flush_with(flush_paths)
     }
 
     fn metrics(&self) -> PipelineCacheMetrics {
@@ -235,27 +287,34 @@ impl PipelineCacheStore for DiskCache {
 }
 
 fn flush_paths(paths: &[PathBuf]) -> io::Result<()> {
-    let mut parents = Vec::with_capacity(paths.len());
     sync_paths_bounded(
         paths,
+        vyre_driver::durable_fanout::open_for_sync,
         File::sync_data,
         "pipeline cache file sync worker panicked",
     )?;
-    for path in paths {
-        if let Some(parent) = path.parent() {
-            parents.push(parent.to_path_buf());
-        }
-    }
-    parents.sort();
-    parents.dedup();
-    sync_parent_dirs(&parents)?;
-    Ok(())
+    let parents = vyre_driver::durable_fanout::parent_directories(paths, |parents, capacity| {
+        parents.try_reserve_exact(capacity).map_err(|source| {
+            io::Error::new(
+                io::ErrorKind::OutOfMemory,
+                format!(
+                    "pipeline cache flush could not reserve {capacity} parent path slot(s): {source}. Fix: flush fewer cache paths per batch."
+                ),
+            )
+        })
+    })?;
+    sync_parent_dirs(&parents)
 }
 
+/// A directory carries no write access to request, so it is opened read-only:
+/// [`vyre_driver::durable_fanout::open_for_sync`] is for the file half. The
+/// opener is a closure because `File::open` is generic over its argument and
+/// states no single opener signature.
 #[cfg(unix)]
 fn sync_parent_dirs(parents: &[PathBuf]) -> io::Result<()> {
     sync_paths_bounded(
         parents,
+        |path: &Path| File::open(path),
         File::sync_all,
         "pipeline cache directory sync worker panicked",
     )
@@ -268,41 +327,26 @@ fn sync_parent_dirs(_parents: &[PathBuf]) -> io::Result<()> {
 
 fn sync_paths_bounded(
     paths: &[PathBuf],
+    open: fn(&Path) -> io::Result<File>,
     sync: fn(&File) -> io::Result<()>,
     panic_message: &'static str,
 ) -> io::Result<()> {
-    if paths.is_empty() {
-        return Ok(());
-    }
-    let workers = sync_worker_count();
-    for chunk in paths.chunks(workers) {
-        std::thread::scope(|scope| {
-            let mut handles = Vec::with_capacity(chunk.len());
-            for path in chunk {
-                handles.push(scope.spawn(move || {
-                    let file = File::open(path)?;
-                    sync(&file)
-                }));
-            }
-            for handle in handles {
-                handle
-                    .join()
-                    .map_err(|_| io::Error::other(panic_message))??;
-            }
-            Ok::<(), io::Error>(())
-        })?;
-    }
-    Ok(())
-}
-
-fn sync_worker_count() -> usize {
-    static WORKERS: OnceLock<usize> = OnceLock::new();
-    *WORKERS.get_or_init(|| {
-        std::thread::available_parallelism()
-            .map(usize::from)
-            .unwrap_or(1)
-            .clamp(1, 16)
-    })
+    vyre_driver::durable_fanout::for_each_bounded(
+        paths,
+        |path| {
+            let file = open(path)?;
+            sync(&file)
+        },
+        || io::Error::other(panic_message),
+        |requested, source| {
+            io::Error::new(
+                io::ErrorKind::OutOfMemory,
+                format!(
+                    "pipeline cache sync could not reserve {requested} worker handle(s): {source}. Fix: lower pipeline cache sync fan-out."
+                ),
+            )
+        },
+    )
 }
 
 /// Errors from disk-backed pipeline cache construction / use.
@@ -319,7 +363,13 @@ pub enum DiskCacheError {
     Io(#[from] io::Error),
 }
 
-#[cfg_attr(not(any(test, feature = "remote-cache")), allow(dead_code))]
+#[cfg_attr(
+    not(any(test, feature = "remote-cache")),
+    expect(
+        dead_code,
+        reason = "the zero-capacity entry point is called by the remote-cache reader and by this module's own tests, so it has no caller in a build with neither"
+    )
+)]
 pub(super) fn read_verified_cache_blob(mut reader: impl Read) -> Option<Vec<u8>> {
     read_verified_cache_blob_with_capacity(&mut reader, 0)
 }
@@ -389,10 +439,12 @@ fn append_u64_decimal(out: &mut String, mut value: u64) {
     }
 }
 
+// Inline: covers `CHECKSUM_LEN`, `MAX_ENCODED_PIPELINE_BLOB_BYTES`, `encode_cache_blob`, `flush`
+// and 2 more items this module keeps private, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_helpers::tiny_artifact;
+    use vyre_test_support::artifact_fixtures::tiny_artifact;
 
     #[test]
     fn disk_cache_persists_across_store_reopen() {
@@ -420,14 +472,14 @@ mod tests {
             .expect("Fix: disk cache test must create isolated cache root");
         cache.put(fp, b"driver-pipeline-blob".to_vec());
         assert!(
-            !cache.pending_flushes.is_empty(),
+            !cache.durability_report().durable,
             "Fix: DiskCache::put must defer fsync work until explicit flush."
         );
         cache
             .flush()
             .expect("Fix: explicit disk cache flush must fsync pending entries.");
         assert!(
-            cache.pending_flushes.is_empty(),
+            cache.durability_report().durable,
             "Fix: explicit disk cache flush must drain pending entries."
         );
         assert_eq!(
@@ -435,6 +487,161 @@ mod tests {
             Some(b"driver-pipeline-blob".to_vec()),
             "Fix: explicit flush must preserve the installed cache artifact."
         );
+    }
+
+    /// A poisoned pending set must retain every unsynchronized installed path.
+    #[test]
+    fn pending_flushes_survive_lock_poison() {
+        let temp = tempfile::TempDir::new().expect("isolated cache directory");
+        let cache = DiskCache::new(temp.path()).expect("cache");
+        let fingerprint = PipelineFingerprint::of(&tiny_artifact());
+        cache.put(fingerprint, b"pending".to_vec());
+        let poisoned = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _pending = cache.pending_flushes.lock().expect("unpoisoned lock");
+            panic!("injected pending-set lock failure");
+        }));
+        assert!(poisoned.is_err());
+        assert_eq!(cache.durability_report().pending_flushes, 1);
+        cache.flush().expect("retained paths must synchronize");
+        assert!(cache.durability_report().durable);
+        assert_eq!(cache.get(&fingerprint), Some(b"pending".to_vec()));
+    }
+
+    /// WHY: removing a batch before I/O must not report premature durability,
+    /// lose later writes, or discard the batch on errors and unwinding.
+    #[test]
+    fn flush_batches_preserve_pending_state_across_all_outcomes() {
+        #[derive(Clone, Copy)]
+        enum Outcome {
+            Success,
+            Error,
+            Panic,
+        }
+        for outcome in [Outcome::Success, Outcome::Error, Outcome::Panic] {
+            for same_path in [false, true] {
+                let temp = tempfile::tempdir().expect("isolated cache directory");
+                let cache = DiskCache::new(temp.path()).expect("cache");
+                let first = PipelineFingerprint([1; 32]);
+                let later = if same_path {
+                    first
+                } else {
+                    PipelineFingerprint([2; 32])
+                };
+                cache.put(first, b"first".to_vec());
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    cache.flush_with(|paths| {
+                        assert_eq!(paths, [cache.path_for(&first)]);
+                        assert_eq!(
+                            cache.durability_report(),
+                            DiskCacheDurabilityReport {
+                                pending_flushes: 1,
+                                durable: false,
+                            }
+                        );
+                        flush_paths(paths)?;
+                        cache.put(later, b"later".to_vec());
+                        assert_eq!(cache.durability_report().pending_flushes, 2);
+                        match outcome {
+                            Outcome::Success => Ok(()),
+                            Outcome::Error => Err(io::Error::other("injected sync failure")),
+                            Outcome::Panic => panic!("injected sync unwind"),
+                        }
+                    })
+                }));
+                match outcome {
+                    Outcome::Success => assert!(matches!(result, Ok(Ok(())))),
+                    Outcome::Error => assert!(
+                        matches!(result, Ok(Err(error)) if error.to_string() == "injected sync failure")
+                    ),
+                    Outcome::Panic => {
+                        let payload = result.expect_err("synchronization must unwind");
+                        assert_eq!(
+                            payload.downcast_ref::<&str>(),
+                            Some(&"injected sync unwind")
+                        );
+                    }
+                }
+                let failed = !matches!(outcome, Outcome::Success);
+                assert_eq!(cache.metrics().flush_errors, u64::from(failed));
+                assert_eq!(
+                    cache.durability_report(),
+                    DiskCacheDurabilityReport {
+                        pending_flushes: if failed && !same_path { 2 } else { 1 },
+                        durable: false,
+                    }
+                );
+                cache.flush().expect("retry pending writes");
+                assert!(cache.durability_report().durable);
+                assert_eq!(cache.get(&later), Some(b"later".to_vec()));
+                assert_eq!(cache.metrics().flushes, 2);
+            }
+        }
+    }
+
+    /// WHY: a later flush must not succeed while earlier accepted writes are
+    /// still synchronizing, and waiting must end when the earlier batch finishes.
+    #[test]
+    fn overlapping_flushes_wait_for_prior_accepted_writes() {
+        use std::sync::mpsc::{channel, RecvTimeoutError};
+        use std::time::Duration;
+
+        let temp = tempfile::tempdir().expect("isolated cache directory");
+        let cache = DiskCache::new(temp.path()).expect("cache");
+        let first = PipelineFingerprint([1; 32]);
+        let second = PipelineFingerprint([2; 32]);
+        cache.put(first, b"first".to_vec());
+        std::thread::scope(|scope| {
+            let (entered_tx, entered_rx) = channel();
+            let (release_tx, release_rx) = channel();
+            let (started_tx, started_rx) = channel();
+            let (finished_tx, finished_rx) = channel();
+            let cache = &cache;
+            let first_flush = scope.spawn(move || {
+                cache.flush_with(|paths| {
+                    entered_tx.send(()).expect("announce in-flight batch");
+                    release_rx
+                        .recv_timeout(Duration::from_secs(5))
+                        .expect("release first batch");
+                    flush_paths(paths)
+                })
+            });
+            entered_rx
+                .recv_timeout(Duration::from_secs(5))
+                .expect("first batch entered");
+            assert!(!cache.durability_report().durable);
+            cache.put(second, b"second".to_vec());
+            let second_flush = scope.spawn(move || {
+                started_tx.send(()).expect("announce later flush");
+                finished_tx.send(cache.flush()).expect("report later flush");
+            });
+            started_rx
+                .recv_timeout(Duration::from_secs(5))
+                .expect("later flush started");
+            let early = finished_rx.recv_timeout(Duration::from_millis(100));
+            release_tx
+                .send(())
+                .expect("allow synchronization to finish");
+            if early.is_err() {
+                finished_rx
+                    .recv_timeout(Duration::from_secs(5))
+                    .expect("later flush must finish")
+                    .expect("later flush succeeds");
+            }
+            first_flush
+                .join()
+                .expect("first flush thread")
+                .expect("first flush succeeds");
+            second_flush.join().expect("later flush thread");
+            assert!(
+                matches!(early, Err(RecvTimeoutError::Timeout)),
+                "later flush returned before prior writes synchronized: {early:?}"
+            );
+        });
+        assert!(cache.durability_report().durable);
+        assert_eq!(cache.metrics().flushes, 2);
+        assert_eq!(cache.metrics().flush_errors, 0);
+        assert_eq!(cache.get(&first), Some(b"first".to_vec()));
+        assert_eq!(cache.get(&second), Some(b"second".to_vec()));
     }
 
     #[test]
@@ -474,7 +681,13 @@ mod tests {
         );
     }
 
+    // WHY not under miri: the cap is 64 MiB, and the reader stops one byte
+    // past it, so the assertion is only reachable by moving 64 MiB through
+    // `read_to_end`. Miri interprets every one of those bytes and does not
+    // finish inside any CI budget. The body executes no `unsafe`, so miri has
+    // nothing here to falsify; every non-miri run still asserts the cap.
     #[test]
+    #[cfg_attr(miri, ignore = "moves 64 MiB through an interpreter")]
     fn cache_blob_reader_rejects_oversized_encoded_blob() {
         let oversized = std::io::repeat(0).take(MAX_ENCODED_PIPELINE_BLOB_BYTES + 1);
 
@@ -516,5 +729,15 @@ mod tests {
                 durable: true,
             }
         );
+    }
+}
+
+impl crate::StateOwnerRecovery for DiskCache {
+    fn failure_domain(&self) -> crate::FailureDomain {
+        crate::FailureDomain::DiskJournal
+    }
+
+    fn recovery_class(&self) -> crate::RecoveryClass {
+        crate::RecoveryClass::RestartableFromCanonicalInput
     }
 }

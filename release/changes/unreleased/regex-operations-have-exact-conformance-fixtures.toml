@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The registered regex NFA and DFA operations now carry exact byte-output fixtures for their canonical zero-input cases, restoring positive reference, CUDA, and WGPU conformance coverage."

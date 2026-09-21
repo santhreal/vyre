@@ -1,0 +1,254 @@
+//! Catalog registrations for the security bitset operations, generated from one
+//! macro so every member declares the same witness shape.
+
+use vyre_foundation::operation::OperationRegistration;
+
+macro_rules! bitset_and_entry {
+    ($module:ident, $build:expr) => {
+        inventory::submit! {
+                    OperationRegistration::library_unconstrained(
+                        super::$module::OP_ID,
+                        $build,
+                        Some(|| {
+                            vec![vec![
+                                vec![12, 0, 0, 0],
+                                vec![10, 0, 0, 0],
+                            ]]
+                        }),
+                        Some(|| {
+                            vec![vec![vec![8, 0, 0, 0]]]
+                        }),
+                    )
+                    .with_category("security")
+            .with_no_legal_rewrite()
+        }
+    };
+}
+
+macro_rules! bitset_and_not_entry {
+    ($module:ident, $build:expr) => {
+        inventory::submit! {
+                    OperationRegistration::library_unconstrained(
+                        super::$module::OP_ID,
+                        $build,
+                        Some(|| {
+                            vec![vec![
+                                vec![15, 0, 0, 0],
+                                vec![12, 0, 0, 0],
+                            ]]
+                        }),
+                        Some(|| {
+                            vec![vec![vec![3, 0, 0, 0]]]
+                        }),
+                    )
+                    .with_category("security")
+            .with_no_legal_rewrite()
+        }
+    };
+}
+
+bitset_and_entry!(auth_check_dominates, || {
+    super::auth_check_dominates::auth_check_dominates(4, "a", "b", "out")
+});
+bitset_and_entry!(buffer_size_check, || {
+    super::buffer_size_check::buffer_size_check(4, "a", "b", "out")
+});
+bitset_and_entry!(lock_dominates, || {
+    super::lock_dominates::lock_dominates(4, "a", "b", "out")
+});
+bitset_and_entry!(path_canonical, || {
+    super::path_canonical::path_canonical(4, "a", "b", "out")
+});
+bitset_and_entry!(sanitizer_dominates, || {
+    super::sanitizer_dominates::sanitizer_dominates(4, "a", "b", "out")
+});
+bitset_and_entry!(sql_param_bound, || {
+    super::sql_param_bound::sql_param_bound(4, "a", "b", "out")
+});
+bitset_and_entry!(xss_escape, || {
+    super::xss_escape::xss_escape(4, "a", "b", "out")
+});
+
+bitset_and_not_entry!(format_string_check, || {
+    super::format_string_check::format_string_check(4, "a", "b", "out")
+});
+bitset_and_not_entry!(taint_kill, || {
+    super::taint_kill::taint_kill(4, "a", "b", "out")
+});
+bitset_and_not_entry!(unchecked_return, || {
+    super::unchecked_return::unchecked_return(4, "a", "b", "out")
+});
+
+inventory::submit! {
+    OperationRegistration::library_unconstrained(
+        super::sink_intersection::OP_ID,
+        || super::sink_intersection::sink_intersection(4, "a", "b", "scratch", "out"),
+        Some(|| vec![vec![
+            vec![12, 0, 0, 0],
+            vec![10, 0, 0, 0],
+        ]]),
+        Some(|| vec![vec![
+            vec![8, 0, 0, 0],
+            vec![1, 0, 0, 0],
+        ]]),
+    )
+    .with_category("security")
+    .with_uncharacterized()
+}
+
+inventory::submit! {
+    OperationRegistration::library_unconstrained(
+        super::integer_overflow_arith::OP_ID,
+        || {
+            super::integer_overflow_arith::integer_overflow_arith(
+                4, "arith", "reach", "guards", "scratch", "out",
+            )
+        },
+        Some(|| vec![vec![
+            vec![15, 0, 0, 0],
+            vec![12, 0, 0, 0],
+            vec![8, 0, 0, 0],
+        ]]),
+        Some(|| vec![vec![
+            vec![12, 0, 0, 0],
+            vec![4, 0, 0, 0],
+        ]]),
+    )
+    .with_category("security")
+    .with_uncharacterized()
+}
+macro_rules! reach_flow_entry {
+    ($op_id:expr, $build:expr, $inputs_fn:expr, $expected_bytes:expr) => {
+        inventory::submit! {
+                    OperationRegistration::library_unconstrained(
+                        $op_id,
+                        $build,
+                        Some($inputs_fn),
+                        Some(|| vec![vec![$expected_bytes.to_vec()]]),
+                    )
+                    .with_category("security")
+            .with_uncharacterized()
+        }
+        inventory::submit! {
+            vyre_libs_builder::plumbing::registration::operation_catalog::ConvergenceContract {
+                op_id: $op_id,
+                max_iterations: super::flow_composition::FLOW_MAX_ITERATIONS,
+            }
+        }
+    };
+}
+
+reach_flow_entry!(
+    super::flows_to::OP_ID,
+    || super::flows_to::flows_to(
+        vyre_libs_graph::graph::program_graph::ProgramGraphShape::new(4, 3),
+        "fin",
+        "fout"
+    ),
+    super::flow_composition::forward_reach_fixture_inputs,
+    super::flow_composition::FORWARD_REACH_EXPECTED_BYTES
+);
+
+reach_flow_entry!(
+    super::taint_flow::OP_ID,
+    || super::taint_flow::taint_flow(
+        vyre_libs_graph::graph::program_graph::ProgramGraphShape::new(4, 3),
+        "fin",
+        "fout"
+    ),
+    super::flow_composition::forward_reach_fixture_inputs,
+    super::flow_composition::FORWARD_REACH_EXPECTED_BYTES
+);
+
+reach_flow_entry!(
+    super::bounded_by_comparison::OP_ID,
+    || super::bounded_by_comparison::bounded_by_comparison(
+        vyre_libs_graph::graph::program_graph::ProgramGraphShape::new(4, 4),
+        "fin",
+        "fout"
+    ),
+    super::flow_composition::dominance_fixture_inputs,
+    super::flow_composition::DOMINANCE_EXPECTED_BYTES
+);
+
+reach_flow_entry!(
+    super::dominance_predecessors::OP_ID,
+    || super::dominance_predecessors::dominance_predecessors(
+        vyre_libs_graph::graph::program_graph::ProgramGraphShape::new(4, 4),
+        "fin",
+        "fout"
+    ),
+    super::flow_composition::dominance_fixture_inputs,
+    super::flow_composition::DOMINANCE_EXPECTED_BYTES
+);
+
+inventory::submit! {
+    OperationRegistration::library_unconstrained(
+        super::flows_to_to_sink::OP_ID,
+        || super::flows_to_to_sink::flows_to_to_sink(vyre_libs_graph::graph::program_graph::ProgramGraphShape::new(4, 3), "source", "sink", "reach", "hits", "out_scalar"),
+        Some(super::flow_composition::dataflow_hit_fixture_inputs),
+        Some(|| {
+            vec![vec![
+                super::flow_composition::DATAFLOW_REACH_EXPECTED_BYTES.to_vec(),
+                super::flow_composition::DATAFLOW_HITS_EXPECTED_BYTES.to_vec(),
+                super::flow_composition::DATAFLOW_HIT_SCALAR_BYTES.to_vec(),
+            ]]
+        }),
+    )
+    .with_category("security")
+    .with_uncharacterized()
+}
+
+inventory::submit! {
+    OperationRegistration::library_unconstrained(
+        super::taint_pollution::OP_ID,
+        || super::taint_pollution::taint_pollution(vyre_libs_graph::graph::program_graph::ProgramGraphShape::new(4, 3), "source", "label_set", "reach", "hits", "out_scalar"),
+        Some(super::flow_composition::dataflow_hit_fixture_inputs),
+        Some(|| {
+            vec![vec![
+                super::flow_composition::DATAFLOW_REACH_EXPECTED_BYTES.to_vec(),
+                super::flow_composition::DATAFLOW_HITS_EXPECTED_BYTES.to_vec(),
+                super::flow_composition::DATAFLOW_HIT_SCALAR_BYTES.to_vec(),
+            ]]
+        }),
+    )
+    .with_category("security")
+    .with_uncharacterized()
+}
+
+inventory::submit! {
+    OperationRegistration::library_unconstrained(
+        super::sanitized_by::OP_ID,
+        || super::sanitized_by::sanitized_by(vyre_libs_graph::graph::program_graph::ProgramGraphShape::new(4, 3), "fin", "san", "fout"),
+        Some(super::sanitized_by::sanitized_by_fixture_inputs),
+        Some(|| vec![vec![super::sanitized_by::EXPECTED_SANITIZED_BY_OUTPUT_BYTES.to_vec()]]),
+    )
+    .with_category("security")
+    .with_uncharacterized()
+}
+
+inventory::submit! {
+    vyre_libs_builder::plumbing::registration::operation_catalog::ConvergenceContract {
+        op_id: super::sanitized_by::OP_ID,
+        max_iterations: 4096,
+    }
+}
+
+inventory::submit! {
+    OperationRegistration::library_unconstrained(
+        super::flows_to_with_sanitizer::OP_ID,
+        || super::flows_to_with_sanitizer::flows_to_with_sanitizer(vyre_libs_graph::graph::program_graph::ProgramGraphShape::new(4, 3), "source", "sink", "sanitizer", "clean", "reach", "alive", "hits", "out_scalar"),
+        Some(super::flows_to_with_sanitizer::flows_to_with_sanitizer_fixture_inputs),
+        Some(|| {
+            vec![vec![
+                super::flows_to_with_sanitizer::EXPECTED_CLEAN_BYTES.to_vec(),
+                super::flows_to_with_sanitizer::EXPECTED_REACH_BYTES.to_vec(),
+                super::flows_to_with_sanitizer::EXPECTED_ALIVE_BYTES.to_vec(),
+                super::flows_to_with_sanitizer::EXPECTED_HITS_BYTES.to_vec(),
+                super::flows_to_with_sanitizer::EXPECTED_FLOWS_TO_WITH_SANITIZER_SCALAR_BYTES.to_vec(),
+            ]]
+        }),
+    )
+    .with_category("security")
+    .with_uncharacterized()
+}

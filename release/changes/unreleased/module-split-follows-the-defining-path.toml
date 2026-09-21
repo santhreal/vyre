@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Public API snapshots state the defining module of a re-exported type. The image and sampler capability records moved into `vyre_spec::resource_capability::image` and `::sampler`, and the retry classification into `vyre_foundation::diagnostics::classification`. Both re-export from their previous path, so no reachable path changed."

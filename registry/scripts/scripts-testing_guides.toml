@@ -1,0 +1,4 @@
+path = "scripts/testing_guides.py"
+state = "implements"
+gate = "doc-contract"
+reason = "generates one docs/testing/<crate>.md guide per workspace member, which docs/DOCS.toml names as their generator"

@@ -324,17 +324,12 @@ fn copy_fused_resident_view_into(
         output.copy_from_slice(bytes);
         return Ok(());
     }
-    if bytes.len() > output.capacity() {
-        output
-            .try_reserve_exact(bytes.len() - output.capacity())
-            .map_err(|source| {
-                vyre_driver::BackendError::new(format!(
-                    "WGPU resident ranged batch download could not reserve {} output byte(s): {source}. Fix: split the resident readback batch before materializing outputs.",
-                    bytes.len()
-                ))
-            })?;
-    }
-    output.clear();
+    vyre_foundation::allocation::reserve_exact_cleared(output, bytes.len()).map_err(|source| {
+        vyre_driver::BackendError::new(format!(
+            "WGPU resident ranged batch download could not reserve {} output byte(s): {source}. Fix: split the resident readback batch before materializing outputs.",
+            bytes.len()
+        ))
+    })?;
     output.extend_from_slice(bytes);
     Ok(())
 }

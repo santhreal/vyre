@@ -4,6 +4,8 @@
 //! actually contains subgroup ops, and that capability reporting
 //! matches the emitted shader.
 
+#![cfg(feature = "device-tests")]
+
 use vyre::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::emit;

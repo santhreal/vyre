@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A resident dispatch that binds one allocation to a read-only slot and to a writable slot is refused, and a store to a binding declared read-only is refused at emission."

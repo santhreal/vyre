@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`vyre_foundation::optimizer::effect_lattice::AtomicOrdering` is deleted. The effect lattice joins orderings through `memory_model::AtomicOrdering`, which carries all five orderings and one `join`."

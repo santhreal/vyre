@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`SafetensorError::ResourceContentModified` and `SafetensorError::SymlinkSwapDetected` are removed because nothing constructed either one; a content change is reported as `ShardContentChanged` and a symlink swap cannot reach the descriptor a verified handle already holds."

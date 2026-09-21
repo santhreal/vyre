@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "vyre-registry-link enables every domain of vyre-primitives instead of the hardware domain alone. Linking one domain left the operation registry partial in every binary that reads it: the release conformance run covered 356 of 359 registered operations and reported the geometry and optimization operations the op matrix requires as missing, when they were only unlinked."

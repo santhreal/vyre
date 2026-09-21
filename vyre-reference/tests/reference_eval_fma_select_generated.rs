@@ -1,7 +1,6 @@
 //! Generated `reference_eval` coverage for FMA and Select expression nodes.
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_reference::reference_eval;
 
 fn eval_f32_expr(expr: Expr) -> f32 {
     let program = Program::wrapped(
@@ -9,7 +8,8 @@ fn eval_f32_expr(expr: Expr) -> f32 {
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), expr)],
     );
-    let outputs = reference_eval(&program, &[])
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[])
+        .outputs()
         .expect("Fix: generated F32 expression program must execute in the reference oracle.");
     let bytes = outputs[0].to_bytes();
     f32::from_le_bytes(
@@ -27,7 +27,8 @@ fn eval_u32_expr(expr: Expr) -> u32 {
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), expr)],
     );
-    let outputs = reference_eval(&program, &[])
+    let outputs = vyre_reference::ReferenceRequest::standard(&program, &[])
+        .outputs()
         .expect("Fix: generated U32 expression program must execute in the reference oracle.");
     let bytes = outputs[0].to_bytes();
     u32::from_le_bytes(

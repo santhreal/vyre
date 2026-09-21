@@ -1,6 +1,6 @@
 //! SPIR-V backend adapter for Vyre.
 //!
-//! Programs enter through `vyre_lower::lower_verified`; the canonical
+//! Programs enter through `vyre_lower::lower_physical`; the canonical
 //! `vyre-emit-spirv` writer owns descriptor-to-SPIR-V serialization. This crate
 //! owns backend registration and Vulkan execution only.
 //!
@@ -20,12 +20,12 @@
 // `unsafe_code = "deny"` while this backend wraps ash properly with
 // per-call Safety: comments.
 #![allow(unsafe_code)]
-#![deny(rust_2018_idioms)]
-#![deny(missing_docs)]
 
 /// Canonical lowering and emitter adapter.
-pub mod backend;
+pub(crate) mod backend;
 mod materializer;
+/// Descriptor bindings read out of an emitted SPIR-V module.
+mod module_bindings;
 mod target_compiler;
 /// Vulkan compute dispatch implementation.
 mod vulkan;
@@ -36,7 +36,7 @@ pub use backend::SpirvBackend;
 
 use std::sync::Arc;
 
-use vyre_driver::{BackendError, BackendRegistration, DispatchConfig, VyreBackend};
+use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
 use vyre_foundation::ir::Program;
 
 /// Stable backend identifier for conform certificates.
@@ -58,17 +58,20 @@ pub struct SpirvBackendRegistration {
 impl SpirvBackendRegistration {
     /// Acquire a new SPIR-V backend by probing for a Vulkan compute device.
     ///
+    /// Every acquisition shares the process-wide Vulkan context, so the loader
+    /// and the logical device are created once however many times a caller
+    /// acquires this backend.
+    ///
     /// # Errors
     /// Returns [`BackendError`] when no Vulkan loader or compatible GPU is found.
     pub fn acquire() -> Result<Self, BackendError> {
-        let device = vulkan::VulkanDevice::acquire()?;
         Ok(Self {
-            device: Arc::new(device),
+            device: vulkan::shared_device()?,
         })
     }
 }
 
-impl vyre_driver::backend::private::Sealed for SpirvBackendRegistration {}
+impl vyre_driver::sealed::Sealed for SpirvBackendRegistration {}
 
 fn spirv_device_buffer_unsupported() -> BackendError {
     BackendError::UnsupportedFeature {
@@ -89,22 +92,13 @@ impl VyreBackend for SpirvBackendRegistration {
         env!("CARGO_PKG_VERSION")
     }
 
-    fn dispatch(
-        &self,
-        program: &Program,
-        inputs: &[Vec<u8>],
-        config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-        self.dispatch_borrowed(program, &borrowed, config)
-    }
-
     fn dispatch_borrowed(
         &self,
         program: &Program,
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
+        BackendError::reject_blocked_contraction(program, config.float_lowering, SPIRV_BACKEND_ID)?;
         let spv_words = SpirvBackend::program_to_spv(program).map_err(|e| {
             BackendError::KernelCompileFailed {
                 backend: SPIRV_BACKEND_ID.to_string(),
@@ -115,31 +109,37 @@ impl VyreBackend for SpirvBackendRegistration {
         // SAFETY: FFI to ash::vk. Handle lifetimes are documented at the
         // surrounding VulkanDevice construction site; the Drop impl owns
         // destruction.
-        unsafe { vulkan::dispatch_program(&self.device, program, &spv_words, inputs, config) }
+        unsafe {
+            vulkan::dispatch_program(
+                &self.device,
+                program,
+                &spv_words,
+                inputs,
+                vulkan::InputOrder::Plan,
+                config,
+            )
+        }
     }
 
     fn allocate_device_buffer(
         &self,
-        byte_len: usize,
+        _byte_len: usize,
     ) -> Result<Box<dyn vyre_driver::DeviceBuffer>, BackendError> {
-        let _ = byte_len;
         Err(spirv_device_buffer_unsupported())
     }
 
     fn upload_device_buffer(
         &self,
-        buffer: &mut dyn vyre_driver::DeviceBuffer,
-        bytes: &[u8],
+        _buffer: &mut dyn vyre_driver::DeviceBuffer,
+        _bytes: &[u8],
     ) -> Result<(), BackendError> {
-        let _ = (buffer, bytes);
         Err(spirv_device_buffer_unsupported())
     }
 
     fn download_device_buffer(
         &self,
-        buffer: &dyn vyre_driver::DeviceBuffer,
+        _buffer: &dyn vyre_driver::DeviceBuffer,
     ) -> Result<Vec<u8>, BackendError> {
-        let _ = buffer;
         Err(spirv_device_buffer_unsupported())
     }
 
@@ -192,70 +192,34 @@ impl VyreBackend for SpirvBackendRegistration {
         self.device.properties.limits.max_storage_buffer_range as u64
     }
 
-    fn supports_grid_sync(&self) -> bool {
-        false
+    /// Workgroup-scoped scratch a Vulkan compute pipeline may declare.
+    ///
+    /// The limit was read into the profile and the flag derived from it was
+    /// not, because the profile was spelled as a struct literal over
+    /// `DeviceProfile::conservative`: `has_shared_memory` stayed false beside a
+    /// 48 KiB budget. The compiler refuses a program that declares workgroup
+    /// scratch against a device reporting no shared memory, so 39 operations
+    /// were refused as `program declares workgroup-scoped scratch but the
+    /// device reports no shared memory` on an RTX 4090. Reporting the budget
+    /// here is what makes the flag follow it, since the neutral profile derives
+    /// one from the other.
+    fn max_shared_memory_bytes(&self) -> u32 {
+        self.device.properties.limits.max_compute_shared_memory_size
     }
 
+    /// Whether this device runs the subgroup operations the emitter produces.
+    ///
+    /// The instance asked for Vulkan 1.0, which makes subgroup properties
+    /// unqueryable, so the backend reported none and the validator refused
+    /// seven subgroup operations before emission on a device whose warps are
+    /// 32 lanes wide. The probe reports a width only when the compute stage
+    /// supports the whole `GroupNonUniform*` family naga emits.
     fn supports_subgroup_ops(&self) -> bool {
-        false
+        self.device.subgroup.is_some()
     }
 
-    fn supports_f16(&self) -> bool {
-        false
-    }
-
-    fn supports_bf16(&self) -> bool {
-        false
-    }
-
-    fn supports_tensor_cores(&self) -> bool {
-        false
-    }
-
-    fn supports_async_compute(&self) -> bool {
-        false
-    }
-
-    fn supports_indirect_dispatch(&self) -> bool {
-        false
-    }
-
-    fn device_profile(&self) -> vyre_driver::DeviceProfile {
-        let max_workgroup_size = self.max_workgroup_size();
-        vyre_driver::DeviceProfile {
-            backend: self.id(),
-            supports_subgroup_ops: false,
-            supports_indirect_dispatch: false,
-            supports_distributed_collectives: false,
-            supports_specialization_constants: false,
-            supports_f16: false,
-            supports_bf16: false,
-            supports_trap_propagation: false,
-            supports_tensor_cores: false,
-            has_mul_high: false,
-            has_dual_issue_fp32_int32: false,
-            has_subgroup_shuffle: false,
-            has_shared_memory: false,
-            max_native_int_width: 32,
-            max_workgroup_size,
-            max_invocations_per_workgroup: self.max_compute_invocations_per_workgroup(),
-            max_shared_memory_bytes: self.device.properties.limits.max_compute_shared_memory_size,
-            max_storage_buffer_binding_size: self.max_storage_buffer_bytes(),
-            subgroup_size: 0,
-            compute_units: 0,
-            regs_per_thread_max: 0,
-            l1_cache_bytes: 0,
-            l2_cache_bytes: 0,
-            mem_bw_gbps: 0,
-            timing_quality: vyre_driver::DeviceTimingQuality::HostOnly,
-            supports_device_timestamps: false,
-            supports_hardware_counters: false,
-            ideal_unroll_depth: 0,
-            ideal_vector_pack_bits: 0,
-            ideal_workgroup_tile: [0, 0, 0],
-            shared_memory_bank_count: 0,
-            shared_memory_bank_width_bytes: 0,
-        }
+    fn subgroup_size(&self) -> Option<u32> {
+        self.device.subgroup
     }
 }
 
@@ -273,21 +237,25 @@ pub fn spirv_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
 /// all SPIRV dispatch even when the op is supported, silently degrading to a
 /// lower-precedence backend.
 pub fn spirv_supported_ops() -> &'static std::collections::HashSet<vyre_foundation::ir::OpId> {
-    vyre_driver::backend::core_supported_ops()
+    vyre_driver::core_supported_ops()
 }
 
-inventory::submit! {
-    BackendRegistration {
-        id: SPIRV_BACKEND_ID,
-        target_id: SPIRV_TARGET_ID,
-        payload_format: Some(target_compiler::SPIRV_TARGET_FORMAT),
-        reference_oracle: false,
-        factory: spirv_factory,
-        supported_ops: spirv_supported_ops,
-        semantic_operations: vyre_driver::backend::dialect_only_supported_ops,
-        target_compiler: Some(target_compiler::target_compiler_factory),
-        materializer: Some(materializer::materializer_factory),
-    }
+/// Backend id submitted into the registry by the SPIR-V driver.
+#[must_use]
+pub fn registered_backend_id() -> Option<&'static str> {
+    Some(SPIRV_BACKEND_ID)
+}
+
+vyre_driver::register_backend! {
+    id: SPIRV_BACKEND_ID,
+    target_id: SPIRV_TARGET_ID,
+    payload_format: Some(target_compiler::SPIRV_TARGET_FORMAT),
+    reference_oracle: false,
+    factory: spirv_factory,
+    supported_ops: spirv_supported_ops,
+    target_compiler: Some(target_compiler::target_compiler_factory),
+    materializer: Some(materializer::materializer_factory),
+    rank: 30,
 }
 
 #[cfg(test)]
@@ -306,20 +274,5 @@ mod tests {
              the router to skip all SPIRV dispatch. Got {} ops.",
             ops.len()
         );
-    }
-}
-
-// V7-EXT-021: declare router precedence inline. SPIR-V is rank 30.
-inventory::submit! {
-    vyre_driver::backend::BackendPrecedence {
-        id: SPIRV_BACKEND_ID,
-        rank: 30,
-    }
-}
-
-inventory::submit! {
-    vyre_driver::backend::BackendCapability {
-        id: SPIRV_BACKEND_ID,
-        dispatches: true,
     }
 }

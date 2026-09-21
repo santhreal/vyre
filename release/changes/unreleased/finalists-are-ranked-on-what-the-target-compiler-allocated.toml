@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Compile-time finalists are re-ranked on the registers, spill and shared memory their emitted entry points allocate, and a finalist above the device register limit is eliminated before measurement."

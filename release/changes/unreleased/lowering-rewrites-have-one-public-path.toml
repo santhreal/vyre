@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Lowering rewrite rules, contracts, and functions now have one public path through vyre_lower::rewrites; implementation modules remain private."

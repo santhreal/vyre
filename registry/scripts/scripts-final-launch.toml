@@ -1,0 +1,4 @@
+path = "scripts/final-launch.sh"
+state = "operator"
+gate = "launch-state"
+reason = "the approval-gated launch entry point: runs the release gate, publishes, tags, pushes and records launch completion"

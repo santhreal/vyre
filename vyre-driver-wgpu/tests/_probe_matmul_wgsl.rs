@@ -1,5 +1,7 @@
 //! Test crate.
 
+#![cfg(feature = "device-tests")]
+
 #[test]
 fn dump_matmul_wgsl() {
     let p = vyre_libs::math::linalg::matmul("a", "b", "out", 4, 4, 4);

@@ -1,4 +1,4 @@
-//! ROADMAP A16  -  range facts into cast / branch / bounds-check elision.
+//! range facts into cast / branch / bounds-check elision.
 //!
 //! Loop-induction range slice shipped here. Inside `Loop(i,
 //! LitU32(lo), LitU32(hi), body)`, the loop variable `i` has the
@@ -55,9 +55,10 @@
 
 use super::substitution::body_rebinds_var;
 use crate::ir::{BinOp, Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
 use crate::optimizer::program_shape_facts::ProgramShapeFacts;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::visit::node_map;
+use crate::visit::{any_descendant, node_map};
 
 /// Fold loop-induction-range-determined `If` conditions.
 #[derive(Debug, Default)]
@@ -72,29 +73,25 @@ impl LoopVarRangeFoldPass {
     /// Skip programs without a foldable If inside a Loop.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        // The fold rule requires both an If AND a Loop; if either is
-        // absent the pass cannot fire. Compose the bitset check for
-        // both kinds before paying the recursive walk.
         use crate::ir::stats::{NODE_KIND_IF, NODE_KIND_LOOP};
-        let stats = program.stats();
-        if !stats.has_any_node_kind(NODE_KIND_LOOP) || !stats.has_any_node_kind(NODE_KIND_IF) {
+        let required = [NODE_KIND_LOOP, NODE_KIND_IF];
+        // Deriving the shape facts walks the program, so the O(1) kind filter
+        // comes first: without both a Loop and an If there is nothing to fold.
+        if !driver::carries_every_kind(program, &required) {
             return PassAnalysis::SKIP;
         }
         let shape_facts = ProgramShapeFacts::derive_cached(program);
-        if program
-            .entry()
-            .iter()
-            .any(|n| node_map::any_descendant(n, &mut |node| has_foldable_if(node, &shape_facts)))
-        {
-            PassAnalysis::RUN
-        } else {
-            PassAnalysis::SKIP
-        }
+        driver::analyze_candidates(program, &required, &mut |node| {
+            has_foldable_if(node, &shape_facts)
+        })
     }
 
     /// Walk the entry tree and fold every range-determined If.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
+        if !Self::analyze_impl(&program).should_run {
+            return PassResult::unchanged(program);
+        }
         let mut changed = false;
         let shape_facts = ProgramShapeFacts::derive_cached(&program);
         let program = program.map_entry(|entry| {
@@ -200,27 +197,16 @@ fn recurse(
                 .map(|n| recurse(n, range, shape_facts, changed))
                 .collect(),
         ),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec: Vec<Node> = match std::sync::Arc::try_unwrap(body) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            Node::Region {
-                generator,
-                source_region,
-                body: std::sync::Arc::new(
-                    body_vec
-                        .into_iter()
-                        .map(|n| recurse(n, range, shape_facts, changed))
-                        .collect(),
-                ),
-            }
-        }
-        other => other,
+        // Every other body-bearing variant carries the enclosing range into
+        // its body: the `Loop` arm above only established a range after
+        // proving the variable is rebound nowhere in the body, nested scopes
+        // included. `map_body` owns which slots exist, so a new nesting
+        // variant is folded instead of handed back untouched.
+        other => node_map::map_body(other, &mut |body| {
+            body.into_iter()
+                .map(|n| recurse(n, range, shape_facts, changed))
+                .collect()
+        }),
     }
 }
 
@@ -347,24 +333,22 @@ fn has_foldable_if(node: &Node, shape_facts: &ProgramShapeFacts) -> bool {
     }
 }
 
+/// True when any `If` anywhere under `node` has a condition this pass can
+/// decide from the loop's range.
+///
+/// Descent comes from [`any_descendant`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => false`, so a
+/// foldable guard inside a fifth body-bearing variant read as absent and the
+/// pass reported SKIP for a program it had work in.
 fn body_has_foldable_if(
     node: &Node,
     range: &LoopRange<'_>,
     shape_facts: &ProgramShapeFacts,
 ) -> bool {
-    match node {
-        Node::If { cond, .. } => condition_verdict(cond, range, shape_facts).is_some(),
-        Node::Block(body) => body
-            .iter()
-            .any(|n| body_has_foldable_if(n, range, shape_facts)),
-        Node::Loop { body, .. } => body
-            .iter()
-            .any(|n| body_has_foldable_if(n, range, shape_facts)),
-        Node::Region { body, .. } => body
-            .iter()
-            .any(|n| body_has_foldable_if(n, range, shape_facts)),
-        _ => false,
-    }
+    any_descendant(
+        node,
+        &mut |n| matches!(n, Node::If { cond, .. } if condition_verdict(cond, range, shape_facts).is_some()),
+    )
 }
 
 #[cfg(test)]
@@ -408,24 +392,7 @@ mod tests {
     }
 
     fn count_ifs(nodes: &[Node]) -> usize {
-        let mut total = 0;
-
-        for n in nodes {
-            match n {
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    total += 1;
-                    total += count_ifs(then);
-                    total += count_ifs(otherwise);
-                }
-                Node::Loop { body, .. } => total += count_ifs(body),
-                Node::Block(body) => total += count_ifs(body),
-                Node::Region { body, .. } => total += count_ifs(body),
-                _ => {}
-            }
-        }
-        total
+        crate::test_ir_inspect::count_nodes(nodes, |node| matches!(node, Node::If { .. }))
     }
 
     /// Positive: `Lt(Var(i), n)` with `n >= hi` is always true →

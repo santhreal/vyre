@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Scan products now return the foundation-owned `ByteRange { tag, start, end }`. The deprecated `Match` and `LiteralMatch` surfaces and the duplicate primitive range type are gone."

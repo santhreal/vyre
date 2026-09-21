@@ -1,0 +1,2 @@
+category = "Added"
+text = "The evidence-attribution gate judges every artifact under release/evidence, deriving the set from the directory rather than a list. An artifact carrying no record, a record naming a commit this branch does not contain, a record taken from an uncommitted worktree, or a device result naming no device is a finding. It owns release/evidence/metadata/unattributed-evidence.json, which names each artifact whose origin is unknown and the exact command that recaptures it; the ledger refuses an artifact its owning gate reproduces without a device."

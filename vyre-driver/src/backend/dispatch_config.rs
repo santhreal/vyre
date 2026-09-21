@@ -2,6 +2,8 @@
 
 use std::time::Duration;
 
+use crate::backend::BackendError;
+
 /// Immutable execution policy supplied by the caller before dispatch.
 ///
 /// `DispatchConfig` is an additive, non-exhaustive struct so that new backend
@@ -39,6 +41,14 @@ pub struct DispatchConfig {
     pub label: Option<String>,
     /// Optional maximum output byte limit.
     pub max_output_bytes: Option<usize>,
+    /// The complete launch a compiled artifact recorded, or a caller stated.
+    ///
+    /// A frozen launch is authoritative: the workgroup, the grid and the shared
+    /// byte requirement are submitted exactly, no tuner sees the launch, and
+    /// nothing infers a grid from buffer shapes. Stating it alongside any of the
+    /// four override fields below is rejected rather than resolved, because the
+    /// resolution would pick one authority and drop the other silently.
+    pub launch: Option<crate::launch_directive::LaunchDirective>,
     /// Optional workgroup size override.
     ///
     /// When `Some`, the backend uses the supplied `[x, y, z]` workgroup size
@@ -54,6 +64,17 @@ pub struct DispatchConfig {
     /// required for megakernels where the work queue length is managed through
     /// storage buffers rather than the primary output slot.
     pub grid_override: Option<[u32; 3]>,
+    /// Per-axis workgroup ceiling this launch is planned against.
+    ///
+    /// `None` plans against what the device reports. `Some(limits)` plans
+    /// against the smaller of the two on each axis, which is how a caller
+    /// targets a portability floor instead of the device in front of it: the
+    /// WebGPU minimum is 65535 workgroups per axis, and a launch planned there
+    /// runs on every conformant implementation rather than only on the one that
+    /// reports a larger ceiling. A launch that no longer fits one axis is folded
+    /// across the others when the program's element index is grid-linearized,
+    /// and refused by name when it fits nowhere.
+    pub max_workgroups_per_axis: Option<[u32; 3]>,
     /// True per-invocation element/byte coverage count for an element-grid
     /// dispatch (e.g. a one-lane-per-byte scan: `Some(haystack_len)`).
     ///
@@ -61,9 +82,9 @@ pub struct DispatchConfig {
     /// that field is OVERLOADED: for an element-grid dispatch it is the workgroup
     /// count derived from the input size, but for a MEGAKERNEL it is a work-queue
     /// length managed through storage buffers, the two cannot be told apart from
-    /// the `[u32; 3]` alone. Backends that infer their dispatch coverage from
-    /// buffer SHAPES rather than from a real GPU grid (the CPU reference
-    /// interpreter, [`CpuRefBackend`](../../../vyre_driver_reference/index.html))
+    /// the `[u32; 3]` alone. A consumer that infers dispatch coverage from
+    /// buffer SHAPES rather than from a real GPU grid (the reference
+    /// interpreter behind [`vyre_driver_reference::CpuRefEvaluator`](../../../vyre_driver_reference/struct.CpuRefEvaluator.html))
     /// cannot see the runtime scan length, so a byte-scan program would be
     /// under-dispatched to `haystack_len / 4` invocations and SILENTLY skip high
     /// positions (a Law-10 recall regression). An element-grid caller sets this to
@@ -75,16 +96,15 @@ pub struct DispatchConfig {
     /// element dispatch.
     ///
     /// This is the N-dimensional counterpart of
-    /// [`dispatch_elements`](Self::dispatch_elements) (a 1-D floor). A backend that
-    /// infers its coverage from buffer SHAPES rather than a real GPU grid (the CPU
-    /// reference interpreter,
-    /// [`CpuRefBackend`](../../../vyre_driver_reference/index.html)) distributes the
+    /// [`dispatch_elements`](Self::dispatch_elements) (a 1-D floor). A consumer that
+    /// infers its coverage from buffer SHAPES rather than a real GPU grid (the
+    /// reference interpreter behind [`vyre_driver_reference::CpuRefEvaluator`](../../../vyre_driver_reference/struct.CpuRefEvaluator.html)) distributes the
     /// dispatch only across workgroup axes whose size is greater than one, so a
     /// program that fans a `[256, 1, 1]` workgroup across `grid.y` (batched
     /// persistent-BFS runs one query per `grid.y` block) would collapse to
     /// `grid.y == 1` and SILENTLY compute only the first query (a Law-10
-    /// under-coverage). A caller that knows the real grid, e.g.
-    /// `persistent_bfs_batch_dispatch_grid(node_count, query_count)`, sets it here so
+    /// under-coverage). A caller that knows the real grid, e.g. one block per
+    /// query alongside the node domain the program's guard admits, sets it here so
     /// the interpreter covers every workgroup the GPU would. `None` (the default)
     /// keeps buffer-shape inference. When both this and `dispatch_elements` are set,
     /// this wins because it fully specifies the grid.
@@ -105,6 +125,16 @@ pub struct DispatchConfig {
     /// A backend MUST reject `cooperative = true` with `UnsupportedFeature`
     /// when its `VyreBackend::supports_grid_sync()` returns `false`.
     pub cooperative: bool,
+    /// Rounding the backend must apply to a chain of f32 arithmetic.
+    ///
+    /// The default admits contraction, which is what every shipped target does
+    /// and what [`vyre_foundation::fp_parity::BACKEND_ELEMENTARY_F32_ULP_BUDGET`]
+    /// is sized for. A caller that needs each operation to round where
+    /// IEEE-754 says it does states
+    /// [`FloatLoweringMode::StrictIeee`](vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee)
+    /// and the emitted module changes; every emitted-artifact cache key carries
+    /// the mode, so the two modules never stand in for each other.
+    pub float_lowering: vyre_foundation::fp_parity::FloatLoweringMode,
 }
 
 impl DispatchConfig {
@@ -124,14 +154,109 @@ impl DispatchConfig {
             timeout,
             label,
             max_output_bytes: None,
+            launch: None,
             workgroup_override: None,
             grid_override: None,
+            max_workgroups_per_axis: None,
             dispatch_elements: None,
             dispatch_grid: None,
             fixpoint_iterations: None,
             speculation: None,
             persistent_thread: None,
             cooperative: false,
+            float_lowering: vyre_foundation::fp_parity::FloatLoweringMode::default(),
         }
+    }
+
+    /// Workgroup shape this dispatch launches, when one is stated.
+    ///
+    /// A frozen launch answers first, so a consumer reads one field instead of
+    /// deciding between a recorded shape and a tuner override.
+    #[must_use]
+    pub fn launch_workgroup(&self) -> Option<[u32; 3]> {
+        match &self.launch {
+            Some(launch) => Some(launch.workgroup()),
+            None => self.workgroup_override,
+        }
+    }
+
+    /// Workgroup count this dispatch launches, when one is stated.
+    #[must_use]
+    pub fn launch_grid(&self) -> Option<[u32; 3]> {
+        match &self.launch {
+            Some(launch) => Some(launch.grid()),
+            None => self.grid_override,
+        }
+    }
+
+    /// Grid a backend that infers coverage from buffer shapes must cover.
+    #[must_use]
+    pub fn coverage_grid(&self) -> Option<[u32; 3]> {
+        match &self.launch {
+            Some(launch) => Some(launch.grid()),
+            None => self.dispatch_grid,
+        }
+    }
+
+    /// Workgroup-shared bytes the launch reserves, zero when none is stated.
+    #[must_use]
+    pub fn launch_dynamic_shared_bytes(&self) -> u32 {
+        match &self.launch {
+            Some(launch) => launch.dynamic_shared_bytes(),
+            None => 0,
+        }
+    }
+
+    /// Reject a dispatch that states two launch authorities.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError::InvalidProgram`] when a frozen launch arrives
+    /// beside a tuner override. Resolving the pair would pick one shape and drop
+    /// the other without saying so, and one of the two is a kernel nothing
+    /// compiled.
+    pub fn validate_launch_authority(&self, backend: &str) -> Result<(), BackendError> {
+        // Destructured field by field: a new dispatch-shape field cannot be
+        // added without deciding here whether it competes with a frozen launch.
+        let Self {
+            profile: _,
+            ulp_budget: _,
+            timeout: _,
+            label: _,
+            max_output_bytes: _,
+            launch,
+            workgroup_override,
+            grid_override,
+            max_workgroups_per_axis,
+            dispatch_elements,
+            dispatch_grid,
+            fixpoint_iterations: _,
+            speculation: _,
+            persistent_thread: _,
+            cooperative: _,
+            float_lowering: _,
+        } = self;
+        let Some(launch) = launch else {
+            return Ok(());
+        };
+        for (field, stated) in [
+            ("workgroup_override", workgroup_override.is_some()),
+            ("grid_override", grid_override.is_some()),
+            ("max_workgroups_per_axis", max_workgroups_per_axis.is_some()),
+            ("dispatch_elements", dispatch_elements.is_some()),
+            ("dispatch_grid", dispatch_grid.is_some()),
+        ] {
+            if stated {
+                return Err(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: backend `{backend}` received a dispatch stating both the frozen launch {:?}/{:?} and `DispatchConfig::{field}`. \
+                         Submit the frozen launch alone, or drop it and state the override alone.",
+                        launch.workgroup(),
+                        launch.grid(),
+                    ),
+                });
+            }
+        }
+        Ok(())
     }
 }

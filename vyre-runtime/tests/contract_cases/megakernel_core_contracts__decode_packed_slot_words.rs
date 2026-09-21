@@ -1,10 +1,20 @@
 // Core megakernel construction and host protocol contracts.
 
+#[path = "megakernel_core_contracts__read_metrics_returns_nonzero_only.rs"]
+mod megakernel_core_contracts_read_metrics_returns_nonzero_only;
+
+use crate::ring_expectations::{assert_publish_rejected_by_status, assert_ring_fault};
 use vyre_foundation::ir::{Node, Program};
-use vyre_runtime::resident_work_queue::protocol::{control, debug, opcode as opcodes, slot};
-use vyre_runtime::resident_work_queue::scheduler;
-use vyre_runtime::resident_work_queue::*;
-use vyre_runtime::PipelineError;
+use vyre_runtime::resident_work_queue::handlers::OpcodeHandler;
+use vyre_runtime::resident_work_queue::protocol::{
+    self, control, debug, opcode as opcodes, slot, DebugRecord, ProtocolError, ARG0_WORD,
+    ARGS_PER_SLOT, OPCODE_WORD, SLOT_WORDS,
+};
+use vyre_runtime::resident_work_queue::ResidentWorkQueue;
+use vyre_runtime::resident_work_queue::{
+    build_program, build_program_jit, build_program_sharded, build_program_sharded_slots,
+};
+use vyre_runtime::{PipelineError, RingEncodingFault};
 
 #[cfg(test)]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -156,7 +166,7 @@ fn encode_control_covers_epoch_and_priority_offsets() {
     let min_len = protocol::control_byte_len(0).expect("control length must fit");
     assert_eq!(ctrl.len(), min_len);
     assert!(ctrl.len() >= (control::EPOCH as usize + 1) * 4);
-    assert!(ctrl.len() >= (scheduler::PRIORITY_OFFSETS_BASE as usize + 6) * 4);
+    assert!(ctrl.len() >= (control::PRIORITY_OFFSETS_BASE as usize + 6) * 4);
 }
 
 #[test]
@@ -169,7 +179,11 @@ fn publish_slot_writes_status_last_and_respects_backpressure() {
     assert_eq!(status, slot::PUBLISHED);
     assert_eq!(op, opcodes::STORE_U32);
     let err = ResidentWorkQueue::publish_slot(&mut ring, 1, 0, opcodes::NOP, &[]).unwrap_err();
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_publish_rejected_by_status(
+        &err,
+        slot::PUBLISHED,
+        "a second publish into a PUBLISHED slot",
+    );
     ring[base..base + 4].copy_from_slice(&slot::DONE.to_le_bytes());
     ResidentWorkQueue::publish_slot(&mut ring, 1, 0, opcodes::NOP, &[]).unwrap();
 }
@@ -178,7 +192,11 @@ fn publish_slot_writes_status_last_and_respects_backpressure() {
 fn publish_slot_rejects_malformed_ring_lengths() {
     let mut ring = vec![0u8; (SLOT_WORDS as usize * 4) + 1];
     let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcodes::NOP, &[]).unwrap_err();
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Geometry,
+        "a ring length off a slot multiple is malformed geometry",
+    );
 }
 
 #[test]
@@ -200,23 +218,36 @@ fn republishing_done_slot_clears_stale_args() {
 fn fallible_ring_encoder_rejects_u32_word_overflow() {
     let too_many_slots = (u32::MAX / SLOT_WORDS) + 1;
     let err = ResidentWorkQueue::try_encode_empty_ring(too_many_slots).unwrap_err();
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    // `ring_encode_capacity` checks the allocation cap first, so a slot count
+    // past the protocol cap is reported as a ring byte-length overflow.
+    let PipelineError::Protocol(ProtocolError::ByteLengthOverflow { buffer, .. }) = err else {
+        panic!("a ring byte-length overflow must surface the typed protocol fault, got {err:?}")
+    };
+    assert_eq!(buffer, "ring");
 }
 
 #[test]
-fn publish_slot_out_of_bounds_returns_queue_full() {
+fn publish_slot_out_of_bounds_reports_an_out_of_bounds_fault() {
     let mut ring = ResidentWorkQueue::encode_empty_ring(2).unwrap();
     let err = ResidentWorkQueue::publish_slot(&mut ring, 5, 0, opcodes::NOP, &[]).unwrap_err();
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::OutOfBounds,
+        "slot 5 on a two-slot ring is out of bounds",
+    );
 }
 
 #[test]
-fn publish_slot_too_many_args_returns_queue_full() {
+fn publish_slot_too_many_args_reports_a_capacity_fault() {
     let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let too_many = vec![0u32; (ARGS_PER_SLOT + 1) as usize];
     let err =
         ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcodes::NOP, &too_many).unwrap_err();
-    assert!(matches!(err, PipelineError::QueueFull { .. }));
+    assert_ring_fault(
+        &err,
+        RingEncodingFault::Capacity,
+        "one arg over ARGS_PER_SLOT is a capacity fault",
+    );
 }
 
 #[test]

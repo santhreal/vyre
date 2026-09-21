@@ -5,14 +5,15 @@
     feature = "math-linalg",
     feature = "math-scan",
     feature = "math-broadcast",
-    feature = "crypto-fnv",
 ))]
 
 use proptest::prelude::*;
 use vyre::ir::Program;
-use vyre_libs::hash::fnv1a32;
+use vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS;
 use vyre_libs::math::broadcast::broadcast;
 use vyre_libs::math::linalg::{dot, matmul};
+
+use vyre_libs::math::prefix_scan::MAX_SINGLE_BLOCK_SCAN;
 use vyre_libs::math::scan::scan_prefix_sum;
 
 fn has_single_region(program: &Program) -> bool {
@@ -48,11 +49,18 @@ proptest! {
         prop_assert_eq!(p.workgroup_size(), [256, 1, 1]);
     }
 
+    /// The workgroup is capped, not inflated. A scan past the portable
+    /// workgroup width gives each lane a longer run instead of asking for more
+    /// lanes, so the next power of two stops being the answer one element past
+    /// that width and the cap remains the answer to the single-block ceiling.
     #[test]
-    fn scan_prefix_sum_is_valid_for_all_sizes(n in 1u32..1024) {
+    fn scan_prefix_sum_is_valid_for_all_sizes(n in 1u32..=MAX_SINGLE_BLOCK_SCAN) {
         let p = scan_prefix_sum("in", "out", n);
         prop_assert!(has_single_region(&p));
-        prop_assert_eq!(p.workgroup_size(), [n.next_power_of_two(), 1, 1]);
+        prop_assert_eq!(
+            p.workgroup_size(),
+            [n.next_power_of_two().min(PORTABLE_WORKGROUP_INVOCATIONS), 1, 1]
+        );
     }
 
     #[test]
@@ -64,17 +72,29 @@ proptest! {
         let p = broadcast(&s, &d, 8);
         prop_assert!(has_single_region(&p));
     }
+}
 
-    #[test]
-    fn fnv1a32_single_workgroup(
-        i in "[a-z][a-z0-9_]*",
-        o in "[a-z][a-z0-9_]*",
-    ) {
-        prop_assume!(i != o);
-        let p = fnv1a32(&i, &o);
-        prop_assert!(has_single_region(&p));
-        prop_assert_eq!(p.workgroup_size(), [1, 1, 1]);
-    }
+/// The lane count stops following the next power of two exactly one element
+/// past the cap. A random sample over the whole domain can miss that step, so
+/// the three sizes around it are pinned: the last size the two rules agree on,
+/// the first size they disagree on, and the largest single-block scan.
+#[test]
+fn scan_prefix_sum_caps_lanes_one_element_past_the_workgroup_width() {
+    let lanes = |n: u32| scan_prefix_sum("in", "out", n).workgroup_size()[0];
+
+    assert_eq!(
+        lanes(PORTABLE_WORKGROUP_INVOCATIONS),
+        PORTABLE_WORKGROUP_INVOCATIONS
+    );
+    assert_eq!(
+        lanes(PORTABLE_WORKGROUP_INVOCATIONS + 1),
+        PORTABLE_WORKGROUP_INVOCATIONS
+    );
+    assert_eq!(lanes(MAX_SINGLE_BLOCK_SCAN), PORTABLE_WORKGROUP_INVOCATIONS);
+    assert!(
+        (PORTABLE_WORKGROUP_INVOCATIONS + 1).next_power_of_two() > PORTABLE_WORKGROUP_INVOCATIONS,
+        "this contract is vacuous unless the next power of two exceeds the cap here"
+    );
 }
 
 // Every vyre-libs Program contains one top-level Region; these tests
@@ -91,9 +111,9 @@ fn wire_round_trip_for_dot() {
 
 #[test]
 
-fn wire_round_trip_for_fnv1a32() {
-    let p = fnv1a32("input", "out");
-    let wire = p.to_wire().expect("fnv1a32 program must serialize");
-    let parsed = Program::from_wire(&wire).expect("fnv1a32 wire bytes must decode");
+fn wire_round_trip_for_broadcast() {
+    let p = broadcast("src", "dst", 8);
+    let wire = p.to_wire().expect("broadcast program must serialize");
+    let parsed = Program::from_wire(&wire).expect("broadcast wire bytes must decode");
     assert_eq!(parsed, p);
 }

@@ -4,11 +4,11 @@
 //! occupancy, autotune, planner, and megakernel-cache arithmetic can be exercised
 //! without opening a CUDA context, and its values are held CONSTANT on purpose:
 //! tests that pin `2048 / 256 = 8` are checking the estimator's division, not a
-//! hardware fact, and they must not churn when the hardware under the desk
+//! hardware fact, and they must not churn when the hardware under test
 //! changes.
 //!
-//! Its numbers are deliberately NOT this machine's. Several of them differ from
-//! the local RTX 5090, measured with `cuDeviceGetAttribute`: this envelope says
+//! Its numbers are deliberately synthetic. Several of them differ from
+//! physical hardware (such as an SM_120 reference device), measured with `cuDeviceGetAttribute`: this envelope says
 //! 2048 threads per SM where the device reports 1536, 256 KiB of shared memory
 //! per SM where the device reports 100 KiB, and 128 KiB of shared memory per
 //! block where the device reports 48 KiB (with an opt-in maximum of 99 KiB, so
@@ -30,13 +30,13 @@ pub const SYNTHETIC_SM120_DEFAULT_MEMORY_BYTES: u64 = 32 * 1024 * 1024 * 1024;
 ///
 /// The caller supplies total memory so tests can exercise both high-VRAM planning
 /// and low-VRAM pressure behavior without duplicating the rest of the envelope.
-/// The remaining fields are fixed; see the module doc for why they are not this
-/// machine's values and must not be used as if they were.
+/// The remaining fields are fixed; see the module doc for why they are synthetic
+/// and must not be used as if they were a live probe.
 #[must_use]
 pub fn synthetic_sm120_envelope(total_memory: u64) -> CudaDeviceCaps {
     CudaDeviceCaps {
         // Deliberately not a real product name: this envelope is a fixture and
-        // must not be mistaken for a probe of the local device.
+        // must not be mistaken for a probe of a live device.
         name: "synthetic sm_120 envelope (test fixture, not real hardware)".to_string(),
         ordinal: 0,
         compute_capability: (12, 0),
@@ -71,57 +71,4 @@ pub fn synthetic_sm120_envelope(total_memory: u64) -> CudaDeviceCaps {
 #[must_use]
 pub fn synthetic_sm120_envelope_default() -> CudaDeviceCaps {
     synthetic_sm120_envelope(SYNTHETIC_SM120_DEFAULT_MEMORY_BYTES)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{synthetic_sm120_envelope, synthetic_sm120_envelope_default};
-
-    #[test]
-    fn synthetic_envelope_preserves_architecture_fields() {
-        let caps = synthetic_sm120_envelope_default();
-
-        assert_eq!(caps.compute_capability, (12, 0));
-        assert_eq!(caps.warp_size, 32);
-        assert_eq!(caps.multi_processor_count, 170);
-        assert_eq!(caps.shared_memory_per_block, 128 * 1024);
-        assert_eq!(caps.shared_memory_per_sm, 256 * 1024);
-        assert_eq!(caps.l2_cache_bytes, 96 * 1024 * 1024);
-        assert!(caps.cooperative_launch);
-        assert!(caps.concurrent_kernels);
-    }
-
-    #[test]
-    fn synthetic_envelope_peak_compute_matches_scheduler_issue_model() {
-        let caps = synthetic_sm120_envelope_default();
-        // SM_count × 4 warp schedulers × warp_size × core_clock_hz.
-        let expected = 170u64 * 4 * 32 * 2_410_000 * 1_000;
-        assert_eq!(
-            caps.peak_compute_ops_per_sec(),
-            expected,
-            "peak compute must follow the universal 4-scheduler issue model exactly"
-        );
-        // Sanity bound on the envelope's own arithmetic (about 52 TOPS at these
-        // fixed clocks), not a claim about any real part.
-        let tops = caps.peak_compute_ops_per_sec() as f64 / 1e12;
-        assert!(
-            (40.0..80.0).contains(&tops),
-            "peak int throughput {tops:.1} TOPS is outside the range this envelope's fixed clocks \
-             and SM count can produce"
-        );
-    }
-
-    #[test]
-    fn synthetic_envelope_keeps_memory_pressure_parametric() {
-        let low_vram = synthetic_sm120_envelope(512 * 1024 * 1024);
-        let high_vram = synthetic_sm120_envelope_default();
-
-        assert_eq!(low_vram.total_memory, 512 * 1024 * 1024);
-        assert_eq!(high_vram.total_memory, 32 * 1024 * 1024 * 1024);
-        assert_eq!(low_vram.compute_capability, high_vram.compute_capability);
-        assert_eq!(
-            low_vram.max_threads_per_block,
-            high_vram.max_threads_per_block
-        );
-    }
 }

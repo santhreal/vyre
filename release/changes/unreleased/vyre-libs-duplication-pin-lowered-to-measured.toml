@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The `vyre-libs` duplication pin records what the tree measures after the width table lands: 10649 to 10598 duplicated lines, with `total_lines` measured. What remains between the three match-emitting entry points is their frozen positional signatures and the shared value they each construct from them, which no owner can absorb without changing the public ABI."

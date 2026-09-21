@@ -225,7 +225,8 @@ fn reduction_oracle_computes_the_real_sum() {
         .find(|(name, _)| *name == "reduction")
         .expect("reduction program present");
     let inputs = [input_value(&[1, 2, 3, 4, 5, 6, 7, 8])];
-    let result = vyre_reference::reference_eval(&reduction, &inputs)
+    let result = vyre_reference::ReferenceRequest::standard(&reduction, &inputs)
+        .outputs()
         .expect("reduction program must run on the reference interpreter");
     assert_eq!(
         result,
@@ -241,11 +242,14 @@ fn full_optimize_preserves_every_loop_program_value() {
             optimize::optimize(program.clone()).expect("registered optimizer must converge");
         for vec in input_vectors() {
             let inputs = [input_value(&vec)];
-            let base = vyre_reference::reference_eval(&program, &inputs)
+            let base = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+                .outputs()
                 .unwrap_or_else(|e| panic!("base `{name}` must run on the reference oracle: {e}"));
-            let opt = vyre_reference::reference_eval(&optimized, &inputs).unwrap_or_else(|e| {
-                panic!("optimized `{name}` must run on the reference oracle: {e}")
-            });
+            let opt = vyre_reference::ReferenceRequest::standard(&optimized, &inputs)
+                .outputs()
+                .unwrap_or_else(|e| {
+                    panic!("optimized `{name}` must run on the reference oracle: {e}")
+                });
             assert_eq!(
                 base, opt,
                 "optimize::optimize changed the observable result of loop program `{name}` for input {vec:?}"
@@ -273,7 +277,8 @@ fn each_loop_pass_preserves_every_loop_program_value() {
             .into_iter()
             .map(|vec| {
                 let inputs = [input_value(&vec)];
-                let base = vyre_reference::reference_eval(&program, &inputs)
+                let base = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+                    .outputs()
                     .unwrap_or_else(|e| panic!("base `{name}` must run on the oracle: {e}"));
                 (vec, base)
             })
@@ -283,7 +288,8 @@ fn each_loop_pass_preserves_every_loop_program_value() {
             let result = transform(program.clone());
             for (vec, base) in &bases {
                 let inputs = [input_value(vec)];
-                let after = vyre_reference::reference_eval(&result.program, &inputs)
+                let after = vyre_reference::ReferenceRequest::standard(&result.program, &inputs)
+                    .outputs()
                     .unwrap_or_else(|e| {
                         panic!("`{pass_name}`-transformed `{name}` must run on the oracle: {e}")
                     });

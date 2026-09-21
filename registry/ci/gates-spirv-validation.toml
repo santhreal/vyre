@@ -1,0 +1,11 @@
+lane = "gates-spirv-validation"
+workflow = ".github/workflows/gates.yml"
+job = "spirv-validation"
+state = "live"
+required_status = "gates / Emitted SPIR-V is validated, not just shaped"
+triggers = ["pull_request", "push"]
+steps = [
+  { command = '''sudo apt-get update
+sudo apt-get install -y spirv-tools''' },
+  { script = "scripts/check_spirv_parity_perf_gate.sh" },
+]

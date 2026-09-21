@@ -1,4 +1,3 @@
-pub use super::depth::{DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_NESTING_DEPTH, DEFAULT_MAX_NODE_COUNT};
 use super::{ValidationCode, ValidationError, ValidationLocation, ValidationPhase};
 use std::borrow::Cow;
 
@@ -13,8 +12,10 @@ pub(crate) fn issue(
     ValidationError::new(code, phase, location, cause, corrective_action)
 }
 
+/// Construct a structured validation error issue.
 #[inline]
-pub(crate) fn err(
+#[must_use]
+pub fn err(
     code: &'static str,
     phase: ValidationPhase,
     location: ValidationLocation,
@@ -32,6 +33,9 @@ pub(crate) fn err(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::validate::depth::{
+        DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_NESTING_DEPTH, DEFAULT_MAX_NODE_COUNT,
+    };
 
     #[test]
     fn issue_preserves_typed_fields() {

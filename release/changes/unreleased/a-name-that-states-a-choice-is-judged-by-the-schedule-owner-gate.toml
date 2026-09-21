@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The schedule-ownership gate reports a function outside the compiler boundary whose own name states a choice, so a selector that returns a bare scalar from an unwrapped device limit no longer passes a rule that judges types."

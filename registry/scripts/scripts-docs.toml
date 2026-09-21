@@ -1,0 +1,4 @@
+path = "scripts/docs.sh"
+state = "retired"
+gate = "workspace-docs"
+reason = "docs-ci.yml runs the gate in its place"

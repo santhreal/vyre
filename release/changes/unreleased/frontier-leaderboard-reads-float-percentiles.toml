@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The frontier leaderboard reads a metric percentile through the same reader as every other artifact inspector. Its private copy accepted only an integer p50, so an artifact recording a float percentile was reported as missing the metric entirely."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The const-fold and CSE analysis programs declare one output buffer each, so `build_canonical_id_program` takes only an expression count, `CANONICAL_TABLE_MULT` is gone, and the const-fold request carries the initial state of its two retained result buffers."

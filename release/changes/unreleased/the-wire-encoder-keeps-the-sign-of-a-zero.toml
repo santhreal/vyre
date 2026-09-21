@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The wire encoder applies the parity canonical form rather than one of its own, so `-0.0` and a negative subnormal keep their sign in the encoded program; folding them into `+0.0` made two programs share one cache key and served one of them the other's device code while the reference interpreter read the literal as written."

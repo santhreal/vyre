@@ -1,0 +1,2 @@
+category = "Changed"
+text = "xtask gates --write-baseline records a measured finding count only when it is at or below the pin already recorded, and fails naming every gate that reports more, so a run can no longer legalize a red gate."

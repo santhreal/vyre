@@ -1,0 +1,2 @@
+category = "Added"
+text = "vyre_libs::prelude names every item one dialect uses from another. The three dialects that reached into a sibling module tree now import from it, so the set of cross-dialect edges is one list in one file instead of a property of scattered use statements."

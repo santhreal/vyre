@@ -19,7 +19,8 @@ pub(super) fn has_divergent_invocation_gated_store(
             then,
             otherwise,
         } => {
-            let new_gate = inside_invocation_gate || cond_depends_on_invocation_id(cond);
+            let new_gate = inside_invocation_gate
+                || expr_depends_on_launch_geometry(cond, &FxHashSet::default());
             then.iter()
                 .chain(otherwise.iter())
                 .any(|n| has_divergent_invocation_gated_store(n, new_gate))
@@ -40,12 +41,21 @@ pub(super) fn has_divergent_invocation_gated_store(
         | Node::Broadcast { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::AsyncLoad { .. }
         | Node::AsyncStore { .. }
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }
-        | Node::Opaque(_) => false,
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. } => false,
+        Node::Opaque(ext) => ext.is_divergent(),
+        Node::TileElementwise { body, .. } => body
+            .iter()
+            .any(|n| has_divergent_invocation_gated_store(n, inside_invocation_gate)),
     }
 }
 
@@ -139,63 +149,39 @@ fn node_has_launch_geometry_dependent_write(
         | Node::Broadcast { .. }
         | Node::Return
         | Node::Barrier { .. }
+        | Node::LogicalBarrier { .. }
         | Node::AsyncLoad { .. }
         | Node::AsyncWait { .. }
         | Node::Trap { .. }
         | Node::Resume { .. }
-        | Node::Opaque(_) => false,
+        | Node::TileLoad { .. }
+        | Node::TileStore { .. }
+        | Node::TileMatmul { .. }
+        | Node::TileReduce { .. }
+        | Node::TileDecl { .. } => false,
+        Node::Opaque(ext) => ext.is_divergent() || !ext.is_pure(),
+        Node::TileElementwise { body, .. } => {
+            nodes_have_launch_geometry_dependent_write(body, launch_vars, inside_launch_gate)
+        }
     }
 }
 
-/// `true` when `expr` references `Expr::InvocationId` (any axis),
-/// `Expr::WorkgroupId`, or `Expr::LocalId` somewhere in its tree.
-/// These are the canonical "this thread is special" predicates.
-fn cond_depends_on_invocation_id(expr: &Expr) -> bool {
+/// True when `expr` names launch geometry itself, before any operand of it is
+/// considered.
+///
+/// Exhaustive with no catch-all arm: a new `Expr` variant fails to compile here
+/// rather than reading as geometry-independent and letting a divergent write
+/// fuse with a uniform one.
+fn expr_names_launch_geometry(expr: &Expr) -> bool {
     match expr {
         Expr::InvocationId { .. }
         | Expr::WorkgroupId { .. }
         | Expr::LocalId { .. }
+        | Expr::LogicalIndex { .. }
+        | Expr::LogicalTileId { .. }
+        | Expr::LogicalWithinTileId { .. }
         | Expr::SubgroupLocalId
         | Expr::SubgroupSize => true,
-        Expr::BinOp { left, right, .. } => {
-            cond_depends_on_invocation_id(left) || cond_depends_on_invocation_id(right)
-        }
-        Expr::UnOp { operand, .. } => cond_depends_on_invocation_id(operand),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            cond_depends_on_invocation_id(cond)
-                || cond_depends_on_invocation_id(true_val)
-                || cond_depends_on_invocation_id(false_val)
-        }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
-            cond_depends_on_invocation_id(value)
-        }
-        Expr::Fma { a, b, c } => {
-            cond_depends_on_invocation_id(a)
-                || cond_depends_on_invocation_id(b)
-                || cond_depends_on_invocation_id(c)
-        }
-        Expr::Load { index, .. } => cond_depends_on_invocation_id(index),
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            cond_depends_on_invocation_id(index)
-                || expected
-                    .as_deref()
-                    .is_some_and(cond_depends_on_invocation_id)
-                || cond_depends_on_invocation_id(value)
-        }
-        Expr::Call { args, .. } => args.iter().any(cond_depends_on_invocation_id),
-        Expr::SubgroupBallot { cond } => cond_depends_on_invocation_id(cond),
-        Expr::SubgroupShuffle { value, lane } => {
-            cond_depends_on_invocation_id(value) || cond_depends_on_invocation_id(lane)
-        }
         Expr::LitU32(_)
         | Expr::LitI32(_)
         | Expr::LitF32(_)
@@ -203,67 +189,32 @@ fn cond_depends_on_invocation_id(expr: &Expr) -> bool {
         | Expr::Var(_)
         | Expr::BufferRef { .. }
         | Expr::BufLen { .. }
-        | Expr::Opaque(_) => false,
+        | Expr::Load { .. }
+        | Expr::BinOp { .. }
+        | Expr::UnOp { .. }
+        | Expr::Select { .. }
+        | Expr::Cast { .. }
+        | Expr::Fma { .. }
+        | Expr::Atomic { .. }
+        | Expr::Call { .. }
+        | Expr::SubgroupBallot { .. }
+        | Expr::SubgroupShuffle { .. }
+        | Expr::SubgroupReduce { .. } => false,
+        Expr::Opaque(ext) => !ext.cse_safe(),
     }
 }
 
+/// True when `expr` reads launch geometry, directly or through a name bound to
+/// it.
+///
+/// The two questions this answers stood as two recursive functions with the
+/// same twenty arms, differing only in whether a `Var` bound to geometry
+/// counted. `launch_vars` is empty for the caller that asks only about the
+/// intrinsics. Descent belongs to [`crate::visit::any_subexpr`], so a new
+/// operand-carrying variant is covered without editing this file.
 fn expr_depends_on_launch_geometry(expr: &Expr, launch_vars: &FxHashSet<Ident>) -> bool {
-    match expr {
-        Expr::InvocationId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => true,
-        Expr::Var(name) => launch_vars.contains(name),
-        Expr::BinOp { left, right, .. } => {
-            expr_depends_on_launch_geometry(left, launch_vars)
-                || expr_depends_on_launch_geometry(right, launch_vars)
-        }
-        Expr::UnOp { operand, .. } => expr_depends_on_launch_geometry(operand, launch_vars),
-        Expr::Select {
-            cond,
-            true_val,
-            false_val,
-        } => {
-            expr_depends_on_launch_geometry(cond, launch_vars)
-                || expr_depends_on_launch_geometry(true_val, launch_vars)
-                || expr_depends_on_launch_geometry(false_val, launch_vars)
-        }
-        Expr::Cast { value, .. } | Expr::SubgroupReduce { value, .. } => {
-            expr_depends_on_launch_geometry(value, launch_vars)
-        }
-        Expr::Fma { a, b, c } => {
-            expr_depends_on_launch_geometry(a, launch_vars)
-                || expr_depends_on_launch_geometry(b, launch_vars)
-                || expr_depends_on_launch_geometry(c, launch_vars)
-        }
-        Expr::Load { index, .. } => expr_depends_on_launch_geometry(index, launch_vars),
-        Expr::Atomic {
-            index,
-            expected,
-            value,
-            ..
-        } => {
-            expr_depends_on_launch_geometry(index, launch_vars)
-                || expected
-                    .as_deref()
-                    .is_some_and(|expr| expr_depends_on_launch_geometry(expr, launch_vars))
-                || expr_depends_on_launch_geometry(value, launch_vars)
-        }
-        Expr::Call { args, .. } => args
-            .iter()
-            .any(|expr| expr_depends_on_launch_geometry(expr, launch_vars)),
-        Expr::SubgroupBallot { cond } => expr_depends_on_launch_geometry(cond, launch_vars),
-        Expr::SubgroupShuffle { value, lane } => {
-            expr_depends_on_launch_geometry(value, launch_vars)
-                || expr_depends_on_launch_geometry(lane, launch_vars)
-        }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::Opaque(_) => false,
-    }
+    crate::visit::any_subexpr(expr, &mut |current| {
+        expr_names_launch_geometry(current)
+            || matches!(current, Expr::Var(name) if launch_vars.contains(name))
+    })
 }

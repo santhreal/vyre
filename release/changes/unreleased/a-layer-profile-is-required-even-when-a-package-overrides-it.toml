@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A package error behavior override no longer stands in for a missing layer profile, and an override declared empty is reported instead of rendering a heading with nothing under it."

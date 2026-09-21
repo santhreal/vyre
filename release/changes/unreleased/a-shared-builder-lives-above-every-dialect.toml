@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The elementwise map builders live in the builder module rather than under math. A shared skeleton hosted inside one gated dialect is unreachable from the others: logical depended on math-broadcast only to reach the builder, and nn quantization could not reach it at all and carried its own copy of the unary map. The logical feature no longer pulls in math, and int8 packing, the skip gate and the EMA update route through the shared builders."

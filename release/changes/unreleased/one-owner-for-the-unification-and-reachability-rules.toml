@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`scripts/check_unification_baselines.sh`, `scripts/check_every_source_file_is_reachable.sh` and `scripts/lib/check_every_source_file_is_reachable.py` are gone. The `unification` and `source-reachability` gates own those rules. The unification gate gained the two fixtures the shell version never had: a second owner of a unified surface is reported with its count and its ceiling, and a row whose scanned path is missing is reported instead of scoring zero, which is how three of the five shell rows passed by measuring nothing."

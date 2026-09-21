@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Mutation verification requires valid positive controls and observed diagnostic, output, or executed-race differences instead of accepting nonempty programs."

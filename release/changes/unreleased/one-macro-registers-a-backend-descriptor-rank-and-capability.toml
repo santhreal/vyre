@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre_driver::register_backend!` registers a backend's descriptor, router precedence rank, and dispatch capability in one declaration. Each concrete driver crate restated the same three `inventory::submit!` blocks, so a backend could register a descriptor and no rank, or a rank under an id no descriptor claimed."

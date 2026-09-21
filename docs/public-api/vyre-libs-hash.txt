@@ -1,0 +1,109 @@
+#[non_exhaustive] pub enum vyre_libs_hash::hash::sketch::CountSketchError
+impl core::error::Error for vyre_libs_hash::hash::sketch::CountSketchError
+impl core::fmt::Display for vyre_libs_hash::hash::sketch::CountSketchError
+pub const fn vyre_libs_hash::hash::crc32::crc32_chunk_count(n: u32, chunk_size: u32) -> u32
+pub const fn vyre_libs_hash::hash::crc32::crc32_chunk_output_words(n: u32, chunk_size: u32) -> core::option::Option<u32>
+pub const fn vyre_libs_hash::hash::crc32::crc32_pair_reduce_output_pairs(pair_count: u32) -> u32
+pub const fn vyre_libs_hash::hash::fnv1a::fnv1a64_initial_state() -> u64
+pub const fn vyre_libs_hash::hash::fnv1a::fnv1a64_update_byte(hash: u64, byte: u8) -> u64
+pub const vyre_libs_hash::hash::adler32::ADLER32_MOD: u32
+pub const vyre_libs_hash::hash::adler32::ADLER32_OP_ID: &str
+pub const vyre_libs_hash::hash::blake3::BLAKE3_G_OP_ID: &str
+pub const vyre_libs_hash::hash::blake3::BLAKE3_ROUND_OP_ID: &str
+pub const vyre_libs_hash::hash::blake3::MSG_SCHEDULE: [[usize; 16]; 7]
+pub const vyre_libs_hash::hash::crc32::CRC32_CHUNK_OP_ID: &str
+pub const vyre_libs_hash::hash::crc32::CRC32_INIT: u32
+pub const vyre_libs_hash::hash::crc32::CRC32_OP_ID: &str
+pub const vyre_libs_hash::hash::crc32::CRC32_PAIR_REDUCE_OP_ID: &str
+pub const vyre_libs_hash::hash::crc32::CRC32_POLY: u32
+pub const vyre_libs_hash::hash::fnv1a::FNV1A32_OFFSET: u32
+pub const vyre_libs_hash::hash::fnv1a::FNV1A32_OP_ID: &str
+pub const vyre_libs_hash::hash::fnv1a::FNV1A32_PRIME: u32
+pub const vyre_libs_hash::hash::fnv1a::FNV1A64_OFFSET: u64
+pub const vyre_libs_hash::hash::fnv1a::FNV1A64_OP_ID: &str
+pub const vyre_libs_hash::hash::fnv1a::FNV1A64_PRIME: u64
+pub const vyre_libs_hash::hash::hypervector::BIND_OP_ID: &str
+pub const vyre_libs_hash::hash::hypervector::BUNDLE_OP_ID: &str
+pub const vyre_libs_hash::hash::hypervector::STANDARD_DIM_BITS: u32
+pub const vyre_libs_hash::hash::hypervector::STANDARD_DIM_WORDS: u32
+pub const vyre_libs_hash::hash::multi_hash::MULTI_HASH_OP_ID: &str
+pub const vyre_libs_hash::hash::ntt::GENERATOR_G: u32
+pub const vyre_libs_hash::hash::ntt::MAX_LEN: u32
+pub const vyre_libs_hash::hash::ntt::OP_ID: &str
+pub const vyre_libs_hash::hash::ntt::PRIME_P: u32
+pub const vyre_libs_hash::hash::sketch::UPDATE_OP_ID: &str
+pub const vyre_libs_hash::hash::sparse_fft::OP_ID: &str
+pub const vyre_libs_hash::hash::table::EMPTY_KEY: u32
+pub const vyre_libs_hash::hash::table::MISS_VALUE: u32
+pub const vyre_libs_hash::hash::table::RESERVED_KEY: u32
+pub fn vyre_libs_hash::hash::adler32::adler32_finalize_expr(a: vyre_foundation::ir_inner::model::generated::Expr, b: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_hash::hash::adler32::adler32_initial_a_expr() -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_hash::hash::adler32::adler32_initial_b_expr() -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_hash::hash::adler32::adler32_program(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::adler32::adler32_update_byte_nodes(a_var: &str, b_var: &str, byte: vyre_foundation::ir_inner::model::generated::Expr) -> [vyre_foundation::ir_inner::model::generated::Node; 2]
+pub fn vyre_libs_hash::hash::blake3::blake3_g(a: usize, b: usize, c: usize, d: usize, mx: &str, my: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_hash::hash::blake3::blake3_g_program(state: &str, message: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::blake3::blake3_round(round_idx: usize, perm: &[usize; 16]) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_hash::hash::blake3::blake3_round_program(state: &str, message: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::blake3_compress(chaining_in: &str, message: &str, params: &str, chaining_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::crc32::crc32_chunk_program(input: &str, out: &str, n: u32, chunk_size: core::num::nonzero::NonZeroU32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::crc32::crc32_finalize_expr(crc: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_hash::hash::crc32::crc32_initial_expr() -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_hash::hash::crc32::crc32_pair_reduce_program(input: &str, out: &str, pair_count: core::num::nonzero::NonZeroU32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::crc32::crc32_program(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::crc32::crc32_update_byte_nodes(crc_var: &str, bit_var: &str, byte: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_hash::hash::fnv1a::fnv1a32_initial_expr() -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_hash::hash::fnv1a::fnv1a32_mix_word_expr(hash: vyre_foundation::ir_inner::model::generated::Expr, word: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_hash::hash::fnv1a::fnv1a32_mul_xor_word_expr(hash: vyre_foundation::ir_inner::model::generated::Expr, word: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_hash::hash::fnv1a::fnv1a32_program(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::fnv1a::fnv1a32_program_dyn(input: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::fnv1a::fnv1a32_program_dyn_u8(input: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::fnv1a::fnv1a32_program_u8(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::fnv1a::fnv1a32_update_byte_expr(hash: vyre_foundation::ir_inner::model::generated::Expr, byte: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_hash::hash::fnv1a::fnv1a32_update_byte_node(hash_var: &str, byte: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_hash::hash::fnv1a::fnv1a64_program(input: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::fnv1a::fnv1a64_program_n(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::fnv1a::fnv1a64_program_n_u8(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::fnv1a::fnv1a64_program_u8(input: &str, out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::hypervector::hypervector_majority_bundle(stacked: &str, out: &str, dim_words: u32, k: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::hypervector::hypervector_xor_bind(a: &str, b: &str, out: &str, dim_words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::multi_hash::multi_hash_program(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::ntt::ntt_butterfly_stage(data: &str, twiddles: &str, n: u32, stage_log: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::sketch::CountSketchError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_hash::hash::sketch::count_sketch_update(table: &str, hashes: &str, signs: &str, d: u32, w: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::sparse_fft::sparse_fft_bin_hash(signal: &str, bins: &str, a: u32, c: u32, b: u32, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_hash::hash::table::hash_insert(in_keys: &str, in_values: &str, table_keys: &str, table_values: &str, table_capacity: u32, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_hash::hash::table::hash_lookup(queries: &str, table_keys: &str, table_values: &str, out_results: &str, table_capacity: u32, t: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_hash::link_anchor()
+pub mod vyre_libs_hash
+pub mod vyre_libs_hash::hash
+pub mod vyre_libs_hash::hash::adler32
+pub mod vyre_libs_hash::hash::blake3
+pub mod vyre_libs_hash::hash::crc32
+pub mod vyre_libs_hash::hash::fnv1a
+pub mod vyre_libs_hash::hash::hypervector
+pub mod vyre_libs_hash::hash::multi_hash
+pub mod vyre_libs_hash::hash::ntt
+pub mod vyre_libs_hash::hash::sketch
+pub mod vyre_libs_hash::hash::sparse_fft
+pub mod vyre_libs_hash::hash::table
+pub vyre_libs_hash::hash::sketch::CountSketchError::Allocation
+pub vyre_libs_hash::hash::sketch::CountSketchError::Allocation::requested: usize
+pub vyre_libs_hash::hash::sketch::CountSketchError::Allocation::source: alloc::string::String
+pub vyre_libs_hash::hash::sketch::CountSketchError::BadQueryShape
+pub vyre_libs_hash::hash::sketch::CountSketchError::BadQueryShape::d: usize
+pub vyre_libs_hash::hash::sketch::CountSketchError::BadQueryShape::hashes: usize
+pub vyre_libs_hash::hash::sketch::CountSketchError::BadQueryShape::signs: usize
+pub vyre_libs_hash::hash::sketch::CountSketchError::BadTableShape
+pub vyre_libs_hash::hash::sketch::CountSketchError::BadTableShape::actual: usize
+pub vyre_libs_hash::hash::sketch::CountSketchError::BadTableShape::expected: usize
+pub vyre_libs_hash::hash::sketch::CountSketchError::HashOutOfRange
+pub vyre_libs_hash::hash::sketch::CountSketchError::HashOutOfRange::col: u32
+pub vyre_libs_hash::hash::sketch::CountSketchError::HashOutOfRange::row: usize
+pub vyre_libs_hash::hash::sketch::CountSketchError::HashOutOfRange::w: u32
+pub vyre_libs_hash::hash::sketch::CountSketchError::InvalidDimensions
+pub vyre_libs_hash::hash::sketch::CountSketchError::InvalidDimensions::d: u32
+pub vyre_libs_hash::hash::sketch::CountSketchError::InvalidDimensions::w: u32
+pub vyre_libs_hash::hash::sketch::CountSketchError::TableSizeOverflow
+pub vyre_libs_hash::hash::sketch::CountSketchError::TableSizeOverflow::d: u32
+pub vyre_libs_hash::hash::sketch::CountSketchError::TableSizeOverflow::w: u32

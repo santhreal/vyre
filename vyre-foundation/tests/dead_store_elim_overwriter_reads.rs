@@ -45,7 +45,8 @@ fn dead_store_elim_keeps_store_read_by_its_overwriter() {
     let inputs = [Value::U32(0)]; // b initial = 0 (overwritten before any observable read)
 
     // Original: b[0]=1; b[0]=load(b,0)+5=6; out=load(b,0)=6.
-    let original = vyre_reference::reference_eval(&program, &inputs)
+    let original = vyre_reference::ReferenceRequest::standard(&program, &inputs)
+        .outputs()
         .expect("original program is well-scoped and must run");
     assert_eq!(
         original,
@@ -61,7 +62,8 @@ fn dead_store_elim_keeps_store_read_by_its_overwriter() {
     // The optimized program must produce the SAME observable output. Pre-fix
     // the pass dropped `store(b,0,1)`, so `load(b,0)` in the overwriter reads
     // b's initial 0 -> writes 5 -> out = 5, not 6: a miscompile.
-    let transformed = vyre_reference::reference_eval(&optimized, &inputs)
+    let transformed = vyre_reference::ReferenceRequest::standard(&optimized, &inputs)
+        .outputs()
         .expect("optimized program must still run");
 
     assert_eq!(

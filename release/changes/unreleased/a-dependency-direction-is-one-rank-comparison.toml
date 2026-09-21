@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`docs/CRATE_OWNERSHIP.toml` declares a rank for every architecture layer, and `xtask crate-ownership` rejects a production dependency whose consumer layer does not outrank the dependency's layer."
