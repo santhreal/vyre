@@ -377,7 +377,10 @@ rustc-hash = "=2.1.3"
 # has an aliasing-violation advisory, RUSTSEC-2023-0126. The persistent HashSet
 # is what the DCE live set needs, so the fork replaces it rather than a std set
 # that would clone the whole set at every branch.
-imbl = "=7.0.1"
+# 7.0.2 is the first release that takes `imbl-sized-chunks` 0.2, which commits
+# the live-slot metadata before dropping an element. RUSTSEC-2026-0292 reports
+# the 0.1 order as a double free when an element's `Drop` panics.
+imbl = "=7.0.2"
 rayon = "=1.12.0"
 wide = "=0.7.33"
 hex = "=0.4.3"
