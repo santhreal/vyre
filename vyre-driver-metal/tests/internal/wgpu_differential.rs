@@ -7,8 +7,23 @@
 
 use super::*;
 
-use vyre_driver::DispatchConfig;
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
+/// Acquire the WGPU backend on this Apple device.
+///
+/// WHY: the registration `vyre-driver-wgpu` submits lives in that crate's
+/// object file, and a linker keeps the object only where a symbol inside it is
+/// referenced. Naming the crate in the manifest references nothing, so the
+/// harness that only called `vyre_driver::acquire("wgpu")` asked the registry
+/// for a backend no object had submitted. `registered_backend_id` is the
+/// reference the driver crate publishes for exactly this, and calling it is
+/// what puts the registration in this binary.
+fn acquire_wgpu() -> Box<dyn VyreBackend> {
+    let _ = vyre_driver_wgpu::registered_backend_id();
+    vyre_driver::acquire("wgpu")
+        .expect("Fix: WGPU-on-Metal must acquire on the Apple GPU differential lane.")
+}
 
 #[test]
 fn apple_native_metal_matches_wgpu_on_same_program_bytes() {
@@ -53,8 +68,7 @@ fn apple_native_metal_matches_wgpu_on_same_program_bytes() {
     let metal = acquire().expect(
         "Fix: Apple Metal builds must acquire the system default MTLDevice before differential dispatch.",
     );
-    let wgpu = vyre_driver::acquire("wgpu")
-        .expect("Fix: WGPU-on-Metal must acquire on the Apple GPU differential lane.");
+    let wgpu = acquire_wgpu();
     let config = DispatchConfig::default();
     let metal_outputs = metal
         .dispatch(&program, &[a.clone(), b.clone()], &config)
@@ -117,8 +131,7 @@ fn a_folded_wgpu_launch_matches_native_metal_on_one_axis() {
 
     let metal =
         acquire().expect("Fix: Apple Metal builds must acquire the system default MTLDevice.");
-    let wgpu = vyre_driver::acquire("wgpu")
-        .expect("Fix: WGPU-on-Metal must acquire on the Apple GPU differential lane.");
+    let wgpu = acquire_wgpu();
 
     let mut folded = DispatchConfig::default();
     folded.max_workgroups_per_axis = Some([4, 65_535, 65_535]);

@@ -1,5 +1,5 @@
 schema_version = 2
-bom_timestamp = "2026-09-20T22:35:54Z"
+bom_timestamp = "2026-09-21T05:56:34Z"
 rustc_version = "1.86.0 (05f9846f8 2025-03-31)"
 cargo_version = "1.86.0 (adf9b6ad1 2025-02-28)"
 target_triples = [
@@ -9,9 +9,9 @@ target_triples = [
     "aarch64-apple-darwin",
     "aarch64-unknown-linux-gnu",
 ]
-lockfile_digest = "81e642902caabad53b6d6a3192e06798c0a6a9d49326b13d850bde13b1d875a3"
+lockfile_digest = "8891b424b89d3cb20ad7ef827cb5c47d8d99e31c23e341d03f0a2b210e8ff9cf"
 is_offline_capable = true
-reproducible_archive_hash = "19855145dbedc88d9f76a46545341b983a015933b4162eecb318afee87db5532"
+reproducible_archive_hash = "bb1d2743c4d704f73e1908207b5a36362607790db0eaa9c1ac0e8f2feb1f6a9d"
 
 [[dependencies]]
 name = "adler2"

@@ -59,6 +59,10 @@ metal.workspace = true
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dev-dependencies]
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
+# The differential suite compares native Metal against wgpu-on-Metal on one
+# Apple GPU, so the second backend has to be in the same binary for
+# `vyre_driver::acquire("wgpu")` to find a registration.
+vyre-driver-wgpu = { workspace = true }
 
 [[test]]
 name = "all_tests"

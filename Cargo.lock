@@ -3551,6 +3551,7 @@ dependencies = [
  "toml",
  "tracing",
  "vyre-driver",
+ "vyre-driver-wgpu",
  "vyre-emit-metal",
  "vyre-foundation",
  "vyre-lower",
