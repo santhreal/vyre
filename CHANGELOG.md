@@ -6540,6 +6540,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A resident route is selected over a rounding accumulation only where the
   combines reassociate or the stated numeric budget covers the order a work
   queue produces.
+- Every WGPU timed dispatch entry runs on an adapter that carries no timestamp
+  query and reports `device_ns` as `None`, instead of refusing the dispatch.
+  The refusal made a retained execution through `launch_resident` and a plain
+  materialized-instance dispatch both fail on such an adapter.
 - A conformance submission returns a retained read-write buffer instead of
   refusing it as an undeclared output value, because the boundary now drains
   the canonical writable set rather than the node output ports a host-fed

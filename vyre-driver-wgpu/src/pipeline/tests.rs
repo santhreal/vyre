@@ -252,7 +252,7 @@ mod bind_group_cache_contracts {
     /// A timed dispatch is admitted by the capability the backend reports, not
     /// by the feature bits an adapter advertises. An adapter whose timestamp
     /// resolve produces no monotonic pair reports no timestamp capability, and
-    /// the dispatch must name that rather than underflow a delta.
+    /// the dispatch reports no device time rather than underflowing a delta.
     #[test]
     fn compiled_borrowed_timed_dispatch_reports_device_ns() {
         use vyre_driver::CompiledPipeline;
@@ -280,14 +280,15 @@ mod bind_group_cache_contracts {
             .expect("Fix: compiled timed dispatch test pipeline must compile.");
 
         if !profile.supports_device_timestamps {
-            let error = pipeline
+            let timed = pipeline
                 .dispatch_borrowed_timed(&[], &harness.config)
-                .expect_err(
-                    "Fix: a timed dispatch on an adapter with no timestamp capability must be refused, not attempted.",
+                .expect(
+                    "Fix: a timed dispatch on an adapter with no timestamp capability must run and report no device time.",
                 );
             assert!(
-                error.to_string().contains("no timestamp capability"),
-                "Fix: refusing a timed dispatch must name the missing capability, got {error}"
+                timed.device_ns.is_none(),
+                "Fix: an adapter with no timestamp capability must report no device time, got {:?}",
+                timed.device_ns
             );
             return;
         }
@@ -307,18 +308,19 @@ mod bind_group_cache_contracts {
         assert!(timed.wait_ns.is_some_and(|ns| ns > 0));
     }
 
-    /// WHY: the resident-handle family reports timing the backend owns, and
-    /// its trait default is host wall time with `device_ns: None`. Requesting
-    /// the timestamp queries unconditionally turned an adapter without them
-    /// into a refusal, so a retained execution through `launch_resident`
-    /// failed on every such adapter instead of running and reporting no
-    /// device time. Both resident entries are covered because the async one
-    /// and the timed one construct the recorder separately.
+    /// WHY: every `CompiledPipeline` timed entry reports timing the backend
+    /// owns, and each trait default is host wall time with `device_ns: None`.
+    /// Requesting the timestamp queries unconditionally turned an adapter
+    /// without them into a refusal, so both a retained execution through
+    /// `launch_resident` and a plain `MaterializedInstance::dispatch` failed
+    /// on every such adapter instead of running and reporting no device time.
+    /// All three entries are covered because each constructs the recorder
+    /// separately.
     ///
     /// It does not catch a backend that reports a fabricated `device_ns` in
     /// place of `None`; the value is asserted absent, not its provenance.
     #[test]
-    fn resident_dispatch_without_timestamps_runs_and_reports_no_device_ns() {
+    fn every_timed_entry_without_timestamps_runs_and_reports_no_device_ns() {
         use vyre_driver::{CompiledPipeline, PendingDispatch};
 
         let harness = PipelineHarness::without_timestamps("timestamp-free resident dispatch test");
@@ -368,14 +370,19 @@ mod bind_group_cache_contracts {
             .expect("Fix: an asynchronous resident dispatch must complete.");
         assert_eq!(u32::from_le_bytes(outputs[0][0..4].try_into().unwrap()), 7);
 
-        let error = pipeline
+        let borrowed = pipeline
             .dispatch_borrowed_timed(&[], &harness.config)
-            .expect_err(
-                "Fix: an explicitly timed dispatch must still be refused when the adapter carries no timestamp capability.",
-            );
+            .expect(
+            "Fix: a borrowed timed dispatch must run on an adapter with no timestamp capability.",
+        );
+        assert_eq!(
+            u32::from_le_bytes(borrowed.outputs[0][0..4].try_into().unwrap()),
+            7
+        );
         assert!(
-            error.to_string().contains("no timestamp capability"),
-            "Fix: refusing an explicitly timed dispatch must name the missing capability, got {error}"
+            borrowed.device_ns.is_none(),
+            "Fix: with no timestamp capability the borrowed timed dispatch must report no device time, got {:?}",
+            borrowed.device_ns
         );
     }
 }

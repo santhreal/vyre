@@ -161,9 +161,7 @@ impl WgpuPipeline {
             params: None,
             workgroups: self.workgroups_for_dispatch(config)?,
         };
-        // Opportunistic, exactly as in `dispatch_persistent_handles_timed`:
-        // this backs an untimed submit whose completion carries an optional
-        // `device_ns`.
+        // See `dispatch_persistent_handles_timed`.
         let timestamp_recorder = TimestampRecorder::new(
             device,
             queue,
@@ -340,13 +338,13 @@ impl CompiledPipeline for WgpuPipeline {
             workgroups: self.workgroups_for_dispatch(config)?,
         };
 
-        // The resident-handle family reports timing the backend already owns:
-        // its trait default is host wall time and `device_ns` is an `Option`,
-        // so an adapter with no timestamp query answers `None`. Requesting the
-        // queries unconditionally turned that into a refusal, and a retained
-        // execution through `launch_resident` failed on every adapter that
-        // advertises no timestamp pair. `dispatch_borrowed_timed` is the
-        // caller's explicit request for device time and still refuses.
+        // Every `CompiledPipeline` timed entry reports timing the backend
+        // already owns: the trait default is host wall time and `device_ns`
+        // is an `Option`, so an adapter that records no timestamp answers
+        // `None`. Requesting the queries unconditionally turned that into a
+        // refusal, and both a retained execution through `launch_resident`
+        // and a plain `MaterializedInstance::dispatch` failed on every
+        // adapter advertising no timestamp pair.
         let timestamp_recorder = TimestampRecorder::new(
             device,
             queue,
@@ -550,7 +548,7 @@ impl CompiledPipeline for WgpuPipeline {
                     compute: "vyre compiled timed compute",
                 },
                 iterations,
-                timestamp_profile: true,
+                timestamp_profile: device_records_timestamps(&self.device_queue.0),
                 inferred_launch: config.launch_grid().is_none().then(|| {
                     crate::engine::record_and_readback::InferredLaunch {
                         workgroup_shape: self.workgroup_shape,
