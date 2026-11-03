@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
 
-# Two of these jobs build the whole workspace on one persistent GPU host, so a
+# Three of these jobs build the workspace on one persistent GPU host, so a
 # superseded run holds that runner against the commit that replaced it.
 concurrency:
   group: gates-${{ github.ref }}
@@ -16,13 +16,16 @@ jobs:
     name: Every registered gate
     # The registry holds device-requiring gates (bench-smoke-runtime times a
     # real dispatch), and a GPU-required gate fails closed on an empty probe
-    # rather than skipping, so the job that runs every gate needs an adapter.
-    # It runs on the host that records the device evidence, because the
-    # artifact gates regenerate that evidence and compare it line by line: a
-    # sweep on a second adapter reports every device fact as divergent.
+    # rather than skipping, so the job that runs them needs an adapter. It runs
+    # on the host that records the device evidence, because the artifact gates
+    # regenerate that evidence and compare it line by line: a sweep on a second
+    # adapter reports every device fact as divergent.
+    #
+    # Build parallelism is the host's, as `.cargo/config.toml` declares. Tests
+    # stay serial because they share one device.
     runs-on: [self-hosted, gpu, santhserver]
+    timeout-minutes: 240
     env:
-      CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     steps:
       # docs-coupling compares this head against the base branch, so this job
@@ -58,32 +61,22 @@ jobs:
             x86_64-apple-darwin \
             x86_64-pc-windows-msvc
 
-      # Runs every registered gate and holds each to the number pinned in
-      # xtask/gate-baselines.toml. Registering a gate without a pin fails, and a
-      # pin naming no gate fails, so neither list is maintained by hand and no
-      # rule can be registered and left unrun. The source-scanning rules, the
-      # frozen contracts, the size ratchet, the unification rows, the release
-      # evidence path oracle and the doc claim manifest are all in here; they
-      # used to be twenty separate steps below, each able to go red without
-      # anyone noticing which. It is also the backstop for a gate that belongs
-      # to no subset, which the sweep's wiring check reports.
-      - name: Run the registered gate sweep
-        run: ./cargo_full run -p xtask -- gates
-
-      # Descriptor areas are the only named subsets. The whole sweep above
-      # remains authoritative; these focused runs address failures to the owner
-      # without maintaining a second handwritten gate list.
-      - name: LEGO composition laws
-        run: ./cargo_full run -p xtask -- gates --subset lego-audit
+      # Every gate declares at least one area, and the areas split between this
+      # job and `tree-rules` below, so the two jobs together run the registry
+      # once. Each run holds every selected gate to the number pinned in
+      # xtask/gate-baselines.toml and checks the wiring of the whole registry:
+      # a gate in no area a workflow runs fails here.
+      - name: Pre-publish compiler and release contracts
+        run: ./cargo_full run -p xtask -- gates --subset prepublish
 
       - name: Generated documentation artifacts
         run: ./cargo_full run -p xtask -- gates --subset docs
 
-      - name: Pre-publish compiler and release contracts
-        run: ./cargo_full run -p xtask -- gates --subset prepublish
-
       - name: Conformance harness contracts
         run: ./cargo_full run -p xtask -- gates --subset conformance
+
+      - name: Source, manifest, API, and workspace contracts
+        run: ./cargo_full run -p xtask -- gates --subset contract-rules
 
       # Structural rules that must hold while the workspace does not compile,
       # so they live in a crate that depends on no vyre crate.
@@ -100,32 +93,22 @@ jobs:
 
   tree-rules:
     name: Rules the sweep owns, named by domain
-    # contract-rules owns bench-smoke-runtime, which dispatches on a device.
-    runs-on: [self-hosted, gpu, santhserver]
-    env:
-      CARGO_BUILD_JOBS: "1"
-      RUST_TEST_THREADS: "1"
+    # These areas read the tree and the registered operations and touch no
+    # device, so they run on a hosted runner in parallel with the device host.
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
-      # rustfmt is the only single-file Rust parser the toolchain ships, and
-      # `source-parses` treats a missing rustfmt as a failure rather than as a
-      # clean tree, so the component is installed instead of assumed. The tree is
-      # never formatted here: --check is read-only and no --emit is passed.
-      - name: Install rustfmt for the parse rule
-        run: rustup component add rustfmt
-
-      # These are the remaining descriptor-derived areas. Every registered area
-      # is named by a workflow, and an unknown or retired area fails the sweep.
       - name: CI registry rules
         run: ./cargo_full run -p xtask --bin xtask -- gates --subset ci-rules
 
       - name: Hot-path rules
         run: ./cargo_full run -p xtask --bin xtask -- gates --subset hot-path
 
-      - name: Source, manifest, API, and workspace contracts
-        run: ./cargo_full run -p xtask --bin xtask -- gates --subset contract-rules
+      - name: LEGO composition laws
+        run: ./cargo_full run -p xtask --bin xtask -- gates --subset lego-audit
 
   feature-msrv:
     name: Every feature compiles alone on the MSRV
@@ -180,8 +163,8 @@ jobs:
     # closed on a probe with no devices rather than skipping, so a hosted runner
     # reports a missing accelerator instead of a parity verdict.
     runs-on: [self-hosted, gpu, santhserver]
+    timeout-minutes: 120
     env:
-      CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     steps:
       - uses: actions/checkout@v4
@@ -211,8 +194,8 @@ jobs:
     # Vulkan device, and it refuses a software implementation, so the job needs
     # a host with a real compute queue.
     runs-on: [self-hosted, gpu, santhserver]
+    timeout-minutes: 60
     env:
-      CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     steps:
       - uses: actions/checkout@v4

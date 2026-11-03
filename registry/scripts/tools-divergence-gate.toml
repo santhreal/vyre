@@ -1,3 +1,0 @@
-path = "tools/divergence-gate.py"
-state = "retired"
-reason = "it compared a compiler CLI that lives outside this workspace against clang, and nothing here invoked it"

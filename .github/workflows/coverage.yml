@@ -20,9 +20,9 @@ jobs:
     # dispatches real device work and fails closed on a probe with no adapter.
     # A hosted runner therefore measures a panic, not coverage.
     runs-on: [self-hosted, gpu, santhserver]
+    timeout-minutes: 240
     env:
       RUSTUP_TOOLCHAIN: stable
-      CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     steps:
       - uses: actions/checkout@v4
@@ -38,11 +38,15 @@ jobs:
       # one package at a time produces the same profile set: `--no-report`
       # accumulates raw profiles and `report` merges them, so the floor is
       # still applied to the whole workspace.
+      #
+      # Only the raw profiles of the previous run are removed. The instrumented
+      # build directory persists on this host, so a run recompiles what the
+      # commit changed instead of every package from nothing.
       - name: Run coverage
         shell: bash
         run: |
           set -euo pipefail
-          ./cargo_full llvm-cov clean --workspace
+          ./cargo_full llvm-cov clean --workspace --profraw-only
           packages=$(./cargo_full metadata --no-deps --format-version 1 \
             | python3 -c 'import json,sys; print("\n".join(p["name"] for p in json.load(sys.stdin)["packages"]))')
           # cargo-llvm-cov selects `--tests`. Naming `--examples` alongside it

@@ -23,11 +23,12 @@
 //!     declared harness compiles each tracked sweep source, and every
 //!     `required-features` entry of that harness, and every feature the sweep's
 //!     own `cfg` names, is a feature the crate defines. No cargo.
-//!   - `--run`: executes one partition, one cargo invocation per sweep, which
-//!     selects the sweep's own module inside its harness by name filter and
-//!     carries every feature the run needs: the harness `required-features`
-//!     cargo demands before it builds the target, and the features the sweep's
-//!     own crate-level `cfg` demands before the module holds a case.
+//!   - `--run`: executes one partition. One `cargo test --no-run` builds every
+//!     harness the partition needs, with every feature the run needs: the
+//!     harness `required-features` cargo demands before it builds the target,
+//!     and the features the sweep's own crate-level `cfg` demands before the
+//!     module holds a case. Each sweep then runs as its harness binary with a
+//!     filter selecting the sweep's own module.
 //!     `--partition volume --shard I --shards N` runs one wave shard; a shard
 //!     index outside the count, or a count larger than the roster, is an error
 //!     rather than a run that selects nothing and exits clean.
@@ -38,7 +39,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
+use std::process::Command;
 
+use crate::cargo_runner::Executable;
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{Member, Tree};
 use crate::gates::test_target_membership::ownership;
@@ -246,7 +249,7 @@ fn sweep_source(path: &Path) -> Option<(String, String)> {
     Some((crate_dir.to_string(), target.to_string()))
 }
 
-/// Execute the selected partition, one cargo invocation per sweep.
+/// Execute the selected partition: one build, then one harness run per sweep.
 fn run_partition(
     ctx: &GateCtx,
     roster: &[SweepTarget],
@@ -310,35 +313,37 @@ fn run_partition(
         ));
     }
 
+    let Some(built) = build_harnesses(ctx, &shard_targets, partition, report)? else {
+        return Ok(());
+    };
     let mut crates: BTreeSet<&str> = BTreeSet::new();
     for target in &shard_targets {
         crates.insert(target.crate_dir.as_str());
-        let mut command = crate::cargo_runner::command(&ctx.root);
-        command.args(["test", "-p", target.package.as_str()]);
-        if !target.features.is_empty() {
-            command.arg("--features");
-            command.arg(target.features.join(","));
-        }
-        command.args(["--test", target.harness.as_str()]);
-        command.args(["--", target.filter().as_str()]);
-        let (status, output, diagnostics) = crate::cargo_runner::run_captured(&mut command)
-            .map_err(|error| {
+        let Some(executable) = harness_executable(&built, target) else {
+            report.find(Finding::new(
+                format!(
+                    "the {partition} build reported no `{}` harness for `{}`, so the sweep `{}` has no binary to run",
+                    target.harness, target.crate_dir, target.sweep
+                ),
+                "declare the harness as a [[test]] target of the package that holds the sweep",
+            ));
+            continue;
+        };
+        let mut command = Command::new(executable);
+        command
+            .arg(target.filter())
+            .current_dir(ctx.root.join(&target.crate_dir));
+        let (status, output, _) =
+            crate::cargo_runner::run_captured(&mut command).map_err(|error| {
                 GateError::new(
-                    format!("cannot run cargo test for `{}`: {error}", target.crate_dir),
-                    "install a cargo the runner can start, or set CARGO to one",
+                    format!(
+                        "cannot run the `{}` harness of `{}`: {error}",
+                        target.harness, target.crate_dir
+                    ),
+                    "rebuild the sweep harnesses; the binary cargo reported is no longer runnable",
                 )
             })?;
         if !status.success() {
-            if let Some(missing) = crate::cargo_runner::unmeasured(&diagnostics) {
-                report.find(Finding::new(
-                    format!(
-                        "`{}` measured nothing: the build named `{missing}`, which the build directory does not carry",
-                        target.crate_dir
-                    ),
-                    "run the sweep again against an intact build directory; a compile whose own inputs were deleted under it reports the state of the disk, and the sweep it was pointed at never ran",
-                ));
-                continue;
-            }
             report.find(Finding::new(
                 format!(
                     "`{}` failed the {partition} sweep `{}`, run as `--test {} -- {}`",
@@ -370,6 +375,88 @@ fn run_partition(
         crates.len()
     ));
     Ok(())
+}
+
+/// Build every harness `targets` runs in one `cargo test --no-run`.
+///
+/// One invocation resolves one feature set for the whole dependency graph, so a
+/// shared dependency compiles once. One invocation per sweep resolved a feature
+/// set per package, recompiled every dependency whose features differed, and
+/// ran out of the six-hour CI budget doing it.
+///
+/// `None` means the build failed and the finding is already recorded.
+fn build_harnesses(
+    ctx: &GateCtx,
+    targets: &[&SweepTarget],
+    partition: &str,
+    report: &mut Report,
+) -> Result<Option<Vec<Executable>>, GateError> {
+    let mut packages: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
+    let mut harnesses: BTreeSet<&str> = BTreeSet::new();
+    for target in targets {
+        packages
+            .entry(target.package.as_str())
+            .or_default()
+            .extend(target.features.iter().map(String::as_str));
+        harnesses.insert(target.harness.as_str());
+    }
+    let mut command = crate::cargo_runner::command(&ctx.root);
+    command.args([
+        "test",
+        "--no-run",
+        "--message-format=json-render-diagnostics",
+    ]);
+    let mut features = Vec::new();
+    for (package, wanted) in &packages {
+        command.args(["-p", package]);
+        features.extend(wanted.iter().map(|feature| format!("{package}/{feature}")));
+    }
+    if !features.is_empty() {
+        command.arg("--features").arg(features.join(","));
+    }
+    for harness in &harnesses {
+        command.args(["--test", harness]);
+    }
+    let (status, stdout, diagnostics) =
+        crate::cargo_runner::run_json(&mut command).map_err(|error| {
+            GateError::new(
+                format!("cannot run cargo to build the {partition} sweep harnesses: {error}"),
+                "install a cargo the runner can start, or set CARGO to one",
+            )
+        })?;
+    if status.success() {
+        return Ok(Some(crate::cargo_runner::executables(&stdout)));
+    }
+    if let Some(missing) = crate::cargo_runner::unmeasured(&diagnostics) {
+        report.find(Finding::new(
+            format!(
+                "the {partition} sweep build measured nothing: it named `{missing}`, which the build directory does not carry"
+            ),
+            "run the sweep again against an intact build directory; a compile whose own inputs were deleted under it reports the state of the disk, and no sweep ran",
+        ));
+    } else {
+        report.find(Finding::new(
+            format!(
+                "the {partition} sweep harnesses do not compile: {} package(s), harness(es) {}",
+                packages.len(),
+                harnesses.into_iter().collect::<Vec<_>>().join(", ")
+            ),
+            "fix the compile error cargo printed above; no sweep in the partition ran",
+        ));
+    }
+    Ok(None)
+}
+
+/// The binary cargo built for `target`'s harness in `target`'s own package.
+///
+/// Harness names repeat across packages (`all_tests`), so the package is
+/// matched by its manifest path and not by the target name alone.
+fn harness_executable<'a>(built: &'a [Executable], target: &SweepTarget) -> Option<&'a Path> {
+    let manifest = Path::new(&target.crate_dir).join("Cargo.toml");
+    built
+        .iter()
+        .find(|unit| unit.target == target.harness && unit.manifest_path.ends_with(&manifest))
+        .map(|unit| unit.executable.as_path())
 }
 
 /// How many cases libtest reported running, across every harness in the output.
@@ -445,6 +532,31 @@ mod tests {
         );
         assert_eq!(cases_run("running 3 tests\nrunning 4 tests\n"), 7);
         assert_eq!(cases_run("Compiling vyre-libs v0.1.0\n"), 0);
+    }
+
+    /// WHY: every sweep package names its harness `all_tests`, so one build
+    /// reports many binaries under that target name. Picking by name alone runs
+    /// another package's harness under this sweep's filter, which selects no
+    /// case or, worse, a neighbour's identically named module.
+    #[test]
+    fn a_harness_binary_is_matched_to_its_own_package() {
+        let stdout = concat!(
+            r#"{"reason":"compiler-artifact","manifest_path":"/w/vyre-libs-graph/Cargo.toml","target":{"name":"all_tests"},"executable":"/t/graph-all_tests"}"#,
+            "\n",
+            r#"{"reason":"compiler-artifact","manifest_path":"/w/vyre-libs/Cargo.toml","target":{"name":"all_tests"},"executable":"/t/libs-all_tests"}"#,
+            "\n",
+            r#"{"reason":"compiler-artifact","manifest_path":"/w/vyre-libs/Cargo.toml","target":{"name":"vyre_libs"},"executable":null}"#,
+            "\n",
+        );
+        let built = crate::cargo_runner::executables(stdout);
+        assert_eq!(built.len(), 2);
+        assert_eq!(
+            harness_executable(&built, &target("sweep_matching_oracle")),
+            Some(Path::new("/t/libs-all_tests"))
+        );
+        let mut other = target("sweep_matching_oracle");
+        other.harness = "all_tests_other".to_string();
+        assert_eq!(harness_executable(&built, &other), None);
     }
 
     /// WHY: a nested support module under `tests/` is not a target, and a

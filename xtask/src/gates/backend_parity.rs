@@ -35,6 +35,10 @@ const CUDA_CRATE: &str = "vyre-driver-cuda";
 /// Target-name fragment that marks a reference-parity target.
 const PARITY: &str = "gpu_parity";
 
+/// Features that compile the CUDA crate's device-acquiring targets. Without
+/// them a run on the device host links none of the targets that touch it.
+const CUDA_DEVICE_FEATURES: &str = "device-tests,cuda";
+
 /// Emitted SPIR-V is validated, not just shaped.
 pub struct SpirvParity;
 
@@ -182,9 +186,13 @@ impl crate::gate::GateBehavior for CudaParity {
             )
         })?;
         report.note(format!("device: {device}"));
-        // The crate's documented test command, so this gate and the testing
-        // guide cannot disagree about what proving the backend means.
-        if !cargo_test(&ctx.root, CUDA_CRATE, &[])? {
+        // Release because a debug reference interpreter is the cost of the
+        // suite rather than the cost of the device work being checked.
+        if !cargo_test(
+            &ctx.root,
+            CUDA_CRATE,
+            &["--release", "--features", CUDA_DEVICE_FEATURES],
+        )? {
             report.find(Finding::new(
                 format!(
                     "the {} tracked `{CUDA_CRATE}` test target(s) did not all pass on the live device",

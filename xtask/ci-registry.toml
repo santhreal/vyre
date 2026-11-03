@@ -225,7 +225,7 @@ workflows = ["gates.yml"]
 [[gate]]
 name = "engineering-scorecard"
 subsets = ["release-evidence"]
-workflows = ["gates.yml", "release-evidence.yml"]
+workflows = ["release-evidence.yml"]
 
 [[gate]]
 name = "error-codes"

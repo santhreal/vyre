@@ -1,3 +1,0 @@
-path = "scripts/check_metal_macbook.sh"
-state = "operator"
-reason = "runs the driver, conformance and benchmark suites over SSH on an Apple GPU host that no runner in this fleet carries"

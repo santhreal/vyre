@@ -268,10 +268,6 @@ fn workflow_failures(gate_names: &[&str], invoked: &[String], subsets: &[String]
             ));
         }
     }
-    if !invoked.iter().any(|name| name == "gates") {
-        failures
-            .push("no workflow runs `xtask gates`, so no workflow runs the registry".to_string());
-    }
     for name in subsets {
         if !registered_subsets.iter().any(|subset| subset.name == name) {
             failures.push(format!(
@@ -842,10 +838,10 @@ mod tests {
         assert_eq!(unregistered.len(), 1);
         assert!(unregistered[0].contains("`xtask dep-drfit`"));
 
-        let unswept = workflow_failures(&names, &["dep-drift".to_string()], &every_subset);
-        assert!(unswept
-            .iter()
-            .any(|failure| failure.contains("no workflow runs `xtask gates`")));
+        // Subsets that together hold every gate are the whole registry; a bare
+        // `xtask gates` step on top of them runs every gate twice.
+        let partitioned = workflow_failures(&names, &["dep-drift".to_string()], &every_subset);
+        assert_eq!(partitioned, Vec::<String>::new());
 
         let unrun_subset = workflow_failures(&names, &["gates".to_string()], &[]);
         assert_eq!(unrun_subset.len(), subsets.len() + names.len());

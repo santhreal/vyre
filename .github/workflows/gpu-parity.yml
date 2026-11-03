@@ -25,7 +25,6 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: [self-hosted, gpu, santhserver]
     env:
-      CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 5
     steps:
@@ -43,13 +42,11 @@ jobs:
     needs: gpu-adapter-probe
     runs-on: [self-hosted, gpu, santhserver]
     env:
-      CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
       - name: Run documented vyre-wgpu command on a real GPU
         run: ./cargo_full run -p vyre-driver-wgpu --bin vyre-wgpu -- demo
       # Every device-acquiring test in this crate is one module of one harness
@@ -78,95 +75,37 @@ jobs:
       - name: Every registry float lowering decision against a constructed backend
         run: ./cargo_full test -p vyre-registry-link --features device-tests -- --test-threads=1 --nocapture
 
-  cuda-driver-contracts:
-    name: CUDA backend contracts
-    needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, santhserver]
-    env:
-      CARGO_BUILD_JOBS: "1"
-      RUST_TEST_THREADS: "1"
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      # The PTX/CUDA backend lowers casts and synthetic binops DIFFERENTLY from
-      # naga (native cvt/mul.hi/shf vs vec2/select synthesis), so the wgpu parity
-      # gates above transfer nothing and the CUDA route needs its own live-GPU
-      # differential. Every one of those matrices is a module of one harness
-      # binary, and this is the lane that owns the device, so the step runs the
-      # crate rather than a named selection: a matrix added later is covered
-      # without editing this file.
-      - name: Every CUDA device contract and differential matrix on the real device
-        run: ./cargo_full test --release -p vyre-driver-cuda --features device-tests,cuda -- --test-threads=1 --nocapture
-
   cuda-parity-suite:
-    name: CUDA parity suite
+    name: CUDA backend contracts and parity
     needs: gpu-adapter-probe
     runs-on: [self-hosted, gpu, santhserver]
     env:
-      CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
 
-      # Every step above names its targets one by one, so a parity test added
-      # later is gated by nothing, which is how fifty-five of them came to run
-      # in no workflow at all while the four named here did. This roster is
-      # derived from the tree instead: every tracked vyre-driver-cuda test
-      # target, so target fifty-six is covered without editing this file. The
-      # gate fails when nvidia-smi does, so a runner that lost its device
-      # cannot report a clean tree.
-      - name: Every derived CUDA parity target on the real device
+      # The PTX/CUDA backend lowers casts and synthetic binops differently from
+      # naga (native cvt/mul.hi/shf vs vec2/select synthesis), so the wgpu parity
+      # targets transfer nothing and the CUDA route needs its own live-GPU
+      # differential. The gate runs every vyre-driver-cuda test target with the
+      # device features on, so a target added later is covered without editing
+      # this file, and it fails when nvidia-smi does, so a runner that lost its
+      # device cannot report a clean backend.
+      - name: Every CUDA device contract and parity target on the real device
         run: ./cargo_full run -q -p xtask --bin xtask -- cuda-parity --device
-
-  composition-parity-gpu:
-    name: Composition parity on real GPU
-    needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, santhserver]
-    env:
-      CARGO_BUILD_JOBS: "1"
-      RUST_TEST_THREADS: "1"
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      # The composition cases are modules of the crate's harness binary, so the
-      # selector names the harness and filters to them by module.
-      - name: Run composition parity
-        run: "./cargo_full test -p vyre-driver-wgpu --features device-tests --release --test all_tests op_pairwise:: -- --test-threads=1 --nocapture"
-
-  determinism-stress-gpu:
-    name: Determinism stress on real GPU
-    needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, santhserver]
-    env:
-      CARGO_BUILD_JOBS: "1"
-      RUST_TEST_THREADS: "1"
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Run determinism stress
-        run: "./cargo_full test -p vyre-driver-wgpu --features device-tests --release --test all_tests determinism_contract:: -- --test-threads=1 --nocapture"
 
   bench-device-tests:
     name: Benchmark harness device tests
     needs: gpu-adapter-probe
     runs-on: [self-hosted, gpu, santhserver]
     env:
-      CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
       # Every `vyre-bench` test that dispatches on a device is behind
       # `device-tests`, off by default so the hosted matrix does not read a
       # missing CUDA driver as a benchmark defect and does not pass a run whose
@@ -184,13 +123,11 @@ jobs:
     needs: gpu-adapter-probe
     runs-on: [self-hosted, gpu, santhserver]
     env:
-      CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
       # Both mandatory contracts are modules of the crate's `device-tests`
       # harness, so the step names that harness and runs every device contract
       # in it rather than two of the six.
@@ -202,13 +139,11 @@ jobs:
     needs: gpu-adapter-probe
     runs-on: [self-hosted, gpu, santhserver]
     env:
-      CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
       - name: Run vyre-conform against CUDA for every registered op
         run: ./cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all
 
@@ -217,13 +152,11 @@ jobs:
     needs: gpu-adapter-probe
     runs-on: [self-hosted, gpu, santhserver]
     env:
-      CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
       - name: Run vyre-conform against WGPU for every registered op
         run: ./cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all
 
@@ -234,13 +167,11 @@ jobs:
       - wgpu-conformance-all-ops
     runs-on: [self-hosted, gpu, santhserver]
     env:
-      CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
       - name: Generate release conformance evidence artifacts
         run: ./cargo_full run --release --bin xtask -- release-conformance --backend all --write
       - uses: actions/upload-artifact@v4
@@ -254,13 +185,11 @@ jobs:
     needs: gpu-adapter-probe
     runs-on: [self-hosted, gpu, santhserver]
     env:
-      CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
       # The smoke budget times one real dispatch, so it belongs on the device
       # rather than in the build-only bench lane, where it measured a panic.
       - name: Enforce smoke benchmark runtime budget
@@ -288,10 +217,7 @@ jobs:
     name: GPU release gate
     needs:
       - driver-contracts
-      - cuda-driver-contracts
       - cuda-parity-suite
-      - composition-parity-gpu
-      - determinism-stress-gpu
       - bench-device-tests
       - mandatory-gpu-enforcer
       - cuda-conformance-all-ops
@@ -306,7 +232,6 @@ jobs:
       }}
     runs-on: [self-hosted, gpu, santhserver]
     env:
-      CARGO_BUILD_JOBS: "1"
       RUST_TEST_THREADS: "1"
     timeout-minutes: 5
     steps:
@@ -314,10 +239,7 @@ jobs:
         shell: bash
         run: |
           if [ "${{ needs.driver-contracts.result }}" != "success" ] \
-            || [ "${{ needs.cuda-driver-contracts.result }}" != "success" ] \
             || [ "${{ needs.cuda-parity-suite.result }}" != "success" ] \
-            || [ "${{ needs.composition-parity-gpu.result }}" != "success" ] \
-            || [ "${{ needs.determinism-stress-gpu.result }}" != "success" ] \
             || [ "${{ needs.bench-device-tests.result }}" != "success" ] \
             || [ "${{ needs.mandatory-gpu-enforcer.result }}" != "success" ] \
             || [ "${{ needs.cuda-conformance-all-ops.result }}" != "success" ] \

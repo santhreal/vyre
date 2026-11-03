@@ -1,3 +1,0 @@
-path = "scripts/prove-release-shards.sh"
-state = "operator"
-reason = "runs the sharded conformance proof and merges the shard certificates"

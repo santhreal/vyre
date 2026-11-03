@@ -630,12 +630,6 @@ pub fn findings(
             ));
         }
     }
-    if !names.invoked.contains_key(RUNNER) {
-        findings.push(Finding::new(
-            "no workflow runs `xtask gates`, so no workflow runs the whole registry",
-            "run `xtask gates` from the workflow that owns the sweep",
-        ));
-    }
     for name in names.subsets.keys() {
         if !subsets.iter().any(|subset| subset.name == name) {
             findings.push(Finding::new(
@@ -1177,11 +1171,6 @@ mod tests {
         );
         assert!(
             messages(&unrun).contains("no workflow runs gate `dep-drift`"),
-            "{}",
-            messages(&unrun)
-        );
-        assert!(
-            messages(&unrun).contains("no workflow runs `xtask gates`"),
             "{}",
             messages(&unrun)
         );

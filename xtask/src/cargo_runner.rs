@@ -106,6 +106,19 @@ pub fn run_streaming(command: &mut Command) -> IoResult<(ExitStatus, String)> {
 /// Both pipes are drained at once, standard error on a thread, so neither
 /// child write blocks on a pipe this process is not reading yet.
 pub fn run_captured(command: &mut Command) -> IoResult<(ExitStatus, String, String)> {
+    run_piped(command, true)
+}
+
+/// Run a cargo invocation whose standard output is a `--message-format=json`
+/// stream, streaming standard error and keeping both texts.
+///
+/// The JSON is read by the caller and never echoed: one line per compiled unit
+/// buries the progress and diagnostics cargo writes to standard error.
+pub fn run_json(command: &mut Command) -> IoResult<(ExitStatus, String, String)> {
+    run_piped(command, false)
+}
+
+fn run_piped(command: &mut Command, echo_stdout: bool) -> IoResult<(ExitStatus, String, String)> {
     command.stdout(Stdio::piped());
     command.stderr(Stdio::piped());
     let mut child = command.spawn()?;
@@ -128,7 +141,9 @@ pub fn run_captured(command: &mut Command) -> IoResult<(ExitStatus, String, Stri
         if let Some(stream) = output {
             for line in BufReader::new(stream).lines() {
                 let line = line?;
-                println!("{line}");
+                if echo_stdout {
+                    println!("{line}");
+                }
                 stdout.push_str(&line);
                 stdout.push('\n');
             }
@@ -139,6 +154,39 @@ pub fn run_captured(command: &mut Command) -> IoResult<(ExitStatus, String, Stri
         let status = child.wait()?;
         Ok((status, stdout, diagnostics))
     })
+}
+
+/// One executable a `--message-format=json` build reported.
+pub struct Executable {
+    /// Manifest of the package the target belongs to.
+    pub manifest_path: PathBuf,
+    /// Target name, as `--bin` or `--test` takes it.
+    pub target: String,
+    /// Path of the built binary.
+    pub executable: PathBuf,
+}
+
+/// Every executable a `--message-format=json` stream reports, in stream order.
+///
+/// Only `compiler-artifact` lines carrying an `executable` count, so a library,
+/// a build script's own output, or a fresh unit with no binary is never
+/// mistaken for one.
+#[must_use]
+pub fn executables(stdout: &str) -> Vec<Executable> {
+    stdout
+        .lines()
+        .filter_map(|line| {
+            let value: serde_json::Value = serde_json::from_str(line).ok()?;
+            if value.get("reason")?.as_str()? != "compiler-artifact" {
+                return None;
+            }
+            Some(Executable {
+                manifest_path: PathBuf::from(value.get("manifest_path")?.as_str()?),
+                target: value.get("target")?.get("name")?.as_str()?.to_string(),
+                executable: PathBuf::from(value.get("executable")?.as_str()?),
+            })
+        })
+        .collect()
 }
 
 /// Directory segments cargo writes inside a profile directory.

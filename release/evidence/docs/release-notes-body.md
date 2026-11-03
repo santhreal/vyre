@@ -1890,6 +1890,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   and refuses a fragment whose text is empty. A regression test builds two
   branches that each add a fragment and merges them, so the fusion cannot come
   back quietly.
+- `xtask oracle-sweeps --run` builds every sweep harness of a partition in one
+  `cargo test --no-run` and runs each sweep as its harness binary, `xtask
+  cuda-parity --device` runs the vyre-driver-cuda targets with the
+  `device-tests` and `cuda` features, and the gate workflows run each gate area
+  once, split between the GPU host and a hosted runner, with build parallelism
+  left to the host.
 - The command-line contract no longer renders a book page.
   `scripts/cli_docs.py` kept generating `docs/CLI.md`, which is deleted, so the
   gate compared a generated document against a file that is not there while its

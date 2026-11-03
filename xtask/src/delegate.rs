@@ -299,16 +299,11 @@ fn rendered_diagnostic(line: &str) -> Option<String> {
 
 /// The binary path cargo reported for `package`'s own binary target.
 fn executable_from(stdout: &str, package: &str) -> Option<PathBuf> {
-    stdout.lines().rev().find_map(|line| {
-        let value: Value = serde_json::from_str(line).ok()?;
-        if value.get("reason").and_then(Value::as_str)? != "compiler-artifact" {
-            return None;
-        }
-        if value.get("target")?.get("name")?.as_str()? != package {
-            return None;
-        }
-        Some(PathBuf::from(value.get("executable")?.as_str()?))
-    })
+    crate::cargo_runner::executables(stdout)
+        .into_iter()
+        .rev()
+        .find(|built| built.target == package)
+        .map(|built| built.executable)
 }
 
 #[cfg(test)]
@@ -321,11 +316,11 @@ mod tests {
     #[test]
     fn executable_comes_from_the_named_binary_target() {
         let stdout = concat!(
-            r#"{"reason":"compiler-artifact","target":{"name":"walkdir"},"executable":null}"#,
+            r#"{"reason":"compiler-artifact","manifest_path":"/w/walkdir/Cargo.toml","target":{"name":"walkdir"},"executable":null}"#,
             "\n",
-            r#"{"reason":"compiler-artifact","target":{"name":"build-script-build"},"executable":"/t/build-script-build"}"#,
+            r#"{"reason":"compiler-artifact","manifest_path":"/w/xtask-registry/Cargo.toml","target":{"name":"build-script-build"},"executable":"/t/build-script-build"}"#,
             "\n",
-            r#"{"reason":"compiler-artifact","target":{"name":"xtask-registry"},"executable":"/t/xtask-registry"}"#,
+            r#"{"reason":"compiler-artifact","manifest_path":"/w/xtask-registry/Cargo.toml","target":{"name":"xtask-registry"},"executable":"/t/xtask-registry"}"#,
             "\n",
             r#"{"reason":"build-finished","success":true}"#,
         );
