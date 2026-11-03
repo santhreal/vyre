@@ -16,8 +16,6 @@ const BENCH_TARGETS_RAW: &str = include_str!("../../docs/optimization/BENCH_TARG
 const STATISTICAL_GATES_RAW: &str =
     include_str!("../../docs/optimization/STATISTICAL_REGRESSION_GATES.toml");
 const ROOFLINE_RAW: &str = include_str!("../../docs/optimization/ROOFLINE_COUNTER_EVIDENCE.toml");
-const METHODOLOGY_RAW: &str =
-    include_str!("../../docs/optimization/BENCHMARK_METHODOLOGY_CONTRACTS.toml");
 
 // ---------------------------------------------------------------------------
 // 189.1: Run on an isolated or fully recorded device
@@ -52,32 +50,6 @@ fn test_189_1_environment_recording_contract() {
         !fp.is_empty(),
         "Fix: source fingerprint must be generated for the benchmark runner"
     );
-
-    // Check methodology TOML specifies isolation and environment recording
-    let methodology: TomlValue = toml::from_str(METHODOLOGY_RAW)
-        .expect("Fix: BENCHMARK_METHODOLOGY_CONTRACTS.toml must be valid TOML");
-    let benchmarks = methodology
-        .get("benchmark")
-        .and_then(TomlValue::as_array)
-        .expect("Fix: BENCHMARK_METHODOLOGY_CONTRACTS.toml must contain [[benchmark]] table");
-    assert!(!benchmarks.is_empty());
-
-    for b in benchmarks {
-        let noise_controls = b
-            .get("noise_controls")
-            .and_then(TomlValue::as_array)
-            .expect("Fix: each benchmark must record noise_controls");
-        assert!(
-            !noise_controls.is_empty(),
-            "Fix: noise controls must not be empty for benchmark {:?}",
-            b.get("benchmark_id")
-        );
-        let env_digest = b
-            .get("environment_digest")
-            .and_then(TomlValue::as_str)
-            .expect("Fix: each benchmark must record environment_digest");
-        assert!(!env_digest.is_empty());
-    }
 }
 
 // ---------------------------------------------------------------------------

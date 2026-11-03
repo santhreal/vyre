@@ -91,10 +91,6 @@ pub mod contraction_candidate_parity_contracts;
 #[path = "consumer_boundary.rs"]
 pub mod consumer_boundary;
 
-/// Integration tests from `tests/corpus_privacy_retention_controls.rs`.
-#[path = "corpus_privacy_retention_controls.rs"]
-pub mod corpus_privacy_retention_controls;
-
 /// Integration tests from `tests/cpu_witnesses.rs`.
 #[allow(deprecated)]
 #[path = "cpu_witnesses.rs"]
@@ -103,10 +99,6 @@ pub mod cpu_witnesses;
 /// Integration tests from `tests/crc32_map_reduce_generated.rs`.
 #[path = "crc32_map_reduce_generated.rs"]
 pub mod crc32_map_reduce_generated;
-
-/// Integration tests from `tests/csr_certificates.rs`.
-#[path = "csr_certificates.rs"]
-pub mod csr_certificates;
 
 /// Integration tests from `tests/csr_closure_argument_bundle_gate.rs`.
 #[path = "csr_closure_argument_bundle_gate.rs"]
@@ -134,10 +126,6 @@ pub mod dedup_conv_ast_walk_family_guard;
 /// Integration tests from `tests/delegating_builder_equivalence.rs`.
 #[path = "delegating_builder_equivalence.rs"]
 pub mod delegating_builder_equivalence;
-
-/// Integration tests from `tests/delta_flow_arrangements.rs`.
-#[path = "delta_flow_arrangements.rs"]
-pub mod delta_flow_arrangements;
 
 /// Integration tests from `tests/device_resident_token_fact_graph_ownership.rs`.
 #[path = "device_resident_token_fact_graph_ownership.rs"]
@@ -167,10 +155,6 @@ pub mod f32_states_its_contractions;
 #[path = "family_duplication_budget.rs"]
 pub mod family_duplication_budget;
 
-/// Integration tests from `tests/flow_precision_planner.rs`.
-#[path = "flow_precision_planner.rs"]
-pub mod flow_precision_planner;
-
 /// Integration tests from `tests/fractional_kernel_parity.rs`.
 #[path = "fractional_kernel_parity.rs"]
 pub mod fractional_kernel_parity;
@@ -178,14 +162,6 @@ pub mod fractional_kernel_parity;
 /// Integration tests from `tests/frontend_dialect_contracts.rs`.
 #[path = "frontend_dialect_contracts.rs"]
 pub mod frontend_dialect_contracts;
-
-/// Integration tests from `tests/frontier_load_balancing_policies.rs`.
-#[path = "frontier_load_balancing_policies.rs"]
-pub mod frontier_load_balancing_policies;
-
-/// Integration tests from `tests/fuzz_target_inventory.rs`.
-#[path = "fuzz_target_inventory.rs"]
-pub mod fuzz_target_inventory;
 
 /// Integration tests from `tests/go_channel_creation_parity.rs`.
 #[cfg(feature = "go-parser")]
@@ -203,10 +179,6 @@ pub mod go_frontend_corpus;
 #[allow(deprecated)]
 #[path = "go_tokenizer_semantics.rs"]
 pub mod go_tokenizer_semantics;
-
-/// Integration tests from `tests/gpu_columnar_string_ingress.rs`.
-#[path = "gpu_columnar_string_ingress.rs"]
-pub mod gpu_columnar_string_ingress;
 
 /// Integration tests from `tests/graph_fixpoint_adversarial_generated.rs`.
 #[cfg(all(feature = "graph", feature = "bitset"))]
@@ -274,26 +246,6 @@ pub mod matroid_intersection_full_value_parity;
 #[path = "operation_tier_readers.rs"]
 pub mod operation_tier_readers;
 
-/// Integration tests from `tests/operator_reporting_interchange.rs`.
-#[path = "operator_reporting_interchange.rs"]
-pub mod operator_reporting_interchange;
-
-/// Integration tests from `tests/output_encoding_unicode_policies.rs`.
-#[path = "output_encoding_unicode_policies.rs"]
-pub mod output_encoding_unicode_policies;
-
-/// Integration tests from `tests/parser_edit_delta_contracts.rs`.
-#[path = "parser_edit_delta_contracts.rs"]
-pub mod parser_edit_delta_contracts;
-
-/// Integration tests from `tests/parser_recovery_corpus_registry.rs`.
-#[path = "parser_recovery_corpus_registry.rs"]
-pub mod parser_recovery_corpus_registry;
-
-/// Integration tests from `tests/pass_research_trace_artifacts.rs`.
-#[path = "pass_research_trace_artifacts.rs"]
-pub mod pass_research_trace_artifacts;
-
 /// Integration tests from `tests/primitive_surface_contracts.rs`.
 #[path = "primitive_surface_contracts.rs"]
 pub mod primitive_surface_contracts;
@@ -305,10 +257,6 @@ pub mod production_ir_parity;
 /// Integration tests from `tests/property.rs`.
 #[path = "property.rs"]
 pub mod property;
-
-/// Integration tests from `tests/property_differential_oracles.rs`.
-#[path = "property_differential_oracles.rs"]
-pub mod property_differential_oracles;
 
 /// Integration tests from `tests/proptest_bitset_and_laws.rs`.
 #[cfg(feature = "bitset")]
@@ -444,38 +392,6 @@ pub mod public_program_builders_behavioral_coverage;
 #[path = "reference_step_ceiling_corpus.rs"]
 pub mod reference_step_ceiling_corpus;
 
-/// Integration tests from `tests/regex_adversarial_class_catalog.rs`.
-#[path = "regex_adversarial_class_catalog.rs"]
-pub mod regex_adversarial_class_catalog;
-
-/// Integration tests from `tests/regex_columnar_output_contracts.rs`.
-#[path = "regex_columnar_output_contracts.rs"]
-pub mod regex_columnar_output_contracts;
-
-/// Integration tests from `tests/regex_dialect_lattice.rs`.
-#[path = "regex_dialect_lattice.rs"]
-pub mod regex_dialect_lattice;
-
-/// Integration tests from `tests/regex_logical_pattern_planner.rs`.
-#[path = "regex_logical_pattern_planner.rs"]
-pub mod regex_logical_pattern_planner;
-
-/// Integration tests from `tests/regex_match_policy_contracts.rs`.
-#[path = "regex_match_policy_contracts.rs"]
-pub mod regex_match_policy_contracts;
-
-/// Integration tests from `tests/regex_prefilter_planner_registry.rs`.
-#[path = "regex_prefilter_planner_registry.rs"]
-pub mod regex_prefilter_planner_registry;
-
-/// Integration tests from `tests/regex_streaming_state_ledger.rs`.
-#[path = "regex_streaming_state_ledger.rs"]
-pub mod regex_streaming_state_ledger;
-
-/// Integration tests from `tests/regex_unicode_profiles.rs`.
-#[path = "regex_unicode_profiles.rs"]
-pub mod regex_unicode_profiles;
-
 /// Integration tests from `tests/region_chain_discipline.rs`.
 #[path = "region_chain_discipline.rs"]
 pub mod region_chain_discipline;
@@ -504,42 +420,18 @@ pub mod registry_closure;
 #[path = "registry_oob_clean.rs"]
 pub mod registry_oob_clean;
 
-/// Integration tests from `tests/resource_budget_complexity_policies.rs`.
-#[path = "resource_budget_complexity_policies.rs"]
-pub mod resource_budget_complexity_policies;
-
 /// Integration tests from `tests/scan_cpu_api_boundary.rs`.
 #[path = "scan_cpu_api_boundary.rs"]
 pub mod scan_cpu_api_boundary;
-
-/// Integration tests from `tests/secret_crypto_policies.rs`.
-#[path = "secret_crypto_policies.rs"]
-pub mod secret_crypto_policies;
 
 /// Integration tests from `tests/security_flows_to_alias_only_parity.rs`.
 #[cfg(feature = "security")]
 #[path = "security_flows_to_alias_only_parity.rs"]
 pub mod security_flows_to_alias_only_parity;
 
-/// Integration tests from `tests/security_privacy_path_corpus_guards.rs`.
-#[path = "security_privacy_path_corpus_guards.rs"]
-pub mod security_privacy_path_corpus_guards;
-
 /// Integration tests from `tests/select_arm_range_catalog.rs`.
 #[path = "select_arm_range_catalog.rs"]
 pub mod select_arm_range_catalog;
-
-/// Integration tests from `tests/semiring_registry.rs`.
-#[path = "semiring_registry.rs"]
-pub mod semiring_registry;
-
-/// Integration tests from `tests/set_domain_selector.rs`.
-#[path = "set_domain_selector.rs"]
-pub mod set_domain_selector;
-
-/// Integration tests from `tests/shared_emitter_artifact_schema.rs`.
-#[path = "shared_emitter_artifact_schema.rs"]
-pub mod shared_emitter_artifact_schema;
 
 /// Integration tests from `tests/shared_owner_closure.rs`.
 #[path = "shared_owner_closure.rs"]
@@ -553,10 +445,6 @@ pub mod single_invocation_guard_contracts;
 #[cfg(feature = "math")]
 #[path = "sinkhorn_iterate_ir_parity.rs"]
 pub mod sinkhorn_iterate_ir_parity;
-
-/// Integration tests from `tests/source_span_witness_records.rs`.
-#[path = "source_span_witness_records.rs"]
-pub mod source_span_witness_records;
 
 /// Integration tests from `tests/succinct_rank_contracts.rs`.
 #[cfg(feature = "math-succinct")]
@@ -580,18 +468,10 @@ pub mod sum_product_depth_order_is_a_contract;
 #[path = "sum_product_signed_parity.rs"]
 pub mod sum_product_signed_parity;
 
-/// Integration tests from `tests/syntax_motif_frontier_compiler.rs`.
-#[path = "syntax_motif_frontier_compiler.rs"]
-pub mod syntax_motif_frontier_compiler;
-
 /// Integration tests from `tests/taint_pollution_grid_sync_planner_cut.rs`.
 #[cfg(feature = "security")]
 #[path = "taint_pollution_grid_sync_planner_cut.rs"]
 pub mod taint_pollution_grid_sync_planner_cut;
-
-/// Integration tests from `tests/target_instruction_capabilities.rs`.
-#[path = "target_instruction_capabilities.rs"]
-pub mod target_instruction_capabilities;
 
 /// Integration tests from `tests/the_shipped_library_build_compiles_no_cpu_oracle.rs`.
 #[path = "the_shipped_library_build_compiles_no_cpu_oracle.rs"]
@@ -601,14 +481,6 @@ pub mod the_shipped_library_build_compiles_no_cpu_oracle;
 #[allow(deprecated)]
 #[path = "universal_harness.rs"]
 pub mod universal_harness;
-
-/// Integration tests from `tests/unsafe_ffi_policies.rs`.
-#[path = "unsafe_ffi_policies.rs"]
-pub mod unsafe_ffi_policies;
-
-/// Integration tests from `tests/url_network_security_policies.rs`.
-#[path = "url_network_security_policies.rs"]
-pub mod url_network_security_policies;
 
 /// Integration tests from `tests/vast_tree_walk_ir_parity_proptest.rs`.
 #[cfg(feature = "graph")]

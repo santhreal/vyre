@@ -26,10 +26,6 @@ id = "operation-registry"
 authority = "../vyre-foundation/src/operation/mod.rs"
 
 [[owner]]
-id = "optimization"
-authority = "optimization/OWNERSHIP.toml"
-
-[[owner]]
 id = "public-facade"
 authority = "../vyre/src/lib.rs"
 

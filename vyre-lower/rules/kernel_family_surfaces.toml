@@ -4,7 +4,6 @@ contract = "vyre-kernel-family-surfaces:v1"
 
 [[family]]
 family_id = "lower.analyses"
-owner_lane = "lower_emit"
 root = "vyre-lower/src/analyses"
 public_reexport = "vyre-lower/src/analyses/mod.rs"
 schedule_config = "vyre-lower/rules/schedules/lower_analyses.toml"
@@ -14,7 +13,6 @@ forbidden_private_import_prefixes = ["vyre_emit_naga::", "vyre_emit_ptx::", "vyr
 
 [[family]]
 family_id = "emit.naga"
-owner_lane = "lower_emit"
 root = "vyre-emit-naga/src/emitter"
 public_reexport = "vyre-emit-naga/src/emitter/mod.rs"
 schedule_config = "vyre-lower/rules/schedules/emit_naga.toml"

@@ -8,7 +8,7 @@ use serde::Serialize;
 
 use crate::hash::sha256_hex;
 
-pub(crate) const DUPLICATE_FAMILY_SCHEMA_VERSION: u32 = 2;
+pub(crate) const DUPLICATE_FAMILY_SCHEMA_VERSION: u32 = 3;
 
 /// One duplicate-detection run, as written to its JSON artifact.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -40,9 +40,7 @@ pub struct DuplicateFamilyFinding {
     pub left: DuplicateSubject,
     /// Second subject.
     pub right: DuplicateSubject,
-    /// Lane that owns the importing side.
-    pub import_owner: String,
-    /// Lane the import points at.
+    /// Operation id or shared builder family the duplicate should import.
     pub import_target: String,
     /// How the score was computed and what to do about it.
     pub evidence: DuplicateEvidence,
@@ -53,8 +51,6 @@ pub struct DuplicateFamilyFinding {
 pub struct DuplicateSubject {
     /// Operation id or source path naming the subject.
     pub id: String,
-    /// Lane that owns it.
-    pub owner_lane: String,
     /// Structural fingerprint, when the detector computes one.
     pub fingerprint: Option<String>,
     /// Token or node count, when the detector measures one.
@@ -252,7 +248,7 @@ pub fn validate_duplicate_family_report_artifact(
 /// written by hand and had already drifted apart, so one caller judged the
 /// missing `detector` field and the other did not.
 const DUPLICATE_FAMILY_BLOCKER_MARKERS: [&str; 6] = [
-    "schema_version=2",
+    "must use schema_version=",
     "generator_command",
     "family[0].family_id",
     "family[0].detector",
@@ -297,7 +293,6 @@ pub fn registered_op_duplicate_subject(
 ) -> DuplicateSubject {
     DuplicateSubject {
         id: op_id.to_string(),
-        owner_lane: registered_op_owner_lane(op_id).to_string(),
         fingerprint: Some(registered_op_fingerprint(fingerprint)),
         tokens: Some(node_count),
         bytes: Some(fingerprint.len() as u64),
@@ -359,56 +354,6 @@ fn bigram_counts(bytes: &[u8]) -> HashMap<(u8, u8), u32> {
     out
 }
 
-/// The lane that owns a registered operation, derived from its id.
-pub fn registered_op_owner_lane(op_id: &str) -> &'static str {
-    if op_id.starts_with("vyre-primitives::hardware::") {
-        "lower_emit"
-    } else if op_id.starts_with("vyre-libs::graph::")
-        || op_id.starts_with("vyre-libs::bitset::")
-        || op_id.starts_with("vyre-libs::fixpoint::")
-        || op_id.starts_with("vyre-libs::graph::")
-        || op_id.starts_with("vyre-libs::dataflow::")
-    {
-        "graph_flow_compiler"
-    } else if op_id.starts_with("vyre-libs::matching::")
-        || op_id.starts_with("vyre-libs::text::")
-        || op_id.starts_with("vyre-libs::nfa::")
-        || op_id.starts_with("vyre-libs::scan::")
-        || op_id.starts_with("vyre-libs::matching::")
-    {
-        "scan_automata"
-    } else if op_id.starts_with("vyre-libs::parsing::") || op_id.starts_with("vyre-libs::parsing::")
-    {
-        "parser_frontend"
-    } else if op_id.starts_with("vyre-libs::security::")
-        || op_id.starts_with("vyre-libs::borrowck::")
-        || op_id.starts_with("vyre-libs::rule::")
-        || op_id.starts_with("vyre-libs::predicate::")
-    {
-        "security_dataflow"
-    } else if op_id.starts_with("vyre-libs::math::")
-        || op_id.starts_with("vyre-libs::reduce::")
-        || op_id.starts_with("vyre-libs::hash::")
-        || op_id.starts_with("vyre-libs::decode::")
-        || op_id.starts_with("vyre-libs::label::")
-        || op_id.starts_with("vyre-libs::math::")
-        || op_id.starts_with("vyre-libs::nn::")
-        || op_id.starts_with("vyre-libs::quant::")
-        || op_id.starts_with("vyre-libs::hash::")
-        || op_id.starts_with("vyre-libs::decode::")
-    {
-        "sparse_math_ai"
-    } else if op_id.starts_with("vyre-libs::visual::") || op_id.starts_with("vyre-libs::visual::") {
-        "product_dogfood"
-    } else if op_id.starts_with("vyre-primitives::") {
-        "foundation_optimizer"
-    } else if op_id.starts_with("vyre-libs::") {
-        "security_dataflow"
-    } else {
-        "op_matrix"
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -426,11 +371,10 @@ mod tests {
     }
 
     #[test]
-    fn registered_op_duplicate_subject_uses_shared_owner_and_fingerprint() {
+    fn registered_op_duplicate_subject_uses_shared_fingerprint() {
         let subject =
             registered_op_duplicate_subject("vyre-libs::scan::literal_set", &[1, 2, 3, 4], 17);
 
-        assert_eq!(subject.owner_lane, "scan_automata");
         assert_eq!(subject.tokens, Some(17));
         assert_eq!(subject.bytes, Some(4));
         assert!(subject
@@ -448,7 +392,6 @@ mod tests {
             score: 0.96,
             left: registered_op_duplicate_subject("left", &[1, 2, 3], 3),
             right: registered_op_duplicate_subject("right", &[1, 2, 4], 3),
-            import_owner: "op_matrix".to_string(),
             import_target: "op_matrix".to_string(),
             evidence: DuplicateEvidence {
                 similarity_metric: "ordered-ir-word-equality",
@@ -470,14 +413,12 @@ mod tests {
         let family_id = registered_op_duplicate_family_id("left", "right");
         let left = DuplicateSubject {
             id: "left".to_string(),
-            owner_lane: "scan_automata".to_string(),
             fingerprint: Some("registered-op-ir-fingerprint:v1:left".to_string()),
             tokens: Some(10),
             bytes: Some(10),
         };
         let right = DuplicateSubject {
             id: "right".to_string(),
-            owner_lane: "scan_automata".to_string(),
             fingerprint: Some("registered-op-ir-fingerprint:v1:right".to_string()),
             tokens: Some(11),
             bytes: Some(11),
@@ -499,7 +440,6 @@ mod tests {
                     score: 0.90,
                     left: left.clone(),
                     right: right.clone(),
-                    import_owner: "scan_automata".to_string(),
                     import_target: "left".to_string(),
                     evidence: evidence.clone(),
                 },
@@ -510,7 +450,6 @@ mod tests {
                     score: 0.96,
                     left,
                     right,
-                    import_owner: "scan_automata".to_string(),
                     import_target: "left".to_string(),
                     evidence,
                 },
@@ -583,7 +522,7 @@ mod tests {
     fn duplicate_family_artifact_validation_rejects_unknown_fingerprint_namespace() {
         let blockers = validate_duplicate_family_report_artifact(
             br#"{
-  "schema_version": 2,
+  "schema_version": 3,
   "generator_command": "xtask whats-similar --all --duplicate-report-json release/evidence/dedup/registered-op-duplicates.json",
   "family_count": 1,
   "families": [
@@ -608,42 +547,6 @@ mod tests {
         assert_eq!(structural_similarity(&[1, 2, 3], &[1, 2, 3]), 0.0);
         assert!((structural_similarity(&[1, 2, 3, 4], &[1, 2, 3, 4]) - 1.0).abs() < 1e-12);
         assert!(structural_similarity(&[1, 2, 3, 4], &[4, 3, 2, 1]) < 1.0);
-    }
-
-    #[test]
-    fn registered_op_owner_lane_classifies_major_namespaces() {
-        assert_eq!(
-            registered_op_owner_lane("vyre-libs::graph::csr_forward_traverse"),
-            "graph_flow_compiler"
-        );
-        assert_eq!(
-            registered_op_owner_lane("vyre-libs::dataflow::semi_naive_join"),
-            "graph_flow_compiler"
-        );
-        assert_eq!(
-            registered_op_owner_lane("vyre-libs::scan::literal_set"),
-            "scan_automata"
-        );
-        assert_eq!(
-            registered_op_owner_lane("vyre-libs::parsing::python312_lexer"),
-            "parser_frontend"
-        );
-        assert_eq!(
-            registered_op_owner_lane("vyre-libs::parsing::ssa_dominance_scan"),
-            "parser_frontend"
-        );
-        assert_eq!(
-            registered_op_owner_lane("vyre-libs::nn::softmax"),
-            "sparse_math_ai"
-        );
-        assert_eq!(
-            registered_op_owner_lane("vyre-libs::predicate::call_to"),
-            "security_dataflow"
-        );
-        assert_eq!(
-            registered_op_owner_lane("vyre-libs::visual::blur"),
-            "product_dogfood"
-        );
     }
 
     /// WHY: the severity bands are exact `>=` comparisons, and every duplicate

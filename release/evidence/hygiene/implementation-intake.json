@@ -1,19 +1,28 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"90a8316bbfeccc9b5890446ddf8b44b85fd6ed2f","commit_timestamp":"1789985860","parent_commit":"dbee9a7e1d0f798ff81472665a06f4c4d8ff12f7","dirty":false,"source_fingerprint":"git:90a8316bbfeccc9b5890446ddf8b44b85fd6ed2f:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
-  "schema_version": 1,
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"c5db4e032aab5ea4291d90cbb8f58c455afc53db","commit_timestamp":"1793738758","parent_commit":"e295e1cf4fa72eab337c5ac380dd64e7d033f506","dirty":true,"source_fingerprint":"git:c5db4e032aab5ea4291d90cbb8f58c455afc53db:dirty=true:worktree=4d43f96316bc8a129995000fc214b976f14981854830fdecd1f173c4493f06e1"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "schema_version": 2,
   "release_blocker_count": 0,
   "intake_summary": [
     {
-      "owner_lane": "bench_harness",
+      "member": "conform",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "documented_panic_contract",
+      "pattern": "std_thread_sleep",
       "release_blocker": false,
       "count": 1
     },
     {
-      "owner_lane": "bench_harness",
+      "member": "conform",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "thread_sleep",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "conform",
       "surface": "production",
       "risk": "release_debt",
       "hot_path": false,
@@ -22,7 +31,79 @@
       "count": 1
     },
     {
-      "owner_lane": "bench_harness",
+      "member": "consumers",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 4
+    },
+    {
+      "member": "structure-gate",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 11
+    },
+    {
+      "member": "structure-gate",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 4
+    },
+    {
+      "member": "structure-gate",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 3
+    },
+    {
+      "member": "vyre",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 4
+    },
+    {
+      "member": "vyre-aot",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "member": "vyre-bench",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-bench",
+      "surface": "production",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-bench",
       "surface": "test",
       "risk": "informational",
       "hot_path": false,
@@ -31,7 +112,340 @@
       "count": 7
     },
     {
-      "owner_lane": "coordination",
+      "member": "vyre-driver",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 15
+    },
+    {
+      "member": "vyre-driver",
+      "surface": "production",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "member": "vyre-driver",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 6
+    },
+    {
+      "member": "vyre-driver-cuda",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "std_thread_sleep",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-driver-cuda",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "thread_sleep",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-driver-cuda",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-driver-wgpu",
+      "surface": "production",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "member": "vyre-driver-wgpu",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-emit-naga",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "member": "vyre-emit-naga",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-emit-ptx",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "member": "vyre-foundation",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 14
+    },
+    {
+      "member": "vyre-foundation",
+      "surface": "production",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 4
+    },
+    {
+      "member": "vyre-foundation",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 11
+    },
+    {
+      "member": "vyre-foundation",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "expect_call",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "member": "vyre-libs",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 20
+    },
+    {
+      "member": "vyre-libs-bitset",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-libs-builder",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 4
+    },
+    {
+      "member": "vyre-libs-graph",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 10
+    },
+    {
+      "member": "vyre-libs-graph",
+      "surface": "production",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-libs-graph",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 5
+    },
+    {
+      "member": "vyre-libs-hash",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-libs-math",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 3
+    },
+    {
+      "member": "vyre-libs-nn",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-libs-pattern",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 11
+    },
+    {
+      "member": "vyre-libs-reduce",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-libs-reduce",
+      "surface": "production",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-libs-security",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-libs-solvers",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-libs-visual",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "member": "vyre-lower",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 7
+    },
+    {
+      "member": "vyre-lower",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 3
+    },
+    {
+      "member": "vyre-megakernel",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-megakernel",
+      "surface": "production",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-megakernel",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 3
+    },
+    {
+      "member": "vyre-megakernel",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "expect_call",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-primitives",
+      "surface": "production",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "vyre-reference",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -40,223 +454,34 @@
       "count": 54
     },
     {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": false,
-      "count": 4
-    },
-    {
-      "owner_lane": "coordination",
+      "member": "vyre-reference",
       "surface": "production",
       "risk": "release_debt",
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 6
+      "count": 1
     },
     {
-      "owner_lane": "coordination",
+      "member": "vyre-reference",
       "surface": "test",
       "risk": "informational",
       "hot_path": false,
       "pattern": "source_inspection_test",
-      "release_blocker": false,
-      "count": 66
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "documented_panic_contract",
-      "release_blocker": false,
-      "count": 56
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 49
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "panic_macro",
-      "release_blocker": false,
-      "count": 44
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "placeholder_text",
-      "release_blocker": false,
-      "count": 4
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "unbounded_read",
       "release_blocker": false,
       "count": 2
     },
     {
-      "owner_lane": "coordination",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "unwrap_call",
-      "release_blocker": false,
-      "count": 11
-    },
-    {
-      "owner_lane": "driver_cuda",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "std_thread_sleep",
-      "release_blocker": false,
-      "count": 1
-    },
-    {
-      "owner_lane": "driver_cuda",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "thread_sleep",
-      "release_blocker": false,
-      "count": 1
-    },
-    {
-      "owner_lane": "driver_cuda",
+      "member": "vyre-registry-link",
       "surface": "test",
       "risk": "informational",
       "hot_path": false,
       "pattern": "source_inspection_test",
-      "release_blocker": false,
-      "count": 1
-    },
-    {
-      "owner_lane": "driver_shared",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "documented_panic_contract",
-      "release_blocker": false,
-      "count": 69
-    },
-    {
-      "owner_lane": "driver_shared",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "pattern": "placeholder_text",
-      "release_blocker": false,
-      "count": 4
-    },
-    {
-      "owner_lane": "driver_shared",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": false,
-      "count": 8
-    },
-    {
-      "owner_lane": "driver_wgpu",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "pattern": "placeholder_text",
       "release_blocker": false,
       "count": 2
     },
     {
-      "owner_lane": "driver_wgpu",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": false,
-      "count": 1
-    },
-    {
-      "owner_lane": "foundation_optimizer",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "documented_panic_contract",
-      "release_blocker": false,
-      "count": 5
-    },
-    {
-      "owner_lane": "foundation_wire",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "documented_panic_contract",
-      "release_blocker": false,
-      "count": 1
-    },
-    {
-      "owner_lane": "foundation_wire",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "pattern": "placeholder_text",
-      "release_blocker": false,
-      "count": 8
-    },
-    {
-      "owner_lane": "foundation_wire",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": false,
-      "count": 4
-    },
-    {
-      "owner_lane": "foundation_wire",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 2
-    },
-    {
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "documented_panic_contract",
-      "release_blocker": false,
-      "count": 11
-    },
-    {
-      "owner_lane": "lower_emit",
-      "surface": "test",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "source_inspection_test",
-      "release_blocker": false,
-      "count": 4
-    },
-    {
-      "owner_lane": "runtime_resident_work_queue",
+      "member": "vyre-runtime",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -265,7 +490,7 @@
       "count": 9
     },
     {
-      "owner_lane": "runtime_resident_work_queue",
+      "member": "vyre-runtime",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -274,52 +499,124 @@
       "count": 1
     },
     {
-      "owner_lane": "testing_evidence",
+      "member": "vyre-runtime",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 5
+    },
+    {
+      "member": "vyre-spec",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
-      "pattern": "std_thread_sleep",
+      "pattern": "documented_panic_contract",
       "release_blocker": false,
       "count": 1
     },
     {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "thread_sleep",
-      "release_blocker": false,
-      "count": 1
-    },
-    {
-      "owner_lane": "testing_evidence",
+      "member": "vyre-spec",
       "surface": "production",
       "risk": "release_debt",
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 1
+      "count": 7
     },
     {
-      "owner_lane": "testing_evidence",
+      "member": "vyre-spec",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 4
+    },
+    {
+      "member": "vyre-test-support",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 5
+    },
+    {
+      "member": "vyre-test-support",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 55
+    },
+    {
+      "member": "vyre-test-support",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "expect_call",
+      "release_blocker": false,
+      "count": 48
+    },
+    {
+      "member": "vyre-test-support",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "panic_macro",
+      "release_blocker": false,
+      "count": 44
+    },
+    {
+      "member": "vyre-test-support",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 4
+    },
+    {
+      "member": "vyre-test-support",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "unbounded_read",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "member": "vyre-test-support",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "unwrap_call",
+      "release_blocker": false,
+      "count": 11
+    },
+    {
+      "member": "xtask",
       "surface": "release_tooling",
       "risk": "informational",
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 11
+      "count": 10
     },
     {
-      "owner_lane": "testing_evidence",
+      "member": "xtask",
       "surface": "release_tooling",
       "risk": "informational",
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 12
+      "count": 6
     },
     {
-      "owner_lane": "testing_evidence",
+      "member": "xtask",
       "surface": "release_tooling",
       "risk": "informational",
       "hot_path": false,
@@ -328,7 +625,7 @@
       "count": 2
     },
     {
-      "owner_lane": "testing_evidence",
+      "member": "xtask",
       "surface": "release_tooling",
       "risk": "informational",
       "hot_path": false,
@@ -337,7 +634,7 @@
       "count": 2
     },
     {
-      "owner_lane": "testing_evidence",
+      "member": "xtask",
       "surface": "release_tooling",
       "risk": "informational",
       "hot_path": false,
@@ -346,7 +643,7 @@
       "count": 2
     },
     {
-      "owner_lane": "testing_evidence",
+      "member": "xtask",
       "surface": "release_tooling",
       "risk": "release_debt",
       "hot_path": false,
@@ -355,7 +652,7 @@
       "count": 2
     },
     {
-      "owner_lane": "testing_evidence",
+      "member": "xtask",
       "surface": "release_tooling",
       "risk": "release_debt",
       "hot_path": false,
@@ -364,16 +661,16 @@
       "count": 1
     },
     {
-      "owner_lane": "testing_evidence",
+      "member": "xtask",
       "surface": "release_tooling",
       "risk": "release_debt",
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
-      "count": 18
+      "count": 16
     },
     {
-      "owner_lane": "testing_evidence",
+      "member": "xtask",
       "surface": "release_tooling",
       "risk": "release_debt",
       "hot_path": false,
@@ -382,16 +679,16 @@
       "count": 1
     },
     {
-      "owner_lane": "testing_evidence",
+      "member": "xtask",
       "surface": "test",
       "risk": "informational",
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 45
+      "count": 43
     },
     {
-      "owner_lane": "testing_evidence",
+      "member": "xtask",
       "surface": "test",
       "risk": "test_hygiene",
       "hot_path": false,
@@ -400,22 +697,67 @@
       "count": 4
     },
     {
-      "owner_lane": "testing_evidence",
+      "member": "xtask",
       "surface": "test",
       "risk": "test_hygiene",
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 11
+      "count": 4
     },
     {
-      "owner_lane": "testing_evidence",
+      "member": "xtask-evidence",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "pattern": "expect_call",
+      "release_blocker": false,
+      "count": 7
+    },
+    {
+      "member": "xtask-evidence",
       "surface": "test",
       "risk": "test_hygiene",
       "hot_path": false,
       "pattern": "placeholder_text",
       "release_blocker": false,
       "count": 1
+    },
+    {
+      "member": "xtask-registry",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "documented_panic_contract",
+      "release_blocker": false,
+      "count": 1
+    },
+    {
+      "member": "xtask-registry",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 6
+    },
+    {
+      "member": "xtask-registry",
+      "surface": "release_tooling",
+      "risk": "release_debt",
+      "hot_path": false,
+      "pattern": "placeholder_text",
+      "release_blocker": false,
+      "count": 2
+    },
+    {
+      "member": "xtask-registry",
+      "surface": "test",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": false,
+      "count": 2
     }
   ],
   "blockers": []

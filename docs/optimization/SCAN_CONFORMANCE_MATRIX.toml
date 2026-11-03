@@ -1,5 +1,4 @@
 schema_version = 2
-dialect_lattice = "docs/optimization/REGEX_DIALECT_LATTICE.toml"
 
 # The code a row carries when its semantics has no refusal path at all. Declared
 # once so no row invents a spelling for "not applicable", and checked against the

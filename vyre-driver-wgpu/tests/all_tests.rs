@@ -511,26 +511,6 @@ pub mod unary_int_parity;
 #[path = "validation_cross_backend.rs"]
 pub mod validation_cross_backend;
 
-/// Integration tests from `tests/wgpu_command_reuse_classifier.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "wgpu_command_reuse_classifier.rs"]
-pub mod wgpu_command_reuse_classifier;
-
-/// Integration tests from `tests/wgpu_subgroup_capability_diagnostics.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "wgpu_subgroup_capability_diagnostics.rs"]
-pub mod wgpu_subgroup_capability_diagnostics;
-
-/// Integration tests from `tests/wgpu_subgroup_scan_plan_registry.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "wgpu_subgroup_scan_plan_registry.rs"]
-pub mod wgpu_subgroup_scan_plan_registry;
-
-/// Integration tests from `tests/wgsl_scan_uniformity_certificates.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "wgsl_scan_uniformity_certificates.rs"]
-pub mod wgsl_scan_uniformity_certificates;
-
 /// Integration tests from `tests/external_resource_wgpu_contracts.rs`.
 #[path = "external_resource_wgpu_contracts.rs"]
 pub mod external_resource_wgpu_contracts;

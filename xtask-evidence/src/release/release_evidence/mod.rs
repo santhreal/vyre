@@ -31,7 +31,7 @@ use xtask::artifact_paths::{FRONTIER_LEADERBOARD_ARTIFACT, LEGO_AUDIT_DUPLICATES
 
 /// Bumped from 5: command identity and artifact ownership now use the complete
 /// argument vector, including backend-specific measured-evidence invocations.
-const RELEASE_EVIDENCE_RUN_SCHEMA_VERSION: u32 = 6;
+const RELEASE_EVIDENCE_RUN_SCHEMA_VERSION: u32 = 7;
 
 const COMMANDS: &[EvidenceCommand] = &[
     EvidenceCommand::required(&["docs-check"]),
@@ -579,7 +579,6 @@ mod tests {
 
         assert_eq!(statuses.len(), 1);
         let status = &statuses[0];
-        assert_eq!(status.owner_lane, "coordination");
         assert_eq!(status.generator_command, "xtask version-matrix");
         assert_eq!(status.command_mode, COMMAND_MODE_SPAWNED);
         assert_eq!(status.content_sha256.as_deref().map(str::len), Some(64));
@@ -758,7 +757,7 @@ mod tests {
             std::fs::create_dir_all(artifact_path.parent().unwrap()).unwrap();
             std::fs::write(
                 &artifact_path,
-                b"{\"schema_version\":2,\"generator_command\":\"xtask whats-similar --all --duplicate-report-json release/evidence/dedup/registered-op-duplicates.json\",\"family_count\":0,\"families\":[]}\n",
+                b"{\"schema_version\":3,\"generator_command\":\"xtask whats-similar --all --duplicate-report-json release/evidence/dedup/registered-op-duplicates.json\",\"family_count\":0,\"families\":[]}\n",
             )
             .unwrap();
         }
@@ -788,7 +787,6 @@ mod tests {
         );
         assert_eq!(statuses.len(), 1);
         let status = &statuses[0];
-        assert_eq!(status.owner_lane, "testing_evidence");
         assert_eq!(
             status.generator_command,
             "xtask whats-similar --all --duplicate-report-json release/evidence/dedup/registered-op-duplicates.json"
@@ -1069,7 +1067,6 @@ mod tests {
             exists: true,
             bytes: 64,
             read_error: None,
-            owner_lane: "testing_evidence",
             generator_command: RELEASE_EVIDENCE_GENERATOR_COMMAND.to_string(),
             command_mode: COMMAND_MODE_SPAWNED,
             content_sha256: Some("a".repeat(64)),
@@ -1097,7 +1094,6 @@ mod tests {
                 exists: true,
                 bytes: 12,
                 read_error: None,
-                owner_lane: "testing_evidence",
                 generator_command: "xtask version-matrix".to_string(),
                 command_mode: COMMAND_MODE_SPAWNED,
                 content_sha256: None,

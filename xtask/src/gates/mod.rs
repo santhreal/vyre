@@ -76,7 +76,6 @@ pub mod module_layout;
 pub mod op_names;
 pub mod oracle_independence;
 pub mod oracle_sweeps;
-pub mod ownership;
 pub mod parity_testing;
 pub mod placement_predicate;
 pub mod platform_boundary;

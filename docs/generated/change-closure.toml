@@ -32262,7 +32262,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SyncFailure"
 variant_name = "Open"
-declaration_site = "vyre-driver/src/durable_fanout.rs:48"
+declaration_site = "vyre-driver/src/durable_fanout.rs:46"
 constructors = ["SyncFailure::Open"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug)"
@@ -32272,7 +32272,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SyncFailure"
 variant_name = "Panicked"
-declaration_site = "vyre-driver/src/durable_fanout.rs:66"
+declaration_site = "vyre-driver/src/durable_fanout.rs:64"
 constructors = ["SyncFailure::Panicked"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug)"
@@ -32282,7 +32282,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SyncFailure"
 variant_name = "Reserve"
-declaration_site = "vyre-driver/src/durable_fanout.rs:71"
+declaration_site = "vyre-driver/src/durable_fanout.rs:69"
 constructors = ["SyncFailure::Reserve"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug)"
@@ -32292,7 +32292,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SyncFailure"
 variant_name = "Sync"
-declaration_site = "vyre-driver/src/durable_fanout.rs:57"
+declaration_site = "vyre-driver/src/durable_fanout.rs:55"
 constructors = ["SyncFailure::Sync"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug)"
@@ -32302,7 +32302,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SyncPass"
 variant_name = "Directories"
-declaration_site = "vyre-driver/src/durable_fanout.rs:29"
+declaration_site = "vyre-driver/src/durable_fanout.rs:27"
 constructors = ["SyncPass::Directories"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
@@ -32312,7 +32312,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "SyncPass"
 variant_name = "Files"
-declaration_site = "vyre-driver/src/durable_fanout.rs:27"
+declaration_site = "vyre-driver/src/durable_fanout.rs:25"
 constructors = ["SyncPass::Files"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"

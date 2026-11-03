@@ -185,8 +185,8 @@ impl GateBehavior for HygieneMatrix {
                 &finding.path,
                 u32::try_from(finding.line).unwrap_or(u32::MAX),
                 format!(
-                    "release-blocking `{}` on the {} surface, owner lane {}, risk {}",
-                    finding.pattern, finding.surface, finding.owner_lane, finding.risk
+                    "release-blocking `{}` on the {} surface in {}, risk {}",
+                    finding.pattern, finding.surface, finding.member, finding.risk
                 ),
                 "remove the pattern from the release surface, or move the code off it",
             ));
@@ -221,7 +221,7 @@ impl GateBehavior for HygieneMatrix {
         let classification_summary = classification_summary(&finding_classes);
         let intake_summary = hygiene_intake_summary(&finding_classes);
         let matrix = HygieneMatrixArtifact {
-            schema_version: 6,
+            schema_version: 7,
             scanned_roots,
             scanned_files,
             release_surface_coverage,
@@ -304,14 +304,14 @@ fn declare_sibling_artifacts(
         Vec::new()
     } else {
         vec![format!(
-            "{} release-blocking hygiene finding(s) remain; implementation-intake.json groups them by owner lane, surface, risk, hot-path flag, and pattern",
+            "{} release-blocking hygiene finding(s) remain; implementation-intake.json groups them by member, surface, risk, hot-path flag, and pattern",
             matrix.release_blocker_count
         )]
     };
     inspection.generates_host_evidence(
         &format!("{ARTIFACT_DIR}/implementation-intake.json"),
         &HygieneIntakeArtifact {
-            schema_version: 1,
+            schema_version: 2,
             release_blocker_count: matrix.release_blocker_count,
             intake_summary: matrix.intake_summary.clone(),
             blockers: intake_blockers,
@@ -348,7 +348,7 @@ fn declare_sibling_artifacts(
         inspection.generates_host_evidence(
             &format!("{ARTIFACT_DIR}/{artifact}"),
             &HygieneScan {
-                schema_version: 1,
+                schema_version: 2,
                 scan: scan.to_string(),
                 findings,
                 release_blocking_findings,

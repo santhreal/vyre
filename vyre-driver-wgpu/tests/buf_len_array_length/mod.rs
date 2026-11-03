@@ -12,8 +12,6 @@
 //! before a Q3 fix lands and pass after, so the workaround in
 //! `vyre_libs::hash::fnv1a` (using `fnv1a64_program_n` instead of
 //! `fnv1a64_program`) can be reverted with confidence.
-//!
-//! Lane: `driver_wgpu` (per `docs/optimization/OWNERSHIP.toml`).
 
 #![cfg(feature = "device-tests")]
 

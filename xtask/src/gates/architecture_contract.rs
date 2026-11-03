@@ -6,26 +6,17 @@
 //! and this rule caught that drift from a Python script that one workflow
 //! invoked and the gate sweep never saw. A rule outside the registry has no
 //! baseline, no place in the sweep and no countable report.
-//!
-//! The optimization lane registry is judged here too, because a lane is an
-//! assignment: a write glob that matches nothing and a `-p` package no manifest
-//! declares both hand an owner a scope they cannot enter, and neither fails
-//! until someone tries. `vyre-scan` survived three lanes here after the crate
-//! stopped existing.
 
 use std::collections::BTreeSet;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
-use crate::gates::scan::{glob_match, Tree};
+use crate::gates::scan::Tree;
 
 /// The document this gate holds to the authorities.
 const ARCHITECTURE: &str = "docs/ARCHITECTURE.md";
 
 /// The docs manifest that has to classify it as current.
 const MANIFEST: &str = "docs/DOCS.toml";
-
-/// The optimization lane registry.
-const LANES: &str = "docs/optimization/OWNERSHIP.toml";
 
 /// Wire version of `docs/generated/OP_SCHEMA.json`.
 ///
@@ -65,10 +56,7 @@ const STALE_LITERALS: &[&str] = &[
 /// What a disagreement with an authority costs, and how to close it.
 const FIX: &str = "correct the document against the authority it describes, or correct the authority; the document is verified prose, not a second source of truth";
 
-/// What a lane naming absent scope costs, and how to close it.
-const LANE_FIX: &str = "delete the lane entry, or restore what it names; a write glob matching nothing and a -p package no manifest declares are both a scope nobody can enter";
-
-/// The architecture document and the optimization lanes agree with the tree.
+/// The architecture document agrees with the tree.
 pub struct ArchitectureContract;
 
 impl crate::gate::GateBehavior for ArchitectureContract {
@@ -82,7 +70,6 @@ impl crate::gate::GateBehavior for ArchitectureContract {
         judge_backend_evidence(&tree, &mut findings)?;
         judge_ownership(&tree, &mut findings)?;
         judge_document(&tree, version.as_deref(), &mut findings)?;
-        judge_lanes(&tree, &members, &mut findings)?;
         let mut report = Report::with_findings(findings);
         report.cover_complete("workspace members", members.len());
         report.note(format!(
@@ -502,176 +489,6 @@ fn normalize_whitespace(text: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// Every optimization lane names scope that exists.
-fn judge_lanes(
-    tree: &Tree,
-    members: &[crate::gates::scan::Member],
-    findings: &mut Vec<Finding>,
-) -> Result<(), GateError> {
-    let table = tree.read_toml(LANES)?;
-    let lanes = table.get("lane").and_then(toml::Value::as_table);
-    let Some(lanes) = lanes else {
-        findings.push(Finding::in_file(
-            LANES,
-            "the lane registry has no [lane.*] tables",
-            LANE_FIX,
-        ));
-        return Ok(());
-    };
-    if lanes.is_empty() {
-        findings.push(Finding::in_file(
-            LANES,
-            "the lane registry declares no lane",
-            LANE_FIX,
-        ));
-    }
-    let packages: BTreeSet<&str> = members.iter().map(|member| member.name.as_str()).collect();
-    for (lane, body) in lanes {
-        let Some(body) = body.as_table() else {
-            findings.push(Finding::in_file(
-                LANES,
-                format!("lane `{lane}` is not a table"),
-                LANE_FIX,
-            ));
-            continue;
-        };
-        for key in ["purpose", "layer"] {
-            let stated = body
-                .get(key)
-                .and_then(toml::Value::as_str)
-                .is_some_and(|value| !value.trim().is_empty());
-            if !stated {
-                findings.push(Finding::in_file(
-                    LANES,
-                    format!("lane `{lane}` states no {key}"),
-                    LANE_FIX,
-                ));
-            }
-        }
-        for key in ["write", "required_commands"] {
-            let populated = body
-                .get(key)
-                .and_then(toml::Value::as_array)
-                .is_some_and(|entries| !entries.is_empty());
-            if !populated {
-                findings.push(Finding::in_file(
-                    LANES,
-                    format!("lane `{lane}` has no {key} entries"),
-                    LANE_FIX,
-                ));
-            }
-        }
-        judge_lane_scopes(tree, lane, body, findings);
-        judge_lane_commands(&packages, lane, body, findings);
-    }
-    Ok(())
-}
-
-/// Every `write` and `avoid` entry of one lane names a repository-relative
-/// scope that matches something in the tree.
-fn judge_lane_scopes(tree: &Tree, lane: &str, body: &toml::Table, findings: &mut Vec<Finding>) {
-    for key in ["write", "avoid"] {
-        let entries = body
-            .get(key)
-            .and_then(toml::Value::as_array)
-            .map(Vec::as_slice)
-            .unwrap_or_default();
-        for entry in entries {
-            let Some(pattern) = entry.as_str().filter(|value| !value.trim().is_empty()) else {
-                findings.push(Finding::in_file(
-                    LANES,
-                    format!("lane `{lane}` has an empty {key} entry"),
-                    LANE_FIX,
-                ));
-                continue;
-            };
-            if pattern.starts_with('/') || pattern.split('/').any(|segment| segment == "..") {
-                findings.push(Finding::in_file(
-                    LANES,
-                    format!(
-                        "lane `{lane}` {key} entry `{pattern}` is not a repository-relative path"
-                    ),
-                    LANE_FIX,
-                ));
-                continue;
-            }
-            // A lane entry names a path scope, so `vyre-driver-*` covers the
-            // files under every directory it matches as well as a file of
-            // that name. Requiring the glob to match a whole path would
-            // report every entry written as a directory, which is most of
-            // them, and reporting a coherent registry is how a rule gets
-            // switched off.
-            let subtree = format!("{}/**", pattern.trim_end_matches('/'));
-            let matched = tree.paths().iter().any(|path| {
-                let path = path.to_string_lossy();
-                glob_match(pattern, path.as_ref()) || glob_match(&subtree, path.as_ref())
-            }) || tree.exists(pattern);
-            if !matched {
-                findings.push(Finding::in_file(
-                    LANES,
-                    format!("lane `{lane}` {key} entry `{pattern}` matches nothing in the tree"),
-                    LANE_FIX,
-                ));
-            }
-        }
-    }
-}
-
-/// Every `-p` package one lane's required commands name is a workspace member.
-fn judge_lane_commands(
-    packages: &BTreeSet<&str>,
-    lane: &str,
-    body: &toml::Table,
-    findings: &mut Vec<Finding>,
-) {
-    let commands = body
-        .get("required_commands")
-        .and_then(toml::Value::as_array)
-        .map(Vec::as_slice)
-        .unwrap_or_default();
-    for command in commands {
-        let Some(command) = command.as_str().filter(|value| !value.trim().is_empty()) else {
-            findings.push(Finding::in_file(
-                LANES,
-                format!("lane `{lane}` has an empty required command"),
-                LANE_FIX,
-            ));
-            continue;
-        };
-        findings.extend(undeclared_command_packages(packages, lane, command));
-    }
-}
-
-/// Findings for each `-p` package one command names that no workspace manifest
-/// declares, and for a `-p` with nothing after it.
-fn undeclared_command_packages(
-    packages: &BTreeSet<&str>,
-    lane: &str,
-    command: &str,
-) -> Vec<Finding> {
-    let tokens: Vec<&str> = command.split_whitespace().collect();
-    tokens
-        .iter()
-        .enumerate()
-        .filter(|(_, token)| **token == "-p")
-        .filter_map(|(index, _)| match tokens.get(index + 1) {
-            None => Some(Finding::in_file(
-                LANES,
-                format!("lane `{lane}` command `{command}` ends with a bare -p"),
-                LANE_FIX,
-            )),
-            Some(package) if !packages.contains(package) => Some(Finding::in_file(
-                LANES,
-                format!(
-                    "lane `{lane}` command `{command}` names package `{package}`, which no workspace manifest declares"
-                ),
-                LANE_FIX,
-            )),
-            Some(_) => None,
-        })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -714,36 +531,5 @@ mod tests {
     #[test]
     fn a_required_token_survives_a_reflowed_paragraph() {
         assert!(normalize_whitespace("the\n  live\tregistry").contains("the live registry"));
-    }
-
-    /// WHY: a lane entry names a path scope, and most are written as a directory
-    /// or a directory glob. Requiring the pattern to match a whole path reported
-    /// `vyre-driver-*` as matching nothing while two driver crates were sitting
-    /// in the tree, and a rule that reports a coherent registry gets switched
-    /// off. The absent case must still fail, or the rule covers nothing.
-    #[test]
-    fn a_lane_entry_may_name_a_directory_or_a_directory_glob() {
-        let listed = [
-            "vyre-driver-cuda/src/lib.rs",
-            "vyre-libs/src/pattern/dfa.rs",
-        ];
-        for pattern in ["vyre-driver-*", "vyre-libs", "vyre-libs/src/pattern/**"] {
-            let subtree = format!("{}/**", pattern.trim_end_matches('/'));
-            assert!(
-                listed
-                    .iter()
-                    .any(|path| glob_match(pattern, path) || glob_match(&subtree, path)),
-                "`{pattern}` names a scope two listed files sit inside"
-            );
-        }
-        for pattern in ["vyre-deleted", "vyre-driver-*/tests/**"] {
-            let subtree = format!("{pattern}/**");
-            assert!(
-                !listed
-                    .iter()
-                    .any(|path| glob_match(pattern, path) || glob_match(&subtree, path)),
-                "`{pattern}` names a scope nothing is inside"
-            );
-        }
     }
 }

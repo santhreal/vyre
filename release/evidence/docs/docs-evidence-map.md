@@ -12,7 +12,6 @@ Required documentation authority:
 - `docs/ARCHITECTURE.md`
 - `docs/CRATE_OWNERSHIP.toml`
 - `docs/optimization/BENCH_TARGETS.toml`
-- `docs/optimization/OWNERSHIP.toml`
 
 Release contract:
 

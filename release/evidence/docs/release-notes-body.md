@@ -5242,6 +5242,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `ObjectiveMetric`, `SearchBudget`, `TargetPayload`, `TargetPayloadFormat`,
   `TargetProfile`, `ValidatedCompileRequest` and `WorkloadProfile` publish at
   `vyre::compiler` only.
+- `docs/optimization/OWNERSHIP.toml` and every `owner_lane` field are deleted:
+  the hygiene matrix and implementation intake group findings by workspace
+  member (schema 7 and 2), the hot-path heatmap ranks by score then file,
+  duplicate-family reports drop `import_owner` (schema 3), and the
+  release-evidence index drops `owner_lane` (index schema 2, run schema 7).
 - `vyre_libs::prelude` is gone. It re-exported forty items that each already
   had a path, so `TensorRef`, `BuildOptions` and every built-in builder were
   reachable at two paths and some at three. It was declared as the one seam a
@@ -5286,6 +5291,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   frees leaked static keys, and no longer depends on bumpalo.
 - The vyre crate manifest no longer carries an empty [build-dependencies]
   table.
+- The 186 `docs/optimization` ledgers that described subsystems vyre does not
+  ship, and the 75 tests that only checked those files for strings, are
+  deleted; the ledgers that code reads remain.
 - The WGPU host-ingress and raw persistent-kernel compiler routes are gone.
   Persistent product execution uses authenticated artifact sessions; concrete
   pipeline compilation remains available only as a hidden oracle helper for

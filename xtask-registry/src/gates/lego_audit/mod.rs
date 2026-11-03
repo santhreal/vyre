@@ -82,8 +82,8 @@ use xtask::gate::{Coverage, Finding, GateCtx, GateError, Report};
 
 use xtask::gates::dedup_report::{
     duplicate_family_report, duplicate_severity, registered_op_duplicate_family_id,
-    registered_op_duplicate_subject, registered_op_owner_lane, structural_similarity,
-    DuplicateEvidence, DuplicateFamilyFinding, DuplicateFamilyReport, DuplicateSubject,
+    registered_op_duplicate_subject, structural_similarity, DuplicateEvidence,
+    DuplicateFamilyFinding, DuplicateFamilyReport, DuplicateSubject,
 };
 
 /// One member of the Category A crate family: its checkout-relative path and

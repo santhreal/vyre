@@ -13,7 +13,6 @@ pub(crate) struct ReleaseEvidenceIndex {
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ReleaseEvidenceIndexEntry {
     pub(crate) path: String,
-    pub(crate) owner_lane: &'static str,
     pub(crate) generator_command: String,
     pub(crate) command_mode: &'static str,
     pub(crate) bytes: u64,
@@ -29,7 +28,6 @@ pub(crate) fn build_evidence_index<'a>(
     let mut artifacts = command_artifacts
         .map(|artifact| ReleaseEvidenceIndexEntry {
             path: artifact.path.clone(),
-            owner_lane: artifact.owner_lane,
             generator_command: artifact.generator_command.clone(),
             command_mode: artifact.command_mode,
             bytes: artifact.bytes,
@@ -52,7 +50,7 @@ pub(crate) fn build_evidence_index<'a>(
         })
         .collect::<Vec<_>>();
     ReleaseEvidenceIndex {
-        schema_version: 1,
+        schema_version: 2,
         artifact_count: artifacts.len(),
         artifacts,
         blockers,

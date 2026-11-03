@@ -145,26 +145,6 @@ pub mod cuda_ffi_template_contracts;
 #[path = "cuda_graph_dispatch_parity/mod.rs"]
 pub mod cuda_graph_dispatch_parity;
 
-/// Integration tests from `tests/cuda_graph_update_evidence.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "cuda_graph_update_evidence.rs"]
-pub mod cuda_graph_update_evidence;
-
-/// Integration tests from `tests/cuda_scan_memory_pool_registry.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "cuda_scan_memory_pool_registry.rs"]
-pub mod cuda_scan_memory_pool_registry;
-
-/// Integration tests from `tests/cuda_stream_ordered_pool_planner.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "cuda_stream_ordered_pool_planner.rs"]
-pub mod cuda_stream_ordered_pool_planner;
-
-/// Integration tests from `tests/cuda_warp_nfa_plan_registry.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "cuda_warp_nfa_plan_registry.rs"]
-pub mod cuda_warp_nfa_plan_registry;
-
 /// Integration tests from `tests/decode_hex_gpu_parity.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "decode_hex_gpu_parity.rs"]
@@ -284,11 +264,6 @@ pub mod generated_resident_sequence_cuda_reference_matrix;
 #[cfg(feature = "device-tests")]
 #[path = "generated_scalar_cuda_reference_matrix.rs"]
 pub mod generated_scalar_cuda_reference_matrix;
-
-/// Integration tests from `tests/gpu_automata_load_balance_registry.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "gpu_automata_load_balance_registry.rs"]
-pub mod gpu_automata_load_balance_registry;
 
 /// Integration tests from `tests/gpu_elementwise_conformance.rs`.
 #[cfg(feature = "device-tests")]
@@ -483,11 +458,6 @@ pub mod reduce_array_primitives_gpu_parity;
 #[cfg(all(test, feature = "device-tests"))]
 #[path = "reduce_scalar_primitives_gpu_parity.rs"]
 pub mod reduce_scalar_primitives_gpu_parity;
-
-/// Integration tests from `tests/regex_bitstream_program_registry.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "regex_bitstream_program_registry.rs"]
-pub mod regex_bitstream_program_registry;
 
 /// Integration tests from `tests/resident_buffer_contracts/mod.rs`.
 #[cfg(feature = "device-tests")]

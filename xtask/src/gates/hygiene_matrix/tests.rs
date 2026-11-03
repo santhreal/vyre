@@ -1345,9 +1345,8 @@ mod threshold_policy_contracts {
 }
 
 /// WHY: the xtask tooling is split across `xtask` and the `xtask-*` crates
-/// that link vyre, and three separate rules key off that: the surface a file
-/// is classified under, the owner lane it is attributed to, and whether the
-/// generic source walk skips it. Each rule used to match the literal string
+/// that link vyre, and two separate rules key off that: the surface a file
+/// is classified under, and whether the generic source walk skips it. Each rule used to match the literal string
 /// `xtask`, so moving a module into a sibling crate reclassified it as
 /// production source under production thresholds. The crate list is read out
 /// of the workspace manifest at run time, so a fourth xtask crate turns this
@@ -1377,16 +1376,31 @@ fn every_xtask_crate_carries_the_release_tooling_rules() {
             "release_tooling",
             "Fix: {source} is xtask source and must carry release-tooling thresholds."
         );
-        assert_eq!(
-            hygiene_owner_lane_for_path(&source),
-            "testing_evidence",
-            "Fix: {source} is xtask source and must be owned by testing_evidence."
-        );
         assert!(
             is_xtask_tree_directory(member),
             "Fix: the generic source walk must skip `{member}`, which the \
              release xtask scan already reads."
         );
+    }
+}
+
+/// WHY: the intake and classification summaries group findings by the member
+/// they sit in. A path the root prefix fails to strip, or a top-level file,
+/// must still group under its first repository segment rather than under the
+/// absolute prefix, which would put every finding in one bucket.
+#[test]
+fn a_finding_groups_under_its_first_repository_segment() {
+    let root = Path::new("/w");
+    for (path, member) in [
+        (
+            "/w/vyre-driver-cuda/src/backend/dispatch.rs",
+            "vyre-driver-cuda",
+        ),
+        ("vyre-libs-security/src/taint.rs", "vyre-libs-security"),
+        ("/w/.github/workflows/ci.yml", ".github"),
+        ("/w/Cargo.toml", "Cargo.toml"),
+    ] {
+        assert_eq!(hygiene_member_for_path(root, path), member, "{path}");
     }
 }
 
@@ -1434,7 +1448,7 @@ fn the_panic_ceiling_fails_over_unrecorded_and_stale_and_only_notes_slack() {
             path: root.join(path).display().to_string(),
             line: 1,
             pattern,
-            owner_lane: "testing_evidence",
+            member: path.split('/').next().unwrap_or_default().to_string(),
             surface,
             risk: if blocker {
                 "release_blocker"

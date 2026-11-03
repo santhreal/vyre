@@ -17,7 +17,7 @@ The counts below are generated from the rows and from the tracked files by the
 
 ## Totals
 
-- Rows: 35. Assertions: 142. Findings: 28.
+- Rows: 35. Assertions: 141. Findings: 28.
 - Tracked files: 8: 8 shell and 0 Python.
 - Rows whose script has left the tree: 27.
 - Tracked files nothing invokes: 2.
@@ -80,7 +80,7 @@ Exits nonzero on:
 
 ### scripts/architecture_docs.py
 
-Subject: gone: the script is not in the tree. docs/ARCHITECTURE.md, docs/DOCS.toml, docs/generated/OP_SCHEMA.json, docs/optimization/OWNERSHIP.toml, docs/CRATE_OWNERSHIP.toml and release/release-train.toml are tracked, and the gates below read them.
+Subject: gone: the script is not in the tree. docs/ARCHITECTURE.md, docs/DOCS.toml, docs/generated/OP_SCHEMA.json, docs/CRATE_OWNERSHIP.toml and release/release-train.toml are tracked, and the gates below read them.
 
 Invoked by: nothing; architectural-invariants.yml runs `architecture-contract` and `docs-references` in its place, and xtask/tests/tree_contracts/architecture_docs.rs holds the same documents.
 
@@ -95,7 +95,6 @@ Assertions:
 - docs/generated/OP_SCHEMA.json declares schema_version 5 and is internally coherent: operation_count equals the operation row count and the tier counts sum to it.
 - release/evidence/backends/backend-matrix.json has an empty blockers array and a preferred_backend_id with a matching probe row.
 - docs/CRATE_OWNERSHIP.toml carries a vyre-megakernel crate row whose responsibility names ProgramGraph, and keeps no planned.vyre-megakernel entry.
-- docs/optimization/OWNERSHIP.toml declares [lane.*] tables, each with a purpose, a layer, at least one write glob and at least one required command; every write and avoid pattern is repository-relative and matches something in the tree; every -p in a required command names a package a workspace manifest declares.
 - docs/DOCS.toml classifies the four current architecture documents as current and the megakernel RFC as superseded.
 - Each of the four architecture documents and the RFC carries a Last verified date and the current Vyre version.
 - The RFC states Status: **Superseded**.
@@ -521,7 +520,7 @@ Findings:
 
 Subject: present: the notes it passes to `gh release create` are release/evidence/docs/release-notes-body.md, which the `release-docs` gate generates.
 
-Invoked by: nothing; it is the manual launch entry point, and it is named by xtask/src/release/launch_state.rs, release/release-train.toml, release/vyre-release-evidence.toml, docs/optimization/OWNERSHIP.toml and conform/vyre-conform/tests/cert_artifact/release_script_contracts.rs.
+Invoked by: nothing; it is the manual launch entry point, and it is named by xtask/src/release/launch_state.rs, release/release-train.toml, release/vyre-release-evidence.toml and conform/vyre-conform/tests/cert_artifact/release_script_contracts.rs.
 
 Gate: xtask/src/release/launch_state.rs and xtask/src/release/launch_contract.rs own the preconditions; the publish, tag, push and gh release actions stay operator actions.
 

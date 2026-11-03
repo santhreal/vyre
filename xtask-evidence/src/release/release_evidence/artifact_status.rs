@@ -19,7 +19,6 @@ pub(crate) struct ReleaseEvidenceArtifactStatus {
     pub(crate) exists: bool,
     pub(crate) bytes: u64,
     pub(crate) read_error: Option<String>,
-    pub(crate) owner_lane: &'static str,
     pub(crate) generator_command: String,
     pub(crate) command_mode: &'static str,
     pub(crate) content_sha256: Option<String>,
@@ -74,7 +73,6 @@ fn inspect(
     command_mode: &'static str,
     pending: &BTreeMap<&str, &str>,
 ) -> Vec<ReleaseEvidenceArtifactStatus> {
-    let owner_lane = owner_lane_for_command(command_args);
     let generator_command = generator_command(command_args);
     expected_artifacts
         .iter()
@@ -83,7 +81,6 @@ fn inspect(
                 return pending_status(
                     artifact,
                     bytes.as_bytes(),
-                    owner_lane,
                     &generator_command,
                     command_mode,
                 );
@@ -132,7 +129,6 @@ fn inspect(
                         exists: metadata.is_file(),
                         bytes: metadata.len(),
                         read_error,
-                        owner_lane,
                         generator_command: generator_command.clone(),
                         command_mode,
                         content_sha256,
@@ -146,7 +142,6 @@ fn inspect(
                     exists: false,
                     bytes: 0,
                     read_error: Some(error.to_string()),
-                    owner_lane,
                     generator_command: generator_command.clone(),
                     command_mode,
                     content_sha256: None,
@@ -174,7 +169,6 @@ fn inspect(
 fn pending_status(
     artifact: &str,
     bytes: &[u8],
-    owner_lane: &'static str,
     generator_command: &str,
     command_mode: &'static str,
 ) -> ReleaseEvidenceArtifactStatus {
@@ -204,7 +198,6 @@ fn pending_status(
         exists: true,
         bytes: length,
         read_error: None,
-        owner_lane,
         generator_command: generator_command.to_string(),
         command_mode,
         content_sha256: Some(content_sha256),
@@ -356,18 +349,6 @@ pub(crate) fn generator_command(command_args: &[&str]) -> String {
         command.push_str(arg);
     }
     command
-}
-
-fn owner_lane_for_command(command_args: &[&str]) -> &'static str {
-    match command_args.first().copied().unwrap_or_default() {
-        "backend-matrix" | "conformance-matrix" => "driver_shared",
-        "release-workload-matrix" | "release-benchmarks" => "bench_harness",
-        "optimization-corpus" | "optimization-matrix" => "foundation_optimizer",
-        "whats-similar" | "lego-audit" => "testing_evidence",
-        "docs-check" | "hygiene-matrix" | "release-evidence" => "testing_evidence",
-        "version-matrix" | "metadata-matrix" | "feature-matrix" => "coordination",
-        _ => "coordination",
-    }
 }
 
 fn artifact_provenance_fingerprints(

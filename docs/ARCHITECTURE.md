@@ -197,5 +197,5 @@ enforces a zero panic budget.
   belongs in.
 
 Machine-readable contracts live next to this file:
-`CRATE_OWNERSHIP.toml`, `optimization/OWNERSHIP.toml`,
-`optimization/OP_MATRIX.toml`, and `testing/TESTING.toml`.
+`CRATE_OWNERSHIP.toml`, `optimization/OP_MATRIX.toml`, and
+`testing/TESTING.toml`.

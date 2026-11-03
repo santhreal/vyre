@@ -36,7 +36,6 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
-use crate::gates::ownership::{load_ownership_lanes, owner_lane_for_file, OwnershipLaneRule};
 use crate::gates::scan::{cfg_test_lines, error_construction_lines, scan_code};
 
 const MAX_HOT_PATH_SCAN_FILE_BYTES: u64 = 2_097_152;
@@ -132,7 +131,6 @@ struct BudgetDelta {
 struct BudgetVxCandidate {
     file: String,
     line: u32,
-    owner_lane: String,
     budget: String,
     actual: usize,
     limit: usize,
@@ -143,7 +141,6 @@ struct BudgetVxCandidate {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct HotPathHeatmapRow {
-    owner_lane: String,
     file: String,
     code_lines: usize,
     score: u64,
@@ -275,16 +272,6 @@ impl crate::gate::GateBehavior for HotPathScan {
             )
         })?;
         report.cover_complete("registered hot path files", entries.len());
-        let ownership_path = root
-            .join("docs")
-            .join("optimization")
-            .join("OWNERSHIP.toml");
-        let ownership_lanes = load_ownership_lanes(&ownership_path).map_err(|error| {
-            GateError::new(
-                format!("cannot load {}: {error}", ownership_path.display()),
-                "repair docs/optimization/OWNERSHIP.toml",
-            )
-        })?;
 
         let mut hits: Vec<Hit> = Vec::new();
         let mut code_lines_by_file: BTreeMap<String, usize> = BTreeMap::new();
@@ -320,23 +307,14 @@ impl crate::gate::GateBehavior for HotPathScan {
             by_file.entry(hit.file.as_str()).or_default().add(hit);
         }
         let budget_deltas = collect_budget_deltas(&entries, &by_file);
-        let unowned_hot_paths = unowned_hot_path_files(&entries, &ownership_lanes);
-        let candidates = budget_vx_candidates(&budget_deltas, &hits, &ownership_lanes);
-        let heatmap =
-            build_hot_path_heatmap(&entries, &by_file, &code_lines_by_file, &ownership_lanes);
+        let candidates = budget_vx_candidates(&budget_deltas, &hits);
+        let heatmap = build_hot_path_heatmap(&entries, &by_file, &code_lines_by_file);
 
         for path in &missing {
             report.find(Finding::in_file(
                 path,
                 "listed in docs/optimization/HOT_PATHS.toml and not on disk",
                 "point the row at where the code moved, or delete the row with the code",
-            ));
-        }
-        for path in &unowned_hot_paths {
-            report.find(Finding::in_file(
-                path,
-                "is a hot path with no owner lane",
-                "give the file a lane in docs/optimization/OWNERSHIP.toml",
             ));
         }
         for delta in &budget_deltas {
@@ -377,8 +355,7 @@ impl crate::gate::GateBehavior for HotPathScan {
         }
         for row in &heatmap {
             report.note(format!(
-                "owner={} | file={} | score={} code_loc={} findings/kLOC={} allocations/kLOC={} clones/kLOC={} locks/kLOC={} formats/kLOC={} panics/kLOC={}",
-                row.owner_lane,
+                "file={} | score={} code_loc={} findings/kLOC={} allocations/kLOC={} clones/kLOC={} locks/kLOC={} formats/kLOC={} panics/kLOC={}",
                 row.file,
                 row.score,
                 row.code_lines,
@@ -610,31 +587,14 @@ fn missing_hot_path_files(entries: &[HotPathEntry], root: &Path) -> Vec<String> 
         .collect()
 }
 
-fn unowned_hot_path_files(
-    entries: &[HotPathEntry],
-    ownership_lanes: &[OwnershipLaneRule],
-) -> Vec<String> {
-    entries
-        .iter()
-        .filter(|entry| owner_lane_for_file(&entry.file, ownership_lanes) == "unowned")
-        .map(|entry| entry.file.clone())
-        .collect()
-}
-
-fn budget_vx_candidates(
-    deltas: &[BudgetDelta],
-    findings: &[Hit],
-    ownership_lanes: &[OwnershipLaneRule],
-) -> Vec<BudgetVxCandidate> {
+fn budget_vx_candidates(deltas: &[BudgetDelta], findings: &[Hit]) -> Vec<BudgetVxCandidate> {
     deltas
         .iter()
         .map(|delta| {
             let line = first_budget_finding_line(delta, findings);
-            let owner_lane = owner_lane_for_file(&delta.file, ownership_lanes).to_string();
             BudgetVxCandidate {
                 file: delta.file.clone(),
                 line,
-                owner_lane,
                 budget: delta.budget.to_string(),
                 actual: delta.actual,
                 limit: delta.limit,
@@ -685,7 +645,6 @@ fn build_hot_path_heatmap(
     entries: &[HotPathEntry],
     by_file: &BTreeMap<&str, FindingCounts>,
     code_lines_by_file: &BTreeMap<String, usize>,
-    ownership_lanes: &[OwnershipLaneRule],
 ) -> Vec<HotPathHeatmapRow> {
     let mut rows = Vec::new();
     for entry in entries {
@@ -710,7 +669,6 @@ fn build_hot_path_heatmap(
             + formats_per_kloc.saturating_mul(5)
             + panics_per_kloc.saturating_mul(12);
         rows.push(HotPathHeatmapRow {
-            owner_lane: owner_lane_for_file(&entry.file, ownership_lanes).to_string(),
             file: entry.file.clone(),
             code_lines,
             score,
@@ -722,12 +680,7 @@ fn build_hot_path_heatmap(
             panics_per_kloc,
         });
     }
-    rows.sort_by(|a, b| {
-        b.score
-            .cmp(&a.score)
-            .then_with(|| a.owner_lane.cmp(&b.owner_lane))
-            .then_with(|| a.file.cmp(&b.file))
-    });
+    rows.sort_by(|a, b| b.score.cmp(&a.score).then_with(|| a.file.cmp(&b.file)));
     rows
 }
 
@@ -861,44 +814,7 @@ mod tests {
     }
 
     #[test]
-    fn unowned_hot_paths_report_exact_missing_owner_files() {
-        let entries = vec![
-            HotPathEntry {
-                file: "vyre-lower/src/pre_emit.rs".to_string(),
-                reason: String::new(),
-                max_findings: None,
-                max_allocation_findings: None,
-                max_clone_findings: None,
-                max_lock_findings: None,
-                max_sleep_findings: None,
-                max_panic_findings: None,
-            },
-            HotPathEntry {
-                file: "vyre-driver/src/launch_fusion.rs".to_string(),
-                reason: String::new(),
-                max_findings: None,
-                max_allocation_findings: None,
-                max_clone_findings: None,
-                max_lock_findings: None,
-                max_sleep_findings: None,
-                max_panic_findings: None,
-            },
-        ];
-        let ownership = crate::gates::ownership::parse_ownership_lane_rules(
-            r#"
-[lane.driver_shared]
-write = ["vyre-driver/src/**"]
-"#,
-        )
-        .unwrap();
-
-        let unowned = unowned_hot_path_files(&entries, &ownership);
-
-        assert_eq!(unowned, vec!["vyre-lower/src/pre_emit.rs"]);
-    }
-
-    #[test]
-    fn budget_vx_candidates_serialize_exact_budget_owner_line_and_gate() {
+    fn budget_vx_candidates_serialize_exact_budget_line_and_gate() {
         let deltas = vec![
             BudgetDelta {
                 file: "vyre-emit-naga/src/lib.rs".to_string(),
@@ -929,23 +845,11 @@ write = ["vyre-driver/src/**"]
                 content: "panic!(\"bad\")".to_string(),
             },
         ];
-        let ownership = crate::gates::ownership::parse_ownership_lane_rules(
-            r#"
-[lane.lower_emit]
-write = ["vyre-emit-naga/src/**"]
-
-[lane.runtime_resident_work_queue]
-write = ["vyre-runtime/src/resident_work_queue/**"]
-"#,
-        )
-        .unwrap();
-
-        let candidates = budget_vx_candidates(&deltas, &findings, &ownership);
+        let candidates = budget_vx_candidates(&deltas, &findings);
         let json = serde_json::to_value(&candidates).unwrap();
 
         assert_eq!(json[0]["file"], "vyre-emit-naga/src/lib.rs");
         assert_eq!(json[0]["line"], 86);
-        assert_eq!(json[0]["owner_lane"], "lower_emit");
         assert_eq!(json[0]["budget"], "max_findings");
         assert_eq!(json[0]["actual"], 10);
         assert_eq!(json[0]["limit"], 9);
@@ -963,7 +867,6 @@ write = ["vyre-runtime/src/resident_work_queue/**"]
             "vyre-runtime/src/resident_work_queue/telemetry/mod.rs"
         );
         assert_eq!(json[1]["line"], 69);
-        assert_eq!(json[1]["owner_lane"], "runtime_resident_work_queue");
         assert_eq!(json[1]["budget"], "max_panic_findings");
     }
 
@@ -1194,7 +1097,7 @@ write = ["vyre-runtime/src/resident_work_queue/**"]
     }
 
     #[test]
-    fn hot_path_heatmap_ranks_mega_file_and_assigns_owner_lane() {
+    fn hot_path_heatmap_ranks_mega_file_first() {
         let entries = vec![
             HotPathEntry {
                 file: "vyre-foundation/src/optimizer/big.rs".to_string(),
@@ -1245,21 +1148,9 @@ write = ["vyre-runtime/src/resident_work_queue/**"]
         let mut code_lines = BTreeMap::new();
         code_lines.insert("vyre-foundation/src/optimizer/big.rs".to_string(), 5862);
         code_lines.insert("vyre-driver/src/small.rs".to_string(), 40);
-        let lanes = vec![
-            OwnershipLaneRule {
-                lane: "foundation_optimizer".to_string(),
-                write_patterns: vec!["vyre-foundation/src/optimizer/**".to_string()],
-            },
-            OwnershipLaneRule {
-                lane: "driver_shared".to_string(),
-                write_patterns: vec!["vyre-driver/src/**".to_string()],
-            },
-        ];
-
-        let rows = build_hot_path_heatmap(&entries, &by_file, &code_lines, &lanes);
+        let rows = build_hot_path_heatmap(&entries, &by_file, &code_lines);
 
         assert_eq!(rows[0].file, "vyre-foundation/src/optimizer/big.rs");
-        assert_eq!(rows[0].owner_lane, "foundation_optimizer");
         assert!(rows[0].formats_per_kloc > 0);
     }
 

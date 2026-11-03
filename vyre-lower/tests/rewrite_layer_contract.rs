@@ -40,7 +40,6 @@ struct KernelFamilySurfaceManifest {
 #[derive(Debug, Deserialize)]
 struct KernelFamilySurface {
     family_id: String,
-    owner_lane: String,
     root: String,
     public_reexport: String,
     schedule_config: String,
@@ -880,9 +879,6 @@ fn kernel_family_surfaces_have_single_reexport_schedule_and_evidence_contracts()
     for family in &manifest.family {
         if family.family_id.trim().is_empty() {
             failures.push("family_id is blank".to_string());
-        }
-        if family.owner_lane.trim().is_empty() {
-            failures.push(format!("{} owner_lane is blank", family.family_id));
         }
         for (label, rel_path) in [
             ("root", &family.root),

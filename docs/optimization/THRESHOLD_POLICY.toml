@@ -1,5 +1,4 @@
 schema_version = 1
-owner_lane = "testing_evidence"
 evidence_artifact = "release/evidence/hygiene/threshold-policy.json"
 
 [[threshold]]

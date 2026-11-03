@@ -7,8 +7,8 @@ use crate::tree_walk::{self, BUILD_OUTPUT_AND_VCS};
 use super::records::{
     ObservedThresholdConst, ThresholdPolicyArtifact, ThresholdPolicyDocument,
     ThresholdPolicyEvidenceRow, ThresholdPolicyFinding, ThresholdPolicyTomlRow,
-    THRESHOLD_POLICY_ARTIFACT, THRESHOLD_POLICY_OWNER_LANE, THRESHOLD_POLICY_SCHEMA_VERSION,
-    THRESHOLD_POLICY_SOURCE, THRESHOLD_SUFFIXES,
+    THRESHOLD_POLICY_ARTIFACT, THRESHOLD_POLICY_SCHEMA_VERSION, THRESHOLD_POLICY_SOURCE,
+    THRESHOLD_SUFFIXES,
 };
 use super::rules::read_text_bounded;
 
@@ -41,7 +41,6 @@ pub(crate) fn collect_threshold_policy(vyre_root: &Path) -> ThresholdPolicyArtif
             schema_version: THRESHOLD_POLICY_SCHEMA_VERSION,
             source_manifest: THRESHOLD_POLICY_SOURCE,
             evidence_artifact: THRESHOLD_POLICY_ARTIFACT.to_string(),
-            owner_lane: THRESHOLD_POLICY_OWNER_LANE.to_string(),
             threshold_const_count: observed.len(),
             registered_policy_count: 0,
             rows: Vec::new(),
@@ -53,12 +52,6 @@ pub(crate) fn collect_threshold_policy(vyre_root: &Path) -> ThresholdPolicyArtif
         blockers.push(format!(
             "{} schema_version={} must be {THRESHOLD_POLICY_SCHEMA_VERSION}. Fix: update the threshold policy reader and manifest together.",
             THRESHOLD_POLICY_SOURCE, document.schema_version
-        ));
-    }
-    if document.owner_lane != THRESHOLD_POLICY_OWNER_LANE {
-        blockers.push(format!(
-            "{} owner_lane `{}` must be `{THRESHOLD_POLICY_OWNER_LANE}`. Fix: keep threshold evidence under the hygiene/testing lane.",
-            THRESHOLD_POLICY_SOURCE, document.owner_lane
         ));
     }
     if document.evidence_artifact != THRESHOLD_POLICY_ARTIFACT {
@@ -143,7 +136,6 @@ pub(crate) fn collect_threshold_policy(vyre_root: &Path) -> ThresholdPolicyArtif
         schema_version: THRESHOLD_POLICY_SCHEMA_VERSION,
         source_manifest: THRESHOLD_POLICY_SOURCE,
         evidence_artifact: THRESHOLD_POLICY_ARTIFACT.to_string(),
-        owner_lane: document.owner_lane,
         threshold_const_count: observed_by_key.len(),
         registered_policy_count: policy_by_key.len(),
         rows,

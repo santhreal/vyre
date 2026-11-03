@@ -53,6 +53,5 @@ parity, adversarial, scale, and lifecycle evidence appropriate to its risk.
 - `docs/architecture/crates.md` states what each crate owns.
 - `docs/ARCHITECTURE.md` is the short page the architecture gate checks.
 - `docs/CRATE_OWNERSHIP.toml` defines crate ownership and allowed edges.
-- `docs/optimization/OWNERSHIP.toml` and `docs/optimization/OP_MATRIX.toml`
-  define optimization lanes and operation coverage.
+- `docs/optimization/OP_MATRIX.toml` defines operation coverage.
 - `docs/DOCS.toml` defines documentation lifecycle and navigation.

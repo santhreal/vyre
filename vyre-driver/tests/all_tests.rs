@@ -42,21 +42,9 @@ pub mod async_copy_overlap_contracts;
 #[path = "async_dispatch_contract.rs"]
 pub mod async_dispatch_contract;
 
-/// Integration tests from `tests/atomic_file_operation_race_policy.rs`.
-#[path = "atomic_file_operation_race_policy.rs"]
-pub mod atomic_file_operation_race_policy;
-
 /// Integration tests from `tests/autotune_store_contracts.rs`.
 #[path = "autotune_store_contracts.rs"]
 pub mod autotune_store_contracts;
-
-/// Integration tests from `tests/backend_capability_digests.rs`.
-#[path = "backend_capability_digests.rs"]
-pub mod backend_capability_digests;
-
-/// Integration tests from `tests/backend_handle_lifetime_provenance.rs`.
-#[path = "backend_handle_lifetime_provenance.rs"]
-pub mod backend_handle_lifetime_provenance;
 
 /// Integration tests from `tests/backend_launch_validation.rs`.
 #[path = "backend_launch_validation.rs"]
@@ -69,10 +57,6 @@ pub mod backend_trait_contract;
 /// Integration tests from `tests/backend_validation_defaults.rs`.
 #[path = "backend_validation_defaults.rs"]
 pub mod backend_validation_defaults;
-
-/// Integration tests from `tests/backpressure_queue_quota_policy.rs`.
-#[path = "backpressure_queue_quota_policy.rs"]
-pub mod backpressure_queue_quota_policy;
 
 /// Integration tests from `tests/benchmark_pass_selection_contracts.rs`.
 #[path = "benchmark_pass_selection_contracts.rs"]
@@ -94,25 +78,13 @@ pub mod cache_eviction_heat_contracts;
 #[path = "capability_adversarial.rs"]
 pub mod capability_adversarial;
 
-/// Integration tests from `tests/command_execution_boundary.rs`.
-#[path = "command_execution_boundary.rs"]
-pub mod command_execution_boundary;
-
 /// Integration tests from `tests/command_reuse_policy_contracts.rs`.
 #[path = "command_reuse_policy_contracts.rs"]
 pub mod command_reuse_policy_contracts;
 
-/// Integration tests from `tests/concurrency_schedule_contracts.rs`.
-#[path = "concurrency_schedule_contracts.rs"]
-pub mod concurrency_schedule_contracts;
-
 /// Integration tests from `tests/consumer_boundary.rs`.
 #[path = "consumer_boundary.rs"]
 pub mod consumer_boundary;
-
-/// Integration tests from `tests/crypto_rng_key_lifecycle.rs`.
-#[path = "crypto_rng_key_lifecycle.rs"]
-pub mod crypto_rng_key_lifecycle;
 
 /// Integration tests from `tests/device_convergence_contracts.rs`.
 #[path = "device_convergence_contracts.rs"]
@@ -207,10 +179,6 @@ pub mod host_input_abi_closure;
 #[path = "hostile_input_probe_shapes.rs"]
 pub mod hostile_input_probe_shapes;
 
-/// Integration tests from `tests/http_proxy_redirect_policy.rs`.
-#[path = "http_proxy_redirect_policy.rs"]
-pub mod http_proxy_redirect_policy;
-
 /// Integration tests from `tests/input_identity_contracts.rs`.
 #[path = "input_identity_contracts.rs"]
 pub mod input_identity_contracts;
@@ -239,10 +207,6 @@ pub mod lock_poison_policy;
 #[path = "megakernel_execution_contracts.rs"]
 pub mod megakernel_execution_contracts;
 
-/// Integration tests from `tests/mixed_work_autotuning.rs`.
-#[path = "mixed_work_autotuning.rs"]
-pub mod mixed_work_autotuning;
-
 /// Integration tests from `tests/no_backend_crate_links_host_arithmetic.rs`.
 #[path = "no_backend_crate_links_host_arithmetic.rs"]
 pub mod no_backend_crate_links_host_arithmetic;
@@ -258,10 +222,6 @@ pub mod omitted_launch_geometry;
 /// Integration tests from `tests/ordering_contracts.rs`.
 #[path = "ordering_contracts.rs"]
 pub mod ordering_contracts;
-
-/// Integration tests from `tests/output_slab_provenance.rs`.
-#[path = "output_slab_provenance.rs"]
-pub mod output_slab_provenance;
 
 /// Integration tests from `tests/output_slots_contracts.rs`.
 #[path = "output_slots_contracts.rs"]
@@ -295,10 +255,6 @@ pub mod registry_closure;
 #[path = "rejection_wording_contract.rs"]
 pub mod rejection_wording_contract;
 
-/// Integration tests from `tests/release_publication_boundary.rs`.
-#[path = "release_publication_boundary.rs"]
-pub mod release_publication_boundary;
-
 /// Integration tests from `tests/reservation_policy_contracts.rs`.
 #[path = "reservation_policy_contracts.rs"]
 pub mod reservation_policy_contracts;
@@ -314,14 +270,6 @@ pub mod result_compaction_contracts;
 /// Integration tests from `tests/routing_registry_surface.rs`.
 #[path = "routing_registry_surface.rs"]
 pub mod routing_registry_surface;
-
-/// Integration tests from `tests/runtime_watchdog_proofs.rs`.
-#[path = "runtime_watchdog_proofs.rs"]
-pub mod runtime_watchdog_proofs;
-
-/// Integration tests from `tests/scan_graph_update_classifier_registry.rs`.
-#[path = "scan_graph_update_classifier_registry.rs"]
-pub mod scan_graph_update_classifier_registry;
 
 /// Integration tests from `tests/shape_prediction_contracts.rs`.
 #[path = "shape_prediction_contracts.rs"]
@@ -350,10 +298,6 @@ pub mod sweep_numeric_oracle_matrix;
 /// Integration tests from `tests/target_contract.rs`.
 #[path = "target_contract.rs"]
 pub mod target_contract;
-
-/// Integration tests from `tests/trace_context_telemetry_contracts.rs`.
-#[path = "trace_context_telemetry_contracts.rs"]
-pub mod trace_context_telemetry_contracts;
 
 /// Integration tests from `tests/trace_jit_policy_contracts.rs`.
 #[path = "trace_jit_policy_contracts.rs"]

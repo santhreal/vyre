@@ -56,7 +56,8 @@ pub(crate) struct HygieneFindingClass {
     pub(crate) path: String,
     pub(crate) line: usize,
     pub(crate) pattern: &'static str,
-    pub(crate) owner_lane: &'static str,
+    /// Workspace member directory, or top-level directory, the finding sits in.
+    pub(crate) member: String,
     pub(crate) surface: &'static str,
     pub(crate) risk: &'static str,
     pub(crate) hot_path: bool,
@@ -65,7 +66,8 @@ pub(crate) struct HygieneFindingClass {
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct HygieneClassificationSummary {
-    pub(crate) owner_lane: &'static str,
+    /// Workspace member directory, or top-level directory, the finding sits in.
+    pub(crate) member: String,
     pub(crate) surface: &'static str,
     pub(crate) risk: &'static str,
     pub(crate) hot_path: bool,
@@ -75,7 +77,8 @@ pub(crate) struct HygieneClassificationSummary {
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct HygieneIntakeSummary {
-    pub(crate) owner_lane: &'static str,
+    /// Workspace member directory, or top-level directory, the finding sits in.
+    pub(crate) member: String,
     pub(crate) surface: &'static str,
     pub(crate) risk: &'static str,
     pub(crate) hot_path: bool,
@@ -106,7 +109,6 @@ pub(crate) struct ThresholdPolicyArtifact {
     pub(crate) schema_version: u32,
     pub(crate) source_manifest: &'static str,
     pub(crate) evidence_artifact: String,
-    pub(crate) owner_lane: String,
     pub(crate) threshold_const_count: usize,
     pub(crate) registered_policy_count: usize,
     pub(crate) rows: Vec<ThresholdPolicyEvidenceRow>,
@@ -141,7 +143,6 @@ pub(crate) struct ThresholdPolicyFinding {
 #[derive(Debug, Deserialize)]
 pub(crate) struct ThresholdPolicyDocument {
     pub(crate) schema_version: u32,
-    pub(crate) owner_lane: String,
     pub(crate) evidence_artifact: String,
     #[serde(default)]
     pub(crate) threshold: Vec<ThresholdPolicyTomlRow>,
@@ -207,7 +208,6 @@ pub(crate) const MAX_HYGIENE_SCAN_FILE_BYTES: u64 = 4_194_304;
 pub(crate) const THRESHOLD_POLICY_SCHEMA_VERSION: u32 = 1;
 pub(crate) const THRESHOLD_POLICY_SOURCE: &str = "docs/optimization/THRESHOLD_POLICY.toml";
 pub(crate) const THRESHOLD_POLICY_ARTIFACT: &str = "release/evidence/hygiene/threshold-policy.json";
-pub(crate) const THRESHOLD_POLICY_OWNER_LANE: &str = "testing_evidence";
 pub(crate) const STRUCTURAL_GATE_SCHEMA_VERSION: u32 = 2;
 pub(crate) const STRUCTURAL_GATE_SOURCE: &str = "docs/testing/STRUCTURAL_GATES.toml";
 pub(crate) const PANIC_BUDGET_SCHEMA_VERSION: u32 = 1;

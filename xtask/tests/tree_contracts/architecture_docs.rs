@@ -125,9 +125,8 @@ fn write_fixture(root: &Path) {
         "schema_version = 1\n\n[[page]]\npath = \"ARCHITECTURE.md\"\nstatus = \"current\"\n",
     )
     .unwrap();
-    // Member manifests and one optimization lane: the gate also asserts that
-    // every lane names paths that exist and `-p` packages a manifest declares,
-    // so a fixture without them is not a coherent workspace.
+    // Member manifests: the gate reads the workspace roster, so a fixture
+    // without them is not a coherent workspace.
     for member in ["a", "vyre-megakernel"] {
         fs::create_dir_all(root.join(member).join("src")).unwrap();
         fs::write(
@@ -137,12 +136,6 @@ fn write_fixture(root: &Path) {
         .unwrap();
         fs::write(root.join(member).join("src/lib.rs"), "").unwrap();
     }
-    fs::create_dir_all(root.join("docs/optimization")).unwrap();
-    fs::write(
-        root.join("docs/optimization/OWNERSHIP.toml"),
-        "[lane.megakernel]\npurpose = \"Artifact freeze\"\nlayer = \"compiler-boundary\"\nwrite = [\"vyre-megakernel/src/**\"]\nrequired_commands = [\"test -p vyre-megakernel\"]\n",
-    )
-    .unwrap();
     // The gate lists the tree through git, so a fixture that is not a checkout
     // reports as unreadable rather than as coherent.
     let status = Command::new("git")
@@ -287,45 +280,4 @@ fn architecture_page_manifest_status_fails_closed() {
     let text = rendered(&report);
     assert_eq!(report.count(), 1, "{text}");
     assert!(text.contains("rather than current"), "{text}");
-}
-
-/// A lane whose write glob matches nothing hands an owner scope they cannot
-/// enter, and nothing fails until they try.
-#[test]
-fn a_lane_naming_absent_scope_fails_closed() {
-    let temp = fixture();
-    let path = temp.path().join("docs/optimization/OWNERSHIP.toml");
-    fs::write(
-        &path,
-        fs::read_to_string(&path)
-            .unwrap()
-            .replace("vyre-megakernel/src/**", "vyre-deleted/src/**"),
-    )
-    .unwrap();
-    let report = judge(temp.path());
-    let text = rendered(&report);
-    assert_eq!(report.count(), 1, "{text}");
-    assert!(text.contains("matches nothing in the tree"), "{text}");
-}
-
-/// A lane command naming a package no manifest declares is the same defect one
-/// level further in, and it is the one that outlived a deleted crate three times.
-#[test]
-fn a_lane_command_naming_an_absent_package_fails_closed() {
-    let temp = fixture();
-    let path = temp.path().join("docs/optimization/OWNERSHIP.toml");
-    fs::write(
-        &path,
-        fs::read_to_string(&path)
-            .unwrap()
-            .replace("test -p vyre-megakernel", "test -p vyre-scan"),
-    )
-    .unwrap();
-    let report = judge(temp.path());
-    let text = rendered(&report);
-    assert_eq!(report.count(), 1, "{text}");
-    assert!(
-        text.contains("names package `vyre-scan`, which no workspace manifest declares"),
-        "{text}"
-    );
 }

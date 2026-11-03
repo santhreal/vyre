@@ -440,10 +440,9 @@ impl Member {
 /// Whether one published path matches a glob, with `*` and `?` confined to one
 /// path segment and `**` spanning any number of them.
 ///
-/// Two gates need this: a document may name a set of pages rather than one page,
-/// and an optimization lane names the paths it may write as globs. Matching
-/// against the listed tree rather than the filesystem is what makes both answers
-/// the same in a development tree and in CI.
+/// A document may name a set of pages rather than one page. Matching against the
+/// listed tree rather than the filesystem gives the same answer in a development
+/// tree and in CI.
 #[must_use]
 pub fn glob_match(pattern: &str, path: &str) -> bool {
     let pattern: Vec<&str> = pattern.split('/').collect();

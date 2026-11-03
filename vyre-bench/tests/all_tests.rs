@@ -5,10 +5,6 @@
 //! binary for the whole set. A test that cannot share a process stays its own
 //! target and states why in `xtask/test-harness-isolation.toml`.
 
-/// Integration tests from `tests/ann_research_planners.rs`.
-#[path = "ann_research_planners.rs"]
-pub mod ann_research_planners;
-
 /// Integration tests from `tests/application_domain_release_evidence_contracts.rs`.
 #[path = "application_domain_release_evidence_contracts.rs"]
 pub mod application_domain_release_evidence_contracts;
@@ -18,10 +14,6 @@ pub mod application_domain_release_evidence_contracts;
 #[allow(clippy::field_reassign_with_default)]
 #[path = "baseline_determinism.rs"]
 pub mod baseline_determinism;
-
-/// Integration tests from `tests/benchmark_methodology_contracts.rs`.
-#[path = "benchmark_methodology_contracts.rs"]
-pub mod benchmark_methodology_contracts;
 
 /// Integration tests from `tests/benchmark_target_contracts.rs`.
 #[path = "benchmark_target_contracts.rs"]
@@ -45,18 +37,6 @@ pub mod cli_audit_surface;
 #[path = "clone_family_contracts.rs"]
 pub mod clone_family_contracts;
 
-/// Integration tests from `tests/corpus_paging_planner.rs`.
-#[path = "corpus_paging_planner.rs"]
-pub mod corpus_paging_planner;
-
-/// Integration tests from `tests/coverage_sanitizer_matrix.rs`.
-#[path = "coverage_sanitizer_matrix.rs"]
-pub mod coverage_sanitizer_matrix;
-
-/// Integration tests from `tests/cross_backend_counter_schema.rs`.
-#[path = "cross_backend_counter_schema.rs"]
-pub mod cross_backend_counter_schema;
-
 /// Integration tests from `tests/cross_backend_matrix.rs`.
 #[cfg(feature = "device-tests")]
 #[allow(clippy::field_reassign_with_default)]
@@ -72,10 +52,6 @@ pub mod cross_emitter_property;
 #[allow(clippy::field_reassign_with_default, missing_docs)]
 #[path = "cuda_event_timing.rs"]
 pub mod cuda_event_timing;
-
-/// Integration tests from `tests/dataset_lineage_catalog.rs`.
-#[path = "dataset_lineage_catalog.rs"]
-pub mod dataset_lineage_catalog;
 
 /// Integration tests from `tests/device_profile_admissibility.rs`.
 #[cfg(feature = "device-tests")]
@@ -100,18 +76,10 @@ pub mod feature_cfg_contract;
 #[path = "finite_queue_artifact.rs"]
 pub mod finite_queue_artifact;
 
-/// Integration tests from `tests/metrics_exposition_contracts.rs`.
-#[path = "metrics_exposition_contracts.rs"]
-pub mod metrics_exposition_contracts;
-
 /// Integration tests from `tests/nvme_gpu_ingest_telemetry.rs`.
 #[cfg(target_os = "linux")]
 #[path = "nvme_gpu_ingest_telemetry.rs"]
 pub mod nvme_gpu_ingest_telemetry;
-
-/// Integration tests from `tests/parser_structural_index_prepass.rs`.
-#[path = "parser_structural_index_prepass.rs"]
-pub mod parser_structural_index_prepass;
 
 /// Integration tests from `tests/perf_analyses_snapshot.rs`.
 #[path = "perf_analyses_snapshot.rs"]
@@ -121,29 +89,9 @@ pub mod perf_analyses_snapshot;
 #[path = "performance_contract_baseline_truth.rs"]
 pub mod performance_contract_baseline_truth;
 
-/// Integration tests from `tests/prototype_kernel_comparator.rs`.
-#[path = "prototype_kernel_comparator.rs"]
-pub mod prototype_kernel_comparator;
-
-/// Integration tests from `tests/regex_cpu_gpu_partition_registry.rs`.
-#[path = "regex_cpu_gpu_partition_registry.rs"]
-pub mod regex_cpu_gpu_partition_registry;
-
-/// Integration tests from `tests/regex_engine_comparator_registry.rs`.
-#[path = "regex_engine_comparator_registry.rs"]
-pub mod regex_engine_comparator_registry;
-
-/// Integration tests from `tests/regex_external_accelerator_routes.rs`.
-#[path = "regex_external_accelerator_routes.rs"]
-pub mod regex_external_accelerator_routes;
-
 /// Integration tests from `tests/registry_closure.rs`.
 #[path = "registry_closure.rs"]
 pub mod registry_closure;
-
-/// Integration tests from `tests/relation_engine_comparators.rs`.
-#[path = "relation_engine_comparators.rs"]
-pub mod relation_engine_comparators;
 
 /// Integration tests from `tests/release_bench_release_macro.rs`.
 #[path = "release_bench_release_macro.rs"]
@@ -162,10 +110,6 @@ pub mod release_matrix_contracts;
 #[path = "release_producer_cuda_contracts.rs"]
 pub mod release_producer_cuda_contracts;
 
-/// Integration tests from `tests/reproducibility_capsules.rs`.
-#[path = "reproducibility_capsules.rs"]
-pub mod reproducibility_capsules;
-
 /// Integration tests from `tests/result_schema.rs`.
 #[cfg(feature = "device-tests")]
 #[allow(clippy::field_reassign_with_default)]
@@ -175,10 +119,6 @@ pub mod result_schema;
 /// Integration tests from `tests/roofline_counter_evidence.rs`.
 #[path = "roofline_counter_evidence.rs"]
 pub mod roofline_counter_evidence;
-
-/// Integration tests from `tests/scan_counter_evidence_registry.rs`.
-#[path = "scan_counter_evidence_registry.rs"]
-pub mod scan_counter_evidence_registry;
 
 /// Integration tests from `tests/section_189_hardware_regression_evidence_and_pmu_policy.rs`.
 #[path = "section_189_hardware_regression_evidence_and_pmu_policy.rs"]

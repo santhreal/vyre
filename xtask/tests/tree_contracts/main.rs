@@ -39,7 +39,6 @@ mod msrv_toolchain;
 mod nested_byte_rows;
 #[cfg(feature = "public-api-tool")]
 mod public_api_snapshot_inventory;
-mod relation_import_certificates;
 mod release_provenance_contracts;
 /// Unix only: the subject is a shell script, and the release hosts run it.
 #[cfg(unix)]

@@ -377,7 +377,7 @@ fn run_partition(
     Ok(())
 }
 
-/// Build every harness `targets` runs in one `cargo test --no-run`.
+/// Build every harness `targets` runs in one no-run test build.
 ///
 /// One invocation resolves one feature set for the whole dependency graph, so a
 /// shared dependency compiles once. One invocation per sweep resolved a feature

@@ -2,8 +2,8 @@
 
 use xtask::gates::dedup_report::{
     duplicate_family_report, duplicate_severity, registered_op_duplicate_family_id,
-    registered_op_duplicate_subject, registered_op_owner_lane, DuplicateEvidence,
-    DuplicateFamilyFinding, DuplicateFamilyReport, DuplicateSubject,
+    registered_op_duplicate_subject, DuplicateEvidence, DuplicateFamilyFinding,
+    DuplicateFamilyReport, DuplicateSubject,
 };
 
 use crate::gates::lego_audit::OpInfo;
@@ -51,7 +51,6 @@ fn registered_op_duplicate_family(
         score,
         left: registered_op_subject(left),
         right: registered_op_subject(right),
-        import_owner: registered_op_import_owner(left, right, same_family),
         import_target: registered_op_import_target(left, right, same_contract, same_family),
         evidence: DuplicateEvidence {
             similarity_metric: "ir-shape-bigram-cosine",
@@ -82,20 +81,6 @@ fn registered_op_duplicate_family(
 
 fn registered_op_subject(op: &OpInfo) -> DuplicateSubject {
     registered_op_duplicate_subject(&op.id, &op.fingerprint, op.own_nodes + op.composed_nodes)
-}
-
-fn registered_op_import_owner(left: &OpInfo, right: &OpInfo, same_family: bool) -> String {
-    if same_family {
-        return implementation_family(left)
-            .or_else(|| implementation_family(right))
-            .map(ToString::to_string)
-            .unwrap_or_else(|| registered_op_owner_lane(&left.id).to_string());
-    }
-    if left.tier <= right.tier {
-        registered_op_owner_lane(&left.id).to_string()
-    } else {
-        registered_op_owner_lane(&right.id).to_string()
-    }
 }
 
 fn registered_op_import_target(

@@ -88,11 +88,6 @@ fn lego_duplicate_family(
         score,
         left: lego_duplicate_subject(left),
         right: lego_duplicate_subject(right),
-        import_owner: if left.tier <= right.tier {
-            registered_op_owner_lane(&left.id).to_string()
-        } else {
-            registered_op_owner_lane(&right.id).to_string()
-        },
         import_target: if left.tier <= right.tier {
             left.id.clone()
         } else {

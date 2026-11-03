@@ -50,7 +50,6 @@ let outputs = backend.dispatch(&program, &inputs, &config)?;
 - `src/codegen/mod.rs`  -  PTX emit pipeline.
 - The workspace [`README.md`](../README.md) places this crate: driver
   names, dialect names, and device quirks live here and nowhere else.
-- `docs/optimization/OWNERSHIP.toml` defines CUDA optimization lanes.
 - `docs/CRATE_OWNERSHIP.toml` defines workspace ownership.
 
 <!-- BEGIN GENERATED CRATE CONTRACT -->

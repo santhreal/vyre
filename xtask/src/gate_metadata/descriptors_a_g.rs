@@ -43,11 +43,11 @@ pub const GATES_A_G: &[GateDescriptor] = &[
         package: "xtask",
         areas: &["docs"],
         subject: "owned documentation pages",
-        inputs: &["Cargo.toml", "docs/ARCHITECTURE.md", "docs/CRATE_OWNERSHIP.toml", "docs/DOCS.toml", "docs/generated/OP_SCHEMA.json", "docs/optimization/OWNERSHIP.toml", "release/evidence/backends/backend-matrix.json", "release/release-train.toml"],
+        inputs: &["Cargo.toml", "docs/ARCHITECTURE.md", "docs/CRATE_OWNERSHIP.toml", "docs/DOCS.toml", "docs/generated/OP_SCHEMA.json", "release/evidence/backends/backend-matrix.json", "release/release-train.toml"],
         artifacts: &[],
         prerequisites: &["backend-matrix", "operation-schema", "testing-guides"],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::architecture_contract::tests::a_lane_entry_may_name_a_directory_or_a_directory_glob",
+        proof: "crate::gates::architecture_contract::tests::a_stale_version_is_bounded_and_a_longer_number_is_not_one",
     },
     GateDescriptor {
         name: "backend-extension",
