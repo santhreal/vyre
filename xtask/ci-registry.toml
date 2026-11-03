@@ -60,7 +60,7 @@ workflows = ["gates.yml", "release-evidence.yml"]
 [[gate]]
 name = "bench-smoke-runtime"
 subsets = ["contract-rules"]
-workflows = ["gates.yml", "gpu-parity.yml"]
+workflows = ["gates.yml"]
 
 [[gate]]
 name = "catalog"

@@ -182,7 +182,7 @@ Findings:
 
 Subject: gone: the script is not in the tree.
 
-Invoked by: nothing; bench-regression.yml runs `bench-smoke-runtime` in its place.
+Invoked by: nothing; gates.yml runs `bench-smoke-runtime` in its place through the contract-rules subset.
 
 Gate: `bench-smoke-runtime`.
 

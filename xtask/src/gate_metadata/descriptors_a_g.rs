@@ -123,14 +123,14 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "bench-smoke-runtime",
-        help: "Enforce bench-smoke-runtime contracts",
+        help: "Time the canonical smoke benchmark case on the host device and hold the total of its measured samples to the budget `contracts/perf_targets.toml` declares. Builds vyre-bench, lists its registry, then runs the case once; setup, backend acquisition and artifact preparation are outside the timed samples.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
         inputs: &[],
         artifacts: &[],
         prerequisites: &[],
-        resource_class: ResourceClass::Cpu,
+        resource_class: ResourceClass::Device,
         proof: "crate::gates::bench::tests::the_smoke_budget_comes_from_the_manifest",
     },
     GateDescriptor {

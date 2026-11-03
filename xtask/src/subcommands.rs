@@ -107,9 +107,6 @@ pub fn registry() -> Vec<RegisteredGate> {
 /// Look one gate up by name.
 #[must_use]
 pub fn find(name: &str) -> Option<RegisteredGate> {
-    if name == "primitive-admission-gate" {
-        return find("lego-primitive-coverage");
-    }
     registry().into_iter().find(|gate| gate.name() == name)
 }
 
