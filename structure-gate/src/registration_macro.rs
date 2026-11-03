@@ -114,20 +114,19 @@ pub fn submitting_macros(definitions: &BTreeMap<String, String>) -> BTreeSet<Str
     }
 }
 
-/// Read hardware registration helpers whose operation id is a named argument.
+/// Read `submit_hardware_intrinsic!` invocations, whose operation id is a
+/// named argument.
 ///
 /// These invocations are source-level definition sites even though the
-/// `OperationRegistration` constructor is expanded from their macro bodies.
+/// `OperationRegistration` constructor is expanded from the macro body.
 pub fn parse_named_intrinsic_macros(
     text: &str,
     consts: &BTreeMap<String, String>,
     found: &mut Vec<(String, Option<String>)>,
 ) {
-    for macro_name in ["submit_hardware_intrinsic", "submit_intrinsic_operation"] {
-        for (body, _) in find_macro_invocations(text, macro_name) {
-            if let Some(id) = field_value(body, "id").and_then(|raw| resolve_id(raw, consts)) {
-                found.push((id, Some("Intrinsic".to_string())));
-            }
+    for (body, _) in find_macro_invocations(text, "submit_hardware_intrinsic") {
+        if let Some(id) = field_value(body, "id").and_then(|raw| resolve_id(raw, consts)) {
+            found.push((id, Some("Intrinsic".to_string())));
         }
     }
 }
@@ -626,7 +625,6 @@ macro_rules! unrelated {
         let submitting = submitting_macros(&definitions);
 
         for expected in [
-            "submit_intrinsic_operation",
             "submit_hardware_intrinsic",
             "define_unary_u32_hardware_intrinsic",
             "define_barrier_u32_hardware_intrinsic",

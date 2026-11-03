@@ -5092,6 +5092,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre_megakernel::SemanticExecutor` is the one boundary a program crosses to
   reach a backend, and the host-oracle gate derives its execution and
   input-binding method names from that trait instead.
+- Operations register only through OperationRegistration: the unused
+  declare_operation!, submit_intrinsic_operation! and vyre_operation! macros,
+  ContractProvider, OperationContractBuilder, and the separate
+  SemanticDescriptor, LoweringProvider and ConformanceProvider inventories are
+  deleted, and those three records are derived views of a registration.
 - `scripts/check_platform_consumer_docs.sh`,
   `scripts/check_parity_testing_not_leaked.sh` and
   `scripts/check_primitive_contract.sh` are gone, along with

@@ -27,17 +27,12 @@ impl ConformanceRegistry {
         &REGISTRY
     }
 
-    /// Compute the conformance registry from global inventory submissions.
+    /// Compute the conformance registry from the registered operations.
     ///
     /// Reachable only through `global`, which runs it once.
     #[must_use]
     pub(crate) fn from_registry() -> Self {
         let mut providers = BTreeMap::new();
-
-        for prov in inventory::iter::<ConformanceProvider> {
-            providers.insert(prov.id, *prov);
-        }
-
         for reg in inventory::iter::<OperationRegistration> {
             providers
                 .entry(reg.id)

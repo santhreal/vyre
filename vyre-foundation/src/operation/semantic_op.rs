@@ -5,8 +5,7 @@ use crate::geometry::{GeometryConstraintConflict, GeometryRequirements};
 use crate::ir::{BufferAccess, Program};
 use crate::numeric::NumericContract;
 use crate::operation::records::{
-    AbsenceDecision, ConformanceProvider, ContractProvider, LoweringProvider, OperationFixtures,
-    SemanticDescriptor,
+    AbsenceDecision, ConformanceProvider, LoweringProvider, OperationFixtures, SemanticDescriptor,
 };
 use crate::operation::registry::OperationRegistry;
 use crate::operation::semantics::{truncate_to_u64, OperationEffects, OperationTier};
@@ -154,15 +153,6 @@ impl SemanticOperation {
     #[must_use]
     pub fn conformance_provider(self) -> ConformanceProvider {
         conformance_provider_of(self.id, self.test_inputs, self.expected_output)
-    }
-
-    /// Extract the contract provider from this operation.
-    #[must_use]
-    pub fn contract_provider(self) -> ContractProvider {
-        ContractProvider {
-            id: self.id,
-            contract: None,
-        }
     }
 
     /// Construct the canonical semantic contract record.

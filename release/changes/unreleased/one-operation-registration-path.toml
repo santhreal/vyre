@@ -1,0 +1,2 @@
+category = "Removed"
+text = "Operations register only through OperationRegistration: the unused declare_operation!, submit_intrinsic_operation! and vyre_operation! macros, ContractProvider, OperationContractBuilder, and the separate SemanticDescriptor, LoweringProvider and ConformanceProvider inventories are deleted, and those three records are derived views of a registration."

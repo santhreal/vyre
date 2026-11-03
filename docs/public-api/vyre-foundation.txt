@@ -242,11 +242,7 @@ impl inventory::Collect for vyre_foundation::extension::ExtensionDataTypeRegistr
 impl inventory::Collect for vyre_foundation::extension::ExtensionUnOpRegistration
 impl inventory::Collect for vyre_foundation::extension::OpaqueExprResolver
 impl inventory::Collect for vyre_foundation::extension::OpaqueNodeResolver
-impl inventory::Collect for vyre_foundation::operation::ConformanceProvider
-impl inventory::Collect for vyre_foundation::operation::ContractProvider
-impl inventory::Collect for vyre_foundation::operation::LoweringProvider
 impl inventory::Collect for vyre_foundation::operation::OperationRegistration
-impl inventory::Collect for vyre_foundation::operation::SemanticDescriptor
 impl inventory::Collect for vyre_foundation::optimizer::ProgramPassRegistration
 impl inventory::Collect for vyre_foundation::optimizer::level_contract::LevelStageRegistration
 impl inventory::Collect for vyre_foundation::optimizer::rewrite_contract::RewriteContractRegistration
@@ -2330,7 +2326,6 @@ pub fn vyre_foundation::operation::OperationCatalogBundle::with_lowering(self, l
 pub fn vyre_foundation::operation::OperationCatalogBundle::with_operation(self, descriptor: vyre_foundation::operation::SemanticDescriptor, lowering: core::option::Option<vyre_foundation::operation::LoweringProvider>) -> Self
 pub fn vyre_foundation::operation::OperationEffects::from_program(program: &vyre_foundation::ir::Program) -> Self
 pub fn vyre_foundation::operation::OperationRegistration::conformance_provider(&self) -> vyre_foundation::operation::ConformanceProvider
-pub fn vyre_foundation::operation::OperationRegistration::contract_provider(&'static self) -> vyre_foundation::operation::ContractProvider
 pub fn vyre_foundation::operation::OperationRegistration::contract_record(&self) -> vyre_spec::op_contract::SemanticContractRecord
 pub fn vyre_foundation::operation::OperationRegistration::descriptor(&'static self) -> vyre_foundation::operation::SemanticDescriptor
 pub fn vyre_foundation::operation::OperationRegistration::direct_effects(&self) -> core::option::Option<vyre_foundation::operation::OperationEffects>
@@ -2354,7 +2349,6 @@ pub fn vyre_foundation::operation::OperationRegistry::transitive_effects(&self, 
 pub fn vyre_foundation::operation::SemanticOperation::callees(self) -> core::option::Option<&'static [&'static str]>
 pub fn vyre_foundation::operation::SemanticOperation::composite_version(self) -> u64
 pub fn vyre_foundation::operation::SemanticOperation::conformance_provider(self) -> vyre_foundation::operation::ConformanceProvider
-pub fn vyre_foundation::operation::SemanticOperation::contract_provider(self) -> vyre_foundation::operation::ContractProvider
 pub fn vyre_foundation::operation::SemanticOperation::contract_record(self) -> vyre_spec::op_contract::SemanticContractRecord
 pub fn vyre_foundation::operation::SemanticOperation::descriptor(self) -> vyre_foundation::operation::SemanticDescriptor
 pub fn vyre_foundation::operation::SemanticOperation::direct_effects(self) -> core::option::Option<vyre_foundation::operation::OperationEffects>
@@ -4103,7 +4097,6 @@ pub fn vyre_foundation::visit::walk_node_children_default<V: vyre_foundation::vi
 pub fn vyre_foundation::visit::walk_nodes(program: &vyre_foundation::ir::Program, f: impl core::ops::function::FnMut(&vyre_foundation::ir::Node))
 pub fn vyre_foundation::visit::walk_nodes_and_exprs<V: vyre_foundation::visit::NodeSink + vyre_foundation::visit::ExprSink>(program: &vyre_foundation::ir::Program, sink: &mut V)
 pub fn vyre_foundation::visit::walk_nodes_mut(program: &mut vyre_foundation::ir::Program, f: impl core::ops::function::FnMut(&mut vyre_foundation::ir::Node))
-pub macro vyre_foundation::declare_operation!
 pub macro vyre_foundation::define_dialect!
 pub macro vyre_foundation::diagnostic_conversions!
 pub macro vyre_foundation::node_visitor_arm!
@@ -4420,7 +4413,6 @@ pub struct vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated
 pub struct vyre_foundation::operation::CallGraphClosure
 pub struct vyre_foundation::operation::ConformanceProvider
 pub struct vyre_foundation::operation::ConformanceRegistry
-pub struct vyre_foundation::operation::ContractProvider
 pub struct vyre_foundation::operation::ExtensionProvenance
 pub struct vyre_foundation::operation::LoweringProvider
 pub struct vyre_foundation::operation::OperationCatalogBundle
@@ -4780,7 +4772,6 @@ pub type vyre_foundation::ir::Ident::Target = str
 pub type vyre_foundation::ir::OpId = alloc::sync::Arc<str>
 pub type vyre_foundation::ir::ProgramGraphBuilder::Target = vyre_foundation::ir::ProgramGraph
 pub type vyre_foundation::lower::ProgramEffects::Output = vyre_foundation::lower::ProgramEffects
-pub type vyre_foundation::operation::OperationContractBuilder = fn() -> vyre_spec::op_contract::SemanticContractRecord
 pub type vyre_foundation::operation::OperationFixtures = fn() -> alloc::vec::Vec<alloc::vec::Vec<alloc::vec::Vec<u8>>>
 pub type vyre_foundation::optimizer::eqsat::EChildren = smallvec::SmallVec<[vyre_foundation::optimizer::eqsat::EClassId; 4]>
 pub type vyre_foundation::optimizer::law_saturation::DerivedKinds = smallvec::SmallVec<[vyre_foundation::optimizer::law_saturation::DerivedRewriteKind; 2]>
@@ -6589,8 +6580,6 @@ pub vyre_foundation::operation::CallGraphClosure::unclosed_or_cyclic: alloc::col
 pub vyre_foundation::operation::ConformanceProvider::expected_output: core::option::Option<vyre_foundation::operation::OperationFixtures>
 pub vyre_foundation::operation::ConformanceProvider::id: &'static str
 pub vyre_foundation::operation::ConformanceProvider::test_inputs: core::option::Option<vyre_foundation::operation::OperationFixtures>
-pub vyre_foundation::operation::ContractProvider::contract: core::option::Option<vyre_foundation::operation::OperationContractBuilder>
-pub vyre_foundation::operation::ContractProvider::id: &'static str
 pub vyre_foundation::operation::ExtensionProvenance::name: &'static str
 pub vyre_foundation::operation::ExtensionProvenance::version: u32
 pub vyre_foundation::operation::IdNamespace::External(&'a str)

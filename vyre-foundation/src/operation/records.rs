@@ -1,5 +1,8 @@
-//! Identity-joined operation records: production semantic descriptor,
-//! implementation lowering provider, and conformance-case provider.
+//! Views of one operation registration: the production semantic descriptor,
+//! the lowering provider, and the conformance-case provider.
+//!
+//! Every view is derived from an `OperationRegistration`. None of them is
+//! submitted to the inventory on its own.
 
 use crate::dialect_lookup::Signature;
 use crate::geometry::GeometryRequirements;
@@ -86,20 +89,3 @@ pub struct ConformanceProvider {
     /// Deterministic fixture outputs.
     pub expected_output: Option<OperationFixtures>,
 }
-
-/// Deterministic contract builder function for semantic operations.
-pub type OperationContractBuilder = fn() -> vyre_spec::SemanticContractRecord;
-
-/// Contract-record provider for semantic operations.
-#[derive(Clone, Copy, Debug)]
-pub struct ContractProvider {
-    /// Stable operation identifier matching the semantic descriptor.
-    pub id: &'static str,
-    /// Contract record builder.
-    pub contract: Option<OperationContractBuilder>,
-}
-
-inventory::collect!(SemanticDescriptor);
-inventory::collect!(LoweringProvider);
-inventory::collect!(ConformanceProvider);
-inventory::collect!(ContractProvider);

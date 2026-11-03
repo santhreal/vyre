@@ -88,18 +88,8 @@ impl OperationCatalogBundle {
         let mut lowering_providers = BTreeMap::new();
         let extensions = BTreeMap::new();
 
-        for desc in inventory::iter::<SemanticDescriptor> {
-            descriptors.insert(desc.id, *desc);
-        }
-        for prov in inventory::iter::<LoweringProvider> {
-            lowering_providers.insert(prov.id, *prov);
-        }
-
-        // Also bridge from OperationRegistration for backwards compatibility
         for reg in inventory::iter::<OperationRegistration> {
-            descriptors
-                .entry(reg.id)
-                .or_insert_with(|| reg.descriptor());
+            descriptors.entry(reg.id).or_insert_with(|| reg.descriptor());
             lowering_providers
                 .entry(reg.id)
                 .or_insert_with(|| reg.lowering_provider());

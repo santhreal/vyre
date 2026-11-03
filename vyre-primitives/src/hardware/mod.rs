@@ -21,35 +21,6 @@ use vyre_foundation::operation::{OperationRegistry, SemanticOperation};
 /// Coarse category every hardware intrinsic registration carries.
 pub const HARDWARE_CATEGORY: &str = "hardware";
 
-/// Submit a hardware intrinsic operation to the inventory registry.
-#[macro_export]
-macro_rules! submit_intrinsic_operation {
-    (
-        id: $op_id:expr,
-        signature: $sig:expr,
-        build: $build:expr,
-        inputs: $inputs:expr,
-        expected: $expected:expr
-    ) => {
-        inventory::submit! {
-                    vyre_foundation::operation::OperationRegistration {
-                        id: $op_id,
-                        semantic_version: 1,
-                        signature: $sig,
-                        tier: vyre_foundation::operation::OperationTier::Intrinsic,
-                        category: Some("hardware"),
-                        build: Some($build),
-                        test_inputs: Some($inputs),
-                        expected_output: Some($expected),
-                        laws: &[],
-                        numeric: vyre_foundation::numeric::NumericContract::EXACT,
-                        geometry_requirements: vyre_foundation::GeometryRequirements::agnostic(),
-                    }
-            .with_laws(&["involution"])
-        }
-    };
-}
-
 macro_rules! submit_hardware_intrinsic {
     (
         id: $op_id:expr,

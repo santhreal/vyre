@@ -34598,7 +34598,7 @@ seam = "foundation-ir"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 8818
+exported_item_count = 8807
 
   [[package.item]]
   path = "alloc::string::String::from(err: vyre_foundation::serial::wire::encode::WireEncodeErr) -> alloc::string::String"
@@ -35924,35 +35924,7 @@ exported_item_count = 8818
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "impl inventory::Collect for vyre_foundation::operation::ConformanceProvider"
-  kind = "impl"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl inventory::Collect for vyre_foundation::operation::ContractProvider"
-  kind = "impl"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl inventory::Collect for vyre_foundation::operation::LoweringProvider"
-  kind = "impl"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "impl inventory::Collect for vyre_foundation::operation::OperationRegistration"
-  kind = "impl"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl inventory::Collect for vyre_foundation::operation::SemanticDescriptor"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -41883,13 +41855,6 @@ exported_item_count = 8818
   [[package.item]]
   path = "vyre_foundation::cpu_op::CpuOp::cpu(input: &[u8], output: &mut alloc::vec::Vec<u8>)"
   kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::declare_operation!"
-  kind = "macro"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
@@ -61957,27 +61922,6 @@ exported_item_count = 8818
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::operation::ContractProvider"
-  kind = "struct"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::operation::ContractProvider::contract: core::option::Option<vyre_foundation::operation::OperationContractBuilder>"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::operation::ContractProvider::id: &'static str"
-  kind = "field"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_foundation::operation::ExtensionProvenance"
   kind = "struct"
   stability = "extension"
@@ -62209,13 +62153,6 @@ exported_item_count = 8818
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_foundation::operation::OperationContractBuilder = fn() -> vyre_spec::op_contract::SemanticContractRecord"
-  kind = "type"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_foundation::operation::OperationEffects"
   kind = "struct"
   stability = "extension"
@@ -62357,13 +62294,6 @@ exported_item_count = 8818
 
   [[package.item]]
   path = "vyre_foundation::operation::OperationRegistration::conformance_provider(&self) -> vyre_foundation::operation::ConformanceProvider"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::operation::OperationRegistration::contract_provider(&'static self) -> vyre_foundation::operation::ContractProvider"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -63078,13 +63008,6 @@ exported_item_count = 8818
 
   [[package.item]]
   path = "vyre_foundation::operation::SemanticOperation::conformance_provider(self) -> vyre_foundation::operation::ConformanceProvider"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_foundation::operation::SemanticOperation::contract_provider(self) -> vyre_foundation::operation::ContractProvider"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -141055,7 +140978,7 @@ seam = "registration-macros"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-foundation"
 stability = "extension"
-exported_item_count = 4
+exported_item_count = 3
 
   [[package.item]]
   path = "vyre_macros"
@@ -141073,13 +140996,6 @@ exported_item_count = 4
 
   [[package.item]]
   path = "vyre_macros::vyre_ast_registry!()"
-  kind = "macro"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_macros::vyre_operation!()"
   kind = "macro"
   stability = "extension"
   feature = "unconditional"
@@ -150418,7 +150334,7 @@ seam = "primitive-library"
 publication_class = "extension-sdk"
 publication_contract = "consumer-seam:vyre-graphics-app"
 stability = "extension"
-exported_item_count = 131
+exported_item_count = 130
 
   [[package.item]]
   path = "impl inventory::Collect for vyre_primitives::hardware::catalog::IntrinsicFacet"
@@ -151104,13 +151020,6 @@ exported_item_count = 131
   kind = "fn"
   stability = "extension"
   feature = "inventory-registry"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_primitives::submit_intrinsic_operation!"
-  kind = "macro"
-  stability = "extension"
-  feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
