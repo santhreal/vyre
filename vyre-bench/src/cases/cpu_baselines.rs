@@ -1,15 +1,14 @@
 //! CPU baseline kernels used by benchmark cases.
 
 use rayon::prelude::*;
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 use wide::f32x8;
 
 const ELEMENTWISE_STRIPE_BYTES: usize = 64 * 1024;
 const F32X8_BYTES: usize = 8 * 4;
 
 pub fn baseline_pool() -> &'static rayon::ThreadPool {
-    static POOL: OnceLock<rayon::ThreadPool> = OnceLock::new();
-    POOL.get_or_init(|| {
+    static POOL: LazyLock<rayon::ThreadPool> = LazyLock::new(|| {
         let threads_str = std::env::var("RAYON_NUM_THREADS").unwrap_or_else(|_| "8".to_string());
         let threads = threads_str.parse().unwrap_or(8);
         rayon::ThreadPoolBuilder::new()
@@ -39,7 +38,8 @@ pub fn baseline_pool() -> &'static rayon::ThreadPool {
                     .build()
                     .unwrap_or_else(|_| std::process::abort())
             })
-    })
+    });
+    LazyLock::force(&POOL)
 }
 
 pub fn elementwise_add_f32_bytes(a: &[u8], b: &[u8]) -> Vec<u8> {

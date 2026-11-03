@@ -17,7 +17,7 @@
 
 #![cfg(feature = "device-tests")]
 
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, LazyLock};
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
@@ -25,12 +25,12 @@ use vyre_foundation::ir::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 fn backend() -> &'static WgpuBackend {
-    static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();
-    BACKEND.get_or_init(|| {
+    static BACKEND: LazyLock<WgpuBackend> = LazyLock::new(|| {
         WgpuBackend::acquire().expect(
             "Fix: GPU adapter required for buf_len_array_length tests. Run on a host with a working wgpu adapter.",
         )
-    })
+    });
+    LazyLock::force(&BACKEND)
 }
 
 fn wrapped_storage_program(body: Node) -> Program {

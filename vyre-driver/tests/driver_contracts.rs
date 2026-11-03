@@ -74,8 +74,9 @@ fn empty_capability_set_rejects_any_program_with_nodes() {
             "noop"
         }
         fn supported_ops(&self) -> &HashSet<OpId> {
-            static EMPTY: std::sync::OnceLock<HashSet<OpId>> = std::sync::OnceLock::new();
-            EMPTY.get_or_init(HashSet::new)
+            static EMPTY: std::sync::LazyLock<HashSet<OpId>> =
+                std::sync::LazyLock::new(HashSet::new);
+            std::sync::LazyLock::force(&EMPTY)
         }
         fn dispatch_borrowed(
             &self,
@@ -158,8 +159,9 @@ fn validation_rejects_unsupported_operation() {
             "unsupported-ops-contract"
         }
         fn supported_ops(&self) -> &HashSet<OpId> {
-            static EMPTY: std::sync::OnceLock<HashSet<OpId>> = std::sync::OnceLock::new();
-            EMPTY.get_or_init(HashSet::new)
+            static EMPTY: std::sync::LazyLock<HashSet<OpId>> =
+                std::sync::LazyLock::new(HashSet::new);
+            std::sync::LazyLock::force(&EMPTY)
         }
         fn dispatch_borrowed(
             &self,

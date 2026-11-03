@@ -3,7 +3,7 @@
 //! `release/release-train.toml` is embedded at build time and is the single
 //! source for the version every gate and document is checked against.
 
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 use serde::Deserialize;
 
@@ -32,12 +32,12 @@ struct Tags {
     policy: String,
 }
 
-static RELEASE_TRAIN: OnceLock<Result<ReleaseTrainData, String>> = OnceLock::new();
+static RELEASE_TRAIN: LazyLock<Result<ReleaseTrainData, String>> = LazyLock::new(|| {
+    crate::toml_config::parse_embedded_toml(RELEASE_TRAIN_TOML_PATH, RELEASE_TRAIN_TOML)
+});
 
 fn data() -> &'static ReleaseTrainData {
-    crate::toml_config::data_or_exit(RELEASE_TRAIN.get_or_init(|| {
-        crate::toml_config::parse_embedded_toml(RELEASE_TRAIN_TOML_PATH, RELEASE_TRAIN_TOML)
-    }))
+    crate::toml_config::data_or_exit(LazyLock::force(&RELEASE_TRAIN))
 }
 
 /// The version this release train ships.

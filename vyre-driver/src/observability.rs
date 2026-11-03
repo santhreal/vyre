@@ -20,7 +20,7 @@ use vyre_libs::telemetry as substrate_obs;
 use crate::lock_policy::{govern_mutex, RecoveryClass};
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{LazyLock, Mutex, OnceLock};
+use std::sync::{LazyLock, Mutex};
 
 const TRACE_EVENT_CAPACITY: usize = 256;
 
@@ -516,12 +516,12 @@ fn trace_events() -> &'static Mutex<VecDeque<SubstrateAuditEvent>> {
 }
 
 fn trace_enabled() -> bool {
-    static ENABLED: OnceLock<bool> = OnceLock::new();
-    *ENABLED.get_or_init(|| {
+    static ENABLED: LazyLock<bool> = LazyLock::new(|| {
         std::env::var("VYRE_TRACE")
             .map(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
             .unwrap_or(false)
-    })
+    });
+    *LazyLock::force(&ENABLED)
 }
 
 /// Record one substrate audit event when `VYRE_TRACE=1`.
@@ -618,9 +618,9 @@ pub(crate) fn clear_substrate_audit_events_for_test() {
 
 #[cfg(test)]
 pub(crate) fn audit_events_test_lock() -> Option<std::sync::MutexGuard<'static, ()>> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    static LOCK: Mutex<()> = Mutex::new(());
     govern_mutex(
-        LOCK.get_or_init(|| Mutex::new(())),
+        &LOCK,
         "observability",
         "LOCK",
         RecoveryClass::TransactionallyRecoverable,

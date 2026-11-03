@@ -754,9 +754,9 @@ mod tests {
         }
 
         fn supported_ops(&self) -> &HashSet<vyre_foundation::ir::OpId> {
-            static OPS: std::sync::OnceLock<HashSet<vyre_foundation::ir::OpId>> =
-                std::sync::OnceLock::new();
-            OPS.get_or_init(HashSet::new)
+            static OPS: std::sync::LazyLock<HashSet<vyre_foundation::ir::OpId>> =
+                std::sync::LazyLock::new(HashSet::new);
+            std::sync::LazyLock::force(&OPS)
         }
 
         fn dispatch_borrowed(

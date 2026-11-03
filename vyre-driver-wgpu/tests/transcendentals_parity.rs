@@ -25,7 +25,7 @@
 //! assertion tightens to `cpu.to_bits() == gpu.to_bits()`.
 
 use proptest::prelude::*;
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 use vyre::ir::UnOp;
 use vyre_driver_wgpu::WgpuBackend;
 
@@ -58,11 +58,11 @@ const SIN_COS_ULP: u32 = 1200;
 const SIN_COS_ABS: f32 = 2e-6;
 
 fn backend() -> &'static WgpuBackend {
-    static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();
-    BACKEND.get_or_init(|| {
+    static BACKEND: LazyLock<WgpuBackend> = LazyLock::new(|| {
         WgpuBackend::acquire()
             .expect("Fix: transcendental parity requires the local GPU-backed wgpu backend")
-    })
+    });
+    LazyLock::force(&BACKEND)
 }
 
 fn gpu_unary_many(backend: &WgpuBackend, op: UnOp, xs: &[f32]) -> Vec<f32> {

@@ -222,8 +222,8 @@ mod tests {
         }
 
         fn supported_ops(&self) -> &HashSet<OpId> {
-            static OPS: std::sync::OnceLock<HashSet<OpId>> = std::sync::OnceLock::new();
-            OPS.get_or_init(HashSet::new)
+            static OPS: std::sync::LazyLock<HashSet<OpId>> = std::sync::LazyLock::new(HashSet::new);
+            std::sync::LazyLock::force(&OPS)
         }
 
         fn dispatch_borrowed(

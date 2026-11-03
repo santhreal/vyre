@@ -6,7 +6,7 @@
 //! inputs, soundness, witness fixtures, and external-engine mapping metadata.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 const SECURITY_PREDICATES_TOML: &str = include_str!("../../rules/security_predicates.toml");
 const EXPECTED_SCHEMA_VERSION: u32 = 1;
@@ -62,14 +62,12 @@ pub struct SecurityPredicateRow {
     pub witness_expected: Vec<u32>,
 }
 
-static SECURITY_PREDICATE_ROWS: OnceLock<Result<Vec<SecurityPredicateRow>, String>> =
-    OnceLock::new();
+static SECURITY_PREDICATE_ROWS: LazyLock<Result<Vec<SecurityPredicateRow>, String>> =
+    LazyLock::new(|| parse_security_predicates(SECURITY_PREDICATES_TOML));
 
 /// Parse and return all bundled security predicate rows.
 pub fn try_security_predicate_rows() -> Result<&'static [SecurityPredicateRow], &'static str> {
-    match SECURITY_PREDICATE_ROWS
-        .get_or_init(|| parse_security_predicates(SECURITY_PREDICATES_TOML))
-    {
+    match &*SECURITY_PREDICATE_ROWS {
         Ok(rows) => Ok(rows.as_slice()),
         Err(error) => Err(error.as_str()),
     }

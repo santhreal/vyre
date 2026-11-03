@@ -13,7 +13,7 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 use vyre::ir::Program;
 use vyre::validate;
 use vyre_driver::{DispatchConfig, VyreBackend};
@@ -26,10 +26,10 @@ const MAX_WIRE_BYTES: usize = 64 * 1024 * 1024;
 /// Cap synthesized dispatch inputs to avoid OOM on huge buffer declarations.
 const MAX_DISPATCH_INPUT_BYTES: usize = 8 * 1024 * 1024;
 
-static BACKEND: OnceLock<Option<WgpuBackend>> = OnceLock::new();
+static BACKEND: LazyLock<Option<WgpuBackend>> = LazyLock::new(|| WgpuBackend::acquire().ok());
 
 fn backend() -> Option<&'static WgpuBackend> {
-    BACKEND.get_or_init(|| WgpuBackend::acquire().ok()).as_ref()
+    LazyLock::force(&BACKEND).as_ref()
 }
 
 /// Zero-filled bytes for exactly the buffers a dispatch stages from the host.

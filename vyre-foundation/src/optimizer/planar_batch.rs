@@ -6,7 +6,7 @@
 //! the backend-neutral contract that the foundation optimizer can use without
 //! depending upward on primitive crates.
 
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 /// Minimum candidate count before a pass should pay planning overhead.
 ///
@@ -15,13 +15,13 @@ use std::sync::OnceLock;
 /// the release default.
 #[must_use]
 pub fn default_planar_rewrite_batch_threshold() -> usize {
-    static VALUE: OnceLock<usize> = OnceLock::new();
-    *VALUE.get_or_init(|| {
+    static VALUE: LazyLock<usize> = LazyLock::new(|| {
         std::env::var("VYRE_PLANAR_REWRITE_BATCH_THRESHOLD")
             .ok()
             .and_then(|raw| raw.parse::<usize>().ok())
             .unwrap_or(8)
-    })
+    });
+    *LazyLock::force(&VALUE)
 }
 
 /// One local rewrite candidate laid out on a 2D region grid.

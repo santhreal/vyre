@@ -366,14 +366,13 @@ fn acquire_backend(
     backend_id: Option<&str>,
 ) -> Result<std::sync::Arc<dyn vyre_driver::VyreBackend>, BenchError> {
     use std::collections::HashMap;
-    use std::sync::{Arc, Mutex, OnceLock};
+    use std::sync::{Arc, LazyLock, Mutex};
 
     #[allow(clippy::type_complexity)]
-    static CACHE: OnceLock<Mutex<HashMap<Option<String>, Arc<dyn vyre_driver::VyreBackend>>>> =
-        OnceLock::new();
+    static CACHE: LazyLock<Mutex<HashMap<Option<String>, Arc<dyn vyre_driver::VyreBackend>>>> =
+        LazyLock::new(|| Mutex::new(HashMap::new()));
 
     let mut cache = CACHE
-        .get_or_init(|| Mutex::new(HashMap::new()))
         .lock()
         .map_err(|error| BenchError::ExecutionFailed(format!(
             "benchmark backend cache lock was poisoned: {error}. Fix: restart the benchmark process after the panic that poisoned shared backend state."

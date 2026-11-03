@@ -36,7 +36,7 @@
 #![allow(deprecated)]
 use crate::harness;
 use harness::{cat_a_dispatch_config, f32_to_ordered};
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
@@ -45,11 +45,11 @@ use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
 
 fn backend() -> &'static WgpuBackend {
-    static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();
-    BACKEND.get_or_init(|| {
+    static BACKEND: LazyLock<WgpuBackend> = LazyLock::new(|| {
         WgpuBackend::acquire()
             .expect("Fix: GPU adapter required for cat_a_gpu_differential. Run on a host with a working wgpu adapter.")
-    })
+    });
+    LazyLock::force(&BACKEND)
 }
 
 fn run_cpu(program: &Program, inputs: Vec<Value>) -> Vec<Vec<u8>> {

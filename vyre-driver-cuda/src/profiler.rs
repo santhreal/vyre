@@ -7,7 +7,7 @@
 
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    OnceLock,
+    LazyLock,
 };
 
 /// NVTX range label covering one host-dispatch path.
@@ -189,8 +189,8 @@ fn nvtx_push_succeeded(depth: libc::c_int) -> bool {
 }
 
 fn nvtx_api() -> Option<NvtxApi> {
-    static API: OnceLock<Option<NvtxApi>> = OnceLock::new();
-    *API.get_or_init(load_nvtx_api)
+    static API: LazyLock<Option<NvtxApi>> = LazyLock::new(load_nvtx_api);
+    *LazyLock::force(&API)
 }
 
 #[cfg(unix)]

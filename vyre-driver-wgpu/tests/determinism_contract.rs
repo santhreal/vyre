@@ -11,14 +11,15 @@
 #![cfg(feature = "device-tests")]
 
 use proptest::prelude::*;
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, UnOp};
 
 fn backend() -> &'static WgpuBackend {
-    static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();
-    BACKEND.get_or_init(|| WgpuBackend::acquire().expect("Fix: GPU required for determinism test"))
+    static BACKEND: LazyLock<WgpuBackend> =
+        LazyLock::new(|| WgpuBackend::acquire().expect("Fix: GPU required for determinism test"));
+    LazyLock::force(&BACKEND)
 }
 
 fn u32_leaf() -> BoxedStrategy<Expr> {

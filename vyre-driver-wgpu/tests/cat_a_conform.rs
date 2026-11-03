@@ -5,7 +5,7 @@
 use crate::harness;
 use harness::cat_a_dispatch_config;
 
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
@@ -13,15 +13,15 @@ use vyre_foundation::fp_parity;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_libs::operation_catalog::library_entries;
 fn backend() -> &'static WgpuBackend {
-    static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();
-    BACKEND.get_or_init(|| {
+    static BACKEND: LazyLock<WgpuBackend> = LazyLock::new(|| {
         let adapters = vyre_driver_wgpu::runtime::enumerate_adapters();
         assert!(
             !adapters.is_empty(),
             "Fix: cat_a_conform requires a live GPU adapter."
         );
         WgpuBackend::acquire().expect("Fix: cat_a_conform must acquire the live GPU backend")
-    })
+    });
+    LazyLock::force(&BACKEND)
 }
 
 fn entry(id: &'static str) -> SemanticOperation {

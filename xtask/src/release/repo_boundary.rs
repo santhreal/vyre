@@ -3,7 +3,7 @@
 //! `release/repo-boundary.toml` is embedded at build time and names which
 //! repository each artifact may appear in.
 
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 use serde::Deserialize;
 
@@ -20,13 +20,18 @@ struct RepoBoundaryData {
     verify_public_repo_action: String,
 }
 
-static REPO_BOUNDARY: OnceLock<Result<RepoBoundaryData, String>> = OnceLock::new();
-static VERIFY_PUBLIC_REPO_EVIDENCE: OnceLock<String> = OnceLock::new();
+static REPO_BOUNDARY: LazyLock<Result<RepoBoundaryData, String>> = LazyLock::new(|| {
+    crate::toml_config::parse_embedded_toml(REPO_BOUNDARY_TOML_PATH, REPO_BOUNDARY_TOML)
+});
+static VERIFY_PUBLIC_REPO_EVIDENCE: LazyLock<String> = LazyLock::new(|| {
+    format!(
+        "scripts/final-launch.sh + gh repo view {} --json visibility",
+        vyre_public_repository()
+    )
+});
 
 fn data() -> &'static RepoBoundaryData {
-    crate::toml_config::data_or_exit(REPO_BOUNDARY.get_or_init(|| {
-        crate::toml_config::parse_embedded_toml(REPO_BOUNDARY_TOML_PATH, REPO_BOUNDARY_TOML)
-    }))
+    crate::toml_config::data_or_exit(LazyLock::force(&REPO_BOUNDARY))
 }
 
 /// The one repository public artifacts may name.
@@ -54,14 +59,7 @@ pub(crate) fn verify_public_repo_action() -> &'static str {
 }
 
 pub(crate) fn verify_public_repo_evidence() -> &'static str {
-    VERIFY_PUBLIC_REPO_EVIDENCE
-        .get_or_init(|| {
-            format!(
-                "scripts/final-launch.sh + gh repo view {} --json visibility",
-                vyre_public_repository()
-            )
-        })
-        .as_str()
+    VERIFY_PUBLIC_REPO_EVIDENCE.as_str()
 }
 
 /// Whether an artifact names exactly the public repository, with no legacy

@@ -16,11 +16,11 @@
 //! the same host (E5: cross-process), and the artifacts persist across
 //! reboots (E4: persistent across runs). Callers that have already set a
 //! writable cache path or sufficiently large cache size keep their choice.
-//! Configuration happens once via a `Once` so multi-threaded backend bring-up
-//! does not race.
+//! Configuration happens once via a `LazyLock` so multi-threaded backend
+//! bring-up does not race.
 
 use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 #[cfg(test)]
 use std::sync::{Mutex, MutexGuard};
@@ -34,7 +34,10 @@ const CUDA_CACHE_MAXSIZE: &str = "CUDA_CACHE_MAXSIZE";
 /// kernel shapes (autotune sweeps, large matmul tilings).
 const DEFAULT_MAX_BYTES: u64 = 1 * 1024 * 1024 * 1024;
 
-static CONFIGURED: OnceLock<Result<(), String>> = OnceLock::new();
+static CONFIGURED: LazyLock<Result<(), String>> = LazyLock::new(|| {
+    let cache_root = default_cache_root()?;
+    configure_jit_cache_unlocked(cache_root, DEFAULT_MAX_BYTES)
+});
 
 #[cfg(test)]
 static TEST_ENV_LOCK: Mutex<()> = Mutex::new(());
@@ -53,12 +56,7 @@ pub fn configure_jit_cache_default() -> Result<(), String> {
     #[cfg(test)]
     let _env_guard = lock_test_env();
 
-    CONFIGURED
-        .get_or_init(|| {
-            let cache_root = default_cache_root()?;
-            configure_jit_cache_unlocked(cache_root, DEFAULT_MAX_BYTES)
-        })
-        .clone()
+    (*CONFIGURED).clone()
 }
 
 fn configure_jit_cache_unlocked(cache_dir: PathBuf, max_bytes: u64) -> Result<(), String> {

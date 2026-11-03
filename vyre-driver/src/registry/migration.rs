@@ -27,7 +27,7 @@
 //! * Chain resolution stops at the highest version reachable. An
 //!   absent further migration is a terminal state, not an error.
 
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 use crate::diagnostics::{Diagnostic, OpLocation};
 use rustc_hash::FxHashMap;
@@ -276,8 +276,7 @@ impl MigrationRegistry {
     /// Process-wide singleton.
     #[must_use]
     pub fn global() -> &'static MigrationRegistry {
-        static REGISTRY: OnceLock<MigrationRegistry> = OnceLock::new();
-        REGISTRY.get_or_init(|| {
+        static REGISTRY: LazyLock<MigrationRegistry> = LazyLock::new(|| {
             let migration_count = inventory::iter::<Migration>().count();
             let mut forward = FxHashMap::default();
             let _ = vyre_foundation::allocation::try_reserve_hash_map_to_capacity(
@@ -303,7 +302,8 @@ impl MigrationRegistry {
                 forward,
                 deprecations,
             }
-        })
+        });
+        LazyLock::force(&REGISTRY)
     }
 
     /// Look up a single-step migration for `(op_id, from)`.

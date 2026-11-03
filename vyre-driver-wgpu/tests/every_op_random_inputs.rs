@@ -9,7 +9,7 @@
 #![cfg(feature = "device-tests")]
 #![allow(clippy::filter_map_bool_then, clippy::unnecessary_map_or)]
 #![allow(deprecated)]
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 use proptest::test_runner::{Config, TestRunner};
 use vyre::ir::Program;
@@ -28,12 +28,12 @@ use harness::every_op_random_inputs::{
 };
 
 fn require_backend() -> &'static WgpuBackend {
-    static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();
-    BACKEND.get_or_init(|| {
+    static BACKEND: LazyLock<WgpuBackend> = LazyLock::new(|| {
         WgpuBackend::acquire().expect(
             "every_op_random_input_stress: GPU adapter probe failed. Fix: verify nvidia-smi, WGPU_BACKEND, Vulkan drivers, and wgpu adapter selection.",
         )
-    })
+    });
+    LazyLock::force(&BACKEND)
 }
 
 /// Evaluate one case on the reference under the interpreter's work ceiling.

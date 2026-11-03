@@ -19,14 +19,14 @@ use crate::{subgroup::SubgroupSimulator, value::Value};
 #[cfg(feature = "subgroup-ops")]
 use smallvec::SmallVec;
 #[cfg(feature = "subgroup-ops")]
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 #[cfg(feature = "subgroup-ops")]
 use vyre_foundation::ir::{Expr, SubgroupReduceOp};
 
 #[cfg(feature = "subgroup-ops")]
 pub(crate) fn subgroup_simulator() -> &'static SubgroupSimulator {
-    static SIMULATOR: OnceLock<SubgroupSimulator> = OnceLock::new();
-    SIMULATOR.get_or_init(SubgroupSimulator::default)
+    static SIMULATOR: LazyLock<SubgroupSimulator> = LazyLock::new(SubgroupSimulator::default);
+    LazyLock::force(&SIMULATOR)
 }
 
 /// Lanes in one subgroup of the simulated device.
