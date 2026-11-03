@@ -1480,8 +1480,9 @@ mod tests {
     use super::*;
 
     /// WHY: a glob whose `*` crossed a path separator would let one document
-    /// reference or one lane write-glob claim a whole subtree, which is the
-    /// scope-that-does-not-exist defect both readers of this exist to catch.
+    /// reference, one `covers` entry or one trybuild pattern claim a whole
+    /// subtree, which is the scope-that-does-not-exist defect every reader of
+    /// this exists to catch.
     #[test]
     fn a_glob_star_stays_inside_one_path_segment_and_a_double_star_does_not() {
         assert!(glob_match("docs/*.md", "docs/a.md"));
@@ -1495,6 +1496,70 @@ mod tests {
             "vyre-libs/src/graph/mod.rs"
         ));
         assert!(!glob_match("vyre-*/src/**/*.rs", "vyre-libs/tests/a.rs"));
+    }
+
+    /// WHY: the glob is the whole coupling. A `covers` entry that matches
+    /// nothing silently exempts a page, and one that matches too much drags an
+    /// unrelated page into every diff. Both directions are asserted here rather
+    /// than through a fixture tree, because the pattern language is the contract.
+    #[test]
+    fn double_star_crosses_separators_and_single_star_does_not() {
+        assert!(glob_match(
+            "vyre-libs/src/parsing/**",
+            "vyre-libs/src/parsing/go/lex.rs"
+        ));
+        assert!(glob_match(
+            "vyre-libs/src/parsing/**",
+            "vyre-libs/src/parsing"
+        ));
+        assert!(!glob_match(
+            "vyre-libs/src/parsing/**",
+            "vyre-libs/src/graph/mod.rs"
+        ));
+        assert!(glob_match(
+            "vyre-megakernel/src/*.rs",
+            "vyre-megakernel/src/cost.rs"
+        ));
+        assert!(!glob_match(
+            "vyre-megakernel/src/*.rs",
+            "vyre-megakernel/src/target/mod.rs"
+        ));
+        assert!(glob_match("Cargo.toml", "Cargo.toml"));
+        assert!(!glob_match("Cargo.toml", "vyre/Cargo.toml"));
+    }
+
+    /// WHY: a `covers` component may carry several stars, and the last run of
+    /// literal text anchors the end of the component while the earlier runs are
+    /// consumed in order. Matching a later run before an earlier one, or
+    /// consuming the anchor as an interior run, both accept a component the
+    /// pattern excludes, and neither is visible from a single-star case.
+    #[test]
+    fn several_stars_in_one_component_match_in_order_and_anchor_the_tail() {
+        assert!(glob_match("docs/*-*.md", "docs/wire-format.md"));
+        assert!(!glob_match("docs/*-*.md", "docs/values.md"));
+        assert!(glob_match("a*b*c", "axbyc"));
+        assert!(glob_match("a*b*c", "abc"));
+        assert!(!glob_match("a*b*c", "acb"));
+        assert!(!glob_match("a*a", "a"));
+        assert!(glob_match("lex*", "lexer.rs"));
+        assert!(glob_match("*.rs", "lib.rs"));
+        assert!(!glob_match("*.rs", "lib.rs.bak"));
+    }
+
+    /// WHY: the trybuild exemption is granted by pattern, and a pattern that
+    /// crossed a directory separator would exempt files nothing compiles.
+    #[test]
+    fn a_star_stays_inside_one_component() {
+        assert!(glob_match(
+            "vyre-macros/tests/ui/*.rs",
+            "vyre-macros/tests/ui/bad.rs"
+        ));
+        assert!(!glob_match(
+            "vyre-macros/tests/ui/*.rs",
+            "vyre-macros/tests/ui/deep/bad.rs"
+        ));
+        assert!(glob_match("a/b?.rs", "a/bc.rs"));
+        assert!(!glob_match("a/b?.rs", "a/bcd.rs"));
     }
 
     /// WHY: the manifest states what cargo needs to build a test harness, and

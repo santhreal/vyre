@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
-use crate::gates::scan::{Code, CodeCursor, Tree};
+use crate::gates::scan::{glob_match, Code, CodeCursor, Tree};
 
 /// Edition the parser reads files under.
 const EDITION: &str = "2021";
@@ -1039,42 +1039,6 @@ fn normalize(path: &str) -> String {
     parts.join("/")
 }
 
-/// Whether a path matches a pattern whose `*` and `?` stay inside one component.
-fn glob_match(pattern: &str, path: &str) -> bool {
-    let pattern: Vec<&str> = pattern.split('/').collect();
-    let path: Vec<&str> = path.split('/').collect();
-    if pattern.len() != path.len() {
-        return false;
-    }
-    pattern
-        .iter()
-        .zip(path.iter())
-        .all(|(pattern, part)| component_match(pattern, part))
-}
-
-/// Whether one path component matches one pattern component.
-fn component_match(pattern: &str, part: &str) -> bool {
-    let pattern: Vec<char> = pattern.chars().collect();
-    let part: Vec<char> = part.chars().collect();
-    let mut memo = vec![vec![false; part.len() + 1]; pattern.len() + 1];
-    memo[0][0] = true;
-    for at in 1..=pattern.len() {
-        if pattern[at - 1] == '*' {
-            memo[at][0] = memo[at - 1][0];
-        }
-    }
-    for at in 1..=pattern.len() {
-        for index in 1..=part.len() {
-            memo[at][index] = match pattern[at - 1] {
-                '*' => memo[at - 1][index] || memo[at][index - 1],
-                '?' => memo[at - 1][index - 1],
-                literal => memo[at - 1][index - 1] && literal == part[index - 1],
-            };
-        }
-    }
-    memo[pattern.len()][part.len()]
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1141,22 +1105,6 @@ mod tests {
     fn relative_paths_collapse() {
         assert_eq!(normalize("a/b/../c/./d.rs"), "a/c/d.rs");
         assert_eq!(normalize("./a.rs"), "a.rs");
-    }
-
-    /// WHY: the trybuild exemption is granted by pattern, and a pattern that
-    /// crossed a directory separator would exempt files nothing compiles.
-    #[test]
-    fn a_star_stays_inside_one_component() {
-        assert!(glob_match(
-            "vyre-macros/tests/ui/*.rs",
-            "vyre-macros/tests/ui/bad.rs"
-        ));
-        assert!(!glob_match(
-            "vyre-macros/tests/ui/*.rs",
-            "vyre-macros/tests/ui/deep/bad.rs"
-        ));
-        assert!(glob_match("a/b?.rs", "a/bc.rs"));
-        assert!(!glob_match("a/b?.rs", "a/bcd.rs"));
     }
 
     /// WHY: a raw string keeps its backslashes and a plain string does not, and

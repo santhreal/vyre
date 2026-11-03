@@ -253,7 +253,7 @@ fn coupling_findings(pages: &[Covering], changed: &BTreeSet<String>, root: &Path
         for pattern in &page.covers {
             let matched: Vec<&String> = changed
                 .iter()
-                .filter(|path| glob_matches(pattern, path))
+                .filter(|path| scan::glob_match(pattern, path))
                 .collect();
             if !matched.is_empty() {
                 hits.insert(pattern.as_str(), matched);
@@ -496,66 +496,7 @@ fn diff_names(root: &Path, arguments: &[&str]) -> Result<BTreeSet<String>, GateE
 
 /// Whether a `covers` pattern matches any path in the set.
 fn matches_any(pattern: &str, paths: &BTreeSet<String>) -> bool {
-    paths.iter().any(|path| glob_matches(pattern, path))
-}
-
-/// Whether `pattern` matches `path`, with `**` crossing separators and `*`
-/// matching within one component.
-fn glob_matches(pattern: &str, path: &str) -> bool {
-    if let Some(prefix) = pattern.strip_suffix("/**") {
-        if path == prefix || path.starts_with(&format!("{prefix}/")) {
-            return true;
-        }
-    }
-    segment_matches(
-        &pattern.split('/').collect::<Vec<_>>(),
-        &path.split('/').collect::<Vec<_>>(),
-    )
-}
-
-/// Component-wise glob match, where `**` consumes any number of components.
-fn segment_matches(pattern: &[&str], path: &[&str]) -> bool {
-    match (pattern.first(), path.first()) {
-        (None, None) => true,
-        (None, Some(_)) => false,
-        (Some(&"**"), _) => {
-            if segment_matches(&pattern[1..], path) {
-                return true;
-            }
-            !path.is_empty() && segment_matches(pattern, &path[1..])
-        }
-        (Some(_), None) => false,
-        (Some(head), Some(component)) => {
-            component_matches(head, component) && segment_matches(&pattern[1..], &path[1..])
-        }
-    }
-}
-
-/// Whether one pattern component matches one path component, `*` spanning any
-/// run of characters inside it.
-fn component_matches(pattern: &str, component: &str) -> bool {
-    let mut parts = pattern.split('*');
-    let Some(first) = parts.next() else {
-        return pattern == component;
-    };
-    if !component.starts_with(first) {
-        return false;
-    }
-    let mut at = first.len();
-    let mut pending: Option<&str> = None;
-    for part in parts {
-        let Some(previous) = pending.replace(part) else {
-            continue;
-        };
-        match component[at..].find(previous) {
-            Some(offset) => at += offset + previous.len(),
-            None => return false,
-        }
-    }
-    match pending {
-        None => at == component.len(),
-        Some(last) => component.len() >= at + last.len() && component[at..].ends_with(last),
-    }
+    paths.iter().any(|path| scan::glob_match(pattern, path))
 }
 
 /// Read one document under the checkout root, under the read bound.
@@ -571,54 +512,6 @@ fn read_document(root: &Path, relative: &str) -> Result<String, GateError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// WHY: the glob is the whole coupling. A `covers` entry that matches
-    /// nothing silently exempts a page, and one that matches too much drags an
-    /// unrelated page into every diff. Both directions are asserted here rather
-    /// than through a fixture tree, because the pattern language is the contract.
-    #[test]
-    fn double_star_crosses_separators_and_single_star_does_not() {
-        assert!(glob_matches(
-            "vyre-libs/src/parsing/**",
-            "vyre-libs/src/parsing/go/lex.rs"
-        ));
-        assert!(glob_matches(
-            "vyre-libs/src/parsing/**",
-            "vyre-libs/src/parsing"
-        ));
-        assert!(!glob_matches(
-            "vyre-libs/src/parsing/**",
-            "vyre-libs/src/graph/mod.rs"
-        ));
-        assert!(glob_matches(
-            "vyre-megakernel/src/*.rs",
-            "vyre-megakernel/src/cost.rs"
-        ));
-        assert!(!glob_matches(
-            "vyre-megakernel/src/*.rs",
-            "vyre-megakernel/src/target/mod.rs"
-        ));
-        assert!(glob_matches("Cargo.toml", "Cargo.toml"));
-        assert!(!glob_matches("Cargo.toml", "vyre/Cargo.toml"));
-    }
-
-    /// WHY: a `covers` component may carry several stars, and the last run of
-    /// literal text anchors the end of the component while the earlier runs are
-    /// consumed in order. Matching a later run before an earlier one, or
-    /// consuming the anchor as an interior run, both accept a component the
-    /// pattern excludes, and neither is visible from a single-star case.
-    #[test]
-    fn several_stars_in_one_component_match_in_order_and_anchor_the_tail() {
-        assert!(glob_matches("docs/*-*.md", "docs/wire-format.md"));
-        assert!(!glob_matches("docs/*-*.md", "docs/values.md"));
-        assert!(glob_matches("a*b*c", "axbyc"));
-        assert!(glob_matches("a*b*c", "abc"));
-        assert!(!glob_matches("a*b*c", "acb"));
-        assert!(!glob_matches("a*a", "a"));
-        assert!(glob_matches("lex*", "lexer.rs"));
-        assert!(glob_matches("*.rs", "lib.rs"));
-        assert!(!glob_matches("*.rs", "lib.rs.bak"));
-    }
 
     /// WHY: rule 3 reads tokens out of code, so what counts as a path decides
     /// whether it reports real broken pointers or noise. A template placeholder,
