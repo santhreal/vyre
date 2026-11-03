@@ -64,8 +64,8 @@ that lives in one op's source file is reuse nobody else gets.
 
 Before writing a new sub-op:
 
-1. **Search by name.** `git grep -n 'fn <verb>' -- vyre-libs/src`. If the work
-   has a name, someone has probably written it.
+1. **Search by name.** `git grep -n 'fn <verb>' -- 'vyre-libs-*/src'
+   vyre-primitives/src`. Named work usually exists already.
 2. **Search by op id.** `./cargo_full run --bin xtask -- print-composition
    --op-id <id>` walks a registered op's region tree. If a region's
    generator reads like the work you are about to do, that is the

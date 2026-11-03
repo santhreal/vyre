@@ -253,66 +253,7 @@ fn read_bounded(path: &std::path::Path, max_bytes: u64) -> std::io::Result<Vec<u
 }
 
 fn flush_paths(paths: &[std::path::PathBuf]) -> std::io::Result<()> {
-    sync_files_bounded(
-        paths,
-        crate::durable_fanout::open_for_sync,
-        std::fs::File::sync_data,
-        "disk cache file sync worker panicked",
-    )?;
-    let parents = crate::durable_fanout::parent_directories(paths, |parents, capacity| {
-        crate::allocation::try_reserve_vec_to_capacity(parents, capacity).map_err(|error| {
-            std::io::Error::new(
-                std::io::ErrorKind::OutOfMemory,
-                format!(
-                    "pipeline cache flush could not reserve {capacity} parent path slot(s): {error}. Fix: flush fewer cache paths per batch."
-                ),
-            )
-        })
-    })?;
-    sync_parent_dirs(&parents)
-}
-
-/// A directory carries no write access to request, so it is opened read-only:
-/// [`crate::durable_fanout::open_for_sync`] is for the file half. The opener is
-/// a closure because `File::open` is generic over its argument and states no
-/// single opener signature.
-#[cfg(unix)]
-fn sync_parent_dirs(parents: &[std::path::PathBuf]) -> std::io::Result<()> {
-    sync_files_bounded(
-        parents,
-        |path: &std::path::Path| std::fs::File::open(path),
-        std::fs::File::sync_all,
-        "disk cache dir sync worker panicked",
-    )
-}
-
-#[cfg(not(unix))]
-fn sync_parent_dirs(_parents: &[std::path::PathBuf]) -> std::io::Result<()> {
-    Ok(())
-}
-
-fn sync_files_bounded(
-    paths: &[std::path::PathBuf],
-    open: fn(&std::path::Path) -> std::io::Result<std::fs::File>,
-    sync: fn(&std::fs::File) -> std::io::Result<()>,
-    panic_message: &'static str,
-) -> std::io::Result<()> {
-    crate::durable_fanout::for_each_bounded(
-        paths,
-        |path| {
-            let file = open(path)?;
-            sync(&file)
-        },
-        || std::io::Error::other(panic_message),
-        |requested, source| {
-            std::io::Error::new(
-                std::io::ErrorKind::OutOfMemory,
-                format!(
-                    "pipeline cache sync could not reserve {requested} worker handle(s): {source}. Fix: lower pipeline cache sync fan-out."
-                ),
-            )
-        },
-    )
+    crate::durable_fanout::sync_paths_and_parents(paths, crate::durable_fanout::into_io_error)
 }
 
 /// Capability bits that participate in pipeline-cache identity.

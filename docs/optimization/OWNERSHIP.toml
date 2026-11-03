@@ -16,7 +16,7 @@ avoid = [
   "vyre-driver-*",
   "vyre-foundation/src/**",
   "vyre-runtime/src/**",
-  "vyre-libs/src/**",
+  "vyre-libs-*/src/**",
   "vyre-primitives/src/**",
 ]
 required_commands = [
@@ -368,7 +368,7 @@ avoid = [
   "vyre-driver-cuda/src/**",
   "vyre-driver-wgpu/src/**",
   "vyre-driver-metal/src/**",
-  "vyre-libs/src/**",
+  "vyre-libs-*/src/**",
 ]
 required_commands = [
   "cargo_full test -p xtask",

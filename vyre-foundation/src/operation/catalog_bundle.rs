@@ -89,7 +89,9 @@ impl OperationCatalogBundle {
         let extensions = BTreeMap::new();
 
         for reg in inventory::iter::<OperationRegistration> {
-            descriptors.entry(reg.id).or_insert_with(|| reg.descriptor());
+            descriptors
+                .entry(reg.id)
+                .or_insert_with(|| reg.descriptor());
             lowering_providers
                 .entry(reg.id)
                 .or_insert_with(|| reg.lowering_provider());

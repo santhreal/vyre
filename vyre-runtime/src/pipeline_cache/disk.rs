@@ -287,65 +287,9 @@ impl PipelineCacheStore for DiskCache {
 }
 
 fn flush_paths(paths: &[PathBuf]) -> io::Result<()> {
-    sync_paths_bounded(
+    vyre_driver::durable_fanout::sync_paths_and_parents(
         paths,
-        vyre_driver::durable_fanout::open_for_sync,
-        File::sync_data,
-        "pipeline cache file sync worker panicked",
-    )?;
-    let parents = vyre_driver::durable_fanout::parent_directories(paths, |parents, capacity| {
-        parents.try_reserve_exact(capacity).map_err(|source| {
-            io::Error::new(
-                io::ErrorKind::OutOfMemory,
-                format!(
-                    "pipeline cache flush could not reserve {capacity} parent path slot(s): {source}. Fix: flush fewer cache paths per batch."
-                ),
-            )
-        })
-    })?;
-    sync_parent_dirs(&parents)
-}
-
-/// A directory carries no write access to request, so it is opened read-only:
-/// [`vyre_driver::durable_fanout::open_for_sync`] is for the file half. The
-/// opener is a closure because `File::open` is generic over its argument and
-/// states no single opener signature.
-#[cfg(unix)]
-fn sync_parent_dirs(parents: &[PathBuf]) -> io::Result<()> {
-    sync_paths_bounded(
-        parents,
-        |path: &Path| File::open(path),
-        File::sync_all,
-        "pipeline cache directory sync worker panicked",
-    )
-}
-
-#[cfg(not(unix))]
-fn sync_parent_dirs(_parents: &[PathBuf]) -> io::Result<()> {
-    Ok(())
-}
-
-fn sync_paths_bounded(
-    paths: &[PathBuf],
-    open: fn(&Path) -> io::Result<File>,
-    sync: fn(&File) -> io::Result<()>,
-    panic_message: &'static str,
-) -> io::Result<()> {
-    vyre_driver::durable_fanout::for_each_bounded(
-        paths,
-        |path| {
-            let file = open(path)?;
-            sync(&file)
-        },
-        || io::Error::other(panic_message),
-        |requested, source| {
-            io::Error::new(
-                io::ErrorKind::OutOfMemory,
-                format!(
-                    "pipeline cache sync could not reserve {requested} worker handle(s): {source}. Fix: lower pipeline cache sync fan-out."
-                ),
-            )
-        },
+        vyre_driver::durable_fanout::into_io_error,
     )
 }
 

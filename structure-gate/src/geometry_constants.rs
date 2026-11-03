@@ -43,8 +43,8 @@ fn judged_source(path: &str) -> bool {
             || member == crate::workspace_rules::CATEGORY_C_CRATE)
 }
 
-/// Collect every banned geometry constant declared in production source of a
-/// crate [`judged_source`] accepts.
+/// Collect every banned geometry constant declared under `src/` of a
+/// Category A crate or the Category C crate.
 #[must_use]
 pub fn geometry_constant_failures(root: &Path) -> Vec<String> {
     let mut failures = Vec::new();

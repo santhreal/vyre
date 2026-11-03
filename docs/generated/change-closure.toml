@@ -7381,7 +7381,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "DiskCacheError"
 variant_name = "CacheDirUnknown"
-declaration_site = "vyre-runtime/src/pipeline_cache/disk.rs:356"
+declaration_site = "vyre-runtime/src/pipeline_cache/disk.rs:300"
 constructors = ["DiskCacheError::CacheDirUnknown"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug)"
@@ -7391,7 +7391,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "DiskCacheError"
 variant_name = "Io"
-declaration_site = "vyre-runtime/src/pipeline_cache/disk.rs:361"
+declaration_site = "vyre-runtime/src/pipeline_cache/disk.rs:305"
 constructors = ["DiskCacheError::Io"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug)"
@@ -20593,7 +20593,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineCacheMissReason"
 variant_name = "DeviceOrRuntimeChanged"
-declaration_site = "vyre-driver/src/pipeline/cache.rs:564"
+declaration_site = "vyre-driver/src/pipeline/cache.rs:505"
 constructors = ["PipelineCacheMissReason::DeviceOrRuntimeChanged"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Copy, Clone, Debug, Eq, PartialEq)"
@@ -20603,7 +20603,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineCacheMissReason"
 variant_name = "DispatchPolicyChanged"
-declaration_site = "vyre-driver/src/pipeline/cache.rs:561"
+declaration_site = "vyre-driver/src/pipeline/cache.rs:502"
 constructors = ["PipelineCacheMissReason::DispatchPolicyChanged"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Copy, Clone, Debug, Eq, PartialEq)"
@@ -20613,7 +20613,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineCacheMissReason"
 variant_name = "EmptyCache"
-declaration_site = "vyre-driver/src/pipeline/cache.rs:557"
+declaration_site = "vyre-driver/src/pipeline/cache.rs:498"
 constructors = ["PipelineCacheMissReason::EmptyCache"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Copy, Clone, Debug, Eq, PartialEq)"
@@ -20623,7 +20623,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineCacheMissReason"
 variant_name = "KeyAbsent"
-declaration_site = "vyre-driver/src/pipeline/cache.rs:566"
+declaration_site = "vyre-driver/src/pipeline/cache.rs:507"
 constructors = ["PipelineCacheMissReason::KeyAbsent"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Copy, Clone, Debug, Eq, PartialEq)"
@@ -20633,7 +20633,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineCacheMissReason"
 variant_name = "ProgramChanged"
-declaration_site = "vyre-driver/src/pipeline/cache.rs:559"
+declaration_site = "vyre-driver/src/pipeline/cache.rs:500"
 constructors = ["PipelineCacheMissReason::ProgramChanged"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Copy, Clone, Debug, Eq, PartialEq)"
@@ -32257,6 +32257,66 @@ constructors = ["SymbolicDim::Symbol"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq, Hash)"
 public_api_entry = "docs/public-api/vyre-foundation.txt"
+disposition = "implemented"
+
+[[closure]]
+type_name = "SyncFailure"
+variant_name = "Open"
+declaration_site = "vyre-driver/src/durable_fanout.rs:48"
+constructors = ["SyncFailure::Open"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Debug)"
+public_api_entry = "docs/public-api/vyre-driver.txt"
+disposition = "implemented"
+
+[[closure]]
+type_name = "SyncFailure"
+variant_name = "Panicked"
+declaration_site = "vyre-driver/src/durable_fanout.rs:66"
+constructors = ["SyncFailure::Panicked"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Debug)"
+public_api_entry = "docs/public-api/vyre-driver.txt"
+disposition = "implemented"
+
+[[closure]]
+type_name = "SyncFailure"
+variant_name = "Reserve"
+declaration_site = "vyre-driver/src/durable_fanout.rs:71"
+constructors = ["SyncFailure::Reserve"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Debug)"
+public_api_entry = "docs/public-api/vyre-driver.txt"
+disposition = "implemented"
+
+[[closure]]
+type_name = "SyncFailure"
+variant_name = "Sync"
+declaration_site = "vyre-driver/src/durable_fanout.rs:57"
+constructors = ["SyncFailure::Sync"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Debug)"
+public_api_entry = "docs/public-api/vyre-driver.txt"
+disposition = "implemented"
+
+[[closure]]
+type_name = "SyncPass"
+variant_name = "Directories"
+declaration_site = "vyre-driver/src/durable_fanout.rs:29"
+constructors = ["SyncPass::Directories"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
+public_api_entry = "docs/public-api/vyre-driver.txt"
+disposition = "implemented"
+
+[[closure]]
+type_name = "SyncPass"
+variant_name = "Files"
+declaration_site = "vyre-driver/src/durable_fanout.rs:27"
+constructors = ["SyncPass::Files"]
+child_traversal = "leaf"
+equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq)"
+public_api_entry = "docs/public-api/vyre-driver.txt"
 disposition = "implemented"
 
 [[closure]]

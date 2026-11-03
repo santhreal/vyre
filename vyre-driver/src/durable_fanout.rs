@@ -1,18 +1,13 @@
-//! Backend-neutral bounded fan-out for durability work on a path set.
-//!
-//! Making a cache entry durable is one filesystem call per file plus one per
-//! containing directory, and both are latency-bound rather than CPU-bound: a
-//! flush of several hundred entries wants concurrency, and concurrency without
-//! a ceiling wants a thread per entry. Three cache layers each answered that
-//! the same way, so the answer lives here once.
-//!
-//! What stays with the caller is the per-item work and its diagnostics: which
-//! sync call to make, what a failure reads like, and what error type it is.
-//! What lives here is the ceiling, the chunk-and-join shape that enforces it,
-//! and the parent-directory set the second pass runs over.
+//! A cache entry is durable once its file data is synced and its containing
+//! directory is synced. Both syncs are latency-bound, so a flush of several
+//! hundred entries runs them concurrently across a bounded worker pool.
+//! `sync_paths_and_parents` is the single implementation; each cache layer
+//! supplies only the mapping from `SyncFailure` to its own error type.
 
 use std::collections::TryReserveError;
+use std::fmt;
 use std::fs::{File, OpenOptions};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
@@ -24,13 +19,153 @@ use std::sync::LazyLock;
 /// the syncs recover in overlap.
 const MAX_WORKERS: usize = 16;
 
-/// Concurrent durability workers this host may use.
+/// Pass of a durable flush.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SyncPass {
+    /// Syncing the data of each written file.
+    Files,
+    /// Syncing each distinct parent directory, which makes the entries durable.
+    Directories,
+}
+
+impl SyncPass {
+    fn noun(self) -> &'static str {
+        match self {
+            Self::Files => "file",
+            Self::Directories => "directory",
+        }
+    }
+}
+
+/// Failure of one step of [`sync_paths_and_parents`].
 ///
-/// Resolved once: `available_parallelism` is a syscall on every platform that
-/// implements it, and a flush loop asking it per chunk pays for an answer that
-/// cannot change usefully within one process.
+/// `Display` omits the path, so a message built from it is safe to log. A
+/// caller that reports paths reads the `path` field.
+#[derive(Debug)]
+pub enum SyncFailure<'a> {
+    /// Opening `path` for the sync failed.
+    Open {
+        /// Pass the path belongs to.
+        pass: SyncPass,
+        /// Path that failed to open.
+        path: &'a Path,
+        /// Error from the open call.
+        source: io::Error,
+    },
+    /// Syncing `path` failed.
+    Sync {
+        /// Pass the path belongs to.
+        pass: SyncPass,
+        /// Path that failed to sync.
+        path: &'a Path,
+        /// Error from the sync call.
+        source: io::Error,
+    },
+    /// A sync worker panicked.
+    Panicked {
+        /// Pass the worker belonged to.
+        pass: SyncPass,
+    },
+    /// Staging storage for the pass could not be reserved.
+    Reserve {
+        /// Pass whose staging failed.
+        pass: SyncPass,
+        /// Entries requested.
+        requested: usize,
+        /// Allocator error.
+        source: TryReserveError,
+    },
+}
+
+impl fmt::Display for SyncFailure<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Open { pass, source, .. } => write!(
+                f,
+                "durable flush could not open a {} for sync: {source}. Fix: remove the corrupted cache entry and retry.",
+                pass.noun()
+            ),
+            Self::Sync { pass, source, .. } => write!(
+                f,
+                "durable flush could not sync a {}: {source}. Fix: check cache storage health and retry.",
+                pass.noun()
+            ),
+            Self::Panicked { pass } => write!(
+                f,
+                "durable flush {} sync worker panicked. Fix: retry the flush.",
+                pass.noun()
+            ),
+            Self::Reserve {
+                pass,
+                requested,
+                source,
+            } => write!(
+                f,
+                "durable flush could not reserve {requested} {} slot(s): {source}. Fix: flush fewer cache paths per batch.",
+                pass.noun()
+            ),
+        }
+    }
+}
+
+/// `failure` as an [`io::Error`] that keeps the open or sync error's kind.
+///
+/// A free function rather than a `From` impl, so it can be passed directly as
+/// the `on_failure` mapper of [`sync_paths_and_parents`] for every lifetime.
 #[must_use]
-pub fn worker_count() -> usize {
+pub fn into_io_error(failure: SyncFailure<'_>) -> io::Error {
+    let kind = match &failure {
+        SyncFailure::Open { source, .. } | SyncFailure::Sync { source, .. } => source.kind(),
+        SyncFailure::Panicked { .. } => io::ErrorKind::Other,
+        SyncFailure::Reserve { .. } => io::ErrorKind::OutOfMemory,
+    };
+    io::Error::new(kind, failure.to_string())
+}
+
+/// Sync the data of every file in `paths`, then every distinct parent
+/// directory of them.
+///
+/// Files are opened with write access, which `FlushFileBuffers` requires on
+/// Windows; directories are opened read-only. The directory pass runs on Unix
+/// only: Windows has no directory handle to flush, and Miri models `fsync`
+/// only on regular files.
+///
+/// # Errors
+///
+/// Returns `on_failure` applied to the first failure. A failing chunk is
+/// joined before returning, and no later chunk starts.
+pub fn sync_paths_and_parents<E: Send>(
+    paths: &[PathBuf],
+    on_failure: impl Fn(SyncFailure<'_>) -> E + Sync,
+) -> Result<(), E> {
+    for_each_bounded(
+        paths,
+        SyncPass::Files,
+        open_for_sync,
+        File::sync_data,
+        &on_failure,
+    )?;
+    if cfg!(all(unix, not(miri))) {
+        let parents = parent_directories(paths).map_err(|(requested, source)| {
+            on_failure(SyncFailure::Reserve {
+                pass: SyncPass::Directories,
+                requested,
+                source,
+            })
+        })?;
+        for_each_bounded(
+            &parents,
+            SyncPass::Directories,
+            |path| File::open(path),
+            File::sync_all,
+            &on_failure,
+        )?;
+    }
+    Ok(())
+}
+
+/// Concurrent durability workers this host may use, resolved once.
+fn worker_count() -> usize {
     static WORKERS: LazyLock<usize> = LazyLock::new(|| {
         std::thread::available_parallelism()
             .map(usize::from)
@@ -41,105 +176,133 @@ pub fn worker_count() -> usize {
 }
 
 /// Sorted, distinct parent directories of `paths`.
-///
-/// A directory entry is durable only after the directory itself is synced, and
-/// a cache batch normally writes many files into few directories, so the second
-/// pass runs over the deduplicated set rather than once per file.
-///
-/// # Errors
-///
-/// Returns whatever `reserve` reports when the parent vector cannot be sized
-/// for `paths.len()` entries.
-pub fn parent_directories<E>(
-    paths: &[PathBuf],
-    reserve: impl FnOnce(&mut Vec<PathBuf>, usize) -> Result<(), E>,
-) -> Result<Vec<PathBuf>, E> {
+fn parent_directories(paths: &[PathBuf]) -> Result<Vec<PathBuf>, (usize, TryReserveError)> {
     let mut parents = Vec::new();
-    reserve(&mut parents, paths.len())?;
-    for path in paths {
-        if let Some(parent) = path.parent() {
-            parents.push(parent.to_path_buf());
-        }
-    }
+    parents
+        .try_reserve_exact(paths.len())
+        .map_err(|source| (paths.len(), source))?;
+    parents.extend(
+        paths
+            .iter()
+            .filter_map(|path| path.parent().map(Path::to_path_buf)),
+    );
     parents.sort_unstable();
     parents.dedup();
     Ok(parents)
 }
 
-/// Open `path` with the access its platform requires to flush its buffers.
-///
-/// A read-only handle is enough to fsync on Unix and is not on Windows, where
-/// `FlushFileBuffers` rejects a handle carrying no write access with
-/// `ERROR_ACCESS_DENIED`. Every cache layer that made an entry durable opened
-/// the file for reading, so every explicit flush failed on Windows with a
-/// permission error against a file the process had just written itself.
-///
-/// Write access is requested on every platform rather than behind a target
-/// predicate: the caller already wrote the file, and one open shape keeps the
-/// durability path the same code on every host.
-///
-/// # Errors
-///
-/// Returns the open error for `path`.
-pub fn open_for_sync(path: &Path) -> std::io::Result<File> {
+fn open_for_sync(path: &Path) -> io::Result<File> {
     OpenOptions::new().read(true).write(true).open(path)
 }
 
-/// Run `task` over every item across a bounded pool of scoped threads.
+/// Open and sync every path across a bounded pool of scoped threads.
 ///
-/// Items are taken [`worker_count`] at a time and each chunk is joined before
-/// the next is spawned. That join is what bounds live threads: spawning the
-/// whole set into one scope would bound nothing, since the scope only joins at
-/// its end.
-///
-/// The first failure in a chunk propagates and no later chunk is started, so a
-/// storage failure stops the fan-out instead of repeating itself once per
-/// remaining item. Every thread of the failing chunk is still joined first,
-/// because the scope cannot return while one of its threads holds a borrow.
-///
-/// A worker that panics becomes `on_panic()`. The panic payload is dropped
-/// rather than resumed: a durability fan-out reports that the batch is not
-/// durable, and resuming here would unwind through the scope of a caller that
-/// is holding a lock over the same path set.
-///
-/// # Errors
-///
-/// Returns the first error `task` reports, `on_panic()` when a worker panicked,
-/// or `on_reserve_failure` when the per-chunk handle vector cannot be sized.
-pub fn for_each_bounded<T, E>(
-    items: &[T],
-    task: impl Fn(&T) -> Result<(), E> + Sync,
-    on_panic: impl Fn() -> E,
-    on_reserve_failure: impl Fn(usize, TryReserveError) -> E,
-) -> Result<(), E>
-where
-    T: Sync,
-    E: Send,
-{
-    if items.is_empty() {
-        return Ok(());
-    }
-    for chunk in items.chunks(worker_count()) {
+/// Paths are taken [`worker_count`] at a time and each chunk is joined before
+/// the next is spawned; that join bounds the live threads. A panicking worker
+/// becomes [`SyncFailure::Panicked`] instead of resuming the unwind, because
+/// the caller may hold a lock over the same path set.
+fn for_each_bounded<E: Send>(
+    paths: &[PathBuf],
+    pass: SyncPass,
+    open: impl Fn(&Path) -> io::Result<File> + Sync,
+    sync: fn(&File) -> io::Result<()>,
+    on_failure: &(impl Fn(SyncFailure<'_>) -> E + Sync),
+) -> Result<(), E> {
+    let task = |path: &PathBuf| -> Result<(), E> {
+        let file =
+            open(path).map_err(|source| on_failure(SyncFailure::Open { pass, path, source }))?;
+        sync(&file).map_err(|source| on_failure(SyncFailure::Sync { pass, path, source }))
+    };
+    for chunk in paths.chunks(worker_count()) {
         std::thread::scope(|scope| {
             let mut handles = Vec::new();
-            handles
-                .try_reserve_exact(chunk.len())
-                .map_err(|source| on_reserve_failure(chunk.len(), source))?;
-            for item in chunk {
-                handles.push(scope.spawn(|| task(item)));
+            handles.try_reserve_exact(chunk.len()).map_err(|source| {
+                on_failure(SyncFailure::Reserve {
+                    pass,
+                    requested: chunk.len(),
+                    source,
+                })
+            })?;
+            for path in chunk {
+                handles.push(scope.spawn(|| task(path)));
             }
             let mut first_error = None;
             for handle in handles {
-                let outcome = handle.join().unwrap_or_else(|_| Err(on_panic()));
+                let outcome = handle
+                    .join()
+                    .unwrap_or_else(|_| Err(on_failure(SyncFailure::Panicked { pass })));
                 if let Err(error) = outcome {
                     first_error = first_error.or(Some(error));
                 }
             }
-            match first_error {
-                Some(error) => Err(error),
-                None => Ok(()),
-            }
+            first_error.map_or(Ok(()), Err)
         })?;
     }
     Ok(())
+}
+
+// Inline: covers `parent_directories`, which no integration test can name.
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parent_directories_are_sorted_and_distinct() {
+        let paths = [
+            PathBuf::from("b/2"),
+            PathBuf::from("a/1"),
+            PathBuf::from("b/1"),
+            PathBuf::from("a/2"),
+        ];
+        assert_eq!(
+            parent_directories(&paths).expect("four parent slots"),
+            [PathBuf::from("a"), PathBuf::from("b")]
+        );
+    }
+
+    /// WHY: a file that cannot be opened must fail the flush in the file pass,
+    /// report that exact path, and keep the open error's kind.
+    #[test]
+    fn missing_file_fails_the_file_pass_with_its_path() {
+        let dir = tempfile::tempdir().expect("isolated directory");
+        let written = dir.path().join("written");
+        std::fs::write(&written, b"entry").expect("write entry");
+        let missing = dir.path().join("missing");
+        let paths = [written, missing.clone()];
+        let reported = sync_paths_and_parents(&paths, |failure| match failure {
+            SyncFailure::Open { pass, path, source } => (pass, path.to_path_buf(), source.kind()),
+            other => panic!("unexpected failure: {other}"),
+        })
+        .expect_err("missing file must fail the flush");
+        assert_eq!(
+            reported,
+            (SyncPass::Files, missing, io::ErrorKind::NotFound)
+        );
+    }
+
+    #[test]
+    fn written_files_and_their_directories_sync() {
+        let dir = tempfile::tempdir().expect("isolated directory");
+        let nested = dir.path().join("nested");
+        std::fs::create_dir(&nested).expect("nested directory");
+        let paths = [dir.path().join("top"), nested.join("inner")];
+        for path in &paths {
+            std::fs::write(path, b"entry").expect("write entry");
+        }
+        sync_paths_and_parents(&paths, into_io_error).expect("flush succeeds");
+    }
+
+    #[test]
+    fn io_conversion_keeps_the_source_kind() {
+        let error = into_io_error(SyncFailure::Sync {
+            pass: SyncPass::Directories,
+            path: Path::new("secret/path"),
+            source: io::Error::new(io::ErrorKind::PermissionDenied, "denied"),
+        });
+        assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+        assert!(
+            !error.to_string().contains("secret"),
+            "durable flush messages must not include the path: {error}"
+        );
+    }
 }

@@ -57,6 +57,7 @@ impl core::fmt::Display for vyre_driver::cache_invalidation::CacheInvalidationEr
 impl core::fmt::Display for vyre_driver::device_convergence::DeviceConvergencePlanError
 impl core::fmt::Display for vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationError
 impl core::fmt::Display for vyre_driver::device_work_queue::DeviceWorkQueueError
+impl core::fmt::Display for vyre_driver::durable_fanout::SyncFailure<'_>
 impl core::fmt::Display for vyre_driver::launch_fusion::LaunchFusionError
 impl core::fmt::Display for vyre_driver::megakernel_barrier::MegakernelBarrierPlanError
 impl core::fmt::Display for vyre_driver::megakernel_execution::MegakernelMemoryError
@@ -357,6 +358,8 @@ pub enum vyre_driver::device_work_queue::DeviceWorkQueueDrainStrategy
 pub enum vyre_driver::device_work_queue::DeviceWorkQueueError
 pub enum vyre_driver::device_work_queue::WorkQueueHostSync
 pub enum vyre_driver::dispatch_policy::DispatchExecutionMode
+pub enum vyre_driver::durable_fanout::SyncFailure<'a>
+pub enum vyre_driver::durable_fanout::SyncPass
 pub enum vyre_driver::graph_capture::GraphCaptureEditAction
 pub enum vyre_driver::graph_capture::GraphCaptureEditStability
 pub enum vyre_driver::graph_capture::ScanGraphCaptureEditKind
@@ -847,10 +850,9 @@ pub fn vyre_driver::dispatch_policy::select_primary_execution_mode(execution: vy
 pub fn vyre_driver::dispatch_policy_cache_digest(config: &vyre_driver::DispatchConfig) -> [u8; 32]
 pub fn vyre_driver::dispatch_policy_cache_string(config: &vyre_driver::DispatchConfig) -> alloc::string::String
 pub fn vyre_driver::dispatch_prefilter_confirm<B, F>(backend: &B, speculator: &vyre_driver::AdaptiveSpeculator, plan: vyre_driver::SpeculativeDispatchPlan<'_>, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig, confirm_two_stage: F) -> core::result::Result<vyre_driver::SpeculativeDispatchOutcome, vyre_driver::BackendError> where B: vyre_driver::VyreBackend + ?core::marker::Sized, F: core::ops::function::FnMut(vyre_driver::OutputBuffers) -> core::result::Result<vyre_driver::OutputBuffers, vyre_driver::BackendError>
-pub fn vyre_driver::durable_fanout::for_each_bounded<T, E>(items: &[T], task: impl core::ops::function::Fn(&T) -> core::result::Result<(), E> + core::marker::Sync, on_panic: impl core::ops::function::Fn() -> E, on_reserve_failure: impl core::ops::function::Fn(usize, alloc::collections::TryReserveError) -> E) -> core::result::Result<(), E> where T: core::marker::Sync, E: core::marker::Send
-pub fn vyre_driver::durable_fanout::open_for_sync(path: &std::path::Path) -> core::io::error::Result<std::fs::File>
-pub fn vyre_driver::durable_fanout::parent_directories<E>(paths: &[std::path::PathBuf], reserve: impl core::ops::function::FnOnce(&mut alloc::vec::Vec<std::path::PathBuf>, usize) -> core::result::Result<(), E>) -> core::result::Result<alloc::vec::Vec<std::path::PathBuf>, E>
-pub fn vyre_driver::durable_fanout::worker_count() -> usize
+pub fn vyre_driver::durable_fanout::SyncFailure<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_driver::durable_fanout::into_io_error(failure: vyre_driver::durable_fanout::SyncFailure<'_>) -> core::io::error::Error
+pub fn vyre_driver::durable_fanout::sync_paths_and_parents<E: core::marker::Send>(paths: &[std::path::PathBuf], on_failure: impl core::ops::function::Fn(vyre_driver::durable_fanout::SyncFailure<'_>) -> E + core::marker::Sync) -> core::result::Result<(), E>
 pub fn vyre_driver::dynamic_element_count_from_bytes(element: &vyre_spec::data_type::DataType, byte_len: usize) -> core::option::Option<u32>
 pub fn vyre_driver::element_size_bytes(data_type: &vyre_spec::data_type::DataType) -> core::result::Result<usize, vyre_driver::BackendError>
 pub fn vyre_driver::emit_aot_launcher_target(target: &vyre_foundation::operation::target_facet::TargetId, request: &vyre_driver::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::AotLauncherFiles, vyre_driver::BackendError>
@@ -2281,6 +2283,22 @@ pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::command_reuse: vyre_dri
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::copy_overlap: core::option::Option<vyre_driver::async_copy_overlap::CopyOverlapDecision>
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::execution: vyre_megakernel::schema::plan::ExecutionMode
 pub vyre_driver::dispatch_policy::DispatchPolicyVerdict::trace_jit: vyre_driver::trace_jit_policy::TraceJitDecision
+pub vyre_driver::durable_fanout::SyncFailure::Open
+pub vyre_driver::durable_fanout::SyncFailure::Open::pass: vyre_driver::durable_fanout::SyncPass
+pub vyre_driver::durable_fanout::SyncFailure::Open::path: &'a std::path::Path
+pub vyre_driver::durable_fanout::SyncFailure::Open::source: core::io::error::Error
+pub vyre_driver::durable_fanout::SyncFailure::Panicked
+pub vyre_driver::durable_fanout::SyncFailure::Panicked::pass: vyre_driver::durable_fanout::SyncPass
+pub vyre_driver::durable_fanout::SyncFailure::Reserve
+pub vyre_driver::durable_fanout::SyncFailure::Reserve::pass: vyre_driver::durable_fanout::SyncPass
+pub vyre_driver::durable_fanout::SyncFailure::Reserve::requested: usize
+pub vyre_driver::durable_fanout::SyncFailure::Reserve::source: alloc::collections::TryReserveError
+pub vyre_driver::durable_fanout::SyncFailure::Sync
+pub vyre_driver::durable_fanout::SyncFailure::Sync::pass: vyre_driver::durable_fanout::SyncPass
+pub vyre_driver::durable_fanout::SyncFailure::Sync::path: &'a std::path::Path
+pub vyre_driver::durable_fanout::SyncFailure::Sync::source: core::io::error::Error
+pub vyre_driver::durable_fanout::SyncPass::Directories
+pub vyre_driver::durable_fanout::SyncPass::Files
 pub vyre_driver::external_import::ExternalImportDescriptor::dimensions: vyre_spec::resource_capability::image::ImageDimensions
 pub vyre_driver::external_import::ExternalImportDescriptor::format: vyre_spec::resource_capability::image::ImageFormat
 pub vyre_driver::external_import::ExternalImportDescriptor::handle: H

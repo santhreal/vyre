@@ -73,7 +73,7 @@ pub(crate) mod diagnostics;
 pub mod dispatch_policy;
 /// Backend-neutral dispatch-shape comparison helpers.
 pub(crate) mod dispatch_shape;
-/// Backend-neutral bounded fan-out for durability work on a path set.
+/// Bounded, backend-neutral durability flush for a set of written files.
 pub mod durable_fanout;
 /// Backend-neutral external resource import shared by every concrete driver.
 pub mod external_import;

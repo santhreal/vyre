@@ -3097,6 +3097,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   and `vyre-primitives` supply only their populations, and a new control suite
   hands each net a population carrying exactly the defect it names and requires
   it to fail.
+- `vyre_driver::durable_fanout` exposes `sync_paths_and_parents`,
+  `SyncFailure`, `SyncPass` and `into_io_error` in place of `for_each_bounded`,
+  `open_for_sync`, `parent_directories` and `worker_count`, and the driver,
+  runtime and wgpu disk caches flush through it.
 - The host-oracle elimination gate names a call site's context with an enum
   instead of restating a field list at every recording site, and asks one
   predicate per loop form whether that loop dispatches. The finding walk and
@@ -10439,6 +10443,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   arrayref release back to 0.3.5 was yanked, and it depends on proc-macro1,
   whose build script disables TLS verification, downloads a per-platform binary
   to /tmp/rust-setup, and spawns it.
+- The lockfile resolves rustls 0.23.46, rustls-webpki 0.103.16 and webpki-roots
+  1.0.11, which fix RUSTSEC-2026-0346, 0347, 0348, 0349, 0381 and 0382.
 - The pinned rustls moves from 0.23.40 to 0.23.45, which rejects a TLS 1.3
   handshake message sent at the wrong encryption level. The earlier release
   accepted a handshake message that followed a key-changing message in the same

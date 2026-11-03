@@ -1223,7 +1223,7 @@ seam = "backend-contract"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 2724
+exported_item_count = 2742
 
   [[package.item]]
   path = "T::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>"
@@ -1591,6 +1591,13 @@ exported_item_count = 2724
 
   [[package.item]]
   path = "impl core::fmt::Display for vyre_driver::device_work_queue::DeviceWorkQueueError"
+  kind = "impl"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "impl core::fmt::Display for vyre_driver::durable_fanout::SyncFailure<'_>"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -12755,28 +12762,147 @@ exported_item_count = 2724
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::durable_fanout::for_each_bounded<T, E>(items: &[T], task: impl core::ops::function::Fn(&T) -> core::result::Result<(), E> + core::marker::Sync, on_panic: impl core::ops::function::Fn() -> E, on_reserve_failure: impl core::ops::function::Fn(usize, alloc::collections::TryReserveError) -> E) -> core::result::Result<(), E> where T: core::marker::Sync, E: core::marker::Send"
+  path = "vyre_driver::durable_fanout::SyncFailure::Open"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncFailure::Open::pass: vyre_driver::durable_fanout::SyncPass"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncFailure::Open::path: &'a std::path::Path"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncFailure::Open::source: core::io::error::Error"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncFailure::Panicked"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncFailure::Panicked::pass: vyre_driver::durable_fanout::SyncPass"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncFailure::Reserve"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncFailure::Reserve::pass: vyre_driver::durable_fanout::SyncPass"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncFailure::Reserve::requested: usize"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncFailure::Reserve::source: alloc::collections::TryReserveError"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncFailure::Sync"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncFailure::Sync::pass: vyre_driver::durable_fanout::SyncPass"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncFailure::Sync::path: &'a std::path::Path"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncFailure::Sync::source: core::io::error::Error"
+  kind = "field"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncFailure<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::durable_fanout::open_for_sync(path: &std::path::Path) -> core::io::error::Result<std::fs::File>"
+  path = "vyre_driver::durable_fanout::SyncFailure<'a>"
+  kind = "enum"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncPass"
+  kind = "enum"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncPass::Directories"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::SyncPass::Files"
+  kind = "variant"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::durable_fanout::into_io_error(failure: vyre_driver::durable_fanout::SyncFailure<'_>) -> core::io::error::Error"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::durable_fanout::parent_directories<E>(paths: &[std::path::PathBuf], reserve: impl core::ops::function::FnOnce(&mut alloc::vec::Vec<std::path::PathBuf>, usize) -> core::result::Result<(), E>) -> core::result::Result<alloc::vec::Vec<std::path::PathBuf>, E>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::durable_fanout::worker_count() -> usize"
+  path = "vyre_driver::durable_fanout::sync_paths_and_parents<E: core::marker::Send>(paths: &[std::path::PathBuf], on_failure: impl core::ops::function::Fn(vyre_driver::durable_fanout::SyncFailure<'_>) -> E + core::marker::Sync) -> core::result::Result<(), E>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
