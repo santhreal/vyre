@@ -911,17 +911,6 @@ running program observes separates them. The module tree is read from
 """
 
 [[gate]]
-file = "xtask/tests/test_source_paths.rs"
-tests = ["tests_are_declared_under_cfg_test"]
-reason = """
-Asserts that every `src/**/tests.rs` in the workspace is declared under
-`#[cfg(test)]`, which is what makes the name-based skip in `is_test_source_path`
-sound. A module the predicate skips is not compiled into the build being judged,
-so no run reveals that one of them ships; the declaration is the witness. The
-file set is derived from the workspace at run time.
-"""
-
-[[gate]]
 file = "xtask/src/gates/platform_support_matrix.rs"
 tests = ["every_driver_crate_reaches_the_roster_under_its_declared_identifier"]
 reason = """

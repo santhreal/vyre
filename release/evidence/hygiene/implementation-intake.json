@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"c5db4e032aab5ea4291d90cbb8f58c455afc53db","commit_timestamp":"1793738758","parent_commit":"e295e1cf4fa72eab337c5ac380dd64e7d033f506","dirty":true,"source_fingerprint":"git:c5db4e032aab5ea4291d90cbb8f58c455afc53db:dirty=true:worktree=4d43f96316bc8a129995000fc214b976f14981854830fdecd1f173c4493f06e1"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"bd2266ff0c5f746e1030d41594f75e53e5c23811","commit_timestamp":"1793742345","parent_commit":"05a3e73c8ca75f8fd947d7ad7b9329085d69c8df","dirty":true,"source_fingerprint":"git:bd2266ff0c5f746e1030d41594f75e53e5c23811:dirty=true:worktree=dec004d6ac5e9d695294116322a82447cf01dbed2b3d19b05398c05d262f16a3"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 2,
   "release_blocker_count": 0,
   "intake_summary": [
@@ -238,15 +238,6 @@
       "count": 11
     },
     {
-      "member": "vyre-foundation",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 2
-    },
-    {
       "member": "vyre-libs",
       "surface": "test",
       "risk": "informational",
@@ -355,15 +346,6 @@
       "count": 1
     },
     {
-      "member": "vyre-libs-security",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "documented_panic_contract",
-      "release_blocker": false,
-      "count": 1
-    },
-    {
       "member": "vyre-libs-solvers",
       "surface": "test",
       "risk": "informational",
@@ -425,15 +407,6 @@
       "pattern": "source_inspection_test",
       "release_blocker": false,
       "count": 3
-    },
-    {
-      "member": "vyre-megakernel",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 1
     },
     {
       "member": "vyre-primitives",
@@ -559,7 +532,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 48
+      "count": 46
     },
     {
       "member": "vyre-test-support",
@@ -685,43 +658,7 @@
       "hot_path": false,
       "pattern": "source_inspection_test",
       "release_blocker": false,
-      "count": 43
-    },
-    {
-      "member": "xtask",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "documented_panic_contract",
-      "release_blocker": false,
-      "count": 4
-    },
-    {
-      "member": "xtask",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 4
-    },
-    {
-      "member": "xtask-evidence",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 7
-    },
-    {
-      "member": "xtask-evidence",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "pattern": "placeholder_text",
-      "release_blocker": false,
-      "count": 1
+      "count": 42
     },
     {
       "member": "xtask-registry",

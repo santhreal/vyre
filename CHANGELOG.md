@@ -7767,6 +7767,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Conformance execution enforces bounded worker process isolation, timeout
   termination bounds, and aligned certificate signing contracts across all
   failure modes.
+- The `vyre-conform` coordinator reads a worker receipt that shares its line
+  with the test harness prefix, so production-route conformance cases no longer
+  fail with a protocol violation under `RUST_TEST_THREADS=1`.
 - The conformance CI lane now rejects a generated conformance matrix that
   differs from the committed release evidence.
 - The downstream graphics app consumer package compiles and passes its test
@@ -7823,6 +7826,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   fingerprint or device signature, and a recorded table that disagrees with the
   evidence are findings now, and a backend a case contract declares without a
   measurement is listed in the table instead of dropping out of it.
+- The `cross-target` gate and the workflows that run it read their triples from
+  `xtask-registry/cross-target-triples.txt`, so CI installs
+  `x86_64-unknown-freebsd` and the gate no longer fails on a target the
+  workflow omitted.
 - The cross-backend comparison gate now reports ownership of its generated
   table, so both immutable validation and canonical regeneration satisfy the
   gate artifact contract.
@@ -7890,6 +7897,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   block width, so a block width that is not a whole number of warps no longer
   reports more resident warps than the SM has slots for, and the theoretical
   estimate now agrees with the driver-measured one.
+- The `device-test-gating` and `device-test-compilation` gates read a workflow
+  step running `xtask cuda-parity --device` as the `vyre-driver-cuda` build
+  with `device-tests,cuda` it runs, so the CUDA device targets no longer report
+  as compiled by no workflow.
 - The public-API snapshot for the CUDA driver names the crate its adapter
   signatures actually come from. Ten of its public items take or return
   `FrontierTypedPlan`, `DeviceResidentTokenFactGraph`, `MegakernelScaleSample`,
@@ -9721,6 +9732,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   module behind a feature that is off by default all pass, so no frozen public
   path has to be renamed. No dependency outside dev-dependencies may name the
   test support crate.
+- Every gate reads test source from one classifier, a file under a crate's
+  `tests/`, `benches/`, `examples/` or `fuzz/` directory or a module reached
+  through a `#[cfg(test)]` declaration including a `#[path]` relocation, so
+  shipped files named like tests, such as `bitset/test_bit.rs` and
+  `vyre-test-support/src/test_parity_oracles.rs`, are judged as production and
+  relocated test modules are not.
 - The testing guide generator writes the documentation registry rows for the
   guides it renders, so a new crate's guide is classified without a
   hand-written row.
