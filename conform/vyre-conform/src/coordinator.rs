@@ -489,18 +489,7 @@ impl WorkerCoordinator {
             let _ = stdout.read_to_end(&mut stdout_bytes);
         }
 
-        let stdout_str = String::from_utf8_lossy(&stdout_bytes);
-        let parsed_receipt: Option<WorkerReceipt> = stdout_str
-            .lines()
-            .find_map(|line| {
-                let trimmed = line.trim();
-                if trimmed.starts_with('{') && trimmed.ends_with('}') {
-                    serde_json::from_str::<WorkerReceipt>(trimmed).ok()
-                } else {
-                    None
-                }
-            })
-            .or_else(|| serde_json::from_slice::<WorkerReceipt>(&stdout_bytes).ok());
+        let parsed_receipt = receipt_in_stdout(&stdout_bytes);
 
         match parsed_receipt {
             Some(receipt) => {
@@ -563,5 +552,79 @@ impl WorkerCoordinator {
                 err_receipt
             }
         }
+    }
+}
+
+/// The worker receipt a worker process wrote to `stdout`.
+///
+/// The receipt is one JSON object on one line. A worker spawned through the
+/// test harness runs under libtest, which prints `test <name> ... ` before the
+/// test body when it runs one test at a time (`RUST_TEST_THREADS=1`), so the
+/// object can follow that prefix on the same line.
+fn receipt_in_stdout(stdout: &[u8]) -> Option<WorkerReceipt> {
+    String::from_utf8_lossy(stdout)
+        .lines()
+        .find_map(|line| {
+            let object = line[line.find('{')?..].trim_end();
+            if object.ends_with('}') {
+                serde_json::from_str::<WorkerReceipt>(object).ok()
+            } else {
+                None
+            }
+        })
+        .or_else(|| serde_json::from_slice::<WorkerReceipt>(stdout).ok())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn receipt() -> WorkerReceipt {
+        WorkerReceipt {
+            receipt_version: WorkerReceipt::SCHEMA_VERSION,
+            request_id: "req-1".to_string(),
+            case_id: "case-1".to_string(),
+            mode: WorkerMode::Reference,
+            status: WorkerStatus::Success,
+            outputs: vec![vec![1, 2, 3]],
+            outputs_blake3: "digest".to_string(),
+            artifact_blake3: None,
+            payload_blake3: None,
+            target_facts_blake3: None,
+            compiler_binary_blake3: "compiler".to_string(),
+            runner_binary_blake3: "runner".to_string(),
+            environment_blake3: "environment".to_string(),
+            device_lease_id: None,
+            elapsed_ms: 7,
+            peak_memory_bytes: 0,
+            auth_tag: "tag".to_string(),
+        }
+    }
+
+    /// WHY: a worker run through the test harness under `RUST_TEST_THREADS=1`
+    /// writes `test vyre_conform_worker_entry ... ` and then the receipt on the
+    /// same line. A reader that required the line to start with `{` reported a
+    /// protocol violation for every case, so a failing case read as a broken
+    /// worker and a passing one as a failure.
+    #[test]
+    fn the_receipt_is_read_after_a_harness_prefix_on_its_line() {
+        let expected = receipt();
+        let json = serde_json::to_string(&expected).expect("Fix: a receipt serializes");
+        for stdout in [
+            format!("{json}\n"),
+            format!("\nrunning 1 test\ntest vyre_conform_worker_entry ... {json}\nok\n"),
+            format!("running 1 test\n{json}\ntest vyre_conform_worker_entry ... ok\n"),
+            json.clone(),
+        ] {
+            assert_eq!(
+                receipt_in_stdout(stdout.as_bytes()),
+                Some(expected.clone()),
+                "Fix: the receipt in {stdout:?} must be read"
+            );
+        }
+        assert_eq!(
+            receipt_in_stdout(b"running 1 test\ntest vyre_conform_worker_entry ... FAILED\n"),
+            None
+        );
     }
 }

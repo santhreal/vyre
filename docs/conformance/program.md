@@ -76,6 +76,14 @@ external-facts digest, a latency objective bounded at the conformance artifact
 ceiling, and the conformance search budget. A backend row in the matrix therefore
 differs from another only in the device it acquires.
 
+The coordinator in `conform/vyre-conform/src/coordinator.rs` runs each case in
+a disposable worker process with an explicit budget and device lease. The
+worker writes its receipt to stdout as one JSON object on one line. A worker
+spawned through the test harness runs under libtest, which prints
+`test <name> ... ` before the test body when `RUST_TEST_THREADS=1`, so the
+coordinator reads each line from its first `{`. A run whose stdout holds no
+parseable receipt is a protocol violation.
+
 ## Boundaries
 
 Conformance owns witness enumeration, the certificate and replay schemas,
