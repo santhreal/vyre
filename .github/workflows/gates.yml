@@ -53,13 +53,7 @@ jobs:
       # added to that toolchain rather than to whichever one an action
       # installed last.
       - name: Install the cross targets the tree declares
-        run: |
-          rustup target add \
-            aarch64-linux-android \
-            aarch64-apple-ios \
-            x86_64-unknown-linux-gnu \
-            x86_64-apple-darwin \
-            x86_64-pc-windows-msvc
+        run: rustup target add $(awk '!/^#/ && NF { print $2 }' xtask-registry/cross-target-triples.txt)
 
       # Every gate declares at least one area, and the areas split between this
       # job and `tree-rules` below, so the two jobs together run the registry

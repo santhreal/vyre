@@ -24,9 +24,10 @@
 //!
 //! The `target_os` literals in workspace source. A `cfg` arm for a platform is
 //! the claim that the tree supports it; a comment naming one is not. A
-//! `target_os` with no triple in `TRIPLE_FOR_OS` is a finding rather than a
-//! skip, so adding an arm for a new platform turns this red until somebody
-//! records which triple proves it.
+//! `target_os` with no triple in `xtask-registry/cross-target-triples.txt` is a
+//! finding rather than a skip, so adding an arm for a new platform turns this
+//! red until somebody records which triple proves it. The workflows that run
+//! this gate install their targets from the same file.
 //!
 //! # Cost, and which subset it belongs in
 //!
@@ -49,21 +50,42 @@ use xtask::gate::{Finding, GateCtx, GateError, Report};
 /// claim they make.
 const PRODUCT_CRATES: &[&str] = &["vyre-driver", "vyre-runtime", "vyre-megakernel"];
 
-/// The triple that proves each `target_os` a `cfg` arm may name.
+/// The `<target_os> <triple>` pairs, one per line, `#` starting a comment.
 ///
-/// One triple per platform, not every triple that platform has: the failure this
-/// catches is a build script branching on the target, and one triple per
-/// `target_os` plus one per architecture family is what distinguishes those
-/// branches. `macos` is pinned to the x86_64 triple on purpose - the aarch64 one
-/// was the arm that got silenced, so the x86_64 one is the arm that was blind.
-const TRIPLE_FOR_OS: &[(&str, &str)] = &[
-    ("android", "aarch64-linux-android"),
-    ("freebsd", "x86_64-unknown-freebsd"),
-    ("ios", "aarch64-apple-ios"),
-    ("linux", "x86_64-unknown-linux-gnu"),
-    ("macos", "x86_64-apple-darwin"),
-    ("windows", "x86_64-pc-windows-msvc"),
-];
+/// The workflows that run this gate install their targets from this file, so
+/// the triples the gate checks and the triples CI installs are one list.
+const TRIPLES: &str = include_str!("../../cross-target-triples.txt");
+
+/// The path [`TRIPLES`] is read from, for findings and errors.
+const TRIPLES_PATH: &str = "xtask-registry/cross-target-triples.txt";
+
+/// Every recorded platform and the triple that proves it.
+fn triple_for_os(table: &'static str) -> Result<BTreeMap<&'static str, &'static str>, String> {
+    let mut recorded = BTreeMap::new();
+    for (index, line) in table.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let mut fields = line.split_whitespace();
+        let (Some(os), Some(triple), None) = (fields.next(), fields.next(), fields.next()) else {
+            return Err(format!(
+                "line {} is {line:?}, not a \"<target_os> <triple>\" pair",
+                index + 1
+            ));
+        };
+        if !triple.contains('-') {
+            return Err(format!(
+                "line {}: {triple} is not a target triple",
+                index + 1
+            ));
+        }
+        if recorded.insert(os, triple).is_some() {
+            return Err(format!("line {}: {os} is recorded twice", index + 1));
+        }
+    }
+    Ok(recorded)
+}
 
 /// Cap on one source file read while scanning for `cfg` arms.
 const MAX_SOURCE_BYTES: u64 = 2_097_152;
@@ -86,7 +108,12 @@ impl xtask::gate::GateBehavior for CrossTarget {
             ));
         }
 
-        let recorded: BTreeMap<&str, &str> = TRIPLE_FOR_OS.iter().copied().collect();
+        let recorded = triple_for_os(TRIPLES).map_err(|problem| {
+            GateError::new(
+                format!("{TRIPLES_PATH} {problem}"),
+                "write one \"<target_os> <triple>\" pair per line",
+            )
+        })?;
         let mut report = Report::clean();
         report.cover_complete("target platforms", declared.len());
         let installed = installed_targets(&root);
@@ -99,8 +126,7 @@ impl xtask::gate::GateBehavior for CrossTarget {
                         "the source branches on target_os = \"{os}\" and no triple proves that arm"
                     ),
                     format!(
-                        "add (\"{os}\", \"<triple>\") to TRIPLE_FOR_OS in \
-                     xtask-registry/src/gates/cross_target.rs, or drop the cfg arm; an \
+                        "add \"{os} <triple>\" to {TRIPLES_PATH}, or drop the cfg arm; an \
                      unrecorded platform is a claim nothing compiles"
                     ),
                 ));
@@ -173,11 +199,7 @@ enum TripleResult {
     Unmeasured(String),
 }
 
-/// Compile [`PRODUCT_CRATES`] for one triple.
-///
-/// No build-affecting flag or environment variable is set: the target is the one
-/// thing that must differ, and everything else has to be the build the tree
-/// declares in its own configuration or the answer is about a build nobody runs.
+/// The targets rustup reports installed; empty when rustup cannot be run.
 fn installed_targets(root: &Path) -> std::collections::BTreeSet<String> {
     let mut command = std::process::Command::new("rustup");
     command
@@ -333,17 +355,34 @@ mod tests {
 
     #[test]
     fn every_recorded_platform_has_a_distinct_triple() {
+        let recorded = triple_for_os(TRIPLES).expect("the shipped table parses");
+        assert!(recorded.len() >= 2, "got {recorded:?}");
         let mut triples = BTreeSet::new();
-        for (os, triple) in TRIPLE_FOR_OS {
+        for (os, triple) in recorded {
             assert!(
-                triples.insert(*triple),
+                triples.insert(triple),
                 "{triple} proves two platforms; {os} needs its own"
             );
-            assert!(
-                triple.contains('-'),
-                "{triple} recorded for {os} is not a target triple"
-            );
         }
+    }
+
+    /// A malformed table is an error, never a shorter list of platforms.
+    #[test]
+    fn a_malformed_table_is_rejected_not_skipped() {
+        for table in [
+            "linux\n",
+            "linux x86_64-unknown-linux-gnu extra\n",
+            "linux linux\n",
+            "linux x86_64-unknown-linux-gnu\nlinux aarch64-unknown-linux-gnu\n",
+        ] {
+            assert!(triple_for_os(table).is_err(), "accepted {table:?}");
+        }
+        let parsed = triple_for_os("# comment\n\n  linux x86_64-unknown-linux-gnu  \n")
+            .expect("comments and blank lines are skipped");
+        assert_eq!(
+            parsed.into_iter().collect::<Vec<_>>(),
+            [("linux", "x86_64-unknown-linux-gnu")]
+        );
     }
 
     #[test]
