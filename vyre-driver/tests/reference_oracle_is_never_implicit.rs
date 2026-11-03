@@ -15,7 +15,7 @@
 //!
 //! Not caught here: a concrete driver crate that computes on the host inside its
 //! own `dispatch`. That is a different contract, pinned by
-//! `no_backend_crate_links_host_arithmetic.rs`.
+//! `structure-gate/tests/backend_linkage.rs`.
 
 /// Shared fixture module from `tests/fixture_backend/mod.rs`.
 ///

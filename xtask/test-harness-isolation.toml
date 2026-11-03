@@ -236,7 +236,7 @@ grouping = "grouped"
 reason = "registers its own ranked device and oracle and names the winner by id, so a sibling registration cannot change its answer"
 
 [[test]]
-path = "vyre-driver/tests/no_backend_crate_links_host_arithmetic.rs"
+path = "structure-gate/tests/backend_linkage.rs"
 grouping = "grouped"
 reason = "names acquire_preferred_dispatch_backend in a comment while reading crate manifests; this binary acquires nothing"
 

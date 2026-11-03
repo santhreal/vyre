@@ -5,6 +5,10 @@
 //! binary for the whole set. A test that cannot share a process stays its own
 //! target and states why in `xtask/test-harness-isolation.toml`.
 
+/// Integration tests from `tests/backend_linkage.rs`.
+#[path = "backend_linkage.rs"]
+pub mod backend_linkage;
+
 /// Integration tests from `tests/cfg_gate_polarity.rs`.
 #[path = "cfg_gate_polarity.rs"]
 pub mod cfg_gate_polarity;

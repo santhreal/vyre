@@ -207,10 +207,6 @@ pub mod lock_poison_policy;
 #[path = "megakernel_execution_contracts.rs"]
 pub mod megakernel_execution_contracts;
 
-/// Integration tests from `tests/no_backend_crate_links_host_arithmetic.rs`.
-#[path = "no_backend_crate_links_host_arithmetic.rs"]
-pub mod no_backend_crate_links_host_arithmetic;
-
 /// Integration tests from `tests/numeric_contracts.rs`.
 #[path = "numeric_contracts.rs"]
 pub mod numeric_contracts;

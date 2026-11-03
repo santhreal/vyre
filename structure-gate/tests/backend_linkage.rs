@@ -16,25 +16,30 @@
 //! flag survives for an out-of-tree registration, which
 //! `acquire_preferred_dispatch_backend` skips.
 //!
-//! Both sets are derived from the workspace manifest and each crate's own
+//! Both sets are derived from the workspace manifest and each crate's shipped
 //! source, so a backend crate added tomorrow is covered without editing this
 //! file, and a driver crate that registers nothing fails here rather than
-//! shrinking the scan in silence.
+//! shrinking the scan in silence. Test sources, as `TestSources` reads them,
+//! register nothing a build ships: a gate fixture that builds a registration
+//! is not a backend.
 //!
-//! `[dev-dependencies]` are deliberately not scanned: parity tests compare a
-//! backend against the reference oracle on purpose, and that dependency does not
-//! exist in a shipped build.
+//! `[dev-dependencies]` are not scanned: parity tests compare a backend
+//! against the reference oracle on purpose, and that dependency does not exist
+//! in a shipped build.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use vyre_test_support::monorepo::vyre_workspace_root;
+use structure_gate::cfg_test::TestSources;
+use structure_gate::source_scan::{rust_sources_with_text, SourceText};
+use structure_gate::workspace_manifest::workspace_members;
+use structure_gate::workspace_root;
 
 /// Crates whose whole purpose is host arithmetic. A crate that registers a
 /// backend may not link one outside `[dev-dependencies]`.
 const HOST_ARITHMETIC_CRATES: &[&str] = &["vyre-reference"];
 
-/// Owns the reference interpreter's driver-facing surface: the target profile
+/// Holds the reference interpreter's driver-facing surface: the target profile
 /// and the semantic executor the conformance oracle calls directly. It
 /// registers no backend, so host arithmetic has no dispatch identity at all,
 /// and it is the one concrete-driver member excluded from the scan below.
@@ -47,6 +52,9 @@ const SHARED_DRIVER: &str = "vyre-driver";
 /// Prefix every concrete driver member carries.
 const CONCRETE_DRIVER_PREFIX: &str = "vyre-driver-";
 
+/// The struct-literal field a backend registration sets.
+const REFERENCE_ORACLE_FIELD: &str = "reference_oracle:";
+
 struct BackendCrate {
     name: String,
     /// `true` when the crate's source declares `reference_oracle: true`.
@@ -54,28 +62,7 @@ struct BackendCrate {
     dependencies: BTreeSet<String>,
 }
 
-fn workspace_members(root: &Path) -> Vec<String> {
-    let manifest = std::fs::read_to_string(root.join("Cargo.toml"))
-        .expect("Fix: the workspace manifest must be readable");
-    let parsed: toml::Table = manifest
-        .parse()
-        .expect("Fix: the workspace manifest must parse as TOML");
-    parsed
-        .get("workspace")
-        .and_then(|workspace| workspace.get("members"))
-        .and_then(|members| members.as_array())
-        .expect("Fix: the workspace manifest must declare [workspace] members")
-        .iter()
-        .map(|member| {
-            member
-                .as_str()
-                .expect("Fix: every workspace member must be a string path")
-                .to_string()
-        })
-        .collect()
-}
-
-/// Read `dependencies` and `build-dependencies` keys for one crate.
+/// `dependencies` and `build-dependencies` keys of one crate.
 fn declared_dependencies(manifest_path: &Path) -> BTreeSet<String> {
     let text = std::fs::read_to_string(manifest_path)
         .unwrap_or_else(|e| panic!("Fix: {manifest_path:?} must be readable: {e}"));
@@ -91,64 +78,73 @@ fn declared_dependencies(manifest_path: &Path) -> BTreeSet<String> {
     names
 }
 
-/// `Some(declares_reference_oracle)` when the crate's source registers a
-/// backend, `None` when it does not.
-fn reference_oracle_flag(src: &Path) -> Option<bool> {
-    let mut files = Vec::new();
-    vyre_test_support::collect_rust_files(src, &mut files);
+/// `Some(true)` when `text` sets `reference_oracle: true`, `Some(false)` when
+/// it sets only `false`, and `None` when it sets the field nowhere.
+fn reference_oracle_flag(text: &str) -> Option<bool> {
     let mut declared = None;
-    for path in files {
-        let text = std::fs::read_to_string(&path)
-            .unwrap_or_else(|e| panic!("Fix: {path:?} must be readable: {e}"));
-        let mut search = 0;
-        while let Some(rel) = text[search..].find("reference_oracle:") {
-            let start = search + rel + "reference_oracle:".len();
-            search = start;
-            let value = text[start..].trim_start();
-            let flag = if value.starts_with("true") {
-                true
-            } else if value.starts_with("false") {
-                false
-            } else {
-                // A field declaration or a read, not a struct-literal value.
-                continue;
-            };
-            declared = Some(declared.unwrap_or(false) || flag);
-        }
+    let mut search = 0;
+    while let Some(rel) = text[search..].find(REFERENCE_ORACLE_FIELD) {
+        let start = search + rel + REFERENCE_ORACLE_FIELD.len();
+        search = start;
+        let value = text[start..].trim_start();
+        let flag = if value.starts_with("true") {
+            true
+        } else if value.starts_with("false") {
+            false
+        } else {
+            // A field declaration or a read, not a struct-literal value.
+            continue;
+        };
+        declared = Some(declared.unwrap_or(false) || flag);
     }
     declared
 }
 
-/// Concrete driver members, by directory name, from the workspace manifest.
-fn concrete_driver_members(root: &Path) -> BTreeSet<String> {
-    workspace_members(root)
-        .into_iter()
-        .filter_map(|member| {
-            let name = Path::new(&member).file_name()?.to_str()?.to_string();
-            name.starts_with(CONCRETE_DRIVER_PREFIX).then_some(name)
-        })
-        .collect()
+/// Every member whose shipped source sets `reference_oracle`, with whether any
+/// site sets it `true`.
+fn registering_members(root: &Path, members: &[String]) -> BTreeMap<String, bool> {
+    let tests = TestSources::of(root);
+    let mut registering = BTreeMap::new();
+    for source in rust_sources_with_text(root) {
+        let SourceText::Read { path, text } = source else {
+            continue;
+        };
+        if tests.contains(&path) {
+            continue;
+        }
+        let Some(member) = members
+            .iter()
+            .find(|member| path.starts_with(&format!("{member}/src/")))
+        else {
+            continue;
+        };
+        if let Some(flag) = reference_oracle_flag(&text) {
+            let declared = registering.entry(member.clone()).or_insert(false);
+            *declared |= flag;
+        }
+    }
+    registering
+}
+
+fn member_name(member: &str) -> String {
+    Path::new(member)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or(member)
+        .to_string()
 }
 
 fn backend_crates() -> Vec<BackendCrate> {
-    let root = vyre_workspace_root();
-    let mut crates = Vec::new();
-    for member in workspace_members(&root) {
-        let dir = root.join(&member);
-        let Some(declares_reference_oracle) = reference_oracle_flag(&dir.join("src")) else {
-            continue;
-        };
-        let name = dir
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or(&member)
-            .to_string();
-        crates.push(BackendCrate {
-            name,
+    let root = workspace_root();
+    let members = workspace_members(&root);
+    let crates: Vec<BackendCrate> = registering_members(&root, &members)
+        .into_iter()
+        .map(|(member, declares_reference_oracle)| BackendCrate {
+            name: member_name(&member),
             declares_reference_oracle,
-            dependencies: declared_dependencies(&dir.join("Cargo.toml")),
-        });
-    }
+            dependencies: declared_dependencies(&root.join(&member).join("Cargo.toml")),
+        })
+        .collect();
     // The scan is a source-text search, so an enumeration that breaks reports
     // an empty tree rather than a violation. The expected set is derived from
     // the same manifest: every concrete driver member registers a backend, and
@@ -156,7 +152,11 @@ fn backend_crates() -> Vec<BackendCrate> {
     // to register, or restoring a registration to the reference driver, turns
     // this red before any linkage rule below is consulted.
     let found: BTreeSet<String> = crates.iter().map(|entry| entry.name.clone()).collect();
-    let mut expected = concrete_driver_members(&root);
+    let mut expected: BTreeSet<String> = members
+        .iter()
+        .map(|member| member_name(member))
+        .filter(|name| name.starts_with(CONCRETE_DRIVER_PREFIX))
+        .collect();
     expected.remove(REFERENCE_DRIVER);
     assert_eq!(
         found, expected,
@@ -228,7 +228,7 @@ fn no_backend_crate_links_a_peer_backend_crate() {
         offenders.is_empty(),
         "Fix: these backend crates link a peer backend crate: {offenders:?}. A driver that can \
          construct another driver can substitute it on an error path, which is the silent \
-         cross-backend fallback this gate exists to rule out. Backend selection belongs to \
+         cross-backend fallback this contract exists to rule out. Backend selection belongs to \
          `acquire_preferred_dispatch_backend`, which reports the failure instead."
     );
 }

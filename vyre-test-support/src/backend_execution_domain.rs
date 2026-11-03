@@ -29,7 +29,7 @@
 //!
 //! Not proven here: that a crate carrying [`ExecutionDomain::Device`] contains
 //! no host arithmetic of its own. That is a property of the dependency graph,
-//! and `vyre-driver/tests/no_backend_crate_links_host_arithmetic.rs` owns it.
+//! and `structure-gate/tests/backend_linkage.rs` is the single test of it.
 
 /// Where a backend registration executes the program dispatched to it.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
