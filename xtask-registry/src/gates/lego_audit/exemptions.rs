@@ -114,37 +114,15 @@ pub(super) const DEAD_EXEMPTION_FIX: &str =
 /// An exemption is a rule that a named subject is judged elsewhere: a phase of a
 /// larger composition, a declared pure-IR leaf, an op whose shape comes from a
 /// shared builder, a pair whose shapes were read side by side and judged
-/// distinct, a directory that is plumbing rather than a dialect, or a leaf-stem
-/// family that is acknowledged rather than renamed. A row naming something that
-/// was renamed or deleted stops exempting anything, and nothing says so: the
-/// list keeps its length, the audit keeps passing, and a reader takes the row as
-/// evidence the subject is covered. Two rows were already in that state when the
-/// check was written, and six more turned up when the plumbing directories and
-/// the leaf-stem families came under the same rule.
+/// distinct, or a leaf-stem family that is acknowledged rather than renamed. A
+/// row naming something that was renamed or deleted stops exempting anything,
+/// and nothing says so: the list keeps its length, the audit keeps passing, and
+/// a reader takes the row as evidence the subject is covered.
 ///
 /// A stem row is held to the condition it suppresses rather than to the mere
 /// existence of the stem, because a family that shrank below the collision
 /// threshold no longer needs acknowledging.
 pub(super) fn check_0_every_exemption_is_live(report: &mut Report, ops: &[OpInfo]) {
-    let roots = category_a_source_roots(&xtask::checkout::checkout_root());
-    if roots.is_empty() {
-        report.find(Finding::new(
-            "the workspace roster names no Category A crate to resolve a directory row against",
-            "restore the Category A ownership family in the root manifest; every directory row reads as dead against a family with no members",
-        ));
-    }
-    for dir in dead_plumbing_rows(&roots) {
-        report.find(Finding::new(
-            format!("no Category A crate carries a `{dir}` directory answering to the shared-plumbing row"),
-            "repoint the row at the directory the module moved to, or delete it: a plumbing row that matches no directory exempts nothing, and it reads as if a cross-dialect edge into it were already reviewed",
-        ));
-    }
-    for dir in dead_substrate_rows(&roots) {
-        report.find(Finding::new(
-            format!("no Category A crate carries a `{dir}` directory answering to the kernel-substrate row"),
-            "repoint the row at the directory the domain moved to, or delete it: a substrate row that matches no directory exempts nothing, and it reads as if a cross-dialect edge into it were already reviewed",
-        ));
-    }
     for marker in PHASE_MARKERS {
         if !ops.iter().any(|op| op.id.contains(marker)) {
             report.find(Finding::new(
@@ -179,25 +157,6 @@ pub(super) fn check_0_every_exemption_is_live(report: &mut Report, ops: &[OpInfo
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// WHY: a directory row names a module of the Category A ownership family,
-    /// and the family is a facade crate plus one crate per domain partition.
-    /// Resolving a row against `vyre-libs/src` alone reported all twenty rows
-    /// dead while every one of them still named a live directory, which is the
-    /// opposite failure this check exists for: it convicted live exemptions and
-    /// the fix line told a reader to delete them. The subject set is the row
-    /// lists and the evidence is the live checkout, so a module that moves out
-    /// of the family still turns this red.
-    #[test]
-    fn every_directory_row_answers_to_a_live_module_of_the_family() {
-        let roots = category_a_source_roots(&xtask::checkout::checkout_root());
-        assert!(
-            roots.len() > 1,
-            "the live family is a facade plus at least one partition crate"
-        );
-        assert_eq!(dead_plumbing_rows(&roots), Vec::<&str>::new());
-        assert_eq!(dead_substrate_rows(&roots), Vec::<&str>::new());
-    }
 
     /// This regression test keeps reviewed pure-IR leaves explicit instead of exempting every flat Tier-3 operation.
     #[test]

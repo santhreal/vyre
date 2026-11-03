@@ -86,7 +86,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "AbsenceDecision"
 variant_name = "NoLegalRewrite"
-declaration_site = "vyre-foundation/src/operation/records.rs:25"
+declaration_site = "vyre-foundation/src/operation/records.rs:28"
 constructors = ["AbsenceDecision::NoLegalRewrite"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"
@@ -96,7 +96,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "AbsenceDecision"
 variant_name = "Uncharacterized"
-declaration_site = "vyre-foundation/src/operation/records.rs:29"
+declaration_site = "vyre-foundation/src/operation/records.rs:32"
 constructors = ["AbsenceDecision::Uncharacterized"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, PartialEq, Eq, Hash)"

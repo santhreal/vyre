@@ -4,7 +4,7 @@
 //! OR composed_fraction ≥ 60%. That's table stakes. vyre's thesis is
 //! composition, so the real measurement is harder.
 //!
-//! This xtask runs twelve stricter audits:
+//! It runs these stricter audits:
 //!
 //! 1. **No-reinvention check**  -  IR fingerprint every op body; any two
 //!    ops with >80% fingerprint overlap where one doesn't invoke the
@@ -15,9 +15,6 @@
 //! 3. **Primitive-coverage**  -  every Tier 2.5 primitive should have
 //!    ≥ 2 callers. Orphans are reported as one-release adoption advisories.
 //!    Synthetic catalog consumers remain hard failures and never count.
-//! 4. **Cross-dialect reach-through**  -  Tier 3 dialects importing
-//!    private items from sibling Tier 3 dialects. That coupling
-//!    belongs in Tier 2.5; flag it.
 //! 5. **Large-file advisory**  -  files over a per-file source-line
 //!    review guideline are reported as notes for a split-by-responsibility
 //!    review. This is advisory and never fails the audit; the hard size
@@ -47,7 +44,6 @@
 
 mod composability;
 mod composition_chain;
-mod cross_dialect;
 mod depth_of_composition;
 mod duplicates;
 pub(crate) mod exemptions;
@@ -63,7 +59,6 @@ mod trend;
 
 use self::composability::*;
 use self::composition_chain::*;
-use self::cross_dialect::*;
 use self::depth_of_composition::*;
 pub use self::duplicates::LegoDuplicateReport;
 use self::exemptions::*;
@@ -90,7 +85,6 @@ use xtask::gates::dedup_report::{
     registered_op_duplicate_subject, registered_op_owner_lane, structural_similarity,
     DuplicateEvidence, DuplicateFamilyFinding, DuplicateFamilyReport, DuplicateSubject,
 };
-use xtask::gates::use_paths::{collect_use_paths, is_test_source_path};
 
 /// One member of the Category A crate family: its checkout-relative path and
 /// the `src` directory under it.
@@ -172,19 +166,6 @@ impl xtask::gate::GateBehavior for LegoPrimitiveCoverage {
         let ops = collect_ops(&mut report);
         report.cover(Coverage::complete("registered operations", ops.len()));
         check_3_primitive_coverage(&mut report, &ops);
-        Ok(report)
-    }
-}
-
-/// Check 4: cross-dialect reachthrough.
-pub struct LegoCrossDialect;
-
-impl xtask::gate::GateBehavior for LegoCrossDialect {
-    fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
-        let mut report = Report::clean();
-        let ops = collect_ops(&mut report);
-        report.cover(Coverage::complete("registered operations", ops.len()));
-        check_4_cross_dialect_reachthrough(&mut report);
         Ok(report)
     }
 }

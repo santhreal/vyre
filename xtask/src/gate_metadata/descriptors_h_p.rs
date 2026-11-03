@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with H through P.
-pub const GATES_H_P: [GateDescriptor; 64] = [
+pub const GATES_H_P: &[GateDescriptor] = &[
     GateDescriptor {
         name: "heuristic-audit",
         help: "Enforce heuristic-audit contracts",
@@ -239,18 +239,6 @@ pub const GATES_H_P: [GateDescriptor; 64] = [
         proof: "xtask_registry::gates::lego_audit::depth_of_composition::tests::below_quarter_composed_tier3_operation_fails_depth_gate",
     },
     GateDescriptor {
-        name: "lego-cross-dialect",
-        help: "Enforce LegoCheck 4: cross-dialect reach-through",
-        package: "xtask-registry",
-        areas: &["lego-audit"],
-        subject: "registered operations",
-        inputs: &[],
-        artifacts: &[],
-        prerequisites: &[],
-        resource_class: ResourceClass::Process,
-        proof: "xtask_registry::gates::lego_audit::cross_dialect::tests::the_substrate_is_an_exempt_target_and_still_an_audited_source",
-    },
-    GateDescriptor {
         name: "lego-duplicate-report",
         help: "Hold release/evidence/dedup/lego-audit-duplicates.json to the live registry; --write regenerates it",
         package: "xtask-registry",
@@ -321,18 +309,6 @@ pub const GATES_H_P: [GateDescriptor; 64] = [
         prerequisites: &[],
         resource_class: ResourceClass::Process,
         proof: "xtask_registry::gates::lego_audit::primitive_coverage::tests::unregistered_primitive_family_fails_admission",
-    },
-    GateDescriptor {
-        name: "lego-quick",
-        help: "Enforce lego-quick contracts",
-        package: "xtask",
-        areas: &["contract-rules"],
-        subject: "registered system invariants",
-        inputs: &[],
-        artifacts: &[],
-        prerequisites: &[],
-        resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::lego_quick::tests::a_declared_dialect_edge_is_not_a_finding",
     },
     GateDescriptor {
         name: "lego-semantic-organization",

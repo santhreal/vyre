@@ -22,11 +22,10 @@ use descriptors_a_g::GATES_A_G;
 use descriptors_h_p::GATES_H_P;
 use descriptors_q_z::GATES_Q_Z;
 
-const fn concat_descriptors(
-    a: &[GateDescriptor; 57],
-    b: &[GateDescriptor; 64],
-    c: &[GateDescriptor; 42],
-) -> [GateDescriptor; 163] {
+/// Number of registered gates, read off the three descriptor parts.
+const GATE_COUNT: usize = GATES_A_G.len() + GATES_H_P.len() + GATES_Q_Z.len();
+
+const fn concat_descriptors() -> [GateDescriptor; GATE_COUNT] {
     let mut out = [GateDescriptor {
         name: "",
         help: "",
@@ -38,28 +37,24 @@ const fn concat_descriptors(
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
         proof: "",
-    }; 163];
-    let mut i = 0;
-    while i < a.len() {
-        out[i] = a[i];
-        i += 1;
-    }
-    let mut j = 0;
-    while j < b.len() {
-        out[a.len() + j] = b[j];
-        j += 1;
-    }
-    let mut k = 0;
-    while k < c.len() {
-        out[a.len() + b.len() + k] = c[k];
-        k += 1;
+    }; GATE_COUNT];
+    let mut next = 0;
+    let parts: [&[GateDescriptor]; 3] = [GATES_A_G, GATES_H_P, GATES_Q_Z];
+    let mut part = 0;
+    while part < parts.len() {
+        let mut i = 0;
+        while i < parts[part].len() {
+            out[next] = parts[part][i];
+            next += 1;
+            i += 1;
+        }
+        part += 1;
     }
     out
 }
 
 /// Complete array holding all registered gate descriptors.
-pub static GATE_METADATA_ARRAY: [GateDescriptor; 163] =
-    concat_descriptors(&GATES_A_G, &GATES_H_P, &GATES_Q_Z);
+pub static GATE_METADATA_ARRAY: [GateDescriptor; GATE_COUNT] = concat_descriptors();
 
 /// Every gate descriptor, sorted by gate name.
 pub static GATE_METADATA: &[GateDescriptor] = &GATE_METADATA_ARRAY;

@@ -304,10 +304,6 @@ name = "lego-composition-depth"
 findings = 0
 
 [[gate]]
-name = "lego-cross-dialect"
-findings = 0
-
-[[gate]]
 name = "lego-duplicate-report"
 findings = 0
 
@@ -329,10 +325,6 @@ findings = 0
 
 [[gate]]
 name = "lego-primitive-coverage"
-findings = 0
-
-[[gate]]
-name = "lego-quick"
 findings = 0
 
 [[gate]]

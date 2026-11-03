@@ -142,8 +142,7 @@ boundary question: whether every child region names a building block that
 is registered, and whether every cited parent is an op that exists.
 
 `./cargo_full run --bin xtask -- lego-audit` is the stricter pass: IR
-fingerprint no-reinvention, depth of composition, primitive coverage, and
-cross-dialect reach-through. `./cargo_full run --bin xtask -- dup-scan`
+fingerprint no-reinvention, depth of composition, and primitive coverage. `./cargo_full run --bin xtask -- dup-scan`
 reports duplicated line counts per crate against their pins.
 
 ### Tiers
@@ -173,8 +172,9 @@ path and the owner path, and it migrates every caller in the same change:
 this workspace ships no compatibility shim for a moved item.
 
 `check-tier-deps` owns dependency-direction validation and checks that
-this contract is present here. `lego-audit` owns composition and
-cross-dialect import validation. A promotion that satisfies one gate and
+this contract is present here. `lego-audit` owns composition validation;
+`crate-ownership` holds every edge between domain crates to the seam its
+destination declares. A promotion that satisfies one gate and
 not the other is not owned.
 
 ## What the rule rejects

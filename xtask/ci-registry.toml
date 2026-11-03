@@ -388,11 +388,6 @@ subsets = ["lego-audit"]
 workflows = ["gates.yml"]
 
 [[gate]]
-name = "lego-cross-dialect"
-subsets = ["lego-audit"]
-workflows = ["gates.yml"]
-
-[[gate]]
 name = "lego-duplicate-report"
 subsets = ["lego-audit"]
 workflows = ["gates.yml"]
@@ -420,11 +415,6 @@ workflows = ["gates.yml"]
 [[gate]]
 name = "lego-primitive-coverage"
 subsets = ["lego-audit"]
-workflows = ["gates.yml"]
-
-[[gate]]
-name = "lego-quick"
-subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]

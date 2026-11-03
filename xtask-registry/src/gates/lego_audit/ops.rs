@@ -8,8 +8,6 @@
 
 use super::*;
 
-pub(super) const MAX_LEGO_AUDIT_SOURCE_BYTES: u64 = 2_097_152;
-
 /// Splits one violation line into the problem and its corrective action.
 ///
 /// Every law states the corrective action in the same line, either after `Fix:`
@@ -622,10 +620,6 @@ pub(super) fn walk(node: &Node, inside_composed: bool, state: &mut Walk) {
         }
         _ => {}
     }
-}
-
-pub(super) fn read_text_bounded(path: &std::path::Path) -> io::Result<String> {
-    xtask::output_arg::read_text_bounded(path, MAX_LEGO_AUDIT_SOURCE_BYTES, "lego audit")
 }
 
 pub(super) fn workspace_root() -> Option<std::path::PathBuf> {

@@ -64,7 +64,6 @@ pub static GATES: &[(&str, &'static dyn GateBehavior)] = &[
         "lego-composition-depth",
         &gates::lego_audit::LegoCompositionDepth,
     ),
-    ("lego-cross-dialect", &gates::lego_audit::LegoCrossDialect),
     (
         "lego-duplicate-report",
         &gates::lego_audit::LegoDuplicateReport,

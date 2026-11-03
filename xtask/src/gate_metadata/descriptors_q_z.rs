@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with Q through Z.
-pub const GATES_Q_Z: [GateDescriptor; 42] = [
+pub const GATES_Q_Z: &[GateDescriptor] = &[
     GateDescriptor {
         name: "readback-ring",
         help: "Enforce readback-ring contracts",

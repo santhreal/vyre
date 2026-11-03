@@ -19,18 +19,6 @@ use std::path::PathBuf;
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
-/// Source roots whose registries are read on a dispatch or lookup path.
-const ROOTS: &[&str] = &[
-    "vyre-driver/src",
-    "vyre-driver-cuda/src",
-    "vyre-driver-spirv/src",
-    "vyre-driver-wgpu/src",
-    "vyre-foundation/src",
-    "vyre-libs/src",
-    "vyre-primitives/src",
-    "vyre-runtime/src",
-];
-
 /// How a once-only construction is spelled.
 const FREEZE_MARKERS: &[&str] = &["LazyLock::new(", "OnceLock", "get_or_init(", "OnceCell"];
 
@@ -40,7 +28,7 @@ pub struct InventoryWalk;
 impl crate::gate::GateBehavior for InventoryWalk {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
-        let files = tree.rust(ROOTS)?;
+        let files = tree.publishable_sources()?;
         let mut report = Report::clean();
         report.cover_complete("inventory sources", files.len());
         let mut findings = Vec::new();
@@ -273,20 +261,28 @@ mod tests {
     use crate::gate::GateBehavior;
     use crate::gates::fixture_checkout;
 
-    /// The gate's report for a tree where one file under one root holds `text`.
-    ///
-    /// Every root has to exist: the rule refuses to scan a path that does not,
-    /// which is what keeps a moved directory from reading as a clean run.
+    /// The gate's report for a workspace whose one publishable member holds
+    /// `text`, beside an unpublished member that holds an unfrozen walk.
     fn run(text: &str) -> Report {
-        let owners: Vec<String> = ROOTS
-            .iter()
-            .map(|root| format!("{root}/owner.rs"))
-            .collect();
-        let mut files: Vec<(&str, &str)> = owners
-            .iter()
-            .map(|path| (path.as_str(), "fn owner() {}\n"))
-            .collect();
-        files.push(("vyre-driver/src/registry.rs", text));
+        let files = [
+            (
+                "Cargo.toml",
+                "[workspace]\nmembers = [\"vyre-libs-graph\", \"tool\"]\n",
+            ),
+            (
+                "vyre-libs-graph/Cargo.toml",
+                "[package]\nname = \"vyre-libs-graph\"\n",
+            ),
+            ("vyre-libs-graph/src/registry.rs", text),
+            (
+                "tool/Cargo.toml",
+                "[package]\nname = \"tool\"\npublish = false\n",
+            ),
+            (
+                "tool/src/main.rs",
+                "fn scan() { for row in inventory::iter::<Row> {} }\n",
+            ),
+        ];
         let (_temporary, root) = fixture_checkout::checkout(&files);
         InventoryWalk
             .run(&GateCtx::new(root, Vec::new()))
@@ -294,11 +290,10 @@ mod tests {
     }
 
     /// The note a clean run states, for a tree carrying `walks` walks.
+    ///
+    /// One production file: the unpublished member is outside the subject.
     fn note(walks: usize) -> String {
-        format!(
-            "{walks} registry walk(s) in {} production file(s)",
-            ROOTS.len() + 1
-        )
+        format!("{walks} registry walk(s) in 1 production file(s)")
     }
 
     #[test]

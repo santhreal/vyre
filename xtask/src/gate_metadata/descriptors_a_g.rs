@@ -4,7 +4,7 @@ use super::artifacts::*;
 use crate::gate::{GateDescriptor, ResourceClass};
 
 /// Static descriptor array for gates starting with A through G.
-pub const GATES_A_G: [GateDescriptor; 57] = [
+pub const GATES_A_G: &[GateDescriptor] = &[
     GateDescriptor {
         name: "abstraction-gate",
         help: "Enforce registered building-block boundaries",

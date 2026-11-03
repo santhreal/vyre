@@ -8371,6 +8371,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   a gate that mutated nothing.
 - A gate run that mutated the workspace prints its report before failing, so
   the findings it computed are no longer discarded.
+- The geometry-constant and inventory-walk gates judge every vyre-libs domain
+  crate instead of the one-file vyre-libs facade, and the lego-quick and
+  lego-cross-dialect gates, which scanned only the pre-split vyre-libs/src
+  dialect directories, are deleted.
 - Every workspace crate README now carries a manifest-backed contract for
   purpose, boundaries, a runnable example, features, errors, testing, release
   status, and ownership. Retired 0.4.x package claims and README drift fail the

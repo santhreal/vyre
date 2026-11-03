@@ -1,7 +1,7 @@
-//! Structural gate: operations in `vyre-libs` and `vyre-primitives` must not
-//! declare hardcoded execution geometry constants (workgroup sizes, block
-//! lanes, invocation counts, tile sizes, elements-per-invocation constants,
-//! or stage counts).
+//! Structural gate: operations in the `vyre-libs` family and `vyre-primitives`
+//! must not declare hardcoded execution geometry constants (workgroup sizes,
+//! block lanes, invocation counts, tile sizes, elements-per-invocation
+//! constants, or stage counts).
 //!
 //! Geometry is selected by `vyre-megakernel` from `GeometryRequirements` and
 //! the widths a target profile admits, not declared as a constant in library
@@ -31,7 +31,20 @@ const BANNED_PATTERNS: &[&str] = &[
     "PIPELINE_STAGES",
 ];
 
-/// Collect all banned geometry constant declarations in `vyre-libs/src` and `vyre-primitives/src`.
+/// Whether `path` is production source of a crate this gate judges: any
+/// Category A crate (the `vyre-libs` facade and every `vyre-libs-<domain>`
+/// partition) or the Category C crate.
+fn judged_source(path: &str) -> bool {
+    let Some((member, rest)) = path.split_once('/') else {
+        return false;
+    };
+    rest.starts_with("src/")
+        && (crate::workspace_rules::is_category_a_crate(member)
+            || member == crate::workspace_rules::CATEGORY_C_CRATE)
+}
+
+/// Collect every banned geometry constant declared in production source of a
+/// crate [`judged_source`] accepts.
 #[must_use]
 pub fn geometry_constant_failures(root: &Path) -> Vec<String> {
     let mut failures = Vec::new();
@@ -40,10 +53,7 @@ pub fn geometry_constant_failures(root: &Path) -> Vec<String> {
         let (file, text) = match source {
             SourceText::Read { path, text } => (path, text),
             SourceText::Unread { path, reason } => {
-                if !is_test_source(&path)
-                    && (path.starts_with("vyre-libs/src/")
-                        || path.starts_with("vyre-primitives/src/"))
-                {
+                if !is_test_source(&path) && judged_source(&path) {
                     failures.push(format!(
                         "{path} was not read: {reason}; the geometry constant gate cannot report an unread source as clean"
                     ));
@@ -51,10 +61,7 @@ pub fn geometry_constant_failures(root: &Path) -> Vec<String> {
                 continue;
             }
         };
-        if is_test_source(&file) {
-            continue;
-        }
-        if !file.starts_with("vyre-libs/src/") && !file.starts_with("vyre-primitives/src/") {
+        if is_test_source(&file) || !judged_source(&file) {
             continue;
         }
 
@@ -136,19 +143,36 @@ mod tests {
         ));
     }
 
+    /// WHY: the scope named `vyre-libs/src/`, and the domain split moved every
+    /// operation into `vyre-libs-<domain>/src/`, so the gate judged a facade
+    /// with one `lib.rs` and passed over the tree it exists for. The members
+    /// are read from the workspace manifest, so a partition added later is
+    /// judged without editing this test. It does not catch a banned name
+    /// missing from `BANNED_PATTERNS`.
     #[test]
-    fn mutation_gate_reintroduced_constant_is_caught() {
-        let synthetic_source = "pub const BLOCK_LANES: u32 = 1024;\nfn foo() {}\n";
-        let mut found = false;
-        for line in synthetic_source.lines() {
-            if is_ident_defined_on_line(line.trim(), "BLOCK_LANES") {
-                found = true;
-                break;
+    fn every_composition_and_intrinsic_crate_is_in_scope() {
+        let root = crate::workspace_manifest::workspace_root();
+        let members = crate::workspace_manifest::workspace_members(&root);
+        let mut judged_partitions = 0usize;
+        for member in &members {
+            let name = member.rsplit('/').next().unwrap_or(member);
+            let expected = crate::workspace_rules::is_category_a_crate(name)
+                || name == crate::workspace_rules::CATEGORY_C_CRATE;
+            assert_eq!(
+                judged_source(&format!("{member}/src/lib.rs")),
+                expected,
+                "Fix: `{member}` is {}a composition or intrinsic crate, so its source is {}judged",
+                if expected { "" } else { "not " },
+                if expected { "" } else { "not " },
+            );
+            if expected && name.starts_with("vyre-libs-") {
+                judged_partitions += 1;
             }
         }
         assert!(
-            found,
-            "Reintroduced geometry constant must be caught by gate"
+            judged_partitions > 0,
+            "Fix: the workspace declares no `vyre-libs-<domain>` member, so this test proves nothing about the split"
         );
+        assert!(!judged_source("vyre-libs-nn/tests/case.rs"));
     }
 }

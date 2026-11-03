@@ -67,7 +67,6 @@ pub mod hygiene_matrix;
 pub mod implementation_family;
 pub mod inventory_walk;
 pub mod layering;
-pub mod lego_quick;
 pub mod lint_hygiene;
 pub mod lock_poison_policy;
 pub mod lockfile;
@@ -192,7 +191,6 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
     ("hot-path-inventory", &inventory_walk::InventoryWalk),
     ("layering", &layering::Layering),
     ("neutral-crates", &layering::NeutralCrates),
-    ("lego-quick", &lego_quick::LegoQuick),
     ("lint-denied-override", &lint_hygiene::DeniedLintOverride),
     ("lint-expect-fix", &lint_hygiene::ExpectHasFix),
     ("lint-liveness-evasion", &lint_hygiene::LivenessEvasion),

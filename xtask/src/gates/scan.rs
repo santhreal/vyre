@@ -257,6 +257,24 @@ impl Tree {
         Ok(sources)
     }
 
+    /// Every Rust file under the `src` directory of a member Cargo would
+    /// publish.
+    ///
+    /// A rule about production code takes its subject from the manifest
+    /// rather than from a list of directories, so a crate split or added is
+    /// judged on the next run instead of falling outside a list nobody edits.
+    pub fn publishable_sources(&self) -> Result<Vec<PathBuf>, GateError> {
+        let roots: Vec<String> = self
+            .member_manifests()?
+            .into_iter()
+            .filter(Member::publishable)
+            .map(|member| format!("{}/src", member.path))
+            .filter(|root| self.exists(root))
+            .collect();
+        let roots: Vec<&str> = roots.iter().map(String::as_str).collect();
+        self.rust(&roots)
+    }
+
     /// Every Rust source in the tree.
     #[must_use]
     pub fn all_rust(&self) -> Vec<PathBuf> {
