@@ -1036,6 +1036,34 @@ pub fn derive_artifact_modules() -> Result<Vec<ArtifactModuleRecord>, String> {
     Ok(modules)
 }
 
+/// Whether `backend_id` registers no materializer because this build target
+/// cannot run it. See [`lacks_materializer_by_target`].
+fn materializer_absent_by_target(backend_id: &str) -> bool {
+    let Ok(registrations) = vyre_registry_link::backend::live_backend_registry() else {
+        return false;
+    };
+    registrations
+        .iter()
+        .find(|registration| registration.id == backend_id)
+        .is_some_and(|registration| lacks_materializer_by_target(registration))
+}
+
+/// Whether one registration lacks a materializer because this build target
+/// cannot run it.
+///
+/// A backend whose device runtime exists only on some targets registers its
+/// pure target compiler everywhere and its materializer only where the runtime
+/// links; its factory then refuses with [`vyre_driver::BackendError::UnsupportedFeature`].
+/// A backend that acquires, or fails for any other reason, and still registers
+/// no materializer has lost its execution facet.
+fn lacks_materializer_by_target(registration: &vyre_driver::BackendRegistration) -> bool {
+    registration.materializer.is_none()
+        && matches!(
+            (registration.factory)(),
+            Err(vyre_driver::BackendError::UnsupportedFeature { .. })
+        )
+}
+
 /// Recorded conformance certificate, as read from the evidence corpus.
 #[derive(serde::Deserialize)]
 struct CertificateJson {
@@ -1707,7 +1735,7 @@ impl GateBehavior for ApplicationRunnable {
                     "register the backend's target compiler factory",
                 ));
             }
-            if !module.has_materializer {
+            if !module.has_materializer && !materializer_absent_by_target(&module.backend_id) {
                 inspection.find(Finding::new(
                     format!(
                         "production backend `{}` registers no materializer, so no device can execute its payload",

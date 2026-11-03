@@ -548,7 +548,13 @@ fn every_registered_frontend_operation_carries_a_program_builder() {
     }
 }
 
-/// Every registered production backend registers both facets a route needs.
+/// Every registered production backend registers both facets a route needs,
+/// or registers no materializer because this build target cannot run it.
+///
+/// WHY: `metal` links on every host through feature unification and registers
+/// its materializer only on Apple targets. Requiring the facet everywhere made
+/// the rule red whenever a crate that links `metal` was built beside this one;
+/// excusing every missing facet would excuse a backend that lost it.
 #[test]
 fn every_registered_production_backend_states_a_payload_format_and_both_facets() {
     let modules = derive_artifact_modules().expect("the backend registry starts");
@@ -576,8 +582,8 @@ fn every_registered_production_backend_states_a_payload_format_and_both_facets()
             module.backend_id
         );
         assert!(
-            module.has_materializer,
-            "production backend `{}` registers no materializer",
+            module.has_materializer || materializer_absent_by_target(&module.backend_id),
+            "production backend `{}` registers no materializer and its factory does not report the target unsupported",
             module.backend_id
         );
         assert!(
@@ -586,6 +592,64 @@ fn every_registered_production_backend_states_a_payload_format_and_both_facets()
             module.backend_id
         );
     }
+}
+
+/// WHY: only a factory that reports the target unsupported excuses a missing
+/// materializer. A backend that acquires, or fails for another reason such as
+/// running out of memory, with no materializer has lost its execution facet,
+/// and a registration that carries the facet never needs the excuse.
+#[test]
+fn only_a_target_refusal_excuses_a_missing_materializer() {
+    use std::collections::HashSet;
+    use std::sync::LazyLock;
+    use vyre_driver::{ArtifactMaterializer, BackendError, BackendRegistration, VyreBackend};
+    use vyre_foundation::ir::OpId;
+
+    fn target_refuses() -> Result<Box<dyn VyreBackend>, BackendError> {
+        Err(BackendError::UnsupportedFeature {
+            name: "fixture runtime".into(),
+            backend: "fixture".into(),
+        })
+    }
+    fn device_fails() -> Result<Box<dyn VyreBackend>, BackendError> {
+        Err(BackendError::DeviceOutOfMemory {
+            requested: 1,
+            available: 0,
+        })
+    }
+    fn refusing_materializer() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
+        Err(BackendError::new("fixture materializer"))
+    }
+    fn no_ops() -> &'static HashSet<OpId> {
+        static OPS: LazyLock<HashSet<OpId>> = LazyLock::new(HashSet::new);
+        &OPS
+    }
+    type Factory = fn() -> Result<Box<dyn VyreBackend>, BackendError>;
+    type Materializer = fn() -> Result<Box<dyn ArtifactMaterializer>, BackendError>;
+    let registration = |factory: Factory, materializer: Option<Materializer>| BackendRegistration {
+        id: "fixture",
+        target_id: vyre_foundation::operation::TargetId::expect_valid("fixture"),
+        payload_format: None,
+        reference_oracle: false,
+        factory,
+        supported_ops: no_ops,
+        semantic_operations: no_ops,
+        target_compiler: None,
+        materializer,
+    };
+
+    assert!(lacks_materializer_by_target(&registration(
+        target_refuses,
+        None
+    )));
+    assert!(!lacks_materializer_by_target(&registration(
+        device_fails,
+        None
+    )));
+    assert!(!lacks_materializer_by_target(&registration(
+        target_refuses,
+        Some(refusing_materializer as Materializer)
+    )));
 }
 
 /// A derived application reaches a lowered target payload through the production route.

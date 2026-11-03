@@ -6809,6 +6809,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   of the operation's canonical program, so a target that declares the whole
   catalog and registers fewer lowering arms no longer reports the whole catalog
   as supported.
+- The `application-runnable` gate accepts a production backend with no
+  materializer when its factory reports the build target unsupported, so
+  `metal` linked on a non-Apple host no longer reads as a backend that lost its
+  execution facet.
 - The NVMe ingest telemetry test declares its crate documentation before its
   `#![cfg(target_os = "linux")]`, so the crate still carries a doc on a target
   the cfg strips. Written the other way round it compiled on Linux and failed
