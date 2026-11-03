@@ -5,6 +5,8 @@
 
 use std::path::PathBuf;
 
+use structure_gate::cfg_test::TestSources;
+
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
@@ -128,6 +130,7 @@ impl crate::gate::GateBehavior for FileSize {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
 
+        let tests = TestSources::of(tree.root());
         let mut rows: Vec<(usize, usize, PathBuf)> = Vec::new();
         for path in tree.paths() {
             let relative = path.to_string_lossy();
@@ -135,7 +138,11 @@ impl crate::gate::GateBehavior for FileSize {
                 continue;
             }
             let lines = tree.read(path)?.matches('\n').count();
-            let cap = cap_for(&relative);
+            let cap = if tests.contains(path) {
+                TEST_MAX_LINES
+            } else {
+                cap_for(&relative)
+            };
             if lines > cap {
                 report.find(Finding::in_file(
                     path.clone(),
@@ -209,13 +216,10 @@ fn measured(rows: &[(&str, usize)], path: &str) -> Option<usize> {
         .map(|(_, value)| *value)
 }
 
-/// Test trees, benches, fuzz targets, the conform tree and the task runners.
+/// The conform tree and the task runners. Test sources are excluded by the
+/// caller through `TestSources`, which reads declarations rather than names.
 fn is_outside_production(path: &str) -> bool {
-    path.contains("/tests/")
-        || path.contains("/benches/")
-        || path.contains("/fuzz/")
-        || path.ends_with("tests.rs")
-        || path.contains("xtask/src/")
+    path.contains("xtask/src/")
         || path.contains("xtask-registry/src/")
         || path.contains("xtask-evidence/src/")
         || path.starts_with("conform/")
@@ -277,14 +281,16 @@ mod tests {
         assert_eq!(cap_for(path), CORE_MAX_LINES);
     }
 
-    /// WHY: the looser cap exists for generated and harness code. A file under a
-    /// core crate's tests directory must take it, or extracting tests out of an
-    /// oversized file would trade one violation for another.
+    /// WHY: the looser cap exists for tooling and the conformance harness. A
+    /// production file named like a test still takes the production cap: the
+    /// name `_tests.rs` once bought any core file the looser cap without a
+    /// `#[cfg(test)]` declaration behind it. Test modules take the looser cap
+    /// through `TestSources` in `run`.
     #[test]
     fn harness_trees_take_the_looser_cap() {
         assert_eq!(
             cap_for("vyre-foundation/src/optimizer/passes/fusion_tests.rs"),
-            TEST_MAX_LINES
+            CORE_MAX_LINES
         );
         assert_eq!(
             cap_for("xtask/src/gates/hygiene_matrix/mod.rs"),

@@ -1,6 +1,8 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
+
+use structure_gate::cfg_test::TestSources;
 
 use super::records::{
     HygieneClassificationSummary, HygieneFinding, HygieneFindingClass, HygieneFindingSummary,
@@ -26,13 +28,13 @@ pub(crate) fn classify_findings(
     findings: &[HygieneFinding],
     hot_paths: &std::collections::BTreeSet<String>,
     structural_gates: &StructuralGateArtifact,
-    test_gated: &BTreeSet<String>,
+    tests: &TestSources,
 ) -> Vec<HygieneFindingClass> {
     findings
         .iter()
         .map(|finding| {
             let member = hygiene_member_for_path(vyre_root, &finding.path);
-            let surface = hygiene_surface_for_path(vyre_root, &finding.path, test_gated);
+            let surface = hygiene_surface_for_path(vyre_root, &finding.path, tests);
             let hot_path = hygiene_finding_is_hot_path(vyre_root, &finding.path, hot_paths);
             let declared = is_declared_structural_gate(vyre_root, finding, structural_gates);
             let risk = hygiene_risk(finding.pattern, surface, hot_path, declared);
@@ -129,7 +131,7 @@ pub(crate) fn hygiene_member_for_path(vyre_root: &Path, path: &str) -> String {
 pub(crate) fn hygiene_surface_for_path(
     vyre_root: &Path,
     path: &str,
-    test_gated: &BTreeSet<String>,
+    tests: &TestSources,
 ) -> &'static str {
     let normalized = path.replace('\\', "/");
     if normalized.contains("/target/")
@@ -140,23 +142,12 @@ pub(crate) fn hygiene_surface_for_path(
     {
         return "generated";
     }
-    if normalized.contains("/vyre-test-support/") || normalized.starts_with("vyre-test-support/") {
-        return "test";
-    }
-    if normalized.contains("/tests/")
-        || normalized.contains("/fuzz/")
-        || normalized.contains("/test_harness/")
-        || normalized.ends_with("/tests.rs")
-        || normalized.ends_with("_test.rs")
-        || normalized.ends_with("_tests.rs")
-        || normalized.contains("_tests_")
-        || normalized.contains("_test_")
-        || test_gated.contains(&relative_to_vyre(vyre_root, Path::new(path)))
-    {
-        return "test";
-    }
-    if normalized.contains("/examples/") {
+    let relative = relative_to_vyre(vyre_root, Path::new(path));
+    if is_example_source(&relative) {
         return "example";
+    }
+    if relative.starts_with("vyre-test-support/") || tests.contains(&relative) {
+        return "test";
     }
     if is_xtask_source_path(&normalized)
         || normalized.contains("/scripts/")
@@ -168,6 +159,22 @@ pub(crate) fn hygiene_surface_for_path(
         return "docs";
     }
     "production"
+}
+
+/// Whether a path is example source: under an `examples/` directory, and not
+/// under a test, bench or fuzz directory below it.
+fn is_example_source(relative: &str) -> bool {
+    let mut directories = relative.split('/');
+    directories.next_back();
+    let mut example = false;
+    for directory in directories {
+        match directory {
+            "examples" => example = true,
+            "tests" | "benches" | "fuzz" => return false,
+            _ => {}
+        }
+    }
+    example
 }
 
 /// Whether a path is xtask source rather than an xtask manifest or README.

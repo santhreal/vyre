@@ -6,6 +6,8 @@
 //! two. A row whose declared paths have moved is unmeasurable, which is worse
 //! than a violation, so a missing path is itself a finding.
 
+use structure_gate::cfg_test::TestSources;
+
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{contains_word, Tree};
 
@@ -106,15 +108,11 @@ impl crate::gate::GateBehavior for Unification {
             if missing {
                 continue;
             }
+            let tests = TestSources::of(tree.root());
             let files = tree
                 .rust(row.roots)?
                 .into_iter()
-                .filter(|path| {
-                    let text = path.to_string_lossy();
-                    !(text.contains("/tests/")
-                        || text.ends_with("_tests.rs")
-                        || text.contains("test_fixtures"))
-                })
+                .filter(|path| !tests.contains(path))
                 .collect::<Vec<_>>();
             let mut hits = Vec::new();
             for file in &files {

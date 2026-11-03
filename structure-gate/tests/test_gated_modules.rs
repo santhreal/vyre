@@ -5,7 +5,7 @@
 //! wrong holds test doubles to a production contract, which is how a panic in a
 //! dispatcher double came to be counted against a shipped crate's panic budget.
 
-use structure_gate::cfg_test::test_gated_module_files;
+use structure_gate::cfg_test::{test_gated_module_files, TestSources};
 use structure_gate::workspace_root;
 
 /// A module gated in its parent is reported, whichever spelling it uses.
@@ -293,4 +293,136 @@ fn only_a_gate_no_build_satisfies_without_test_counts() {
         ],
         "Fix: only a module whose gate every configuration satisfies with `test` on is test-only"
     );
+}
+
+/// Write `files` under a fresh fixture root, each `(relative path, text)`.
+fn fixture_tree(files: &[(&str, &str)]) -> tempfile::TempDir {
+    let tree = tempfile::tempdir().expect("Fix: the fixture root must be creatable.");
+    for (relative, text) in files {
+        let path = tree.path().join(relative);
+        std::fs::create_dir_all(path.parent().expect("Fix: a fixture file has a parent."))
+            .expect("Fix: the fixture directory must be creatable.");
+        std::fs::write(&path, text).expect("Fix: a fixture file must be writable.");
+    }
+    tree
+}
+
+/// A gated declaration carrying `#[path]` gates the file the attribute names.
+///
+/// The relocated spelling is how a crate keeps a large test module beside the
+/// file it tests: `#[cfg(test)] #[path = "pool_tests.rs"] mod tests;`. Reading
+/// only the module name looked for `pool/tests.rs`, which does not exist, and
+/// the real file counted as shipped code. Every placement is covered: the
+/// attribute before or after the gate, inside an inline block, and climbing out
+/// of the declaring directory. The decoys sit where the unrelocated rule looks.
+#[test]
+fn a_relocated_gated_module_is_the_file_its_path_attribute_names() {
+    let tree = fixture_tree(&[
+        (
+            "demo/src/lib.rs",
+            "mod pool;\npub mod outer {\n    #[cfg(test)]\n    #[path = \"deep.rs\"]\n    \
+             mod deep;\n}\n#[cfg(test)]\n#[path = \"../fixtures/shared.rs\"]\nmod shared;\n",
+        ),
+        (
+            "demo/src/pool.rs",
+            "#[cfg(test)]\n#[path = \"pool_tests.rs\"]\nmod tests;\n\
+             #[path = \"other_tests.rs\"]\n#[cfg(test)]\nmod other;\n",
+        ),
+        ("demo/src/pool_tests.rs", ""),
+        ("demo/src/other_tests.rs", ""),
+        ("demo/src/outer/deep.rs", ""),
+        ("demo/fixtures/shared.rs", ""),
+        ("demo/src/pool/tests.rs", ""),
+        ("demo/src/pool/other.rs", ""),
+        ("demo/src/deep.rs", ""),
+        ("demo/src/shared.rs", ""),
+    ]);
+
+    let gated = test_gated_module_files(tree.path());
+
+    assert_eq!(
+        gated.into_iter().collect::<Vec<_>>(),
+        vec![
+            "demo/fixtures/shared.rs".to_string(),
+            "demo/src/other_tests.rs".to_string(),
+            "demo/src/outer/deep.rs".to_string(),
+            "demo/src/pool_tests.rs".to_string(),
+        ],
+        "Fix: a relocated gated module is the file its `#[path]` names, resolved \
+         against the declaring directory, or the inline block's directory inside one"
+    );
+}
+
+/// Test source is a target directory or a gated declaration, never a name.
+///
+/// Seven gates once held their own file-name rules, and they disagreed: one
+/// excused every `test_*.rs`, which skipped the shipped `bitset/test_bit.rs`
+/// operation, and another missed `benches/`. A name that reads like a test and
+/// is compiled into the library ships; a file under `tests/`, `benches/`,
+/// `examples/` or `fuzz/` never does, and neither does a module behind a
+/// `#[cfg(test)]` declaration, whatever it is called.
+#[test]
+fn test_sources_are_judged_by_target_directory_and_declaration_not_by_name() {
+    let tree = fixture_tree(&[
+        (
+            "demo/src/lib.rs",
+            "pub mod test_bit;\nmod latest_tests;\nmod geom;\n#[cfg(test)]\nmod checks;\n",
+        ),
+        ("demo/src/geom.rs", "mod tests;\n"),
+        ("demo/src/geom/tests/mod.rs", ""),
+        ("demo/src/test_bit.rs", ""),
+        ("demo/src/latest_tests.rs", ""),
+        ("demo/src/checks.rs", ""),
+        ("demo/tests/integration.rs", ""),
+        ("demo/benches/throughput.rs", ""),
+        ("demo/examples/walkthrough.rs", ""),
+        ("fuzz/fuzz_targets/decode.rs", ""),
+    ]);
+
+    let tests = TestSources::of(tree.path());
+
+    for test_source in [
+        "demo/src/checks.rs",
+        "demo\\src\\checks.rs",
+        "demo/tests/integration.rs",
+        "demo/benches/throughput.rs",
+        "demo/examples/walkthrough.rs",
+        "fuzz/fuzz_targets/decode.rs",
+    ] {
+        assert!(
+            tests.contains(test_source),
+            "Fix: `{test_source}` builds no shipped artifact and must read as test source"
+        );
+    }
+    for shipped in [
+        "demo/src/lib.rs",
+        "demo/src/test_bit.rs",
+        "demo/src/latest_tests.rs",
+        "demo/src/tests.rs",
+        "demo/src/geom/tests/mod.rs",
+    ] {
+        assert!(
+            !tests.contains(shipped),
+            "Fix: `{shipped}` is compiled into the library and must read as shipped source"
+        );
+    }
+    for harness in [
+        "demo/src/checks.rs",
+        "demo/tests/integration.rs",
+        "demo/benches/throughput.rs",
+    ] {
+        assert!(
+            tests.contains_harness(harness),
+            "Fix: `{harness}` builds a test or bench harness"
+        );
+    }
+    for program in [
+        "demo/examples/walkthrough.rs",
+        "fuzz/fuzz_targets/decode.rs",
+    ] {
+        assert!(
+            !tests.contains_harness(program),
+            "Fix: `{program}` builds a standalone program, not a test harness"
+        );
+    }
 }

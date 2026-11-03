@@ -10,6 +10,8 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use structure_gate::cfg_test::TestSources;
+
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
@@ -451,11 +453,12 @@ impl crate::gate::GateBehavior for ProgramWireFields {
         // The declaration is located rather than named. This gate once named a
         // path that no longer existed, failed on it, and could not be wired.
         let candidates = tree.rust(&["vyre-foundation/src"])?;
+        let tests = TestSources::of(tree.root());
         let declaration = tree
             .hits(
                 &candidates
                     .into_iter()
-                    .filter(|path| !path.to_string_lossy().contains("/tests/"))
+                    .filter(|path| !tests.contains(path))
                     .collect::<Vec<PathBuf>>(),
                 |line| followed_by(line, "pub struct Program", '{'),
             )?

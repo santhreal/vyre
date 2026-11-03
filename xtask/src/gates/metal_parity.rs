@@ -20,6 +20,8 @@
 use std::collections::BTreeSet;
 use std::process::Command;
 
+use structure_gate::cfg_test::TestSources;
+
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
@@ -174,9 +176,9 @@ impl crate::gate::GateBehavior for MetalParity {
 /// lines are dropped before the scan.
 fn published_counters_in(tree: &Tree, directory: &str) -> Result<BTreeSet<String>, GateError> {
     let mut found = BTreeSet::new();
+    let tests = TestSources::of(tree.root());
     for path in tree.rust(&[directory])? {
-        let name = path.to_string_lossy();
-        if name.contains("/tests/") || name.ends_with("_tests.rs") || name.ends_with("/tests.rs") {
+        if tests.contains(&path) {
             continue;
         }
         let text = tree.read(&path)?;
@@ -222,9 +224,9 @@ fn asserted_counters(
     published: &BTreeSet<String>,
 ) -> Result<BTreeSet<String>, GateError> {
     let mut found = BTreeSet::new();
+    let tests = TestSources::of(tree.root());
     for path in tree.rust(&[metal_dir])? {
-        let name = path.to_string_lossy();
-        if !name.contains("/tests/") && !name.ends_with("/tests.rs") {
+        if !tests.contains(&path) {
             continue;
         }
         let text = tree.read(&path)?;

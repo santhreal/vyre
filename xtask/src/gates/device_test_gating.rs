@@ -61,6 +61,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use quote::ToTokens;
+use structure_gate::cfg_test::TestSources;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
@@ -103,7 +104,8 @@ impl crate::gate::GateBehavior for DeviceTestGating {
                 parsed.insert(path.clone(), file);
             }
         }
-        let registry = registry_reach(&parsed);
+        let tests = TestSources::of(tree.root());
+        let registry = registry_reach(&parsed, &tests);
         report.note(format!(
             "{} registry acquisition name(s): {}; {} registration reader(s): {}",
             registry.acquisitions.len(),
@@ -138,7 +140,7 @@ impl crate::gate::GateBehavior for DeviceTestGating {
                 continue;
             }
             let display = path.display().to_string();
-            let in_test = scan::is_test_tree(path);
+            let in_test = tests.contains_harness(path);
             for name in ungated_acquisitions(&file.items, in_test, &backends) {
                 report.find(Finding::new(
                     format!("{display}: test code acquires {name} with no hardware admission"),
@@ -686,13 +688,13 @@ struct RegistryReach {
 /// the owning crate saw a test enumerate every driver and acquire each one
 /// without matching anything. Declarations in test trees are skipped, so a
 /// fixture that names a reader does not widen the rule.
-fn registry_reach(parsed: &BTreeMap<PathBuf, syn::File>) -> RegistryReach {
+fn registry_reach(parsed: &BTreeMap<PathBuf, syn::File>, tests: &TestSources) -> RegistryReach {
     let mut reach = RegistryReach {
         acquisitions: BTreeSet::new(),
         readers: BTreeSet::new(),
     };
     for (path, file) in parsed {
-        if scan::is_test_tree(path) {
+        if tests.contains(path) {
             continue;
         }
         collect_registry_acquisitions(&file.items, &mut reach.acquisitions);

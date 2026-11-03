@@ -17,6 +17,11 @@
 //! is the one way a gate can certify what it never checked. Dropping whole
 //! comment lines cannot break a folded scalar, whose continuation lines are
 //! argv and never start with `#`.
+//!
+//! An xtask gate that runs cargo itself is read as the cargo invocation it runs.
+//! `XTASK_CARGO_RUNS` lists them, each from the constants the gate builds its
+//! command from, so a step running `xtask cuda-parity --device` covers what that
+//! gate compiles and nothing else.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -35,6 +40,41 @@ pub struct WorkflowCommand {
     pub features: BTreeSet<String>,
     /// Test targets the invocation names with `--test`.
     pub targets: BTreeSet<String>,
+}
+
+/// An xtask gate invocation that runs one cargo build of one package.
+pub struct XtaskCargoRun {
+    /// The gate name following `xtask --`.
+    pub gate: &'static str,
+    /// The flag that makes the gate run cargo.
+    pub flag: &'static str,
+    /// The package the gate builds.
+    pub package: &'static str,
+    /// The comma-separated features the build enables. The build names no
+    /// `--test`, so it compiles every test target.
+    pub features: &'static str,
+}
+
+/// Every xtask gate invocation that builds a package itself.
+const XTASK_CARGO_RUNS: &[XtaskCargoRun] = &[crate::gates::backend_parity::CUDA_DEVICE_RUN];
+
+/// The cargo invocation an xtask gate step runs, when `command` is one.
+fn xtask_cargo_run(command: &str) -> Option<WorkflowCommand> {
+    let (runner, arguments) = command.split_once(" -- ")?;
+    if !runner.split(' ').any(|token| token == "xtask") {
+        return None;
+    }
+    let mut arguments = arguments.split(' ').filter(|token| !token.is_empty());
+    let gate = arguments.next()?;
+    let flags: Vec<&str> = arguments.collect();
+    let run = XTASK_CARGO_RUNS
+        .iter()
+        .find(|run| run.gate == gate && flags.contains(&run.flag))?;
+    Some(WorkflowCommand {
+        packages: BTreeSet::from([run.package.to_string()]),
+        features: run.features.split(',').map(str::to_string).collect(),
+        targets: BTreeSet::new(),
+    })
 }
 
 /// Every workflow file in the tree, in a stable order.
@@ -63,6 +103,12 @@ pub fn enabling(text: &str, feature: &str) -> Vec<WorkflowCommand> {
     let mut commands = Vec::new();
     for segment in collapsed.split("./cargo_full").skip(1) {
         let command = segment.split("- name:").next().unwrap_or(segment);
+        if let Some(run) = xtask_cargo_run(command) {
+            if run.features.contains(feature) {
+                commands.push(run);
+            }
+            continue;
+        }
         if !command.contains(feature) {
             continue;
         }
@@ -175,5 +221,42 @@ mod tests {
             "device-tests"
         )
         .is_empty());
+    }
+
+    /// WHY: `xtask cuda-parity --device` compiles every `vyre-driver-cuda` test
+    /// target with `device-tests`, and a reader that saw only `./cargo_full
+    /// test` read the CUDA crate as built by nothing once the raw cargo step
+    /// folded into the gate. The gate without `--device` builds nothing, and an
+    /// unlisted gate is not a build.
+    #[test]
+    fn an_xtask_gate_that_runs_cargo_is_the_build_it_runs() {
+        for run in XTASK_CARGO_RUNS {
+            assert!(
+                crate::gates::GATES
+                    .iter()
+                    .any(|(name, _)| *name == run.gate),
+                "`{}` is not a registered gate, so no step can run it",
+                run.gate
+            );
+        }
+        let workflow = concat!(
+            "      - name: CUDA parity\n",
+            "        run: ./cargo_full run -q -p xtask --bin xtask -- cuda-parity --device\n",
+            "      - name: CUDA static\n",
+            "        run: ./cargo_full run -q -p xtask --bin xtask -- cuda-parity\n",
+            "      - name: unrelated gate\n",
+            "        run: ./cargo_full run -q -p xtask --bin xtask -- file-size --device\n",
+        );
+
+        let commands = enabling(workflow, "device-tests");
+        assert_eq!(commands.len(), 1, "only the device run is a build");
+        let run = &crate::gates::backend_parity::CUDA_DEVICE_RUN;
+        assert_eq!(commands[0].packages, named(&[run.package]));
+        assert_eq!(
+            commands[0].features,
+            run.features.split(',').map(str::to_string).collect()
+        );
+        assert!(commands[0].targets.is_empty(), "the run names no `--test`");
+        assert!(enabling(workflow, "spirv-val").is_empty());
     }
 }

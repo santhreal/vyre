@@ -74,7 +74,7 @@ use crate::workspace_manifest::{
 };
 use crate::workspace_rules::{crate_declares_frontend, FRONTEND_OWNERS};
 
-use crate::backend_vocabulary::is_test_source;
+use crate::cfg_test::TestSources;
 use crate::module_layout::{
     directory_stutter_failures, generic_module_name_failures, numbered_sibling_failures,
     sibling_module_failures, source_test_directory_failures, CrateRoot, PUBLIC_API_SNAPSHOT_DIR,
@@ -124,7 +124,7 @@ pub fn scan(root: &Path) -> Workspace {
     let excludes = workspace_excludes(root);
     let manifest_directories = crate::workspace_manifest::manifest_directories(root);
     let sources = member_sources(root, &members);
-    let registrations = scan_registrations(&sources);
+    let registrations = scan_registrations(&sources, &TestSources::of(root));
     let substrate_paths = scan_substrate_paths(&sources);
     let frontend_paths = scan_frontend_paths(&sources, &members);
     let materializers = scan_materializers(&sources);
@@ -267,10 +267,10 @@ pub fn run(args: &[String]) {
 /// case is already stripped per file by [`parse_registrations`]; this is the
 /// other half, where the gate sits in the parent directory instead of an
 /// attribute.
-fn scan_registrations(sources: &[MemberSource]) -> Vec<Registration> {
+fn scan_registrations(sources: &[MemberSource], tests: &TestSources) -> Vec<Registration> {
     let mut registrations = Vec::new();
     for source in sources {
-        if is_test_source(&source.file) {
+        if tests.contains(&source.file) {
             continue;
         }
         let Ok(text) = &source.text else {

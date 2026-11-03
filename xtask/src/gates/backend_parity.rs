@@ -19,6 +19,7 @@ use std::process::Command;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
+use crate::gates::workflow_commands::XtaskCargoRun;
 
 /// Crate whose emitted SPIR-V is validated.
 const SPIRV_CRATE: &str = "vyre-driver-spirv";
@@ -38,6 +39,14 @@ const PARITY: &str = "gpu_parity";
 /// Features that compile the CUDA crate's device-acquiring targets. Without
 /// them a run on the device host links none of the targets that touch it.
 const CUDA_DEVICE_FEATURES: &str = "device-tests,cuda";
+
+/// The build `cuda-parity --device` runs, read by the workflow step reader.
+pub(crate) const CUDA_DEVICE_RUN: XtaskCargoRun = XtaskCargoRun {
+    gate: "cuda-parity",
+    flag: "--device",
+    package: CUDA_CRATE,
+    features: CUDA_DEVICE_FEATURES,
+};
 
 /// Emitted SPIR-V is validated, not just shaped.
 pub struct SpirvParity;

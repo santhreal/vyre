@@ -2,6 +2,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use structure_gate::cfg_test::TestSources;
+
 use crate::tree_walk::{self, BUILD_OUTPUT_AND_VCS};
 
 use super::records::{HygieneFinding, BLOCKED_PATTERNS};
@@ -55,25 +57,9 @@ pub(crate) const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
     ),
 ];
 
-/// Whether a path holds test source rather than the production surface.
-///
-/// One owner for the question: the root walk and the xtask walk both ask it, and
-/// a scan that answered it differently would hold one tree to a rule it did not
-/// hold the other to.
-pub(crate) fn is_test_source_path(path: &Path) -> bool {
-    let path = path.to_string_lossy().replace('\\', "/");
-    path.contains("/tests/")
-        || path.contains("/benches/")
-        || path.contains("/examples/")
-        || path.ends_with("/tests.rs")
-        || path.ends_with("_test.rs")
-        || path.ends_with("_tests.rs")
-        || path.contains("_tests_")
-        || path.contains("_test_")
-}
-
 pub(crate) fn scan_root(
     root: &Path,
+    tests: &TestSources,
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
@@ -94,7 +80,7 @@ pub(crate) fn scan_root(
         if path.file_name().and_then(|name| name.to_str()) == Some("hygiene_matrix.rs") {
             continue;
         }
-        if is_test_source_path(path) {
+        if tests.contains(path.strip_prefix(root).unwrap_or(path)) {
             continue;
         }
         scan_file(path, scanned_files, findings);
@@ -102,6 +88,7 @@ pub(crate) fn scan_root(
 }
 pub(crate) fn scan_source_inspection_test_files(
     root: &Path,
+    tests: &TestSources,
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
@@ -119,14 +106,7 @@ pub(crate) fn scan_source_inspection_test_files(
         if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
             continue;
         }
-        let path_string = path.to_string_lossy().replace('\\', "/");
-        let is_test_file = path_string.contains("/tests/")
-            || path_string.ends_with("/tests.rs")
-            || path_string.ends_with("_test.rs")
-            || path_string.ends_with("_tests.rs")
-            || path_string.contains("_tests_")
-            || path_string.contains("_test_");
-        if !is_test_file {
+        if !tests.contains(path.strip_prefix(root).unwrap_or(path)) {
             continue;
         }
         let text = match read_text_bounded(path) {
@@ -175,6 +155,7 @@ pub(crate) fn xtask_source_roots(root: &Path) -> Vec<PathBuf> {
 /// xtask crate's non-test source, which cannot fall out of date.
 pub(crate) fn scan_release_xtask(
     root: &Path,
+    tests: &TestSources,
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
@@ -191,7 +172,7 @@ pub(crate) fn scan_release_xtask(
             if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
                 continue;
             }
-            if is_test_source_path(path) {
+            if tests.contains(path.strip_prefix(root).unwrap_or(path)) {
                 continue;
             }
             if path.file_name().and_then(|name| name.to_str()) == Some("hygiene_matrix.rs") {

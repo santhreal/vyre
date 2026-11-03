@@ -24,8 +24,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use crate::backend_vocabulary::is_test_source;
-use crate::cfg_test::{cfg_test_line_mask, test_gated_module_files};
+use crate::cfg_test::{cfg_test_line_mask, TestSources};
 use crate::module_layout::CrateRoot;
 use crate::source_scan::{
     is_word_byte, mask_comments_and_strings, rust_sources_with_text, SourceText,
@@ -57,13 +56,13 @@ pub struct Declaration {
 pub fn duplicate_public_type_name_failures(root: &Path, crate_roots: &[CrateRoot]) -> Vec<String> {
     let mut failures = Vec::new();
     let mut found = Vec::new();
-    let test_gated = test_gated_module_files(root);
+    let tests = TestSources::of(root);
 
     for source in rust_sources_with_text(root) {
         let Some(owner) = owning_crate(source.path(), crate_roots) else {
             continue;
         };
-        if is_test_source(source.path()) || test_gated.contains(source.path()) {
+        if tests.contains(source.path()) {
             continue;
         }
         match source {

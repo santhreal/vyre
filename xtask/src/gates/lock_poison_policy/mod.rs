@@ -12,11 +12,10 @@
 //! initializer panic leaves no recoverable state and no decision to record. A
 //! detector there would report on every static in the tree and prove nothing.
 
-use std::path::Path;
+use structure_gate::cfg_test::TestSources;
 
 use crate::gate::{Finding, GateBehavior, GateCtx, GateError, Report};
 use crate::gates::scan::{cfg_test_lines, Tree};
-use crate::gates::use_paths::is_test_source_path;
 
 pub mod state_owners;
 
@@ -256,50 +255,6 @@ fn is_comment(trimmed: &str) -> bool {
     trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*')
 }
 
-/// Whether a file is reached only through a `#[cfg(test)]` module declaration.
-///
-/// A whole file of tests carries no marker of its own, so `cfg_test_lines` sees
-/// production code in it and the stem may be anything. The declaring module is
-/// where the fact is recorded, so that is where this reads it.
-fn declared_under_cfg_test(tree: &Tree, relative_path: &Path) -> bool {
-    let (parent, module) = match relative_path.file_name().and_then(|name| name.to_str()) {
-        Some("mod.rs") => {
-            let dir = relative_path.parent();
-            (
-                dir.and_then(Path::parent),
-                dir.and_then(Path::file_name).and_then(|n| n.to_str()),
-            )
-        }
-        _ => (
-            relative_path.parent(),
-            relative_path.file_stem().and_then(|n| n.to_str()),
-        ),
-    };
-    let (Some(parent), Some(module)) = (parent, module) else {
-        return false;
-    };
-
-    ["mod.rs", "lib.rs", "main.rs"].iter().any(|declaring| {
-        let Ok(text) = tree.read(&parent.join(declaring)) else {
-            return false;
-        };
-        let lines: Vec<&str> = text.lines().collect();
-        lines.iter().enumerate().any(|(at, line)| {
-            let trimmed = line.trim();
-            let declares = trimmed == format!("mod {module};")
-                || trimmed == format!("pub mod {module};")
-                || trimmed == format!("pub(crate) mod {module};");
-            declares
-                && at > 0
-                && lines[..at]
-                    .iter()
-                    .rev()
-                    .take_while(|above| above.trim().starts_with('#'))
-                    .any(|above| above.contains("cfg(test)"))
-        })
-    })
-}
-
 /// Whether the path is a policy owner, which states a decision rather than
 /// calling one.
 fn is_policy_owner(path: &str) -> bool {
@@ -318,29 +273,18 @@ impl GateBehavior for LockPoisonPolicy {
         let mut scanned_count = 0;
         let mut outside_roots = 0usize;
 
+        let tests = TestSources::of(tree.root());
         for relative_path in tree.all_rust() {
-            if is_test_source_path(&relative_path) {
+            if tests.contains(&relative_path) {
                 continue;
             }
 
             let path_str = relative_path.to_string_lossy();
-            if path_str.starts_with("tests/")
-                || path_str.contains("/tests/")
-                || path_str.starts_with("examples/")
-                || path_str.contains("/examples/")
-                || path_str.starts_with("benches/")
-                || path_str.contains("/benches/")
-                || path_str.starts_with("structure-gate/")
-                || path_str.contains("/structure-gate/")
-            {
+            if path_str.starts_with("structure-gate/") || path_str.contains("/structure-gate/") {
                 continue;
             }
 
             if is_policy_owner(&path_str) {
-                continue;
-            }
-
-            if declared_under_cfg_test(&tree, &relative_path) {
                 continue;
             }
 

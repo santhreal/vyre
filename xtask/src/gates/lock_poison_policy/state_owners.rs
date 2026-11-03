@@ -30,6 +30,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use quote::ToTokens;
+use structure_gate::cfg_test::TestSources;
 
 use crate::gate::{Finding, GateError, Report};
 use crate::gates::scan::Tree;
@@ -257,13 +258,10 @@ fn contracts_in(text: &str, relative_path: &Path) -> Result<FileContracts, GateE
 
 /// Check both directions and report how many owners were inventoried.
 pub fn check(tree: &Tree, report: &mut Report) -> Result<usize, GateError> {
+    let tests = TestSources::of(tree.root());
     let mut inventoried = 0;
     for relative_path in tree.rust(OWNER_CONTRACT_ROOTS)? {
-        let stem = relative_path
-            .file_stem()
-            .and_then(|name| name.to_str())
-            .unwrap_or_default();
-        if stem == "tests" || stem.ends_with("_tests") {
+        if tests.contains(&relative_path) {
             continue;
         }
         let found = contracts_in(&tree.read(&relative_path)?, &relative_path)?;
@@ -331,11 +329,7 @@ pub fn check(tree: &Tree, report: &mut Report) -> Result<usize, GateError> {
     }
 
     for relative_path in tree.rust(PURE_ROOTS)? {
-        let stem = relative_path
-            .file_stem()
-            .and_then(|name| name.to_str())
-            .unwrap_or_default();
-        if stem == "tests" || stem.ends_with("_tests") {
+        if tests.contains(&relative_path) {
             continue;
         }
         for owner in contracts_in(&tree.read(&relative_path)?, &relative_path)?.owners {

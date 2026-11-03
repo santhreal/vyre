@@ -19,6 +19,8 @@
 
 use std::path::{Path, PathBuf};
 
+use structure_gate::cfg_test::TestSources;
+
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
@@ -68,8 +70,9 @@ impl crate::gate::GateBehavior for OwnedDispatch {
         let tree = Tree::open(&ctx.root)?;
         let mut findings = Vec::new();
         let mut traits = 0usize;
+        let tests = TestSources::of(tree.root());
         for path in tree.all_rust() {
-            if scan::is_test_tree(&path) {
+            if tests.contains(&path) {
                 continue;
             }
             let text = tree.read(&path)?;
@@ -107,8 +110,9 @@ impl crate::gate::GateBehavior for NestedRows {
         let tree = Tree::open(&ctx.root)?;
         let mut findings = Vec::new();
         let mut traits = 0usize;
+        let tests = TestSources::of(tree.root());
         for path in tree.all_rust() {
-            if scan::is_test_tree(&path) {
+            if tests.contains(&path) {
                 continue;
             }
             let text = tree.read(&path)?;

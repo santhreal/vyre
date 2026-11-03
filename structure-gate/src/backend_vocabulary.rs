@@ -30,7 +30,7 @@ use std::path::Path;
 
 use serde::Deserialize;
 
-use crate::cfg_test::cfg_test_line_mask;
+use crate::cfg_test::{cfg_test_line_mask, TestSources};
 use crate::crate_ownership::{Registry, REGISTRY as OWNERSHIP_REGISTRY};
 use crate::source_scan::mask_comments_and_strings;
 use crate::{read_source_bounded, relative};
@@ -435,17 +435,6 @@ pub fn run_states(run: &[String], wanted: &[String]) -> bool {
                 .is_some_and(|stem| stem == wanted_last))
 }
 
-/// Whether the tree reaches `file` only as test support.
-///
-/// A `tests` directory or a `tests.rs` module is test code whatever declared it,
-/// and the `#[cfg(test)]` attribute that gates it sits in the parent file rather
-/// than in the file being read, so a reader of that file cannot see it.
-#[must_use]
-pub fn is_test_source(file: &str) -> bool {
-    file.split('/')
-        .any(|part| part == "tests" || part == "tests.rs")
-}
-
 /// Reject a data row that no longer describes the tree it judges.
 ///
 /// The wordlist is the rule, so a row that covers nothing is the rule quietly
@@ -626,12 +615,13 @@ fn production_lines<'a>(
 ) -> impl Iterator<Item = (String, u32, String)> + 'a {
     let directory = root.join(prefix.trim_end_matches('/'));
     let tree = crate::workspace_manifest::tree_files(root);
+    let tests = TestSources::of(root);
     tree.rust_sources_under(&directory)
         .to_vec()
         .into_iter()
         .filter_map(move |path| {
             let file = relative(root, &path);
-            if is_test_source(&file) {
+            if tests.contains(&file) {
                 return None;
             }
             let text = read_source_bounded(&path).ok()?;

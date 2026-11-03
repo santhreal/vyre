@@ -25,7 +25,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use structure_gate::backend_vocabulary::{is_test_source, Neutrality};
+use structure_gate::backend_vocabulary::Neutrality;
+use structure_gate::cfg_test::TestSources;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::manifest_contract::{dep_lines, dependency_hosts, entries, target_package};
@@ -358,12 +359,13 @@ fn backend_vocabulary(
     neutrality: &Neutrality,
 ) -> Result<Vec<(String, u32, String)>, GateError> {
     let prefix = format!("{directory}/src/");
+    let tests = TestSources::of(tree.root());
     let mut found = Vec::new();
     for path in tree.paths() {
         let Some(relative) = path.to_str() else {
             continue;
         };
-        if !relative.starts_with(&prefix) || !relative.ends_with(".rs") || is_test_source(relative)
+        if !relative.starts_with(&prefix) || !relative.ends_with(".rs") || tests.contains(relative)
         {
             continue;
         }
@@ -1310,15 +1312,5 @@ mod tests {
             vec!["`NVIDIA`".to_string()],
             "Fix: the allowance must not reach a crate that does not read the interface."
         );
-    }
-
-    #[test]
-    fn a_test_only_directory_or_module_is_not_production_source() {
-        assert!(is_test_source(
-            "vyre-libs/src/solvers/tests/dot_contracts.rs"
-        ));
-        assert!(is_test_source("vyre-libs/src/solvers/tests.rs"));
-        assert!(!is_test_source("vyre-libs/src/solvers/contracts.rs"));
-        assert!(!is_test_source("vyre-libs/src/tested/mod.rs"));
     }
 }

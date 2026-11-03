@@ -144,10 +144,18 @@ impl StaticOutputs {
 
     /// The recorded inputs in dispatch order.
     pub fn recorded(&self) -> Vec<Vec<u32>> {
-        self.recorded
-            .lock()
-            .expect("Fix: static-output dispatcher recorder mutex should not be poisoned")
-            .clone()
+        self.recorder().clone()
+    }
+
+    /// The recorder. A poisoned recorder holds the inputs of a dispatch that
+    /// panicked midway, so no later assertion can trust it.
+    fn recorder(&self) -> std::sync::MutexGuard<'_, Vec<Vec<u32>>> {
+        self.recorded.lock().unwrap_or_else(|_| {
+            vyre_foundation::failure_domain::invariant_violation_poison(
+                "the static-output dispatcher",
+                "the recorded dispatch inputs",
+            )
+        })
     }
 }
 
@@ -193,10 +201,7 @@ impl SemanticExecutor for StaticOutputs {
             }
         }
         if let Some(index) = self.record_input {
-            self.recorded
-                .lock()
-                .expect("Fix: static-output dispatcher recorder mutex should not be poisoned")
-                .push(read_u32s(&inputs[index]));
+            self.recorder().push(read_u32s(&inputs[index]));
         }
         semantic_output(request, self.outputs.clone())
     }

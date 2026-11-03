@@ -52,8 +52,9 @@
 use crate::gate::{GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
 
+use structure_gate::cfg_test::TestSources;
+
 use super::host_oracle_elimination_eval::analyze_sources;
-use crate::gates::scan::test_module_files;
 
 /// Zero-baseline gate that eliminates host CPU oracles and semantic twins from production library code.
 pub struct HostOracleElimination;
@@ -73,8 +74,7 @@ impl crate::gate::GateBehavior for HostOracleElimination {
         let sources = tree.rust(&borrowed)?;
         report.cover_complete("production library sources", sources.len());
 
-        let test_scoped_files = test_module_files(&tree, &sources)?;
-        let findings = analyze_sources(&tree, &sources, &test_scoped_files)?;
+        let findings = analyze_sources(&tree, &sources, &TestSources::of(tree.root()))?;
         for finding in findings {
             report.find(finding);
         }

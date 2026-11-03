@@ -16,7 +16,7 @@
 
 #![forbid(unsafe_code)]
 
-use structure_gate::backend_vocabulary::is_test_source;
+use structure_gate::cfg_test::TestSources;
 use structure_gate::module_layout::{
     directory_stutter_failures, generic_module_name_failures, numbered_sibling_failures,
     sibling_module_failures, source_test_directory_failures,
@@ -143,15 +143,16 @@ fn the_registration_scan_is_not_vacuous() {
 /// An integration test registers fixture operations to drive the registry it
 /// tests, and those ids ship in nothing. Counting them convicted seven crates
 /// of owning operations and told each to move its fixture into a category
-/// crate, where the fixture would then ship. The `#[cfg(test)]` half of this is
-/// stripped per file; a `tests/` directory carries no attribute the file can
-/// see, so it is judged by path.
+/// crate, where the fixture would then ship. A `#[cfg(test)]` item is stripped
+/// per file; a `tests/` directory and a module gated in its parent carry no
+/// attribute the file can see, so they are judged by `TestSources`.
 #[test]
 fn no_production_registration_comes_from_a_test_source() {
     let registrations = workspace().registrations;
+    let tests = TestSources::of(&workspace_root());
     let from_tests: Vec<&str> = registrations
         .iter()
-        .filter(|registration| is_test_source(&registration.file))
+        .filter(|registration| tests.contains(&registration.file))
         .map(|registration| registration.file.as_str())
         .collect();
 

@@ -15,6 +15,8 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
+use structure_gate::cfg_test::TestSources;
+
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
@@ -77,11 +79,12 @@ impl crate::gate::GateBehavior for ShaderSource {
 
         let sources = tree.all_rust();
         report.note(format!("scanned {} Rust source file(s)", sources.len()));
+        let tests = TestSources::of(tree.root());
 
         for file in &sources {
             let text = tree.read(file)?;
             let builds_strings = scan::contains_any(&text, STRING_BUILDERS);
-            let owned_by_driver = is_permitted(file);
+            let owned_by_driver = is_permitted(file, &tests);
 
             if builds_strings && !owned_by_driver {
                 for (number, line) in scan::numbered(&text) {
@@ -198,12 +201,12 @@ fn has_extension(path: &Path, extensions: &[&str]) -> bool {
 }
 
 /// Whether a file may hold shader syntax.
-fn is_permitted(path: &Path) -> bool {
+fn is_permitted(path: &Path, tests: &TestSources) -> bool {
     let text = path.to_string_lossy();
     if text.ends_with(".wgsl") {
         return true;
     }
-    if scan::is_test_tree(path) {
+    if tests.contains(path) {
         return true;
     }
     if text.replace('\\', "/").ends_with(RULE_SOURCE) {
@@ -224,12 +227,30 @@ mod tests {
     /// allowance described files the scan could not reach.
     #[test]
     fn only_shader_owning_paths_may_hold_shader_syntax() {
-        assert!(is_permitted(Path::new("vyre-driver-wgpu/src/emit.rs")));
-        assert!(is_permitted(Path::new("vyre-driver-wgpu/shaders/add.wgsl")));
-        assert!(is_permitted(Path::new("vyre-libs/tests/shader_text.rs")));
-        assert!(is_permitted(Path::new("anything/x.wgsl")));
-        assert!(!is_permitted(Path::new("vyre-lower/src/lowering.rs")));
-        assert!(!is_permitted(Path::new("vyre-driver/src/pipeline.rs")));
+        assert!(is_permitted(
+            Path::new("vyre-driver-wgpu/src/emit.rs"),
+            &TestSources::default()
+        ));
+        assert!(is_permitted(
+            Path::new("vyre-driver-wgpu/shaders/add.wgsl"),
+            &TestSources::default()
+        ));
+        assert!(is_permitted(
+            Path::new("vyre-libs/tests/shader_text.rs"),
+            &TestSources::default()
+        ));
+        assert!(is_permitted(
+            Path::new("anything/x.wgsl"),
+            &TestSources::default()
+        ));
+        assert!(!is_permitted(
+            Path::new("vyre-lower/src/lowering.rs"),
+            &TestSources::default()
+        ));
+        assert!(!is_permitted(
+            Path::new("vyre-driver/src/pipeline.rs"),
+            &TestSources::default()
+        ));
     }
 
     /// WHY: an exemption keyed on a path is dead the moment the rule text moves,
@@ -244,7 +265,7 @@ mod tests {
             panic!("Fix: {RULE_SOURCE} is exempt from the shader scan but unreadable: {error}")
         });
         assert!(
-            is_permitted(Path::new(RULE_SOURCE)),
+            is_permitted(Path::new(RULE_SOURCE), &TestSources::default()),
             "Fix: the rule source must be permitted, or it reports its own token table"
         );
         for token in TOKENS {

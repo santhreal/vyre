@@ -2,7 +2,9 @@
 
 use std::path::PathBuf;
 
-use crate::gates::scan::{attribute_is_test_only, test_module_files, Tree};
+use structure_gate::cfg_test::TestSources;
+
+use crate::gates::scan::{attribute_is_test_only, Tree};
 
 use super::host_oracle_elimination_eval::analyze_sources;
 use super::host_oracle_elimination_test_fixtures::{
@@ -732,8 +734,7 @@ fn test_workspace_findings() {
     let root = structure_gate::workspace_root();
     let tree = Tree::open(&root).unwrap();
     let sources = workspace_production_sources(&tree);
-    let test_scoped = test_module_files(&tree, &sources).unwrap();
-    let findings = analyze_sources(&tree, &sources, &test_scoped).unwrap();
+    let findings = analyze_sources(&tree, &sources, &TestSources::of(tree.root())).unwrap();
     assert_eq!(
         findings.len(),
         0,
@@ -752,7 +753,7 @@ fn a_cfg_test_module_named_by_a_path_attribute_is_test_scoped() {
     let root = structure_gate::workspace_root();
     let tree = Tree::open(&root).unwrap();
     let sources = workspace_production_sources(&tree);
-    let test_scoped = test_module_files(&tree, &sources).unwrap();
+    let test_scoped = TestSources::of(tree.root());
 
     let mut declared: Vec<PathBuf> = Vec::new();
     for path in &sources {

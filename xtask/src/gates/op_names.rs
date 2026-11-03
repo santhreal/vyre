@@ -11,6 +11,7 @@
 
 use std::path::Path;
 
+use structure_gate::cfg_test::TestSources;
 use walkdir::WalkDir;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
@@ -124,12 +125,7 @@ fn is_op_source(path: &Path) -> bool {
     let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
         return false;
     };
-    if EXEMPT_FILE_NAMES.contains(&name) {
-        return false;
-    }
-    !path
-        .components()
-        .any(|component| component.as_os_str() == "tests")
+    !EXEMPT_FILE_NAMES.contains(&name)
 }
 
 /// Every workspace member of the library family, by directory.
@@ -164,6 +160,7 @@ impl crate::gate::GateBehavior for OpNames {
         let mut report = Report::clean();
         let mut scanned = 0usize;
         let mut public_functions = 0usize;
+        let tests = TestSources::of(&ctx.root);
         for root in &roots {
             let source = ctx.root.join(root).join("src");
             if !structure_gate::source_scan::carries_rust_source(&source) {
@@ -177,7 +174,10 @@ impl crate::gate::GateBehavior for OpNames {
                     )
                 })?;
                 let path = entry.path();
-                if !entry.file_type().is_file() || !is_op_source(path) {
+                if !entry.file_type().is_file()
+                    || !is_op_source(path)
+                    || tests.contains(path.strip_prefix(&ctx.root).unwrap_or(path))
+                {
                     continue;
                 }
                 let text =
@@ -237,16 +237,13 @@ mod tests {
         assert_eq!(declared_function("    let x = 1;"), None);
     }
 
-    /// WHY: a module root and a test tree are exempt, and exempting them by
+    /// WHY: a module root is exempt by its file name, and exempting it by
     /// substring would also exempt a real op source whose path contains the
-    /// word.
+    /// word. Test modules are excluded by `TestSources`, not by name.
     #[test]
     fn scopes_the_scan_to_op_sources() {
         assert!(is_op_source(Path::new("vyre-libs/src/geom/rotate.rs")));
         assert!(!is_op_source(Path::new("vyre-libs/src/geom/mod.rs")));
-        assert!(!is_op_source(Path::new(
-            "vyre-libs/src/geom/tests/rotate.rs"
-        )));
         assert!(is_op_source(Path::new("vyre-libs/src/geom/testable.rs")));
         assert!(!is_op_source(Path::new("vyre-libs/src/geom/rotate.md")));
     }

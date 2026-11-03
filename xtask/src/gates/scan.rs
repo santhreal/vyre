@@ -25,7 +25,7 @@
 //! and the ratchet engine belong here, and masking comments and string literals
 //! and finding the end of a brace-delimited block belong to `source_scan`.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -499,9 +499,10 @@ pub struct Rule<'r> {
     /// Repository-relative roots the rule covers. A root that does not exist is
     /// fatal, because a rule scanning nothing reports success forever.
     pub roots: &'r [&'r str],
-    /// Paths inside the scope the rule does not cover, such as test trees. A skip
-    /// that leaves nothing behind is fatal for the same reason a missing root is:
-    /// the rule scans no file and reports success forever.
+    /// Paths inside the scope the rule does not cover. Test sources are never
+    /// covered and need no entry here. A skip that leaves nothing behind is
+    /// fatal for the same reason a missing root is: the rule scans no file and
+    /// reports success forever.
     pub skip: &'r dyn Fn(&Path) -> bool,
     /// What a matching line looks like.
     pub line: &'r dyn Fn(&str) -> bool,
@@ -537,11 +538,12 @@ pub struct Rule<'r> {
 pub fn ratchet(tree: &Tree, rule: &Rule<'_>) -> Result<crate::gate::Report, GateError> {
     use crate::gate::{Finding, Report};
 
+    let tests = structure_gate::cfg_test::TestSources::of(tree.root());
     let in_scope = tree.rust(rule.roots)?;
     let in_scope_count = in_scope.len();
     let files: Vec<PathBuf> = in_scope
         .into_iter()
-        .filter(|path| !(rule.skip)(path))
+        .filter(|path| !tests.contains(path) && !(rule.skip)(path))
         .collect();
     if files.is_empty() {
         return Err(GateError::new(
@@ -671,16 +673,6 @@ pub fn statement_at(lines: &[&str], index: usize) -> String {
         .map(|line| line.trim())
         .collect::<Vec<_>>()
         .join(" ")
-}
-
-/// Whether a path sits under a test or bench tree, which is not a dispatch path.
-#[must_use]
-pub fn is_test_tree(path: &Path) -> bool {
-    let path = path.to_string_lossy();
-    path.contains("/test/")
-        || path.contains("/tests/")
-        || path.contains("/benches/")
-        || path.contains("/fuzz/")
 }
 
 /// Whether a line begins a comment, which quotes a symbol rather than calling it.
@@ -1148,14 +1140,6 @@ fn collect_cfg_features(meta: &syn::Meta, features: &mut BTreeSet<String>) {
     }
 }
 
-/// A `mod name;` declaration in a parent file, with the `#[path]` override when
-/// one is present.
-struct DeclaredModule {
-    name: String,
-    is_test_gated: bool,
-    declared_path: Option<String>,
-}
-
 /// The file a `#[path = "..."]` attribute names, relative to the directory of
 /// the file that declares the module.
 pub(crate) fn declared_module_path(attrs: &[syn::Attribute]) -> Option<String> {
@@ -1173,89 +1157,6 @@ pub(crate) fn declared_module_path(attrs: &[syn::Attribute]) -> Option<String> {
         }
     }
     None
-}
-
-/// Every file in `sources` that a `#[cfg(test)] mod` declaration reaches.
-///
-/// A whole file can be test code: the attribute sits on the declaration in the
-/// parent, not in the file, so a gate that reads only the file itself sees
-/// shipped source. The walk is transitive, since a test module declares its own
-/// children, and it honors `#[path]`, which is how five `vyre-libs` test modules
-/// were read as production code.
-///
-/// A file that does not parse declares nothing this can trust, so it is skipped
-/// and the files it would have named stay in production scope. That is the
-/// direction that reports too much rather than too little, and the gate that
-/// owns whether source parses reports the file itself.
-pub fn test_module_files(tree: &Tree, sources: &[PathBuf]) -> Result<BTreeSet<PathBuf>, GateError> {
-    let mut test_scoped_files = BTreeSet::new();
-    let mut parent_to_children: BTreeMap<PathBuf, Vec<DeclaredModule>> = BTreeMap::new();
-
-    for path in sources {
-        let text = tree.read(path)?;
-        let Ok(file_ast) = syn::parse_file(&text) else {
-            continue;
-        };
-
-        for item in &file_ast.items {
-            if let syn::Item::Mod(item_mod) = item {
-                if item_mod.content.is_none() {
-                    parent_to_children
-                        .entry(path.clone())
-                        .or_default()
-                        .push(DeclaredModule {
-                            name: item_mod.ident.to_string(),
-                            is_test_gated: item_mod.attrs.iter().any(attribute_is_test_only),
-                            declared_path: declared_module_path(&item_mod.attrs),
-                        });
-                }
-            }
-        }
-    }
-
-    let mut changed = true;
-    while changed {
-        changed = false;
-        for (parent_path, modules) in &parent_to_children {
-            let parent_is_test = test_scoped_files.contains(parent_path);
-            let parent_dir = parent_path.parent().unwrap_or_else(|| Path::new(""));
-
-            for module in modules {
-                if !parent_is_test && !module.is_test_gated {
-                    continue;
-                }
-                // `#[path]` states the file, so it replaces the search rather
-                // than adding to it: `#[cfg(test)] #[path = "x_tests.rs"] mod
-                // tests;` names `x_tests.rs`, and no `tests.rs` is consulted.
-                let candidates = match &module.declared_path {
-                    Some(declared) => vec![parent_dir.join(declared)],
-                    None => {
-                        let mod_name = &module.name;
-                        let stem = parent_path
-                            .file_stem()
-                            .and_then(|s| s.to_str())
-                            .unwrap_or("");
-                        let sibling = parent_dir.join(format!("{mod_name}.rs"));
-                        let directory = parent_dir.join(mod_name).join("mod.rs");
-                        let nested = if stem != "mod" && stem != "lib" && stem != "main" {
-                            parent_dir.join(stem).join(format!("{mod_name}.rs"))
-                        } else {
-                            sibling.clone()
-                        };
-                        vec![sibling, directory, nested]
-                    }
-                };
-
-                for cand in candidates {
-                    if sources.contains(&cand) && test_scoped_files.insert(cand) {
-                        changed = true;
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(test_scoped_files)
 }
 
 /// Per-line nesting from a walk that takes every literal and comment whole.

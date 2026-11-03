@@ -47,9 +47,7 @@ impl GateBehavior for BlockingWait {
                 // readback path calls. Everything else is a dispatch path, where a
                 // wait is a defect.
                 skip: &|path| {
-                    is_test_path(path)
-                        || path.to_string_lossy().contains("/benches/")
-                        || path == Path::new("vyre-driver-wgpu/src/wait_backoff.rs")
+                    path == Path::new("vyre-driver-wgpu/src/wait_backoff.rs")
                         || path == Path::new("vyre-driver-wgpu/src/runtime/device/acquire.rs")
                 },
                 line: &|line| scan::contains_any(line, NEEDLES),
@@ -77,7 +75,7 @@ impl GateBehavior for UnboundedCache {
             &tree,
             &Rule {
                 roots: &["vyre-driver-wgpu/src", "vyre-runtime/src"],
-                skip: &scan::is_test_tree,
+                skip: &|_| false,
                 line: &|line| {
                     scan::contains_word(line, "HashMap::new()")
                         || scan::contains_word(line, "VecDeque::new()")
@@ -106,7 +104,7 @@ impl GateBehavior for UnboundedRead {
             &tree,
             &Rule {
                 roots: &["vyre-driver-wgpu/src"],
-                skip: &is_test_path,
+                skip: &|_| false,
                 line: &|line| line.contains("read_to_end"),
                 reviewed: &[],
                 reviewed_line: None,
@@ -196,12 +194,6 @@ fn block_uses_capacity(lines: &[&str], start: usize) -> (bool, usize) {
         }
     }
     (block.contains(".capacity()"), end)
-}
-
-/// Test trees are not the dispatch path.
-fn is_test_path(path: &Path) -> bool {
-    let path = path.to_string_lossy();
-    path.contains("/test/") || path.contains("/tests/")
 }
 
 #[cfg(test)]

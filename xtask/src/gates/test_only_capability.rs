@@ -25,9 +25,10 @@
 //! production build at all.
 //!
 //! Test-support and fixture modules in non-production crate layers (`tooling`,
-//! `test-tooling`, `standalone-tooling`, `conformance`) and test trees
-//! (`tests/`, `benches/`, `fuzz/`, `test/`) are exempt. The exemption is
-//! derived from the declared layer in `docs/CRATE_OWNERSHIP.toml`.
+//! `test-tooling`, `standalone-tooling`, `conformance`) and test sources
+//! (`tests/`, `benches/`, `examples/`, `fuzz/`, and every module behind a
+//! `#[cfg(test)]` declaration) are exempt. The layer exemption is derived from
+//! the declared layer in `docs/CRATE_OWNERSHIP.toml`.
 //!
 //! An inline `mod tests` or `mod test` module is exempt whether or not it
 //! carries `pub`.
@@ -38,9 +39,10 @@
 //! reported; uncalled production code is judged by dead-code analysis and
 //! reachability gates.
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::collections::BTreeMap;
+use std::path::Path;
 
+use structure_gate::cfg_test::TestSources;
 use syn::spanned::Spanned;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
@@ -75,9 +77,10 @@ impl crate::gate::GateBehavior for TestOnlyCapability {
 
         let all_rust = tree.all_rust();
         let mut production_files = Vec::new();
+        let tests = TestSources::of(tree.root());
 
         for path in &all_rust {
-            if scan::is_test_tree(path) {
+            if tests.contains(path) {
                 continue;
             }
             let is_exempt_crate = member_packages
@@ -93,20 +96,11 @@ impl crate::gate::GateBehavior for TestOnlyCapability {
             report.note(note);
         }
 
-        let mut test_gated_submodules = BTreeSet::new();
-        let mut parsed_files = BTreeMap::new();
-
-        for path in &production_files {
-            let text = tree.read(path)?;
-            if let Ok(file) = syn::parse_file(&text) {
-                collect_test_gated_submodules(path, &file, &mut test_gated_submodules);
-                parsed_files.insert(path.clone(), file);
-            }
-        }
-
         let mut findings = Vec::new();
-        for (path, file) in &parsed_files {
-            inspect_file(path, file, &test_gated_submodules, &mut findings);
+        for path in &production_files {
+            if let Ok(file) = syn::parse_file(&tree.read(path)?) {
+                inspect_file(path, &file, &mut findings);
+            }
         }
 
         for finding in findings {
@@ -138,41 +132,8 @@ impl CrateLayerRegistry {
     }
 }
 
-/// Collect paths of submodule files that are declared test-gated in their parent module.
-fn collect_test_gated_submodules(
-    parent_path: &Path,
-    file: &syn::File,
-    test_gated: &mut BTreeSet<PathBuf>,
-) {
-    let parent_dir = parent_path.parent().unwrap_or(Path::new(""));
-    let stem = parent_path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or_default();
-
-    for item in &file.items {
-        if let syn::Item::Mod(item_mod) = item {
-            if item_mod.content.is_none() && is_test_only_gated(&item_mod.attrs) {
-                let mod_name = item_mod.ident.to_string();
-                if stem == "mod" || stem == "lib" || stem == "main" {
-                    test_gated.insert(parent_dir.join(format!("{mod_name}.rs")));
-                    test_gated.insert(parent_dir.join(&mod_name).join("mod.rs"));
-                } else {
-                    test_gated.insert(parent_dir.join(stem).join(format!("{mod_name}.rs")));
-                    test_gated.insert(parent_dir.join(stem).join(&mod_name).join("mod.rs"));
-                }
-            }
-        }
-    }
-}
-
 /// Inspect one parsed Rust source file for test-only capability.
-fn inspect_file(
-    path: &Path,
-    file: &syn::File,
-    test_gated_submodules: &BTreeSet<PathBuf>,
-    findings: &mut Vec<Finding>,
-) {
+fn inspect_file(path: &Path, file: &syn::File, findings: &mut Vec<Finding>) {
     let display = path.display().to_string();
 
     // Arm 1: Check for test-only public module declarations.
@@ -200,7 +161,7 @@ fn inspect_file(
 
     // Arm 2: Check for production module files that are empty in production because
     // all public functions/capabilities inside them are individually test-gated.
-    if !test_gated_submodules.contains(path) && !is_test_only_gated(&file.attrs) {
+    if !is_test_only_gated(&file.attrs) {
         inspect_file_arm2(path, file, findings);
     }
 }
@@ -383,11 +344,9 @@ pub(crate) mod tests {
         "#;
         let file = syn::parse_file(code).expect("Fix: parse test code");
         let mut findings = Vec::new();
-        let submodules = BTreeSet::new();
         inspect_file(
             Path::new("vyre-libs/src/encoding/mod.rs"),
             &file,
-            &submodules,
             &mut findings,
         );
         assert_eq!(findings.len(), 1);
@@ -413,11 +372,9 @@ pub(crate) mod tests {
         "#;
         let file = syn::parse_file(code).expect("Fix: parse test code");
         let mut findings = Vec::new();
-        let submodules = BTreeSet::new();
         inspect_file(
             Path::new("vyre-libs/src/encoding/mod.rs"),
             &file,
-            &submodules,
             &mut findings,
         );
         assert!(
@@ -443,11 +400,9 @@ pub(crate) mod tests {
         "#;
         let file = syn::parse_file(code).expect("Fix: parse test code");
         let mut findings = Vec::new();
-        let submodules = BTreeSet::new();
         inspect_file(
             Path::new("vyre-foundation/src/transform/parallelism.rs"),
             &file,
-            &submodules,
             &mut findings,
         );
         assert!(findings.is_empty(), "inline test modules must be exempt");
@@ -476,11 +431,9 @@ pub(crate) mod tests {
         "#;
         let file = syn::parse_file(code).expect("Fix: parse test code");
         let mut findings = Vec::new();
-        let submodules = BTreeSet::new();
         inspect_file(
             Path::new("vyre-libs/src/scheduling/megakernel_schedule.rs"),
             &file,
-            &submodules,
             &mut findings,
         );
         assert_eq!(findings.len(), 1);
@@ -499,11 +452,9 @@ pub(crate) mod tests {
         "#;
         let file = syn::parse_file(code).expect("Fix: parse test code");
         let mut findings = Vec::new();
-        let submodules = BTreeSet::new();
         inspect_file(
             Path::new("vyre-libs/src/scheduling/pipeline.rs"),
             &file,
-            &submodules,
             &mut findings,
         );
         assert!(findings.is_empty());

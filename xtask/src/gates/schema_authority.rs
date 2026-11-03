@@ -9,8 +9,10 @@
 
 use std::path::Path;
 
+use structure_gate::cfg_test::TestSources;
+
 use crate::gate::{Finding, GateBehavior, GateCtx, GateError, Report};
-use crate::gates::scan::{self, Tree};
+use crate::gates::scan::Tree;
 
 /// Gate that enforces schema authority and typed decode contracts across the workspace.
 pub struct SchemaAuthorityGate;
@@ -20,16 +22,13 @@ impl GateBehavior for SchemaAuthorityGate {
         let mut report = Report::clean();
         let tree = Tree::open(&ctx.root)?;
         let mut scanned_count = 0usize;
+        let tests = TestSources::of(tree.root());
 
         for path in tree.paths() {
             let path_str = path.to_string_lossy().replace('\\', "/");
 
-            if scan::is_test_tree(path)
-                || path_str.contains("/tests/")
-                || path_str.contains("/benches/")
-                || path_str.contains("/test_fixtures/")
+            if tests.contains(path)
                 || path_str.contains("/fixtures/")
-                || path_str.ends_with("/tests.rs")
                 || path_str.ends_with("vyre-spec/src/schema_registry/mod.rs")
                 || path_str.ends_with("vyre-spec/src/compatibility.rs")
                 || path_str.ends_with("vyre-foundation/src/serial/schema_authority.rs")

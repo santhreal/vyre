@@ -9,7 +9,7 @@
 
 use std::path::Path;
 
-use crate::backend_vocabulary::is_test_source;
+use crate::cfg_test::TestSources;
 use crate::source_scan::{rust_sources_with_text, SourceText};
 
 const BANNED_PATTERNS: &[&str] = &[
@@ -48,12 +48,13 @@ fn judged_source(path: &str) -> bool {
 #[must_use]
 pub fn geometry_constant_failures(root: &Path) -> Vec<String> {
     let mut failures = Vec::new();
+    let tests = TestSources::of(root);
 
     for source in rust_sources_with_text(root) {
         let (file, text) = match source {
             SourceText::Read { path, text } => (path, text),
             SourceText::Unread { path, reason } => {
-                if !is_test_source(&path) && judged_source(&path) {
+                if !tests.contains(&path) && judged_source(&path) {
                     failures.push(format!(
                         "{path} was not read: {reason}; the geometry constant gate cannot report an unread source as clean"
                     ));
@@ -61,7 +62,7 @@ pub fn geometry_constant_failures(root: &Path) -> Vec<String> {
                 continue;
             }
         };
-        if is_test_source(&file) || !judged_source(&file) {
+        if tests.contains(&file) || !judged_source(&file) {
             continue;
         }
 

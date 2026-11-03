@@ -16,6 +16,8 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
+use structure_gate::cfg_test::TestSources;
+
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
 
@@ -33,8 +35,9 @@ impl crate::gate::GateBehavior for InventoryWalk {
         report.cover_complete("inventory sources", files.len());
         let mut findings = Vec::new();
         let mut walks = 0usize;
+        let tests = TestSources::of(tree.root());
         for path in &files {
-            if scan::is_test_tree(path) {
+            if tests.contains(path) {
                 continue;
             }
             let text = tree.read(path)?;

@@ -7,8 +7,10 @@
 //! require corrective guidance in every panic message a caller can hit.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
+
+use structure_gate::cfg_test::TestSources;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{self, Tree};
@@ -71,10 +73,10 @@ impl crate::gate::GateBehavior for DeniedLintOverride {
                 .join(", ")
         ));
 
-        let test_modules = scan::test_module_files(&tree, &all_rust)?;
+        let tests = TestSources::of(tree.root());
         let files: Vec<PathBuf> = all_rust
             .into_iter()
-            .filter(|path| !is_outside_production(path) && !test_modules.contains(path))
+            .filter(|path| !tests.contains_harness(path))
             .collect();
         report.note(format!("scanned {} production source file(s)", files.len()));
 
@@ -232,10 +234,10 @@ impl crate::gate::GateBehavior for ExpectHasFix {
             report.note(note);
         }
         let all_rust = tree.all_rust();
-        let test_modules = scan::test_module_files(&tree, &all_rust)?;
+        let tests = TestSources::of(tree.root());
         let files: Vec<PathBuf> = all_rust
             .into_iter()
-            .filter(|path| !is_outside_production(path) && !test_modules.contains(path))
+            .filter(|path| !tests.contains_harness(path))
             .collect();
         report.note(format!("scanned {} production source file(s)", files.len()));
         for file in &files {
@@ -443,10 +445,11 @@ impl crate::gate::GateBehavior for UnsafeJustification {
         ];
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
+        let tests = TestSources::of(tree.root());
         let files: Vec<PathBuf> = tree
             .all_rust()
             .into_iter()
-            .filter(|path| !is_outside_production(path))
+            .filter(|path| !tests.contains_harness(path))
             .collect();
         report.cover_complete("production source files", files.len());
         report.note(format!("scanned {} production source file(s)", files.len()));
@@ -529,14 +532,14 @@ impl crate::gate::GateBehavior for LivenessEvasion {
         if let Some(note) = tree.absence_note() {
             report.note(note);
         }
-        let test_modules = scan::test_module_files(&tree, &all_rust)?;
+        let tests = TestSources::of(tree.root());
         // One read per file, kept for both halves: the discarded-read scan wants
         // production lines, and the reference count wants every line of every
         // file, including the test trees that are what make an item look live.
         let mut sources = Vec::with_capacity(all_rust.len());
         for path in all_rust {
             let text = tree.read(&path)?;
-            let production = !is_outside_production(&path) && !test_modules.contains(&path);
+            let production = !tests.contains_harness(&path);
             let lines = text.lines().collect::<Vec<&str>>();
             let test_only = scan::cfg_test_lines(&lines);
             let trait_impl = scan::trait_impl_lines(&lines);
@@ -881,21 +884,6 @@ const KEYWORDS: &[&str] = &[
 /// Whether `token` is a Rust keyword rather than a name.
 fn is_keyword(token: &str) -> bool {
     KEYWORDS.binary_search(&token).is_ok()
-}
-
-/// Whether a path sits outside production sources.
-///
-/// Test and benchmark trees are not production, and neither is the fragment
-/// directory a historical split left behind. The rule is written out rather than
-/// shared with the hot-path scanner, because that one also excludes fuzz targets
-/// and excluding them here would narrow the scan.
-fn is_outside_production(path: &Path) -> bool {
-    let path = path.to_string_lossy();
-    path.contains("/tests/")
-        || path.starts_with("tests/")
-        || path.contains("/benches/")
-        || path.starts_with("benches/")
-        || path.contains("/__law7_split/")
 }
 
 /// Whether a line opens an unsafe block.

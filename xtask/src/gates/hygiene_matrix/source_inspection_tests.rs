@@ -9,6 +9,8 @@
 use super::*;
 use std::path::Path;
 
+use structure_gate::cfg_test::TestSources;
+
 /// The scanner must classify and report the same path on Unix and Windows.
 /// This covers separator handling, not filesystem case sensitivity.
 #[test]
@@ -20,6 +22,11 @@ fn source_inspection_paths_are_portable() {
             assert!(source.contains("fn helper"));
         }
     "#;
+    let tests = TestSources::with_gated_modules(
+        ["pkg/src/tests.rs", "pkg/src/contract_tests.rs"]
+            .map(str::to_string)
+            .into(),
+    );
     for relative in [
         "pkg/tests/contract.rs",
         "pkg/benches/contract.rs",
@@ -29,7 +36,7 @@ fn source_inspection_paths_are_portable() {
     ] {
         for spelling in [relative.to_string(), relative.replace('/', "\\")] {
             let path = Path::new(&spelling);
-            assert!(is_test_source_path(path), "{spelling}");
+            assert!(tests.contains(path), "{spelling}");
             let mut findings = Vec::new();
             scan_source_inspection_tests(path, source, &mut findings);
             assert_eq!(findings.len(), 1, "{spelling}");
@@ -441,8 +448,9 @@ fn source_inspection_test_scanner_covers_integration_files_and_inline_test_modul
 
     let mut findings = Vec::new();
     let mut scanned_files = 0;
-    scan_root(root.path(), &mut scanned_files, &mut findings);
-    scan_source_inspection_test_files(root.path(), &mut scanned_files, &mut findings);
+    let tests = TestSources::of(root.path());
+    scan_root(root.path(), &tests, &mut scanned_files, &mut findings);
+    scan_source_inspection_test_files(root.path(), &tests, &mut scanned_files, &mut findings);
 
     let source_findings = findings
         .iter()

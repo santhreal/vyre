@@ -2,6 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::{Path, PathBuf};
+use structure_gate::cfg_test::TestSources;
 use syn::visit::Visit;
 
 use crate::gate::{Finding, GateError};
@@ -19,7 +20,7 @@ use super::host_oracle_elimination_scanners::{
 pub(super) fn analyze_sources(
     tree: &Tree,
     sources: &[PathBuf],
-    test_scoped_files: &BTreeSet<PathBuf>,
+    tests: &TestSources,
 ) -> Result<Vec<Finding>, GateError> {
     let canonical_path = PathBuf::from("vyre-megakernel/src/execution.rs");
     let text = tree.read(&canonical_path).map_err(|err| {
@@ -125,7 +126,7 @@ pub(super) fn analyze_sources(
                 "fix syntax defect so the file parses as valid Rust",
             )
         })?;
-        let is_test_scoped = test_scoped_files.contains(path);
+        let is_test_scoped = tests.contains(path);
         parsed_sources.push((path.clone(), file_ast, is_test_scoped));
     }
     Ok(analyze_parsed(

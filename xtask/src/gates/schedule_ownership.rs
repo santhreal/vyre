@@ -64,6 +64,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use quote::ToTokens;
+use structure_gate::cfg_test::TestSources;
 use syn::spanned::Spanned;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
@@ -137,11 +138,12 @@ impl crate::gate::GateBehavior for ScheduleOwnership {
             device_fact_fields: facts,
         };
         let mut judged = 0_usize;
+        let tests = TestSources::of(tree.root());
         for path in tree.all_rust() {
             let Some(crate_directory) = registry.subject_crate(&path) else {
                 continue;
             };
-            if is_test_path(&path) || registry.layer(crate_directory) == FIXTURE_LAYER {
+            if tests.contains(&path) || registry.layer(crate_directory) == FIXTURE_LAYER {
                 continue;
             }
             let text = tree.read(&path)?;
@@ -558,8 +560,9 @@ fn geometry_fields(tree: &Tree) -> Result<BTreeSet<String>, GateError> {
 /// waiting to match an unrelated signature.
 fn device_fact_fields(tree: &Tree) -> Result<BTreeSet<String>, GateError> {
     let mut fields = BTreeSet::new();
+    let tests = TestSources::of(tree.root());
     for path in tree.all_rust() {
-        if is_test_path(&path) {
+        if tests.contains(&path) {
             continue;
         }
         let text = tree.read(&path)?;
@@ -1059,16 +1062,6 @@ fn is_test_gated(attrs: &[syn::Attribute]) -> bool {
         let text = attr.to_token_stream().to_string().replace(' ', "");
         text.contains("cfg(test)") || text == "#[test]" || text.contains("cfg(any(test")
     })
-}
-
-/// Whether a path holds test rather than production source.
-fn is_test_path(path: &Path) -> bool {
-    let text = path.to_string_lossy();
-    text.contains("/tests/")
-        || text.contains("/benches/")
-        || text.contains("_tests.rs")
-        || text.contains("/test_")
-        || text.contains("fixtures")
 }
 
 /// Findings for one file.

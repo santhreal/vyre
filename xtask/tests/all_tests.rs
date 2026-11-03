@@ -29,10 +29,6 @@ pub mod gate_verdict;
 #[path = "device_test_compilation.rs"]
 pub mod device_test_compilation;
 
-/// Integration tests from `tests/test_source_paths.rs`.
-#[path = "test_source_paths.rs"]
-pub mod test_source_paths;
-
 /// Integration tests from `tests/public_api_paths_masking.rs`.
 #[path = "public_api_paths_masking.rs"]
 pub mod public_api_paths_masking;

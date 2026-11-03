@@ -2,6 +2,8 @@ use super::*;
 use std::collections::BTreeSet;
 use std::path::Path;
 
+use structure_gate::cfg_test::TestSources;
+
 use crate::tree_walk::{self, BUILD_OUTPUT_AND_VCS};
 
 /// WHY: `unbounded_read` matched `fs::read(` as a bare substring, so any
@@ -318,7 +320,7 @@ fn xtask_sources_are_release_tooling_whatever_group_holds_them() {
         "/w/xtask/src/gates/gate1.rs",
     ] {
         assert_eq!(
-            hygiene_surface_for_path(Path::new("/w"), path, &BTreeSet::new()),
+            hygiene_surface_for_path(Path::new("/w"), path, &TestSources::default()),
             "release_tooling",
             "Fix: {path} is xtask source and must carry release-tooling thresholds."
         );
@@ -327,7 +329,7 @@ fn xtask_sources_are_release_tooling_whatever_group_holds_them() {
         hygiene_surface_for_path(
             Path::new("/w"),
             "/w/docs/optimization/PASSES.md",
-            &BTreeSet::new()
+            &TestSources::default()
         ),
         "docs",
         "Fix: real documentation must still classify as docs."
@@ -336,7 +338,7 @@ fn xtask_sources_are_release_tooling_whatever_group_holds_them() {
         hygiene_surface_for_path(
             Path::new("/w"),
             "/w/vyre-libs/src/docs/loader.rs",
-            &BTreeSet::new()
+            &TestSources::default()
         ),
         "docs",
         "Fix: only the xtask tree is reclassified; other trees keep the docs rule."
@@ -352,6 +354,7 @@ fn xtask_sources_are_release_tooling_whatever_group_holds_them() {
 #[test]
 fn every_xtask_command_module_is_scanned_and_no_test_source_is() {
     let root = crate::checkout::checkout_root();
+    let tests = TestSources::of(&root);
     let mut expected = 0usize;
     for source_root in xtask_source_roots(&root) {
         for entry in tree_walk::pruned(&source_root, BUILD_OUTPUT_AND_VCS).flatten() {
@@ -359,7 +362,7 @@ fn every_xtask_command_module_is_scanned_and_no_test_source_is() {
             if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
                 continue;
             }
-            if is_test_source_path(path)
+            if tests.contains(path.strip_prefix(&root).unwrap_or(path))
                 || path.file_name().and_then(|name| name.to_str()) == Some("hygiene_matrix.rs")
             {
                 continue;
@@ -369,7 +372,7 @@ fn every_xtask_command_module_is_scanned_and_no_test_source_is() {
     }
     let mut scanned = 0usize;
     let mut findings = Vec::new();
-    scan_release_xtask(&root, &mut scanned, &mut findings);
+    scan_release_xtask(&root, &tests, &mut scanned, &mut findings);
     assert!(
         expected > 0,
         "Fix: the xtask crates hold production source; the enumeration found none."
@@ -380,7 +383,7 @@ fn every_xtask_command_module_is_scanned_and_no_test_source_is() {
     );
     for finding in &findings {
         assert!(
-            !is_test_source_path(Path::new(&finding.path)),
+            !tests.contains(relative_to_vyre(&root, Path::new(&finding.path))),
             "Fix: `{}` is test source and must stay out of the production scan.",
             finding.path
         );
@@ -504,7 +507,7 @@ fn hygiene_classifier_separates_test_from_release_blocker() {
         &findings,
         &hot_paths,
         &structural_gates(&[]),
-        &BTreeSet::new(),
+        &TestSources::default(),
     );
 
     assert_eq!(classes[0].surface, "production");
@@ -530,7 +533,7 @@ fn undeclared_source_inspection_tests_are_release_blockers() {
         &findings,
         &std::collections::BTreeSet::new(),
         &structural_gates(&[]),
-        &BTreeSet::new(),
+        &TestSources::default(),
     );
 
     assert_eq!(classes[0].surface, "test");
@@ -570,7 +573,7 @@ fn only_the_declared_source_inspection_test_is_informational() {
             "driver/tests/source_contracts.rs",
             "no_other_file_calls_the_owner",
         )]),
-        &BTreeSet::new(),
+        &TestSources::default(),
     );
 
     assert_eq!(
@@ -692,7 +695,9 @@ fn a_cfg_test_gated_source_is_test_hygiene_and_the_same_file_ungated_is_not() {
         test: None,
     }];
 
-    let gated = BTreeSet::from(["vyre-libs/src/test_parity_oracles.rs".to_string()]);
+    let gated = TestSources::with_gated_modules(BTreeSet::from([
+        "vyre-libs/src/test_parity_oracles.rs".to_string(),
+    ]));
     let classes = classify_findings(
         Path::new("/repo"),
         &findings,
@@ -709,7 +714,7 @@ fn a_cfg_test_gated_source_is_test_hygiene_and_the_same_file_ungated_is_not() {
         &findings,
         &hot_paths,
         &structural_gates(&[]),
-        &BTreeSet::new(),
+        &TestSources::default(),
     );
     assert_eq!(classes[0].surface, "production");
     assert_ne!(classes[0].risk, "test_hygiene");
@@ -741,7 +746,7 @@ fn test_support_crate_findings_are_test_hygiene() {
         &findings,
         &hot_paths,
         &structural_gates(&[]),
-        &BTreeSet::new(),
+        &TestSources::default(),
     );
 
     assert!(classes.iter().all(|class| class.surface == "test"));
@@ -760,26 +765,13 @@ fn rust_doc_comment_call_examples_do_not_count_as_production_blockers() {
     ));
 }
 
-/// Feature-gated test harness modules remain test infrastructure even when Cargo places them under `src`.
-#[test]
-fn feature_gated_test_harness_sources_are_test_hygiene() {
-    assert_eq!(
-        hygiene_surface_for_path(
-            Path::new("/repo"),
-            "/repo/vyre-driver-cuda/src/test_harness/fake_backend.rs",
-            &BTreeSet::new(),
-        ),
-        "test"
-    );
-}
-
 #[test]
 fn fuzz_targets_are_test_surface_not_release_production() {
     assert_eq!(
         hygiene_surface_for_path(
             Path::new("."),
             "vyre-foundation/fuzz/fuzz_targets/reachability.rs",
-            &BTreeSet::new(),
+            &TestSources::default(),
         ),
         "test"
     );
@@ -837,7 +829,7 @@ fn hygiene_classifier_marks_hot_path_debt_as_release_blocker() {
         &findings,
         &hot_paths,
         &structural_gates(&[]),
-        &BTreeSet::new(),
+        &TestSources::default(),
     );
 
     assert!(classes[0].hot_path);
@@ -1372,7 +1364,7 @@ fn every_xtask_crate_carries_the_release_tooling_rules() {
     for member in &crates {
         let source = format!("/w/{member}/src/gates/some_gate.rs");
         assert_eq!(
-            hygiene_surface_for_path(Path::new("/w"), &source, &BTreeSet::new()),
+            hygiene_surface_for_path(Path::new("/w"), &source, &TestSources::default()),
             "release_tooling",
             "Fix: {source} is xtask source and must carry release-tooling thresholds."
         );

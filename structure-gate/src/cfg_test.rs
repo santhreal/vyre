@@ -7,8 +7,9 @@
 //! does not compile is still judged.
 
 use std::borrow::Cow;
-use std::collections::BTreeSet;
-use std::path::Path;
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, LazyLock, Mutex, PoisonError};
 
 use crate::source_scan::{code_offsets, opaque_span, rust_sources_with_text, SourceText};
 
@@ -398,7 +399,9 @@ fn end_of_item(text: &str, from: usize) -> Option<usize> {
 /// Both spellings of a gated module are covered: the sibling file `<name>.rs`
 /// and everything under the directory `<name>/`. A declaration written inside an
 /// inline `mod` block resolves under that block, because that is the directory
-/// the compiler looks in.
+/// the compiler looks in. A `#[path = "..."]` on the declaration, written before
+/// or after the gate, names the file instead, resolved against the directory
+/// the compiler resolves it against.
 ///
 /// Only a gate that no configuration satisfies without `test` counts. A module
 /// declared `#[cfg(any(test, feature = "test-fixtures"))]` compiles into a build
@@ -413,9 +416,7 @@ pub fn test_gated_module_files(root: &Path) -> BTreeSet<String> {
         let SourceText::Read { path: file, text } = source else {
             continue;
         };
-        let Some((parent, _)) = file.rsplit_once('/') else {
-            continue;
-        };
+        let parent = file.rsplit_once('/').map_or("", |(parent, _)| parent);
         let mut inline = None;
         for span in cfg_test_spans_detailed(&text) {
             if !span.test_only {
@@ -425,24 +426,190 @@ pub fn test_gated_module_files(root: &Path) -> BTreeSet<String> {
                 continue;
             };
             let blocks = inline.get_or_insert_with(|| inline_module_blocks(&text));
-            let mut home = module_home(parent, &file).into_owned();
-            for enclosing in enclosing_modules(blocks, span.start) {
-                home.push('/');
-                home.push_str(enclosing);
+            let enclosing = enclosing_modules(blocks, span.start);
+            let relocated = relocated_path(&text, span.start, span.end);
+            // A relocated declaration outside any inline block resolves against
+            // the declaring file's own directory; inside one, against the
+            // directory its children would be looked up in.
+            let mut home = if relocated.is_some() && enclosing.is_empty() {
+                parent.to_string()
+            } else {
+                module_home(parent, &file).into_owned()
+            };
+            for block in enclosing {
+                home = child(&home, block);
             }
-            declared.insert(format!("{home}/{name}"));
+            match relocated {
+                Some(path) => {
+                    if let Some(module) = relocated_module(&home, path) {
+                        declared.insert(module);
+                    }
+                }
+                None => {
+                    declared.insert(child(&home, &name));
+                }
+            }
         }
         files.push(file);
     }
     files
         .into_iter()
         .filter(|file| {
-            declared.iter().any(|module| {
-                file.strip_prefix(module)
-                    .is_some_and(|rest| rest == ".rs" || rest.starts_with('/'))
-            })
+            file.strip_suffix(".rs")
+                .is_some_and(|module| declared.contains(module))
+                || file
+                    .match_indices('/')
+                    .any(|(at, _)| declared.contains(&file[..at]))
         })
         .collect()
+}
+
+/// Directories whose Rust sources build a test, bench, example or fuzz target.
+///
+/// Cargo compiles `tests/`, `benches/` and `examples/` into their own targets,
+/// and a `fuzz/` crate is a cargo-fuzz harness, so nothing under them links
+/// into a library or binary a consumer installs.
+pub const NON_SHIPPING_DIRECTORIES: [&str; 4] = ["tests", "benches", "examples", "fuzz"];
+
+/// The [`NON_SHIPPING_DIRECTORIES`] whose targets are test or bench harnesses.
+/// Examples and fuzz targets are standalone programs, held to the rules a
+/// shipped program is held to by a gate that judges code a reader copies.
+pub const HARNESS_DIRECTORIES: [&str; 2] = ["tests", "benches"];
+
+/// Whether a repository-relative path sits under a [`NON_SHIPPING_DIRECTORIES`]
+/// directory. Only directory components above a crate's `src` count: cargo
+/// discovers targets beside `src`, so `src/tests.rs` and `src/geom/tests/` are
+/// modules, and whether they ship is what their declaration says.
+#[must_use]
+pub fn in_non_shipping_directory(relative: &str) -> bool {
+    in_directory(relative, &NON_SHIPPING_DIRECTORIES)
+}
+
+/// Whether a directory component of `relative` above its first `src` is one of
+/// `directories`.
+fn in_directory(relative: &str, directories: &[&str]) -> bool {
+    let mut components = relative.split(['/', '\\']);
+    components.next_back();
+    components
+        .take_while(|component| *component != "src")
+        .any(|component| directories.contains(&component))
+}
+
+/// Every Rust source of one checkout that no shipped artifact compiles.
+///
+/// A file is test source when it sits under a [`NON_SHIPPING_DIRECTORIES`]
+/// directory or the tree reaches it only through a `#[cfg(test)]` module
+/// declaration. The file name is not read: `bitset/test_bit.rs` is a shipped
+/// operation, and `pool_tests.rs` ships unless its declaration is gated.
+#[derive(Debug, Default)]
+pub struct TestSources {
+    gated: BTreeSet<String>,
+}
+
+impl TestSources {
+    /// The test sources of the checkout at `root`.
+    ///
+    /// Derived once per process per root from the corpus
+    /// [`rust_sources_with_text`] already holds for that root, so it is exactly
+    /// as fresh as the text every rule reads.
+    #[must_use]
+    pub fn of(root: &Path) -> Arc<Self> {
+        static DERIVED: LazyLock<Mutex<BTreeMap<PathBuf, Arc<TestSources>>>> =
+            LazyLock::new(|| Mutex::new(BTreeMap::new()));
+
+        let mut cache = DERIVED.lock().unwrap_or_else(PoisonError::into_inner);
+        Arc::clone(cache.entry(root.to_path_buf()).or_insert_with(|| {
+            Arc::new(Self {
+                gated: test_gated_module_files(root),
+            })
+        }))
+    }
+
+    /// A set over an explicit list of gated module files, checkout-relative
+    /// and slash-separated, for a caller that judges a tree it did not read.
+    #[must_use]
+    pub fn with_gated_modules(gated: BTreeSet<String>) -> Self {
+        Self { gated }
+    }
+
+    /// Whether `relative`, a path relative to the root this set was read from,
+    /// is test source. Either separator is accepted; a path that is not UTF-8
+    /// matches no declaration and is judged as shipped.
+    #[must_use]
+    pub fn contains(&self, relative: impl AsRef<Path>) -> bool {
+        self.judge(relative.as_ref(), &NON_SHIPPING_DIRECTORIES)
+    }
+
+    /// Whether `relative` is test or bench harness source: [`Self::contains`]
+    /// without the example and fuzz targets, which build standalone programs.
+    #[must_use]
+    pub fn contains_harness(&self, relative: impl AsRef<Path>) -> bool {
+        self.judge(relative.as_ref(), &HARNESS_DIRECTORIES)
+    }
+
+    fn judge(&self, relative: &Path, directories: &[&str]) -> bool {
+        let Some(relative) = relative.to_str() else {
+            return false;
+        };
+        if in_directory(relative, directories) {
+            return true;
+        }
+        if relative.contains('\\') {
+            return self.gated.contains(&relative.replace('\\', "/"));
+        }
+        self.gated.contains(relative)
+    }
+}
+
+/// The value of a `#[path = "..."]` attribute on the item `start..end` spans.
+///
+/// The span opens at the test gate, so a `#[path]` written after the gate is
+/// inside it and one written before it is among the attributes directly above.
+/// Attributes above are walked back one whole line at a time while the line is
+/// a single `#[...]`; a doc comment or code between two attributes stops the
+/// walk.
+fn relocated_path(text: &str, start: usize, end: usize) -> Option<&str> {
+    let mut from = start;
+    loop {
+        let above = text[..from].trim_end();
+        let line_start = above.rfind('\n').map_or(0, |newline| newline + 1);
+        let line = above[line_start..].trim_start();
+        if !(line.starts_with("#[") && line.ends_with(']')) {
+            break;
+        }
+        from = above.len() - line.len();
+    }
+    let attributes = &text[from..end];
+    attributes.match_indices("#[path").find_map(|(at, _)| {
+        let value = attributes[at + "#[path".len()..]
+            .trim_start()
+            .strip_prefix('=')?
+            .trim_start()
+            .strip_prefix('"')?;
+        value.find('"').map(|close| &value[..close])
+    })
+}
+
+/// The module key a relocated declaration gates, resolved against `home`.
+///
+/// `x/mod.rs` gates the directory `x`, any other `y.rs` gates the file `y.rs`.
+/// `..` and `.` segments are folded, so a relocation that climbs out of the
+/// declaring directory names the file it reaches; one that climbs out of the
+/// checkout names nothing.
+fn relocated_module(home: &str, path: &str) -> Option<String> {
+    let mut parts: Vec<&str> = home.split('/').filter(|part| !part.is_empty()).collect();
+    for part in path.split(['/', '\\']) {
+        match part {
+            "" | "." => {}
+            ".." => {
+                parts.pop()?;
+            }
+            part => parts.push(part),
+        }
+    }
+    let joined = parts.join("/");
+    let module = joined.strip_suffix(".rs")?;
+    Some(module.strip_suffix("/mod").unwrap_or(module).to_string())
 }
 
 /// Directory a module declared in `file` looks for its children in.
@@ -454,7 +621,16 @@ fn module_home<'a>(parent: &'a str, file: &'a str) -> Cow<'a, str> {
     if matches!(stem, "mod.rs" | "lib.rs" | "main.rs") {
         Cow::Borrowed(parent)
     } else {
-        Cow::Owned(format!("{parent}/{}", stem.trim_end_matches(".rs")))
+        Cow::Owned(child(parent, stem.trim_end_matches(".rs")))
+    }
+}
+
+/// The module path `name` below `home`; an empty `home` is the checkout root.
+fn child(home: &str, name: &str) -> String {
+    if home.is_empty() {
+        name.to_string()
+    } else {
+        format!("{home}/{name}")
     }
 }
 

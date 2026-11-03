@@ -30,22 +30,6 @@ pub fn collect_use_paths(file: &syn::File) -> Vec<UsePath> {
     syn::visit::visit_file(&mut collector, file);
     collector.paths
 }
-/// Whether a path is test code rather than shipped source.
-///
-/// A `tests.rs` module file inside `src/` is test code: the workspace declares
-/// every one of them as `#[cfg(test)] mod tests;`, so none of it is compiled
-/// into a shipped artifact. `tests_are_declared_under_cfg_test` proves that
-/// holds for every such file, which is what lets the name decide it here.
-pub fn is_test_source_path(path: &std::path::Path) -> bool {
-    path.components()
-        .any(|component| component.as_os_str() == "tests")
-        || path
-            .file_stem()
-            .and_then(|stem| stem.to_str())
-            .is_some_and(|stem| {
-                stem == "tests" || stem.starts_with("test_") || stem.ends_with("_test")
-            })
-}
 
 fn is_test_only(attrs: &[syn::Attribute]) -> bool {
     attrs.iter().any(|attribute| {
@@ -176,19 +160,5 @@ mod tests {
         let paths = collect_use_paths(&file);
         assert_eq!(paths.len(), 2);
         assert!(paths.iter().all(|path| path.is_public));
-    }
-
-    /// This path-classification test keeps detached test helper files out of production dependency audits.
-    #[test]
-    fn test_source_paths_are_excluded_without_hiding_production_modules() {
-        assert!(is_test_source_path(std::path::Path::new(
-            "vyre-libs/src/test_parity_oracles.rs"
-        )));
-        assert!(is_test_source_path(std::path::Path::new(
-            "vyre-libs/src/parsing/tests/contracts.rs"
-        )));
-        assert!(!is_test_source_path(std::path::Path::new(
-            "vyre-libs/src/parsing/lexer.rs"
-        )));
     }
 }
