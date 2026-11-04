@@ -822,8 +822,12 @@ fn reads_and_writes(access: TargetResourceAccess) -> (bool, bool) {
 /// every lifetime.
 ///
 /// The loop covers every access against every lifetime a graph output can carry,
-/// so a rule reintroduced for one pair fails here. It does not cover
-/// `ResourceLifetime::Constant`, which no graph output can hold.
+/// so a rule reintroduced for one pair fails here. A read-only binding of the
+/// value the node writes is the one pair that is not a membership question: no
+/// module of the payload writes the value and no caller binds a node's output,
+/// so the payload is rejected where it loads, except at `Retained`, whose prior
+/// version the caller holds. It does not cover `ResourceLifetime::Constant`,
+/// which no graph output can hold.
 #[test]
 fn payload_access_decides_projection_membership_at_every_lifetime() {
     for access in [
@@ -884,8 +888,26 @@ fn payload_access_decides_projection_membership_at_every_lifetime() {
                 ],
             );
 
-            let core = test_instance_core(&artifact, &payload).unwrap();
             let (reads, writes) = reads_and_writes(access);
+            let loaded = test_instance_core(&artifact, &payload);
+            if reads && !writes && lifetime != ValueLifetime::Retained {
+                let message = loaded
+                    .err()
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Fix: a {access:?} read of the node's own {lifetime:?} output, which no module writes first, must be rejected at load"
+                        )
+                    })
+                    .to_string();
+                assert!(
+                    message.contains("`acc_val`") && message.contains("at target binding (0, 1)"),
+                    "Fix: the load rejection must name the value and the binding: {message}"
+                );
+                continue;
+            }
+            let core = loaded.unwrap_or_else(|error| {
+                panic!("Fix: a {access:?} binding at lifetime {lifetime:?} must load: {error}")
+            });
             assert_eq!(
                 core.module_inputs[0].contains(&acc_id),
                 reads,
@@ -1082,5 +1104,121 @@ fn a_read_back_buffer_no_module_writes_absorbs_under_its_read_identity() {
         state.get(&queue).map(Vec::as_slice),
         Some(&[9, 0, 0, 0][..]),
         "Fix: the returned bytes must land on the identity the module read"
+    );
+}
+
+/// One node reading `x` and `y` and writing `res`, with the payload bindings
+/// `bindings_for(x, y, res)` states.
+fn single_node_payload_core(
+    bindings_for: impl Fn(
+        ArtifactValueId,
+        ArtifactValueId,
+        ArtifactValueId,
+    ) -> Vec<(ArtifactValueId, TargetResourceAccess)>,
+) -> Result<crate::materialize::InstanceCore, BackendError> {
+    let mut graph = ProgramGraph::new();
+    let x = graph
+        .add_external_value(
+            "x",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        )
+        .unwrap();
+    let y = graph
+        .add_external_value(
+            "y",
+            contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+        )
+        .unwrap();
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::storage("in_x", 0, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("in_y", 1, BufferAccess::ReadOnly, DataType::U32),
+            BufferDecl::storage("out", 2, BufferAccess::WriteOnly, DataType::U32),
+        ],
+        [32, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::add(
+                Expr::load("in_x", Expr::u32(0)),
+                Expr::load("in_y", Expr::u32(0)),
+            ),
+        )],
+    );
+    let (_, outputs) = graph
+        .add_node(
+            "node0",
+            program,
+            vec![
+                GraphInput {
+                    buffer: "in_x".into(),
+                    value: x,
+                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                },
+                GraphInput {
+                    buffer: "in_y".into(),
+                    value: y,
+                    contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
+                },
+            ],
+            vec![GraphOutput {
+                buffer: "out".into(),
+                name: "res".into(),
+                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output),
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+    let artifact = compile_graph(graph);
+    let bindings = global_bindings(&bindings_for(
+        ArtifactValueId(x.0),
+        ArtifactValueId(y.0),
+        ArtifactValueId(outputs[0].0),
+    ));
+    let payload = test_payload(
+        &artifact,
+        vec![entry_point(
+            &artifact,
+            "entry0",
+            ArtifactNodeId(0),
+            bindings,
+        )],
+    );
+    test_instance_core(&artifact, &payload)
+}
+
+/// WHY: a payload whose module reads a value the artifact writes, while no
+/// module of the payload writes it first, fails on every submission. The
+/// rejection belongs where the payload is accepted, naming the module, the
+/// value and the binding, rather than at the first dispatch as an unbound
+/// input. The same bindings with the written value bound for writing are the
+/// control. A read-write binding is not covered: it names its write identity as
+/// an output of the same module, so it never reaches this rejection.
+#[test]
+fn a_payload_reading_a_value_no_caller_or_earlier_module_supplies_is_refused_at_load() {
+    single_node_payload_core(|x, y, res| {
+        vec![
+            (x, TargetResourceAccess::ReadOnly),
+            (y, TargetResourceAccess::ReadOnly),
+            (res, TargetResourceAccess::WriteOnly),
+        ]
+    })
+    .expect("Fix: a module reading only caller inputs and writing its output must load");
+
+    let message = single_node_payload_core(|x, y, res| {
+        vec![
+            (x, TargetResourceAccess::ReadOnly),
+            (y, TargetResourceAccess::ReadOnly),
+            (res, TargetResourceAccess::ReadOnly),
+        ]
+    })
+    .err()
+    .expect("Fix: a module reading the value the artifact writes, with nothing writing it first, must be refused at load")
+    .to_string();
+    assert!(
+        message.contains("module 0 reads canonical artifact value")
+            && message.contains("`res`")
+            && message.contains("at target binding (0, 2)"),
+        "Fix: the rejection must name the module, the value and the binding: {message}"
     );
 }

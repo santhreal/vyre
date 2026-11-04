@@ -274,6 +274,66 @@ fn retained_chain_relates(
             .is_some_and(|priors| priors.contains(&left))
 }
 
+/// Reject a payload whose modules read a value nothing can supply.
+///
+/// A module stages its inputs out of the execution state, which holds what the
+/// caller bound and what modules earlier in submission order wrote. A value no
+/// node of the neutral artifact writes is the caller's to bind, and so is every
+/// version of a retained value, because a caller holds whichever one its last
+/// segment produced. Any other value has to be written by this module or an
+/// earlier one. A payload that reads outside that set fails on every
+/// submission, so it is refused here, where the payload is accepted, with the
+/// module, the binding and the value named.
+fn reject_unsuppliable_module_reads(
+    artifact: &Artifact,
+    names: &BTreeMap<String, ArtifactValueId>,
+    module_inputs: &[Vec<ArtifactValueId>],
+    module_outputs: &[Vec<ArtifactValueId>],
+    module_resources: &[BTreeMap<(u32, u32), ArtifactValueId>],
+) -> Result<(), BackendError> {
+    let written: BTreeSet<ArtifactValueId> = artifact
+        .abi()
+        .entries
+        .iter()
+        .flat_map(|entry| entry.outputs.iter().copied())
+        .collect();
+    let mut available: BTreeSet<ArtifactValueId> = artifact
+        .resources()
+        .iter()
+        .filter(|resource| {
+            resource.lifetime == vyre_megakernel::ResourceLifetime::Retained
+                || !written.contains(&resource.value)
+        })
+        .map(|resource| resource.value)
+        .collect();
+    for (index, (inputs, outputs)) in module_inputs.iter().zip(module_outputs).enumerate() {
+        available.extend(outputs.iter().copied());
+        let Some(&missing) = inputs.iter().find(|value| !available.contains(value)) else {
+            continue;
+        };
+        let name = names
+            .iter()
+            .find_map(|(name, value)| (*value == missing).then_some(name.as_str()))
+            .unwrap_or("<unnamed>");
+        let slot = module_resources
+            .get(index)
+            .and_then(|resources| {
+                resources
+                    .iter()
+                    .find_map(|(slot, value)| (*value == missing).then_some(*slot))
+            })
+            .map_or_else(String::new, |(group, slot)| {
+                format!(" at target binding ({group}, {slot})")
+            });
+        return Err(invalid_module(&format!(
+            "module {index} reads canonical artifact value {} (`{name}`){slot}, which no caller \
+             binds and neither this module nor an earlier one writes",
+            missing.0
+        )));
+    }
+    Ok(())
+}
+
 impl InstanceCore {
     /// Record what an instance materialized from `artifact` and `payload` keeps.
     ///
@@ -485,6 +545,13 @@ impl InstanceCore {
             module_outputs.push(outputs);
             module_resources.push(resources);
         }
+        reject_unsuppliable_module_reads(
+            artifact,
+            &resources.values,
+            &module_inputs,
+            &module_outputs,
+            &module_resources,
+        )?;
 
         Ok(Self {
             artifact: artifact.digest(),

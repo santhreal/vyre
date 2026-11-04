@@ -9097,6 +9097,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   analysis programs, the two rule bodies, the decoder and the driver, and it
   reads the shared arena workgroup size instead of declaring a second copy of
   it.
+- A target payload whose module reads a value that no caller binds and no
+  earlier module writes is rejected when it is loaded, with the module, the
+  value and the target binding in the error, instead of failing every
+  submission as an unbound input.
 - Every per-node validation rule lives in
   `vyre-foundation/src/validate/node_rules.rs`, which both the production
   single-pass validator and the legacy multi-walk arm call. The two walks each
