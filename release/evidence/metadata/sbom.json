@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"bce499a47203550d57d452cb2d18951b8a3b5755","commit_timestamp":"1790013164","parent_commit":"6e8ce09485b313ea19669218077595e3bd7c4dff","dirty":false,"source_fingerprint":"git:bce499a47203550d57d452cb2d18951b8a3b5755:dirty=false"},"host":{"state":"recorded","hostname":"santhserver","os":"linux","architecture":"x86_64","cpu_model":"11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz","cpu_cores":16},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"5197a693f907618ce51365779ad13c22fd4100f3","commit_timestamp":"1793750705","parent_commit":"bb9bdabf8442562a15d2ca1cc2b3c97e9469e1c0","dirty":false,"source_fingerprint":"git:5197a693f907618ce51365779ad13c22fd4100f3:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "bomFormat": "CycloneDX",
   "components": [
     {
@@ -4566,7 +4566,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "0af8c3e5087969c323f667ccb4b789fa0954f5aa650550e38e81cf9108be21b5"
+          "content": "bba0a7831d1297712e7e7b33759b0c837941e79196dd05df506d5f36f7f78619"
         }
       ],
       "licenses": [
@@ -4577,9 +4577,9 @@
         }
       ],
       "name": "private-gemm-x86",
-      "purl": "pkg:cargo/private-gemm-x86@0.1.20",
+      "purl": "pkg:cargo/private-gemm-x86@0.1.22",
       "type": "library",
-      "version": "0.1.20"
+      "version": "0.1.22"
     },
     {
       "hashes": [
@@ -5269,7 +5269,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "0d41d731c7d2f962d1ccc364cec258de3c0e93b38c2fb3ba97ac74513048d634"
+          "content": "48e13bd8c0e9365c43cfa5c9e8f9ad49d3c8444926c9aac819e0e4dc503c8fdf"
         }
       ],
       "licenses": [
@@ -5280,9 +5280,9 @@
         }
       ],
       "name": "rustls",
-      "purl": "pkg:cargo/rustls@0.23.45",
+      "purl": "pkg:cargo/rustls@0.23.46",
       "type": "library",
-      "version": "0.23.45"
+      "version": "0.23.46"
     },
     {
       "hashes": [
@@ -5307,7 +5307,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "f3c3cf1d8b1e7d4927e2d154c3fcb02979afb9939629c62cd9048d4f07b60ac2"
+          "content": "4443b1b6d39d7c663139942cc4558262562d2c84123bb6282ef177009ca8b281"
         }
       ],
       "licenses": [
@@ -5318,9 +5318,9 @@
         }
       ],
       "name": "rustls-webpki",
-      "purl": "pkg:cargo/rustls-webpki@0.103.15",
+      "purl": "pkg:cargo/rustls-webpki@0.103.16",
       "type": "library",
-      "version": "0.103.15"
+      "version": "0.103.16"
     },
     {
       "hashes": [
@@ -8024,7 +8024,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "52f5ee44c96cf55f1b349600768e3ece3a8f26010c05265ab73f945bb1a2eb9d"
+          "content": "f5f280bbb2b287bc8e7de7e3852945a0ff50d1bbcb5ed42b6c7a568c546df171"
         }
       ],
       "licenses": [
@@ -8035,9 +8035,9 @@
         }
       ],
       "name": "webpki-roots",
-      "purl": "pkg:cargo/webpki-roots@1.0.7",
+      "purl": "pkg:cargo/webpki-roots@1.0.11",
       "type": "library",
-      "version": "1.0.7"
+      "version": "1.0.11"
     },
     {
       "hashes": [
@@ -9092,7 +9092,7 @@
       "type": "framework",
       "version": "0.8.0"
     },
-    "timestamp": "2026-09-21T11:50:37Z",
+    "timestamp": "2026-11-04T00:05:05Z",
     "tools": [
       {
         "name": "xtask-release-provenance",
@@ -9106,7 +9106,7 @@
       }
     ]
   },
-  "serialNumber": "urn:uuid:vyre-sbom-3503bc4a7db298c50f9e7add684cb93bf5d0e29da0c9fbd5e9ed259080e0fc73",
+  "serialNumber": "urn:uuid:vyre-sbom-464f158bb4606a221121868d709f0ff28a6ae31afbc0cee8cea7d3e5ec6762aa",
   "specVersion": "1.5",
   "version": 1
 }
