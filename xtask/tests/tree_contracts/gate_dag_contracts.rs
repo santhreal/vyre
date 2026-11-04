@@ -170,57 +170,16 @@ fn gate_dag_gate_reports_complete_coverage() {
     );
 }
 
-/// WHY: the registered gate set is derived at run time, so the contract fails
-/// when a gate has no baseline row, no mutation suite reference, or no owner, so adding a gate
-/// without those turns the suite red.
+/// WHY: the registered gate set is derived at run time, so a gate added with
+/// an unknown owner package, no mutation proof, or any other descriptor defect
+/// turns the suite red. `failures()` is the one definition of a defect.
 #[test]
-fn runtime_registered_gate_set_has_owner_proof_and_baseline() {
-    let root = xtask::checkout::checkout_root();
-    let baseline_content = std::fs::read_to_string(root.join("xtask/gate-baselines.toml"))
-        .expect("gate-baselines.toml must be readable");
-    let baseline_data: toml::Value =
-        toml::from_str(&baseline_content).expect("gate-baselines.toml must parse as valid TOML");
-    let baseline_gates = baseline_data
-        .get("gate")
-        .and_then(|g| g.as_array())
-        .expect("gate-baselines.toml must contain [[gate]] array");
-    let baseline_names: std::collections::BTreeSet<&str> = baseline_gates
-        .iter()
-        .filter_map(|g| g.get("name").and_then(|n| n.as_str()))
-        .collect();
-
-    // Derive registered gate descriptors at run time
-    let registered_descriptors = GATE_METADATA;
+fn every_registered_descriptor_passes_self_validation() {
     assert!(
-        !registered_descriptors.is_empty(),
+        !GATE_METADATA.is_empty(),
         "registered gate set must not be empty"
     );
-
-    for desc in registered_descriptors {
-        // 1. Must have an authoritative owner in known packages
-        let owner = desc.owner();
-        assert!(
-            ["xtask", "xtask-registry", "xtask-evidence"].contains(&owner),
-            "gate `{}` has invalid or missing owner: `{owner}`",
-            desc.name
-        );
-
-        // 2. Must have a valid mutation suite reference
-        let proof = desc.mutation_suite().trim();
-        assert!(
-            !proof.is_empty() && proof != "definition-site mutation tests",
-            "gate `{}` must declare an authoritative mutation suite reference, found `{proof}`",
-            desc.name
-        );
-
-        // 3. Must have a baseline row in gate-baselines.toml
-        assert!(
-            baseline_names.contains(desc.name),
-            "gate `{}` has no baseline row in xtask/gate-baselines.toml",
-            desc.name
-        );
-
-        // 4. Must pass descriptor self-validation
+    for desc in GATE_METADATA {
         let failures = desc.failures();
         assert!(
             failures.is_empty(),
@@ -230,9 +189,9 @@ fn runtime_registered_gate_set_has_owner_proof_and_baseline() {
     }
 }
 
-/// WHY: a gate missing owner, proof, or baseline must fail the contract.
+/// WHY: a gate missing its owner package or its proof must fail the contract.
 #[test]
-fn runtime_gate_validation_fails_on_missing_owner_proof_or_baseline() {
+fn runtime_gate_validation_fails_on_missing_owner_or_proof() {
     let mut desc = *descriptor_by_name("architecture-contract");
 
     // Missing owner

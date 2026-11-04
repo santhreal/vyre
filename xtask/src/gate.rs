@@ -222,13 +222,13 @@ impl Coverage {
     }
 }
 
-/// What a gate produces. `findings` is the pinned number; `notes` is context
-/// that must never be counted.
+/// What a gate produces. `findings` is what the sweep counts and holds at zero;
+/// `notes` is context that is never counted.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Report {
-    /// Everything wrong the gate found. This count is what the baseline pins.
+    /// Everything wrong the gate found.
     pub findings: Vec<Finding>,
-    /// Context the gate wants a reader to have, never counted and never pinned.
+    /// Context for a reader, never counted.
     pub notes: Vec<String>,
     /// Complete subject universes judged by this gate.
     #[serde(default)]
@@ -412,7 +412,7 @@ impl Report {
         failures
     }
 
-    /// The pinned number.
+    /// The number of findings.
     #[must_use]
     pub fn count(&self) -> usize {
         self.findings.len()
@@ -545,51 +545,6 @@ impl fmt::Display for ResourceClass {
     }
 }
 
-/// Typed parser or query schema representing the input inspection mode of a gate.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub enum QueryKind {
-    /// Pure Rust syntax tree (AST / syn parser).
-    #[default]
-    RustAst,
-    /// Parsed TOML configuration or manifest.
-    TomlManifest,
-    /// Workspace dependency and metadata graph.
-    WorkspaceGraph,
-    /// Parsed JSON artifact or report.
-    JsonArtifact,
-    /// Parsed CI workflow YAML specification.
-    YamlWorkflow,
-    /// Live operation or inventory registry query.
-    RegistryLink,
-    /// Measured performance evidence or execution record.
-    EvidenceRecord,
-    /// Literal text where literal string matching is the product contract (e.g. license headers, docs).
-    TextLiteral,
-}
-
-impl QueryKind {
-    /// Stable string identifier for the query kind.
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::RustAst => "rust-ast",
-            Self::TomlManifest => "toml-manifest",
-            Self::WorkspaceGraph => "workspace-graph",
-            Self::JsonArtifact => "json-artifact",
-            Self::YamlWorkflow => "yaml-workflow",
-            Self::RegistryLink => "registry-link",
-            Self::EvidenceRecord => "evidence-record",
-            Self::TextLiteral => "text-literal",
-        }
-    }
-}
-
-impl fmt::Display for QueryKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
 /// Static contract that makes a gate discoverable and auditable.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GateDescriptor {
@@ -615,139 +570,10 @@ pub struct GateDescriptor {
     pub proof: &'static str,
 }
 impl GateDescriptor {
-    /// Authoritative owner package of this gate.
-    #[must_use]
-    pub fn owner(&self) -> &'static str {
-        self.package
-    }
-
-    /// Authoritative mutation suite symbol proving the claimed defect.
-    #[must_use]
-    pub fn mutation_suite(&self) -> &'static str {
-        self.proof
-    }
-
-    /// Exact generated outputs owned by this gate.
-    #[must_use]
-    pub fn generated_outputs(&self) -> &'static [&'static str] {
-        self.artifacts
-    }
-
-    /// Prerequisite gate names that must precede this gate.
-    #[must_use]
-    pub fn prerequisites_list(&self) -> &'static [&'static str] {
-        self.prerequisites
-    }
-
-    /// Pinned finding baseline for this gate (hard 0 across all gates).
-    #[must_use]
-    pub fn baseline(&self) -> usize {
-        0
-    }
-
-    /// Report schema version string.
-    #[must_use]
-    pub fn report_schema(&self) -> &'static str {
-        "standard-finding-v1"
-    }
-
-    /// Typed parser or query kind used to judge inputs.
-    #[must_use]
-    pub fn query_kind(&self) -> QueryKind {
-        if self.package == "xtask-registry" {
-            return QueryKind::RegistryLink;
-        }
-        if self.package == "xtask-evidence" {
-            return QueryKind::EvidenceRecord;
-        }
-        if self.subject == "ci workflows"
-            || self
-                .inputs
-                .iter()
-                .any(|i| i.ends_with(".yml") || i.ends_with(".yaml"))
-        {
-            return QueryKind::YamlWorkflow;
-        }
-        if self.inputs.iter().any(|i| i.ends_with(".json")) {
-            return QueryKind::JsonArtifact;
-        }
-        if self.inputs.iter().any(|i| i.ends_with(".toml")) || self.subject.contains("manifest") {
-            return QueryKind::TomlManifest;
-        }
-        if self.subject.contains("workspace") || self.subject.contains("crate") {
-            return QueryKind::WorkspaceGraph;
-        }
-        if self.inputs.iter().any(|i| i.ends_with(".md")) || self.subject.contains("documentation")
-        {
-            return QueryKind::TextLiteral;
-        }
-        QueryKind::RustAst
-    }
-
-    /// Content-addressed cache key for this gate under `root`.
-    #[must_use]
-    pub fn cache_key(&self, root: &Path) -> String {
-        self.compute_cache_key(root)
-    }
-
     /// Whether this gate owns any generated artifact.
     #[must_use]
     pub fn generates(&self) -> bool {
         !self.artifacts.is_empty()
-    }
-    /// Compute a deterministic content-addressed cache key from descriptor metadata and declared input files.
-    #[must_use]
-    pub fn compute_cache_key(&self, root: &Path) -> String {
-        let mut hasher = blake3::Hasher::new();
-        hasher.update(self.name.as_bytes());
-        hasher.update(self.package.as_bytes());
-        for area in self.areas {
-            hasher.update(area.as_bytes());
-        }
-        hasher.update(self.subject.as_bytes());
-        for input in self.inputs {
-            hasher.update(input.as_bytes());
-        }
-        for artifact in self.artifacts {
-            hasher.update(artifact.as_bytes());
-        }
-        for prereq in self.prerequisites {
-            hasher.update(prereq.as_bytes());
-        }
-        hasher.update(self.resource_class.as_str().as_bytes());
-        hasher.update(self.proof.as_bytes());
-
-        if self.inputs.is_empty() {
-            let manifest = root.join("Cargo.toml");
-            if let Ok(bytes) = std::fs::read(&manifest) {
-                hasher.update(&bytes);
-            }
-        } else {
-            for input in self.inputs {
-                let p = root.join(input);
-                if p.is_file() {
-                    if let Ok(bytes) = std::fs::read(&p) {
-                        hasher.update(input.as_bytes());
-                        hasher.update(&bytes);
-                    }
-                } else {
-                    for entry in walkdir::WalkDir::new(&p)
-                        .sort_by_file_name()
-                        .into_iter()
-                        .filter_map(Result::ok)
-                    {
-                        if entry.file_type().is_file() {
-                            let rel = entry.path().strip_prefix(root).unwrap_or(entry.path());
-                            hasher.update(rel.to_string_lossy().as_bytes());
-                            if let Ok(bytes) = std::fs::read(entry.path()) {
-                                hasher.update(&bytes);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        hasher.finalize().to_hex().to_string()
     }
 
     /// Every defect in a metadata row.
@@ -972,12 +798,6 @@ impl RegisteredGate {
     #[must_use]
     pub fn proof(&self) -> &'static str {
         self.descriptor.proof
-    }
-
-    /// Compute a deterministic content-addressed cache key.
-    #[must_use]
-    pub fn compute_cache_key(&self, root: &Path) -> String {
-        self.descriptor.compute_cache_key(root)
     }
 }
 

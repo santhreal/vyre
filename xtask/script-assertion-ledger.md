@@ -967,8 +967,8 @@ confirm the number, revert the edit, confirm the pin again. A gate that stays
 green under its injection is not covering the assertion it inherited, whatever its
 pin says.
 
-The `findings` column is the count with the injection applied, given the pin in
-`xtask/gate-baselines.toml` at the time of writing.
+The `findings` column is the count with the injection applied, from the zero
+every gate holds.
 
 | Gate | Injection | Findings |
 | --- | --- | --- |

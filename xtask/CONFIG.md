@@ -22,8 +22,7 @@ sub-directory is a usage bug, not a configuration choice.
 ## Tier B  -  community knowledge
 
 xtask emits no op corpus. Its data files sit beside its manifest and each has
-one reader: `gate-baselines.toml` is the sweep's pin per gate,
-`dup-baseline.toml` is `dup-scan`, `feature-isolation.toml` is
+one reader: `dup-baseline.toml` is `dup-scan`, `feature-isolation.toml` is
 `feature-isolation`, `public-api-paths.toml` is `public-api-paths`, and
 `unsafe-budget.txt` is `lint-unsafe-budget`. Adding a dimension to one of them
 is a code change in its reader and a data change in the file, in the same patch.

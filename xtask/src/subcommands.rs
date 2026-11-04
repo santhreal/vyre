@@ -176,7 +176,7 @@ pub fn help_text() -> String {
         text.push_str(&format!("  {name:width$}  {help}\n"));
     }
     text.push_str(&format!(
-        "  {:width$}  Run every registered gate and hold each to its pinned finding count\n",
+        "  {:width$}  Run every registered gate and fail on any finding\n",
         crate::gates::sweep::RUNNER
     ));
     text.push_str(&format!("  {:width$}  Print this message\n", "--help"));

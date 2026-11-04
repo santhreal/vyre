@@ -1,28 +1,14 @@
 //! The gate runner and the wiring meta-check.
 //!
-//! 41 subcommands were registered and 9 were ever invoked. The other 32 gates
-//! compiled, passed review, and judged nothing, so every rule they encoded was
-//! decorative. Nothing failed when that happened, which is the defect this
-//! module closes: the registry, the pinned baseline, and the workflows must
-//! agree, and disagreement is a hard failure.
+//! The registry and the workflows must agree, and disagreement is a hard
+//! failure: a registered gate no workflow selects by name, directly or through
+//! a subset a workflow runs, judges nothing anyone reads. `file-size` was red on
+//! fourteen source files while nothing in CI named it.
 //!
-//! The sweep enumerates the registry at run time. A gate registered without a
-//! baseline row fails, and a baseline row naming no registered gate fails, so
-//! neither list is maintained by hand and neither can quietly fall behind.
-//!
-//! Registration is not wiring. A gate no workflow selects by name, directly or
-//! through a subset a workflow runs, fails the wiring check: `file-size` was
-//! red on fourteen source files while nothing in CI named it, so its judgement
-//! reached nobody who could act on it. Wiring failures are not pinnable and no
-//! baseline row excuses one.
-//!
-//! A gate that reports findings is pinned at its present finding count rather
-//! than excused. The pin ratchets: more findings than the pin fails, fewer is
-//! reported so the pin can be lowered. No pin makes a failing gate legal and no
-//! owner sentence buys it time, so progress lands in the code the gate judges
-//! instead of in this file.
+//! Every gate holds zero findings. There is no per-gate pin: a count above zero
+//! fails the sweep, and the only way to make a red gate green is to change what
+//! it judges.
 
-use crate::gates::gate_canon::{baseline_path, load_baselines, Baseline};
 use std::fs;
 use std::path::Path;
 use std::process;
@@ -37,19 +23,6 @@ use crate::subcommands;
 /// the check that every subcommand a workflow names is dispatchable read only
 /// the gate half of the table and reported the runner itself as unregistered.
 pub const RUNNER: &str = "gates";
-
-/// Read the pinned rows, or exit naming what could not be read.
-///
-/// The rows and every rule about them belong to `gate_canon`, which is the gate
-/// a caller can ask for by name. The sweep needs them before it runs anything,
-/// because pairing a gate with its pin is what the sweep does, so it reads them
-/// through that owner rather than parsing the file a second time here.
-fn baselines_or_exit(root: &Path) -> Vec<Baseline> {
-    load_baselines(root).unwrap_or_else(|error| {
-        eprintln!("{error}");
-        process::exit(1);
-    })
-}
 
 /// What the in-repo workflows name: xtask subcommands, subsets, and scripts.
 struct WorkflowNames {
@@ -174,37 +147,6 @@ fn script_failures(root: &Path, scripts: &[(String, usize, String)]) -> Vec<Stri
     failures
 }
 
-/// Every disagreement between the registry and the baseline file.
-///
-/// Both directions are failures. A gate with no row would run unpinned, so a
-/// new finding in it would pass; a row with no gate is a pin nobody enforces,
-/// which is what a retired gate leaves behind.
-fn baseline_failures(gate_names: &[&str], baselines: &[Baseline]) -> Vec<String> {
-    let mut failures = Vec::new();
-    for name in gate_names {
-        if !baselines.iter().any(|pin| pin.name == *name) {
-            failures.push(format!(
-                "gate `{name}` has no row in xtask/gate-baselines.toml; add one with its present finding count"
-            ));
-        }
-    }
-    for pin in baselines {
-        if !gate_names.iter().any(|name| *name == pin.name) {
-            failures.push(format!(
-                "xtask/gate-baselines.toml pins `{}`, which is not a registered gate; delete the row or register the gate",
-                pin.name
-            ));
-        }
-        if pin.findings != 0 {
-            failures.push(format!(
-                "xtask/gate-baselines.toml pins `{}` at {}; every gate is hard and every pin must remain zero",
-                pin.name, pin.findings
-            ));
-        }
-    }
-    failures
-}
-
 /// Every disagreement between executable gates and their static contracts.
 fn metadata_failures(
     root: &Path,
@@ -298,14 +240,14 @@ fn workflow_failures(gate_names: &[&str], invoked: &[String], subsets: &[String]
     failures
 }
 
-/// Reject a registry, baseline and workflow set that do not agree.
+/// Reject a registry and workflow set that do not agree.
 ///
 /// This is the meta-check. It is what makes an unwired gate impossible rather
 /// than merely discouraged, and what makes a workflow step invoking a deleted
 /// script impossible to leave behind.
-fn wiring_failures(root: &Path, gate_names: &[&str], baselines: &[Baseline]) -> Vec<String> {
+fn wiring_failures(root: &Path, gate_names: &[&str]) -> Vec<String> {
     let names = workflow_names(root);
-    let mut failures = baseline_failures(gate_names, baselines);
+    let mut failures = crate::gates::gate_canon::subset_failures(gate_names);
     failures.extend(metadata_failures(
         root,
         gate_names,
@@ -325,25 +267,6 @@ fn wiring_failures(root: &Path, gate_names: &[&str], baselines: &[Baseline]) -> 
         )),
     }
     failures
-}
-
-fn render_baseline(rows: &[(&str, usize)]) -> String {
-    let mut text = String::from(
-        "# Pinned finding count of every registered gate, written by\n\
-         # `xtask gates --write-baseline`.\n\
-         #\n\
-         # One row per registered gate, and the sweep fails on a gate with no row\n\
-         # or a row with no gate. More findings than the pin fails; fewer is\n\
-         # reported so the pin can be lowered here, and the pin only ever moves\n\
-         # down. A gate that cannot run at all fails outright: no row makes a\n\
-         # failing gate legal, and the writer refuses to record one.\n",
-    );
-    for (name, findings) in rows {
-        text.push_str("\n[[gate]]\n");
-        text.push_str(&format!("name = \"{name}\"\n"));
-        text.push_str(&format!("findings = {findings}\n"));
-    }
-    text
 }
 
 /// The gates this invocation runs, and what to call the selection.
@@ -387,48 +310,38 @@ fn execute(gate: &crate::gate::RegisteredGate, root: &Path) -> Result<Report, Ga
     gate.run(&GateCtx::new(root.to_path_buf(), Vec::new()))
 }
 
-/// Execute a selection of gates in sweep comparison mode with exactly one pre-capture and one post-verification.
-pub fn execute_sweep_selection(
-    root: &Path,
-    selected: &[crate::gate::RegisteredGate],
-    baselines: &[Baseline],
-) -> Vec<String> {
+/// Run each selected gate once, print what it reported, and return every
+/// failure: a gate that could not run, a report that breaks its descriptor
+/// contract, any finding, and any workspace write. The workspace is hashed once
+/// before the first gate and once after the last.
+pub fn sweep(root: &Path, selected: &[crate::gate::RegisteredGate]) -> Vec<String> {
     let mut failures = Vec::new();
-    let sweep_snapshot = crate::artifact_gate::WorkspaceSnapshot::capture(root);
-
+    let snapshot = crate::artifact_gate::WorkspaceSnapshot::capture(root);
     for gate in selected {
         let name = gate.name();
-        let Some(pin) = baselines.iter().find(|pin| pin.name == name) else {
-            continue;
-        };
-        let descriptor = crate::gate_metadata::descriptor(name);
         match execute(gate, root) {
             Err(error) => failures.push(format!("gate `{name}` could not run: {error}")),
             Ok(report) => {
-                if let Some(descriptor) = descriptor {
-                    for failure in report.contract_failures(descriptor) {
-                        failures.push(format!("gate `{name}` {failure}"));
-                    }
-                } else {
-                    for failure in report.coverage_failures() {
-                        failures.push(format!("gate `{name}` {failure}"));
-                    }
-                }
-                let found = report.count();
-                if found > pin.findings {
+                print!("{}", gate::render(name, &report));
+                let contract = match crate::gate_metadata::descriptor(name) {
+                    Some(descriptor) => report.contract_failures(descriptor),
+                    None => report.coverage_failures(),
+                };
+                failures.extend(
+                    contract
+                        .into_iter()
+                        .map(|failure| format!("gate `{name}` {failure}")),
+                );
+                if report.count() > 0 {
                     failures.push(format!(
-                        "gate `{name}` reported {found} finding(s) against a pinned {}; fix the new finding",
-                        pin.findings
+                        "gate `{name}` reported {} finding(s); every gate holds zero, so fix what it reports",
+                        report.count()
                     ));
                 }
             }
         }
     }
-
-    let sweep_mutations = sweep_snapshot.detect_mutations(root, "sweep", &[], false);
-    for mutation in sweep_mutations {
-        failures.push(mutation);
-    }
+    failures.extend(snapshot.detect_mutations(root, "sweep", &[], false));
     failures
 }
 
@@ -458,7 +371,7 @@ fn help_requested_of_the_runner(args: &[String]) -> bool {
 /// runner takes flags only, so anything that is not a known flag or the value
 /// of `--subset`/`--area` is a typo.
 fn unknown_argument(args: &[String]) -> Option<String> {
-    const KNOWN: &[&str] = &["--list", "--write-baseline", "--help", "-h"];
+    const KNOWN: &[&str] = &["--list", "--help", "-h"];
     let mut words = args.iter();
     while let Some(word) = words.next() {
         match word.as_str() {
@@ -475,12 +388,10 @@ fn unknown_argument(args: &[String]) -> Option<String> {
 /// What the runner accepts, rendered from the registry it would run.
 fn usage_text() -> String {
     let mut text = String::from(
-        "usage: xtask gates [--subset <name>] [--list] [--write-baseline]\n\n\
-         With no flags every registered gate runs and its finding count is\n\
-         compared with the pinned count in xtask/gate-baselines.toml.\n\n\
+        "usage: xtask gates [--subset <name>] [--list]\n\n\
+         With no flags every registered gate runs, and any finding fails.\n\n\
          --subset <name>   run one subset; --area is accepted for it\n\
-         --list            print every gate name and every subset\n\
-         --write-baseline  record the current finding counts as the pins\n\n\
+         --list            print every gate name and every subset\n\n\
          subsets:\n",
     );
     for subset in subcommands::subsets() {
@@ -527,105 +438,10 @@ pub fn run(args: &[String]) {
         process::exit(2);
     });
 
-    if args.iter().any(|argument| argument == "--write-baseline") {
-        let mut rows = Vec::new();
-        let mut failing = Vec::new();
-        let mut red = Vec::new();
-        for gate in &selected {
-            match execute(gate, &root) {
-                Ok(report) => {
-                    println!("{}: {} finding(s)", gate.name(), report.count());
-                    rows.push((gate.name(), report.count()));
-                    if report.count() != 0 {
-                        red.push(gate.name());
-                    }
-                }
-                Err(error) => {
-                    println!("{}: could not run: {error}", gate.name());
-                    failing.push(gate.name());
-                }
-            }
-        }
-        if !failing.is_empty() {
-            eprintln!(
-                "Fix: {} gate(s) could not run and a baseline may not record a failure: {}. Fix what they report, then write the baseline.",
-                failing.len(),
-                failing.join(", ")
-            );
-            process::exit(1);
-        }
-        if !red.is_empty() {
-            eprintln!(
-                "Fix: every gate is hard and a baseline may record only zero findings; fix: {}",
-                red.join(", ")
-            );
-            process::exit(1);
-        }
-        if args
-            .iter()
-            .any(|argument| argument == "--subset" || argument == "--area")
-        {
-            eprintln!(
-                "Fix: a baseline covers the whole registry, so it cannot be written from a subset. Drop `--subset`."
-            );
-            process::exit(2);
-        }
-        let path = baseline_path(&root);
-        fs::write(&path, render_baseline(&rows)).unwrap_or_else(|error| {
-            eprintln!("Fix: cannot write {}: {error}", path.display());
-            process::exit(1);
-        });
-        println!("wrote {}", path.display());
-        return;
-    }
-
-    let baselines = baselines_or_exit(&root);
     let registry = subcommands::registry();
     let gate_names: Vec<&str> = registry.iter().map(|gate| gate.name()).collect();
-    let mut failures = wiring_failures(&root, &gate_names, &baselines);
-    let sweep_snapshot = crate::artifact_gate::WorkspaceSnapshot::capture(&root);
-
-    for gate in &selected {
-        let name = gate.name();
-        let Some(pin) = baselines.iter().find(|pin| pin.name == name) else {
-            // The wiring check already reported this, and running a gate with no
-            // pin would report a number nothing holds it to.
-            continue;
-        };
-        let descriptor = crate::gate_metadata::descriptor(name);
-        match execute(gate, &root) {
-            Err(error) => failures.push(format!("gate `{name}` could not run: {error}")),
-            Ok(report) => {
-                print!("{}", gate::render(name, &report));
-                if let Some(descriptor) = descriptor {
-                    for failure in report.contract_failures(descriptor) {
-                        failures.push(format!("gate `{name}` {failure}"));
-                    }
-                } else {
-                    for failure in report.coverage_failures() {
-                        failures.push(format!("gate `{name}` {failure}"));
-                    }
-                }
-                let found = report.count();
-                if found > pin.findings {
-                    failures.push(format!(
-                        "gate `{name}` reported {found} finding(s) against a pinned {}; fix the new finding",
-                        pin.findings
-                    ));
-                } else if found < pin.findings {
-                    println!(
-                        "{name}: {found} finding(s), improved from {}; lower the pin in xtask/gate-baselines.toml",
-                        pin.findings
-                    );
-                }
-            }
-        }
-    }
-
-    let sweep_mutations = sweep_snapshot.detect_mutations(&root, "sweep", &[], false);
-    for mutation in sweep_mutations {
-        failures.push(mutation);
-    }
+    let mut failures = wiring_failures(&root, &gate_names);
+    failures.extend(sweep(&root, &selected));
     if !failures.is_empty() {
         eprintln!("gates: {} failure(s):", failures.len());
         for failure in &failures {
@@ -634,7 +450,7 @@ pub fn run(args: &[String]) {
         process::exit(1);
     }
     println!(
-        "gates: {} gate(s) in the {what} hold their baseline",
+        "gates: {} gate(s) in the {what} report zero findings",
         selected.len()
     );
 }
@@ -642,14 +458,6 @@ pub fn run(args: &[String]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gates::gate_canon::BaselineFile;
-
-    fn pin(name: &str, findings: usize) -> Baseline {
-        Baseline {
-            name: name.to_string(),
-            findings,
-        }
-    }
 
     /// WHY: Section 182.5.4 requires rejecting any write outside the declaring gate's owned set.
     #[test]
@@ -728,33 +536,11 @@ mod tests {
         }
     }
 
-    /// WHY: this is the defect the whole registry exists to close. A gate
-    /// registered with no baseline row runs unpinned, so a new finding in it
-    /// passes; both injections have to go red, and the clean case has to be
-    /// silent or the failure means nothing.
+    /// WHY: a gate registered with no descriptor row has no declared subject,
+    /// artifacts or proof, and a descriptor naming no gate is a contract
+    /// nobody runs. Both directions fail, and the agreeing case is silent.
     #[test]
-    fn a_registry_and_a_baseline_that_disagree_both_fail() {
-        let names = ["dep-drift", "op-names"];
-        assert_eq!(
-            baseline_failures(&names, &[pin("dep-drift", 0), pin("op-names", 0)]),
-            Vec::<String>::new()
-        );
-
-        let missing_row = baseline_failures(&names, &[pin("dep-drift", 0)]);
-        assert_eq!(missing_row.len(), 1);
-        assert!(missing_row[0].contains("`op-names` has no row"));
-
-        let extra_row = baseline_failures(
-            &names,
-            &[pin("dep-drift", 0), pin("op-names", 0), pin("retired", 0)],
-        );
-        assert_eq!(extra_row.len(), 1);
-        assert!(extra_row[0].contains("pins `retired`"));
-
-        let tolerated = baseline_failures(&names, &[pin("dep-drift", 0), pin("op-names", 1)]);
-        assert_eq!(tolerated.len(), 1);
-        assert!(tolerated[0].contains("every pin must remain zero"));
-
+    fn a_registry_and_its_descriptors_that_disagree_both_fail() {
         let valid_descriptor = crate::gate::GateDescriptor {
             name: "dep-drift",
             help:
@@ -778,26 +564,56 @@ mod tests {
             .contains("has no executable gate"));
     }
 
-    /// WHY: the baseline row shape is the exemption surface. `status` and
-    /// `owner` are what kept three gates red for a fortnight, and `output_lines`
-    /// is the pin that counted output instead of findings, so a file carrying
-    /// any of them must fail to load rather than be read with the field ignored.
-    #[test]
-    fn a_row_carrying_a_retired_field_fails_to_load() {
-        let good: BaselineFile =
-            toml::from_str("[[gate]]\nname = \"dep-drift\"\nfindings = 0\n").expect("loads");
-        assert_eq!(good.gate.len(), 1);
-        for row in [
-            "[[gate]]\nname = \"dep-drift\"\nfindings = 0\nstatus = \"red\"\n",
-            "[[gate]]\nname = \"dep-drift\"\nfindings = 0\nowner = \"someone\"\n",
-            "[[gate]]\nname = \"dep-drift\"\noutput_lines = 32\n",
-        ] {
-            assert!(
-                toml::from_str::<BaselineFile>(row).is_err(),
-                "a row carrying a retired field must not load: {row}"
-            );
+    /// A gate reporting whatever count it was built with.
+    struct Counted(usize);
+
+    impl crate::gate::GateBehavior for Counted {
+        fn run(&self, _: &GateCtx) -> Result<Report, GateError> {
+            let mut report = Report::clean();
+            report.cover_complete("fixture subjects", 1);
+            for index in 0..self.0 {
+                report.find(crate::gate::Finding::new(
+                    format!("finding {index}"),
+                    "fix it",
+                ));
+            }
+            Ok(report)
         }
     }
+
+    /// WHY: every gate holds zero findings, so the sweep fails on the first
+    /// one. A sweep that compared against a tolerated count would pass a gate
+    /// whose count was raised along with its findings; the clean gate has to
+    /// stay silent or the failure means nothing.
+    #[test]
+    fn the_sweep_fails_on_any_finding_and_passes_zero() {
+        static DESCRIPTOR: crate::gate::GateDescriptor = crate::gate::GateDescriptor {
+            name: "sweep-fixture",
+            help: "Report the fixture's count",
+            package: "xtask",
+            areas: &[],
+            subject: "fixture subjects",
+            inputs: &[],
+            artifacts: &[],
+            prerequisites: &[],
+            resource_class: crate::gate::ResourceClass::Cpu,
+            proof: "crate::gates::sweep::tests::the_sweep_fails_on_any_finding_and_passes_zero",
+        };
+        static CLEAN: Counted = Counted(0);
+        static ONE: Counted = Counted(1);
+        let root = tempfile::tempdir().expect("tempdir");
+        let clean = crate::gate::RegisteredGate::new(&DESCRIPTOR, &CLEAN);
+        let red = crate::gate::RegisteredGate::new(&DESCRIPTOR, &ONE);
+
+        assert_eq!(sweep(root.path(), &[clean]), Vec::<String>::new());
+        let failures = sweep(root.path(), &[clean, red]);
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(
+            failures[0].contains("`sweep-fixture` reported 1 finding(s)"),
+            "{failures:?}"
+        );
+    }
+
     /// WHY: a workflow that invokes a name nobody registered runs nothing under
     /// a name that reads as coverage, and a subset nobody runs is a set of gates
     /// that only the whole-registry sweep reaches. The old scan kept only names
@@ -945,7 +761,10 @@ mod tests {
             unknown_argument(&["--subset".to_string(), "ci-rules".to_string()]),
             None
         );
-        assert_eq!(unknown_argument(&["--write-baseline".to_string()]), None);
+        assert_eq!(
+            unknown_argument(&["--write-baseline".to_string()]),
+            Some("--write-baseline".to_string())
+        );
         assert_eq!(unknown_argument(&["--list".to_string()]), None);
         assert_eq!(unknown_argument(&[]), None);
         // A subset literally named like a flag is a value, not a second flag.
@@ -1002,11 +821,9 @@ mod tests {
         let registry = subcommands::registry();
         assert!(registry.len() > 10, "registry must contain multiple gates");
 
-        let baselines = load_baselines(&crate::checkout::checkout_root()).unwrap_or_default();
-
         let subset_gates: Vec<crate::gate::RegisteredGate> =
             registry.iter().take(5).copied().collect();
-        let _ = execute_sweep_selection(root, &subset_gates, &baselines);
+        let _ = sweep(root, &subset_gates);
 
         let (captures, verifications) = crate::artifact_gate::snapshot_counter_values();
         assert_eq!(

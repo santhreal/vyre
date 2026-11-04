@@ -1,16 +1,9 @@
 //! What may not appear on a dispatch path.
 //!
-//! Seven shell ratchets covered this ground, each with its own copy of a source
-//! walk, its own ceiling constant, and its own `--strict` mode that no workflow
-//! ever passed. The ceilings are pinned in `xtask/gate-baselines.toml` now, so
-//! lowering one is a diff against the pin rather than an edit to the rule, and
-//! the reviewed allowances are checked on every run rather than only under a
-//! flag nothing set.
-//!
-//! Two of the ratchets, blocking waits and unbounded caches, deliberately failed
-//! below their ceiling as well as above it, on the argument that slack is where a
-//! regression hides. The runner now reports a count below the pin so the pin can
-//! be lowered, which is the same guarantee without a red tree for progress.
+//! Each rule reports every occurrence outside its reviewed allowances as a
+//! finding, and the sweep fails on any finding, so there is no ceiling to raise:
+//! a new occurrence is either fixed or added to the reviewed allowance in the
+//! same change. The allowances are checked on every run.
 
 use std::path::Path;
 

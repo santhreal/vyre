@@ -57,9 +57,9 @@ jobs:
 
       # Every gate declares at least one area, and the areas split between this
       # job and `tree-rules` below, so the two jobs together run the registry
-      # once. Each run holds every selected gate to the number pinned in
-      # xtask/gate-baselines.toml and checks the wiring of the whole registry:
-      # a gate in no area a workflow runs fails here.
+      # once. Each run fails on any finding in a selected gate and checks the
+      # wiring of the whole registry: a gate in no area a workflow runs fails
+      # here.
       - name: Pre-publish compiler and release contracts
         run: ./cargo_full run -p xtask -- gates --subset prepublish
 

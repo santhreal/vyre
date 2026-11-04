@@ -589,7 +589,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
         package: "xtask",
         areas: &["release-evidence"],
         subject: "all-axis engineering scorecard",
-        inputs: &["Cargo.toml", "docs/public-api", "docs/testing", "xtask/gate-baselines.toml"],
+        inputs: &["Cargo.toml", "docs/public-api", "docs/testing"],
         artifacts: &["docs/generated/engineering-scorecard.toml"],
         prerequisites: &["public-api-snapshot", "testing-guides", "verification-budget"],
         resource_class: ResourceClass::Cpu,
@@ -749,7 +749,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "gate-canon",
-        help: "Hold the gate registry to its baselines: every gate has one baseline row and a subset, and a raised pin, a lowered target, or a loosened limit or floor without a recorded measurement against the base revision is a finding.",
+        help: "Hold the gate registry to its ratchets: every gate belongs to a subset, and a lowered target, or a limit or floor loosened against the base revision without a recorded measurement, is a finding.",
         package: "xtask",
         areas: &["prepublish"],
         subject: "registered system invariants",
@@ -757,7 +757,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
         artifacts: &[],
         prerequisites: &[],
         resource_class: ResourceClass::Cpu,
-        proof: "crate::gates::gate_canon::tests::a_row_with_nonzero_findings_fails_to_load",
+        proof: "crate::gates::gate_canon::tests::measurement_needs_a_new_number",
     },
     GateDescriptor {
         name: "gate-dag",

@@ -42,9 +42,8 @@ beyond what a `cargo publish --dry-run` catches. The subset is every gate
 whose descriptor in `xtask/src/gate_metadata/` lists the `prepublish` area.
 
 Run one gate by name, or a subset with `--subset`. `xtask gates` with no
-subset runs the whole registry. Every gate returns findings; the runner
-decides what a finding count means, and `xtask/gate-baselines.toml` pins
-the count each gate is allowed. A pin moves down.
+subset runs the whole registry. Every gate returns findings, and the runner
+fails on any finding.
 
 ## Evidence
 

@@ -1,197 +1,51 @@
 //! The gate that makes softening a gate impossible without saying so.
 //!
 //! Every other rule in this registry judges the product. This one judges the
-//! registry: `xtask/gate-baselines.toml` is 400 lines any edit can loosen, and
-//! the ratchet constants are integers in gate sources that a one-character
-//! change relaxes. Both were reviewable and neither was checkable, so the
-//! cheapest way to make a red gate green was to move the number rather than the
-//! code, and nothing in the tree could tell the two apart.
+//! registry. Every gate holds zero findings, so the number a gate tolerates
+//! lives in its source: a ratchet constant that a one-character change relaxes.
+//! The constant was reviewable and not checkable, so the cheapest way to make a
+//! red gate green was to move the number rather than the code.
 //!
-//! Seven clauses, in two families.
+//! Four clauses. One reads the registry as it stands: a registered gate no
+//! subset contains. Three read the diff, because softening is a direction and a
+//! direction needs a before: a limit that was raised, a target that was
+//! lowered, and a floor that was lowered without recording what was measured.
+//! The comparison is `--base REF` or `GITHUB_BASE_REF` against the merge base,
+//! and the worktree against `HEAD` when neither is set, which is what a local
+//! caller has before committing.
 //!
-//! Three read the registry as it stands and need no history: a baseline row
-//! naming no registered gate, a registered gate with no baseline row, and a
-//! registered gate no subset contains. The sweep calls [`registry_failures`] for
-//! the first two before it runs anything, because a sweep that cannot pair a
-//! gate with its pin cannot judge one; this gate reports the same three as
-//! counted findings so the rule is reachable on its own.
-//!
-//! Four read the diff, because softening is a direction and a direction needs a
-//! before. A pinned finding count that rose, a limit that was raised, a target
-//! that was lowered, and a floor that was lowered without recording what was
-//! measured. The comparison is `--base REF` or `GITHUB_BASE_REF` against the
-//! merge base, and the worktree against `HEAD` when neither is set, which is
-//! what a local caller has before committing.
-//!
-//! A raised limit and a lowered floor are legal when the change says what it
-//! measured: the constant's own doc comment has to change in the same revision
-//! and carry a number. A target and a pinned count have no such escape. That
-//! asymmetry is deliberate. A bound on what a gate reads can honestly grow, and
-//! recording the measurement is the whole cost; a target is what the tree is
-//! aiming at and a pin is what it has already achieved, so lowering either is a
-//! claim about the product rather than about the gate.
+//! A raised limit and a lowered floor are legal when the change states what it
+//! measured: the constant's own doc comment changes in the same revision and
+//! carries a number. A target has no such exception. A bound on what a gate
+//! reads can grow, and recording the measurement is the cost; a target is what
+//! the tree is aiming at, so lowering it is a claim about the product rather
+//! than about the gate.
 //!
 //! The constant scan derives its files from the registry: every crate that
 //! implements a registered gate, `xtask` included, contributes its tracked Rust
-//! sources. No list of gate crates is written down here, so a gate moved into a
-//! new crate is covered by being registered.
+//! sources. A gate moved into a new crate is covered by being registered.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
-
-use serde::Deserialize;
 
 use crate::gate::{Finding, GateCtx, GateError, RegisteredGate, Report};
 use crate::subcommands;
 
-/// Where the pinned finding counts live.
-pub const BASELINES: &str = "xtask/gate-baselines.toml";
-
-/// Pinned finding count for one gate.
+/// Every registered gate no subset contains.
 ///
-/// `deny_unknown_fields` is load-bearing. This file used to carry `status` and
-/// `owner` per row, which together let a failing gate stay legal indefinitely
-/// behind a prose excuse; three gates sat red that way for a fortnight while
-/// the sweep reported that every gate held its baseline. A row that still
-/// carries either field, or the `output_lines` this file pinned before findings
-/// were countable, now fails to load instead of being ignored.
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Baseline {
-    /// Name of the gate the row pins, which is the gate's own `name()`.
-    pub name: String,
-    /// The pinned count.
-    pub findings: usize,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct BaselineFile {
-    #[serde(default)]
-    pub(crate) gate: Vec<Baseline>,
-}
-
-/// One row as a past revision of the baseline file wrote it.
-///
-/// The working-tree copy is held to exactly `name` and `findings`, every count
-/// zero. A past revision is a record this gate does not own: the file pinned
-/// `output_lines` before findings were countable and carried nonzero counts
-/// before they were all closed, so reading it with [`Baseline`] made the whole
-/// comparison unrunnable against any base older than the last schema change.
-/// That is how the required sweep failed instead of reporting: `main` still
-/// carries `output_lines`, and a gate that cannot run judges nothing.
-///
-/// A row is compared when the base revision recorded a count for it. A row that
-/// recorded none pinned no count there, so there is no direction to judge.
-#[derive(Debug, Deserialize)]
-struct HistoricalBaseline {
-    /// Name of the gate the row pinned.
-    name: String,
-    /// The count that revision pinned, when it pinned one.
-    findings: Option<usize>,
-}
-
-#[derive(Debug, Deserialize)]
-struct HistoricalBaselineFile {
-    #[serde(default)]
-    gate: Vec<HistoricalBaseline>,
-}
-
-/// The baseline file under a checkout root.
+/// A gate no subset contains is reachable only by running the whole registry,
+/// so the domain that owns it never sees its verdict on its own.
 #[must_use]
-pub fn baseline_path(root: &Path) -> PathBuf {
-    root.join(BASELINES)
-}
-
-/// Parse one revision of the baseline file.
-fn parse_baselines(text: &str, source: &str) -> Result<Vec<Baseline>, GateError> {
-    let file: BaselineFile = toml::from_str(text).map_err(|error| {
-        GateError::new(
-            format!("cannot parse {source}: {error}"),
-            "repair the file so every row carries exactly `name` and `findings`",
-        )
-    })?;
-    for row in &file.gate {
-        if row.findings != 0 {
-            return Err(GateError::new(
-                format!(
-                    "gate `{}` pins {} finding(s); every baseline pin must be zero",
-                    row.name, row.findings
-                ),
-                "fix every finding so the gate passes with zero findings",
-            ));
-        }
-    }
-    Ok(file.gate)
-}
-
-/// Every pinned count one past revision of the baseline file recorded.
-fn historical_pins(text: &str, source: &str) -> Result<BTreeMap<String, usize>, GateError> {
-    let file: HistoricalBaselineFile = toml::from_str(text).map_err(|error| {
-        GateError::new(
-            format!("cannot parse {source}: {error}"),
-            "read that revision by hand; a past baseline file must at least be TOML carrying a `gate` array",
-        )
-    })?;
-    Ok(file
-        .gate
-        .into_iter()
-        .filter_map(|row| row.findings.map(|findings| (row.name, findings)))
-        .collect())
-}
-
-/// Every pinned row in the working tree.
-pub fn load_baselines(root: &Path) -> Result<Vec<Baseline>, GateError> {
-    let path = baseline_path(root);
-    let text = fs::read_to_string(&path).map_err(|error| {
-        GateError::new(
-            format!("cannot read {}: {error}", path.display()),
-            "regenerate it with `xtask gates --write-baseline`",
-        )
-    })?;
-    parse_baselines(&text, BASELINES)
-}
-
-/// Every disagreement between the registry, the baseline file and the subsets.
-///
-/// All three directions are failures. A gate with no row would run unpinned, so
-/// a new finding in it would pass; a row with no gate is a pin nobody enforces,
-/// which is what a retired gate leaves behind; and a gate no subset contains is
-/// reachable only by running the whole registry, so the domain that owns it
-/// never sees its verdict on its own.
-///
-/// The sweep calls this before it runs anything, because pairing a gate with its
-/// pin is what the sweep does. [`GateCanon`] reports the same messages as
-/// findings so the rule can be asked for by name.
-#[must_use]
-pub fn registry_failures(gate_names: &[&str], baselines: &[Baseline]) -> Vec<String> {
-    let mut failures = Vec::new();
-    for name in gate_names {
-        if !baselines.iter().any(|pin| pin.name == *name) {
-            failures.push(format!(
-                "gate `{name}` has no row in {BASELINES}; add one with its present finding count"
-            ));
-        }
-    }
-    for pin in baselines {
-        if !gate_names.iter().any(|name| *name == pin.name) {
-            failures.push(format!(
-                "{BASELINES} pins `{}`, which is not a registered gate; delete the row or register the gate",
-                pin.name
-            ));
-        }
-    }
-    for name in gate_names {
-        let subsets = subcommands::subsets();
-        if !subsets.iter().any(|subset| subset.gates.contains(name)) {
-            failures.push(format!(
-                "gate `{name}` is registered and belongs to no subset; add it to the subset whose domain owns it, so its verdict reaches that domain instead of only the whole-registry run"
-            ));
-        }
-    }
-    failures
+pub fn subset_failures(gate_names: &[&str]) -> Vec<String> {
+    let subsets = subcommands::subsets();
+    gate_names
+        .iter()
+        .filter(|name| !subsets.iter().any(|subset| subset.gates.contains(name)))
+        .map(|name| format!(
+            "gate `{name}` is registered and belongs to no subset; add it to the subset whose domain owns it, so its verdict reaches that domain instead of only the whole-registry run"
+        ))
+        .collect()
 }
 
 /// Which way a ratchet constant is allowed to move.
@@ -231,22 +85,19 @@ impl crate::gate::GateBehavior for GateCanon {
         let mut report = Report::clean();
         let registry = subcommands::registry();
         let gate_names: Vec<&str> = registry.iter().map(|gate| gate.name()).collect();
-        let baselines = load_baselines(&ctx.root)?;
         report.cover_complete("registered gates", gate_names.len());
 
-        for message in registry_failures(&gate_names, &baselines) {
-            report.find(Finding::in_file(
-                BASELINES,
+        for message in subset_failures(&gate_names) {
+            report.find(Finding::new(
                 message,
-                "make the registry, the baseline file and the subsets name the same gates",
+                "declare an area on the gate's descriptor that a subset holds",
             ));
         }
 
         let sources = gate_sources(&ctx.root, &registry)?;
         let current = constants(&ctx.root, &sources, &mut report);
         report.note(format!(
-            "{} pinned row(s), {} gate source file(s), {} ratchet constant(s)",
-            baselines.len(),
+            "{} gate source file(s), {} ratchet constant(s)",
             sources.len(),
             current.len()
         ));
@@ -265,12 +116,6 @@ impl crate::gate::GateBehavior for GateCanon {
         };
         report.note(format!("compared against `{base}`"));
 
-        report
-            .findings
-            .extend(baseline_findings(&ctx.root, &base, &baselines)?);
-        report
-            .findings
-            .extend(removal_findings(&ctx.root, &base, &sources, &baselines)?);
         report
             .findings
             .extend(constant_findings(&ctx.root, &base, &sources, &current)?);
@@ -385,16 +230,16 @@ fn gate_sources(root: &Path, registry: &[RegisteredGate]) -> Result<Vec<String>,
 /// migration, and aborting on it made this gate unrunnable exactly when the
 /// registry was moving. It is a finding instead: a constant in a file this run
 /// cannot read is a constant no direction was judged for, so silence about it
-/// would let a pin move behind a deletion.
+/// would let a bound move behind a deletion.
 fn constants(root: &Path, files: &[String], report: &mut Report) -> Vec<Constant> {
     let mut found = Vec::new();
     for file in files {
-        match fs::read_to_string(root.join(file)) {
+        match structure_gate::read_source_bounded(&root.join(file)) {
             Ok(text) => found.extend(constants_in(file, &text)),
             Err(error) => report.find(Finding::in_file(
                 file,
                 format!("git tracks this gate source and this run cannot read it: {error}"),
-                "restore the file as UTF-8 text, or commit its deletion so the registry and the pins move with it",
+                "restore the file as UTF-8 text, or commit its deletion so the registry moves with it",
             )),
         }
     }
@@ -530,102 +375,6 @@ fn doc_above(lines: &[&str], index: usize) -> String {
 /// number, which is the measurement the campaign rule asks for.
 fn records_measurement(before: &str, after: &str) -> bool {
     after != before && after.chars().any(|character| character.is_ascii_digit())
-}
-
-/// Every pinned count that rose.
-fn baseline_findings(
-    root: &Path,
-    base: &str,
-    current: &[Baseline],
-) -> Result<Vec<Finding>, GateError> {
-    let Some(text) = at_revision(root, base, BASELINES) else {
-        return Ok(Vec::new());
-    };
-    let pinned = historical_pins(&text, &format!("{base}:{BASELINES}"))?;
-    let mut findings = Vec::new();
-    for row in current {
-        let Some(was) = pinned.get(row.name.as_str()) else {
-            continue;
-        };
-        if row.findings > *was {
-            findings.push(Finding::in_file(
-                BASELINES,
-                format!(
-                    "gate `{}` is pinned at {} against {was} in `{base}`",
-                    row.name, row.findings
-                ),
-                "fix what the gate reported instead of pinning it; a pinned count only ever moves down",
-            ));
-        }
-    }
-    Ok(findings)
-}
-
-/// Every gate that left the registry while its pin stayed behind.
-///
-/// Told apart from a row that never named a gate by reading the base revision
-/// of the same sources: a name that was a gate and is not one now is a removal,
-/// and a row for a name neither revision declares is a pin for something that
-/// never existed. The two need different corrections, so they are different
-/// findings.
-fn removal_findings(
-    root: &Path,
-    base: &str,
-    sources: &[String],
-    baselines: &[Baseline],
-) -> Result<Vec<Finding>, GateError> {
-    let registered: BTreeSet<&str> = subcommands::registry()
-        .iter()
-        .map(|gate| gate.name())
-        .collect();
-    let mut before: BTreeSet<String> = BTreeSet::new();
-    for file in sources {
-        let Some(text) = at_revision(root, base, file) else {
-            continue;
-        };
-        before.extend(declared_gate_names(&text));
-    }
-    let mut findings = Vec::new();
-    for row in baselines {
-        if registered.contains(row.name.as_str()) {
-            continue;
-        }
-        if before.contains(&row.name) {
-            findings.push(Finding::in_file(
-                BASELINES,
-                format!(
-                    "gate `{}` was registered in `{base}` and is not registered now, and its pinned row survives",
-                    row.name
-                ),
-                "delete the row in the same change that deletes the gate; a surviving pin makes the registry and the baseline disagree about what is covered",
-            ));
-        }
-    }
-    Ok(findings)
-}
-
-/// Every gate name a source revision declares in GateDescriptor metadata.
-///
-/// Gate descriptors declare `name: "..."`. Reading text is what makes a previous revision answerable at
-/// all, since the gate it declared no longer exists to be called.
-fn declared_gate_names(text: &str) -> BTreeSet<String> {
-    let mut names = BTreeSet::new();
-    for line in text.lines() {
-        let trimmed = line.trim();
-        if let Some(rest) = trimmed.strip_prefix("name:") {
-            if let Some(name) = quoted(rest) {
-                names.insert(name);
-            }
-        }
-    }
-    names
-}
-
-/// The text between the first pair of double quotes.
-fn quoted(text: &str) -> Option<String> {
-    let (_, rest) = text.split_once('"')?;
-    let (inside, _) = rest.split_once('"')?;
-    Some(inside.to_string())
 }
 
 /// Every ratchet constant that moved the lax way.
@@ -818,118 +567,22 @@ mod tests {
         assert!(!records_measurement("/// old", "/// fewer files now"));
     }
 
-    /// WHY: the previous revision's registry cannot be called, so its gate
-    /// names are read from its text. Both registration shapes have to be read
-    /// or a removed delegated gate looks like a row that never named a gate.
+    /// WHY: a gate no subset holds runs only in the whole-registry sweep, so
+    /// its domain never sees its verdict. The agreeing case is asserted first:
+    /// a rule that reports on a registry that already agrees says nothing when
+    /// it disagrees.
     #[test]
-    fn reads_descriptor_gate_names() {
-        let text =
-            "GateDescriptor {\n    name: \"alpha\",\n}\nGateDescriptor {\n    name: \"beta\",\n}\n";
-        let names = declared_gate_names(text);
-        assert!(names.contains("alpha"), "{names:?}");
-        assert!(names.contains("beta"), "{names:?}");
-    }
-
-    /// WHY: the three static clauses are what the sweep asks for before it runs
-    /// anything, and each has to name the one thing to correct. The agreeing
-    /// case is asserted first: a rule that reports on a registry and a baseline
-    /// that already agree says nothing when they disagree.
-    #[test]
-    fn registry_failures_report_each_direction() {
-        let baselines = vec![
-            Baseline {
-                name: "ci-matrix".to_string(),
-                findings: 0,
-            },
-            Baseline {
-                name: "retired-gate".to_string(),
-                findings: 3,
-            },
-        ];
-        assert_eq!(
-            registry_failures(&["ci-matrix"], &baselines[..1]),
-            Vec::<String>::new(),
-            "a registry and a baseline that agree report nothing"
-        );
-        let failures = registry_failures(&["ci-matrix", "unpinned-gate"], &baselines);
+    fn a_gate_no_subset_holds_fails() {
+        let subset = subcommands::subsets()
+            .into_iter()
+            .next()
+            .expect("the descriptor registry has at least one nonempty area");
+        assert_eq!(subset_failures(&subset.gates), Vec::<String>::new());
+        let failures = subset_failures(&[subset.gates[0], "unsubsetted-gate"]);
+        assert_eq!(failures.len(), 1, "{failures:?}");
         assert!(
-            failures
-                .iter()
-                .any(|text| text.contains("`unpinned-gate` has no row")),
+            failures[0].contains("`unsubsetted-gate` is registered and belongs to no subset"),
             "{failures:?}"
-        );
-        assert!(
-            failures
-                .iter()
-                .any(|text| text.contains("pins `retired-gate`")),
-            "{failures:?}"
-        );
-        assert!(
-            failures
-                .iter()
-                .any(|text| text.contains("`unpinned-gate` is registered and belongs to no subset")),
-            "{failures:?}"
-        );
-    }
-
-    /// WHY: the baseline row shape is the exemption surface. `status` and
-    /// `owner` are what kept three gates red for a fortnight, and `output_lines`
-    /// is the pin that counted output instead of findings, so a file carrying
-    /// any of them must fail to load rather than be read with the field ignored.
-    #[test]
-    fn a_row_carrying_a_retired_field_fails_to_load() {
-        let good = parse_baselines("[[gate]]\nname = \"dep-drift\"\nfindings = 0\n", "fixture")
-            .expect("a well formed row loads");
-        assert_eq!(good.len(), 1);
-        for row in [
-            "[[gate]]\nname = \"dep-drift\"\nfindings = 0\nstatus = \"red\"\n",
-            "[[gate]]\nname = \"dep-drift\"\nfindings = 0\nowner = \"someone\"\n",
-            "[[gate]]\nname = \"dep-drift\"\noutput_lines = 32\n",
-        ] {
-            assert!(
-                parse_baselines(row, "fixture").is_err(),
-                "a row carrying a retired field must not load: {row}"
-            );
-        }
-    }
-    /// WHY: Section 182.6.2 requires zero-only baselines. A row with non-zero
-    /// findings must be rejected on parse rather than allowing positive pins.
-    #[test]
-    fn a_row_with_nonzero_findings_fails_to_load() {
-        let nonzero = "[[gate]]\nname = \"dep-drift\"\nfindings = 5\n";
-        assert!(
-            parse_baselines(nonzero, "fixture").is_err(),
-            "a row with non-zero findings must fail to parse"
-        );
-    }
-
-    /// WHY: the direction clauses need a before, and the before is whatever the
-    /// base revision wrote. Reading it with the working-tree row type made this
-    /// gate unrunnable against `main`, which still pins `output_lines`, so the
-    /// required sweep reported that the gate could not run rather than whether
-    /// a pin had risen. Every past shape is read here and the working-tree
-    /// shape stays strict, so leniency cannot leak forward.
-    #[test]
-    fn a_past_revision_is_read_through_the_fields_it_wrote() {
-        let past = "[[gate]]\nname = \"dup-scan\"\noutput_lines = 34\nfindings = 3\n\n\
-                    [[gate]]\nname = \"gate1\"\noutput_lines = 7\n\n\
-                    [[gate]]\nname = \"dep-drift\"\nfindings = 0\nstatus = \"red\"\n";
-        let pins = historical_pins(past, "base:fixture")
-            .expect("a past revision is read through the fields it wrote");
-        assert_eq!(pins.get("dup-scan").copied(), Some(3));
-        assert_eq!(pins.get("dep-drift").copied(), Some(0));
-        assert_eq!(
-            pins.get("gate1").copied(),
-            None,
-            "a row that pinned no count offers no direction to judge"
-        );
-        assert!(
-            parse_baselines(past, "fixture").is_err(),
-            "the working-tree copy is still held to exactly `name` and `findings`"
-        );
-        assert!(
-            historical_pins("gate = 3\n", "base:fixture").is_err(),
-            "a past revision that is not a baseline file at all is still a failure"
         );
     }
 }

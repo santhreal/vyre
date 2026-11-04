@@ -152,12 +152,12 @@ packages = []
 reason = "The committed public API snapshots. They are the semver trip-wire, so a regenerated snapshot is how an accidental promise ships."
 defends = "monotonic weakening"
 
-# ─── The gates and their pins ──────────────────────────────────────
+# ─── The gates and their verdict ───────────────────────────────────
 
 [[boundary]]
-pattern = "/xtask/gate-baselines.toml"
+pattern = "/xtask/src/gates/sweep.rs"
 packages = []
-reason = "Every gate's finding pin. A raised row certifies what it stopped checking."
+reason = "The sweep that fails on any finding. An edit that tolerates a count certifies what the gate stopped checking."
 defends = "monotonic weakening"
 
 [[boundary]]

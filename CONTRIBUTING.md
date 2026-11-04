@@ -70,15 +70,12 @@ Run one gate by name, or a related set with `--subset`:
 ```
 
 `./cargo_full run -p xtask --bin xtask -- --help` prints every gate and every
-subset with what it judges. The subsets group gates by what they answer for:
-`prepublish`, `composition`, `structure`, `docs`, `ir`, `manifest-rules`,
-`source-rules`, `hot-path-rules`, `lint-rules`, `contract-rules`, `repo-rules`.
+subset with what it judges. A subset is every gate whose descriptor in
+`xtask/src/gate_metadata/` lists that area.
 
-A gate reports findings. `xtask/gate-baselines.toml` pins the count each gate is
-allowed: more findings than the pin fails, fewer is reported so the pin can be
-lowered. The pin only moves down, and `gates --write-baseline` refuses to record
-a count above the pin already written. A gate that owns a generated artifact
-checks it by default and rewrites it only when you pass `--write`.
+A gate reports findings, and every gate holds zero: `xtask gates` fails on any
+finding. A gate that owns a generated artifact checks it by default and
+rewrites it only when you pass `--write`.
 
 `xtask/ci-registry.toml` declares the wiring: which subsets hold each gate,
 which workflows run it, every check CI runs that is not a gate, and every

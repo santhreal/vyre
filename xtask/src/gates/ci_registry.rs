@@ -10,9 +10,8 @@
 //! `xtask/ci-registry.toml` is the one declaration of that wiring. Every
 //! registered gate has exactly one row carrying its subsets and the workflows
 //! that run it, and every check CI runs that is not an xtask gate has an
-//! `[[external]]` row carrying the same wiring. Pinned finding counts are a
-//! different fact with a different owner and stay in `xtask/gate-baselines.toml`.
-//! The gate compares that declaration against the tree it describes, in both
+//! `[[external]]` row carrying the same wiring. A row carries no finding count:
+//! every gate holds zero. The gate compares that declaration against the tree it describes, in both
 //! directions:
 //!
 //! 1. Every registered gate has exactly one row, and every row names a
@@ -62,9 +61,8 @@ const XTASK: &str = "xtask";
 ///
 /// `deny_unknown_fields` is load-bearing. This file used to carry `status` and
 /// `owner` per row, which together let a failing gate stay legal indefinitely
-/// behind a prose excuse. A row that still carries a retired field, or the
-/// `findings` pin that belongs to `xtask/gate-baselines.toml`, fails to load
-/// rather than being ignored.
+/// behind a prose excuse. A row that still carries a retired field, or a
+/// `findings` pin, fails to load rather than being ignored.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct GateRow {
@@ -449,8 +447,8 @@ pub fn render(
          #\n\
          # A `[[gate]]` row carries the subsets that hold the gate and the\n\
          # workflows that run it. An `[[external]]` row is a check CI runs that\n\
-         # is not an xtask gate. The finding count each gate is pinned at lives\n\
-         # in `xtask/gate-baselines.toml`.\n\
+         # is not an xtask gate. Every gate holds zero findings, so no row\n\
+         # carries a count.\n\
          #\n\
          # The `ci-registry` gate compares this file against the registry, the\n\
          # subsets and the workflow steps, in both directions, so a gate no\n\
@@ -1091,9 +1089,9 @@ mod tests {
         assert!(found.is_empty(), "{}", messages(&found));
     }
 
-    /// WHY: a gate with no row runs unpinned, so a new finding in it passes; a
-    /// row with no gate is a pin nobody enforces. Both directions have to fail,
-    /// and a gate declared twice is two pins for one name, whichever the reader
+    /// WHY: a gate with no row has no declared wiring, and a row with no gate
+    /// declares wiring for nothing. Both directions have to fail, and a gate
+    /// declared twice is two declarations for one name, whichever the reader
     /// edits.
     #[test]
     fn a_row_and_a_gate_that_do_not_pair_up_both_fail() {
@@ -1553,9 +1551,8 @@ mod tests {
 
     /// WHY: the file used to carry per-row prose that let a failing gate stay
     /// legal. A retired field must fail to load rather than be ignored, a schema
-    /// this gate does not read must stop it rather than be guessed at, and the
-    /// `findings` pin belongs to `xtask/gate-baselines.toml`, so a pin written
-    /// here is a second copy of a fact and fails to load.
+    /// this gate does not read must stop it rather than be guessed at, and a
+    /// `findings` pin restates the zero every gate holds, so it fails to load.
     #[test]
     fn a_retired_field_and_an_unknown_schema_both_refuse_to_load() {
         let good: Registry = toml::from_str(

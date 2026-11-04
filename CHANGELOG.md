@@ -5032,6 +5032,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   The backend-extension gate now derives the roster from the vyre-emit-*
   workspace members and requires each one to consume emit_adversarial_corpus,
   and fails when the roster is empty.
+- `xtask gates` fails on any finding; `xtask/gate-baselines.toml`, `gates
+  --write-baseline` and the unused gate cache key and DAG executor are deleted.
 - The `GeometryStrategy` trait and `GeometryLoweringError` are removed from
   `vyre-foundation`, and
   `vyre_driver::DeviceProfile::admissible_workgroup_widths` reports the

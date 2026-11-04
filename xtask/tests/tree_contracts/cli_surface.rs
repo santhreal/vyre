@@ -343,7 +343,7 @@ fn every_runner_help_route_answers_without_running_the_gates() {
         );
         let text = String::from_utf8_lossy(&output.stdout);
         assert!(
-            text.contains("usage: xtask gates") && text.contains("--write-baseline"),
+            text.contains("usage: xtask gates") && text.contains("--subset <name>"),
             "Fix: `xtask {}` must print the runner usage, it printed:\n{text}",
             line.join(" ")
         );
