@@ -1,4 +1,11 @@
 //! Cold-process compiled-pipeline persistence regression.
+//!
+//! The contract is what the persistent cache controls: a second process that
+//! compiles the same program seeds every driver pipeline cache it creates from
+//! the blob the first process persisted, and dispatches the same bytes. Wall
+//! time is not asserted. The compile it would bound is dominated by the
+//! megakernel search and the host's load, not by the cache, so a time budget
+//! failed on a busy host while the cache behaved correctly.
 
 #![cfg(feature = "device-tests")]
 
@@ -23,9 +30,15 @@ use vyre_megakernel::{
 const HELPER_FLAG: &str = "VYRE_PIPELINE_CACHE_HELPER_OUT";
 const HELPER_CASE_ID: &str = "VYRE_PIPELINE_CACHE_HELPER_CASE";
 const PIPELINE_CACHE_CASE: &str = "vyre-libs::nn::softmax";
-const CACHE_HIT_LATENCY_BUDGET: Duration = Duration::from_millis(500);
 
-fn compile_case(case: &SemanticOperation) -> (Duration, Vec<Vec<u8>>) {
+/// What one process observed of the persistent pipeline cache.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct PersistedLookups {
+    seeded: u64,
+    cold: u64,
+}
+
+fn compile_case(case: &SemanticOperation) -> (PersistedLookups, Vec<Vec<u8>>) {
     let inputs = (case
         .test_inputs
         .expect("Fix: persistence regression requires deterministic test inputs"))(
@@ -52,11 +65,9 @@ fn compile_case(case: &SemanticOperation) -> (Duration, Vec<Vec<u8>>) {
     .expect("Fix: persistence regression compile request must validate");
     let registration = vyre_driver::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
         .expect("Fix: WGPU backend registration must be linked");
-    let compile_start = Instant::now();
     let _session =
         vyre_runtime::artifact_admission::ArtifactSession::compile(registration, &request)
             .expect("Fix: persistence regression must materialize an authenticated WGPU artifact");
-    let compile_time = compile_start.elapsed();
     let output = backend
         .dispatch(&program, &input_case, &DispatchConfig::default())
         .expect("Fix: persistence regression program must dispatch on the wgpu backend");
@@ -68,7 +79,12 @@ fn compile_case(case: &SemanticOperation) -> (Duration, Vec<Vec<u8>>) {
         let tolerance = fp_parity::effective_tolerance(case.id, &program);
         assert_outputs_within_tolerance(case.id, tolerance, &expected, &output);
     }
-    (compile_time, output)
+    let stats = backend.stats();
+    let lookups = PersistedLookups {
+        seeded: stats.persisted_pipeline_seeded,
+        cold: stats.persisted_pipeline_cold,
+    };
+    (lookups, output)
 }
 
 fn assert_outputs_within_tolerance(
@@ -138,12 +154,20 @@ fn any_pipeline_blob(root: &Path) -> bool {
     false
 }
 
-fn read_helper_result(root: &Path) -> (Duration, Vec<Vec<u8>>) {
-    let nanos = fs::read_to_string(root.join("compile_nanos.txt"))
-        .expect("Fix: helper process must write compile_nanos.txt")
-        .trim()
-        .parse::<u64>()
-        .expect("Fix: helper compile_nanos.txt must contain a u64 nanosecond count");
+fn read_helper_result(root: &Path) -> (PersistedLookups, Vec<Vec<u8>>) {
+    let lookups = fs::read_to_string(root.join("persisted_lookups.txt"))
+        .expect("Fix: helper process must write persisted_lookups.txt");
+    let counts: Vec<u64> = lookups
+        .split_whitespace()
+        .map(|count| {
+            count
+                .parse()
+                .expect("Fix: persisted_lookups.txt must hold two u64 counts")
+        })
+        .collect();
+    let [seeded, cold] = counts[..] else {
+        panic!("Fix: persisted_lookups.txt must hold `seeded cold`, found `{lookups}`");
+    };
     let mut outputs = Vec::new();
     let mut index = 0usize;
     loop {
@@ -162,7 +186,7 @@ fn read_helper_result(root: &Path) -> (Duration, Vec<Vec<u8>>) {
         !outputs.is_empty(),
         "Fix: helper process must emit at least one output buffer"
     );
-    (Duration::from_nanos(nanos), outputs)
+    (PersistedLookups { seeded, cold }, outputs)
 }
 
 fn helper_case(case_id: &str) -> SemanticOperation {
@@ -182,7 +206,11 @@ fn helper_test_filter() -> String {
     format!("{module}::compiled_pipeline_cache_helper_process")
 }
 
-fn run_helper(cache_root: &Path, output_root: &Path, case_id: &str) -> (Duration, Vec<Vec<u8>>) {
+fn run_helper(
+    cache_root: &Path,
+    output_root: &Path,
+    case_id: &str,
+) -> (PersistedLookups, Vec<Vec<u8>>) {
     fs::create_dir_all(output_root).unwrap_or_else(|error| {
         panic!("Fix: failed to create `{}`: {error}", output_root.display())
     });
@@ -229,12 +257,12 @@ fn compiled_pipeline_cache_helper_process() {
     };
     let case_id =
         std::env::var(HELPER_CASE_ID).expect("Fix: helper process must receive a harness case id");
-    let (compile_time, output) = compile_case(&helper_case(&case_id));
+    let (lookups, output) = compile_case(&helper_case(&case_id));
     fs::write(
-        output_root.join("compile_nanos.txt"),
-        compile_time.as_nanos().to_string(),
+        output_root.join("persisted_lookups.txt"),
+        format!("{} {}", lookups.seeded, lookups.cold),
     )
-    .unwrap_or_else(|error| panic!("Fix: failed to write helper timing: {error}"));
+    .unwrap_or_else(|error| panic!("Fix: failed to write helper cache counts: {error}"));
     for (index, bytes) in output.iter().enumerate() {
         let path = output_root.join(format!("output-{index}.bin"));
         fs::write(&path, bytes)
@@ -249,8 +277,11 @@ fn compiled_pipeline_cache_persists_across_backend_reconstruction() {
     let first_result_root = temp.path().join("first-run");
     let second_result_root = temp.path().join("second-run");
 
-    let (first_compile, first_output) =
-        run_helper(&cache_root, &first_result_root, PIPELINE_CACHE_CASE);
+    let (first, first_output) = run_helper(&cache_root, &first_result_root, PIPELINE_CACHE_CASE);
+    assert!(
+        first.seeded + first.cold >= 1,
+        "Fix: the dispatch must consult the persistent pipeline cache on a device with `PIPELINE_CACHE` (observed {first:?})"
+    );
     let pipeline_cache_dir = cache_root.join("pipeline");
     assert!(
         any_pipeline_blob(&pipeline_cache_dir),
@@ -258,15 +289,18 @@ fn compiled_pipeline_cache_persists_across_backend_reconstruction() {
         pipeline_cache_dir.display()
     );
 
-    let (second_compile, second_output) =
-        run_helper(&cache_root, &second_result_root, PIPELINE_CACHE_CASE);
+    let (second, second_output) = run_helper(&cache_root, &second_result_root, PIPELINE_CACHE_CASE);
 
     assert_eq!(
         first_output, second_output,
         "Fix: compiled pipeline cache hit must preserve byte-identical dispatch output"
     );
+    assert_eq!(
+        second.cold, 0,
+        "Fix: a process compiling a program the cache directory already holds must seed every pipeline from the persisted blob (first={first:?}, second={second:?})"
+    );
     assert!(
-        second_compile < first_compile || second_compile <= CACHE_HIT_LATENCY_BUDGET,
-        "Fix: cold-process pipeline cache hit must either improve over first compile or stay under the hot-path latency budget of {CACHE_HIT_LATENCY_BUDGET:?} (first={first_compile:?}, second={second_compile:?})"
+        second.seeded >= 1,
+        "Fix: the second process must consult the persisted blob at least once (first={first:?}, second={second:?})"
     );
 }

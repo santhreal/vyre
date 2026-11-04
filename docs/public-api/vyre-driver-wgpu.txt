@@ -376,6 +376,8 @@ pub use vyre_driver_wgpu::pipeline::IndirectDispatch
 pub use vyre_driver_wgpu::pipeline::OutputLayout
 pub use vyre_driver_wgpu::pipeline::output_layout_from_program
 pub vyre_driver_wgpu::WgpuBackendStats::adapter_name: alloc::sync::Arc<str>
+pub vyre_driver_wgpu::WgpuBackendStats::persisted_pipeline_cold: u64
+pub vyre_driver_wgpu::WgpuBackendStats::persisted_pipeline_seeded: u64
 pub vyre_driver_wgpu::WgpuBackendStats::persistent_pool: vyre_driver_wgpu::buffer::BufferPoolStats
 pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_byte_capacity: usize
 pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_bytes: usize

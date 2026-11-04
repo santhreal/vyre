@@ -34,6 +34,9 @@ const DISK_PIPELINE_CACHE_VERSION: u32 = 5;
 
 pub(crate) struct PipelineCacheHandle {
     pub(crate) cache: wgpu::PipelineCache,
+    /// Whether `cache` was created from a persisted blob that passed its
+    /// metadata and digest checks.
+    pub(crate) seeded: bool,
 }
 
 pub(crate) fn load_or_compile_disk_wgsl(
@@ -83,6 +86,7 @@ pub(crate) fn create_compiled_pipeline_cache(
     key: &CompiledPipelineCacheKey,
 ) -> Result<PipelineCacheHandle, BackendError> {
     let data = load_compiled_pipeline_blob(key)?;
+    let seeded = data.is_some();
     let cache = {
         #[allow(unsafe_code)]
         // SAFETY: FFI to wgpu / wgpu-hal native APIs. Handles + sizes are
@@ -97,7 +101,7 @@ pub(crate) fn create_compiled_pipeline_cache(
             })
         }
     };
-    Ok(PipelineCacheHandle { cache })
+    Ok(PipelineCacheHandle { cache, seeded })
 }
 
 pub(crate) fn persist_compiled_pipeline_cache(

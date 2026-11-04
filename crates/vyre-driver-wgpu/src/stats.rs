@@ -35,6 +35,13 @@ pub struct WgpuBackendStats {
     pub pipeline_cache_evictions: u64,
     /// Hit ratio over all pipeline-cache lookups.
     pub pipeline_cache_hit_rate: f64,
+    /// Pipeline compiles whose driver cache was seeded from a persisted blob
+    /// since backend construction. Stays 0 on a device without
+    /// `wgpu::Features::PIPELINE_CACHE`.
+    pub persisted_pipeline_seeded: u64,
+    /// Pipeline compiles that consulted the persistent cache and found no
+    /// usable blob since backend construction.
+    pub persisted_pipeline_cold: u64,
     /// Persistent buffer pool counters (allocations, hits, releases, evictions).
     pub persistent_pool: crate::buffer::BufferPoolStats,
 }
@@ -89,6 +96,8 @@ impl WgpuBackend {
             pipeline_cache_insertions: self.pipeline_cache.insertions(),
             pipeline_cache_evictions: self.pipeline_cache.evictions(),
             pipeline_cache_hit_rate,
+            persisted_pipeline_seeded: self.pipeline_cache.persisted_seeded(),
+            persisted_pipeline_cold: self.pipeline_cache.persisted_cold(),
             persistent_pool,
         }
     }

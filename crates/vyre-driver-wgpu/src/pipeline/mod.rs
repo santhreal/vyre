@@ -374,7 +374,9 @@ impl WgpuPipeline {
         // `create_pipeline_cache` call on a device without the feature is a
         // fatal validation abort, not a recoverable error.
         let pipeline_cache_handle = if device.features().contains(wgpu::Features::PIPELINE_CACHE) {
-            Some(create_compiled_pipeline_cache(device, &artifact_key)?)
+            let handle = create_compiled_pipeline_cache(device, &artifact_key)?;
+            pipeline_cache.record_persisted_lookup(handle.seeded);
+            Some(handle)
         } else {
             None
         };

@@ -28099,7 +28099,7 @@ seam = "portable-driver"
 publication_class = "concrete-backend"
 publication_contract = "target-support:wgpu"
 stability = "backend"
-exported_item_count = 515
+exported_item_count = 517
 
   [[package.item]]
   path = "impl core::convert::From<alloc::vec::Vec<u8>> for vyre_driver_wgpu::engine::graph::GpuResource"
@@ -29027,6 +29027,20 @@ exported_item_count = 515
 
   [[package.item]]
   path = "vyre_driver_wgpu::WgpuBackendStats::adapter_name: alloc::sync::Arc<str>"
+  kind = "field"
+  stability = "backend"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver_wgpu::WgpuBackendStats::persisted_pipeline_cold: u64"
+  kind = "field"
+  stability = "backend"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver_wgpu::WgpuBackendStats::persisted_pipeline_seeded: u64"
   kind = "field"
   stability = "backend"
   feature = "unconditional"

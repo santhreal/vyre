@@ -25,6 +25,8 @@ pub(crate) struct LruPipelineCache {
     misses: AtomicU64,
     insertions: AtomicU64,
     evictions: AtomicU64,
+    persisted_seeded: AtomicU64,
+    persisted_cold: AtomicU64,
     max_entries: u32,
     max_bytes: usize,
 }
@@ -54,6 +56,8 @@ impl LruPipelineCache {
             misses: AtomicU64::new(0),
             insertions: AtomicU64::new(0),
             evictions: AtomicU64::new(0),
+            persisted_seeded: AtomicU64::new(0),
+            persisted_cold: AtomicU64::new(0),
             max_entries: max_entries.max(1),
             max_bytes: max_bytes.max(1),
         }
@@ -335,6 +339,28 @@ impl LruPipelineCache {
     /// Capacity-driven evictions.
     pub(crate) fn evictions(&self) -> u64 {
         self.evictions.load(Ordering::Relaxed)
+    }
+
+    /// Count one compile that consulted the persistent pipeline cache.
+    ///
+    /// `seeded` is whether the driver cache was created from a persisted blob
+    /// that passed its metadata and digest checks.
+    pub(crate) fn record_persisted_lookup(&self, seeded: bool) {
+        if seeded {
+            rebasing_atomic_add_u64(&self.persisted_seeded, 1, "persisted pipeline seeds");
+        } else {
+            rebasing_atomic_add_u64(&self.persisted_cold, 1, "persisted pipeline cold compiles");
+        }
+    }
+
+    /// Compiles whose driver cache was seeded from a persisted blob.
+    pub(crate) fn persisted_seeded(&self) -> u64 {
+        self.persisted_seeded.load(Ordering::Relaxed)
+    }
+
+    /// Compiles that consulted the persistent cache and found no usable blob.
+    pub(crate) fn persisted_cold(&self) -> u64 {
+        self.persisted_cold.load(Ordering::Relaxed)
     }
 }
 

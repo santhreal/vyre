@@ -1125,6 +1125,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   floor or a member of the aggregate percentile field list. A minimum added to
   the record that no reader checks now fails the suite by name instead of
   reaching the artifacts unexamined.
+- `WgpuBackendStats` reports `persisted_pipeline_seeded` and
+  `persisted_pipeline_cold`, the pipeline compiles whose driver cache was or
+  was not created from a persisted blob.
 - Vyre-bench now establishes a typed whole-application workload class and
   records release evidence across dense numerical, irregular stateful, and
   latency-sensitive interactive application domains. Each case compiles a
