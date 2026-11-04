@@ -52,7 +52,26 @@ fn compile_case(case: &SemanticOperation) -> (PersistedLookups, Vec<Vec<u8>>) {
     let program = case
         .program()
         .unwrap_or_else(|| panic!("Fix: persistence case `{}` must provide a program", case.id));
-    let graph = ProgramGraph::from_program(case.id, program.clone())
+    // The dispatch runs first and the counts are read before anything else
+    // compiles, so a process that starts from an empty cache directory has
+    // nothing a seed could come from.
+    let output = backend
+        .dispatch(&program, &input_case, &DispatchConfig::default())
+        .expect("Fix: persistence regression program must dispatch on the wgpu backend");
+    let stats = backend.stats();
+    let lookups = PersistedLookups {
+        seeded: stats.persisted_pipeline_seeded,
+        cold: stats.persisted_pipeline_cold,
+    };
+    if let Some(expected_cases) = case.expected_output {
+        let expected = expected_cases()
+            .into_iter()
+            .next()
+            .expect("Fix: expected-output fixture must contain one case");
+        let tolerance = fp_parity::effective_tolerance(case.id, &program);
+        assert_outputs_within_tolerance(case.id, tolerance, &expected, &output);
+    }
+    let graph = ProgramGraph::from_program(case.id, program)
         .expect("Fix: persistence regression Program must adapt to one canonical graph");
     let request = CompileRequest::new(
         graph,
@@ -68,22 +87,6 @@ fn compile_case(case: &SemanticOperation) -> (PersistedLookups, Vec<Vec<u8>>) {
     let _session =
         vyre_runtime::artifact_admission::ArtifactSession::compile(registration, &request)
             .expect("Fix: persistence regression must materialize an authenticated WGPU artifact");
-    let output = backend
-        .dispatch(&program, &input_case, &DispatchConfig::default())
-        .expect("Fix: persistence regression program must dispatch on the wgpu backend");
-    if let Some(expected_cases) = case.expected_output {
-        let expected = expected_cases()
-            .into_iter()
-            .next()
-            .expect("Fix: expected-output fixture must contain one case");
-        let tolerance = fp_parity::effective_tolerance(case.id, &program);
-        assert_outputs_within_tolerance(case.id, tolerance, &expected, &output);
-    }
-    let stats = backend.stats();
-    let lookups = PersistedLookups {
-        seeded: stats.persisted_pipeline_seeded,
-        cold: stats.persisted_pipeline_cold,
-    };
     (lookups, output)
 }
 
@@ -279,8 +282,8 @@ fn compiled_pipeline_cache_persists_across_backend_reconstruction() {
 
     let (first, first_output) = run_helper(&cache_root, &first_result_root, PIPELINE_CACHE_CASE);
     assert!(
-        first.seeded + first.cold >= 1,
-        "Fix: the dispatch must consult the persistent pipeline cache on a device with `PIPELINE_CACHE` (observed {first:?})"
+        first.cold >= 1,
+        "Fix: a process starting from an empty cache directory must compile at least one pipeline with no persisted blob to seed it (observed {first:?})"
     );
     let pipeline_cache_dir = cache_root.join("pipeline");
     assert!(
