@@ -128,13 +128,15 @@ fn snapshot_directory_matches_publishable_package_set() {
 #[test]
 fn inventory_includes_cuda_and_excludes_private_tooling() {
     let inventory = inventory(&workspace_root());
-    assert!(inventory.contains(&(
-        "vyre-driver-cuda".to_string(),
-        "vyre-driver-cuda".to_string()
-    )));
-    for private in ["xtask", "vyre-bench", "conform/vyre-conform"] {
+    assert!(
+        inventory
+            .iter()
+            .any(|(_, package)| package == "vyre-driver-cuda"),
+        "Fix: the publishable CUDA driver must receive a public API snapshot"
+    );
+    for private in ["xtask", "vyre-bench", "vyre-conform"] {
         assert!(
-            inventory.iter().all(|(member, _)| member != private),
+            inventory.iter().all(|(_, package)| package != private),
             "private workspace member {private} must not receive a public API snapshot"
         );
     }
