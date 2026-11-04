@@ -359,9 +359,9 @@ mod tests {
 
     /// The workspace root must be the directory holding the workspace manifest.
     ///
-    /// This is the anchor every other resolution hangs off. If it drifted (say
-    /// this crate were moved a level deeper) the sibling search would start
-    /// from the wrong place and silently find nothing.
+    /// This is the anchor every other resolution hangs off. If it drifted, every
+    /// roster lookup would read a manifest that is not this workspace's and
+    /// resolve members against the wrong tree.
     #[test]
     fn vyre_workspace_root_is_the_directory_holding_the_workspace_manifest() {
         let root = vyre_workspace_root();
@@ -370,10 +370,12 @@ mod tests {
             "expected a workspace manifest at {}",
             root.join("Cargo.toml").display()
         );
+        let own = vyre_crate_directory(env!("CARGO_PKG_NAME"));
         assert!(
-            root.join("vyre-test-support").join("Cargo.toml").is_file(),
-            "expected this crate to be a direct child of {}",
-            root.display()
+            own.starts_with(&root) && own.join("Cargo.toml").is_file(),
+            "expected this crate's manifest under {}, found {}",
+            root.display(),
+            own.display()
         );
     }
 
@@ -498,8 +500,7 @@ mod tests {
         let quoted = "pub fn declaring_source_file";
         assert_eq!(
             declaring_source_file(quoted),
-            vyre_workspace_root()
-                .join("vyre-test-support")
+            vyre_crate_directory(env!("CARGO_PKG_NAME"))
                 .join("src")
                 .join("monorepo.rs")
         );

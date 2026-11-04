@@ -429,15 +429,7 @@ impl crate::gate::GateBehavior for NeutralCrates {
         let mut optional = Vec::new();
 
         for crate_name in NEUTRAL_CRATES {
-            let manifest = format!("{crate_name}/Cargo.toml");
-            if !tree.has(&manifest) {
-                return Err(GateError::new(
-                    format!("neutral crate `{crate_name}` has no manifest at {manifest}"),
-                    "point the rule at the directory the crate moved to, or drop the name; a \
-                     neutrality rule over a manifest that does not exist reports success \
-                     forever",
-                ));
-            }
+            let manifest = format!("{}/Cargo.toml", tree.member_directory(crate_name)?);
             let text = tree.read(&manifest)?;
             let table = toml::from_str::<toml::Table>(&text).map_err(|error| {
                 GateError::new(

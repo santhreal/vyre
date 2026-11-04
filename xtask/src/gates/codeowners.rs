@@ -52,7 +52,8 @@ const SCHEMA_VERSION: u32 = 1;
 pub struct Boundary {
     /// CODEOWNERS pattern, rooted with a leading slash.
     pub pattern: String,
-    /// Workspace members this pattern covers, empty for a non-package path.
+    /// Package names of the workspace members this pattern covers, empty for a
+    /// non-package path.
     pub packages: Vec<String>,
     /// Why the path is protected.
     pub reason: String,
@@ -68,7 +69,7 @@ pub struct Boundary {
 /// reason repeated twenty times stops reading as a decision.
 #[derive(Debug, Deserialize)]
 pub struct Open {
-    /// Workspace member names as they appear in the root manifest.
+    /// Package names of the workspace members left open.
     pub packages: Vec<String>,
     /// Why no maintainer review is required for them.
     pub reason: String,
@@ -156,10 +157,13 @@ pub fn pattern_matches(pattern: &str, path: &str) -> bool {
 /// one argument: a deleted active file, a renamed boundary, a shadow at a
 /// higher-precedence location, a pattern matching nothing, a member in neither
 /// roster, and a protection payload that stops requiring the owner review.
+///
+/// `members` holds every workspace member as `(package name, directory)`; the
+/// manifest records package names and the patterns match directories.
 #[must_use]
 pub fn audit(
     manifest: &Manifest,
-    members: &[String],
+    members: &[(&str, &str)],
     tracked: &[PathBuf],
     active: Option<&str>,
     present_locations: &[&str],
@@ -208,7 +212,11 @@ pub fn audit(
             ));
         }
         for package in &boundary.packages {
-            if !members.iter().any(|member| member == package) {
+            let directory = members
+                .iter()
+                .find(|(name, _)| *name == package.as_str())
+                .map(|(_, directory)| *directory);
+            let Some(directory) = directory else {
                 findings.push(Finding::in_file(
                     MANIFEST,
                     format!(
@@ -218,12 +226,14 @@ pub fn audit(
                     "name a current member or drop it; the package moved and the boundary \
                      did not follow",
                 ));
-            } else if !pattern_matches(&boundary.pattern, &format!("{package}/Cargo.toml")) {
+                continue;
+            };
+            if !pattern_matches(&boundary.pattern, &format!("{directory}/Cargo.toml")) {
                 findings.push(Finding::in_file(
                     MANIFEST,
                     format!(
-                        "boundary `{}` claims to cover `{package}`, whose directory it does \
-                         not match",
+                        "boundary `{}` claims to cover `{package}`, whose directory \
+                         `{directory}` it does not match",
                         boundary.pattern
                     ),
                     "match the pattern to the member directory; the claim and the pattern \
@@ -253,8 +263,8 @@ pub fn audit(
              which a reader stops at",
         ));
     }
-    for member in members {
-        if !decided.contains(member.as_str()) {
+    for (member, _) in members {
+        if !decided.contains(member) {
             findings.push(Finding::in_file(
                 MANIFEST,
                 format!("workspace member `{member}` records no protection decision"),
@@ -264,7 +274,7 @@ pub fn audit(
         }
     }
     for package in &decided {
-        if !members.iter().any(|member| member == *package) && !package.is_empty() {
+        if !members.iter().any(|(member, _)| member == package) && !package.is_empty() {
             findings.push(Finding::in_file(
                 MANIFEST,
                 format!("`{package}` is recorded but is not a workspace member"),
@@ -350,7 +360,11 @@ impl crate::gate::GateBehavior for Codeowners {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let manifest = parse_manifest(&tree.read(MANIFEST)?)?;
-        let members = tree.members()?;
+        let manifests = tree.member_manifests()?;
+        let members: Vec<(&str, &str)> = manifests
+            .iter()
+            .map(|member| (member.name.as_str(), member.path.as_str()))
+            .collect();
 
         let mut report = Report::clean();
         report.cover_complete("workspace members", members.len());
@@ -436,13 +450,13 @@ mod tests {
             owner: "@team".to_string(),
             protected_branch: "main".to_string(),
             boundary: vec![
-                boundary("/vyre-spec/", &["vyre-spec"]),
+                boundary("/acme-spec/", &["acme-spec"]),
                 boundary(&format!("/{MANIFEST}"), &[]),
                 boundary(&format!("/{ACTIVE}"), &[]),
                 boundary("/xtask/src/gates/codeowners.rs", &[]),
             ],
             open: vec![Open {
-                packages: vec!["vyre-libs".to_string()],
+                packages: vec!["acme-libs".to_string()],
                 reason: "reason".to_string(),
             }],
         }
@@ -451,8 +465,8 @@ mod tests {
     /// Tracked paths the fixture manifest's patterns resolve against.
     fn tracked() -> Vec<PathBuf> {
         [
-            "vyre-spec/src/lib.rs",
-            "vyre-libs/src/lib.rs",
+            "acme-spec/src/lib.rs",
+            "acme-libs/src/lib.rs",
             MANIFEST,
             ACTIVE,
             "xtask/src/gates/codeowners.rs",
@@ -463,8 +477,8 @@ mod tests {
         .collect()
     }
 
-    fn members() -> Vec<String> {
-        vec!["vyre-spec".to_string(), "vyre-libs".to_string()]
+    fn members() -> Vec<(&'static str, &'static str)> {
+        vec![("acme-spec", "acme-spec"), ("acme-libs", "acme-libs")]
     }
 
     /// A protection payload that requires the owner review on `main`.
@@ -553,10 +567,48 @@ mod tests {
     #[test]
     fn a_boundary_claiming_a_package_it_does_not_cover_is_reported() {
         let mut manifest = fixture();
-        manifest.boundary[0] = boundary("/vyre-libs/", &["vyre-spec"]);
+        manifest.boundary[0] = boundary("/acme-libs/", &["acme-spec"]);
         assert!(run(&manifest)
             .iter()
-            .any(|message| message.contains("whose directory it does")));
+            .any(|message| message.contains("whose directory")));
+    }
+
+    /// WHY: a package name is not a directory. A member nested under a grouping
+    /// directory is covered by the pattern matching its directory, and a pattern
+    /// written against its package name covers nothing it holds.
+    #[test]
+    fn a_boundary_is_judged_against_the_member_directory_not_the_package_name() {
+        let mut roster = members();
+        roster.push(("vyre-conform", "conform/vyre-conform"));
+        let mut paths = tracked();
+        paths.push(PathBuf::from("conform/vyre-conform/Cargo.toml"));
+        paths.push(PathBuf::from("vyre-conform/README.md"));
+        for (pattern, covered) in [("/conform/", true), ("/vyre-conform/", false)] {
+            let mut manifest = fixture();
+            manifest.boundary.push(boundary(pattern, &["vyre-conform"]));
+            let rendered = render(&manifest);
+            let messages: Vec<String> = audit(
+                &manifest,
+                &roster,
+                &paths,
+                Some(&rendered),
+                &[ACTIVE],
+                Some(GOOD_SCRIPT),
+            )
+            .iter()
+            .map(|finding| finding.message.to_string())
+            .collect();
+            if covered {
+                assert!(messages.is_empty(), "{pattern}: {messages:?}");
+            } else {
+                assert!(
+                    messages
+                        .iter()
+                        .any(|message| message.contains("whose directory")),
+                    "{pattern}: {messages:?}"
+                );
+            }
+        }
     }
 
     /// WHY: the row's unowned-new-crate mutation. Adding a member must turn this
@@ -566,7 +618,7 @@ mod tests {
     fn a_member_in_neither_roster_is_reported() {
         let manifest = fixture();
         let mut roster = members();
-        roster.push("vyre-newcomer".to_string());
+        roster.push(("vyre-newcomer", "crates/vyre-newcomer"));
         let rendered = render(&manifest);
         let findings = audit(
             &manifest,
@@ -587,7 +639,7 @@ mod tests {
     fn a_member_recorded_twice_is_reported() {
         let mut manifest = fixture();
         manifest.open.push(Open {
-            packages: vec!["vyre-spec".to_string()],
+            packages: vec!["acme-spec".to_string()],
             reason: "second".to_string(),
         });
         assert!(run(&manifest)
@@ -660,7 +712,7 @@ mod tests {
     fn a_hand_edited_active_file_is_reported() {
         let manifest = fixture();
         let mut edited = render(&manifest);
-        edited.push_str("/vyre-libs/ @someone-else\n");
+        edited.push_str("/acme-libs/ @someone-else\n");
         let findings = audit(
             &manifest,
             &members(),
@@ -679,20 +731,20 @@ mod tests {
     #[test]
     fn an_unrooted_pattern_is_reported() {
         let mut manifest = fixture();
-        manifest.boundary[0] = boundary("vyre-spec/", &["vyre-spec"]);
+        manifest.boundary[0] = boundary("acme-spec/", &["acme-spec"]);
         assert!(run(&manifest)
             .iter()
             .any(|message| message.contains("is not rooted")));
     }
 
-    /// WHY: prefix matching that forgets the separator would let `/vyre-spec/`
-    /// claim `vyre-spec-extra/`, quietly widening every directory boundary.
+    /// WHY: prefix matching that forgets the separator would let `/acme-spec/`
+    /// claim `acme-spec-extra/`, quietly widening every directory boundary.
     #[test]
     fn a_directory_pattern_does_not_claim_a_sibling_sharing_its_prefix() {
-        assert!(pattern_matches("/vyre-spec/", "vyre-spec/src/lib.rs"));
+        assert!(pattern_matches("/acme-spec/", "acme-spec/src/lib.rs"));
         assert!(!pattern_matches(
-            "/vyre-spec/",
-            "vyre-spec-extra/src/lib.rs"
+            "/acme-spec/",
+            "acme-spec-extra/src/lib.rs"
         ));
         assert!(pattern_matches("/Cargo.toml", "Cargo.toml"));
         assert!(!pattern_matches("/Cargo.toml", "xtask/Cargo.toml"));

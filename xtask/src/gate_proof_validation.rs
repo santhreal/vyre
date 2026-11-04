@@ -7,7 +7,19 @@ use std::collections::{BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::gate::GateDescriptor;
+use crate::gate::{proof_prefix, GateDescriptor, GATE_PACKAGES};
+
+/// The `src` directory of a gate package, read from the workspace roster.
+fn gate_package_source(root: &Path, package: &str) -> Result<PathBuf, String> {
+    structure_gate::find_member_directory(root, package)
+        .map(|directory| directory.join("src"))
+        .filter(|source| source.is_dir())
+        .ok_or_else(|| {
+            format!(
+                "no workspace member with a `src` directory declares the gate package `{package}`"
+            )
+        })
+}
 
 /// Structural record of a resolved symbol in a package.
 #[derive(Clone, Debug)]
@@ -277,22 +289,14 @@ pub fn validate_all_descriptors(root: &Path, descriptors: &[GateDescriptor]) -> 
 
     // Build one index per package
     let mut indices: HashMap<&'static str, PackageSymbolIndex> = HashMap::new();
-    for package in ["xtask", "xtask-registry", "xtask-evidence"] {
-        let crate_dir = match package {
-            "xtask" => root.join("xtask").join("src"),
-            "xtask-registry" => root.join("xtask-registry").join("src"),
-            "xtask-evidence" => root.join("xtask-evidence").join("src"),
-            _ => continue,
-        };
-        if crate_dir.exists() {
-            let index = PackageSymbolIndex::build(&crate_dir);
-            failures.extend(index.failures.clone());
-            indices.insert(package, index);
-        } else {
-            failures.push(format!(
-                "crate source directory `{}` does not exist",
-                crate_dir.display()
-            ));
+    for (package, _) in GATE_PACKAGES {
+        match gate_package_source(root, package) {
+            Ok(crate_dir) => {
+                let index = PackageSymbolIndex::build(&crate_dir);
+                failures.extend(index.failures.clone());
+                indices.insert(package, index);
+            }
+            Err(failure) => failures.push(failure),
         }
     }
 
@@ -324,25 +328,16 @@ fn validate_proof_with_index(
         return failures;
     }
 
-    let package_prefix = match descriptor.package {
-        "xtask" => "crate::",
-        "xtask-registry" => "xtask_registry::",
-        "xtask-evidence" => "xtask_evidence::",
-        other => {
-            failures.push(format!(
-                "gate `{}` declares unknown owner package `{other}`",
-                descriptor.name
-            ));
-            return failures;
-        }
+    let Some(package_prefix) = proof_prefix(descriptor.package) else {
+        failures.push(format!(
+            "gate `{}` declares unknown owner package `{}`",
+            descriptor.name, descriptor.package
+        ));
+        return failures;
     };
 
     // Check wrong package prefixes
-    for (other_pkg, other_pfx) in [
-        ("xtask", "crate::"),
-        ("xtask-registry", "xtask_registry::"),
-        ("xtask-evidence", "xtask_evidence::"),
-    ] {
+    for (other_pkg, other_pfx) in GATE_PACKAGES {
         if other_pkg != descriptor.package && proof.starts_with(other_pfx) {
             failures.push(format!(
                 "gate `{}` owned by package `{}` declares proof `{proof}` belonging to package `{other_pkg}`",
@@ -419,25 +414,20 @@ fn validate_proof_with_index(
 /// Validate that a gate descriptor's proof symbol is package-qualified and resolves to a real #[test] function.
 pub fn validate_proof_symbol(root: &Path, descriptor: &GateDescriptor) -> Vec<String> {
     let mut failures = Vec::new();
-    let crate_dir = match descriptor.package {
-        "xtask" => root.join("xtask").join("src"),
-        "xtask-registry" => root.join("xtask-registry").join("src"),
-        "xtask-evidence" => root.join("xtask-evidence").join("src"),
-        other => {
-            failures.push(format!(
-                "gate `{}` declares unknown owner package `{other}`",
-                descriptor.name
-            ));
-            return failures;
-        }
-    };
-    if !crate_dir.exists() {
+    if proof_prefix(descriptor.package).is_none() {
         failures.push(format!(
-            "crate source directory `{}` does not exist",
-            crate_dir.display()
+            "gate `{}` declares unknown owner package `{}`",
+            descriptor.name, descriptor.package
         ));
         return failures;
     }
+    let crate_dir = match gate_package_source(root, descriptor.package) {
+        Ok(crate_dir) => crate_dir,
+        Err(failure) => {
+            failures.push(failure);
+            return failures;
+        }
+    };
     let index = PackageSymbolIndex::build(&crate_dir);
     failures.extend(index.failures.clone());
     let mut indices = HashMap::new();
@@ -451,11 +441,24 @@ mod tests {
     use super::*;
     use crate::gate_metadata::GATE_METADATA;
 
+    /// A fixture checkout whose roster declares `xtask` under a grouping
+    /// directory, holding `files` beside its manifest. The proof source is
+    /// read from the roster, so a fixture with no workspace manifest resolves
+    /// no package at all.
+    fn xtask_checkout(files: &[(&str, &str)]) -> (tempfile::TempDir, PathBuf) {
+        let mut tree = vec![
+            ("Cargo.toml", "[workspace]\nmembers = [\"tools/xtask\"]\n"),
+            ("tools/xtask/Cargo.toml", "[package]\nname = \"xtask\"\n"),
+        ];
+        tree.extend_from_slice(files);
+        crate::gates::fixture_checkout::checkout(&tree)
+    }
+
     /// WHY: Section 182 requires proof identities to reject missing symbols fail-closed.
     #[test]
     fn proof_identity_rejects_missing_symbol() {
-        let (_temporary, root) = crate::gates::fixture_checkout::checkout(&[(
-            "xtask/src/gates/architecture_contract.rs",
+        let (_temporary, root) = xtask_checkout(&[(
+            "tools/xtask/src/gates/architecture_contract.rs",
             "#[cfg(test)]\nmod tests {\n    #[test]\n    fn a_real_proof() {}\n}\n",
         )]);
         let descriptor = GateDescriptor {
@@ -482,13 +485,13 @@ mod tests {
     /// WHY: Section 182 requires proof identities to reject ambiguous symbols fail-closed.
     #[test]
     fn proof_identity_rejects_ambiguous_symbol() {
-        let (_temporary, root) = crate::gates::fixture_checkout::checkout(&[
+        let (_temporary, root) = xtask_checkout(&[
             (
-                "xtask/src/gates/alpha.rs",
+                "tools/xtask/src/gates/alpha.rs",
                 "#[cfg(test)]\nmod tests {\n    #[test]\n    fn duplicate_proof() {}\n}\n",
             ),
             (
-                "xtask/src/gates/alpha/mod.rs",
+                "tools/xtask/src/gates/alpha/mod.rs",
                 "#[cfg(test)]\nmod tests {\n    #[test]\n    fn duplicate_proof() {}\n}\n",
             ),
         ]);
@@ -516,10 +519,8 @@ mod tests {
     /// WHY: Section 182 requires proof identities to reject non-test functions fail-closed.
     #[test]
     fn proof_identity_rejects_non_test_symbol() {
-        let (_temporary, root) = crate::gates::fixture_checkout::checkout(&[(
-            "xtask/src/gate_metadata.rs",
-            "pub fn owned_by() {}\n",
-        )]);
+        let (_temporary, root) =
+            xtask_checkout(&[("tools/xtask/src/gate_metadata.rs", "pub fn owned_by() {}\n")]);
         let descriptor = GateDescriptor {
             name: "test-non-test",
             help: "Help text",
@@ -544,8 +545,8 @@ mod tests {
     /// WHY: Section 182 requires proof identities to reject symbols from other packages fail-closed.
     #[test]
     fn proof_identity_rejects_wrong_package_symbol() {
-        let (_temporary, root) = crate::gates::fixture_checkout::checkout(&[(
-            "xtask/src/gates/architecture_contract.rs",
+        let (_temporary, root) = xtask_checkout(&[(
+            "tools/xtask/src/gates/architecture_contract.rs",
             "#[cfg(test)]\nmod tests {\n    #[test]\n    fn a_real_proof() {}\n}\n",
         )]);
         let descriptor = GateDescriptor {
@@ -572,8 +573,8 @@ mod tests {
     /// WHY: Section 182 requires proof identities to reject generic invented enforces_invariants placeholders.
     #[test]
     fn proof_identity_rejects_generic_enforces_invariants() {
-        let (_temporary, root) = crate::gates::fixture_checkout::checkout(&[(
-            "xtask/src/gates/architecture_contract.rs",
+        let (_temporary, root) = xtask_checkout(&[(
+            "tools/xtask/src/gates/architecture_contract.rs",
             "#[cfg(test)]\nmod tests {\n    #[test]\n    fn a_real_proof() {}\n}\n",
         )]);
         let descriptor = GateDescriptor {

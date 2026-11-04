@@ -357,6 +357,7 @@ fn every_xtask_command_module_is_scanned_and_no_test_source_is() {
     let tests = TestSources::of(&root);
     let mut expected = 0usize;
     for source_root in xtask_source_roots(&root) {
+        let source_root = source_root.expect("every xtask crate is a workspace member");
         for entry in tree_walk::pruned(&source_root, BUILD_OUTPUT_AND_VCS).flatten() {
             let path = entry.path();
             if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
@@ -504,6 +505,7 @@ fn hygiene_classifier_separates_test_from_release_blocker() {
 
     let classes = classify_findings(
         Path::new("."),
+        &[],
         &findings,
         &hot_paths,
         &structural_gates(&[]),
@@ -530,6 +532,7 @@ fn undeclared_source_inspection_tests_are_release_blockers() {
 
     let classes = classify_findings(
         Path::new("."),
+        &[],
         &findings,
         &std::collections::BTreeSet::new(),
         &structural_gates(&[]),
@@ -567,6 +570,7 @@ fn only_the_declared_source_inspection_test_is_informational() {
 
     let classes = classify_findings(
         Path::new("/repo"),
+        &[],
         &findings,
         &std::collections::BTreeSet::new(),
         &structural_gates(&[(
@@ -700,6 +704,7 @@ fn a_cfg_test_gated_source_is_test_hygiene_and_the_same_file_ungated_is_not() {
     ]));
     let classes = classify_findings(
         Path::new("/repo"),
+        &[],
         &findings,
         &hot_paths,
         &structural_gates(&[]),
@@ -711,6 +716,7 @@ fn a_cfg_test_gated_source_is_test_hygiene_and_the_same_file_ungated_is_not() {
 
     let classes = classify_findings(
         Path::new("/repo"),
+        &[],
         &findings,
         &hot_paths,
         &structural_gates(&[]),
@@ -743,6 +749,7 @@ fn test_support_crate_findings_are_test_hygiene() {
 
     let classes = classify_findings(
         Path::new("/repo"),
+        &[],
         &findings,
         &hot_paths,
         &structural_gates(&[]),
@@ -826,6 +833,7 @@ fn hygiene_classifier_marks_hot_path_debt_as_release_blocker() {
 
     let classes = classify_findings(
         Path::new("."),
+        &[],
         &findings,
         &hot_paths,
         &structural_gates(&[]),
@@ -1341,25 +1349,33 @@ mod threshold_policy_contracts {
 /// is classified under, and whether the generic source walk skips it. Each rule used to match the literal string
 /// `xtask`, so moving a module into a sibling crate reclassified it as
 /// production source under production thresholds. The crate list is read out
-/// of the workspace manifest at run time, so a fourth xtask crate turns this
-/// red instead of quietly inheriting the wrong rules.
+/// of the workspace manifest at run time and must equal the gate-package
+/// table the release xtask scan reads, so a fourth xtask crate turns this red
+/// instead of quietly inheriting the wrong rules or going unscanned.
 #[test]
 fn every_xtask_crate_carries_the_release_tooling_rules() {
     let manifest = fs::read_to_string(crate::checkout::checkout_root().join("Cargo.toml"))
         .expect("Fix: the workspace manifest must be readable");
-    let crates: Vec<String> = manifest
+    let mut crates: Vec<String> = manifest
         .lines()
         .filter_map(|line| {
             line.trim()
                 .strip_prefix('"')?
                 .strip_suffix("\",")
-                .map(str::to_string)
+                .map(|member| member.rsplit('/').next().unwrap_or(member).to_string())
         })
         .filter(|member| member == "xtask" || member.starts_with("xtask-"))
         .collect();
-    assert!(
-        crates.len() >= 3,
-        "expected the xtask family in the workspace roster, found {crates:?}"
+    let mut scanned: Vec<String> = crate::gate::GATE_PACKAGES
+        .iter()
+        .map(|(package, _)| package.to_string())
+        .collect();
+    scanned.sort();
+    crates.sort();
+    assert_eq!(
+        crates, scanned,
+        "Fix: the workspace roster's xtask family must equal `gate::GATE_PACKAGES`, \
+         the set the release xtask scan reads"
     );
     for member in &crates {
         let source = format!("/w/{member}/src/gates/some_gate.rs");
@@ -1376,23 +1392,74 @@ fn every_xtask_crate_carries_the_release_tooling_rules() {
     }
 }
 
-/// WHY: the intake and classification summaries group findings by the member
-/// they sit in. A path the root prefix fails to strip, or a top-level file,
-/// must still group under its first repository segment rather than under the
-/// absolute prefix, which would put every finding in one bucket.
+/// WHY: the release xtask scan reads each xtask crate's `src` tree. Finding
+/// the family by listing the repository root found nothing once the crates
+/// sat under a grouping directory, and the scan then read zero files and
+/// reported zero findings. The roots are resolved through the roster, so a
+/// nested crate is read from its own directory and a crate the roster does
+/// not declare is returned as an error for the scan to report.
 #[test]
-fn a_finding_groups_under_its_first_repository_segment() {
+fn the_xtask_source_roots_follow_the_roster_and_name_a_missing_crate() {
+    let tree = tempfile::TempDir::new().expect("Fix: create a fixture tree.");
+    let root = tree.path();
+    fs::write(
+        root.join("Cargo.toml"),
+        "[workspace]\nmembers = [\"tools/xtask\", \"tools/xtask-registry\"]\n",
+    )
+    .expect("Fix: write the fixture workspace manifest.");
+    for (directory, package) in [
+        ("tools/xtask", "xtask"),
+        ("tools/xtask-registry", "xtask-registry"),
+    ] {
+        fs::create_dir_all(root.join(directory).join("src"))
+            .expect("Fix: create the fixture member.");
+        fs::write(
+            root.join(directory).join("Cargo.toml"),
+            format!("[package]\nname = \"{package}\"\n"),
+        )
+        .expect("Fix: write the fixture member manifest.");
+    }
+    assert_eq!(
+        xtask_source_roots(root),
+        vec![
+            Ok(root.join("tools/xtask/src")),
+            Ok(root.join("tools/xtask-registry/src")),
+            Err("xtask-evidence"),
+        ]
+    );
+}
+
+/// WHY: the intake and classification summaries group findings by the member
+/// they sit in. A member nested under a grouping directory must group under
+/// its own name, not under the grouping directory, which would put every
+/// member in one bucket; a member whose name prefixes another's must not
+/// claim the other's files. A path the root prefix fails to strip still
+/// resolves, and a file outside every member groups under its first
+/// repository segment rather than under the absolute prefix.
+#[test]
+fn a_finding_groups_under_the_member_that_contains_it() {
     let root = Path::new("/w");
+    let members = [
+        "crates/vyre-driver".to_string(),
+        "crates/vyre-driver-cuda".to_string(),
+        "acme-security".to_string(),
+    ];
     for (path, member) in [
         (
-            "/w/vyre-driver-cuda/src/backend/dispatch.rs",
+            "/w/crates/vyre-driver-cuda/src/backend/dispatch.rs",
             "vyre-driver-cuda",
         ),
-        ("vyre-libs-security/src/taint.rs", "vyre-libs-security"),
+        ("/w/crates/vyre-driver/src/lib.rs", "vyre-driver"),
+        ("acme-security/src/taint.rs", "acme-security"),
+        ("/w/crates/README.md", "crates"),
         ("/w/.github/workflows/ci.yml", ".github"),
         ("/w/Cargo.toml", "Cargo.toml"),
     ] {
-        assert_eq!(hygiene_member_for_path(root, path), member, "{path}");
+        assert_eq!(
+            hygiene_member_for_path(root, &members, path),
+            member,
+            "{path}"
+        );
     }
 }
 

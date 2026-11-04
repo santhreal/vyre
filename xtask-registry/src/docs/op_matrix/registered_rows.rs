@@ -30,15 +30,12 @@ pub(super) fn registered_records(root: &Path, problems: &mut Vec<String>) -> Vec
         wgpu_cells.insert(entry.id.to_string(), wgpu_cell(entry.build));
     }
 
-    // One directory search per namespace and domain, not per operation. The
-    // fallback walks a crate source tree, and 327 registrations share 40-odd
-    // domains, so the uncached reader walked the same trees hundreds of times.
-    let mut owners = BTreeMap::<String, String>::new();
+    let mut checkout = Checkout::read(root);
     ids.into_iter()
         .filter_map(|(id, sources)| {
             let tier = tiers.get(&id).copied().unwrap_or(OpTier::Unknown);
             let wgpu = wgpu_cells.get(&id).copied().unwrap_or("experimental");
-            match record_for_registered_id(root, &mut owners, &id, tier, sources, wgpu) {
+            match record_for_registered_id(&mut checkout, &id, tier, sources, wgpu) {
                 Ok(record) => Some(record),
                 Err(problem) => {
                     problems.push(problem);
@@ -92,6 +89,50 @@ pub(super) fn live_operation_tiers() -> BTreeMap<&'static str, OpTier> {
         .collect()
 }
 
+/// The checkout the owner and suite columns are read from.
+///
+/// A package name is not a directory: members sit under grouping directories,
+/// so every path is resolved through the workspace roster, which is read once
+/// here rather than once per operation.
+struct Checkout<'a> {
+    root: &'a Path,
+    /// Repository-relative directory of every member, by package name.
+    members: BTreeMap<String, String>,
+    /// Every composition crate's `src` tree, read once; see
+    /// [`composition_crate_sources`].
+    compositions: Vec<String>,
+    /// One directory search per namespace and domain, not per operation. The
+    /// fallback walks a crate source tree, and 327 registrations share 40-odd
+    /// domains, so the uncached reader walked the same trees hundreds of times.
+    owners: BTreeMap<String, String>,
+}
+
+impl<'a> Checkout<'a> {
+    fn read(root: &'a Path) -> Self {
+        let members: BTreeMap<String, String> = structure_gate::member_directories(root)
+            .into_iter()
+            .map(|(package, directory)| {
+                let relative = directory.strip_prefix(root).unwrap_or(&directory);
+                (package, relative.to_string_lossy().replace('\\', "/"))
+            })
+            .collect();
+        let compositions = composition_crate_sources(root, &members);
+        Self {
+            root,
+            members,
+            compositions,
+            owners: BTreeMap::new(),
+        }
+    }
+
+    /// The member directory of `package`, or the package name itself when the
+    /// roster declares no such member, so the row names a path
+    /// `vyre-conform` `op_matrix_truth` reports instead of a plausible one.
+    fn directory<'p>(&'p self, package: &'p str) -> &'p str {
+        self.members.get(package).map_or(package, String::as_str)
+    }
+}
+
 fn push_registered(
     ids: &mut BTreeMap<String, BTreeSet<String>>,
     id: &str,
@@ -108,8 +149,7 @@ fn push_registered(
 }
 
 fn record_for_registered_id(
-    root: &Path,
-    owners: &mut BTreeMap<String, String>,
+    checkout: &mut Checkout<'_>,
     id: &str,
     tier: OpTier,
     sources: BTreeSet<String>,
@@ -129,7 +169,7 @@ fn record_for_registered_id(
     let record = OpRecord {
         family: id.to_string(),
         tier,
-        owners: owner_paths(root, owners, id, tier)?,
+        owners: owner_paths(checkout, id, tier)?,
         ops: vec![id.to_string()],
         duplicate_ok: sources.len() > 1,
         registry_sources: sources.into_iter().collect(),
@@ -139,7 +179,7 @@ fn record_for_registered_id(
         wgpu,
         spirv: "experimental",
         release_blocking_notes: release_notes(id, tier)?,
-        tests: test_paths(id, tier)?,
+        tests: test_paths(checkout, id, tier)?,
     };
 
     Ok(record)
@@ -162,14 +202,9 @@ fn record_for_registered_id(
 /// reported as the id that carries it rather than taking the empty owner list a
 /// foundation op gets. An empty list reads as "defined by the IR", which is the
 /// one answer that would let a new tier ship with no owner and no finding.
-fn owner_paths(
-    root: &Path,
-    owners: &mut BTreeMap<String, String>,
-    id: &str,
-    tier: OpTier,
-) -> Result<Vec<String>, String> {
+fn owner_paths(checkout: &mut Checkout<'_>, id: &str, tier: OpTier) -> Result<Vec<String>, String> {
     match tier {
-        OpTier::Intrinsic | OpTier::Library => Ok(vec![namespace_source_dir(root, owners, id)]),
+        OpTier::Intrinsic | OpTier::Library => Ok(vec![namespace_source_dir(checkout, id)]),
         OpTier::Foundation | OpTier::External | OpTier::Unknown => Ok(Vec::new()),
         tier => Err(format!(
             "Fix: op id `{id}` declares tier `{tier:?}`, which reaches no owner rule. Record where a registration of that tier keeps its definition, in `owner_paths` of the op matrix rows."
@@ -197,17 +232,17 @@ fn owner_paths(
 /// A domain is not always a top-level module. The optimizer and quantization
 /// ops moved under `nn`, so the search runs over the whole crate source tree
 /// through [`source_directory_named`] once the top-level answer holds no code.
-fn namespace_source_dir(root: &Path, owners: &mut BTreeMap<String, String>, id: &str) -> String {
+fn namespace_source_dir(checkout: &mut Checkout<'_>, id: &str) -> String {
     let Some((crate_name, rest)) = id.split_once("::") else {
         return String::new();
     };
     let domain = rest.split("::").next().unwrap_or("unknown");
     let key = format!("{crate_name}/{domain}");
-    if let Some(found) = owners.get(&key) {
+    if let Some(found) = checkout.owners.get(&key) {
         return found.clone();
     }
-    let found = resolve_source_dir(root, crate_name, domain);
-    owners.insert(key, found.clone());
+    let found = resolve_source_dir(checkout, crate_name, domain);
+    checkout.owners.insert(key, found.clone());
     found
 }
 
@@ -217,13 +252,16 @@ fn namespace_source_dir(root: &Path, owners: &mut BTreeMap<String, String>, id: 
 /// crate this checkout ships, walked rather than written down: the facade was
 /// split into one crate per domain, and a list of the twenty-two names would
 /// have to be edited again on the next split to keep resolving.
-fn resolve_source_dir(root: &Path, crate_name: &str, domain: &str) -> String {
-    let minted = format!("{crate_name}/src/{domain}");
-    let own = format!("{crate_name}/src");
-    let mut candidates = vec![own.clone()];
+fn resolve_source_dir(checkout: &Checkout<'_>, crate_name: &str, domain: &str) -> String {
+    let root = checkout.root;
+    let own = format!("{}/src", checkout.directory(crate_name));
+    let minted = format!("{own}/{domain}");
+    let mut candidates = vec![own.as_str()];
     candidates.extend(
-        composition_crate_sources(root)
-            .into_iter()
+        checkout
+            .compositions
+            .iter()
+            .map(String::as_str)
             .filter(|source| *source != own),
     );
 
@@ -261,31 +299,25 @@ fn resolve_source_dir(root: &Path, crate_name: &str, domain: &str) -> String {
     minted
 }
 
-/// Every `vyre-libs*` crate in the checkout that ships a `src` tree, as
-/// `<crate>/src`, shallowest name first for a stable answer.
+/// Every `vyre-libs*` member of the roster that ships a `src` tree, as
+/// `<member directory>/src`, sorted by package name for a stable answer.
 ///
 /// Shipping a `src` tree is read from the Rust source under it. The split of
 /// `vyre-libs` into 22 domain crates left a `src` directory behind in every
 /// checkout that pulled a deletion, and a crate named from such a shell reaches
 /// the owner column as the owner of code defined somewhere else.
-fn composition_crate_sources(root: &Path) -> Vec<String> {
-    let Ok(entries) = std::fs::read_dir(root) else {
-        return Vec::new();
-    };
-    let mut sources: Vec<String> = entries
-        .flatten()
-        .filter_map(|entry| {
-            let name = entry.file_name().to_string_lossy().into_owned();
-            let is_composition = name == "vyre-libs"
-                || name
+fn composition_crate_sources(root: &Path, members: &BTreeMap<String, String>) -> Vec<String> {
+    members
+        .iter()
+        .filter(|(package, _)| {
+            package.as_str() == "vyre-libs"
+                || package
                     .strip_prefix("vyre-libs-")
-                    .is_some_and(|domain| !domain.is_empty());
-            (is_composition && carries_rust_source(&entry.path().join("src")))
-                .then(|| format!("{name}/src"))
+                    .is_some_and(|domain| !domain.is_empty())
         })
-        .collect();
-    sources.sort();
-    sources
+        .map(|(_, directory)| format!("{directory}/src"))
+        .filter(|source| carries_rust_source(&root.join(source)))
+        .collect()
 }
 
 /// Suites that judge one operation, per tier.
@@ -296,19 +328,23 @@ fn composition_crate_sources(root: &Path) -> Vec<String> {
 /// no suite, and an empty list here reads as an operation the harnesses already
 /// cover, so the tier is reported instead. Naming a new tier in one field rule
 /// and not the others is exactly how a row ships judged by nothing.
-fn test_paths(id: &str, tier: OpTier) -> Result<Vec<String>, String> {
+fn test_paths(checkout: &Checkout<'_>, id: &str, tier: OpTier) -> Result<Vec<String>, String> {
     let mut tests = match tier {
         OpTier::Intrinsic => {
             let crate_name = id.split_once("::").map_or("", |(name, _)| name);
+            let directory = checkout.directory(crate_name);
             let domain = id.split("::").nth(1).unwrap_or("");
             if domain == "hardware" {
-                vec![format!("{crate_name}/tests/hardware_conform.rs")]
+                vec![format!("{directory}/tests/hardware_conform.rs")]
             } else {
-                vec![format!("{crate_name}/tests/integration.rs")]
+                vec![format!("{directory}/tests/integration.rs")]
             }
         }
         OpTier::Library | OpTier::External => {
-            vec!["vyre-libs/tests/universal_harness.rs".to_string()]
+            vec![format!(
+                "{}/tests/universal_harness.rs",
+                checkout.directory("vyre-libs")
+            )]
         }
         OpTier::Foundation | OpTier::Unknown => Vec::new(),
         tier => {
@@ -317,7 +353,10 @@ fn test_paths(id: &str, tier: OpTier) -> Result<Vec<String>, String> {
             ));
         }
     };
-    tests.push("conform/vyre-conform/tests/op_matrix_truth/mod.rs".to_string());
+    tests.push(format!(
+        "{}/tests/op_matrix_truth/mod.rs",
+        checkout.directory("vyre-conform")
+    ));
     Ok(tests)
 }
 

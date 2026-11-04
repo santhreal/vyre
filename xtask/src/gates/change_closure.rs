@@ -8,13 +8,14 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use syn::spanned::Spanned;
 
 use crate::artifact_gate::{settle_inspection, Inspection};
 use crate::gate::{GateBehavior, GateCtx, GateError, Report};
+use crate::gates::scan::Tree;
 
 /// Path of the canonical symbol-level change-closure manifest.
 pub const MANIFEST_PATH: &str = "docs/generated/change-closure.toml";
@@ -143,25 +144,15 @@ const SCANNED_CRATES: &[&str] = &[
 ///
 /// Returns `GateError` if sources or public API snapshots cannot be read.
 pub fn collect_change_closure(root: &Path) -> Result<ChangeClosureManifest, GateError> {
+    let tree = Tree::open(root)?;
     let mut closures = Vec::new();
     let public_apis = load_public_apis(root);
 
     for crate_name in SCANNED_CRATES {
-        let crate_dir = root.join(crate_name).join("src");
-        if !crate_dir.exists() {
-            continue;
-        }
-        let rs_files = collect_rust_files(&crate_dir);
-        for file in rs_files {
-            let rel_path = file.strip_prefix(root).unwrap_or(&file);
-            let rel_str = rel_path.to_string_lossy().to_string();
-            let text = fs::read_to_string(&file).map_err(|e| {
-                GateError::new(
-                    format!("cannot read `{rel_str}`: {e}"),
-                    "ensure workspace files are readable",
-                )
-            })?;
-
+        let source = format!("{}/src", tree.member_directory(crate_name)?);
+        for file in tree.rust(&[source.as_str()])? {
+            let rel_str = file.to_string_lossy().replace('\\', "/");
+            let text = tree.read(&file)?;
             let parsed = syn::parse_file(&text).map_err(|e| {
                 GateError::new(
                     format!("syntax parse error in `{rel_str}`: {e}"),
@@ -184,22 +175,6 @@ pub fn collect_change_closure(root: &Path) -> Result<ChangeClosureManifest, Gate
         schema_version: 1,
         closures,
     })
-}
-
-fn collect_rust_files(dir: &Path) -> Vec<PathBuf> {
-    let mut files = Vec::new();
-    if let Ok(entries) = fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                files.extend(collect_rust_files(&path));
-            } else if path.is_file() && path.extension().is_some_and(|e| e == "rs") {
-                files.push(path);
-            }
-        }
-    }
-    files.sort();
-    files
 }
 
 fn load_public_apis(root: &Path) -> BTreeMap<String, String> {

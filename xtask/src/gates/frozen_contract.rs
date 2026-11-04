@@ -140,16 +140,18 @@ impl crate::gate::GateBehavior for BackendExtension {
             }
         }
 
+        let members = tree.member_manifests()?;
         for backend in BACKENDS {
-            let manifest = format!("{backend}/Cargo.toml");
-            if !tree.exists(&manifest) {
+            let Some(member) = members.iter().find(|member| member.name == *backend) else {
                 report.find(Finding::in_file(
-                    manifest,
-                    "backend crate manifest is missing",
+                    "Cargo.toml",
+                    format!("no workspace member declares the backend crate `{backend}`"),
                     "restore the crate, or delete it from the backend list in this gate",
                 ));
                 continue;
-            }
+            };
+            let directory = &member.path;
+            let manifest = format!("{directory}/Cargo.toml");
             let text = tree.read(&manifest)?;
             let toml_val: Option<toml::Value> = toml::from_str(&text).ok();
             let has_dep = |dep: &str| -> bool {
@@ -170,7 +172,7 @@ impl crate::gate::GateBehavior for BackendExtension {
                 ));
             }
 
-            let sources = tree.rust(&[&format!("{backend}/src")])?;
+            let sources = tree.rust(&[&format!("{directory}/src")])?;
             let mut implements_backend = false;
             for file in &sources {
                 if let Ok(content) = tree.read(file) {
@@ -197,7 +199,7 @@ impl crate::gate::GateBehavior for BackendExtension {
             }
             if !implements_backend {
                 report.find(Finding::in_file(
-                    format!("{backend}/src"),
+                    format!("{directory}/src"),
                     format!("{backend} does not implement the backend trait in its own crate"),
                     "keep a backend one crate that implements the backend trait",
                 ));
@@ -226,7 +228,7 @@ impl crate::gate::GateBehavior for BackendExtension {
                 for (message, matcher) in raw_registration_requirements() {
                     if tree.hits(&sources, |line| matcher(line))?.is_empty() {
                         report.find(Finding::in_file(
-                            format!("{backend}/src"),
+                            format!("{directory}/src"),
                             format!("{backend} {message}"),
                             format!(
                                 "submit the record from the backend crate, or register \

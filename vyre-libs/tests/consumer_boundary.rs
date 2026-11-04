@@ -8,7 +8,7 @@
 use vyre_test_support::consumer_boundary::{
     assert_source_does_not_name_downstream_consumers, ConsumerBoundaryScan,
 };
-use vyre_test_support::monorepo::vyre_workspace_root;
+use vyre_test_support::monorepo::vyre_crate_directory;
 
 /// vyre-libs is a substrate-neutral primitive library: no source file may name a
 /// downstream consumer or sibling integration. The former security/dataflow
@@ -19,7 +19,7 @@ use vyre_test_support::monorepo::vyre_workspace_root;
 #[test]
 fn library_source_does_not_name_downstream_consumers() {
     assert_source_does_not_name_downstream_consumers(
-        ConsumerBoundaryScan::for_crate("vyre-libs", vyre_workspace_root().join("vyre-libs"))
+        ConsumerBoundaryScan::for_crate("vyre-libs", vyre_crate_directory(env!("CARGO_PKG_NAME")))
             .with_rationale("vyre-libs is a substrate-neutral primitive library"),
     );
 }

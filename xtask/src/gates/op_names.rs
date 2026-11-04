@@ -133,9 +133,10 @@ fn is_op_source(path: &Path) -> bool {
 /// crate is covered by the rule the day it is declared.
 fn library_family_roots(tree: &Tree) -> Result<Vec<String>, GateError> {
     Ok(tree
-        .members()?
+        .member_manifests()?
         .into_iter()
-        .filter(|member| member == "vyre-libs" || member.starts_with("vyre-libs-"))
+        .filter(|member| member.name == "vyre-libs" || member.name.starts_with("vyre-libs-"))
+        .map(|member| member.path)
         .collect())
 }
 

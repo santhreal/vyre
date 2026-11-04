@@ -1,4 +1,3 @@
-use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -126,25 +125,18 @@ pub(crate) fn is_xtask_tree_directory(name: &str) -> bool {
     name == "xtask" || name.starts_with("xtask-")
 }
 
-/// The `src` directory of every xtask crate, `xtask` first.
-pub(crate) fn xtask_source_roots(root: &Path) -> Vec<PathBuf> {
-    let mut roots = vec![root.join("xtask/src")];
-    let mut siblings: Vec<PathBuf> = fs::read_dir(root)
-        .into_iter()
-        .flatten()
-        .flatten()
-        .map(|entry| entry.path())
-        .filter(|path| {
-            path.file_name()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| name.starts_with("xtask-"))
+/// The `src` directory of every xtask crate, `xtask` first, resolved through
+/// the workspace roster. A package the roster does not declare is returned as
+/// its name, so the caller reports it instead of scanning nothing.
+pub(crate) fn xtask_source_roots(root: &Path) -> Vec<Result<PathBuf, &'static str>> {
+    crate::gate::GATE_PACKAGES
+        .iter()
+        .map(|(package, _)| {
+            structure_gate::find_member_directory(root, package)
+                .map(|directory| directory.join("src"))
+                .ok_or(*package)
         })
-        .map(|path| path.join("src"))
-        .filter(|path| path.is_dir())
-        .collect();
-    siblings.sort();
-    roots.extend(siblings);
-    roots
+        .collect()
 }
 
 /// Hold every xtask source file to the same command hygiene as the tree it gates.
@@ -160,6 +152,19 @@ pub(crate) fn scan_release_xtask(
     findings: &mut Vec<HygieneFinding>,
 ) {
     for source_root in xtask_source_roots(root) {
+        let source_root = match source_root {
+            Ok(source_root) => source_root,
+            Err(package) => {
+                findings.push(HygieneFinding {
+                    path: root.join("Cargo.toml").display().to_string(),
+                    line: 1,
+                    pattern: "unreadable_scan_entry",
+                    text: format!("no workspace member declares the xtask crate `{package}`"),
+                    test: None,
+                });
+                continue;
+            }
+        };
         for entry in tree_walk::pruned(&source_root, BUILD_OUTPUT_AND_VCS) {
             let entry = match entry {
                 Ok(entry) => entry,

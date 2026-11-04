@@ -13,10 +13,10 @@ protected_branch = "main"
 # higher-precedence location silently replaces the whole policy. The gate
 # refuses one at any location.
 #
-# Every workspace member appears exactly once: named by a boundary that covers
-# it, or listed under `[[open]]` with the reason no maintainer review is
-# required. A new crate matches neither and turns the gate red until someone
-# records the decision.
+# Every workspace member appears exactly once, by package name: named by a
+# boundary whose pattern matches the member's directory, or listed under
+# `[[open]]` with the reason no maintainer review is required. A new crate
+# matches neither and turns the gate red until someone records the decision.
 
 # ─── Specification and semantics ───────────────────────────────────
 
@@ -46,7 +46,7 @@ defends = "oracle poisoning, silent host execution"
 
 [[boundary]]
 pattern = "/conform/"
-packages = ["conform/vyre-conform-spec", "conform/vyre-conform"]
+packages = ["vyre-conform-spec", "vyre-conform"]
 reason = "The conformance harness, its certificate schema and the parity matrices."
 defends = "rigged tests, silent coverage holes, no proof for all inputs"
 

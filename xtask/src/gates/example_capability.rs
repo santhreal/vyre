@@ -442,14 +442,15 @@ fn unknown_placeholders(text: &str) -> Vec<String> {
 /// is the one thing this gate exists to prevent.
 fn checkout_patch_section(root: &Path, manifest: &str) -> Result<String, String> {
     let parsed: toml::Table = toml::from_str(manifest).map_err(|error| error.to_string())?;
+    let members = structure_gate::member_directories(root);
     let mut section = String::from("\n[patch.crates-io]\n");
     for name in crate::manifest_walk::dependency_names(&parsed) {
-        if !root.join(&name).join("Cargo.toml").is_file() {
+        let Some(directory) = members.get(&name) else {
             continue;
-        }
+        };
         section.push_str(&format!(
             "{name} = {{ path = \"{}\" }}\n",
-            root.join(&name).display()
+            directory.display()
         ));
     }
     Ok(section)
@@ -466,13 +467,13 @@ fn stale_pin_findings(root: &Path, subject: &str, manifest: &str) -> Vec<Finding
     let Ok(parsed) = toml::from_str::<toml::Table>(manifest) else {
         return Vec::new();
     };
+    let members = structure_gate::member_directories(root);
     let mut findings = Vec::new();
     for name in crate::manifest_walk::dependency_names(&parsed) {
-        let member = root.join(&name).join("Cargo.toml");
-        if !member.is_file() {
+        let Some(directory) = members.get(&name) else {
             continue;
-        }
-        let Some(declared) = manifest_version(&member) else {
+        };
+        let Some(declared) = manifest_version(&directory.join("Cargo.toml")) else {
             continue;
         };
         let Some(required) = dependency_requirement(&parsed, &name) else {
@@ -541,8 +542,10 @@ mod tests {
     /// the surface in this checkout. That is exactly how a template kept
     /// importing two functions the shipping crate exports and the published one
     /// does not. The check reads the requirement from the rendered manifest and
-    /// the version from the member beside it, so a workspace bump turns it red
-    /// until the template follows.
+    /// the version from the member the workspace roster resolves, so a
+    /// workspace bump turns it red until the template follows. The member sits
+    /// under a grouping directory, so a lookup that reads the package name as
+    /// a directory finds nothing and fails the stale case.
     #[test]
     fn a_template_pinned_off_the_checkout_version_is_named() {
         let root = std::env::temp_dir().join(format!(
@@ -550,8 +553,13 @@ mod tests {
             std::process::id(),
             line!()
         ));
-        let member = root.join("vyre-libs");
+        let member = root.join("crates/vyre-libs");
         std::fs::create_dir_all(&member).expect("create member directory");
+        std::fs::write(
+            root.join("Cargo.toml"),
+            "[workspace]\nmembers = [\"crates/vyre-libs\"]\n",
+        )
+        .expect("write workspace manifest");
         std::fs::write(
             member.join("Cargo.toml"),
             "[package]\nname = \"vyre-libs\"\nversion = \"0.8.0\"\n",
@@ -632,7 +640,10 @@ mod tests {
             .filter_map(|line| line.split_once(" = ").map(|(name, _)| name))
             .collect();
         assert_eq!(patched, vec!["vyre", "vyre-libs", "vyre-reference"]);
-        assert!(section.contains(&format!("path = \"{}\"", root.join("vyre").display())));
+        assert!(section.contains(&format!(
+            "path = \"{}\"",
+            structure_gate::member_directory(&root, "vyre").display()
+        )));
     }
 
     /// WHY: a template that renders to something cargo cannot parse used to

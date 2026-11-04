@@ -77,7 +77,7 @@ fn the_resolved_root_is_the_tree_this_run_is_inside() {
 #[test]
 fn a_member_directory_resolves_to_the_workspace_above_it() {
     let root = canonical(&structure_gate::workspace_root());
-    let member = root.join("structure-gate");
+    let member = structure_gate::member_directory(&root, env!("CARGO_PKG_NAME"));
     assert!(
         member.join("Cargo.toml").is_file(),
         "fixture manifest moved: {}",

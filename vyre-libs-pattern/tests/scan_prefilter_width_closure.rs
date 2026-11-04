@@ -131,7 +131,7 @@ fn rows() -> Vec<WidthRow> {
 }
 
 fn crate_root() -> std::path::PathBuf {
-    vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs-pattern")
+    vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"))
 }
 
 /// The `PrefilterWidth` variant names, read out of the width table's own source.

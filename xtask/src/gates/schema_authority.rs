@@ -23,6 +23,13 @@ impl GateBehavior for SchemaAuthorityGate {
         let tree = Tree::open(&ctx.root)?;
         let mut scanned_count = 0usize;
         let tests = TestSources::of(tree.root());
+        // The xtask family is tooling, not a persisted or transmitted record.
+        let members = tree.member_manifests()?;
+        let tooling: Vec<&str> = members
+            .iter()
+            .filter(|member| crate::gate::proof_prefix(&member.name).is_some())
+            .map(|member| member.path.as_str())
+            .collect();
 
         for path in tree.paths() {
             let path_str = path.to_string_lossy().replace('\\', "/");
@@ -32,7 +39,7 @@ impl GateBehavior for SchemaAuthorityGate {
                 || path_str.ends_with("vyre-spec/src/schema_registry/mod.rs")
                 || path_str.ends_with("vyre-spec/src/compatibility.rs")
                 || path_str.ends_with("vyre-foundation/src/serial/schema_authority.rs")
-                || path_str.starts_with("xtask")
+                || tooling.iter().any(|directory| path.starts_with(directory))
             {
                 continue;
             }

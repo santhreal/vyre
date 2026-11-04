@@ -642,9 +642,7 @@ fn pinned_baseline_registry() -> Vec<toml::Value> {
 }
 
 fn baselines_dir() -> std::path::PathBuf {
-    vyre_test_support::monorepo::vyre_workspace_root()
-        .join("vyre-bench")
-        .join("baselines")
+    vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME")).join("baselines")
 }
 
 fn registry_str<'a>(entry: &'a toml::Value, field: &str) -> &'a str {

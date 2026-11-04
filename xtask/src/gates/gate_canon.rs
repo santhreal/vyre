@@ -30,6 +30,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::gate::{Finding, GateCtx, GateError, RegisteredGate, Report};
+use crate::gates::scan::Tree;
 use crate::subcommands;
 
 /// Every registered gate no subset contains.
@@ -183,33 +184,16 @@ fn gate_sources(root: &Path, registry: &[RegisteredGate]) -> Result<Vec<String>,
             crates.insert(gate.package());
         }
     }
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(["ls-files", "-z", "--"])
-        .args(crates.iter().map(|package| format!("{package}/src")))
-        .output()
-        .map_err(|error| {
-            GateError::new(
-                format!("cannot list the gate sources: {error}"),
-                "run this gate inside a git checkout of the repository",
-            )
-        })?;
-    if !output.status.success() {
-        return Err(GateError::new(
-            format!(
-                "cannot list the gate sources: git ls-files exited {}",
-                output.status
-            ),
-            "run this gate inside a git checkout of the repository",
-        ));
+    let tree = Tree::open(root)?;
+    let mut directories = Vec::with_capacity(crates.len());
+    for package in &crates {
+        directories.push(format!("{}/src", tree.member_directory(package)?));
     }
-    let mut files: Vec<String> = output
-        .stdout
-        .split(|byte| *byte == 0)
-        .filter(|entry| !entry.is_empty())
-        .map(|entry| String::from_utf8_lossy(entry).into_owned())
-        .filter(|path| path.ends_with(".rs"))
+    let roots: Vec<&str> = directories.iter().map(String::as_str).collect();
+    let mut files: Vec<String> = tree
+        .rust(&roots)?
+        .into_iter()
+        .map(|path| path.to_string_lossy().replace('\\', "/"))
         .collect();
     if files.is_empty() {
         return Err(GateError::new(

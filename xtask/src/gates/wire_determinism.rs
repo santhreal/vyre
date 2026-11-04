@@ -58,7 +58,7 @@ impl crate::gate::GateBehavior for WireDeterminism {
             ));
         }
 
-        let manifest_path = format!("{WIRE_CRATE}/Cargo.toml");
+        let manifest_path = format!("{}/Cargo.toml", tree.member_directory(WIRE_CRATE)?);
         let manifest = tree.read_toml(&manifest_path)?;
         let declared: BTreeSet<String> = manifest
             .get("features")

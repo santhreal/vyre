@@ -156,6 +156,7 @@ impl GateBehavior for HygieneMatrix {
         let mut scanned_files = 0usize;
         let mut findings = Vec::new();
         let tests = TestSources::of(&root);
+        let members = crate::gates::scan::Tree::open(&root)?.members()?;
         scan_root(&root, &tests, &mut scanned_files, &mut findings);
         scan_source_inspection_test_files(&root, &tests, &mut scanned_files, &mut findings);
         scan_release_xtask(&root, &tests, &mut scanned_files, &mut findings);
@@ -168,8 +169,14 @@ impl GateBehavior for HygieneMatrix {
         let release_surface_coverage = release_surface_coverage(&root);
         let hot_paths = load_hot_path_files(&root);
         let mut structural_gates = load_structural_gates(&root);
-        let finding_classes =
-            classify_findings(&root, &findings, &hot_paths, &structural_gates, &tests);
+        let finding_classes = classify_findings(
+            &root,
+            &members,
+            &findings,
+            &hot_paths,
+            &structural_gates,
+            &tests,
+        );
         let panic_budget = collect_panic_budget(&root, &finding_classes);
         structural_gates.blockers.extend(stale_declaration_blockers(
             &root,

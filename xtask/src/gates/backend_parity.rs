@@ -60,7 +60,8 @@ impl crate::gate::GateBehavior for SpirvParity {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
         report.cover_complete("backend parity operations", tree.all_rust().len());
-        let manifest_path = format!("{SPIRV_CRATE}/Cargo.toml");
+        let spirv_dir = tree.member_directory(SPIRV_CRATE)?;
+        let manifest_path = format!("{spirv_dir}/Cargo.toml");
         let manifest = tree.read_toml(&manifest_path)?;
 
         let declares_feature = manifest
@@ -77,7 +78,7 @@ impl crate::gate::GateBehavior for SpirvParity {
 
         let gated = gated_targets(&manifest, SPIRV_FEATURE);
         let mut gated_sources = BTreeSet::new();
-        for harness in gated_harnesses(&manifest, SPIRV_CRATE, SPIRV_FEATURE) {
+        for harness in gated_harnesses(&manifest, &spirv_dir, SPIRV_FEATURE) {
             gated_sources.insert(harness.clone());
             let Ok(text) = tree.read(Path::new(&harness)) else {
                 continue;
@@ -85,7 +86,7 @@ impl crate::gate::GateBehavior for SpirvParity {
             gated_sources.extend(harness_modules(&text, &harness));
         }
         for path in tree.paths() {
-            let Some(target) = test_target(path, SPIRV_CRATE) else {
+            let Some(target) = test_target(path, &spirv_dir) else {
                 continue;
             };
             let text = tree.read(path)?;
@@ -157,15 +158,16 @@ impl crate::gate::GateBehavior for CudaParity {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
         report.cover_complete("backend parity operations", tree.all_rust().len());
+        let cuda_dir = tree.member_directory(CUDA_CRATE)?;
         let targets: BTreeSet<String> = tree
             .paths()
             .iter()
-            .filter_map(|path| test_target(path, CUDA_CRATE))
+            .filter_map(|path| test_target(path, &cuda_dir))
             .collect();
 
         if targets.is_empty() {
             report.find(Finding::new(
-                format!("no tracked test target under `{CUDA_CRATE}/tests`, so the device job would report a clean backend with nothing to run"),
+                format!("no tracked test target under `{cuda_dir}/tests`, so the device job would report a clean backend with nothing to run"),
                 "restore the parity suite; a device gate that runs nothing is the defect it guards",
             ));
             return Ok(report);

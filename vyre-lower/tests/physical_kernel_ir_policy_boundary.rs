@@ -24,20 +24,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use vyre_lower::{verify_descriptor, KernelOpKind};
-
-/// Workspace root, whether the test runs from the workspace or from the crate directory.
-fn workspace_root() -> PathBuf {
-    let here = Path::new(".");
-    if here.join("docs/CRATE_OWNERSHIP.toml").exists() {
-        return here.to_path_buf();
-    }
-    let parent = Path::new("..");
-    assert!(
-        parent.join("docs/CRATE_OWNERSHIP.toml").exists(),
-        "cannot locate the workspace root from the test working directory"
-    );
-    parent.to_path_buf()
-}
+use vyre_test_support::monorepo::{vyre_crate_directory, vyre_workspace_rosters};
 
 /// Every `.rs` file under `dir`, recursively.
 fn rust_sources(dir: &Path) -> Vec<PathBuf> {
@@ -193,44 +180,41 @@ fn code_identifiers(code: &str) -> BTreeSet<String> {
 }
 
 /// The backend names the workspace publishes, derived from its driver and emitter members.
-fn backend_names(root: &Path) -> BTreeSet<String> {
-    let mut names = BTreeSet::new();
-    let entries = std::fs::read_dir(root).expect("workspace root is readable");
-    for entry in entries {
-        let path = entry.expect("valid dir entry").path();
-        if !path.is_dir() {
-            continue;
-        }
-        let Some(member) = path.file_name().and_then(|name| name.to_str()) else {
-            continue;
-        };
-        for prefix in ["vyre-driver-", "vyre-emit-"] {
-            if let Some(suffix) = member.strip_prefix(prefix) {
-                names.insert(suffix.to_string());
-            }
-        }
-    }
+fn backend_names() -> BTreeSet<String> {
+    let members = vyre_workspace_rosters().members;
+    let names: BTreeSet<String> = members
+        .iter()
+        .filter_map(|member| {
+            let directory = member.rsplit('/').next().unwrap_or(member);
+            ["vyre-driver-", "vyre-emit-"]
+                .iter()
+                .find_map(|prefix| directory.strip_prefix(prefix))
+                .map(str::to_string)
+        })
+        .collect();
     assert!(
         names.len() >= 5,
-        "derived {} backend name(s) from {}, which cannot be the whole backend set",
-        names.len(),
-        root.display()
+        "derived {} backend name(s) from the workspace members {members:?}, which cannot be \
+         the whole backend set",
+        names.len()
     );
     names
 }
 
 #[test]
 fn no_physical_kernel_ir_type_names_a_schedule_owner_type() {
-    let root = workspace_root();
-    let mut semantic = declared_public_types(&root.join("vyre-foundation/src/execution_plan"));
-    semantic.extend(declared_public_types(&root.join("vyre-megakernel/src")));
+    let mut semantic =
+        declared_public_types(&vyre_crate_directory("vyre-foundation").join("src/execution_plan"));
+    semantic.extend(declared_public_types(
+        &vyre_crate_directory("vyre-megakernel").join("src"),
+    ));
     assert!(
         semantic.len() >= 50,
         "derived only {} schedule-owner type(s), which cannot be the whole set",
         semantic.len()
     );
 
-    let descriptor_dir = root.join("vyre-lower/src/descriptor");
+    let descriptor_dir = vyre_crate_directory(env!("CARGO_PKG_NAME")).join("src/descriptor");
     let sources = rust_sources(&descriptor_dir);
     assert!(
         sources.len() >= 5,
@@ -263,11 +247,10 @@ fn no_physical_kernel_ir_type_names_a_schedule_owner_type() {
 
 #[test]
 fn no_backend_name_appears_as_a_literal_in_lowering() {
-    let root = workspace_root();
-    let names = backend_names(&root);
+    let names = backend_names();
     let mut findings = Vec::new();
 
-    for path in rust_sources(&root.join("vyre-lower/src")) {
+    for path in rust_sources(&vyre_crate_directory(env!("CARGO_PKG_NAME")).join("src")) {
         let source = std::fs::read_to_string(&path)
             .unwrap_or_else(|error| panic!("cannot read {}: {error}", path.display()));
         let (_, literals) = split_code_and_literals(&source);

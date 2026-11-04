@@ -24,9 +24,8 @@ fn fixture_root() -> PathBuf {
 /// overwriting them leaves nothing stale behind.
 fn write_fixture(root: &Path, source: &str) {
     fs::create_dir_all(root.join("src")).expect("Fix: feature fixture source must be creatable");
-    let workspace = vyre_test_support::monorepo::vyre_workspace_root();
-    let substrate = workspace.join("vyre-pass-engine");
-    let foundation = workspace.join("vyre-foundation");
+    let substrate = vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"));
+    let foundation = vyre_test_support::monorepo::vyre_crate_directory("vyre-foundation");
     fs::write(
         root.join("Cargo.toml"),
         format!(

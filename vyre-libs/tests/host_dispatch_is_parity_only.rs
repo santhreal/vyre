@@ -38,7 +38,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-/// Crate directories permitted to execute a Program on the host.
+/// Packages permitted to execute a Program on the host.
 // vyre-test-support is dev-only across the workspace, so its test parity oracles cannot reach shipped builds.
 const ORACLE_CRATES: &[&str] = &[
     "vyre-reference",
@@ -58,6 +58,7 @@ const MINIMUM_IMPLEMENTORS: usize = 20;
 #[test]
 fn no_production_crate_outside_the_oracle_executes_on_the_host() {
     let root = checkout_root();
+    let oracles = oracle_directories(&root);
     let offenders: BTreeMap<String, Vec<String>> = implementors(&root)
         .into_iter()
         .filter_map(|(path, declared)| {
@@ -68,7 +69,7 @@ fn no_production_crate_outside_the_oracle_executes_on_the_host() {
                 .map(|declared| declared.name)
                 .collect();
             let host = declared.reaches_interpreter || shipped.iter().any(|n| is_host_type(n));
-            (is_host_execution_offender(&path) && host && !shipped.is_empty())
+            (is_host_execution_offender(&oracles, &path) && host && !shipped.is_empty())
                 .then_some((path, shipped))
         })
         .collect();
@@ -132,22 +133,35 @@ fn every_policed_seam_is_a_trait_this_tree_declares() {
 /// rule and not for today's tree.
 #[test]
 fn the_judgement_admits_reference_and_test_implementations_only() {
-    for oracle in ORACLE_CRATES {
+    let oracles = [
+        PathBuf::from("crates/acme-oracle"),
+        PathBuf::from("acme-support"),
+    ];
+    for oracle in &oracles {
+        let path = format!("{}/src/dispatcher.rs", oracle.display());
         assert!(
-            !is_host_execution_offender(&format!("{oracle}/src/dispatcher.rs")),
-            "the parity oracle crate {oracle} exists to execute on the host"
+            !is_host_execution_offender(&oracles, &path),
+            "the parity oracle crate at {path} exists to execute on the host"
         );
     }
     assert!(
-        !is_host_execution_offender("vyre-libs/src/graph/dispatch/tests/mod.rs"),
+        is_host_execution_offender(&oracles, "acme-oracle/src/dispatcher.rs"),
+        "a directory that only shares an oracle's name is not the oracle"
+    );
+    assert!(
+        is_host_execution_offender(&oracles, "crates/acme-oracle-extra/src/dispatcher.rs"),
+        "a crate whose name extends an oracle's is not the oracle"
+    );
+    assert!(
+        !is_host_execution_offender(&oracles, "vyre-libs/src/graph/dispatch/tests/mod.rs"),
         "a test module never reaches a default build"
     );
     assert!(
-        is_host_execution_offender("vyre-libs/src/graph/dispatch/oracle.rs"),
+        is_host_execution_offender(&oracles, "vyre-libs/src/graph/dispatch/oracle.rs"),
         "an ungated production module is the defect this closes"
     );
     assert!(
-        !is_host_execution_offender("vyre-driver-cuda/tests/parity.rs"),
+        !is_host_execution_offender(&oracles, "vyre-driver-cuda/tests/parity.rs"),
         "an integration test is not production surface"
     );
     assert!(
@@ -192,12 +206,11 @@ impl SemanticExecutor for Shipped {}
 /// Paths decide whether code is reachable from a shipped build: oracle crates
 /// and `tests` or `benches` directories are excluded here. Test `cfg`s are read
 /// separately, on the item, its enclosing module, and its `mod` statement.
-fn is_host_execution_offender(path: &str) -> bool {
+///
+/// `oracles` holds the repository-relative directories of [`ORACLE_CRATES`].
+fn is_host_execution_offender(oracles: &[PathBuf], path: &str) -> bool {
     let path = Path::new(path);
-    if ORACLE_CRATES
-        .iter()
-        .any(|crate_dir| path.starts_with(crate_dir))
-    {
+    if oracles.iter().any(|directory| path.starts_with(directory)) {
         return false;
     }
     !path
@@ -512,14 +525,19 @@ fn tracked_sources(root: &Path) -> Vec<String> {
 /// in each of them, so a compiled-in path can name a different tree than the one
 /// under test.
 fn checkout_root() -> PathBuf {
-    let start = std::env::current_dir().expect("Fix: the working directory must be readable");
-    for candidate in start.ancestors() {
-        let Ok(text) = std::fs::read_to_string(candidate.join("Cargo.toml")) else {
-            continue;
-        };
-        if text.lines().any(|line| line.trim_start() == "[workspace]") {
-            return candidate.to_path_buf();
-        }
-    }
-    panic!("Fix: no workspace manifest above the working directory");
+    structure_gate::workspace_root()
+}
+
+/// The repository-relative directory of every [`ORACLE_CRATES`] package, read
+/// from the workspace roster: a package name is not a directory.
+fn oracle_directories(root: &Path) -> Vec<PathBuf> {
+    ORACLE_CRATES
+        .iter()
+        .map(|package| {
+            let directory = structure_gate::member_directory(root, package);
+            directory
+                .strip_prefix(root)
+                .map_or_else(|_| directory.clone(), Path::to_path_buf)
+        })
+        .collect()
 }

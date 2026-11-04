@@ -8,14 +8,14 @@
 use vyre_test_support::consumer_boundary::{
     assert_source_does_not_name_downstream_consumers, ConsumerBoundaryScan,
 };
-use vyre_test_support::monorepo::vyre_workspace_root;
+use vyre_test_support::monorepo::vyre_crate_directory;
 
 #[test]
 fn pass_engine_source_does_not_name_downstream_consumers() {
     assert_source_does_not_name_downstream_consumers(
         ConsumerBoundaryScan::for_crate(
             "vyre-pass-engine",
-            vyre_workspace_root().join("vyre-pass-engine"),
+            vyre_crate_directory(env!("CARGO_PKG_NAME")),
         )
         .skipping_directories(&["archive", "release"])
         .with_rationale("vyre-pass-engine is a platform substrate crate"),

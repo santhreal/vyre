@@ -7809,6 +7809,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - CPU-parity integration tests now declare their required Cargo features.
   Default-feature `vyre-libs` test builds no longer import reference-only
   symbols that are intentionally absent from production builds.
+- Repository tooling resolves every crate directory through the workspace
+  roster, so a crate outside the directory its package name spells is read or
+  reported instead of skipped, and `docs/PROTECTED_BOUNDARIES.toml` records
+  members by package name.
 - Workspace crate ownership now comes from one manifest-checked registry. The
   tier gate rejects missing crates, undeclared production edges, and stale
   generated graph or ownership guides, while planned compiler boundaries stay

@@ -14,8 +14,6 @@ use std::path::{Path, PathBuf};
 use xtask::gate::{Finding, GateCtx, GateError, Report};
 use xtask::gates::scan;
 
-const VYRE_ROOT: &str = "libs/performance/matching/vyre";
-
 /// Crates whose source we audit. Excludes test fixtures, examples,
 /// benchmarks, and documentation.
 const CRATES: &[&str] = &[
@@ -122,12 +120,17 @@ pub struct HeuristicAudit;
 
 impl xtask::gate::GateBehavior for HeuristicAudit {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        let vyre_dir = resolve_vyre_dir(&ctx.root);
-
         let mut hits: Vec<(PathBuf, usize, &str, &str)> = Vec::new();
         let mut scan_errors = Vec::new();
         for crate_name in CRATES {
-            let src = vyre_dir.join(crate_name).join("src");
+            let Some(directory) = structure_gate::find_member_directory(&ctx.root, crate_name)
+            else {
+                scan_errors.push(format!(
+                    "no workspace member declares the audited crate `{crate_name}`"
+                ));
+                continue;
+            };
+            let src = directory.join("src");
             if !src.exists() {
                 scan_errors.push(format!(
                     "heuristic audit crate source root `{}` does not exist",
@@ -219,66 +222,9 @@ fn production_markers(body: &str) -> Vec<(usize, &'static str, &'static str)> {
     found
 }
 
-fn resolve_vyre_dir(workspace_root: &Path) -> PathBuf {
-    let foundation = workspace_root.join("vyre-foundation").join("src");
-    if structure_gate::source_scan::carries_rust_source(&foundation) {
-        workspace_root.to_path_buf()
-    } else {
-        workspace_root.join(VYRE_ROOT)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-
-    /// A checkout is a directory carrying Rust source, so a fixture that only
-    /// creates `vyre-foundation/src` proves nothing: an empty directory left
-    /// behind by a move is what the resolver has to look past.
-    fn write_foundation(root: &Path) {
-        let src = root.join("vyre-foundation").join("src");
-        fs::create_dir_all(&src).expect("Vyre source root");
-        fs::write(src.join("lib.rs"), "pub fn build() {}\n").expect("Vyre crate root");
-    }
-
-    /// The audit must scan a standalone Vyre workspace instead of appending its monorepo path twice.
-    #[test]
-    fn resolves_standalone_vyre_workspace_root() {
-        let root = tempfile::tempdir().expect("temporary workspace");
-        write_foundation(root.path());
-
-        assert_eq!(resolve_vyre_dir(root.path()), root.path());
-    }
-
-    /// The audit must retain support for running from the enclosing Santh workspace.
-    #[test]
-    fn resolves_vyre_root_inside_monorepo() {
-        let root = tempfile::tempdir().expect("temporary workspace");
-        let expected = root.path().join(VYRE_ROOT);
-        write_foundation(&expected);
-
-        assert_eq!(resolve_vyre_dir(root.path()), expected);
-    }
-
-    /// An empty source directory is not a checkout.
-    #[test]
-    fn a_source_directory_holding_nothing_is_not_the_workspace() {
-        let root = tempfile::tempdir().expect("temporary workspace");
-        fs::create_dir_all(root.path().join("vyre-foundation/src")).expect("emptied source root");
-
-        assert_eq!(resolve_vyre_dir(root.path()), root.path().join(VYRE_ROOT));
-    }
-
-    /// A standalone workspace must win when an unrelated nested path also resembles Vyre.
-    #[test]
-    fn standalone_workspace_takes_precedence_over_nested_candidate() {
-        let root = tempfile::tempdir().expect("temporary workspace");
-        write_foundation(root.path());
-        write_foundation(&root.path().join(VYRE_ROOT));
-
-        assert_eq!(resolve_vyre_dir(root.path()), root.path());
-    }
 
     /// Duplicate marker patterns would hide audit categories behind repeated findings.
     #[test]

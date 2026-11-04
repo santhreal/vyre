@@ -37,6 +37,11 @@ binds into `[tags]`, which drops it from the parsed manifest and makes
 
 `xtask version-matrix` reads the manifest and reports blockers.
 
+`xtask package-readiness` orders the publishable members so each publishes
+after the members it depends on. Each step states the manifest the workspace
+roster records for its package; a package is never read from the directory its
+name spells.
+
 `xtask gates --subset prepublish` is what must hold before publishing,
 beyond what a `cargo publish --dry-run` catches. The subset is every gate
 whose descriptor in `xtask/src/gate_metadata/` lists the `prepublish` area.

@@ -132,7 +132,8 @@ pub(crate) fn run(args: &mut impl Iterator<Item = String>) -> Result<(), String>
     let mod_rs = generate_mod_rs();
     let readme = generate_readme(id.as_str(), archetype.as_str(), summary.as_str());
 
-    let manifest_dir = xtask::checkout::checkout_root().join("xtask-registry");
+    let manifest_dir =
+        structure_gate::member_directory(&xtask::checkout::checkout_root(), env!("CARGO_PKG_NAME"));
     let op_dir = manifest_dir
         .join("src")
         .join("ops")

@@ -545,6 +545,24 @@ impl fmt::Display for ResourceClass {
     }
 }
 
+/// Every package that registers gates, with the Rust path its proofs are named
+/// under.
+pub const GATE_PACKAGES: [(&str, &str); 3] = [
+    ("xtask", "crate::"),
+    ("xtask-registry", "xtask_registry::"),
+    ("xtask-evidence", "xtask_evidence::"),
+];
+
+/// The proof path prefix of a gate package, or `None` for a package that
+/// registers no gates.
+#[must_use]
+pub fn proof_prefix(package: &str) -> Option<&'static str> {
+    GATE_PACKAGES
+        .iter()
+        .find(|(name, _)| *name == package)
+        .map(|(_, prefix)| *prefix)
+}
+
 /// Static contract that makes a gate discoverable and auditable.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GateDescriptor {
@@ -591,7 +609,7 @@ impl GateDescriptor {
                 self.name, self.help
             ));
         }
-        if !["xtask", "xtask-registry", "xtask-evidence"].contains(&self.package) {
+        if proof_prefix(self.package).is_none() {
             failures.push(format!(
                 "gate `{}` declares unknown owner package `{}`",
                 self.name, self.package
@@ -618,13 +636,7 @@ impl GateDescriptor {
                 self.name, self.proof
             ));
         }
-        let expected_prefix = match self.package {
-            "xtask" => Some("crate::"),
-            "xtask-registry" => Some("xtask_registry::"),
-            "xtask-evidence" => Some("xtask_evidence::"),
-            _ => None,
-        };
-        if let Some(prefix) = expected_prefix {
+        if let Some(prefix) = proof_prefix(self.package) {
             if !self.proof.starts_with(prefix) {
                 failures.push(format!(
                     "gate `{}` owned by package `{}` declares proof `{}` missing required package prefix `{prefix}`",

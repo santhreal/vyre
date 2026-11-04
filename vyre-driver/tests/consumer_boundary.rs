@@ -8,12 +8,15 @@
 use vyre_test_support::consumer_boundary::{
     assert_source_does_not_name_downstream_consumers, ConsumerBoundaryScan,
 };
-use vyre_test_support::monorepo::vyre_workspace_root;
+use vyre_test_support::monorepo::vyre_crate_directory;
 
 #[test]
 fn driver_source_does_not_name_downstream_consumers() {
     assert_source_does_not_name_downstream_consumers(
-        ConsumerBoundaryScan::for_crate("vyre-driver", vyre_workspace_root().join("vyre-driver"))
-            .with_rationale("vyre-driver is a platform crate"),
+        ConsumerBoundaryScan::for_crate(
+            "vyre-driver",
+            vyre_crate_directory(env!("CARGO_PKG_NAME")),
+        )
+        .with_rationale("vyre-driver is a platform crate"),
     );
 }

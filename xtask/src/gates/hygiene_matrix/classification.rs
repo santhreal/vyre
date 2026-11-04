@@ -25,6 +25,7 @@ pub(crate) fn finding_summary(findings: &[HygieneFinding]) -> Vec<HygieneFinding
 
 pub(crate) fn classify_findings(
     vyre_root: &Path,
+    members: &[String],
     findings: &[HygieneFinding],
     hot_paths: &std::collections::BTreeSet<String>,
     structural_gates: &StructuralGateArtifact,
@@ -33,7 +34,7 @@ pub(crate) fn classify_findings(
     findings
         .iter()
         .map(|finding| {
-            let member = hygiene_member_for_path(vyre_root, &finding.path);
+            let member = hygiene_member_for_path(vyre_root, members, &finding.path);
             let surface = hygiene_surface_for_path(vyre_root, &finding.path, tests);
             let hot_path = hygiene_finding_is_hot_path(vyre_root, &finding.path, hot_paths);
             let declared = is_declared_structural_gate(vyre_root, finding, structural_gates);
@@ -117,15 +118,31 @@ pub(crate) fn hygiene_intake_summary(classes: &[HygieneFindingClass]) -> Vec<Hyg
         .collect()
 }
 
-/// The first repository-relative segment of `path`: the workspace member
-/// directory a finding sits in, or the top-level directory of a tree file.
-pub(crate) fn hygiene_member_for_path(vyre_root: &Path, path: &str) -> String {
+/// The workspace member a finding sits in, named by its directory's last
+/// segment; a file outside every member groups under its first
+/// repository-relative segment.
+///
+/// `members` holds the roster's member paths. The deepest member path that
+/// contains the file wins, so a member nested under a grouping directory
+/// groups under its own name rather than under the grouping directory.
+pub(crate) fn hygiene_member_for_path(vyre_root: &Path, members: &[String], path: &str) -> String {
     let relative = relative_to_vyre(vyre_root, Path::new(path));
     let relative = relative.trim_start_matches('/');
-    relative
-        .split_once('/')
-        .map_or(relative, |(member, _)| member)
-        .to_string()
+    let member = members
+        .iter()
+        .filter(|member| {
+            relative
+                .strip_prefix(member.as_str())
+                .is_some_and(|rest| rest.starts_with('/'))
+        })
+        .max_by_key(|member| member.len());
+    match member {
+        Some(member) => member.rsplit('/').next().unwrap_or(member).to_string(),
+        None => relative
+            .split_once('/')
+            .map_or(relative, |(segment, _)| segment)
+            .to_string(),
+    }
 }
 
 pub(crate) fn hygiene_surface_for_path(

@@ -123,7 +123,7 @@ fn judge_members(
     }
     if !members
         .iter()
-        .any(|member| member.path == "vyre-megakernel")
+        .any(|member| member.name == "vyre-megakernel")
     {
         findings.push(Finding::in_file(
             "Cargo.toml",
@@ -274,10 +274,9 @@ fn judge_ownership(tree: &Tree, findings: &mut Vec<Finding>) -> Result<(), GateE
         ));
         return Ok(());
     };
-    let megakernel = rows.iter().find(|row| {
-        row.get("package").and_then(toml::Value::as_str) == Some("vyre-megakernel")
-            || row.get("path").and_then(toml::Value::as_str) == Some("vyre-megakernel")
-    });
+    let megakernel = rows
+        .iter()
+        .find(|row| row.get("package").and_then(toml::Value::as_str) == Some("vyre-megakernel"));
     match megakernel {
         None => findings.push(Finding::in_file(
             path,

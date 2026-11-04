@@ -635,11 +635,11 @@ fn coverage_of(text: &str) -> Coverage {
 /// The concrete backend types, read from the driver members that own them.
 fn backend_roster(tree: &Tree) -> Result<BTreeSet<String>, GateError> {
     let mut roster = BTreeSet::new();
-    for member in tree.members()? {
-        if !member.starts_with("vyre-driver-") || member == CPU_ORACLE_CRATE {
+    for member in tree.member_manifests()? {
+        if !member.name.starts_with("vyre-driver-") || member.name == CPU_ORACLE_CRATE {
             continue;
         }
-        for path in tree.rust(&[&format!("{member}/src")])? {
+        for path in tree.rust(&[&format!("{}/src", member.path)])? {
             for line in tree.read(&path)?.lines() {
                 if let Some(name) = declared_backend(line) {
                     roster.insert(name);

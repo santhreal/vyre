@@ -35,12 +35,12 @@ const BANNED_PATTERNS: &[&str] = &[
 /// Category A crate (the `vyre-libs` facade and every `vyre-libs-<domain>`
 /// partition) or the Category C crate.
 fn judged_source(path: &str) -> bool {
-    let Some((member, rest)) = path.split_once('/') else {
+    let Some((directory, _)) = path.split_once("/src/") else {
         return false;
     };
-    rest.starts_with("src/")
-        && (crate::workspace_rules::is_category_a_crate(member)
-            || member == crate::workspace_rules::CATEGORY_C_CRATE)
+    let member = directory.rsplit('/').next().unwrap_or(directory);
+    crate::workspace_rules::is_category_a_crate(member)
+        || member == crate::workspace_rules::CATEGORY_C_CRATE
 }
 
 /// Collect every banned geometry constant declared under `src/` of a

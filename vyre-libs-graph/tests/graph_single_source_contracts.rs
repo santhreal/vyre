@@ -423,7 +423,7 @@ fn cpu_reference_functions(primitive_source: &str) -> Vec<String> {
 
 /// This crate's directory, resolved from the checkout this run is inside.
 fn crate_root() -> PathBuf {
-    vyre_test_support::monorepo::vyre_workspace_root().join("vyre-libs-graph")
+    vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"))
 }
 
 fn read(path: &Path) -> String {

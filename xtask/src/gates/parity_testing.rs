@@ -11,7 +11,7 @@
 //! a target-specific table or a `[features]` entry, and the section is what
 //! decides whether that is legal.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
@@ -36,9 +36,10 @@ fn manifests(tree: &Tree) -> Vec<PathBuf> {
         .collect()
 }
 
-/// Whether a mention inside `section` of `crate_directory` is allowed.
-fn is_allowed(crate_directory: &str, section: &str) -> bool {
-    if crate_directory == DECLARING_CRATE && section == "[features]" {
+/// Whether a mention inside `section` is allowed, for the declaring crate's
+/// manifest or any other.
+fn is_allowed(declaring: bool, section: &str) -> bool {
+    if declaring && section == "[features]" {
         return true;
     }
     section.contains("dev-dependencies")
@@ -52,14 +53,14 @@ impl crate::gate::GateBehavior for ParityTestingIsolated {
         let mut report = Report::clean();
         let tree = Tree::open(&ctx.root)?;
         let paths = manifests(&tree);
+        let declaring = PathBuf::from(format!(
+            "{}/Cargo.toml",
+            tree.member_directory(DECLARING_CRATE)?
+        ));
         report.cover_complete("parity test manifests", paths.len());
         for path in &paths {
             let text = tree.read(path)?;
-            let crate_directory = path
-                .parent()
-                .and_then(Path::file_name)
-                .map(|name| name.to_string_lossy().into_owned())
-                .unwrap_or_default();
+            let declares = *path == declaring;
             let mut section = String::new();
             for (index, line) in text.lines().enumerate() {
                 let trimmed = line.split('#').next().unwrap_or("").trim();
@@ -70,7 +71,7 @@ impl crate::gate::GateBehavior for ParityTestingIsolated {
                     section = trimmed.to_string();
                     continue;
                 }
-                if !trimmed.contains(FEATURE) || is_allowed(&crate_directory, &section) {
+                if !trimmed.contains(FEATURE) || is_allowed(declares, &section) {
                     continue;
                 }
                 report.find(Finding::at(
@@ -101,14 +102,11 @@ mod tests {
     /// third would read as coverage while the probe path shipped.
     #[test]
     fn allows_only_the_declaration_and_a_development_dependency() {
-        assert!(is_allowed(DECLARING_CRATE, "[features]"));
-        assert!(is_allowed("vyre-reference", "[dev-dependencies]"));
-        assert!(is_allowed(
-            "vyre-reference",
-            "[target.'cfg(unix)'.dev-dependencies]"
-        ));
-        assert!(!is_allowed("vyre-reference", "[features]"));
-        assert!(!is_allowed("vyre-reference", "[dependencies]"));
-        assert!(!is_allowed(DECLARING_CRATE, "[dependencies]"));
+        assert!(is_allowed(true, "[features]"));
+        assert!(is_allowed(false, "[dev-dependencies]"));
+        assert!(is_allowed(false, "[target.'cfg(unix)'.dev-dependencies]"));
+        assert!(!is_allowed(false, "[features]"));
+        assert!(!is_allowed(false, "[dependencies]"));
+        assert!(!is_allowed(true, "[dependencies]"));
     }
 }

@@ -58,9 +58,9 @@ pub use duplicate_type_name::duplicate_public_type_name_failures;
 pub use geometry_constants::geometry_constant_failures;
 pub use source_scan::opaque_span;
 pub use workspace_manifest::{
-    crate_ident, discarding_imports, member_directory, read_lanes, read_source_bounded,
-    submits_registrations, workspace_excludes, workspace_members, workspace_root,
-    workspace_root_from, MAX_SOURCE_BYTES,
+    crate_ident, discarding_imports, find_member_directory, member_directories, member_directory,
+    read_lanes, read_source_bounded, submits_registrations, workspace_excludes, workspace_members,
+    workspace_root, workspace_root_from, MAX_SOURCE_BYTES,
 };
 pub use workspace_rules::{
     category_home_failures, frontend_owner_failures, is_category_a_crate,

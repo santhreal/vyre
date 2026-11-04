@@ -119,23 +119,22 @@ fn publish_order(
     let members = publishable_members(metadata_path, root, blockers);
     let domain = members.keys().cloned().collect::<BTreeSet<_>>();
 
-    let mut pending = BTreeMap::<String, BTreeSet<String>>::new();
-    for (package, manifest) in &members {
-        pending.insert(
-            package.clone(),
-            internal_dependencies(root, manifest, &domain, blockers),
-        );
+    let mut pending = BTreeMap::<String, (String, BTreeSet<String>)>::new();
+    for (package, manifest) in members {
+        let dependencies = internal_dependencies(root, &manifest, &domain, blockers);
+        pending.insert(package, (manifest, dependencies));
     }
 
     let mut order = Vec::with_capacity(pending.len());
     let mut published = BTreeSet::<String>::new();
     while let Some(package) = pending
         .iter()
-        .find(|(_, dependencies)| dependencies.is_subset(&published))
+        .find(|(_, (_, dependencies))| dependencies.is_subset(&published))
         .map(|(package, _)| package.clone())
     {
-        pending.remove(&package);
-        let manifest = manifest_of(&members, &package);
+        let Some((manifest, _)) = pending.remove(&package) else {
+            break;
+        };
         published.insert(package.clone());
         order.push(PublishStep {
             package,
@@ -144,7 +143,7 @@ fn publish_order(
         });
     }
 
-    for (package, dependencies) in &pending {
+    for (package, (_, dependencies)) in &pending {
         let blocking = dependencies
             .difference(&published)
             .cloned()
@@ -154,22 +153,15 @@ fn publish_order(
             blocking.join(", ")
         ));
     }
-    for package in pending.keys() {
+    for (package, (manifest, _)) in pending {
         order.push(PublishStep {
-            package: package.clone(),
+            package,
             version: release_train::vyre_version(),
-            manifest: manifest_of(&members, package),
+            manifest,
         });
     }
 
     (order, domain)
-}
-
-fn manifest_of(members: &BTreeMap<String, String>, package: &str) -> String {
-    members
-        .get(package)
-        .cloned()
-        .unwrap_or_else(|| format!("{package}/Cargo.toml"))
 }
 
 /// Publishable crates and their manifests, as the metadata matrix records them.

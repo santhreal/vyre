@@ -67,9 +67,9 @@ pub fn read_source_bounded(path: &Path) -> std::io::Result<String> {
     Ok(text)
 }
 
-/// The checkout-relative directory of a workspace member, by package name.
+/// The directory of a workspace member, by package name.
 ///
-/// A member's directory is not always its package name: `vyre-conform` lives at
+/// A member's directory is not its package name: `vyre-conform` is at
 /// `conform/vyre-conform`. The roster is read from the root manifest at run
 /// time, so a gate that needs its own crate directory gets it without a
 /// compiled-in manifest path, which would name whichever checkout built the
@@ -79,32 +79,49 @@ pub fn read_source_bounded(path: &Path) -> std::io::Result<String> {
 /// Panics when no member directory's manifest declares `package`.
 #[must_use]
 pub fn member_directory(root: &Path, package: &str) -> PathBuf {
-    for member in workspace_members(root) {
-        let member_dir = root.join(&member);
-        let manifest_path = member_dir.join("Cargo.toml");
-        let Ok(text) = read_source_bounded(&manifest_path) else {
-            continue;
-        };
-        #[derive(Deserialize)]
-        struct PackageManifest {
-            package: Option<PackageName>,
-        }
-        #[derive(Deserialize)]
-        struct PackageName {
-            name: String,
-        }
-        let declared = toml::from_str::<PackageManifest>(&text)
-            .ok()
-            .and_then(|manifest| manifest.package.map(|pkg| pkg.name));
-        if declared.as_deref() == Some(package) {
-            return member_dir;
-        }
+    find_member_directory(root, package).unwrap_or_else(|| {
+        panic!(
+            "Fix: no workspace member under {} declares package `{package}`; the roster in the \
+             root Cargo.toml is what this resolves against.",
+            root.display()
+        )
+    })
+}
+
+/// [`member_directory`], or `None` when no member declares `package`.
+#[must_use]
+pub fn find_member_directory(root: &Path, package: &str) -> Option<PathBuf> {
+    member_directories(root).remove(package)
+}
+
+/// Every workspace member's directory, keyed by the package name its manifest
+/// declares. A caller resolving several names reads the roster once through
+/// this instead of once per name.
+///
+/// A member whose manifest is unreadable or declares no package is absent.
+///
+/// # Panics
+///
+/// Panics when the root manifest cannot be read or parsed.
+#[must_use]
+pub fn member_directories(root: &Path) -> BTreeMap<String, PathBuf> {
+    #[derive(Deserialize)]
+    struct PackageManifest {
+        package: Option<PackageName>,
     }
-    panic!(
-        "Fix: no workspace member under {} declares package `{package}`; the roster in the root \
-         Cargo.toml is what this resolves against.",
-        root.display()
-    );
+    #[derive(Deserialize)]
+    struct PackageName {
+        name: String,
+    }
+    workspace_members(root)
+        .into_iter()
+        .filter_map(|member| {
+            let member_dir = root.join(&member);
+            let text = read_source_bounded(&member_dir.join("Cargo.toml")).ok()?;
+            let name = toml::from_str::<PackageManifest>(&text).ok()?.package?.name;
+            Some((name, member_dir))
+        })
+        .collect()
 }
 
 /// The workspace member roster, as the root manifest declares it.
@@ -292,12 +309,12 @@ fn read_member_sources(root: &Path, members: &[String]) -> Vec<MemberSource> {
     let tree = tree_files(root);
     let mut roster: Vec<(String, PathBuf)> = Vec::new();
     for member in members {
+        let crate_name = member.rsplit('/').next().unwrap_or(member).to_string();
         // This crate's own tests carry example registrations that name other
         // crates on purpose, so scanning itself reports its own fixtures.
-        if member.as_str() == SELF_CRATE {
+        if crate_name == SELF_CRATE {
             continue;
         }
-        let crate_name = member.rsplit('/').next().unwrap_or(member).to_string();
         for path in tree.rust_sources_under(&root.join(member)) {
             roster.push((crate_name.clone(), path.clone()));
         }
@@ -721,7 +738,7 @@ mod tests {
     /// The checkout is walked once per process, however many contracts ask.
     #[test]
     fn a_second_request_for_the_tree_does_not_walk_it_again() {
-        let root = workspace_root().join("structure-gate");
+        let root = member_directory(&workspace_root(), SELF_CRATE);
 
         let first = tree_files(&root);
         let second = tree_files(&root);
