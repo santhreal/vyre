@@ -46,6 +46,10 @@ domains are equal residents: linear algebra, neural network layers,
 matching, hashing, parsing, decoding, and equally the solvers, encoding,
 analysis, scheduling and reasoning the compiler composes for itself.
 
+The crate is a facade over `vyre-libs-*` domain packages. A domain too
+small to stand alone is a feature of the package it serves: `vfs`, the
+block loads that fill device arenas, is a feature of `vyre-libs-device`.
+
 Not here: anything that names a concrete backend, links an emitter crate,
 or reimplements in host Rust what IR expresses. The first two invert the
 dependency, because a composition states what it needs and the driver

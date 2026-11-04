@@ -138,10 +138,6 @@ name = "vyre-libs-text"
 duplicate_paths = 0
 
 [[crate]]
-name = "vyre-libs-vfs"
-duplicate_paths = 0
-
-[[crate]]
 name = "vyre-libs-visual"
 duplicate_paths = 0
 

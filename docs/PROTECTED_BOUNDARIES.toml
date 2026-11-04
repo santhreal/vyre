@@ -237,7 +237,6 @@ packages = [
   "vyre-libs-security",
   "vyre-libs-solvers",
   "vyre-libs-text",
-  "vyre-libs-vfs",
   "vyre-libs-visual",
 ]
 reason = "Domain compositions built from published IR. A wrong composition fails conformance against the protected oracle."

@@ -76,7 +76,6 @@
 - [Testing `vyre-libs-security`](testing/vyre-libs-security.md)
 - [Testing `vyre-libs-solvers`](testing/vyre-libs-solvers.md)
 - [Testing `vyre-libs-text`](testing/vyre-libs-text.md)
-- [Testing `vyre-libs-vfs`](testing/vyre-libs-vfs.md)
 - [Testing `vyre-libs-visual`](testing/vyre-libs-visual.md)
 - [Testing `vyre-libs`](testing/vyre-libs.md)
 - [Testing `vyre-lower`](testing/vyre-lower.md)

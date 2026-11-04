@@ -4616,6 +4616,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   with typed transform preconditions, deterministic replay, inverse/source
   provenance, exact per-phase geometry, and checked resource bounds before
   physical lowering.
+- The `vyre-libs-vfs` package is folded into `vyre-libs-device` behind its
+  `vfs` feature; `vyre_libs::vfs` and the `vyre-libs::vfs::resolve` operation
+  id are unchanged.
 - `visit` is split by what is being visited. `node` owns the per-variant `Node`
   decisions a traversal cannot re-derive safely - which bodies a variant nests,
   which scalar name it binds and what it does to that name, which operands it

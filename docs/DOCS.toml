@@ -1270,19 +1270,6 @@ generator = "../xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
-path = "testing/vyre-libs-vfs.md"
-title = "Testing `vyre-libs-vfs`"
-status = "generated"
-audience = "contributor"
-owner = "testing"
-kind = "testing"
-section = "Testing and conformance"
-authority = "testing/TESTING.toml"
-generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
-nav = true
-
-[[page]]
 path = "testing/vyre-libs-visual.md"
 title = "Testing `vyre-libs-visual`"
 status = "generated"

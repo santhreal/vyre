@@ -636,6 +636,10 @@ member = "vyre-libs-device"
 feature = "device"
 
 [[pair]]
+member = "vyre-libs-device"
+feature = "vfs"
+
+[[pair]]
 member = "vyre-libs-encoding"
 feature = "(default)"
 
@@ -990,18 +994,6 @@ feature = "(none)"
 [[pair]]
 member = "vyre-libs-text"
 feature = "text"
-
-[[pair]]
-member = "vyre-libs-vfs"
-feature = "(default)"
-
-[[pair]]
-member = "vyre-libs-vfs"
-feature = "(none)"
-
-[[pair]]
-member = "vyre-libs-vfs"
-feature = "vfs"
 
 [[pair]]
 member = "vyre-libs-visual"

@@ -170,8 +170,7 @@ visual = ["math-kernels", "dep:vyre-libs-visual", "vyre-libs-visual?/visual"]
 
 rule = ["builder", "dep:vyre-libs-rule", "vyre-libs-rule?/rule"]
 
-vfs = ["dep:vyre-libs-vfs", "vyre-libs-vfs?/vfs"]
-
+vfs = ["dep:vyre-libs-device", "vyre-libs-device?/vfs"]
 device = ["dep:vyre-libs-device", "vyre-libs-device?/device"]
 
 solvers = ["device", "telemetry", "math-kernels", "topology", "dep:vyre-libs-solvers", "vyre-libs-solvers?/solvers"]
@@ -207,7 +206,6 @@ vyre-libs-parsing = { workspace = true, optional = true }
 vyre-libs-security = { workspace = true, optional = true }
 vyre-libs-visual = { workspace = true, optional = true }
 vyre-libs-rule = { workspace = true, optional = true }
-vyre-libs-vfs = { workspace = true, optional = true }
 vyre-libs-device = { workspace = true, optional = true }
 vyre-libs-solvers = { workspace = true, optional = true }
 vyre-libs-encoding = { workspace = true, optional = true }

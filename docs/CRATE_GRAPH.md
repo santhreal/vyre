@@ -35,7 +35,7 @@ each other; a layer that admits none states `None`.
 
 ## Workspace dependency graph
 
-The workspace contains 56 crates and 291 internal production edges, resolved
+The workspace contains 55 crates and 288 internal production edges, resolved
 under the union of every feature. An arrow points from a crate to an internal
 normal or build dependency. Development dependencies are excluded.
 
@@ -81,32 +81,31 @@ graph TD
   C37["vyre-libs-security"]
   C38["vyre-libs-solvers"]
   C39["vyre-libs-text"]
-  C40["vyre-libs-vfs"]
-  C41["vyre-libs-visual"]
-  C42["vyre-lower"]
-  C43["vyre-macros"]
-  C44["vyre-megakernel"]
-  C45["vyre-pass-engine"]
-  C46["vyre-primitives"]
-  C47["vyre-reference"]
-  C48["vyre-registry-link"]
-  C49["vyre-runtime"]
-  C50["vyre-safetensors"]
-  C51["vyre-spec"]
-  C52["vyre-test-support"]
-  C53["xtask"]
-  C54["xtask-evidence"]
-  C55["xtask-registry"]
+  C40["vyre-libs-visual"]
+  C41["vyre-lower"]
+  C42["vyre-macros"]
+  C43["vyre-megakernel"]
+  C44["vyre-pass-engine"]
+  C45["vyre-primitives"]
+  C46["vyre-reference"]
+  C47["vyre-registry-link"]
+  C48["vyre-runtime"]
+  C49["vyre-safetensors"]
+  C50["vyre-spec"]
+  C51["vyre-test-support"]
+  C52["xtask"]
+  C53["xtask-evidence"]
+  C54["xtask-registry"]
   C1 --> C8
   C1 --> C9
   C1 --> C13
   C1 --> C18
-  C1 --> C44
-  C1 --> C49
-  C1 --> C51
+  C1 --> C43
+  C1 --> C48
+  C1 --> C50
   C3 --> C8
   C3 --> C18
-  C3 --> C44
+  C3 --> C43
   C4 --> C1
   C4 --> C2
   C4 --> C8
@@ -115,15 +114,15 @@ graph TD
   C4 --> C16
   C4 --> C18
   C4 --> C19
-  C4 --> C42
+  C4 --> C41
+  C4 --> C43
   C4 --> C44
   C4 --> C45
   C4 --> C46
   C4 --> C47
   C4 --> C48
-  C4 --> C49
-  C4 --> C51
-  C4 --> C53
+  C4 --> C50
+  C4 --> C52
   C5 --> C1
   C5 --> C6
   C5 --> C8
@@ -133,59 +132,59 @@ graph TD
   C5 --> C13
   C5 --> C18
   C5 --> C19
-  C5 --> C44
+  C5 --> C43
+  C5 --> C45
   C5 --> C46
   C5 --> C47
   C5 --> C48
-  C5 --> C49
-  C5 --> C51
-  C6 --> C51
+  C5 --> C50
+  C6 --> C50
   C7 --> C1
   C7 --> C15
   C7 --> C18
   C7 --> C19
-  C7 --> C42
+  C7 --> C41
   C8 --> C18
   C8 --> C19
-  C8 --> C44
-  C8 --> C51
+  C8 --> C43
+  C8 --> C50
   C9 --> C8
   C9 --> C16
   C9 --> C18
-  C9 --> C42
-  C9 --> C44
+  C9 --> C41
+  C9 --> C43
   C10 --> C8
   C10 --> C14
   C10 --> C18
-  C10 --> C42
-  C10 --> C44
+  C10 --> C41
+  C10 --> C43
   C11 --> C8
   C11 --> C18
-  C11 --> C44
-  C11 --> C47
+  C11 --> C43
+  C11 --> C46
   C12 --> C8
   C12 --> C17
   C12 --> C18
-  C12 --> C42
-  C12 --> C44
+  C12 --> C41
+  C12 --> C43
   C13 --> C8
   C13 --> C15
   C13 --> C18
-  C13 --> C42
-  C13 --> C44
-  C13 --> C51
+  C13 --> C41
+  C13 --> C43
+  C13 --> C50
   C14 --> C15
   C14 --> C18
-  C14 --> C42
+  C14 --> C41
   C15 --> C18
-  C15 --> C42
+  C15 --> C41
   C16 --> C18
-  C16 --> C42
+  C16 --> C41
   C17 --> C15
   C17 --> C18
-  C17 --> C42
-  C18 --> C43
-  C18 --> C51
+  C17 --> C41
+  C18 --> C42
+  C18 --> C50
   C19 --> C18
   C19 --> C20
   C19 --> C21
@@ -208,31 +207,30 @@ graph TD
   C19 --> C38
   C19 --> C39
   C19 --> C40
-  C19 --> C41
-  C19 --> C44
-  C19 --> C46
-  C19 --> C51
+  C19 --> C43
+  C19 --> C45
+  C19 --> C50
   C20 --> C18
   C20 --> C22
   C20 --> C26
   C20 --> C27
   C20 --> C29
-  C20 --> C44
-  C20 --> C46
-  C20 --> C51
+  C20 --> C43
+  C20 --> C45
+  C20 --> C50
   C21 --> C18
   C21 --> C22
   C21 --> C34
-  C21 --> C46
+  C21 --> C45
   C22 --> C18
-  C22 --> C44
-  C22 --> C46
-  C22 --> C51
+  C22 --> C43
+  C22 --> C45
+  C22 --> C50
   C23 --> C18
   C23 --> C22
   C23 --> C32
   C23 --> C39
-  C23 --> C46
+  C23 --> C45
   C24 --> C18
   C24 --> C22
   C25 --> C18
@@ -245,11 +243,11 @@ graph TD
   C25 --> C31
   C25 --> C32
   C25 --> C34
-  C25 --> C44
-  C25 --> C46
+  C25 --> C43
+  C25 --> C45
   C26 --> C18
   C26 --> C22
-  C26 --> C46
+  C26 --> C45
   C27 --> C18
   C27 --> C21
   C27 --> C22
@@ -257,137 +255,135 @@ graph TD
   C27 --> C28
   C27 --> C29
   C27 --> C34
-  C27 --> C41
-  C27 --> C44
-  C27 --> C46
+  C27 --> C40
+  C27 --> C43
+  C27 --> C45
   C28 --> C18
   C28 --> C22
-  C28 --> C46
+  C28 --> C45
   C29 --> C18
   C29 --> C22
   C29 --> C26
   C29 --> C34
-  C29 --> C46
-  C29 --> C51
+  C29 --> C45
+  C29 --> C50
   C30 --> C18
   C30 --> C22
   C30 --> C29
   C30 --> C34
-  C30 --> C44
-  C30 --> C46
-  C30 --> C51
+  C30 --> C43
+  C30 --> C45
+  C30 --> C50
   C31 --> C18
   C31 --> C22
   C31 --> C28
   C31 --> C34
   C31 --> C39
-  C31 --> C46
-  C31 --> C51
+  C31 --> C45
+  C31 --> C50
   C32 --> C18
   C32 --> C22
   C32 --> C28
   C32 --> C29
-  C32 --> C46
+  C32 --> C45
   C33 --> C18
   C33 --> C20
   C33 --> C22
   C33 --> C27
-  C33 --> C44
+  C33 --> C43
   C34 --> C18
   C34 --> C22
-  C34 --> C44
-  C34 --> C46
+  C34 --> C43
+  C34 --> C45
   C35 --> C18
   C35 --> C22
-  C35 --> C46
-  C35 --> C51
+  C35 --> C45
+  C35 --> C50
   C36 --> C18
   C36 --> C22
   C36 --> C27
   C36 --> C29
   C36 --> C31
-  C36 --> C44
-  C36 --> C46
+  C36 --> C43
+  C36 --> C45
   C37 --> C18
   C37 --> C21
   C37 --> C22
   C37 --> C27
   C37 --> C34
-  C37 --> C46
-  C37 --> C51
+  C37 --> C45
+  C37 --> C50
   C38 --> C18
   C38 --> C21
   C38 --> C22
   C38 --> C26
   C38 --> C27
   C38 --> C29
-  C38 --> C44
-  C38 --> C46
+  C38 --> C43
+  C38 --> C45
   C39 --> C18
   C39 --> C22
   C39 --> C34
-  C39 --> C46
+  C39 --> C45
   C40 --> C18
   C40 --> C22
+  C40 --> C29
+  C40 --> C45
   C41 --> C18
-  C41 --> C22
-  C41 --> C29
-  C41 --> C46
-  C42 --> C18
-  C42 --> C51
+  C41 --> C50
+  C43 --> C18
+  C43 --> C41
+  C43 --> C50
   C44 --> C18
-  C44 --> C42
-  C44 --> C51
+  C44 --> C19
+  C44 --> C43
+  C44 --> C45
   C45 --> C18
-  C45 --> C19
-  C45 --> C44
-  C45 --> C46
   C46 --> C18
+  C46 --> C45
+  C46 --> C50
+  C47 --> C8
+  C47 --> C9
+  C47 --> C10
+  C47 --> C12
+  C47 --> C13
   C47 --> C18
-  C47 --> C46
-  C47 --> C51
+  C47 --> C19
+  C47 --> C41
+  C47 --> C43
+  C47 --> C45
+  C47 --> C50
   C48 --> C8
-  C48 --> C9
-  C48 --> C10
-  C48 --> C12
-  C48 --> C13
   C48 --> C18
   C48 --> C19
-  C48 --> C42
-  C48 --> C44
-  C48 --> C46
-  C48 --> C51
-  C49 --> C8
-  C49 --> C18
-  C49 --> C19
-  C49 --> C44
-  C49 --> C51
+  C48 --> C43
+  C48 --> C50
+  C51 --> C0
+  C51 --> C8
+  C51 --> C18
+  C51 --> C41
+  C51 --> C43
+  C51 --> C45
+  C51 --> C46
+  C51 --> C50
   C52 --> C0
-  C52 --> C8
-  C52 --> C18
-  C52 --> C42
-  C52 --> C44
-  C52 --> C46
-  C52 --> C47
-  C52 --> C51
   C53 --> C0
+  C53 --> C4
+  C53 --> C8
+  C53 --> C18
+  C53 --> C47
+  C53 --> C52
   C54 --> C0
-  C54 --> C4
+  C54 --> C1
   C54 --> C8
   C54 --> C18
-  C54 --> C48
-  C54 --> C53
-  C55 --> C0
-  C55 --> C1
-  C55 --> C8
-  C55 --> C18
-  C55 --> C19
-  C55 --> C44
-  C55 --> C46
-  C55 --> C47
-  C55 --> C48
-  C55 --> C51
-  C55 --> C53
+  C54 --> C19
+  C54 --> C43
+  C54 --> C45
+  C54 --> C46
+  C54 --> C47
+  C54 --> C50
+  C54 --> C52
 ```
 
 ## Resolved production edges
@@ -488,7 +484,7 @@ graph TD
 | `vyre-libs` | `vyre-libs-bitset` | `libs-bitset` | `normal` | `always` | `bitset`, `logical` | `true` | `true` | `analysis`, `bitset`, `encoding`, `fixpoint`, `full`, `graph`, `graph-dispatch`, `interactive-graphics`, `label`, `logical`, `math`, `math-succinct`, `nfa`, `pattern-nfa`, `pattern-regex`, `predicate`, `reasoning`, `scheduling`, `security`, `solvers`, `topology` |
 | `vyre-libs` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | `builder`, `builder-ops`, `cat-a-builder-options`, `telemetry` | `false` | `true` | None |
 | `vyre-libs` | `vyre-libs-decode` | `libs-decode` | `normal` | `always` | `decode` | `true` | `true` | `decode`, `default`, `full` |
-| `vyre-libs` | `vyre-libs-device` | `libs-device` | `normal` | `always` | `device` | `true` | `true` | `analysis`, `device`, `encoding`, `full`, `graph-dispatch`, `reasoning`, `scheduling`, `solvers` |
+| `vyre-libs` | `vyre-libs-device` | `libs-device` | `normal` | `always` | `device`, `vfs` | `true` | `true` | `analysis`, `device`, `encoding`, `full`, `graph-dispatch`, `reasoning`, `scheduling`, `solvers`, `vfs` |
 | `vyre-libs` | `vyre-libs-encoding` | `libs-encoding` | `normal` | `always` | `encoding` | `true` | `true` | `encoding`, `full` |
 | `vyre-libs` | `vyre-libs-fixpoint` | `libs-fixpoint` | `normal` | `always` | `fixpoint` | `true` | `true` | `analysis`, `encoding`, `fixpoint`, `full`, `graph`, `graph-dispatch`, `interactive-graphics`, `math`, `math-succinct`, `predicate`, `reasoning`, `scheduling`, `security`, `solvers`, `topology` |
 | `vyre-libs` | `vyre-libs-graph` | `libs-graph` | `normal` | `always` | `graph`, `graph-dispatch`, `interactive-graphics`, `topology` | `true` | `true` | `analysis`, `encoding`, `full`, `graph`, `graph-dispatch`, `interactive-graphics`, `math`, `math-succinct`, `predicate`, `reasoning`, `scheduling`, `security`, `solvers`, `topology` |
@@ -504,7 +500,6 @@ graph TD
 | `vyre-libs` | `vyre-libs-security` | `libs-security` | `normal` | `always` | `label`, `predicate`, `security` | `true` | `true` | `full`, `label`, `predicate`, `security` |
 | `vyre-libs` | `vyre-libs-solvers` | `libs-solvers` | `normal` | `always` | `solvers` | `true` | `true` | `full`, `solvers` |
 | `vyre-libs` | `vyre-libs-text` | `libs-text` | `normal` | `always` | `text` | `true` | `true` | `decode`, `default`, `encoding`, `full`, `parsing`, `parsing-kernels`, `pattern`, `pattern-dfa`, `pattern-nfa`, `pattern-regex`, `pattern-substring`, `python-parser`, `scheduling`, `text` |
-| `vyre-libs` | `vyre-libs-vfs` | `libs-vfs` | `normal` | `always` | `vfs` | `true` | `true` | `full`, `vfs` |
 | `vyre-libs` | `vyre-libs-visual` | `libs-visual` | `normal` | `always` | `visual` | `true` | `true` | `full`, `interactive-graphics`, `visual` |
 | `vyre-libs` | `vyre-megakernel` | `megakernel-compiler` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
@@ -624,8 +619,6 @@ graph TD
 | `vyre-libs-text` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-text` | `vyre-libs-reduce` | `libs-reduce` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-text` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
-| `vyre-libs-vfs` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
-| `vyre-libs-vfs` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-visual` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-visual` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-visual` | `vyre-libs-math` | `libs-math` | `normal` | `always` | None | `false` | `true` | None |

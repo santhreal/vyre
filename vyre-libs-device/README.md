@@ -10,12 +10,12 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Own compiler-internal device boundary contracts, memory ownership models, and resident graph layout compositions. Does not own concrete backend implementations or driver dispatch.
+Own compiler-internal device boundary contracts, memory ownership models, resident graph layout, and the virtual filesystem DMA block load and asset resolution compositions that fill device arenas. Does not own concrete backend implementations, driver dispatch, host file IO or runtime storage drivers.
 
 ### Boundaries
 
 This crate is the `libraries` layer's `libs-device` seam, at `vyre-libs-device`.
-Every production dependency on it crosses Device boundary contracts, memory ownership and resident graph layout compositions.
+Every production dependency on it crosses Device boundary contracts, memory ownership, resident graph layout and virtual filesystem block load compositions.
 The layer ranks in the architecture manifest decide which layers may
 reach it; a dependency from a layer that does not outrank this one requires
 an architecture-manifest change.
@@ -30,7 +30,7 @@ Run the checked-in behavior from `vyre-libs-device/tests/all_tests.rs`:
 
 ### Features
 
-- Manifest features: `default`, `device`
+- Manifest features: `default`, `device`, `vfs`
 - Default feature members: `device`
 
 ### Errors and unsupported behavior

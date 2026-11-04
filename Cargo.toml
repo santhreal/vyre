@@ -58,7 +58,6 @@ members = [
     "vyre-libs-security",
     "vyre-libs-visual",
     "vyre-libs-rule",
-    "vyre-libs-vfs",
     "vyre-libs-device",
     "vyre-libs-solvers",
     "vyre-libs-encoding",
@@ -308,7 +307,6 @@ vyre-libs-parsing = { version = "0.8.0", path = "vyre-libs-parsing" }
 vyre-libs-security = { version = "0.8.0", path = "vyre-libs-security" }
 vyre-libs-visual = { version = "0.8.0", path = "vyre-libs-visual" }
 vyre-libs-rule = { version = "0.8.0", path = "vyre-libs-rule" }
-vyre-libs-vfs = { version = "0.8.0", path = "vyre-libs-vfs" }
 vyre-libs-device = { version = "0.8.0", path = "vyre-libs-device" }
 vyre-libs-solvers = { version = "0.8.0", path = "vyre-libs-solvers" }
 vyre-libs-encoding = { version = "0.8.0", path = "vyre-libs-encoding" }

@@ -10,7 +10,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 /// Canonical op-id under which this VFS resolver registers itself in the
 /// inventory.
 ///
-/// The resolver is owned and registered by `vyre-libs`.
+/// The id keeps the `vyre-libs` namespace every library operation registers under.
 pub const VFS_RESOLVE_OP_ID: &str = "vyre-libs::vfs::resolve";
 
 /// GPU-Native Virtual File System (VFS) Asynchronous DMA Resolver

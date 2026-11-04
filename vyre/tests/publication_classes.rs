@@ -67,7 +67,6 @@ pub(crate) const EXPECTED_PUBLISHABLE_PACKAGES: &[&str] = &[
     "vyre-libs-security",
     "vyre-libs-solvers",
     "vyre-libs-text",
-    "vyre-libs-vfs",
     "vyre-libs-visual",
     "vyre-libs",
     "vyre-lower",

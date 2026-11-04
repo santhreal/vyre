@@ -502,8 +502,8 @@ package = "vyre-libs-device"
 path = "vyre-libs-device"
 layer = "libraries"
 seam = "libs-device"
-interface = "Device boundary contracts, memory ownership and resident graph layout compositions."
-responsibility = "Own compiler-internal device boundary contracts, memory ownership models, and resident graph layout compositions. Does not own concrete backend implementations or driver dispatch."
+interface = "Device boundary contracts, memory ownership, resident graph layout and virtual filesystem block load compositions."
+responsibility = "Own compiler-internal device boundary contracts, memory ownership models, resident graph layout, and the virtual filesystem DMA block load and asset resolution compositions that fill device arenas. Does not own concrete backend implementations, driver dispatch, host file IO or runtime storage drivers."
 
 [[crate]]
 package = "vyre-libs-encoding"
@@ -624,14 +624,6 @@ layer = "libraries"
 seam = "libs-text"
 interface = "Text classification, UTF-8 validation and line indexing compositions."
 responsibility = "Own text processing, byte classification, UTF-8 validation, and line indexing IR compositions. Does not own decoding decompression algorithms, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-vfs"
-path = "vyre-libs-vfs"
-layer = "libraries"
-seam = "libs-vfs"
-interface = "Virtual filesystem asynchronous block load compositions."
-responsibility = "Own virtual filesystem DMA asynchronous block load and asset resolution compositions. Does not own host file IO or runtime storage drivers."
 
 [[crate]]
 package = "vyre-libs-visual"
@@ -860,10 +852,6 @@ optional = true
 
 [[facade.domain]]
 package = "vyre-libs-rule"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-vfs"
 optional = true
 
 [[facade.domain]]
@@ -1144,7 +1132,7 @@ requires = ["builder"]
 
 [[facade.feature]]
 name = "vfs"
-domain = "vyre-libs-vfs"
+domain = "vyre-libs-device"
 requires = []
 
 [[facade.feature]]

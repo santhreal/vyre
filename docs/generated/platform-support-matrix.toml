@@ -1211,6 +1211,11 @@ feature = "device"
 publication_class = "internal-engine"
 
 [[package_features]]
+package = "vyre-libs-device"
+feature = "vfs"
+publication_class = "internal-engine"
+
+[[package_features]]
 package = "vyre-libs-encoding"
 feature = "default"
 publication_class = "internal-engine"
@@ -1548,16 +1553,6 @@ publication_class = "extension-sdk"
 [[package_features]]
 package = "vyre-libs-text"
 feature = "text"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-vfs"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-vfs"
-feature = "vfs"
 publication_class = "extension-sdk"
 
 [[package_features]]

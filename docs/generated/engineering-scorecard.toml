@@ -4,8 +4,8 @@
 schema_version = 2
 
 [summary]
-total_crates = 56
-total_gates = 161
+total_crates = 55
+total_gates = 160
 evaluated_axes = 22
 overall_verdict = "unqualified"
 qualification_reason = "missing qualification document: release/engineering-qualification.toml"
@@ -27,7 +27,7 @@ path = "vyre"
 tier = "core"
 public_api_symbols = 172
 testing_guide_present = true
-gate_count = 16
+gate_count = 15
 axes_passed = 0
 axes_total = 22
 status = "unqualified"
@@ -278,7 +278,7 @@ status = "unqualified"
 name = "vyre-libs-device"
 path = "vyre-libs-device"
 tier = "middleware"
-public_api_symbols = 139
+public_api_symbols = 143
 testing_guide_present = true
 gate_count = 3
 axes_passed = 0
@@ -451,17 +451,6 @@ axes_total = 22
 status = "unqualified"
 
 [[crate]]
-name = "vyre-libs-vfs"
-path = "vyre-libs-vfs"
-tier = "middleware"
-public_api_symbols = 6
-testing_guide_present = true
-gate_count = 3
-axes_passed = 0
-axes_total = 22
-status = "unqualified"
-
-[[crate]]
 name = "vyre-libs-visual"
 path = "vyre-libs-visual"
 tier = "middleware"
@@ -522,7 +511,7 @@ path = "vyre-primitives"
 tier = "middleware"
 public_api_symbols = 130
 testing_guide_present = true
-gate_count = 6
+gate_count = 5
 axes_passed = 0
 axes_total = 22
 status = "unqualified"
@@ -599,7 +588,7 @@ path = "xtask"
 tier = "tooling"
 public_api_symbols = 0
 testing_guide_present = true
-gate_count = 161
+gate_count = 160
 axes_passed = 0
 axes_total = 22
 status = "unqualified"

@@ -65,10 +65,10 @@ duplicate_source_bytes = 0
 disk_use_bytes = 2736886
 
 [tier.libraries]
-compile_units = 32
-link_units = 55
+compile_units = 31
+link_units = 53
 duplicate_source_bytes = 0
-disk_use_bytes = 2861649
+disk_use_bytes = 2812769
 
 [tier.lowering]
 compile_units = 2

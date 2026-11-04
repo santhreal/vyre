@@ -47,7 +47,9 @@ graph.
   registry. No application semantics.
 - `vyre-libs` owns every composition: consumer dialects and the compiler's
   own solvers, encoding, analysis, scheduling, and reasoning. Equal
-  residents.
+  residents. It is a facade: each feature forwards to the `vyre-libs-*`
+  domain package the `[facade]` roster in `docs/CRATE_OWNERSHIP.toml`
+  assigns it.
 - `vyre-primitives` owns marker types and hardware intrinsics. A composition
   belongs in `vyre-libs`.
 - `vyre-lower` owns the sole `Program` to validated `PhysicalKernel`

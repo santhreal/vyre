@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 ./cargo_full test -p vyre-libs-device
 ```
 
-Own compiler-internal device boundary contracts, memory ownership models, and resident graph layout compositions. Does not own concrete backend implementations or driver dispatch.
+Own compiler-internal device boundary contracts, memory ownership models, resident graph layout, and the virtual filesystem DMA block load and asset resolution compositions that fill device arenas. Does not own concrete backend implementations, driver dispatch, host file IO or runtime storage drivers.
 
 The crate lives at `vyre-libs-device` and owns the `libs-device` seam in the `libraries` layer.
 
@@ -23,7 +23,7 @@ The crate lives at `vyre-libs-device` and owns the `libs-device` seam in the `li
 ## Feature sets
 
 - Default feature members: `device`
-- Available manifest features: `default`, `device`
+- Available manifest features: `default`, `device`, `vfs`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets

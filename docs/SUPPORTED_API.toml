@@ -130886,57 +130886,6 @@ exported_item_count = 78
   wire_compatibility = "api-only"
 
 [[package]]
-name = "vyre-libs-vfs"
-path = "vyre-libs-vfs"
-seam = "libs-vfs"
-publication_class = "extension-sdk"
-publication_contract = "closure:vyre-libs"
-stability = "extension"
-exported_item_count = 6
-
-  [[package.item]]
-  path = "vyre_libs_vfs"
-  kind = "mod"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_libs_vfs::link_anchor()"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_libs_vfs::vfs"
-  kind = "mod"
-  stability = "extension"
-  feature = "vfs"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_libs_vfs::vfs::resolve"
-  kind = "mod"
-  stability = "extension"
-  feature = "vfs"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_libs_vfs::vfs::resolve::VFS_RESOLVE_OP_ID: &str"
-  kind = "const"
-  stability = "extension"
-  feature = "vfs"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_libs_vfs::vfs::resolve::vfs_resolve_dma(include_hashes: &str, out_file_buffers: &str, block_words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program"
-  kind = "fn"
-  stability = "extension"
-  feature = "vfs"
-  wire_compatibility = "api-only"
-
-[[package]]
 name = "vyre-libs-visual"
 path = "vyre-libs-visual"
 seam = "libs-visual"

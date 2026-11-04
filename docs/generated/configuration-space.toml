@@ -5,7 +5,7 @@ feature_ownership_findings = []
 forward_findings = []
 facade_findings = []
 unreachable_cfg_findings = []
-scheduled_cells = 301
+scheduled_cells = 300
 
 [[crates]]
 name = "structure-gate"
@@ -332,7 +332,6 @@ optional_deps = [
     "vyre-libs-security",
     "vyre-libs-solvers",
     "vyre-libs-text",
-    "vyre-libs-vfs",
     "vyre-libs-visual",
 ]
 has_build_script = false
@@ -405,6 +404,7 @@ publication_class = "internal-engine"
 features = [
     "default",
     "device",
+    "vfs",
 ]
 default_features = ["device"]
 optional_deps = []
@@ -634,18 +634,6 @@ features = [
     "text",
 ]
 default_features = ["text"]
-optional_deps = []
-has_build_script = false
-
-[[crates]]
-name = "vyre-libs-vfs"
-manifest_path = "vyre-libs-vfs/Cargo.toml"
-publication_class = "extension-sdk"
-features = [
-    "default",
-    "vfs",
-]
-default_features = ["vfs"]
 optional_deps = []
 has_build_script = false
 
@@ -1798,9 +1786,24 @@ isolated_build_command = "./cargo_full check -p vyre-libs-device --no-default-fe
 
 [[covering_sets]]
 package = "vyre-libs-device"
+enabled_features = [
+    "device",
+    "vfs",
+]
+target_cell = "full_features"
+isolated_build_command = "./cargo_full check -p vyre-libs-device --all-features"
+
+[[covering_sets]]
+package = "vyre-libs-device"
 enabled_features = ["device"]
 target_cell = "isolated_device"
 isolated_build_command = "./cargo_full check -p vyre-libs-device --no-default-features --features device"
+
+[[covering_sets]]
+package = "vyre-libs-device"
+enabled_features = ["vfs"]
+target_cell = "isolated_vfs"
+isolated_build_command = "./cargo_full check -p vyre-libs-device --no-default-features --features vfs"
 
 [[covering_sets]]
 package = "vyre-libs-encoding"
@@ -2321,18 +2324,6 @@ target_cell = "isolated_text"
 isolated_build_command = "./cargo_full check -p vyre-libs-text --no-default-features --features text"
 
 [[covering_sets]]
-package = "vyre-libs-vfs"
-enabled_features = []
-target_cell = "base_no_features"
-isolated_build_command = "./cargo_full check -p vyre-libs-vfs --no-default-features"
-
-[[covering_sets]]
-package = "vyre-libs-vfs"
-enabled_features = ["vfs"]
-target_cell = "isolated_vfs"
-isolated_build_command = "./cargo_full check -p vyre-libs-vfs --no-default-features --features vfs"
-
-[[covering_sets]]
 package = "vyre-libs-visual"
 enabled_features = []
 target_cell = "base_no_features"
@@ -2785,6 +2776,7 @@ enabled = [
     "vyre-libs-decode/default",
     "vyre-libs-device/default",
     "vyre-libs-device/device",
+    "vyre-libs-device/vfs",
     "vyre-libs-encoding/default",
     "vyre-libs-encoding/encoding",
     "vyre-libs-fixpoint/default",
@@ -2849,8 +2841,6 @@ enabled = [
     "vyre-libs-solvers/solvers",
     "vyre-libs-text/default",
     "vyre-libs-text/text",
-    "vyre-libs-vfs/default",
-    "vyre-libs-vfs/vfs",
     "vyre-libs-visual/default",
     "vyre-libs-visual/visual",
 ]
@@ -2884,7 +2874,6 @@ activated = [
     "vyre-libs-security",
     "vyre-libs-solvers",
     "vyre-libs-text",
-    "vyre-libs-vfs",
     "vyre-libs-visual",
     "vyre-lower",
     "vyre-macros",

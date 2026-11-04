@@ -372,7 +372,7 @@ Own validated ProgramGraph, versioned schedule-free LogicalProgramGraph domains,
 - Seam: `foundation-ir`
 - Interface: Typed IR, graph, diagnostics, validation and semantic optimization contracts.
 - Carried by the curated surface: `true`
-- Consumed by 48 production edge(s)
+- Consumed by 47 production edge(s)
 
 | Dependency | Seam crossed | Interface | Activated by |
 | --- | --- | --- | --- |
@@ -398,7 +398,7 @@ Own every composition in the workspace: consumer dialects and compiler-internal 
 | `vyre-libs-bitset` | `libs-bitset` | Packed bitset word operations and logical bitwise compositions. | `analysis`, `bitset`, `encoding`, `fixpoint`, `full`, `graph`, `graph-dispatch`, `interactive-graphics`, `label`, `logical`, `math`, `math-succinct`, `nfa`, `pattern-nfa`, `pattern-regex`, `predicate`, `reasoning`, `scheduling`, `security`, `solvers`, `topology` |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
 | `vyre-libs-decode` | `libs-decode` | Base64, hex, DEFLATE and encodex decoding compositions. | `decode`, `default`, `full` |
-| `vyre-libs-device` | `libs-device` | Device boundary contracts, memory ownership and resident graph layout compositions. | `analysis`, `device`, `encoding`, `full`, `graph-dispatch`, `reasoning`, `scheduling`, `solvers` |
+| `vyre-libs-device` | `libs-device` | Device boundary contracts, memory ownership, resident graph layout and virtual filesystem block load compositions. | `analysis`, `device`, `encoding`, `full`, `graph-dispatch`, `reasoning`, `scheduling`, `solvers`, `vfs` |
 | `vyre-libs-encoding` | `libs-encoding` | Provenance, matroid and fingerprint encoding compositions. | `encoding`, `full` |
 | `vyre-libs-fixpoint` | `libs-fixpoint` | Deterministic fixpoint iteration and grid synchronization compositions. | `analysis`, `encoding`, `fixpoint`, `full`, `graph`, `graph-dispatch`, `interactive-graphics`, `math`, `math-succinct`, `predicate`, `reasoning`, `scheduling`, `security`, `solvers`, `topology` |
 | `vyre-libs-graph` | `libs-graph` | Graph algorithm compositions: CSR traversal, AST walks, dominator trees and topological sort. | `analysis`, `encoding`, `full`, `graph`, `graph-dispatch`, `interactive-graphics`, `math`, `math-succinct`, `predicate`, `reasoning`, `scheduling`, `security`, `solvers`, `topology` |
@@ -414,7 +414,6 @@ Own every composition in the workspace: consumer dialects and compiler-internal 
 | `vyre-libs-security` | `libs-security` | Security taint analysis and label resolver compositions. | `full`, `label`, `predicate`, `security` |
 | `vyre-libs-solvers` | `libs-solvers` | Numerical solver and autotuning compositions. | `full`, `solvers` |
 | `vyre-libs-text` | `libs-text` | Text classification, UTF-8 validation and line indexing compositions. | `decode`, `default`, `encoding`, `full`, `parsing`, `parsing-kernels`, `pattern`, `pattern-dfa`, `pattern-nfa`, `pattern-regex`, `pattern-substring`, `python-parser`, `scheduling`, `text` |
-| `vyre-libs-vfs` | `libs-vfs` | Virtual filesystem asynchronous block load compositions. | `full`, `vfs` |
 | `vyre-libs-visual` | `libs-visual` | Visual rendering and compositing effect compositions. | `full`, `interactive-graphics`, `visual` |
 | `vyre-megakernel` | `megakernel-compiler` | Schedule search, immutable artifact identity and authenticated target-payload construction. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
@@ -472,7 +471,7 @@ Own shared IR composition infrastructure, child region skeletons, operand wrappe
 - Seam: `libs-builder`
 - Interface: Shared IR composition infrastructure, child region skeletons, operands and registration link anchors.
 - Carried by the curated surface: `false`
-- Consumed by 22 production edge(s)
+- Consumed by 21 production edge(s)
 
 | Dependency | Seam crossed | Interface | Activated by |
 | --- | --- | --- | --- |
@@ -503,13 +502,13 @@ Own Base64, hex, DEFLATE, and encodex data decoding and decompression IR composi
 
 ### `vyre-libs-device`
 
-Own compiler-internal device boundary contracts, memory ownership models, and resident graph layout compositions. Does not own concrete backend implementations or driver dispatch.
+Own compiler-internal device boundary contracts, memory ownership models, resident graph layout, and the virtual filesystem DMA block load and asset resolution compositions that fill device arenas. Does not own concrete backend implementations, driver dispatch, host file IO or runtime storage drivers.
 
 - Path: `vyre-libs-device`
 - Layer: `libraries` (rank 3)
 - Publication class: `internal-engine`
 - Seam: `libs-device`
-- Interface: Device boundary contracts, memory ownership and resident graph layout compositions.
+- Interface: Device boundary contracts, memory ownership, resident graph layout and virtual filesystem block load compositions.
 - Carried by the curated surface: `false`
 - Consumed by 1 production edge(s)
 
@@ -834,23 +833,6 @@ Own text processing, byte classification, UTF-8 validation, and line indexing IR
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
 | `vyre-libs-reduce` | `libs-reduce` | Workgroup reduction tree, atomic scalar reduction and prefix scan compositions. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
-
-### `vyre-libs-vfs`
-
-Own virtual filesystem DMA asynchronous block load and asset resolution compositions. Does not own host file IO or runtime storage drivers.
-
-- Path: `vyre-libs-vfs`
-- Layer: `libraries` (rank 3)
-- Publication class: `extension-sdk`
-- Seam: `libs-vfs`
-- Interface: Virtual filesystem asynchronous block load compositions.
-- Carried by the curated surface: `false`
-- Consumed by 1 production edge(s)
-
-| Dependency | Seam crossed | Interface | Activated by |
-| --- | --- | --- | --- |
-| `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
-| `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
 
 ### `vyre-libs-visual`
 

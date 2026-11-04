@@ -14,6 +14,7 @@ pub const fn vyre_libs_device::device::device_resident_token_fact_graph::TokenFa
 pub const vyre_libs_device::device::device_resident_token_fact_graph::OP_ID: &str
 pub const vyre_libs_device::device::device_resident_token_fact_graph::TOKEN_FACT_DEGREE_PROFILE_BUCKETS: usize
 pub const vyre_libs_device::device::device_resident_token_fact_graph::TOKEN_FACT_DEGREE_PROFILE_RANKS: [u64; 16]
+pub const vyre_libs_device::vfs::resolve::VFS_RESOLVE_OP_ID: &str
 pub enum vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError
 pub enum vyre_libs_device::device::device_resident_token_fact_graph::TokenFactEdgeKind
 pub enum vyre_libs_device::device::device_resident_token_fact_graph::TokenFactNodeKind
@@ -32,11 +33,14 @@ pub fn vyre_libs_device::device::gpu_probe_contract::validate_gpu_probe_contract
 pub fn vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_libs_device::device::memory_ownership_contract::validate_memory_ownership_contract(records: &[vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipRecord<'_>]) -> core::result::Result<vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipProof, vyre_libs_device::device::memory_ownership_contract::MemoryOwnershipError>
 pub fn vyre_libs_device::link_anchor()
+pub fn vyre_libs_device::vfs::resolve::vfs_resolve_dma(include_hashes: &str, out_file_buffers: &str, block_words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub mod vyre_libs_device
 pub mod vyre_libs_device::device
 pub mod vyre_libs_device::device::device_resident_token_fact_graph
 pub mod vyre_libs_device::device::gpu_probe_contract
 pub mod vyre_libs_device::device::memory_ownership_contract
+pub mod vyre_libs_device::vfs
+pub mod vyre_libs_device::vfs::resolve
 pub struct vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraph
 pub struct vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphLayout
 pub struct vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphScratch

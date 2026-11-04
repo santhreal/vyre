@@ -4823,7 +4823,7 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 [[op]]
 family = "vyre-libs::vfs::resolve"
 tier = "libs"
-owners = ["vyre-libs-vfs/src/vfs"]
+owners = ["vyre-libs-device/src/vfs"]
 ops = ["vyre-libs::vfs::resolve"]
 registry_sources = ["vyre-foundation::operation"]
 reference = "supported"

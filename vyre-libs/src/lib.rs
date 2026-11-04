@@ -52,9 +52,7 @@ pub fn link_anchor() -> usize {
     vyre_libs_visual::link_anchor();
     #[cfg(feature = "rule")]
     vyre_libs_rule::link_anchor();
-    #[cfg(feature = "vfs")]
-    vyre_libs_vfs::link_anchor();
-    #[cfg(feature = "device")]
+    #[cfg(any(feature = "device", feature = "vfs"))]
     vyre_libs_device::link_anchor();
     #[cfg(feature = "solvers")]
     vyre_libs_solvers::link_anchor();
@@ -112,10 +110,10 @@ pub use vyre_libs_security::predicate;
 #[cfg(feature = "security")]
 pub use vyre_libs_security::security;
 
+#[cfg(feature = "vfs")]
+pub use vyre_libs_device::vfs;
 #[cfg(feature = "rule")]
 pub use vyre_libs_rule::rule;
-#[cfg(feature = "vfs")]
-pub use vyre_libs_vfs::vfs;
 #[cfg(feature = "visual")]
 pub use vyre_libs_visual::visual;
 

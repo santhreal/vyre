@@ -3750,7 +3750,6 @@ dependencies = [
  "vyre-libs-security",
  "vyre-libs-solvers",
  "vyre-libs-text",
- "vyre-libs-vfs",
  "vyre-libs-visual",
  "vyre-lower",
  "vyre-megakernel",
@@ -3826,6 +3825,7 @@ dependencies = [
 name = "vyre-libs-device"
 version = "0.8.0"
 dependencies = [
+ "inventory",
  "vyre-foundation",
  "vyre-libs-builder",
 ]
@@ -4079,15 +4079,6 @@ dependencies = [
  "vyre-primitives",
  "vyre-reference",
  "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-vfs"
-version = "0.8.0"
-dependencies = [
- "inventory",
- "vyre-foundation",
- "vyre-libs-builder",
 ]
 
 [[package]]
