@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"ccba33820268d7dc04ddfe9c6ddabf46390b1fc5","commit_timestamp":"1793768127","parent_commit":"b6cb8e23d04c0185eaf4c1e5b54a5a56b3d702ce","dirty":false,"source_fingerprint":"git:ccba33820268d7dc04ddfe9c6ddabf46390b1fc5:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"7726a7a023e4ec4f3db561f71ef1cf19e81f27b0","commit_timestamp":"1793806554","parent_commit":"6913b4549fc77f22c0a43d7b8ed4b7b7bc167437","dirty":false,"source_fingerprint":"git:7726a7a023e4ec4f3db561f71ef1cf19e81f27b0:dirty=false"},"host":{"state":"recorded","hostname":"santhserver","os":"linux","architecture":"x86_64","cpu_model":"11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz","cpu_cores":16},"measurement":{"state":"host_only"}},
   "schema_version": 2,
   "requested_vyre_release": "0.8.0",
   "tag_story": {
@@ -30,35 +30,35 @@
     {
       "package": "structure-gate",
       "version": "0.1.0",
-      "manifest": "structure-gate/Cargo.toml",
+      "manifest": "tools/structure-gate/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
       "package": "vyre",
       "version": "0.8.0",
-      "manifest": "vyre/Cargo.toml",
+      "manifest": "crates/vyre/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-alloc-probe",
       "version": "0.8.0",
-      "manifest": "vyre-alloc-probe/Cargo.toml",
+      "manifest": "crates/vyre-alloc-probe/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
       "package": "vyre-aot",
       "version": "0.8.0",
-      "manifest": "vyre-aot/Cargo.toml",
+      "manifest": "crates/vyre-aot/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
       "package": "vyre-bench",
       "version": "0.8.0",
-      "manifest": "vyre-bench/Cargo.toml",
+      "manifest": "crates/vyre-bench/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
@@ -79,336 +79,336 @@
     {
       "package": "vyre-debug",
       "version": "0.8.0",
-      "manifest": "vyre-debug/Cargo.toml",
+      "manifest": "crates/vyre-debug/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
       "package": "vyre-driver",
       "version": "0.8.0",
-      "manifest": "vyre-driver/Cargo.toml",
+      "manifest": "crates/vyre-driver/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-driver-cuda",
       "version": "0.8.0",
-      "manifest": "vyre-driver-cuda/Cargo.toml",
+      "manifest": "crates/vyre-driver-cuda/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-driver-metal",
       "version": "0.8.0",
-      "manifest": "vyre-driver-metal/Cargo.toml",
+      "manifest": "crates/vyre-driver-metal/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-driver-reference",
       "version": "0.8.0",
-      "manifest": "vyre-driver-reference/Cargo.toml",
+      "manifest": "crates/vyre-driver-reference/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-driver-spirv",
       "version": "0.8.0",
-      "manifest": "vyre-driver-spirv/Cargo.toml",
+      "manifest": "crates/vyre-driver-spirv/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-driver-wgpu",
       "version": "0.8.0",
-      "manifest": "vyre-driver-wgpu/Cargo.toml",
+      "manifest": "crates/vyre-driver-wgpu/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-emit-metal",
       "version": "0.8.0",
-      "manifest": "vyre-emit-metal/Cargo.toml",
+      "manifest": "crates/vyre-emit-metal/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-emit-naga",
       "version": "0.8.0",
-      "manifest": "vyre-emit-naga/Cargo.toml",
+      "manifest": "crates/vyre-emit-naga/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-emit-ptx",
       "version": "0.8.0",
-      "manifest": "vyre-emit-ptx/Cargo.toml",
+      "manifest": "crates/vyre-emit-ptx/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-emit-spirv",
       "version": "0.8.0",
-      "manifest": "vyre-emit-spirv/Cargo.toml",
+      "manifest": "crates/vyre-emit-spirv/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-foundation",
       "version": "0.8.0",
-      "manifest": "vyre-foundation/Cargo.toml",
+      "manifest": "crates/vyre-foundation/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs",
       "version": "0.8.0",
-      "manifest": "vyre-libs/Cargo.toml",
+      "manifest": "crates/vyre-libs/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-analysis",
       "version": "0.8.0",
-      "manifest": "vyre-libs-analysis/Cargo.toml",
+      "manifest": "crates/vyre-libs-analysis/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-bitset",
       "version": "0.8.0",
-      "manifest": "vyre-libs-bitset/Cargo.toml",
+      "manifest": "crates/vyre-libs-bitset/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-builder",
       "version": "0.8.0",
-      "manifest": "vyre-libs-builder/Cargo.toml",
+      "manifest": "crates/vyre-libs-builder/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-decode",
       "version": "0.8.0",
-      "manifest": "vyre-libs-decode/Cargo.toml",
+      "manifest": "crates/vyre-libs-decode/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-device",
       "version": "0.8.0",
-      "manifest": "vyre-libs-device/Cargo.toml",
+      "manifest": "crates/vyre-libs-device/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-encoding",
       "version": "0.8.0",
-      "manifest": "vyre-libs-encoding/Cargo.toml",
+      "manifest": "crates/vyre-libs-encoding/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-fixpoint",
       "version": "0.8.0",
-      "manifest": "vyre-libs-fixpoint/Cargo.toml",
+      "manifest": "crates/vyre-libs-fixpoint/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-graph",
       "version": "0.8.0",
-      "manifest": "vyre-libs-graph/Cargo.toml",
+      "manifest": "crates/vyre-libs-graph/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-hash",
       "version": "0.8.0",
-      "manifest": "vyre-libs-hash/Cargo.toml",
+      "manifest": "crates/vyre-libs-hash/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-math",
       "version": "0.8.0",
-      "manifest": "vyre-libs-math/Cargo.toml",
+      "manifest": "crates/vyre-libs-math/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-nn",
       "version": "0.8.0",
-      "manifest": "vyre-libs-nn/Cargo.toml",
+      "manifest": "crates/vyre-libs-nn/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-parsing",
       "version": "0.8.0",
-      "manifest": "vyre-libs-parsing/Cargo.toml",
+      "manifest": "crates/vyre-libs-parsing/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-pattern",
       "version": "0.8.0",
-      "manifest": "vyre-libs-pattern/Cargo.toml",
+      "manifest": "crates/vyre-libs-pattern/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-reasoning",
       "version": "0.8.0",
-      "manifest": "vyre-libs-reasoning/Cargo.toml",
+      "manifest": "crates/vyre-libs-reasoning/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-reduce",
       "version": "0.8.0",
-      "manifest": "vyre-libs-reduce/Cargo.toml",
+      "manifest": "crates/vyre-libs-reduce/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-rule",
       "version": "0.8.0",
-      "manifest": "vyre-libs-rule/Cargo.toml",
+      "manifest": "crates/vyre-libs-rule/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-scheduling",
       "version": "0.8.0",
-      "manifest": "vyre-libs-scheduling/Cargo.toml",
+      "manifest": "crates/vyre-libs-scheduling/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-security",
       "version": "0.8.0",
-      "manifest": "vyre-libs-security/Cargo.toml",
+      "manifest": "crates/vyre-libs-security/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-solvers",
       "version": "0.8.0",
-      "manifest": "vyre-libs-solvers/Cargo.toml",
+      "manifest": "crates/vyre-libs-solvers/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-text",
       "version": "0.8.0",
-      "manifest": "vyre-libs-text/Cargo.toml",
+      "manifest": "crates/vyre-libs-text/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-libs-visual",
       "version": "0.8.0",
-      "manifest": "vyre-libs-visual/Cargo.toml",
+      "manifest": "crates/vyre-libs-visual/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-lower",
       "version": "0.8.0",
-      "manifest": "vyre-lower/Cargo.toml",
+      "manifest": "crates/vyre-lower/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-macros",
       "version": "0.8.0",
-      "manifest": "vyre-macros/Cargo.toml",
+      "manifest": "crates/vyre-macros/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-megakernel",
       "version": "0.8.0",
-      "manifest": "vyre-megakernel/Cargo.toml",
+      "manifest": "crates/vyre-megakernel/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-pass-engine",
       "version": "0.8.0",
-      "manifest": "vyre-pass-engine/Cargo.toml",
+      "manifest": "crates/vyre-pass-engine/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
       "package": "vyre-primitives",
       "version": "0.8.0",
-      "manifest": "vyre-primitives/Cargo.toml",
+      "manifest": "crates/vyre-primitives/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-reference",
       "version": "0.8.0",
-      "manifest": "vyre-reference/Cargo.toml",
+      "manifest": "crates/vyre-reference/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-registry-link",
       "version": "0.8.0",
-      "manifest": "vyre-registry-link/Cargo.toml",
+      "manifest": "crates/vyre-registry-link/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
       "package": "vyre-runtime",
       "version": "0.8.0",
-      "manifest": "vyre-runtime/Cargo.toml",
+      "manifest": "crates/vyre-runtime/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-safetensors",
       "version": "0.8.0",
-      "manifest": "vyre-safetensors/Cargo.toml",
+      "manifest": "crates/vyre-safetensors/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-spec",
       "version": "0.8.0",
-      "manifest": "vyre-spec/Cargo.toml",
+      "manifest": "crates/vyre-spec/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
     {
       "package": "vyre-test-support",
       "version": "0.8.0",
-      "manifest": "vyre-test-support/Cargo.toml",
+      "manifest": "crates/vyre-test-support/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
       "package": "xtask",
       "version": "0.1.0",
-      "manifest": "xtask/Cargo.toml",
+      "manifest": "tools/xtask/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
       "package": "xtask-evidence",
       "version": "0.1.0",
-      "manifest": "xtask-evidence/Cargo.toml",
+      "manifest": "tools/xtask-evidence/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     },
     {
       "package": "xtask-registry",
       "version": "0.1.0",
-      "manifest": "xtask-registry/Cargo.toml",
+      "manifest": "tools/xtask-registry/Cargo.toml",
       "release_group": "vyre",
       "publishable": false
     }
@@ -709,7 +709,7 @@
       "release_group": "vyre"
     },
     {
-      "manifest": "vyre-pass-engine/Cargo.toml",
+      "manifest": "crates/vyre-pass-engine/Cargo.toml",
       "dependency": "vyre-libs",
       "version": "0.8.0",
       "expected": "0.8.0",

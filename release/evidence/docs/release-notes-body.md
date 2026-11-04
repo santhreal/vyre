@@ -1991,6 +1991,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   from `vyre-test-support` and resolve the checkout through
   `vyre_test_support::monorepo::vyre_workspace_root` instead of restating both
   per file.
+- Product crates are under `crates/` and repository tooling under `tools/`;
+  package names and the published crates are unchanged.
 - The cross-backend u32 parity suites read one op table instead of one
   hand-written test per op. `synthetic_binop_parity`, its CUDA twin, and both
   `div_zero_shift_mask` suites loop over the shared table with a per-backend
@@ -3364,6 +3366,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   decides which lines belong to an inline test module lives in the scan module
   that already owns what is not code. The hot-path scan held the only copy, so
   the heuristic audit could not tell a test fixture from production debt.
+- Workflow wiring is checked once, by the `ci-registry` gate, which now rejects
+  every script glob and fails on a workflow it cannot read; `xtask gates`
+  checks only the registry before it runs.
 - The vyre-libs fixture owner exposes the out-of-bounds report entry point, so
   no module in the crate reaches the reference interpreter itself.
 - The batched packed-activation INT4 matmul and its top-1 routing variant
@@ -5028,6 +5033,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   The backend-extension gate now derives the roster from the vyre-emit-*
   workspace members and requires each one to consume emit_adversarial_corpus,
   and fails when the roster is empty.
+- `xtask gates` fails on any finding; `xtask/gate-baselines.toml`, `gates
+  --write-baseline` and the unused gate cache key and DAG executor are deleted.
 - The `GeometryStrategy` trait and `GeometryLoweringError` are removed from
   `vyre-foundation`, and
   `vyre_driver::DeviceProfile::admissible_workgroup_widths` reports the
@@ -7760,6 +7767,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   fail with a protocol violation under `RUST_TEST_THREADS=1`.
 - The conformance CI lane now rejects a generated conformance matrix that
   differs from the committed release evidence.
+- A conformance case's wall budget no longer includes the read of the running
+  binary's digest, which the coordinator now takes when it is constructed.
 - The downstream graphics app consumer package compiles and passes its test
   suite against the current runtime API, and the consumer-compilation gate
   verifies that out-of-workspace consumer packages build without errors.
@@ -7800,6 +7809,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - CPU-parity integration tests now declare their required Cargo features.
   Default-feature `vyre-libs` test builds no longer import reference-only
   symbols that are intentionally absent from production builds.
+- Repository tooling resolves every crate directory through the workspace
+  roster, so a crate outside the directory its package name spells is read or
+  reported instead of skipped, and `docs/PROTECTED_BOUNDARIES.toml` records
+  members by package name.
 - Workspace crate ownership now comes from one manifest-checked registry. The
   tier gate rejects missing crates, undeclared production edges, and stale
   generated graph or ownership guides, while planned compiler boundaries stay
@@ -9512,6 +9525,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   rust frontend stages is a second frontend.
 - Govern mutable state owner locks under explicit failure domains and recovery
   classes with zero unhandled lock poisoning across production crates.
+- Benchmark runs on an RTX 3080 Ti record the roofline memory fraction against
+  its 912 GB/s peak instead of omitting it.
 - Every scalar rule leaf is runnable again.
   `vyre_libs::rule::condition_op::condition_program` declared its verdict slot
   as a backend-allocated output with no static element count, which fails IR

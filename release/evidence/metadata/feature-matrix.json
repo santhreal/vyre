@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"ccba33820268d7dc04ddfe9c6ddabf46390b1fc5","commit_timestamp":"1793768127","parent_commit":"b6cb8e23d04c0185eaf4c1e5b54a5a56b3d702ce","dirty":false,"source_fingerprint":"git:ccba33820268d7dc04ddfe9c6ddabf46390b1fc5:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"7726a7a023e4ec4f3db561f71ef1cf19e81f27b0","commit_timestamp":"1793806554","parent_commit":"6913b4549fc77f22c0a43d7b8ed4b7b7bc167437","dirty":false,"source_fingerprint":"git:7726a7a023e4ec4f3db561f71ef1cf19e81f27b0:dirty=false"},"host":{"state":"recorded","hostname":"santhserver","os":"linux","architecture":"x86_64","cpu_model":"11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz","cpu_cores":16},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
@@ -10,7 +10,7 @@
   "packages": [
     {
       "name": "structure-gate",
-      "manifest": "structure-gate/Cargo.toml",
+      "manifest": "tools/structure-gate/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -21,7 +21,7 @@
     },
     {
       "name": "vyre",
-      "manifest": "vyre/Cargo.toml",
+      "manifest": "crates/vyre/Cargo.toml",
       "feature_count": 4,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -37,7 +37,7 @@
     },
     {
       "name": "vyre-alloc-probe",
-      "manifest": "vyre-alloc-probe/Cargo.toml",
+      "manifest": "crates/vyre-alloc-probe/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -48,7 +48,7 @@
     },
     {
       "name": "vyre-aot",
-      "manifest": "vyre-aot/Cargo.toml",
+      "manifest": "crates/vyre-aot/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -62,7 +62,7 @@
     },
     {
       "name": "vyre-bench",
-      "manifest": "vyre-bench/Cargo.toml",
+      "manifest": "crates/vyre-bench/Cargo.toml",
       "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [
@@ -107,7 +107,7 @@
     },
     {
       "name": "vyre-debug",
-      "manifest": "vyre-debug/Cargo.toml",
+      "manifest": "crates/vyre-debug/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -118,7 +118,7 @@
     },
     {
       "name": "vyre-driver",
-      "manifest": "vyre-driver/Cargo.toml",
+      "manifest": "crates/vyre-driver/Cargo.toml",
       "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -133,7 +133,7 @@
     },
     {
       "name": "vyre-driver-cuda",
-      "manifest": "vyre-driver-cuda/Cargo.toml",
+      "manifest": "crates/vyre-driver-cuda/Cargo.toml",
       "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -148,7 +148,7 @@
     },
     {
       "name": "vyre-driver-metal",
-      "manifest": "vyre-driver-metal/Cargo.toml",
+      "manifest": "crates/vyre-driver-metal/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -162,7 +162,7 @@
     },
     {
       "name": "vyre-driver-reference",
-      "manifest": "vyre-driver-reference/Cargo.toml",
+      "manifest": "crates/vyre-driver-reference/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -173,7 +173,7 @@
     },
     {
       "name": "vyre-driver-spirv",
-      "manifest": "vyre-driver-spirv/Cargo.toml",
+      "manifest": "crates/vyre-driver-spirv/Cargo.toml",
       "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -188,7 +188,7 @@
     },
     {
       "name": "vyre-driver-wgpu",
-      "manifest": "vyre-driver-wgpu/Cargo.toml",
+      "manifest": "crates/vyre-driver-wgpu/Cargo.toml",
       "feature_count": 4,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -204,7 +204,7 @@
     },
     {
       "name": "vyre-emit-metal",
-      "manifest": "vyre-emit-metal/Cargo.toml",
+      "manifest": "crates/vyre-emit-metal/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -215,7 +215,7 @@
     },
     {
       "name": "vyre-emit-naga",
-      "manifest": "vyre-emit-naga/Cargo.toml",
+      "manifest": "crates/vyre-emit-naga/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -226,7 +226,7 @@
     },
     {
       "name": "vyre-emit-ptx",
-      "manifest": "vyre-emit-ptx/Cargo.toml",
+      "manifest": "crates/vyre-emit-ptx/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -240,7 +240,7 @@
     },
     {
       "name": "vyre-emit-spirv",
-      "manifest": "vyre-emit-spirv/Cargo.toml",
+      "manifest": "crates/vyre-emit-spirv/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -251,7 +251,7 @@
     },
     {
       "name": "vyre-foundation",
-      "manifest": "vyre-foundation/Cargo.toml",
+      "manifest": "crates/vyre-foundation/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -265,7 +265,7 @@
     },
     {
       "name": "vyre-foundation-fuzz",
-      "manifest": "vyre-foundation/fuzz/Cargo.toml",
+      "manifest": "crates/vyre-foundation/fuzz/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -298,7 +298,7 @@
     },
     {
       "name": "vyre-libs",
-      "manifest": "vyre-libs/Cargo.toml",
+      "manifest": "crates/vyre-libs/Cargo.toml",
       "feature_count": 64,
       "has_default_feature": true,
       "default_feature_members": [
@@ -385,7 +385,7 @@
     },
     {
       "name": "vyre-libs-analysis",
-      "manifest": "vyre-libs-analysis/Cargo.toml",
+      "manifest": "crates/vyre-libs-analysis/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [
@@ -401,7 +401,7 @@
     },
     {
       "name": "vyre-libs-bitset",
-      "manifest": "vyre-libs-bitset/Cargo.toml",
+      "manifest": "crates/vyre-libs-bitset/Cargo.toml",
       "feature_count": 4,
       "has_default_feature": true,
       "default_feature_members": [
@@ -420,7 +420,7 @@
     },
     {
       "name": "vyre-libs-builder",
-      "manifest": "vyre-libs-builder/Cargo.toml",
+      "manifest": "crates/vyre-libs-builder/Cargo.toml",
       "feature_count": 5,
       "has_default_feature": true,
       "default_feature_members": [
@@ -442,7 +442,7 @@
     },
     {
       "name": "vyre-libs-decode",
-      "manifest": "vyre-libs-decode/Cargo.toml",
+      "manifest": "crates/vyre-libs-decode/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [
@@ -458,7 +458,7 @@
     },
     {
       "name": "vyre-libs-device",
-      "manifest": "vyre-libs-device/Cargo.toml",
+      "manifest": "crates/vyre-libs-device/Cargo.toml",
       "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [
@@ -475,7 +475,7 @@
     },
     {
       "name": "vyre-libs-encoding",
-      "manifest": "vyre-libs-encoding/Cargo.toml",
+      "manifest": "crates/vyre-libs-encoding/Cargo.toml",
       "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [
@@ -492,7 +492,7 @@
     },
     {
       "name": "vyre-libs-fixpoint",
-      "manifest": "vyre-libs-fixpoint/Cargo.toml",
+      "manifest": "crates/vyre-libs-fixpoint/Cargo.toml",
       "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [
@@ -509,7 +509,7 @@
     },
     {
       "name": "vyre-libs-graph",
-      "manifest": "vyre-libs-graph/Cargo.toml",
+      "manifest": "crates/vyre-libs-graph/Cargo.toml",
       "feature_count": 7,
       "has_default_feature": true,
       "default_feature_members": [
@@ -530,7 +530,7 @@
     },
     {
       "name": "vyre-libs-hash",
-      "manifest": "vyre-libs-hash/Cargo.toml",
+      "manifest": "crates/vyre-libs-hash/Cargo.toml",
       "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [
@@ -547,7 +547,7 @@
     },
     {
       "name": "vyre-libs-math",
-      "manifest": "vyre-libs-math/Cargo.toml",
+      "manifest": "crates/vyre-libs-math/Cargo.toml",
       "feature_count": 12,
       "has_default_feature": true,
       "default_feature_members": [
@@ -576,7 +576,7 @@
     },
     {
       "name": "vyre-libs-nn",
-      "manifest": "vyre-libs-nn/Cargo.toml",
+      "manifest": "crates/vyre-libs-nn/Cargo.toml",
       "feature_count": 11,
       "has_default_feature": true,
       "default_feature_members": [
@@ -603,7 +603,7 @@
     },
     {
       "name": "vyre-libs-parsing",
-      "manifest": "vyre-libs-parsing/Cargo.toml",
+      "manifest": "crates/vyre-libs-parsing/Cargo.toml",
       "feature_count": 5,
       "has_default_feature": true,
       "default_feature_members": [
@@ -622,7 +622,7 @@
     },
     {
       "name": "vyre-libs-pattern",
-      "manifest": "vyre-libs-pattern/Cargo.toml",
+      "manifest": "crates/vyre-libs-pattern/Cargo.toml",
       "feature_count": 8,
       "has_default_feature": true,
       "default_feature_members": [
@@ -644,7 +644,7 @@
     },
     {
       "name": "vyre-libs-reasoning",
-      "manifest": "vyre-libs-reasoning/Cargo.toml",
+      "manifest": "crates/vyre-libs-reasoning/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [
@@ -660,7 +660,7 @@
     },
     {
       "name": "vyre-libs-reduce",
-      "manifest": "vyre-libs-reduce/Cargo.toml",
+      "manifest": "crates/vyre-libs-reduce/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [
@@ -676,7 +676,7 @@
     },
     {
       "name": "vyre-libs-rule",
-      "manifest": "vyre-libs-rule/Cargo.toml",
+      "manifest": "crates/vyre-libs-rule/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [
@@ -692,7 +692,7 @@
     },
     {
       "name": "vyre-libs-scheduling",
-      "manifest": "vyre-libs-scheduling/Cargo.toml",
+      "manifest": "crates/vyre-libs-scheduling/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [
@@ -708,7 +708,7 @@
     },
     {
       "name": "vyre-libs-security",
-      "manifest": "vyre-libs-security/Cargo.toml",
+      "manifest": "crates/vyre-libs-security/Cargo.toml",
       "feature_count": 4,
       "has_default_feature": true,
       "default_feature_members": [
@@ -726,7 +726,7 @@
     },
     {
       "name": "vyre-libs-solvers",
-      "manifest": "vyre-libs-solvers/Cargo.toml",
+      "manifest": "crates/vyre-libs-solvers/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [
@@ -742,7 +742,7 @@
     },
     {
       "name": "vyre-libs-text",
-      "manifest": "vyre-libs-text/Cargo.toml",
+      "manifest": "crates/vyre-libs-text/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [
@@ -758,7 +758,7 @@
     },
     {
       "name": "vyre-libs-visual",
-      "manifest": "vyre-libs-visual/Cargo.toml",
+      "manifest": "crates/vyre-libs-visual/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [
@@ -774,7 +774,7 @@
     },
     {
       "name": "vyre-lower",
-      "manifest": "vyre-lower/Cargo.toml",
+      "manifest": "crates/vyre-lower/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -788,7 +788,7 @@
     },
     {
       "name": "vyre-macros",
-      "manifest": "vyre-macros/Cargo.toml",
+      "manifest": "crates/vyre-macros/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -799,7 +799,7 @@
     },
     {
       "name": "vyre-megakernel",
-      "manifest": "vyre-megakernel/Cargo.toml",
+      "manifest": "crates/vyre-megakernel/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -821,7 +821,7 @@
     },
     {
       "name": "vyre-pass-engine",
-      "manifest": "vyre-pass-engine/Cargo.toml",
+      "manifest": "crates/vyre-pass-engine/Cargo.toml",
       "feature_count": 3,
       "has_default_feature": true,
       "default_feature_members": [
@@ -838,7 +838,7 @@
     },
     {
       "name": "vyre-primitives",
-      "manifest": "vyre-primitives/Cargo.toml",
+      "manifest": "crates/vyre-primitives/Cargo.toml",
       "feature_count": 6,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -856,7 +856,7 @@
     },
     {
       "name": "vyre-reference",
-      "manifest": "vyre-reference/Cargo.toml",
+      "manifest": "crates/vyre-reference/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [
@@ -872,7 +872,7 @@
     },
     {
       "name": "vyre-registry-link",
-      "manifest": "vyre-registry-link/Cargo.toml",
+      "manifest": "crates/vyre-registry-link/Cargo.toml",
       "feature_count": 7,
       "has_default_feature": true,
       "default_feature_members": [
@@ -897,7 +897,7 @@
     },
     {
       "name": "vyre-runtime",
-      "manifest": "vyre-runtime/Cargo.toml",
+      "manifest": "crates/vyre-runtime/Cargo.toml",
       "feature_count": 6,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -915,7 +915,7 @@
     },
     {
       "name": "vyre-safetensors",
-      "manifest": "vyre-safetensors/Cargo.toml",
+      "manifest": "crates/vyre-safetensors/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -926,7 +926,7 @@
     },
     {
       "name": "vyre-spec",
-      "manifest": "vyre-spec/Cargo.toml",
+      "manifest": "crates/vyre-spec/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -937,7 +937,7 @@
     },
     {
       "name": "vyre-test-support",
-      "manifest": "vyre-test-support/Cargo.toml",
+      "manifest": "crates/vyre-test-support/Cargo.toml",
       "feature_count": 11,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -960,7 +960,7 @@
     },
     {
       "name": "xtask",
-      "manifest": "xtask/Cargo.toml",
+      "manifest": "tools/xtask/Cargo.toml",
       "feature_count": 2,
       "has_default_feature": true,
       "default_feature_members": [],
@@ -974,7 +974,7 @@
     },
     {
       "name": "xtask-evidence",
-      "manifest": "xtask-evidence/Cargo.toml",
+      "manifest": "tools/xtask-evidence/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
@@ -985,7 +985,7 @@
     },
     {
       "name": "xtask-registry",
-      "manifest": "xtask-registry/Cargo.toml",
+      "manifest": "tools/xtask-registry/Cargo.toml",
       "feature_count": 0,
       "has_default_feature": false,
       "default_feature_members": [],
