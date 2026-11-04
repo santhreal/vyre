@@ -106,7 +106,6 @@ pub const TESTING_GUIDE_ARTIFACTS: &[&str] = &[
     "docs/testing/vyre-libs-vfs.md",
     "docs/testing/vyre-libs-visual.md",
     "docs/testing/vyre-libs.md",
-    "docs/testing/vyre-lints.md",
     "docs/testing/vyre-lower.md",
     "docs/testing/vyre-macros.md",
     "docs/testing/vyre-megakernel.md",

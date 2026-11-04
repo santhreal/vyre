@@ -40,9 +40,8 @@ const CONSUMER_NAMES: &[&str] = &["weir", "surgec", "gossan", "keyhog"];
 
 /// Documents that may name the partner product, because the release train ships
 /// both under joint tags and a runbook nobody can follow is not a runbook. The
-/// list is a data file two guards read, after they disagreed about which
-/// documents were exempt.
-const RELEASE_COORDINATION: &str = "vyre-lints/rules/release_coordination_docs.txt";
+/// list is a data file, so a second guard on the boundary reads the same rows.
+const RELEASE_COORDINATION: &str = "xtask/release-coordination-docs.txt";
 
 /// Platform documentation stays consumer-neutral.
 pub struct PlatformConsumerDocs;

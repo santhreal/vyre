@@ -5,7 +5,7 @@ feature_ownership_findings = []
 forward_findings = []
 facade_findings = []
 unreachable_cfg_findings = []
-scheduled_cells = 302
+scheduled_cells = 301
 
 [[crates]]
 name = "structure-gate"
@@ -658,15 +658,6 @@ features = [
     "visual",
 ]
 default_features = ["visual"]
-optional_deps = []
-has_build_script = false
-
-[[crates]]
-name = "vyre-lints"
-manifest_path = "vyre-lints/Cargo.toml"
-publication_class = "conformance-tooling"
-features = []
-default_features = []
 optional_deps = []
 has_build_script = false
 
@@ -2352,12 +2343,6 @@ package = "vyre-libs-visual"
 enabled_features = ["visual"]
 target_cell = "isolated_visual"
 isolated_build_command = "./cargo_full check -p vyre-libs-visual --no-default-features --features visual"
-
-[[covering_sets]]
-package = "vyre-lints"
-enabled_features = []
-target_cell = "base_no_features"
-isolated_build_command = "./cargo_full check -p vyre-lints --no-default-features"
 
 [[covering_sets]]
 package = "vyre-lower"

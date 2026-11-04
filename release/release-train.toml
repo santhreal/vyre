@@ -33,7 +33,6 @@ required_packaging_steps = [
 package_verify_passed = [
   "vyre-macros@0.8.0",
   "vyre-spec@0.8.0",
-  "vyre-lints@0.8.0",
 ]
 
 [versions]
@@ -64,7 +63,6 @@ packages = [
   "vyre-emit-spirv",
   "vyre-foundation",
   "vyre-libs",
-  "vyre-lints",
   "vyre-lower",
   "vyre-macros",
   "vyre-megakernel",

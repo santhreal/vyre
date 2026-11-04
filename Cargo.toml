@@ -71,7 +71,6 @@ members = [
     # as a dev-dependency, without either reaching test-only crates.
     "vyre-alloc-probe",
     "vyre-bench",
-    "vyre-lints",
     "vyre-lower",
     "vyre-emit-naga",
     "vyre-emit-ptx",
@@ -327,7 +326,6 @@ vyre-emit-naga = { version = "0.8.0", path = "vyre-emit-naga" }
 vyre-emit-ptx = { version = "0.8.0", path = "vyre-emit-ptx" }
 vyre-emit-spirv = { version = "0.8.0", path = "vyre-emit-spirv" }
 vyre-emit-metal = { version = "0.8.0", path = "vyre-emit-metal" }
-vyre-lints = { path = "vyre-lints" }
 vyre-debug = { path = "vyre-debug" }
 vyre-conform-spec = { path = "conform/vyre-conform-spec" }
 

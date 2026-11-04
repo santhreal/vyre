@@ -4103,22 +4103,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "vyre-lints"
-version = "0.8.0"
-dependencies = [
- "anyhow",
- "clap",
- "proc-macro2",
- "serde",
- "syn 2.0.117",
- "tempfile",
- "toml",
- "vyre-foundation",
- "vyre-test-support",
- "walkdir",
-]
-
-[[package]]
 name = "vyre-lower"
 version = "0.8.0"
 dependencies = [

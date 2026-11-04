@@ -1571,11 +1571,6 @@ feature = "visual"
 publication_class = "extension-sdk"
 
 [[package_features]]
-package = "vyre-lints"
-feature = "default"
-publication_class = "conformance-tooling"
-
-[[package_features]]
 package = "vyre-lower"
 feature = "default"
 publication_class = "internal-engine"

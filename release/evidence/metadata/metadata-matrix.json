@@ -1,9 +1,9 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"a6b06181a71b4fe65a554931a80d7a74b41ca4d1","commit_timestamp":"1789828766","parent_commit":"6d6606ab3655e0069938d6ecad6213c6b7baaa73","dirty":false,"source_fingerprint":"git:a6b06181a71b4fe65a554931a80d7a74b41ca4d1:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"85810e0db7ebebdfdec1e161a94f695c52d29120","commit_timestamp":"1793752895","parent_commit":"19b78839271a298a4ca5534b445ffa9769941e5e","dirty":true,"source_fingerprint":"git:85810e0db7ebebdfdec1e161a94f695c52d29120:dirty=true:worktree=5620aa8870b77e057a3e2139d25ee3564f7d336fcee865865b8f67891f3c77c2"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 3,
   "publishable_package_count": 43,
   "vyre_package_count": 43,
-  "internal_tooling_count": 18,
+  "internal_tooling_count": 17,
   "root_patch_section_count": 0,
   "required_release_surfaces": [
     "vyre",
@@ -730,22 +730,6 @@
       "release_surface": "vyre-crate",
       "expected_version": "0.8.0",
       "publish_policy": "publishable release crate",
-      "blockers": []
-    },
-    {
-      "name": "vyre-lints",
-      "manifest": "vyre-lints/Cargo.toml",
-      "version": "0.8.0",
-      "description": "Lego-block enforcement lints for vyre. Forbids raw IR construction in dialect crates.",
-      "license": "MIT OR Apache-2.0",
-      "readme": "README.md",
-      "repository": "https://github.com/santhreal/vyre",
-      "publish": false,
-      "release_kind": "internal-tooling",
-      "release_group": "internal-tooling",
-      "release_surface": "internal-tooling",
-      "expected_version": null,
-      "publish_policy": "publish=false allowed for release tooling that is not a crates.io artifact",
       "blockers": []
     },
     {

@@ -1301,9 +1301,6 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   carry it and proves the law over those, so a single-element or
   extent-mismatched case is skipped instead of turning the whole declaration
   into a proof that failed to execute.
-- A `vyre-lints` missing-root diagnostic names the `--check-...` flag that
-  selected the lint, and reported violations are refused when their kind is
-  outside the kind list the lint registers.
 - The full matroid intersection operation is owned by the graph dialect under
   the id vyre-libs::graph::matroid_intersection_full. It composes the
   exchange-graph BFS step and path reconstruction, which vyre-libs-graph
@@ -2792,8 +2789,6 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   emits what every former copy emitted. Seven files that reimplemented
   little-endian `pack`/`unpack` read `vyre_primitives::wire::pack_u32_slice`
   and `decode_u32_le_bytes_all`, the crate that owns that layout.
-- `vyre-lints --print-default-roots` prints member paths with forward slashes
-  on every host.
 - Three concepts in `vyre-lower` had two copies each. The constant behind an
   index operand is written in one of two encodings, a `Literal` op whose first
   operand is a pool index or an operand id that is itself a pool index, and
@@ -4111,21 +4106,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `layout_prefix_scan`, `path_raster`, and `rgba_to_grayscale` operations
   record no-legal-rewrite instead of uncharacterized, matching the reference
   oracle's refutation of every law family their shape admits.
-- Duplication pins for three crates now record the measured tree: vyre-macros
-  89 to 41, vyre-lints 66 to 0, vyre-debug 54 to 9. Their total line counts are
-  corrected to the measured values, which were already stale before these
-  changes. A no-op test whose body was a comment claiming to pin a test count
-  is deleted, and the two `raw_ir_in_libs` case files, named for a helper and
-  for one of their own tests, are now named for what they hold.
-- The five `vyre-lints` scans share one source walk in
-  `vyre-lints/src/scan.rs`, and the CLI reads a lint registry instead of four
-  near-identical entry points. `ViolationKind` gains `ALL`, `position` and
-  `as_str` so the CLI and the JSON writer read the enum rather than restating
-  it, and a kind that reaches no lint now fails the suite. The CLI reports its
-  declared scan scope under `--print-default-roots`, so the production-root
-  test asserts the property those roots must satisfy instead of restating the
-  list. `raw_ir_in_libs` kept a second workspace-relative path function that
-  disagreed with `vyre-lints/src/paths.rs` on the vyre-libs prefix; it is gone.
+- Duplication pins for two crates now record the measured tree: vyre-macros 89
+  to 41, vyre-debug 54 to 9. Their total line counts are corrected to the
+  measured values, which were already stale before these changes. A no-op test
+  whose body was a comment claiming to pin a test count is deleted.
 - The three `vyre-debug` descriptor and WGSL suites share one program fixture
   in `vyre-debug/tests/support/mod.rs`. The descriptor a dump renders, the
   descriptor a diff compares and the WGSL a backend emits are only comparable
@@ -4698,13 +4682,6 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   predicates and the builder registrations under builder. Every path that was
   public is still public at the same spelling, and no operation id,
   registration or built program changed.
-- `vyre_lints::read_source_bounded` is public surface with its bound stated,
-  and `vyre_lints::LINT_SOURCE_READ_CAP` is public beside it so the number a
-  caller is refused at has one home instead of a constant and a sentence that
-  can disagree. The `vyre-lints` binary is a separate compilation unit and
-  reads the workspace manifest through the same reader, so making it
-  crate-internal would have meant a second reader with a second cap in the
-  binary. The public API snapshot records both.
 - Four binding and readback decisions in `vyre-driver-wgpu` are stated once.
   `pipeline::binding::declared_byte_size` owns the
   element-count-times-element-size product with its overflow refusal,
@@ -5302,6 +5279,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The 186 `docs/optimization` ledgers that described subsystems vyre does not
   ship, and the 75 tests that only checked those files for strings, are
   deleted; the ledgers that code reads remain.
+- The unpublished `vyre-lints` crate is deleted. The `gpu-loudness`,
+  `host-oracle-elimination`, `hygiene-matrix` and `platform-consumer-docs`
+  gates enforce its fallback, skip-guard and consumer-name rules; its raw-IR
+  rule, which reported 14913 construction sites no gate read, and its same-name
+  module scanner are dropped.
 - The WGPU host-ingress and raw persistent-kernel compiler routes are gone.
   Persistent product execution uses authenticated artifact sessions; concrete
   pipeline compilation remains available only as a hidden oracle helper for
@@ -6714,12 +6696,6 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   increment their composition-call counters at the entry point every public
   wrapper funnels through, so `total_calls` no longer reports zero for two
   shipped compositions.
-- The exemption list shipped with vyre-lints drops 59 rows that named a file no
-  longer in the tree, and a test now fails on any row that names nothing. An
-  exemption keyed on a path silently exempts nothing after a rename or a split,
-  so the count it holds back grows by every construction site in the files that
-  moved. The header states what the file is: the default configuration of the
-  shipped lint, read by no workspace gate.
 - Three registered compositions published a different result once the dispatch
   was rounded up past the grid they were built for.
   `builder::strided_accumulate` let every workgroup write the final
@@ -10282,16 +10258,6 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   primitive features instead of thirteen.
 - The workspace lockfile now records the TOML parser already declared by
   vyre-libs, so locked builds resolve without modifying the checkout.
-- `vyre-lints` resolves the workspace root by walking ancestors for a manifest
-  that declares `[workspace]`, and `--print-default-roots` prints those roots
-  relative to it. A run from inside a member directory previously enumerated no
-  members at all, because the default root is the current directory and a
-  member manifest declares no `workspace.members`. Manifest reading also goes
-  through `toml::from_str::<toml::Table>` rather than parsing a whole document
-  into `toml::Value`, which the pinned toml release rejects at run time with
-  `unexpected content, expected nothing`, and source reading goes through the
-  one bounded reader `vyre_lints::read_source_bounded` so a single cap covers
-  every file the lint walks.
 - The hand-written-descent waiver roster holds each row to the owner
   docs/CRATE_OWNERSHIP.toml declares for the crate containing the file, instead
   of a compiled-in list of three names the tree never used.

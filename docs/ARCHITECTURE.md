@@ -117,7 +117,7 @@ Every workspace member declares one publication class in `docs/CRATE_OWNERSHIP.t
 - `extension-sdk`: Stable extension interfaces (`vyre-foundation`, `vyre-spec`, `vyre-macros`, `vyre-primitives`, `vyre-driver`). Allows out-of-tree frontends, backends, and operations.
 - `concrete-backend`: Hardware-specific driver packages (`vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-driver-metal`, `vyre-driver-spirv`, `vyre-driver-reference`).
 - `internal-engine`: Compiler engine packages (`vyre-megakernel`, `vyre-registry-link`, `vyre-reference`, `vyre-pass-engine`, `vyre-runtime`, `vyre-aot`, `vyre-lower`, `vyre-emit-naga`, `vyre-emit-ptx`, `vyre-emit-spirv`, `vyre-emit-metal`, `vyre-debug`).
-- `conformance-tooling`: Tooling, gates, and benchmarks (`structure-gate`, `vyre-conform-spec`, `vyre-conform`, `xtask`, `xtask-registry`, `xtask-evidence`, `vyre-alloc-probe`, `vyre-bench`, `vyre-lints`).
+- `conformance-tooling`: Tooling, gates, and benchmarks (`structure-gate`, `vyre-conform-spec`, `vyre-conform`, `xtask`, `xtask-registry`, `xtask-evidence`, `vyre-alloc-probe`, `vyre-bench`).
 - `private-test-support`: Private test harnesses (`vyre-test-support`).
 
 ## Consumers

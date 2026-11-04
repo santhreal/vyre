@@ -676,7 +676,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
         package: "xtask",
         areas: &["docs"],
         subject: "owned documentation pages",
-        inputs: &["docs/optimization/OP_MATRIX.toml", "vyre-lints/rules/release_coordination_docs.txt", "vyre-primitives/README.md"],
+        inputs: &["docs/optimization/OP_MATRIX.toml", "xtask/release-coordination-docs.txt", "vyre-primitives/README.md"],
         artifacts: &[],
         prerequisites: &["crate-readmes", "op-matrix"],
         resource_class: ResourceClass::Cpu,

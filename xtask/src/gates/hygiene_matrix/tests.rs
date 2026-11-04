@@ -403,15 +403,15 @@ fn every_xtask_command_module_is_scanned_and_no_test_source_is() {
 
 #[test]
 fn hidden_fallback_scan_ignores_guard_implementation_text() {
-    let guard = Path::new("vyre-lints/src/production_cpu_fallbacks.rs");
+    let guard = Path::new("xtask/src/gates/gpu_loudness.rs");
 
     assert!(
         !line_contains_blocked_pattern(
             guard,
             "cpu_fallback",
             "cpu fallback",
-            "//! Production CPU fallback guard.",
-            "//! production cpu fallback guard.",
+            "//! The GPU loudness guard rejects a silent cpu fallback.",
+            "//! the gpu loudness guard rejects a silent cpu fallback.",
         ),
         "Fix: hygiene evidence must not count the guard's own forbidden-token description as shipped fallback behavior."
     );
@@ -839,7 +839,7 @@ fn hygiene_classifier_marks_hot_path_debt_as_release_blocker() {
 #[test]
 fn hidden_fallback_guard_source_is_identified_for_gpu_skip_phrases() {
     assert!(is_hidden_fallback_guard_source(Path::new(
-        "vyre-lints/src/gpu_skip_guards.rs"
+        "xtask/src/gates/gpu_loudness.rs"
     )));
 }
 

@@ -235,15 +235,6 @@ depends on it.
 
 Not here: tensor data handling beyond metadata and identity.
 
-### vyre-lints
-
-The workspace lints: production host fallbacks, silent device skip guards,
-module forks, consumer coupling, raw IR construction in composition crates.
-
-Each lint exists because the defect it catches shipped once. Not here:
-style. A lint that fires on formatting trains everyone to ignore the lints
-that catch a host fallback.
-
 ### structure-gate
 
 The structural contract: the crate roster, one identity per operation, one

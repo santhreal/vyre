@@ -642,14 +642,6 @@ interface = "Visual rendering and compositing effect compositions."
 responsibility = "Own visual rendering and compositing effects including blur, shadow, blend modes, gradients, and color conversions. Does not own display presentation, backend lowering, or runtime execution."
 
 [[crate]]
-package = "vyre-lints"
-path = "vyre-lints"
-layer = "tooling"
-seam = "lint-policy"
-interface = "Workspace lint policy as a checkable declaration."
-responsibility = "Enforce source-level project policies without depending on runtime crates."
-
-[[crate]]
 package = "vyre-lower"
 path = "vyre-lower"
 layer = "lowering"

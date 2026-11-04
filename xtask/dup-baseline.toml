@@ -242,19 +242,14 @@ duplicate_lines = 206
 total_lines = 4768
 
 [[crate]]
-name = "vyre-lints"
-duplicate_lines = 0
-total_lines = 3438
-
-[[crate]]
 name = "vyre-lower"
 duplicate_lines = 35
 total_lines = 23477
 
 [[crate]]
 name = "vyre-macros"
-duplicate_lines = 22
-total_lines = 2393
+duplicate_lines = 10
+total_lines = 2142
 
 [[crate]]
 name = "vyre-megakernel"

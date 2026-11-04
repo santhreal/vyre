@@ -1020,7 +1020,6 @@ The `findings` column is the count with the injection applied, given the pin in
 | `proptest-coverage` | Delete two property-test files, taking the count from 182 to 180 against the floor of 181. | 0 to 1 |
 | `repo-hygiene` | Add a second `BACKLOG.md` under any crate directory and track it. | 2 to 3 |
 | `shader-source` | Add `out.push_str("@compute");` to a file under `vyre-driver-wgpu/src`. | 0 to 1 |
-| `layering` | Add `vyre-lints.workspace = true` to `[dependencies]` in `vyre-spec/Cargo.toml`. | 0 to 29, one per member that reaches it, each naming the chain |
 | `layering` | Add `wgpu.workspace = true` to `[dependencies]` in `vyre-spec/Cargo.toml`. | 0 to 48, every neutral member that reaches vyre-spec |
 | `layering` | Delete the `[[crate]]` entry for `vyre-spec` from `docs/CRATE_OWNERSHIP.toml`. | gate errors: an unregistered member has an empty closure, so the roster is unreviewed rather than clean |
 | `layering` | Change `layer` on the `vyre-spec` entry to a name no `[[layer]]` row in `structure-gate/backend-vocabulary.toml` holds. | gate errors: a layer with no neutrality decision would be skipped |

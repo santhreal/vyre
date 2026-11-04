@@ -133,16 +133,6 @@ config = "Programs, descriptors, traces, and output modes are explicit subcomman
 failure = "Missing or malformed artifacts, emission failures, and cache filesystem failures return non-zero."
 exit_codes = "0 on success or help, 1 on artifact or operation failure, 2 on invalid arguments."
 
-[[binary]]
-package = "vyre-lints"
-name = "vyre-lints"
-readme = "vyre-lints/README.md"
-audience = "public"
-hardware = "No accelerator is required."
-environment = "No environment variables alter CLI behavior."
-config = "Workspace root, allowlist, format, library roots, and evidence outputs are explicit options."
-failure = "Malformed configuration, unreadable sources, and lint findings return non-zero with file and rule context."
-exit_codes = "0 with no blocking findings or on help, 1 on lint or I/O failure, 2 on invalid arguments."
 
 [[binary]]
 package = "structure-gate"

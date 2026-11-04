@@ -236,7 +236,7 @@ owner = 'release-tooling'
 layer = 'tooling'
 owned = 'Own the xtask subcommands that must observe the live operation registry, the primitive catalog behind it, or a linked backend driver.'
 non_owned = 'Gates answerable from source text, benchmark provenance, production library semantics.'
-allowed_dependencies = ['vyre', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-foundation', 'vyre-libs', 'vyre-lints', 'vyre-megakernel', 'vyre-primitives', 'vyre-reference', 'vyre-spec', 'xtask']
+allowed_dependencies = ['vyre', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-foundation', 'vyre-libs', 'vyre-megakernel', 'vyre-primitives', 'vyre-reference', 'vyre-spec', 'xtask']
 profile = 'tooling'
 
 [package.xtask-evidence]
@@ -286,15 +286,6 @@ layer = 'tooling'
 owned = 'Own reproducible workload benchmarks against the best available native baseline for each class.'
 non_owned = 'Baselines that are vyre unfused output, production library semantics.'
 allowed_dependencies = ['vyre', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-metal', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-emit-ptx', 'vyre-foundation', 'vyre-libs', 'vyre-lower', 'vyre-primitives', 'vyre-reference', 'vyre-runtime', 'vyre-spec']
-profile = 'tooling'
-
-[package.vyre-lints]
-path = 'vyre-lints'
-owner = 'lint-policy'
-layer = 'tooling'
-owned = 'Enforce source-level project policies without depending on runtime crates.'
-non_owned = 'Production library semantics, device drivers as libraries.'
-allowed_dependencies = []
 profile = 'tooling'
 
 [package.vyre-lower]

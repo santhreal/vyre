@@ -112,8 +112,9 @@ nvidia-smi
 
 Hardware execution is capability-based and never tied to specific hardware
 identities. A GPU-required lane fails loudly when the probe is broken. Do not
-add a host fallback, a skip guard, or a `no GPU` pass. `vyre-lints` rejects
-all three; a silent fallback is the failure class the workspace exists to prevent.
+add a host fallback, a skip guard, or a `no GPU` pass. The `gpu-loudness`,
+`host-oracle-elimination` and `hygiene-matrix` gates reject all three; a silent
+fallback is the failure class the workspace exists to prevent.
 
 ## What a change must satisfy
 

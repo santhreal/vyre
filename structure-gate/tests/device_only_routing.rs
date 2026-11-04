@@ -36,7 +36,7 @@
 //! which host evaluator supplies the comparison arm and is exempt. The optimizer
 //! also runs on the host, at compile time, which is not program execution.
 //!
-//! Where the rest of this class lives: `vyre-lints`' `production_cpu_fallbacks`
+//! Where the rest of this class lives: the `host-oracle-elimination` gate
 //! rejects a production call into the oracle, and
 //! `vyre-test-support`'s `ProductionBackend` maps every backend registration the
 //! registry may hold onto an `ExecutionDomain` through an exhaustive match, so a
@@ -104,8 +104,8 @@ struct RoutingEnum {
 ///
 /// A second route expressed as something other than an enum variant: a boolean
 /// field, a string id, or a trait with two implementors. Those are the shapes
-/// `vyre-lints`' `production_cpu_fallbacks` and the `schedule-ownership` gate
-/// read, over calls rather than declarations.
+/// the `host-oracle-elimination` and `schedule-ownership` gates read, over
+/// calls rather than declarations.
 #[test]
 fn no_type_enumerates_execution_routes() {
     let root = workspace_root();

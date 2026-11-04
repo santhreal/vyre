@@ -610,15 +610,7 @@ pub(crate) const HYGIENE_RULE_SOURCES: [&str; 6] = [
 ];
 
 /// The files that own the hidden-fallback rule and spell the prose it catches.
-pub(crate) const HIDDEN_FALLBACK_GUARD_SOURCES: [&str; 7] = [
-    "xtask/src/gates/gpu_loudness.rs",
-    "vyre-lints/src/production_cpu_fallbacks.rs",
-    "vyre-lints/src/gpu_skip_guards.rs",
-    "vyre-lints/src/lib.rs",
-    "vyre-lints/src/main.rs",
-    "vyre-lints/tests/production_cpu_fallbacks.rs",
-    "vyre-lints/tests/gpu_skip_guards.rs",
-];
+pub(crate) const HIDDEN_FALLBACK_GUARD_SOURCES: [&str; 1] = ["xtask/src/gates/gpu_loudness.rs"];
 
 pub(crate) fn is_hygiene_rule_source(path: &Path) -> bool {
     let normalized = path.to_string_lossy().replace('\\', "/");

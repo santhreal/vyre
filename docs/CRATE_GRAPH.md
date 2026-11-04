@@ -35,7 +35,7 @@ each other; a layer that admits none states `None`.
 
 ## Workspace dependency graph
 
-The workspace contains 57 crates and 290 internal production edges, resolved
+The workspace contains 56 crates and 290 internal production edges, resolved
 under the union of every feature. An arrow points from a crate to an internal
 normal or build dependency. Development dependencies are excluded.
 
@@ -83,31 +83,30 @@ graph TD
   C39["vyre-libs-text"]
   C40["vyre-libs-vfs"]
   C41["vyre-libs-visual"]
-  C42["vyre-lints"]
-  C43["vyre-lower"]
-  C44["vyre-macros"]
-  C45["vyre-megakernel"]
-  C46["vyre-pass-engine"]
-  C47["vyre-primitives"]
-  C48["vyre-reference"]
-  C49["vyre-registry-link"]
-  C50["vyre-runtime"]
-  C51["vyre-safetensors"]
-  C52["vyre-spec"]
-  C53["vyre-test-support"]
-  C54["xtask"]
-  C55["xtask-evidence"]
-  C56["xtask-registry"]
+  C42["vyre-lower"]
+  C43["vyre-macros"]
+  C44["vyre-megakernel"]
+  C45["vyre-pass-engine"]
+  C46["vyre-primitives"]
+  C47["vyre-reference"]
+  C48["vyre-registry-link"]
+  C49["vyre-runtime"]
+  C50["vyre-safetensors"]
+  C51["vyre-spec"]
+  C52["vyre-test-support"]
+  C53["xtask"]
+  C54["xtask-evidence"]
+  C55["xtask-registry"]
   C1 --> C8
   C1 --> C9
   C1 --> C13
   C1 --> C18
-  C1 --> C45
-  C1 --> C50
-  C1 --> C52
+  C1 --> C44
+  C1 --> C49
+  C1 --> C51
   C3 --> C8
   C3 --> C18
-  C3 --> C45
+  C3 --> C44
   C4 --> C1
   C4 --> C2
   C4 --> C8
@@ -116,15 +115,15 @@ graph TD
   C4 --> C16
   C4 --> C18
   C4 --> C19
-  C4 --> C43
+  C4 --> C42
+  C4 --> C44
   C4 --> C45
   C4 --> C46
   C4 --> C47
   C4 --> C48
   C4 --> C49
-  C4 --> C50
-  C4 --> C52
-  C4 --> C54
+  C4 --> C51
+  C4 --> C53
   C5 --> C1
   C5 --> C6
   C5 --> C8
@@ -134,59 +133,59 @@ graph TD
   C5 --> C13
   C5 --> C18
   C5 --> C19
-  C5 --> C45
+  C5 --> C44
+  C5 --> C46
   C5 --> C47
   C5 --> C48
   C5 --> C49
-  C5 --> C50
-  C5 --> C52
-  C6 --> C52
+  C5 --> C51
+  C6 --> C51
   C7 --> C1
   C7 --> C15
   C7 --> C18
   C7 --> C19
-  C7 --> C43
+  C7 --> C42
   C8 --> C18
   C8 --> C19
-  C8 --> C45
-  C8 --> C52
+  C8 --> C44
+  C8 --> C51
   C9 --> C8
   C9 --> C16
   C9 --> C18
-  C9 --> C43
-  C9 --> C45
+  C9 --> C42
+  C9 --> C44
   C10 --> C8
   C10 --> C14
   C10 --> C18
-  C10 --> C43
-  C10 --> C45
+  C10 --> C42
+  C10 --> C44
   C11 --> C8
   C11 --> C18
-  C11 --> C45
-  C11 --> C48
+  C11 --> C44
+  C11 --> C47
   C12 --> C8
   C12 --> C17
   C12 --> C18
-  C12 --> C43
-  C12 --> C45
+  C12 --> C42
+  C12 --> C44
   C13 --> C8
   C13 --> C15
   C13 --> C18
-  C13 --> C43
-  C13 --> C45
-  C13 --> C52
+  C13 --> C42
+  C13 --> C44
+  C13 --> C51
   C14 --> C15
   C14 --> C18
-  C14 --> C43
+  C14 --> C42
   C15 --> C18
-  C15 --> C43
+  C15 --> C42
   C16 --> C18
-  C16 --> C43
+  C16 --> C42
   C17 --> C15
   C17 --> C18
-  C17 --> C43
-  C18 --> C44
-  C18 --> C52
+  C17 --> C42
+  C18 --> C43
+  C18 --> C51
   C19 --> C18
   C19 --> C20
   C19 --> C21
@@ -210,30 +209,30 @@ graph TD
   C19 --> C39
   C19 --> C40
   C19 --> C41
-  C19 --> C45
-  C19 --> C47
-  C19 --> C52
+  C19 --> C44
+  C19 --> C46
+  C19 --> C51
   C20 --> C18
   C20 --> C22
   C20 --> C26
   C20 --> C27
   C20 --> C29
-  C20 --> C45
-  C20 --> C47
-  C20 --> C52
+  C20 --> C44
+  C20 --> C46
+  C20 --> C51
   C21 --> C18
   C21 --> C22
   C21 --> C34
-  C21 --> C47
+  C21 --> C46
   C22 --> C18
-  C22 --> C45
-  C22 --> C47
-  C22 --> C52
+  C22 --> C44
+  C22 --> C46
+  C22 --> C51
   C23 --> C18
   C23 --> C22
   C23 --> C32
   C23 --> C39
-  C23 --> C47
+  C23 --> C46
   C24 --> C18
   C24 --> C22
   C25 --> C18
@@ -246,11 +245,11 @@ graph TD
   C25 --> C31
   C25 --> C32
   C25 --> C34
-  C25 --> C45
-  C25 --> C47
+  C25 --> C44
+  C25 --> C46
   C26 --> C18
   C26 --> C22
-  C26 --> C47
+  C26 --> C46
   C27 --> C18
   C27 --> C21
   C27 --> C22
@@ -259,135 +258,135 @@ graph TD
   C27 --> C29
   C27 --> C34
   C27 --> C41
-  C27 --> C45
-  C27 --> C47
+  C27 --> C44
+  C27 --> C46
   C28 --> C18
   C28 --> C22
-  C28 --> C47
+  C28 --> C46
   C29 --> C18
   C29 --> C22
   C29 --> C26
   C29 --> C34
-  C29 --> C47
-  C29 --> C52
+  C29 --> C46
+  C29 --> C51
   C30 --> C18
   C30 --> C22
   C30 --> C29
   C30 --> C34
-  C30 --> C45
-  C30 --> C47
-  C30 --> C52
+  C30 --> C44
+  C30 --> C46
+  C30 --> C51
   C31 --> C18
   C31 --> C22
   C31 --> C28
   C31 --> C34
   C31 --> C39
-  C31 --> C47
-  C31 --> C52
+  C31 --> C46
+  C31 --> C51
   C32 --> C18
   C32 --> C22
   C32 --> C28
   C32 --> C29
-  C32 --> C47
+  C32 --> C46
   C33 --> C18
   C33 --> C20
   C33 --> C22
   C33 --> C27
-  C33 --> C45
+  C33 --> C44
   C34 --> C18
   C34 --> C22
-  C34 --> C45
-  C34 --> C47
+  C34 --> C44
+  C34 --> C46
   C35 --> C18
   C35 --> C22
-  C35 --> C47
-  C35 --> C52
+  C35 --> C46
+  C35 --> C51
   C36 --> C18
   C36 --> C22
   C36 --> C27
   C36 --> C29
   C36 --> C31
-  C36 --> C45
-  C36 --> C47
+  C36 --> C44
+  C36 --> C46
   C37 --> C18
   C37 --> C21
   C37 --> C22
   C37 --> C27
   C37 --> C34
-  C37 --> C47
-  C37 --> C52
+  C37 --> C46
+  C37 --> C51
   C38 --> C18
   C38 --> C21
   C38 --> C22
   C38 --> C26
   C38 --> C27
   C38 --> C29
-  C38 --> C45
-  C38 --> C47
+  C38 --> C44
+  C38 --> C46
   C39 --> C18
   C39 --> C22
   C39 --> C34
-  C39 --> C47
+  C39 --> C46
   C40 --> C18
   C40 --> C22
   C41 --> C18
   C41 --> C22
   C41 --> C29
-  C41 --> C47
-  C43 --> C18
-  C43 --> C52
+  C41 --> C46
+  C42 --> C18
+  C42 --> C51
+  C44 --> C18
+  C44 --> C42
+  C44 --> C51
   C45 --> C18
-  C45 --> C43
-  C45 --> C52
+  C45 --> C19
+  C45 --> C44
+  C45 --> C46
   C46 --> C18
-  C46 --> C19
-  C46 --> C45
-  C46 --> C47
   C47 --> C18
+  C47 --> C46
+  C47 --> C51
+  C48 --> C8
+  C48 --> C9
+  C48 --> C10
+  C48 --> C12
+  C48 --> C13
   C48 --> C18
-  C48 --> C47
-  C48 --> C52
+  C48 --> C19
+  C48 --> C42
+  C48 --> C44
+  C48 --> C46
+  C48 --> C51
   C49 --> C8
-  C49 --> C9
-  C49 --> C10
-  C49 --> C12
-  C49 --> C13
   C49 --> C18
   C49 --> C19
-  C49 --> C43
-  C49 --> C45
-  C49 --> C47
-  C49 --> C52
-  C50 --> C8
-  C50 --> C18
-  C50 --> C19
-  C50 --> C45
-  C50 --> C52
+  C49 --> C44
+  C49 --> C51
+  C52 --> C0
+  C52 --> C8
+  C52 --> C18
+  C52 --> C42
+  C52 --> C44
+  C52 --> C46
+  C52 --> C47
+  C52 --> C51
   C53 --> C0
-  C53 --> C8
-  C53 --> C18
-  C53 --> C43
-  C53 --> C45
-  C53 --> C47
-  C53 --> C48
-  C53 --> C52
-  C54 --> C0
-  C55 --> C4
+  C54 --> C4
+  C54 --> C8
+  C54 --> C18
+  C54 --> C48
+  C54 --> C53
+  C55 --> C0
+  C55 --> C1
   C55 --> C8
   C55 --> C18
-  C55 --> C49
-  C55 --> C54
-  C56 --> C0
-  C56 --> C1
-  C56 --> C8
-  C56 --> C18
-  C56 --> C19
-  C56 --> C45
-  C56 --> C47
-  C56 --> C48
-  C56 --> C49
-  C56 --> C52
-  C56 --> C54
+  C55 --> C19
+  C55 --> C44
+  C55 --> C46
+  C55 --> C47
+  C55 --> C48
+  C55 --> C51
+  C55 --> C53
 ```
 
 ## Resolved production edges

@@ -19,7 +19,7 @@ decided outside it.
 is one product among several under one account, and a bare tag is ambiguous
 about which.
 
-`[release_groups.vyre]` names the repository, the version key and the 26
+`[release_groups.vyre]` names the repository, the version key and the 24
 packages published together.
 
 `required_release_note_tokens` is the set of strings the release notes must

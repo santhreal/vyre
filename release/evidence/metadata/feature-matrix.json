@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"90a8316bbfeccc9b5890446ddf8b44b85fd6ed2f","commit_timestamp":"1789985860","parent_commit":"dbee9a7e1d0f798ff81472665a06f4c4d8ff12f7","dirty":false,"source_fingerprint":"git:90a8316bbfeccc9b5890446ddf8b44b85fd6ed2f:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"85810e0db7ebebdfdec1e161a94f695c52d29120","commit_timestamp":"1793752895","parent_commit":"19b78839271a298a4ca5534b445ffa9769941e5e","dirty":true,"source_fingerprint":"git:85810e0db7ebebdfdec1e161a94f695c52d29120:dirty=true:worktree=5620aa8870b77e057a3e2139d25ee3564f7d336fcee865865b8f67891f3c77c2"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "required_release_packages": [
     "vyre",
@@ -783,17 +783,6 @@
         "default",
         "visual"
       ],
-      "malformed_features": [],
-      "unresolved_feature_members": [],
-      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
-    },
-    {
-      "name": "vyre-lints",
-      "manifest": "vyre-lints/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
-      "default_feature_members": [],
-      "features": [],
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"

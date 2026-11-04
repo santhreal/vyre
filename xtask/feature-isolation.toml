@@ -1016,14 +1016,6 @@ member = "vyre-libs-visual"
 feature = "visual"
 
 [[pair]]
-member = "vyre-lints"
-feature = "(default)"
-
-[[pair]]
-member = "vyre-lints"
-feature = "(none)"
-
-[[pair]]
 member = "vyre-lower"
 feature = "(default)"
 

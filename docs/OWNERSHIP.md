@@ -871,18 +871,6 @@ Own visual rendering and compositing effects including blur, shadow, blend modes
 | `vyre-libs-math` | `libs-math` | Linear algebra, matrix, scan, broadcasting, algebra and succinct structure compositions. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
 
-### `vyre-lints`
-
-Enforce source-level project policies without depending on runtime crates.
-
-- Path: `vyre-lints`
-- Layer: `tooling` (rank 7)
-- Publication class: `conformance-tooling`
-- Seam: `lint-policy`
-- Interface: Workspace lint policy as a checkable declaration.
-- Carried by the curated surface: `false`
-- Consumed by 0 production edge(s)
-
 ### `vyre-lower`
 
 Consume validated selected schedule phases and semantic programs, then own the single validated PhysicalKernel lowering boundary plus its backend-neutral pre-emission transforms.

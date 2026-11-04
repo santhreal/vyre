@@ -408,7 +408,6 @@ pub const GATES_A_G: &[GateDescriptor] = &[
             "vyre-libs-vfs/README.md",
             "vyre-libs-visual/README.md",
             "vyre-libs/README.md",
-            "vyre-lints/README.md",
             "vyre-lower/README.md",
             "vyre-macros/README.md",
             "vyre-megakernel/README.md",

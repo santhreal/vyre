@@ -69,7 +69,7 @@ description = "CUDA crate documents its unsafe-code policy in lib.rs."
 # live claim. Both the doc and the proving artifact are gone, so the row asserted
 # a contract with no subject on either side.
 #
-# Per-crate rule corpora do still exist, in vyre-libs/rules, vyre-lower/rules and
-# vyre-lints/rules. If the zero-Rust op contribution path is still a claim worth
+# Per-crate rule corpora do still exist, in vyre-libs-security/rules and
+# vyre-lower/rules. If the zero-Rust op contribution path is still a claim worth
 # gating, it needs a doc that states it and a corpus file that proves it.
 

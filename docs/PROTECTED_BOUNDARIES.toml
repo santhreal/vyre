@@ -267,10 +267,6 @@ packages = ["vyre-debug"]
 reason = "Read-only inspection of descriptors and artifacts. It produces no shipped decision."
 
 [[open]]
-packages = ["vyre-lints"]
-reason = "Lint implementations. Their verdicts are pinned in the protected gate baselines."
-
-[[open]]
 packages = ["xtask"]
 reason = "Gate runner and text rules. The pins and the CODEOWNERS generator inside it are protected by path."
 

@@ -79,7 +79,6 @@
 - [Testing `vyre-libs-vfs`](testing/vyre-libs-vfs.md)
 - [Testing `vyre-libs-visual`](testing/vyre-libs-visual.md)
 - [Testing `vyre-libs`](testing/vyre-libs.md)
-- [Testing `vyre-lints`](testing/vyre-lints.md)
 - [Testing `vyre-lower`](testing/vyre-lower.md)
 - [Testing `vyre-macros`](testing/vyre-macros.md)
 - [Testing `vyre-megakernel`](testing/vyre-megakernel.md)
