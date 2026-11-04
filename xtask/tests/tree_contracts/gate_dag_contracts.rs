@@ -254,3 +254,17 @@ fn runtime_gate_validation_fails_on_missing_owner_proof_or_baseline() {
         "validation must fail on missing mutation proof: {failures:?}"
     );
 }
+
+/// WHY: 89 descriptors once carried `Enforce <name> contracts`, which restates
+/// the gate name and is what `--help` printed. The registry-wide sweep above
+/// holds every descriptor to `failures()`, so this pins the placeholder there.
+#[test]
+fn runtime_gate_validation_fails_on_a_placeholder_help_line() {
+    let mut desc = *descriptor_by_name("architecture-contract");
+    desc.help = "Enforce architecture-contract contracts";
+    let failures = desc.failures();
+    assert!(
+        failures.iter().any(|f| f.contains("placeholder help line")),
+        "validation must fail on a help line that restates the gate name: {failures:?}"
+    );
+}

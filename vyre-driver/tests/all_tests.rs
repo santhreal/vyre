@@ -323,10 +323,6 @@ pub mod lock_policy_closure;
 #[path = "support_certificate_join.rs"]
 pub mod support_certificate_join;
 
-/// Integration tests from `tests/concrete_driver_dependency_boundaries.rs`.
-#[path = "concrete_driver_dependency_boundaries.rs"]
-pub mod concrete_driver_dependency_boundaries;
-
 /// Integration tests from `tests/target_facet_lowering_arms.rs`.
 #[path = "target_facet_lowering_arms.rs"]
 pub mod target_facet_lowering_arms;

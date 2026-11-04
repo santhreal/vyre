@@ -52,6 +52,10 @@ pub(crate) const CUDA_DEVICE_RUN: XtaskCargoRun = XtaskCargoRun {
 pub struct SpirvParity;
 
 impl crate::gate::GateBehavior for SpirvParity {
+    fn usage(&self) -> &'static [&'static str] {
+        &["--validate runs every validator-gated target against spirv-val; without it only the registration is checked"]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
@@ -145,6 +149,10 @@ impl crate::gate::GateBehavior for SpirvParity {
 pub struct CudaParity;
 
 impl crate::gate::GateBehavior for CudaParity {
+    fn usage(&self) -> &'static [&'static str] {
+        &["--device runs the vyre-driver-cuda suite with its device features on the local GPU; without it only the tracked targets are checked"]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();

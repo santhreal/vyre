@@ -57,6 +57,13 @@ const CONNECT_TIMEOUT: &str = "8";
 pub struct MetalParity;
 
 impl crate::gate::GateBehavior for MetalParity {
+    fn usage(&self) -> &'static [&'static str] {
+        &[
+            "--host HOST runs the Metal, conformance and benchmark suites on an Apple GPU over ssh",
+            "--remote-root PATH is the vyre checkout on that host; required with --host",
+        ]
+    }
+
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();

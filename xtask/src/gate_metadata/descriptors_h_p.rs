@@ -7,7 +7,7 @@ use crate::gate::{GateDescriptor, ResourceClass};
 pub const GATES_H_P: &[GateDescriptor] = &[
     GateDescriptor {
         name: "heuristic-audit",
-        help: "Enforce heuristic-audit contracts",
+        help: "Report hand-rolled heuristics that should call an existing primitive.",
         package: "xtask-registry",
         areas: &["prepublish"],
         subject: "registered operations",
@@ -31,7 +31,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "hot-path-blocking-wait",
-        help: "Enforce hot-path-blocking-wait contracts",
+        help: "Report blocking waits, busy waits and polled maintenance on throughput paths.",
         package: "xtask",
         areas: &["hot-path"],
         subject: "tracked source files",
@@ -43,7 +43,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "hot-path-inventory",
-        help: "Enforce hot-path-inventory contracts",
+        help: "Report registry walks that run per lookup rather than once.",
         package: "xtask",
         areas: &["hot-path"],
         subject: "tracked source files",
@@ -55,7 +55,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "hot-path-nested-rows",
-        help: "Enforce hot-path-nested-rows contracts",
+        help: "Report nested byte rows returned by a trait that offers no slots to fill.",
         package: "xtask",
         areas: &["hot-path"],
         subject: "tracked source files",
@@ -67,7 +67,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "hot-path-owned-dispatch",
-        help: "Enforce hot-path-owned-dispatch contracts",
+        help: "Report owned-row dispatch declared as the method a backend must implement.",
         package: "xtask",
         areas: &["hot-path"],
         subject: "tracked source files",
@@ -79,7 +79,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "hot-path-reserve",
-        help: "Enforce hot-path-reserve contracts",
+        help: "Report reserve calls that pass remaining capacity instead of additional length.",
         package: "xtask",
         areas: &["hot-path"],
         subject: "tracked source files",
@@ -91,7 +91,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "hot-path-scan",
-        help: "Enforce hot-path-scan contracts",
+        help: "Scan every file docs/optimization/HOT_PATHS.toml lists against its budget.",
         package: "xtask",
         areas: &["hot-path"],
         subject: "tracked source files",
@@ -103,7 +103,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "hot-path-unbounded-cache",
-        help: "Enforce hot-path-unbounded-cache contracts",
+        help: "Report unbounded associative containers in dispatcher and runtime code.",
         package: "xtask",
         areas: &["hot-path"],
         subject: "tracked source files",
@@ -115,7 +115,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "hot-path-unbounded-read",
-        help: "Enforce hot-path-unbounded-read contracts",
+        help: "Report unbounded synchronous reads of external files on dispatch-critical paths.",
         package: "xtask",
         areas: &["hot-path"],
         subject: "tracked source files",
@@ -127,7 +127,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "hygiene-matrix",
-        help: "Enforce hygiene-matrix contracts",
+        help: "Scan the release surface for hidden fallbacks, unbounded reads, missing panic contracts and undeclared thresholds; --write regenerates the hygiene evidence.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -148,7 +148,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "internal-dep-versions",
-        help: "Enforce internal-dep-versions contracts",
+        help: "Require a version on a publishable crate's dependency on a member exactly when that member is published.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "workspace manifests",
@@ -160,7 +160,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "invariant-paths",
-        help: "Enforce invariant-paths contracts",
+        help: "Require every conformance test an invariant descriptor cites to exist.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -192,7 +192,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "layering",
-        help: "Enforce layering contracts",
+        help: "Keep every substrate-neutral crate off backend APIs, in its dependency graph and in its production sources.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "workspace manifests",
@@ -348,7 +348,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "lint-denied-override",
-        help: "Enforce lint-denied-override contracts",
+        help: "Reject a production attribute that re-allows a lint the workspace denies.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -360,7 +360,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "lint-expect-fix",
-        help: "Enforce lint-expect-fix contracts",
+        help: "Require every production `.expect(\"...\")` message to state the corrective action.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -372,7 +372,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "lint-liveness-evasion",
-        help: "Enforce lint-liveness-evasion contracts",
+        help: "Reject `let _ =` reads and test-only callers that keep otherwise dead production code alive.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -384,7 +384,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "lint-one-policy",
-        help: "Enforce lint-one-policy contracts",
+        help: "Hold every member to the lint policy the workspace manifest declares.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -396,7 +396,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "lint-unsafe-budget",
-        help: "Enforce lint-unsafe-budget contracts",
+        help: "Match the files that allow unsafe code against the reviewed list exactly.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -408,7 +408,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "lint-unsafe-justification",
-        help: "Enforce lint-unsafe-justification contracts",
+        help: "Require a checkable justification on every unsafe block.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -444,7 +444,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "lockfile-clean",
-        help: "Enforce lockfile-clean contracts",
+        help: "Report a Cargo.lock that differs from the commit.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "workspace manifests",
@@ -468,7 +468,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "metal-parity",
-        help: "Enforce metal-parity contracts",
+        help: "Hold the Metal counter roster to the driver's test assertions and the measured cases to the benchmark catalog; `--host` runs the suites on an Apple GPU over ssh.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -480,7 +480,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "module-layout",
-        help: "Enforce module-layout contracts",
+        help: "Report a `foo.rs` beside a `foo/` directory.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -492,7 +492,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "neutral-crates",
-        help: "Enforce neutral-crates contracts",
+        help: "Keep every named neutral crate free of production edges to a backend, driver product or runtime, and reject a manifest that references a retired crate.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "workspace manifests",
@@ -516,7 +516,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "op-names",
-        help: "Enforce op-names contracts",
+        help: "Hold every public op function in the library family to the canonical naming scheme.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -600,7 +600,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "oracle-sweeps",
-        help: "Enforce oracle-sweeps contracts",
+        help: "Run the derived oracle-matrix sweep roster and hold it to the harnesses that compile each sweep.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -624,7 +624,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "parity-testing-isolated",
-        help: "Enforce parity-testing-isolated contracts",
+        help: "Keep the raw-shader parity oracle out of every non-development dependency.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "workspace manifests",
@@ -636,7 +636,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "path-deps-resolve",
-        help: "Enforce path-deps-resolve contracts",
+        help: "Resolve every path dependency and inherited key to a tracked manifest or table entry.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "workspace manifests",
@@ -648,7 +648,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "placement-predicates",
-        help: "Enforce placement-predicates contracts",
+        help: "Require every ownership answer in the judging crates to come from a content read.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -660,7 +660,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "platform-boundary",
-        help: "Enforce platform-boundary contracts",
+        help: "Report a downstream consumer name in a platform crate's prose.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -672,7 +672,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "platform-consumer-docs",
-        help: "Enforce platform-consumer-docs contracts",
+        help: "Keep platform documentation consumer-neutral.",
         package: "xtask",
         areas: &["docs"],
         subject: "owned documentation pages",
@@ -737,7 +737,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "program-wire-fields",
-        help: "Enforce program-wire-fields contracts",
+        help: "Require every field of the program type to be on the wire or marked transient.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -749,7 +749,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "proptest-coverage",
-        help: "Enforce proptest-coverage contracts",
+        help: "Hold the number of property-test files at or above the measured floor.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered operations",
@@ -761,7 +761,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "public-api-paths",
-        help: "Enforce public-api-paths contracts",
+        help: "Hold every published item to one public path per crate, against a pin.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "workspace manifests",
@@ -773,7 +773,7 @@ pub const GATES_H_P: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "public-api-snapshot",
-        help: "Enforce public-api-snapshot contracts",
+        help: "Match every publishable crate's externally reachable API against its snapshot.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "workspace manifests",

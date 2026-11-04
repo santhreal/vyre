@@ -7,7 +7,7 @@ use crate::gate::{GateDescriptor, ResourceClass};
 pub const GATES_Q_Z: &[GateDescriptor] = &[
     GateDescriptor {
         name: "readback-ring",
-        help: "Enforce readback-ring contracts",
+        help: "Require ordinary outputs to stage through the size-classed readback ring.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -159,7 +159,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "repo-hygiene",
-        help: "Enforce repo-hygiene contracts",
+        help: "Hold instruction files, redirects and backlog files to their agreed shape.",
         package: "xtask",
         areas: &["prepublish"],
         subject: "tracked source files",
@@ -171,7 +171,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "schedule-ownership",
-        help: "Enforce schedule-ownership contracts",
+        help: "Report a second route to a schedule decision.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "production sources outside the compiler boundary",
@@ -195,7 +195,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "script-ledger",
-        help: "Enforce script-ledger contracts",
+        help: "Hold xtask/script-assertion-ledger.md and the lists and totals it derives to the tree.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -207,7 +207,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "shader-source",
-        help: "Enforce shader-source contracts",
+        help: "Require shader text to be emitted structurally, never assembled from string pieces.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -231,7 +231,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "single-backlog",
-        help: "Enforce single-backlog contracts",
+        help: "Require one execution queue and no committed parallel plan.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -243,7 +243,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "source-include-module",
-        help: "Enforce source-include-module contracts",
+        help: "Reject `include!` of hand-written Rust; compose modules with `mod`.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -255,7 +255,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "source-parses",
-        help: "Enforce source-parses contracts",
+        help: "Parse every tracked `.rs` file as Rust.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -267,7 +267,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "source-reachability",
-        help: "Enforce source-reachability contracts",
+        help: "Require every tracked `.rs` file to be reached from a declared cargo target.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -279,7 +279,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "spirv-parity",
-        help: "Enforce spirv-parity contracts",
+        help: "Require every SPIR-V test that runs spirv-val to compile behind the validator feature; `--validate` runs those targets against spirv-val.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -315,7 +315,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "test-material-placement",
-        help: "Enforce test-material-placement contracts",
+        help: "Report test material in a shipping `src/` tree, shipping edges to test support, and production lines that reference it.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -351,7 +351,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "testing-guides",
-        help: "Enforce testing-guides contracts",
+        help: "Hold the per-crate testing guides under docs/testing/ to the tree; --write regenerates them.",
         package: "xtask",
         areas: &["docs"],
         subject: "registered system invariants",
@@ -387,7 +387,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "unification",
-        help: "Enforce unification contracts",
+        help: "Keep landed cross-crate unifications landed.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -399,7 +399,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "variant-list-closure",
-        help: "Enforce variant-list-closure contracts",
+        help: "Report a `const ALL` array that is not exactly its enum's variants.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "declared variant lists",
@@ -506,7 +506,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "wire-determinism",
-        help: "Enforce wire-determinism contracts",
+        help: "Run the wire suites twice and require one answer.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -518,7 +518,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "workspace-check",
-        help: "Enforce workspace-check contracts",
+        help: "Compile every target of every crate with every feature enabled.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -530,7 +530,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "workspace-clippy",
-        help: "Enforce workspace-clippy contracts",
+        help: "Run clippy with warnings denied over the surface workspace-check compiles.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -542,7 +542,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "workspace-docs",
-        help: "Enforce workspace-docs contracts",
+        help: "Build rustdoc for the whole workspace with no broken item or link.",
         package: "xtask",
         areas: &["docs"],
         subject: "owned documentation pages",
@@ -554,7 +554,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "workspace-membership",
-        help: "Enforce workspace-membership contracts",
+        help: "Require every manifest on disk to be a workspace member or its own workspace root.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "workspace manifests",
@@ -566,7 +566,7 @@ pub const GATES_Q_Z: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "workspace-tests",
-        help: "Enforce workspace-tests contracts",
+        help: "Run every test of the contract-owning crates.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",

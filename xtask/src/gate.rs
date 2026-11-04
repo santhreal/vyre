@@ -759,6 +759,11 @@ impl GateDescriptor {
         }
         if self.help.trim().is_empty() {
             failures.push(format!("gate `{}` declares an empty help line", self.name));
+        } else if self.help.trim() == format!("Enforce {} contracts", self.name) {
+            failures.push(format!(
+                "gate `{}` declares the placeholder help line `{}`; state what the gate checks",
+                self.name, self.help
+            ));
         }
         if !["xtask", "xtask-registry", "xtask-evidence"].contains(&self.package) {
             failures.push(format!(

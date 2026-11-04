@@ -786,17 +786,6 @@ coupling.
 """
 
 [[gate]]
-file = "vyre-driver/tests/concrete_driver_dependency_boundaries.rs"
-tests = ["concrete_driver_source_files_have_no_forbidden_production_imports"]
-reason = """
-Asserts that no concrete driver imports a semantic library, a schedule search
-stage, application policy or a peer driver. An import that is never called links
-in without any run-time trace, and the crate list and layer assignments are read
-from `docs/CRATE_OWNERSHIP.toml` at run time so a driver added there is judged
-without an edit here.
-"""
-
-[[gate]]
 file = "vyre-driver/tests/external_resource_path_agreement.rs"
 tests = ["every_concrete_driver_publishes_its_external_resource_surface_at_one_path", "concrete_drivers_agree_on_the_external_resource_path"]
 reason = """

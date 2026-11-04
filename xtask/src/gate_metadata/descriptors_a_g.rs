@@ -39,7 +39,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "architecture-contract",
-        help: "Enforce architecture-contract contracts",
+        help: "Hold docs/ARCHITECTURE.md to the tree it describes.",
         package: "xtask",
         areas: &["docs"],
         subject: "owned documentation pages",
@@ -51,7 +51,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "backend-extension",
-        help: "Enforce backend-extension contracts",
+        help: "Hold adding a backend to one crate plus inventory submissions, with no edit to a shared crate.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -75,7 +75,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "bench-baselines",
-        help: "Enforce bench-baselines contracts",
+        help: "Require a published benches/RESULTS.md section for every package with a bench target.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -87,7 +87,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "bench-coverage",
-        help: "Enforce bench-coverage contracts",
+        help: "Require a registered case for every measured dimension, and resolve every case a tracked workflow or evidence manifest selects against the live registry.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered benchmark cases",
@@ -159,7 +159,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "check-tier-deps",
-        help: "Enforce check-tier-deps contracts",
+        help: "Hold every crate to the layer it declares and to the layers below it.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "workspace manifests",
@@ -171,7 +171,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "ci-concurrency",
-        help: "Enforce ci-concurrency contracts",
+        help: "Require every workflow a push or pull request starts to cancel a superseded run through a per-ref concurrency group.",
         package: "xtask",
         areas: &["ci-rules"],
         subject: "ci workflows",
@@ -183,7 +183,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "ci-matrix",
-        help: "Enforce ci-matrix contracts",
+        help: "Require the hosted matrix to cover every platform and toolchain no other job covers.",
         package: "xtask",
         areas: &["ci-rules"],
         subject: "ci workflows",
@@ -195,7 +195,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "ci-registry",
-        help: "Enforce ci-registry contracts",
+        help: "Hold xtask/ci-registry.toml to the subsets and workflows that run each gate; --write regenerates it.",
         package: "xtask",
         areas: &["ci-rules"],
         subject: "ci workflows",
@@ -207,7 +207,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "ci-required",
-        help: "Enforce ci-required contracts",
+        help: "Resolve every required status context to a job that still fails closed.",
         package: "xtask",
         areas: &["ci-rules"],
         subject: "ci workflows",
@@ -219,7 +219,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "ci-shell",
-        help: "Enforce ci-shell contracts",
+        help: "Require a declared shell on every step of a workflow that runs on Windows, and hold tracked shell scripts to the oldest bash in the matrix.",
         package: "xtask",
         areas: &["ci-rules"],
         subject: "ci workflows",
@@ -231,7 +231,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "ci-steps",
-        help: "Enforce ci-steps contracts",
+        help: "Resolve every cargo package, binary, test and feature selector a workflow or script passes against the tree.",
         package: "xtask",
         areas: &["ci-rules"],
         subject: "ci workflows",
@@ -243,7 +243,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "cli-docs",
-        help: "Enforce cli-docs contracts",
+        help: "Hold docs/CLI.toml to the shipped binaries cargo reports and to the help output of each one.",
         package: "xtask",
         areas: &["docs"],
         subject: "owned documentation pages",
@@ -325,7 +325,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "contract-in-source",
-        help: "Enforce contract-in-source contracts",
+        help: "Require a source comment to state its contract rather than point at a document.",
         package: "xtask",
         areas: &["docs"],
         subject: "tracked source files",
@@ -337,7 +337,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "crate-ownership",
-        help: "Enforce crate-ownership contracts",
+        help: "Join docs/CRATE_OWNERSHIP.toml to the cargo graph: every member has a row, and every production edge points down a layer rank into a layer that admits the consumer.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "workspace manifests",
@@ -349,7 +349,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "crate-pages",
-        help: "Enforce crate-pages contracts",
+        help: "Require a boundary page and a module map for every crate.",
         package: "xtask",
         areas: &["docs"],
         subject: "owned documentation pages",
@@ -361,7 +361,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "crate-readmes",
-        help: "Enforce crate-readmes contracts",
+        help: "Hold the generated contract section of every crate README to its sources; --write regenerates it.",
         package: "xtask",
         areas: &["docs"],
         subject: "owned documentation pages",
@@ -443,7 +443,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "cuda-parity",
-        help: "Enforce cuda-parity contracts",
+        help: "Require a parity target among the vyre-driver-cuda tests; `--device` runs the suite with device features on a live CUDA GPU.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -455,7 +455,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "dep-drift",
-        help: "Enforce dep-drift contracts",
+        help: "Hold every manifest to the dependency versions the workspace table manages.",
         package: "xtask",
         areas: &["prepublish"],
         subject: "workspace manifests",
@@ -479,7 +479,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "device-test-gating",
-        help: "Enforce device-test-gating contracts",
+        help: "Allow test code to acquire a concrete backend only where a hardware feature admits it and a workflow compiles it.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "rust sources",
@@ -503,7 +503,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "doc-claims",
-        help: "Enforce doc-claims contracts",
+        help: "Resolve every documented claim to a phrase in a document and a test that runs.",
         package: "xtask",
         areas: &["docs"],
         subject: "owned documentation pages",
@@ -515,7 +515,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "docs-check",
-        help: "Enforce docs-check contracts",
+        help: "Hold the documentation manifest to the pages, navigation and links on disk; --write regenerates the generated pages.",
         package: "xtask",
         areas: &["docs"],
         subject: "owned documentation pages",
@@ -527,7 +527,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "docs-coupling",
-        help: "Enforce docs-coupling contracts",
+        help: "Hold an authored page to the code it covers, and to the diff that changes that code.",
         package: "xtask",
         areas: &["docs"],
         subject: "owned documentation pages",
@@ -539,7 +539,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "docs-references",
-        help: "Enforce docs-references contracts",
+        help: "Resolve every path-like code span, link target and command input in the docs to a published path.",
         package: "xtask",
         areas: &["docs"],
         subject: "owned documentation pages",
@@ -551,7 +551,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "docs-register",
-        help: "Enforce docs-register contracts",
+        help: "Hold every authored page to the documentation register.",
         package: "xtask",
         areas: &["docs"],
         subject: "owned documentation pages",
@@ -563,7 +563,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "domain-vocabulary",
-        help: "Enforce domain-vocabulary contracts",
+        help: "Keep consumer-domain vocabulary out of published non-composition surfaces.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "published items across non-composition crates",
@@ -575,7 +575,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "dup-scan",
-        help: "Enforce dup-scan contracts",
+        help: "Measure cross-file duplicate source blocks against the pinned per-crate baseline.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -655,7 +655,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "evidence-paths",
-        help: "Enforce evidence-paths contracts",
+        help: "Resolve every path release evidence cites, and require it to reach a reader.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -667,7 +667,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "evidence-provenance",
-        help: "Enforce evidence-provenance contracts",
+        help: "Resolve every committed evidence fingerprint against the commit that contains it.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "committed release evidence",
@@ -679,7 +679,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "example-capability",
-        help: "Enforce example-capability contracts",
+        help: "Build every example and check every capability it claims.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
@@ -691,7 +691,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "feature-isolation",
-        help: "Enforce feature-isolation contracts",
+        help: "Hold every feature selection the manifests declare to its recorded compile outcome.",
         package: "xtask",
         areas: &["prepublish"],
         subject: "workspace manifests",
@@ -715,7 +715,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "feature-msrv",
-        help: "Enforce feature-msrv contracts",
+        help: "Compile every declared feature selection on the advertised MSRV.",
         package: "xtask",
         areas: &["prepublish"],
         subject: "workspace manifests",
@@ -727,7 +727,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "file-size",
-        help: "Enforce file-size contracts",
+        help: "Hold production source files under their line cap; test sources take the test cap.",
         package: "xtask",
         areas: &["prepublish"],
         subject: "tracked source files",
@@ -739,7 +739,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "frozen-contracts",
-        help: "Enforce frozen-contracts contracts",
+        help: "Match the seven frozen declarations against their snapshots.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "registered system invariants",
@@ -751,7 +751,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "gate-canon",
-        help: "Enforce gate-canon contracts",
+        help: "Hold the gate registry to its baselines: every gate has one baseline row and a subset, and a raised pin, a lowered target, or a loosened limit or floor without a recorded measurement against the base revision is a finding.",
         package: "xtask",
         areas: &["prepublish"],
         subject: "registered system invariants",
@@ -787,7 +787,7 @@ pub const GATES_A_G: &[GateDescriptor] = &[
     },
     GateDescriptor {
         name: "gpu-loudness",
-        help: "Enforce gpu-loudness contracts",
+        help: "Report a GPU test that returns early on a failed probe with no loud abort beside it.",
         package: "xtask",
         areas: &["contract-rules"],
         subject: "tracked source files",
