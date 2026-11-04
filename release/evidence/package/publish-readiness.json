@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"3012be0f95ea29b782bf5362235253ebbbb09a05","commit_timestamp":"1793765962","parent_commit":"bf9e3bb24d2f1c477af14463178800b9b090172e","dirty":false,"source_fingerprint":"git:3012be0f95ea29b782bf5362235253ebbbb09a05:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"ccba33820268d7dc04ddfe9c6ddabf46390b1fc5","commit_timestamp":"1793768127","parent_commit":"b6cb8e23d04c0185eaf4c1e5b54a5a56b3d702ce","dirty":false,"source_fingerprint":"git:ccba33820268d7dc04ddfe9c6ddabf46390b1fc5:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 3,
   "release_train": {
     "vyre": "0.8.0",
@@ -125,11 +125,6 @@
       "package": "vyre-libs-parsing",
       "version": "0.8.0",
       "manifest": "vyre-libs-parsing/Cargo.toml"
-    },
-    {
-      "package": "vyre-libs-vfs",
-      "version": "0.8.0",
-      "manifest": "vyre-libs-vfs/Cargo.toml"
     },
     {
       "package": "vyre-libs-visual",
@@ -664,12 +659,6 @@
     },
     {
       "package": "vyre-libs",
-      "dependency": "vyre-libs-vfs",
-      "dependency_version": "0.8.0",
-      "manifest": "vyre-libs/Cargo.toml"
-    },
-    {
-      "package": "vyre-libs",
       "dependency": "vyre-libs-visual",
       "dependency_version": "0.8.0",
       "manifest": "vyre-libs/Cargo.toml"
@@ -1383,18 +1372,6 @@
       "manifest": "vyre-libs-text/Cargo.toml"
     },
     {
-      "package": "vyre-libs-vfs",
-      "dependency": "vyre-foundation",
-      "dependency_version": "0.8.0",
-      "manifest": "vyre-libs-vfs/Cargo.toml"
-    },
-    {
-      "package": "vyre-libs-vfs",
-      "dependency": "vyre-libs-builder",
-      "dependency_version": "0.8.0",
-      "manifest": "vyre-libs-vfs/Cargo.toml"
-    },
-    {
       "package": "vyre-libs-visual",
       "dependency": "vyre-foundation",
       "dependency_version": "0.8.0",
@@ -1652,9 +1629,9 @@
       "package": "vyre-libs-device",
       "manifest": "vyre-libs-device/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 16,
-      "file_list_digest": "blake3:7c63f2186b0df772da707c586f918f890b3b13c5e4e875c21d5b5d94782ed560",
-      "rust_source_count": 6,
+      "file_count": 18,
+      "file_list_digest": "blake3:7bd95c83be951297e8f74be54e8fcf1b5abd20b4784a9198fe9809cca1dedaae",
+      "rust_source_count": 8,
       "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
@@ -1787,18 +1764,6 @@
       "file_count": 65,
       "file_list_digest": "blake3:fd0c222c60a310c01c865d66f187b84bb23b378fb4ba854317e3becc522ebb98",
       "rust_source_count": 46,
-      "missing_required_files": [],
-      "forbidden_files": [],
-      "command_error": null,
-      "blockers": []
-    },
-    {
-      "package": "vyre-libs-vfs",
-      "manifest": "vyre-libs-vfs/Cargo.toml",
-      "cargo_package_list_succeeded": true,
-      "file_count": 12,
-      "file_list_digest": "blake3:942bb68c1a39903c5aa6b6aa20e808bcdffe7692ecd37c8e0681ad4822d26a84",
-      "rust_source_count": 3,
       "missing_required_files": [],
       "forbidden_files": [],
       "command_error": null,
@@ -2780,13 +2745,6 @@
     },
     {
       "package": "vyre-libs",
-      "dependency": "vyre-libs-vfs",
-      "version": "0.8.0",
-      "manifest": "vyre-libs/Cargo.toml",
-      "source": "workspace"
-    },
-    {
-      "package": "vyre-libs",
       "dependency": "vyre-libs-visual",
       "version": "0.8.0",
       "manifest": "vyre-libs/Cargo.toml",
@@ -3987,20 +3945,6 @@
       "dependency": "vyre-reference",
       "version": "0.8.0",
       "manifest": "vyre-libs-text/Cargo.toml",
-      "source": "workspace"
-    },
-    {
-      "package": "vyre-libs-vfs",
-      "dependency": "vyre-foundation",
-      "version": "0.8.0",
-      "manifest": "vyre-libs-vfs/Cargo.toml",
-      "source": "workspace"
-    },
-    {
-      "package": "vyre-libs-vfs",
-      "dependency": "vyre-libs-builder",
-      "version": "0.8.0",
-      "manifest": "vyre-libs-vfs/Cargo.toml",
       "source": "workspace"
     },
     {

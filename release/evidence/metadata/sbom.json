@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"3012be0f95ea29b782bf5362235253ebbbb09a05","commit_timestamp":"1793765962","parent_commit":"bf9e3bb24d2f1c477af14463178800b9b090172e","dirty":false,"source_fingerprint":"git:3012be0f95ea29b782bf5362235253ebbbb09a05:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"ccba33820268d7dc04ddfe9c6ddabf46390b1fc5","commit_timestamp":"1793768127","parent_commit":"b6cb8e23d04c0185eaf4c1e5b54a5a56b3d702ce","dirty":false,"source_fingerprint":"git:ccba33820268d7dc04ddfe9c6ddabf46390b1fc5:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "bomFormat": "CycloneDX",
   "components": [
     {
@@ -7502,25 +7502,6 @@
           }
         }
       ],
-      "name": "vyre-libs-vfs",
-      "purl": "pkg:cargo/vyre-libs-vfs@0.8.0",
-      "type": "library",
-      "version": "0.8.0"
-    },
-    {
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "local_workspace"
-        }
-      ],
-      "licenses": [
-        {
-          "license": {
-            "id": "Apache-2.0 OR MIT"
-          }
-        }
-      ],
       "name": "vyre-libs-visual",
       "purl": "pkg:cargo/vyre-libs-visual@0.8.0",
       "type": "library",
@@ -9073,7 +9054,7 @@
       "type": "framework",
       "version": "0.8.0"
     },
-    "timestamp": "2026-11-04T04:19:22Z",
+    "timestamp": "2026-11-04T04:55:27Z",
     "tools": [
       {
         "name": "xtask-release-provenance",
@@ -9087,7 +9068,7 @@
       }
     ]
   },
-  "serialNumber": "urn:uuid:vyre-sbom-ca0bc0a37bbf683ac772d827b31e654d5ea6e4428b3dd9e1d09c2e8cf892e9ac",
+  "serialNumber": "urn:uuid:vyre-sbom-2012e92c63303f62397d305bed9b1cdfb537f144b97b04eac29c475e2f338239",
   "specVersion": "1.5",
   "version": 1
 }

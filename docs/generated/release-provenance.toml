@@ -1,5 +1,5 @@
 schema_version = 2
-bom_timestamp = "2026-11-04T04:19:22Z"
+bom_timestamp = "2026-11-04T04:55:27Z"
 rustc_version = "1.86.0 (05f9846f8 2025-03-31)"
 cargo_version = "1.86.0 (adf9b6ad1 2025-02-28)"
 target_triples = [
@@ -9,9 +9,9 @@ target_triples = [
     "aarch64-apple-darwin",
     "aarch64-unknown-linux-gnu",
 ]
-lockfile_digest = "ca0bc0a37bbf683ac772d827b31e654d5ea6e4428b3dd9e1d09c2e8cf892e9ac"
+lockfile_digest = "2012e92c63303f62397d305bed9b1cdfb537f144b97b04eac29c475e2f338239"
 is_offline_capable = true
-reproducible_archive_hash = "4af795050d09f72325b2a9e15576033ebcbc9038ee62cb675a1b0ff0bca8bd1c"
+reproducible_archive_hash = "c97dbe7be4ba599e3a9e2a4b855b2709e22faec61f72d039bcd50e97b2c14530"
 
 [[dependencies]]
 name = "adler2"
@@ -3166,14 +3166,6 @@ license = "Apache-2.0 OR MIT"
 is_policy_approved = true
 
 [[dependencies]]
-name = "vyre-libs-vfs"
-version = "0.8.0"
-checksum = "local_workspace"
-source = "workspace"
-license = "Apache-2.0 OR MIT"
-is_policy_approved = true
-
-[[dependencies]]
 name = "vyre-libs-visual"
 version = "0.8.0"
 checksum = "local_workspace"
@@ -3939,7 +3931,7 @@ digest = "5d4a12d89211943294bb3b1cf4ffe776c3d8acc2e1b16afae67c16e7c5de50f1"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/release-workload-matrix.json"
-digest = "e668eab97b56fb064d2a80eb2bce548c35dd902fbd1369a254d6e944d9c73b4b"
+digest = "11e23357b685493fd5052451242e65f1a556fef8012bb8bd97137cf461c84876"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/resident-optimizer-pipeline.json"
@@ -4115,7 +4107,7 @@ digest = "9fc92a0786cdc3452171967bf5a80c832b175a7d2ddb3bec1621ab7a62127c2d"
 
 [[schemas]]
 path = "docs/generated/configuration-space.toml"
-digest = "01bdccab5b5b1e62bbe694ed8506d110c35f0c3f4efd4cd1717efd9e70d8f0af"
+digest = "1076fea98e5835b51ff463af4fe202086655a509057871b77e23c95916364f15"
 
 [[schemas]]
 path = "docs/generated/driver-error-codes.toml"
@@ -4123,7 +4115,7 @@ digest = "2fbb1f049e9985434e389a67eedd95c9c20315bab34655ce8ebc1b0f4d2438d6"
 
 [[schemas]]
 path = "docs/generated/engineering-scorecard.toml"
-digest = "a84923ca6327b6842f85e5532b177fc67d6954dadb4d4d5a660c77e1742b6a76"
+digest = "7157c16525acc4809564a4f22b4fe2688b0fd63a8a3dee38b51972ae91040549"
 
 [[schemas]]
 path = "docs/generated/error-codes.toml"
@@ -4139,7 +4131,7 @@ digest = "c4b44b5404a056ce1f3b516fb569c9937dc53353cf37bc9518faacd729ca83e7"
 
 [[schemas]]
 path = "docs/generated/platform-support-matrix.toml"
-digest = "fc5adb8e4c102b27f1095a4cd310d8dbf6d824231853285e3532794ab42b8c85"
+digest = "1ce802b6b44fdfb041388d0c461fb15215dd135f680ec7b3c5dccc6ea66aa9df"
 
 [[build_scripts]]
 crate_name = "vyre-emit-ptx"

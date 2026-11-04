@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"3012be0f95ea29b782bf5362235253ebbbb09a05","commit_timestamp":"1793765962","parent_commit":"bf9e3bb24d2f1c477af14463178800b9b090172e","dirty":false,"source_fingerprint":"git:3012be0f95ea29b782bf5362235253ebbbb09a05:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"ccba33820268d7dc04ddfe9c6ddabf46390b1fc5","commit_timestamp":"1793768127","parent_commit":"b6cb8e23d04c0185eaf4c1e5b54a5a56b3d702ce","dirty":false,"source_fingerprint":"git:ccba33820268d7dc04ddfe9c6ddabf46390b1fc5:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 2,
   "requested_vyre_release": "0.8.0",
   "tag_story": {
@@ -304,13 +304,6 @@
       "package": "vyre-libs-text",
       "version": "0.8.0",
       "manifest": "vyre-libs-text/Cargo.toml",
-      "release_group": "vyre",
-      "publishable": true
-    },
-    {
-      "package": "vyre-libs-vfs",
-      "version": "0.8.0",
-      "manifest": "vyre-libs-vfs/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
@@ -654,13 +647,6 @@
     },
     {
       "manifest": "Cargo.toml",
-      "dependency": "vyre-libs-vfs",
-      "version": "0.8.0",
-      "expected": "0.8.0",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "Cargo.toml",
       "dependency": "vyre-libs-visual",
       "version": "0.8.0",
       "expected": "0.8.0",
@@ -986,13 +972,6 @@
     {
       "lockfile": "Cargo.lock",
       "package": "vyre-libs-text",
-      "version": "0.8.0",
-      "expected": "0.8.0",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "Cargo.lock",
-      "package": "vyre-libs-vfs",
       "version": "0.8.0",
       "expected": "0.8.0",
       "release_group": "vyre"
