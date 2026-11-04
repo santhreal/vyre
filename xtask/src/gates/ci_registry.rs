@@ -52,8 +52,6 @@ pub const WRITER: &str = "./cargo_full run -p xtask --bin xtask -- ci-registry -
 const WORKFLOWS: &str = ".github/workflows";
 /// Where a workflow that does not run is parked.
 const PAUSED: &str = ".github/workflows-paused";
-/// A glob a workflow may name, because a glob names a set rather than a file.
-const SCRIPT_GLOBS: &[&str] = &["check_*.sh"];
 /// The package whose gates `xtask` runs in process.
 const XTASK: &str = "xtask";
 
@@ -205,21 +203,17 @@ pub struct WorkflowNames {
 /// beginning with `-` is not a subcommand, so `./cargo_full test -- --nocapture`
 /// is not mistaken for one. A YAML comment is documentation, not a reference:
 /// prose that ends a sentence with a script name invokes nothing.
-pub fn workflow_names(root: &Path) -> WorkflowNames {
+pub fn workflow_names(root: &Path) -> Result<WorkflowNames, GateError> {
     let mut names = WorkflowNames::default();
     for path in yaml_files(&root.join(WORKFLOWS)) {
-        let Ok(text) = fs::read_to_string(&path) else {
-            continue;
-        };
+        let text = workflow_text(&path)?;
         let file = file_name(&path);
         for (index, line) in text.lines().enumerate() {
             read_line(&mut names, &file, index + 1, line);
         }
     }
     for path in yaml_files(&root.join(PAUSED)) {
-        let Ok(text) = fs::read_to_string(&path) else {
-            continue;
-        };
+        let text = workflow_text(&path)?;
         let file = file_name(&path);
         for (index, line) in text.lines().enumerate() {
             if let Some(script) = referenced_script(line) {
@@ -229,7 +223,18 @@ pub fn workflow_names(root: &Path) -> WorkflowNames {
             }
         }
     }
-    names
+    Ok(names)
+}
+
+/// One workflow file's text. A workflow this run cannot read is wiring nobody
+/// judged, so it fails the run instead of reading as a workflow with no steps.
+fn workflow_text(path: &Path) -> Result<String, GateError> {
+    crate::output_arg::read_tracked_text(path).map_err(|error| {
+        GateError::new(
+            format!("cannot read {}: {error}", path.display()),
+            "restore the workflow as UTF-8 text, or delete it",
+        )
+    })
 }
 
 /// Every workflow file in one directory, sorted.
@@ -646,7 +651,7 @@ pub fn findings(
     }
 
     findings.extend(external_findings(root, registry, names));
-    findings.extend(workflow_findings(root, registry, gate_names));
+    findings.extend(workflow_findings(root, registry, &workflows, gate_names));
     findings
 }
 
@@ -658,10 +663,14 @@ pub fn findings(
 /// leaves no trace to go red. Every path keeps a row, and the row says which of
 /// four things happened to it: it runs, it is parked with a way back, another
 /// workflow runs its checks, or its verification class is uncovered.
-fn workflow_findings(root: &Path, registry: &Registry, gate_names: &[&str]) -> Vec<Finding> {
+fn workflow_findings(
+    root: &Path,
+    registry: &Registry,
+    runs: &BTreeMap<String, BTreeSet<String>>,
+    gate_names: &[&str],
+) -> Vec<Finding> {
     let mut findings = Vec::new();
     let files = workflow_files(root);
-    let runs = derived_workflows(&workflow_names(root), &derived_subsets());
     let mut seen: BTreeMap<&str, usize> = BTreeMap::new();
     for row in &registry.workflow {
         *seen.entry(row.path.as_str()).or_default() += 1;
@@ -842,14 +851,12 @@ fn external_findings(root: &Path, registry: &Registry, names: &WorkflowNames) ->
     for (parent, scripts) in [(WORKFLOWS, &names.scripts), (PAUSED, &names.paused_scripts)] {
         for (file, line, script) in scripts {
             if script.contains('*') {
-                if !SCRIPT_GLOBS.contains(&script.as_str()) {
-                    findings.push(Finding::at(
-                        format!("{parent}/{file}"),
-                        *line as u32,
-                        format!("`scripts/{script}` is not an accepted glob"),
-                        "name the script, or add the glob to the accepted set",
-                    ));
-                }
+                findings.push(Finding::at(
+                    format!("{parent}/{file}"),
+                    *line as u32,
+                    format!("`scripts/{script}` names a set of scripts"),
+                    "name one script or one gate; a glob reaches whatever a future checkout leaves in the directory",
+                ));
                 continue;
             }
             if !directory.join(script).exists() {
@@ -909,7 +916,7 @@ fn external_findings(root: &Path, registry: &Registry, names: &WorkflowNames) ->
 /// row whose file is gone keeps the state it was given rather than being
 /// dropped.
 fn write(root: &Path) -> Result<Report, GateError> {
-    let names = workflow_names(root);
+    let names = workflow_names(root)?;
     let subsets = derived_subsets();
     let workflows = derived_workflows(&names, &subsets);
     let externals = derived_externals(&names);
@@ -970,7 +977,7 @@ impl crate::gate::GateBehavior for CiRegistry {
             return write(&ctx.root);
         }
         let registry = load(&ctx.root)?;
-        let names = workflow_names(&ctx.root);
+        let names = workflow_names(&ctx.root)?;
         let gates = subcommands::registry();
         let gate_names: Vec<&str> = gates.iter().map(|gate| gate.name()).collect();
         let mut report = Report::with_findings(findings(&ctx.root, &registry, &names, &gate_names));
@@ -998,6 +1005,18 @@ impl crate::gate::GateBehavior for CiRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `workflow_findings` over the workflows the fixture tree carries, derived
+    /// the way the gate derives them.
+    fn scanned_workflow_findings(
+        root: &Path,
+        registry: &Registry,
+        gate_names: &[&str],
+    ) -> Vec<Finding> {
+        let scanned = workflow_names(root).expect("the fixture workflows are readable");
+        let runs = derived_workflows(&scanned, &derived_subsets());
+        workflow_findings(root, registry, &runs, gate_names)
+    }
 
     fn names(pairs: &[(&str, &str)], subsets: &[(&str, &str)]) -> WorkflowNames {
         let mut out = WorkflowNames::default();
@@ -1082,7 +1101,7 @@ mod tests {
     fn the_checked_in_declaration_agrees_with_the_checked_in_tree() {
         let root = crate::checkout::checkout_root();
         let declaration = load(&root).expect("the declaration loads");
-        let scanned = workflow_names(&root);
+        let scanned = workflow_names(&root).expect("the checked-in workflows are readable");
         let gates = subcommands::registry();
         let gate_names: Vec<&str> = gates.iter().map(|gate| gate.name()).collect();
         let found = findings(&root, &declaration, &scanned, &gate_names);
@@ -1250,7 +1269,9 @@ mod tests {
 
     /// WHY: a step pointing at a script the checkout no longer carries fails at
     /// run time under a step name that still reads as coverage, so the
-    /// declaration has to name it before CI does.
+    /// declaration has to name it before CI does. A glob names whatever a
+    /// future checkout leaves in the directory, so it fails even when it
+    /// matches nothing today.
     #[test]
     fn a_step_naming_a_script_the_tree_lacks_fails() {
         let root = std::env::temp_dir().join(format!("vyre-ci-registry-{}", std::process::id()));
@@ -1263,6 +1284,9 @@ mod tests {
         scanned
             .scripts
             .push(("gates.yml".to_string(), 9, "departed.sh".to_string()));
+        scanned
+            .scripts
+            .push(("gates.yml".to_string(), 11, "check_*.sh".to_string()));
         let declaration = Registry {
             schema_version: SCHEMA_VERSION,
             gate: Vec::new(),
@@ -1280,9 +1304,16 @@ mod tests {
         };
         let found = external_findings(&root, &declaration, &scanned);
         fs::remove_dir_all(&root).ok();
-        assert_eq!(found.len(), 1, "{}", messages(&found));
+        assert_eq!(found.len(), 3, "{}", messages(&found));
         assert!(
             found[0].message.contains("`scripts/departed.sh`"),
+            "{}",
+            messages(&found)
+        );
+        assert!(
+            found[1]
+                .message
+                .contains("`scripts/check_*.sh` names a set"),
             "{}",
             messages(&found)
         );
@@ -1313,7 +1344,7 @@ mod tests {
             .expect("the workflow is written");
         let parked = format!("{PAUSED}/book.yml");
 
-        let unrecorded = workflow_findings(&root, &registry(Vec::new()), &[]);
+        let unrecorded = scanned_workflow_findings(&root, &registry(Vec::new()), &[]);
         assert!(
             messages(&unrecorded).contains(&format!("`{parked}` is in the checkout")),
             "{}",
@@ -1324,7 +1355,7 @@ mod tests {
         let mut row = workflow_row(&parked, PAUSED_STATE);
         row.returns_when = "  ".to_string();
         declaration.workflow.push(row);
-        let empty = workflow_findings(&root, &declaration, &[]);
+        let empty = scanned_workflow_findings(&root, &declaration, &[]);
         assert!(
             messages(&empty).contains("records no reason"),
             "{}",
@@ -1345,7 +1376,7 @@ mod tests {
             &format!("{PAUSED}/restored.yml"),
             PAUSED_STATE,
         ));
-        let stale = workflow_findings(&root, &declaration, &[]);
+        let stale = scanned_workflow_findings(&root, &declaration, &[]);
         fs::remove_dir_all(&root).ok();
         assert!(
             messages(&stale).contains("`.github/workflows-paused/restored.yml` is declared `paused` and the checkout does not carry it"),
@@ -1371,12 +1402,12 @@ mod tests {
         let mut declaration = registry(Vec::new());
         declaration.workflow.push(workflow_row(&path, LIVE));
         assert!(
-            workflow_findings(&root, &declaration, &[]).is_empty(),
+            scanned_workflow_findings(&root, &declaration, &[]).is_empty(),
             "a live workflow with a row is clean"
         );
 
         fs::remove_file(&live).expect("the workflow is deleted");
-        let deleted = workflow_findings(&root, &declaration, &[]);
+        let deleted = scanned_workflow_findings(&root, &declaration, &[]);
         assert!(
             messages(&deleted).contains(&format!(
                 "`{path}` is declared `live` and the checkout does not carry it"
@@ -1464,7 +1495,11 @@ mod tests {
         unprotected.reason = "the budget was never validated".to_string();
         declaration.workflow.push(unprotected);
 
-        let found = messages(&workflow_findings(&root, &declaration, &["catalog"]));
+        let found = messages(&scanned_workflow_findings(
+            &root,
+            &declaration,
+            &["catalog"],
+        ));
         assert!(
             found.contains("which the checkout does not carry"),
             "{found}"
@@ -1480,7 +1515,11 @@ mod tests {
         laundered.superseded_by = format!("{PAUSED}/parked.yml");
         laundered.gate = "catalog".to_string();
         into_a_parked_lane.workflow.push(laundered);
-        let dead_end = messages(&workflow_findings(&root, &into_a_parked_lane, &["catalog"]));
+        let dead_end = messages(&scanned_workflow_findings(
+            &root,
+            &into_a_parked_lane,
+            &["catalog"],
+        ));
         assert!(
             dead_end.contains("is `paused` and runs nothing"),
             "{dead_end}"
@@ -1494,7 +1533,7 @@ mod tests {
         elsewhere.superseded_by = format!("{WORKFLOWS}/gates.yml");
         elsewhere.gate = "docs-check".to_string();
         wrong_lane.workflow.push(elsewhere);
-        let unrun = messages(&workflow_findings(
+        let unrun = messages(&scanned_workflow_findings(
             &root,
             &wrong_lane,
             &["catalog", "docs-check"],
@@ -1516,7 +1555,7 @@ mod tests {
         unprotected.reason = "the budget was never validated".to_string();
         unprotected.class = "mutation coverage of the verifier".to_string();
         declaration.workflow.push(unprotected);
-        let clean = workflow_findings(&root, &declaration, &["catalog"]);
+        let clean = scanned_workflow_findings(&root, &declaration, &["catalog"]);
         fs::remove_dir_all(&root).ok();
         assert!(clean.is_empty(), "{}", messages(&clean));
     }
@@ -1536,7 +1575,7 @@ mod tests {
         )
         .expect("the parked workflow is written");
 
-        let names = workflow_names(&root);
+        let names = workflow_names(&root).expect("the fixture workflows are readable");
         let found = messages(&external_findings(&root, &registry(Vec::new()), &names));
         let credited = derived_externals(&names);
         fs::remove_dir_all(&root).ok();

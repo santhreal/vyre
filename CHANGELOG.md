@@ -3368,6 +3368,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   decides which lines belong to an inline test module lives in the scan module
   that already owns what is not code. The hot-path scan held the only copy, so
   the heuristic audit could not tell a test fixture from production debt.
+- Workflow wiring is checked once, by the `ci-registry` gate, which now rejects
+  every script glob and fails on a workflow it cannot read; `xtask gates`
+  checks only the registry before it runs.
 - The vyre-libs fixture owner exposes the out-of-bounds report entry point, so
   no module in the crate reaches the reference interpreter itself.
 - The batched packed-activation INT4 matmul and its top-1 routing variant

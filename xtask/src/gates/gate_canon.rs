@@ -37,7 +37,7 @@ use crate::subcommands;
 /// A gate no subset contains is reachable only by running the whole registry,
 /// so the domain that owns it never sees its verdict on its own.
 #[must_use]
-pub fn subset_failures(gate_names: &[&str]) -> Vec<String> {
+fn subset_failures(gate_names: &[&str]) -> Vec<String> {
     let subsets = subcommands::subsets();
     gate_names
         .iter()
