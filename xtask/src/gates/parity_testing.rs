@@ -13,9 +13,8 @@
 
 use std::path::{Path, PathBuf};
 
-use walkdir::WalkDir;
-
 use crate::gate::{Finding, GateCtx, GateError, Report};
+use crate::gates::scan::Tree;
 
 /// The feature that must never be enabled outside a development dependency.
 const FEATURE: &str = "parity-testing";
@@ -26,25 +25,15 @@ const DECLARING_CRATE: &str = "vyre-driver-wgpu";
 /// The corrective action for every leak this gate reports.
 const FIX: &str = "move the activation into the crate's [dev-dependencies] or [target.'cfg(...)'.dev-dependencies] block, because a production build must never link the raw-shader probe path";
 
-/// Every manifest in the checkout, ignoring build output.
-fn manifests(root: &Path) -> Result<Vec<PathBuf>, GateError> {
-    let mut found = Vec::new();
-    for entry in WalkDir::new(root).into_iter().filter_entry(|entry| {
-        let name = entry.file_name().to_string_lossy();
-        name != "target" && name != ".git"
-    }) {
-        let entry = entry.map_err(|error| {
-            GateError::new(
-                format!("cannot walk {}: {error}", root.display()),
-                "make every directory in the checkout readable",
-            )
-        })?;
-        if entry.file_type().is_file() && entry.file_name() == "Cargo.toml" {
-            found.push(entry.path().to_path_buf());
-        }
-    }
-    found.sort();
-    Ok(found)
+/// Every manifest the checkout lists, nested and non-member ones included,
+/// because a fuzz or example manifest links the probe path as surely as a
+/// member does.
+fn manifests(tree: &Tree) -> Vec<PathBuf> {
+    tree.paths()
+        .iter()
+        .filter(|path| path.file_name().is_some_and(|name| name == "Cargo.toml"))
+        .cloned()
+        .collect()
 }
 
 /// Whether a mention inside `section` of `crate_directory` is allowed.
@@ -61,15 +50,11 @@ pub struct ParityTestingIsolated;
 impl crate::gate::GateBehavior for ParityTestingIsolated {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let mut report = Report::clean();
-        let paths = manifests(&ctx.root)?;
+        let tree = Tree::open(&ctx.root)?;
+        let paths = manifests(&tree);
         report.cover_complete("parity test manifests", paths.len());
         for path in &paths {
-            let text = structure_gate::read_source_bounded(path).map_err(|error| {
-                GateError::new(
-                    format!("cannot read {}: {error}", path.display()),
-                    "make every manifest in the checkout readable",
-                )
-            })?;
+            let text = tree.read(path)?;
             let crate_directory = path
                 .parent()
                 .and_then(Path::file_name)
@@ -89,7 +74,7 @@ impl crate::gate::GateBehavior for ParityTestingIsolated {
                     continue;
                 }
                 report.find(Finding::at(
-                    path.strip_prefix(&ctx.root).unwrap_or(path),
+                    path,
                     u32::try_from(index + 1).unwrap_or(u32::MAX),
                     format!(
                         "section `{}` enables `{FEATURE}`",

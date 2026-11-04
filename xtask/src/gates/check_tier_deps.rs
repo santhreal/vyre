@@ -15,8 +15,6 @@
 //! way around it.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::path::Path;
 
 use toml::Value;
 
@@ -45,26 +43,17 @@ pub struct CheckTierDeps;
 
 impl crate::gate::GateBehavior for CheckTierDeps {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
-        let root = &ctx.root;
-        let tree = Tree::open(root)?;
-        let members = workspace_members(root);
+        let tree = Tree::open(&ctx.root)?;
+        let members = tree.member_manifests()?;
         let mut failures = Vec::new();
 
         let ranks = crate_registry::declared_layer_ranks(&tree)?;
         let layers = declared_layers(&tree, &ranks, &mut failures)?;
-        let workspace_deps = workspace_dependency_packages(root);
-        let mut packages = BTreeMap::new();
-        let mut manifests = Vec::new();
+        let workspace_deps = workspace_dependency_packages(&tree.read_toml("Cargo.toml")?);
+        let members_by_package: BTreeSet<&str> =
+            members.iter().map(|member| member.name.as_str()).collect();
         for member in &members {
-            let manifest = root.join(member).join("Cargo.toml");
-            let text = read_bounded(&manifest);
-            let table = parse_toml(&manifest, &text);
-            let package = package_name(&manifest, &table);
-            packages.insert(package.clone(), member.clone());
-            manifests.push((package, table));
-        }
-        let members_by_package: BTreeSet<&str> = packages.keys().map(String::as_str).collect();
-        for (package, table) in &manifests {
+            let package = &member.name;
             let Some(&layer) = layers.get(package) else {
                 failures.push(format!(
                     "`{package}` is a workspace member with no entry in docs/CRATE_OWNERSHIP.toml; declare its layer there"
@@ -77,11 +66,11 @@ impl crate::gate::GateBehavior for CheckTierDeps {
                 &layers,
                 &members_by_package,
                 &workspace_deps,
-                table,
+                &member.manifest,
                 &mut failures,
             );
         }
-        validate_cross_crate_promotion_contract(root, &mut failures);
+        validate_cross_crate_promotion_contract(&tree, &mut failures);
 
         let mut report = Report::from_messages(failures, FIX);
         report.cover_complete("workspace members", members.len());
@@ -92,22 +81,6 @@ impl crate::gate::GateBehavior for CheckTierDeps {
         ));
         Ok(report)
     }
-}
-
-fn workspace_members(root: &Path) -> Vec<String> {
-    let text = read_bounded(&root.join("Cargo.toml"));
-    let table = parse_toml(&root.join("Cargo.toml"), &text);
-    table
-        .get("workspace")
-        .and_then(|w| w.get("members"))
-        .and_then(Value::as_array)
-        .map(|arr| {
-            arr.iter()
-                .filter_map(Value::as_str)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default()
 }
 
 /// Each member's declared layer, resolved to the rank that orders it.
@@ -141,26 +114,9 @@ fn declared_layers<'a>(
     Ok(layers)
 }
 
-/// Package name a workspace member publishes, which is what a dependency names.
-///
-/// # Panics
-///
-/// Panics when the manifest table does not contain a `[package]` name.
-fn package_name(manifest: &Path, table: &Value) -> String {
-    table
-        .get("package")
-        .and_then(|package| package.get("name"))
-        .and_then(Value::as_str)
-        .unwrap_or_else(|| panic!("Fix: {} declares no [package] name", manifest.display()))
-        .to_string()
-}
-
 /// Package each `[workspace.dependencies]` key resolves to, so a member written
 /// as `dep.workspace = true` is checked like any other edge.
-fn workspace_dependency_packages(root: &Path) -> BTreeMap<String, String> {
-    let path = root.join("Cargo.toml");
-    let text = read_bounded(&path);
-    let table = parse_toml(&path, &text);
+fn workspace_dependency_packages(table: &toml::Table) -> BTreeMap<String, String> {
     let mut packages = BTreeMap::new();
     let Some(deps) = table
         .get("workspace")
@@ -206,7 +162,7 @@ fn scan_manifest(
     layers: &BTreeMap<String, Layer<'_>>,
     members: &BTreeSet<&str>,
     workspace_deps: &BTreeMap<String, String>,
-    table: &Value,
+    table: &toml::Table,
     failures: &mut Vec<String>,
 ) {
     for (deps, dep_kind) in production_tables(table) {
@@ -240,7 +196,7 @@ fn scan_manifest(
 /// A `[target.'cfg(...)'.dependencies]` table is reported under its own name so
 /// the failure points at the table that declares the edge rather than at the
 /// plain one that does not.
-fn production_tables(table: &Value) -> Vec<(&toml::map::Map<String, Value>, String)> {
+fn production_tables(table: &toml::Table) -> Vec<(&toml::Table, String)> {
     let mut tables = Vec::new();
     for kind in ["dependencies", "build-dependencies"] {
         if let Some(deps) = table.get(kind).and_then(Value::as_table) {
@@ -259,22 +215,22 @@ fn production_tables(table: &Value) -> Vec<(&toml::map::Map<String, Value>, Stri
     tables
 }
 
-fn validate_cross_crate_promotion_contract(root: &Path, failures: &mut Vec<String>) {
-    let crate_graph = read_contract_doc(root, "docs/CRATE_GRAPH.md", failures);
-    let lego_rule = read_contract_doc(root, "docs/lego-block-rule.md", failures);
+fn validate_cross_crate_promotion_contract(tree: &Tree, failures: &mut Vec<String>) {
+    let crate_graph = read_contract_doc(tree, "docs/CRATE_GRAPH.md", failures);
+    let lego_rule = read_contract_doc(tree, "docs/lego-block-rule.md", failures);
     failures.extend(cross_crate_promotion_contract_text_failures(
         crate_graph.as_deref().unwrap_or(""),
         lego_rule.as_deref().unwrap_or(""),
     ));
 }
 
-fn read_contract_doc(root: &Path, rel: &str, failures: &mut Vec<String>) -> Option<String> {
-    let path = root.join(rel);
-    match fs::read_to_string(&path) {
+fn read_contract_doc(tree: &Tree, rel: &str, failures: &mut Vec<String>) -> Option<String> {
+    match tree.read(rel) {
         Ok(text) => Some(text),
         Err(error) => {
             failures.push(format!(
-                "cross-crate promotion contract could not read `{rel}`: {error}"
+                "cross-crate promotion contract could not read `{rel}`: {}",
+                error.message
             ));
             None
         }
@@ -302,30 +258,6 @@ fn cross_crate_promotion_contract_text_failures(crate_graph: &str, lego_rule: &s
         }
     }
     failures
-}
-
-/// Read a manifest file within bounded size.
-///
-/// # Panics
-///
-/// Panics when the manifest file cannot be read or exceeds
-/// [`structure_gate::MAX_SOURCE_BYTES`].
-fn read_bounded(path: &Path) -> String {
-    structure_gate::read_source_bounded(path).unwrap_or_else(|error| {
-        panic!("Fix: cannot read {}: {error}", path.display());
-    })
-}
-
-/// Parse a manifest TOML string into a Value table.
-///
-/// # Panics
-///
-/// Panics when `text` is not valid TOML.
-fn parse_toml(path: &Path, text: &str) -> Value {
-    let table: toml::Table = toml::from_str(text).unwrap_or_else(|e| {
-        panic!("Fix: parse {}: {e}", path.display());
-    });
-    Value::Table(table)
 }
 
 #[cfg(test)]
@@ -366,6 +298,10 @@ mod tests {
 mod dependency_kind_tests {
     use super::*;
 
+    fn fixture_manifest(text: &str) -> toml::Table {
+        toml::from_str(text).expect("the fixture manifest is TOML")
+    }
+
     /// Ranks the fixtures are judged against, mirroring the shape the manifest
     /// declares: a lower number is a lower layer.
     fn fixture_ranks() -> BTreeMap<String, i64> {
@@ -403,7 +339,7 @@ mod dependency_kind_tests {
     }
 
     fn scan(manifest: &str) -> Vec<String> {
-        let table = parse_toml(Path::new("fixture/Cargo.toml"), manifest);
+        let table = fixture_manifest(manifest);
         let ranks = fixture_ranks();
         let workspace_deps =
             BTreeMap::from([("vyre-driver".to_string(), "vyre-driver".to_string())]);
@@ -469,10 +405,7 @@ mod dependency_kind_tests {
 
     #[test]
     fn downward_dependency_is_allowed() {
-        let table = parse_toml(
-            Path::new("fixture/Cargo.toml"),
-            "[dependencies]\nvyre-primitives.workspace = true\n",
-        );
+        let table = fixture_manifest("[dependencies]\nvyre-primitives.workspace = true\n");
         let ranks = fixture_ranks();
         let mut failures = Vec::new();
         scan_manifest(
@@ -494,10 +427,7 @@ mod dependency_kind_tests {
     /// ranks; there is one ordering now and equality is a refusal.
     #[test]
     fn an_edge_between_two_layers_of_equal_rank_is_reported() {
-        let table = parse_toml(
-            Path::new("fixture/Cargo.toml"),
-            "[dependencies]\nvyre-megakernel.workspace = true\n",
-        );
+        let table = fixture_manifest("[dependencies]\nvyre-megakernel.workspace = true\n");
         let ranks = BTreeMap::from([
             ("emitter".to_string(), 2),
             ("compiler-boundary".to_string(), 2),
@@ -539,10 +469,7 @@ mod dependency_kind_tests {
     #[test]
     fn an_edge_inside_one_layer_is_allowed() {
         let ranks = BTreeMap::from([("libraries".to_string(), 3)]);
-        let table = parse_toml(
-            Path::new("fixture/Cargo.toml"),
-            "[dependencies]\nvyre-libs-nn.workspace = true\n",
-        );
+        let table = fixture_manifest("[dependencies]\nvyre-libs-nn.workspace = true\n");
         let layers = BTreeMap::from([
             (
                 "vyre-libs-math".to_string(),
