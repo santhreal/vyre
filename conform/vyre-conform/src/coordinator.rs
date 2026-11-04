@@ -98,6 +98,13 @@ impl DeviceLeaseManager {
 pub struct WorkerCoordinator {
     auth_secret: Vec<u8>,
     lease_manager: DeviceLeaseManager,
+    /// The digest of the running image, read when the coordinator is built.
+    ///
+    /// Reading the image is a full pass over the executable. Taken on the
+    /// first request, that pass ran before the request's wall budget started
+    /// and outside it: a request with a 100 ms budget returned after more than
+    /// forty seconds on a loaded host. Construction pays it once instead.
+    binary_digest: String,
 }
 
 impl Default for WorkerCoordinator {
@@ -119,6 +126,7 @@ impl WorkerCoordinator {
         Self {
             auth_secret,
             lease_manager: DeviceLeaseManager::new(),
+            binary_digest: current_binary_digest(),
         }
     }
 
@@ -139,7 +147,7 @@ impl WorkerCoordinator {
             "req-ref-{}",
             REQUEST_COUNTER.fetch_add(1, Ordering::Relaxed)
         );
-        let binary_digest = current_binary_digest();
+        let binary_digest = self.binary_digest.clone();
         let env_digest = current_environment_digest();
 
         let request = WorkerRequest::new_reference(
@@ -178,8 +186,8 @@ impl WorkerCoordinator {
                     artifact_blake3: None,
                     payload_blake3: None,
                     target_facts_blake3: None,
-                    compiler_binary_blake3: current_binary_digest(),
-                    runner_binary_blake3: current_binary_digest(),
+                    compiler_binary_blake3: self.binary_digest.clone(),
+                    runner_binary_blake3: self.binary_digest.clone(),
                     environment_blake3: current_environment_digest(),
                     device_lease_id: None,
                     elapsed_ms: 0,
@@ -195,7 +203,7 @@ impl WorkerCoordinator {
             "req-prod-{}",
             REQUEST_COUNTER.fetch_add(1, Ordering::Relaxed)
         );
-        let binary_digest = current_binary_digest();
+        let binary_digest = self.binary_digest.clone();
         let env_digest = current_environment_digest();
         let target_facts_digest = crate::backend_selection::backend_registration(backend_id)
             .ok()
@@ -260,7 +268,7 @@ impl WorkerCoordinator {
         budget: Option<WorkerBudget>,
     ) -> Result<WorkerReceipt, CertificateRejection> {
         let (ref_receipt, prod_receipt) = self.execute_case_pair(backend_id, case, budget);
-        let expected_binary = current_binary_digest();
+        let expected_binary = self.binary_digest.clone();
         let expected_env = current_environment_digest();
         let expected_target_facts = target_facts_digest(backend_id);
 

@@ -82,7 +82,9 @@ worker writes its receipt to stdout as one JSON object on one line. A worker
 spawned through the test harness runs under libtest, which prints
 `test <name> ... ` before the test body when `RUST_TEST_THREADS=1`, so the
 coordinator reads each line from its first `{`. A run whose stdout holds no
-parseable receipt is a protocol violation.
+parseable receipt is a protocol violation. The coordinator reads the digest of
+the running binary when it is constructed, and every request and receipt
+carries that digest, so a request's wall budget covers the worker alone.
 
 ## Boundaries
 
