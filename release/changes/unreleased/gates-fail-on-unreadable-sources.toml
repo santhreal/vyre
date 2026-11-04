@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The cross-target and tracked-modules gates fail on an unreadable or oversize Rust source instead of skipping it, and every source gate reads through one 4 MiB reader."

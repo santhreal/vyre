@@ -9,14 +9,12 @@
 //!
 //! Default mode: warning. `--strict` exits non-zero  -  the gate.
 
-use std::io;
 use std::path::{Path, PathBuf};
 
 use xtask::gate::{Finding, GateCtx, GateError, Report};
 use xtask::gates::scan;
 
 const VYRE_ROOT: &str = "libs/performance/matching/vyre";
-const MAX_HEURISTIC_AUDIT_SOURCE_BYTES: u64 = 2_097_152;
 
 /// Crates whose source we audit. Excludes test fixtures, examples,
 /// benchmarks, and documentation.
@@ -188,7 +186,7 @@ fn scan_dir(
         if path.extension().and_then(|extension| extension.to_str()) != Some("rs") {
             continue;
         }
-        let body = match read_text_bounded(&path) {
+        let body = match structure_gate::read_source_bounded(&path) {
             Ok(body) => body,
             Err(error) => {
                 scan_errors.push(format!(
@@ -228,10 +226,6 @@ fn resolve_vyre_dir(workspace_root: &Path) -> PathBuf {
     } else {
         workspace_root.join(VYRE_ROOT)
     }
-}
-
-fn read_text_bounded(path: &Path) -> io::Result<String> {
-    xtask::output_arg::read_text_bounded(path, MAX_HEURISTIC_AUDIT_SOURCE_BYTES, "heuristic audit")
 }
 
 #[cfg(test)]

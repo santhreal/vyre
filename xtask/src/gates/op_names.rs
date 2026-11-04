@@ -39,9 +39,6 @@ const EXEMPT_FILE_NAMES: &[&str] = &[
 const FIX: &str =
     "name the function for the operation it performs, in snake_case, with no implementation suffix";
 
-/// Largest source file this gate will read.
-const MAX_SOURCE_BYTES: u64 = 2_097_152;
-
 /// The identifier a `pub fn` declaration declares, or `None` when the line declares no
 /// public function.
 fn declared_function(line: &str) -> Option<&str> {
@@ -180,14 +177,12 @@ impl crate::gate::GateBehavior for OpNames {
                 {
                     continue;
                 }
-                let text =
-                    crate::output_arg::read_text_bounded(path, MAX_SOURCE_BYTES, "op-name scan")
-                        .map_err(|error| {
-                            GateError::new(
-                                format!("cannot read {}: {error}", path.display()),
-                                "make the file readable, or split it under the scan bound",
-                            )
-                        })?;
+                let text = structure_gate::read_source_bounded(path).map_err(|error| {
+                    GateError::new(
+                        error.to_string(),
+                        "make the file readable, or split it under the source cap",
+                    )
+                })?;
                 scanned += 1;
                 for func in extract_public_functions(&text) {
                     public_functions += 1;

@@ -1,10 +1,10 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"85810e0db7ebebdfdec1e161a94f695c52d29120","commit_timestamp":"1793752895","parent_commit":"19b78839271a298a4ca5534b445ffa9769941e5e","dirty":true,"source_fingerprint":"git:85810e0db7ebebdfdec1e161a94f695c52d29120:dirty=true:worktree=a1b282d52f8e536a884f598d94b8a974552bcfaf2d87147aca2096fb6681d389"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"9ba2cebb1fe7881d87c772ba4779eeee4c910706","commit_timestamp":"1793755661","parent_commit":"15def6865fad67b0c9e465a200290bf5d11a706a","dirty":true,"source_fingerprint":"git:9ba2cebb1fe7881d87c772ba4779eeee4c910706:dirty=true:worktree=37be8e439162cf03b73360c4d6eda9e6eecd4968fbd0d467327230452b3ddab2"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 7,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4785,
+  "scanned_files": 4786,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -2342,7 +2342,7 @@
     },
     {
       "path": "structure-gate/src/source_scan.rs",
-      "line": 101,
+      "line": 99,
       "pattern": "documented_panic_contract",
       "member": "structure-gate",
       "surface": "production",
@@ -2352,7 +2352,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 79,
+      "line": 103,
       "pattern": "documented_panic_contract",
       "member": "structure-gate",
       "surface": "production",
@@ -2362,7 +2362,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 143,
+      "line": 167,
       "pattern": "documented_panic_contract",
       "member": "structure-gate",
       "surface": "production",
@@ -2372,7 +2372,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 145,
+      "line": 169,
       "pattern": "documented_panic_contract",
       "member": "structure-gate",
       "surface": "production",
@@ -2382,7 +2382,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 176,
+      "line": 200,
       "pattern": "documented_panic_contract",
       "member": "structure-gate",
       "surface": "production",
@@ -2392,7 +2392,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 302,
+      "line": 326,
       "pattern": "documented_panic_contract",
       "member": "structure-gate",
       "surface": "production",
@@ -2402,7 +2402,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 388,
+      "line": 412,
       "pattern": "documented_panic_contract",
       "member": "structure-gate",
       "surface": "production",
@@ -2412,7 +2412,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 566,
+      "line": 590,
       "pattern": "documented_panic_contract",
       "member": "structure-gate",
       "surface": "production",
@@ -2422,7 +2422,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 567,
+      "line": 591,
       "pattern": "documented_panic_contract",
       "member": "structure-gate",
       "surface": "production",
@@ -2432,7 +2432,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 573,
+      "line": 597,
       "pattern": "documented_panic_contract",
       "member": "structure-gate",
       "surface": "production",
@@ -2442,7 +2442,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 579,
+      "line": 603,
       "pattern": "documented_panic_contract",
       "member": "structure-gate",
       "surface": "production",
@@ -2452,7 +2452,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 699,
+      "line": 723,
       "pattern": "source_inspection_test",
       "member": "structure-gate",
       "surface": "production",
@@ -2462,7 +2462,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 734,
+      "line": 758,
       "pattern": "source_inspection_test",
       "member": "structure-gate",
       "surface": "production",
@@ -2472,7 +2472,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 770,
+      "line": 794,
       "pattern": "source_inspection_test",
       "member": "structure-gate",
       "surface": "production",
@@ -2482,7 +2482,7 @@
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 790,
+      "line": 814,
       "pattern": "source_inspection_test",
       "member": "structure-gate",
       "surface": "production",
@@ -7082,7 +7082,7 @@
     },
     {
       "path": "xtask/src/artifact_gate.rs",
-      "line": 671,
+      "line": 669,
       "pattern": "documented_panic_contract",
       "member": "xtask",
       "surface": "release_tooling",
@@ -7502,7 +7502,7 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 316,
+      "line": 300,
       "pattern": "placeholder_text",
       "member": "xtask-registry",
       "surface": "release_tooling",
@@ -7512,7 +7512,7 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 319,
+      "line": 303,
       "pattern": "placeholder_text",
       "member": "xtask-registry",
       "surface": "release_tooling",
@@ -7613,94 +7613,94 @@
     },
     {
       "path": "structure-gate/src/source_scan.rs",
-      "line": 101,
+      "line": 99,
       "pattern": "documented_panic_contract",
       "text": "handle.join().expect(\"a source read lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 79,
+      "line": 103,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 143,
+      "line": 167,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest_path.display()));"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 145,
+      "line": 169,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest_path.display()));"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 176,
+      "line": 200,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 302,
+      "line": 326,
       "pattern": "documented_panic_contract",
       "text": "lane.join().expect(\"a member source lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 388,
+      "line": 412,
       "pattern": "documented_panic_contract",
       "text": "lane.join().expect(\"a crate root lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 566,
+      "line": 590,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 567,
+      "line": 591,
       "pattern": "documented_panic_contract",
       "text": "if let Some(root) = ROOTS.lock().expect(POISONED).get(&start) {"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 573,
+      "line": 597,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 579,
+      "line": 603,
       "pattern": "documented_panic_contract",
       "text": "ROOTS.lock().expect(POISONED).insert(start, root.clone());"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 699,
+      "line": 723,
       "pattern": "source_inspection_test",
       "text": "test `a_second_request_for_the_tree_does_not_walk_it_again` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "a_second_request_for_the_tree_does_not_walk_it_again"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 734,
+      "line": 758,
       "pattern": "source_inspection_test",
       "text": "test `a_subtree_range_holds_exactly_the_sources_under_it` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "a_subtree_range_holds_exactly_the_sources_under_it"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 770,
+      "line": 794,
       "pattern": "source_inspection_test",
       "text": "test `a_second_request_for_the_same_roster_shares_the_first_read` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "a_second_request_for_the_same_roster_shares_the_first_read"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 790,
+      "line": 814,
       "pattern": "source_inspection_test",
       "text": "test `a_narrower_roster_is_not_served_the_wider_read` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "a_narrower_roster_is_not_served_the_wider_read"
@@ -10595,7 +10595,7 @@
     },
     {
       "path": "xtask/src/artifact_gate.rs",
-      "line": 671,
+      "line": 669,
       "pattern": "documented_panic_contract",
       "text": "let (lane_entries, lane_errors) = handle.join().expect("
     },
@@ -10853,13 +10853,13 @@
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 316,
+      "line": 300,
       "pattern": "placeholder_text",
       "text": "/// platform is prose and compiles nothing. That also drops the placeholder"
     },
     {
       "path": "xtask-registry/src/gates/cross_target.rs",
-      "line": 319,
+      "line": 303,
       "pattern": "placeholder_text",
       "text": "/// accepts only `[a-z0-9_]` there, so anything else is a placeholder rather than"
     },

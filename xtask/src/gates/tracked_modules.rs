@@ -42,9 +42,6 @@ use std::process::Command;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
 
-/// Cap on one source file read while scanning declarations.
-const MAX_SOURCE_BYTES: u64 = 4_194_304;
-
 /// Rejects a commit whose module declarations outrun its tracked files.
 pub struct TrackedModules;
 
@@ -70,9 +67,15 @@ impl crate::gate::GateBehavior for TrackedModules {
 
         let mut loaded = Vec::with_capacity(sources.len());
         for source in sources {
-            if let Some(text) = read_capped(&root.join(&source)) {
-                loaded.push((source, text));
-            }
+            let text =
+                structure_gate::read_source_bounded(&root.join(&source)).map_err(|error| {
+                    GateError::new(
+                    error.to_string(),
+                    "make the tracked source readable; an unread file declares modules this gate \
+                     cannot judge",
+                )
+                })?;
+            loaded.push((source, text));
         }
         let root_for_exists = root.clone();
         Ok(judge(&loaded, &tracked, &move |path| {
@@ -184,15 +187,6 @@ fn tracked_files(root: &Path) -> Result<BTreeSet<PathBuf>, GateError> {
         .filter(|entry| !entry.is_empty())
         .map(|entry| PathBuf::from(String::from_utf8_lossy(entry).into_owned()))
         .collect())
-}
-
-/// Reads one source file, skipping anything past the cap.
-fn read_capped(path: &Path) -> Option<String> {
-    let length = std::fs::metadata(path).ok()?.len();
-    if length > MAX_SOURCE_BYTES {
-        return None;
-    }
-    std::fs::read_to_string(path).ok()
 }
 
 /// Every `mod NAME;` in one file, with the inline modules that enclose it and

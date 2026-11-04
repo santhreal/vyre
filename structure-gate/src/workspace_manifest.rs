@@ -16,30 +16,54 @@ use walkdir::WalkDir;
 use crate::module_layout::CrateRoot;
 use crate::source_scan::code_offsets;
 
-/// Largest source or manifest file this gate will read.
+/// The most bytes one tracked source or manifest may hold before a reader
+/// refuses it.
 ///
-/// The gate walks whatever tree it is pointed at, so an unbounded
-/// `read_to_string` lets one pathological file decide the process's memory.
-/// Every read in this crate goes through here.
-pub const MAX_SOURCE_BYTES: u64 = 16_777_216;
+/// The largest tracked Rust source is under 100 KiB, so a file over the cap is
+/// generated output or a binary that reached the walk, not a large source.
+/// Reading it in full would let one file decide how much memory a tree scan
+/// takes, and truncating it would let a rule judge part of a file and report
+/// the rest clean.
+pub const MAX_SOURCE_BYTES: u64 = 4 * 1024 * 1024;
 
-/// Read a source or manifest file, refusing anything over [`MAX_SOURCE_BYTES`].
-pub(crate) fn read_source_bounded(path: &Path) -> std::io::Result<String> {
+/// Read one source or manifest whole, or fail naming why.
+///
+/// Every gate that reads a tracked Rust source or `Cargo.toml` reads it here,
+/// so one cap holds for all of them. A file that cannot be opened, is not
+/// UTF-8, or holds more than [`MAX_SOURCE_BYTES`] is an error with the path in
+/// it, never a shorter text and never a skip.
+///
+/// # Errors
+///
+/// The open or read failure, or `InvalidData` when the file exceeds the cap.
+pub fn read_source_bounded(path: &Path) -> std::io::Result<String> {
     use std::io::Read as _;
 
-    let file = fs::File::open(path)?;
-    let length = file.metadata()?.len();
-    if length > MAX_SOURCE_BYTES {
+    let file = fs::File::open(path).map_err(|error| {
+        std::io::Error::new(
+            error.kind(),
+            format!("cannot open `{}`: {error}", path.display()),
+        )
+    })?;
+    let length = file.metadata().map_or(0, |metadata| metadata.len());
+    let mut text = String::with_capacity(length.min(MAX_SOURCE_BYTES) as usize);
+    file.take(MAX_SOURCE_BYTES + 1)
+        .read_to_string(&mut text)
+        .map_err(|error| {
+            std::io::Error::new(
+                error.kind(),
+                format!("cannot read `{}` as UTF-8: {error}", path.display()),
+            )
+        })?;
+    if text.len() as u64 > MAX_SOURCE_BYTES {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
             format!(
-                "`{}` is {length} bytes; refusing to read more than {MAX_SOURCE_BYTES}",
+                "`{}` holds more than {MAX_SOURCE_BYTES} bytes, which is generated output or a binary rather than a source",
                 path.display()
             ),
         ));
     }
-    let mut text = String::with_capacity(length as usize);
-    file.take(MAX_SOURCE_BYTES + 1).read_to_string(&mut text)?;
     Ok(text)
 }
 

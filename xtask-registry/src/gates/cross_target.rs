@@ -87,16 +87,13 @@ fn triple_for_os(table: &'static str) -> Result<BTreeMap<&'static str, &'static 
     Ok(recorded)
 }
 
-/// Cap on one source file read while scanning for `cfg` arms.
-const MAX_SOURCE_BYTES: u64 = 2_097_152;
-
 /// Compiles the product crates for every platform the source declares an arm for.
 pub struct CrossTarget;
 
 impl xtask::gate::GateBehavior for CrossTarget {
     fn run(&self, _ctx: &GateCtx) -> Result<Report, GateError> {
         let root = xtask::checkout::checkout_root();
-        let declared = declared_target_oses(&root);
+        let declared = declared_target_oses(&root)?;
         if declared.len() < 2 {
             return Err(GateError::new(
                 format!(
@@ -280,34 +277,21 @@ const NO_ERROR_LINE: &str = "the target check reported no error line";
 /// The host platform is always included: a tree that compiles nowhere else still
 /// has to compile here, and its absence from every `cfg` arm is not a reason to
 /// leave it unchecked. It carries no origin, because no line claimed it.
-fn declared_target_oses(root: &Path) -> BTreeMap<String, Option<Origin>> {
+fn declared_target_oses(root: &Path) -> Result<BTreeMap<String, Option<Origin>>, GateError> {
+    let tree = xtask::gates::scan::Tree::open(root)?;
     let mut found = BTreeMap::new();
     found.insert(std::env::consts::OS.to_string(), None);
-    let mut stack = vec![root.to_path_buf()];
-    while let Some(dir) = stack.pop() {
-        let Ok(entries) = std::fs::read_dir(&dir) else {
-            continue;
-        };
-        for entry in entries.flatten() {
-            let name = entry.file_name();
-            let name = name.to_string_lossy();
-            let path: PathBuf = entry.path();
-            if path.is_dir() {
-                if name == "target" || name.starts_with('.') {
-                    continue;
-                }
-                stack.push(path);
-            } else if name.ends_with(".rs") {
-                if let Ok(source) =
-                    xtask::output_arg::read_text_bounded(&path, MAX_SOURCE_BYTES, "cross target")
-                {
-                    let relative = path.strip_prefix(root).unwrap_or(&path).to_path_buf();
-                    collect_target_oses(&source, &relative, &mut found);
-                }
-            }
-        }
+    for relative in tree.all_rust() {
+        let source =
+            structure_gate::read_source_bounded(&tree.absolute(&relative)).map_err(|error| {
+                GateError::new(
+                    error.to_string(),
+                    "make the source readable; an unread file could hide a target_os arm",
+                )
+            })?;
+        collect_target_oses(&source, &relative, &mut found);
     }
-    found
+    Ok(found)
 }
 
 /// Pull every `target_os` literal a compiled `cfg` arm names out of one file.

@@ -8,8 +8,6 @@
 //! workspace contains.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::io::Read;
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex, PoisonError};
@@ -151,35 +149,14 @@ impl SourceText {
     }
 }
 
-/// The most bytes one source may hold before a scanner refuses to judge it.
+/// The text of one source, or the reason it could not be read.
 ///
-/// The per-file line cap holds every tracked source far below this, so a file
-/// over the bound is not a large source: it is generated output or a binary
-/// that reached the walk. Reading it in full would let one file decide how much
-/// memory a tree scan takes.
-const MAX_SOURCE_BYTES: u64 = 4 * 1024 * 1024;
-
-/// The text of one source, read under [`MAX_SOURCE_BYTES`].
-///
-/// A file that cannot be opened, is not UTF-8, or holds more than the cap
-/// yields the reason instead of the text. Truncating it would let a scanner
-/// judge a source it read only part of and report the tree as clean past the
-/// cut. Aborting is the other wrong answer: one generated file dropped into a
-/// source tree took down every rule over the whole tree. The reason travels
-/// with the path so a reader that has to have the file can name it, and a
-/// reader that only needs the shape of the module tree can carry on.
+/// Aborting on an unreadable file is the wrong answer here: one generated file
+/// dropped into a source tree took down every rule over the whole tree. The
+/// reason travels with the path so a reader that has to have the file can name
+/// it, and a reader that only needs the shape of the module tree can carry on.
 fn read_source(path: &Path) -> Result<String, String> {
-    let mut text = String::new();
-    let file = fs::File::open(path).map_err(|error| format!("cannot be opened: {error}"))?;
-    file.take(MAX_SOURCE_BYTES + 1)
-        .read_to_string(&mut text)
-        .map_err(|error| format!("cannot be read as UTF-8: {error}"))?;
-    if text.len() as u64 > MAX_SOURCE_BYTES {
-        return Err(format!(
-            "holds more than {MAX_SOURCE_BYTES} bytes, which is generated output or a binary rather than a source"
-        ));
-    }
-    Ok(text)
+    crate::read_source_bounded(path).map_err(|error| error.to_string())
 }
 
 /// Whether `directory` holds a Rust source, at any depth below it.

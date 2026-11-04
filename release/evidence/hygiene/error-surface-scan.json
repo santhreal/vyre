@@ -1,71 +1,71 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"85810e0db7ebebdfdec1e161a94f695c52d29120","commit_timestamp":"1793752895","parent_commit":"19b78839271a298a4ca5534b445ffa9769941e5e","dirty":true,"source_fingerprint":"git:85810e0db7ebebdfdec1e161a94f695c52d29120:dirty=true:worktree=a1b282d52f8e536a884f598d94b8a974552bcfaf2d87147aca2096fb6681d389"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"9ba2cebb1fe7881d87c772ba4779eeee4c910706","commit_timestamp":"1793755661","parent_commit":"15def6865fad67b0c9e465a200290bf5d11a706a","dirty":true,"source_fingerprint":"git:9ba2cebb1fe7881d87c772ba4779eeee4c910706:dirty=true:worktree=37be8e439162cf03b73360c4d6eda9e6eecd4968fbd0d467327230452b3ddab2"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 2,
   "scan": "error-surface",
   "findings": [
     {
       "path": "structure-gate/src/source_scan.rs",
-      "line": 101,
+      "line": 99,
       "pattern": "documented_panic_contract",
       "text": "handle.join().expect(\"a source read lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 79,
+      "line": 103,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 143,
+      "line": 167,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest_path.display()));"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 145,
+      "line": 169,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest_path.display()));"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 176,
+      "line": 200,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 302,
+      "line": 326,
       "pattern": "documented_panic_contract",
       "text": "lane.join().expect(\"a member source lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 388,
+      "line": 412,
       "pattern": "documented_panic_contract",
       "text": "lane.join().expect(\"a crate root lane must not panic. Fix: repair the defect stated by the lane panic printed before this one\")"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 566,
+      "line": 590,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"Fix: the working directory must be readable to locate the vyre checkout\");"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 567,
+      "line": 591,
       "pattern": "documented_panic_contract",
       "text": "if let Some(root) = ROOTS.lock().expect(POISONED).get(&start) {"
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 573,
+      "line": 597,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
       "path": "structure-gate/src/workspace_manifest.rs",
-      "line": 579,
+      "line": 603,
       "pattern": "documented_panic_contract",
       "text": "ROOTS.lock().expect(POISONED).insert(start, root.clone());"
     },
@@ -1841,7 +1841,7 @@
     },
     {
       "path": "xtask/src/artifact_gate.rs",
-      "line": 671,
+      "line": 669,
       "pattern": "documented_panic_contract",
       "text": "let (lane_entries, lane_errors) = handle.join().expect("
     },

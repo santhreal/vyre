@@ -25,9 +25,6 @@ use structure_gate::cfg_test::strip_cfg_test_items;
 use structure_gate::registration_text::parse_registrations;
 use structure_gate::source_scan::{gating_features, module_routes, string_literals};
 
-/// Largest source file this reader will open.
-const MAX_SOURCE_BYTES: u64 = 4_194_304;
-
 /// Where one operation is defined and what enables it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Placement {
@@ -319,23 +316,10 @@ fn submission_features(text: &str) -> Vec<String> {
 /// silent skip answered `no definition site` for every operation it defined.
 /// The cap stays; the skip is named.
 fn read_capped(path: &Path) -> Result<String, String> {
-    let meta = fs::metadata(path).map_err(|error| {
+    structure_gate::read_source_bounded(path).map_err(|error| {
         format!(
-            "cannot read `{}`: {error}. Fix: make the module file readable, or drop the `mod` declaration that names it",
-            path.display()
-        )
-    })?;
-    if meta.len() > MAX_SOURCE_BYTES {
-        return Err(format!(
-            "`{}` is {} bytes, over the {MAX_SOURCE_BYTES} byte read cap, so the registrations it holds are unread. Fix: split the file",
-            path.display(),
-            meta.len()
-        ));
-    }
-    fs::read_to_string(path).map_err(|error| {
-        format!(
-            "cannot read `{}`: {error}. Fix: make the module file readable",
-            path.display()
+            "{error}, so the registrations it holds are unread. Fix: make the module file readable \
+             and under the cap, or drop the `mod` declaration that names it"
         )
     })
 }

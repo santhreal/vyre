@@ -57,6 +57,10 @@ pub mod published_module_reexports;
 #[path = "scan_roster_pruning.rs"]
 pub mod scan_roster_pruning;
 
+/// Integration tests from `tests/source_reader.rs`.
+#[path = "source_reader.rs"]
+pub mod source_reader;
+
 /// Integration tests from `tests/source_directory_placement.rs`.
 #[path = "source_directory_placement.rs"]
 pub mod source_directory_placement;
