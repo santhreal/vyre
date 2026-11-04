@@ -29,11 +29,6 @@ xtask::artifact_gate! {
     /// Holds `docs/optimization/OP_MATRIX.toml` to the live operation registry.
     OpMatrixGate,
     name: "op-matrix",
-    help: "Render the canonical op matrix from the live operation registry and the manual scan \
-       construct rows, and report each line docs/optimization/OP_MATRIX.toml disagrees on. \
-       Proves every registered op id carries a canonical tier namespace, is registered by one \
-       semantic source, appears in one family, and that every family declares owners and \
-       tests. Proves nothing about whether the named owner and test paths exist.",
     inspect: |ctx| inspect(&ctx.root),
 }
 

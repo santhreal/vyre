@@ -37,13 +37,6 @@ crate::artifact_gate! {
     /// Holds the feature matrix to the feature tables in the manifests.
     FeatureMatrixGate,
     name: "feature-matrix",
-    help: "Regenerate release/evidence/metadata/feature-matrix.json from every workspace manifest \
-           and report each line the committed artifact disagrees on. Proves every feature table \
-           parses, every feature member resolves to a local feature, an optional dependency or a \
-           dependency feature, every package that declares features declares a default policy, the \
-           three release packages exist with empty defaults, and that vyre, vyre-driver-cuda and \
-           vyre-driver-wgpu declare their release features. Proves nothing about whether any \
-           feature selection compiles: that is feature-isolation.",
     inspect: |ctx| inspect(&ctx.root),
 }
 

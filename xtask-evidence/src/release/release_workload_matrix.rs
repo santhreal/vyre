@@ -25,12 +25,6 @@ xtask::artifact_gate! {
     /// Holds the workload matrix to the benchmark cases the registry declares.
     ReleaseWorkloadMatrixGate,
     name: "release-workload-matrix",
-    help: "Rebuild release/evidence/benchmarks/release-workload-matrix.json from the benchmark case \
-       registry and the bench target manifest, and report each line the committed artifact \
-       disagrees on. Proves every required release workload family matches at least one \
-       registered case, that each family naming a CPU state-of-the-art baseline has one, and \
-       that the matrix carries no blockers. Proves nothing about any measurement: no benchmark \
-       runs here and no artifact any family names is read.",
     inspect: |ctx| inspect(),
 }
 

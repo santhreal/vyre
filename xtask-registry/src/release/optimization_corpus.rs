@@ -83,13 +83,6 @@ xtask::artifact_gate! {
     /// Holds the five optimizer corpus artifacts to the corpus the generator emits.
     OptimizationCorpusGate,
     name: "optimization-corpus",
-    help: "Regenerate the five artifacts under release/evidence/optimization from the semantic \
-       Program optimizer corpus and report each line the committed copies disagree on. Proves \
-       the corpus reaches its case floor, that every case verifies after optimization, that at \
-       least one pass instance changed a program, that no case failed to converge, that every \
-       required family carries its minimum case count, that no case id repeats, and that no \
-       optimizer pass id repeats. Proves nothing about runtime performance: the corpus is \
-       optimized and re-verified in process, never executed on a device.",
     inspect: |ctx| inspect(),
 }
 

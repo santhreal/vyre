@@ -338,14 +338,6 @@ xtask::artifact_gate! {
     /// Holds the backend release policy evidence to the tree and to the recorded probe.
     BackendMatrixGate,
     name: "backend-matrix",
-    help: "Judge the CUDA-first, WGPU-fallback backend policy. Proves, on any host, that every \
-       backend implementation file the policy names exists and carries its implementation \
-       tokens with no unresolved marker left in it, and that no backend production source \
-       states a hidden fallback. Proves, from the recorded probe, that CUDA acquires first, \
-       that the WGPU fallback acquires, that the preferred dispatch backend is never the \
-       reference one, and that the host met the release GPU floor. The probe is only as \
-       current as the run that recorded it; --write re-probes this host and rewrites the \
-       artifact.",
     inspect: |ctx| inspect(&ctx.root),
 }
 

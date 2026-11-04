@@ -33,12 +33,6 @@ xtask::artifact_gate! {
     /// Holds the optimizer integration matrix to the live pass catalog.
     OptimizationMatrixGate,
     name: "optimization-matrix",
-    help: "Regenerate release/evidence/optimization/optimization-integration-matrix.json from the \
-       live optimizer pass catalog and report every line the committed artifact disagrees on. \
-       Proves the artifact lists exactly the catalog entries the source registers, that no pass \
-       id repeats, and that every entry names an owner, invariant, proof and benchmark. Proves \
-       nothing about whether a pass is correct, ever fires, or improves anything: the named \
-       proof and benchmark are strings the catalog carries, not results this gate reads.",
     inspect: |ctx| inspect(),
 }
 

@@ -268,13 +268,6 @@ crate::artifact_gate! {
     /// Holds the publish-readiness evidence to the manifests and the package archives.
     PackageReadinessGate,
     name: "package-readiness",
-    help: "Regenerate release/evidence/package/publish-readiness.json by deriving the publish order \
-       from the manifests and listing each crate's package archive, and report each line the \
-       committed copy disagrees on. Proves the derived order covers exactly the publishable set \
-       the metadata matrix names, that no dependency publishes after its consumer, that every \
-       local path dependency carries a crates.io version, and that each archive holds its \
-       required files and none of its forbidden ones. Proves nothing about crates.io: no \
-       version is looked up and nothing is uploaded.",
     inspect: |ctx| inspect(&ctx.root),
 }
 

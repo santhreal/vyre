@@ -276,11 +276,11 @@ impl Inspection {
 
 /// Declare a gate whose whole body is one artifact inspection.
 ///
-/// Twelve gates spelled the same four methods: a name, a help string,
-/// `generates` returning true, and a `run` that hands one [`Inspection`] to
-/// [`settle_inspection`]. Only the name, the help and the expression that
-/// builds the inspection differ between them, so those are the arguments and
-/// the rest is here. The inspection expression names its own binding for the
+/// Every such gate spells the same `run`: it hands one [`Inspection`] to
+/// [`settle_inspection`]. Only the name and the expression that builds the
+/// inspection differ between them, so those are the arguments and the rest is
+/// here. The help line is the gate's descriptor in `gate_metadata`, the one
+/// place the runner reads it from. The inspection expression names its own binding for the
 /// context, because a name this macro invented would not be visible to the
 /// expression the caller writes.
 ///
@@ -289,7 +289,6 @@ impl Inspection {
 ///     /// Holds the feature matrix to every workspace manifest.
 ///     FeatureMatrixGate,
 ///     name: "feature-matrix",
-///     help: "Regenerate release/evidence/metadata/feature-matrix.json ...",
 ///     inspect: |ctx| inspect(&ctx.root),
 /// }
 /// ```
@@ -299,7 +298,6 @@ macro_rules! artifact_gate {
         $(#[$attribute:meta])*
         $gate:ident,
         name: $name:literal,
-        $(help: $help:literal,)?
         inspect: |$ctx:ident| $inspection:expr $(,)?
     ) => {
         $(#[$attribute])*

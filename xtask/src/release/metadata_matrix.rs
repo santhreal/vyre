@@ -82,13 +82,6 @@ crate::artifact_gate! {
     /// Holds the metadata matrix to the package tables in the manifests.
     MetadataMatrixGate,
     name: "metadata-matrix",
-    help: "Regenerate release/evidence/metadata/metadata-matrix.json from every workspace manifest \
-       and report each line the committed artifact disagrees on. Proves every publishable crate \
-       declares version, description, license, an https repository and a readme that exists and \
-       is not empty, that its version is the one the release train names, that no manifest \
-       carries a [patch.crates-io] section, and that the three required release surfaces are \
-       present. Proves nothing about whether a crate packages or publishes: that is \
-       package-readiness.",
     inspect: |ctx| inspect(&ctx.root),
 }
 
