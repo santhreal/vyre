@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3 IR builders. Does not own security taint logic, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-hash` and owns the `libs-hash` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-hash` and owns the `libs-hash` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-hash` and owns the `libs-hash` seam in the `librar
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_hash` | `vyre-libs-hash/src/lib.rs` | None | `./cargo_full test -p vyre-libs-hash` |
-| `test` | `all_tests` | `vyre-libs-hash/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-hash --test all_tests` |
+| `lib` | `vyre_libs_hash` | `crates/vyre-libs-hash/src/lib.rs` | None | `./cargo_full test -p vyre-libs-hash` |
+| `test` | `all_tests` | `crates/vyre-libs-hash/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-hash --test all_tests` |
 
 ## Test classes
 

@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Package the same megakernel artifact class ahead of time. Not a second compile path. No workspace crate currently depends on this one.
 
-The crate lives at `vyre-aot` and owns the `aot-artifacts` seam in the `packaging` layer.
+The crate lives at `crates/vyre-aot` and owns the `aot-artifacts` seam in the `packaging` layer.
 
 ## Commands
 
@@ -30,9 +30,9 @@ The crate lives at `vyre-aot` and owns the `aot-artifacts` seam in the `packagin
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_aot_release_surface` | `vyre-aot/examples/vyre_aot_release_surface.rs` | None | `./cargo_full test -p vyre-aot --example vyre_aot_release_surface` |
-| `lib` | `vyre_aot` | `vyre-aot/src/lib.rs` | None | `./cargo_full test -p vyre-aot` |
-| `test` | `all_tests` | `vyre-aot/tests/all_tests.rs` | None | `./cargo_full test -p vyre-aot --test all_tests` |
+| `example` | `vyre_aot_release_surface` | `crates/vyre-aot/examples/vyre_aot_release_surface.rs` | None | `./cargo_full test -p vyre-aot --example vyre_aot_release_surface` |
+| `lib` | `vyre_aot` | `crates/vyre-aot/src/lib.rs` | None | `./cargo_full test -p vyre-aot` |
+| `test` | `all_tests` | `crates/vyre-aot/tests/all_tests.rs` | None | `./cargo_full test -p vyre-aot --test all_tests` |
 
 ## Test classes
 

@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Consume verified lowering products and emit native Apple shader source through the shared emitter path.
 
-The crate lives at `vyre-emit-metal` and owns the `metal-emitter` seam in the `emitter` layer.
+The crate lives at `crates/vyre-emit-metal` and owns the `metal-emitter` seam in the `emitter` layer.
 
 ## Commands
 
@@ -24,9 +24,9 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_emit_metal_release_surface` | `vyre-emit-metal/examples/vyre_emit_metal_release_surface.rs` | None | `./cargo_full test -p vyre-emit-metal --example vyre_emit_metal_release_surface` |
-| `lib` | `vyre_emit_metal` | `vyre-emit-metal/src/lib.rs` | None | `./cargo_full test -p vyre-emit-metal` |
-| `test` | `all_tests` | `vyre-emit-metal/tests/all_tests.rs` | None | `./cargo_full test -p vyre-emit-metal --test all_tests` |
+| `example` | `vyre_emit_metal_release_surface` | `crates/vyre-emit-metal/examples/vyre_emit_metal_release_surface.rs` | None | `./cargo_full test -p vyre-emit-metal --example vyre_emit_metal_release_surface` |
+| `lib` | `vyre_emit_metal` | `crates/vyre-emit-metal/src/lib.rs` | None | `./cargo_full test -p vyre-emit-metal` |
+| `test` | `all_tests` | `crates/vyre-emit-metal/tests/all_tests.rs` | None | `./cargo_full test -p vyre-emit-metal --test all_tests` |
 
 ## Test classes
 

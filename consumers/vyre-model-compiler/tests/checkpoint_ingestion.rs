@@ -411,7 +411,7 @@ fn every_safetensor_element_type_ingests_or_reports_the_typed_error() {
 
 #[test]
 fn covered_dtypes_match_the_safetensors_declaration() {
-    let source_path = workspace_root().join("vyre-safetensors/src/lib.rs");
+    let source_path = workspace_root().join("crates/vyre-safetensors/src/lib.rs");
     let source = fs::read_to_string(&source_path)
         .unwrap_or_else(|error| panic!("read {}: {error}", source_path.display()));
 

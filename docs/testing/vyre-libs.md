@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own every composition in the workspace: consumer dialects and compiler-internal solvers, encoding, analysis, scheduling, and reasoning. Returns Programs. No backend, no emitter, no host rewrite of IR.
 
-The crate lives at `vyre-libs` and owns the `semantic-library` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs` and owns the `semantic-library` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,21 +30,21 @@ The crate lives at `vyre-libs` and owns the `semantic-library` seam in the `libr
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `dominator_tree_e2e` | `vyre-libs/examples/dominator_tree_e2e.rs` | None | `./cargo_full test -p vyre-libs --example dominator_tree_e2e` |
-| `example` | `jacobi_workgroup_perf` | `vyre-libs/examples/jacobi_workgroup_perf.rs` | None | `./cargo_full test -p vyre-libs --example jacobi_workgroup_perf` |
-| `example` | `prefix_sum_megakernel` | `vyre-libs/examples/prefix_sum_megakernel.rs` | None | `./cargo_full test -p vyre-libs --example prefix_sum_megakernel` |
-| `example` | `select1_optimizer_parity` | `vyre-libs/examples/select1_optimizer_parity.rs` | `bitset` | `./cargo_full test -p vyre-libs --example select1_optimizer_parity --features bitset` |
-| `lib` | `vyre_libs` | `vyre-libs/src/lib.rs` | None | `./cargo_full test -p vyre-libs` |
-| `test` | `all_tests` | `vyre-libs/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs --test all_tests` |
-| `test` | `all_tests_fixpoint_graph_math_kernels` | `vyre-libs/tests/all_tests_fixpoint_graph_math_kernels.rs` | `fixpoint`, `graph`, `math-kernels` | `./cargo_full test -p vyre-libs --test all_tests_fixpoint_graph_math_kernels --features fixpoint,graph,math-kernels` |
-| `test` | `all_tests_fixpoint_graph_math_kernels_parsing_kernels` | `vyre-libs/tests/all_tests_fixpoint_graph_math_kernels_parsing_kernels.rs` | `fixpoint`, `graph`, `math-kernels`, `parsing-kernels` | `./cargo_full test -p vyre-libs --test all_tests_fixpoint_graph_math_kernels_parsing_kernels --features fixpoint,graph,math-kernels,parsing-kernels` |
-| `test` | `all_tests_fixpoint_math_kernels` | `vyre-libs/tests/all_tests_fixpoint_math_kernels.rs` | `fixpoint`, `math-kernels` | `./cargo_full test -p vyre-libs --test all_tests_fixpoint_math_kernels --features fixpoint,math-kernels` |
-| `test` | `all_tests_hash` | `vyre-libs/tests/all_tests_hash.rs` | `hash` | `./cargo_full test -p vyre-libs --test all_tests_hash --features hash` |
-| `test` | `all_tests_hash_math_nn_activation_nn_linear_pattern` | `vyre-libs/tests/all_tests_hash_math_nn_activation_nn_linear_pattern.rs` | `hash`, `math`, `nn-activation`, `nn-linear`, `pattern` | `./cargo_full test -p vyre-libs --test all_tests_hash_math_nn_activation_nn_linear_pattern --features hash,math,nn-activation,nn-linear,pattern` |
-| `test` | `all_tests_hash_nn_activation_nn_attention_nn_linear_nn_norm` | `vyre-libs/tests/all_tests_hash_nn_activation_nn_attention_nn_linear_nn_norm.rs` | `hash`, `nn-activation`, `nn-attention`, `nn-linear`, `nn-norm` | `./cargo_full test -p vyre-libs --test all_tests_hash_nn_activation_nn_attention_nn_linear_nn_norm --features hash,nn-activation,nn-attention,nn-linear,nn-norm` |
-| `test` | `all_tests_hash_nn_attention_nn_norm` | `vyre-libs/tests/all_tests_hash_nn_attention_nn_norm.rs` | `hash`, `nn-attention`, `nn-norm` | `./cargo_full test -p vyre-libs --test all_tests_hash_nn_attention_nn_norm --features hash,nn-attention,nn-norm` |
-| `test` | `all_tests_math_math_linalg_nn_activation_nn_attention_nn_linear_nn_norm` | `vyre-libs/tests/all_tests_math_math_linalg_nn_activation_nn_attention_nn_linear_nn_norm.rs` | `math`, `math-linalg`, `nn-activation`, `nn-attention`, `nn-linear`, `nn-norm` | `./cargo_full test -p vyre-libs --test all_tests_math_math_linalg_nn_activation_nn_attention_nn_linear_nn_norm --features math,math-linalg,nn-activation,nn-attention,nn-linear,nn-norm` |
-| `test` | `all_tests_math_nn_attention` | `vyre-libs/tests/all_tests_math_nn_attention.rs` | `math`, `nn-attention` | `./cargo_full test -p vyre-libs --test all_tests_math_nn_attention --features math,nn-attention` |
+| `example` | `dominator_tree_e2e` | `crates/vyre-libs/examples/dominator_tree_e2e.rs` | None | `./cargo_full test -p vyre-libs --example dominator_tree_e2e` |
+| `example` | `jacobi_workgroup_perf` | `crates/vyre-libs/examples/jacobi_workgroup_perf.rs` | None | `./cargo_full test -p vyre-libs --example jacobi_workgroup_perf` |
+| `example` | `prefix_sum_megakernel` | `crates/vyre-libs/examples/prefix_sum_megakernel.rs` | None | `./cargo_full test -p vyre-libs --example prefix_sum_megakernel` |
+| `example` | `select1_optimizer_parity` | `crates/vyre-libs/examples/select1_optimizer_parity.rs` | `bitset` | `./cargo_full test -p vyre-libs --example select1_optimizer_parity --features bitset` |
+| `lib` | `vyre_libs` | `crates/vyre-libs/src/lib.rs` | None | `./cargo_full test -p vyre-libs` |
+| `test` | `all_tests` | `crates/vyre-libs/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs --test all_tests` |
+| `test` | `all_tests_fixpoint_graph_math_kernels` | `crates/vyre-libs/tests/all_tests_fixpoint_graph_math_kernels.rs` | `fixpoint`, `graph`, `math-kernels` | `./cargo_full test -p vyre-libs --test all_tests_fixpoint_graph_math_kernels --features fixpoint,graph,math-kernels` |
+| `test` | `all_tests_fixpoint_graph_math_kernels_parsing_kernels` | `crates/vyre-libs/tests/all_tests_fixpoint_graph_math_kernels_parsing_kernels.rs` | `fixpoint`, `graph`, `math-kernels`, `parsing-kernels` | `./cargo_full test -p vyre-libs --test all_tests_fixpoint_graph_math_kernels_parsing_kernels --features fixpoint,graph,math-kernels,parsing-kernels` |
+| `test` | `all_tests_fixpoint_math_kernels` | `crates/vyre-libs/tests/all_tests_fixpoint_math_kernels.rs` | `fixpoint`, `math-kernels` | `./cargo_full test -p vyre-libs --test all_tests_fixpoint_math_kernels --features fixpoint,math-kernels` |
+| `test` | `all_tests_hash` | `crates/vyre-libs/tests/all_tests_hash.rs` | `hash` | `./cargo_full test -p vyre-libs --test all_tests_hash --features hash` |
+| `test` | `all_tests_hash_math_nn_activation_nn_linear_pattern` | `crates/vyre-libs/tests/all_tests_hash_math_nn_activation_nn_linear_pattern.rs` | `hash`, `math`, `nn-activation`, `nn-linear`, `pattern` | `./cargo_full test -p vyre-libs --test all_tests_hash_math_nn_activation_nn_linear_pattern --features hash,math,nn-activation,nn-linear,pattern` |
+| `test` | `all_tests_hash_nn_activation_nn_attention_nn_linear_nn_norm` | `crates/vyre-libs/tests/all_tests_hash_nn_activation_nn_attention_nn_linear_nn_norm.rs` | `hash`, `nn-activation`, `nn-attention`, `nn-linear`, `nn-norm` | `./cargo_full test -p vyre-libs --test all_tests_hash_nn_activation_nn_attention_nn_linear_nn_norm --features hash,nn-activation,nn-attention,nn-linear,nn-norm` |
+| `test` | `all_tests_hash_nn_attention_nn_norm` | `crates/vyre-libs/tests/all_tests_hash_nn_attention_nn_norm.rs` | `hash`, `nn-attention`, `nn-norm` | `./cargo_full test -p vyre-libs --test all_tests_hash_nn_attention_nn_norm --features hash,nn-attention,nn-norm` |
+| `test` | `all_tests_math_math_linalg_nn_activation_nn_attention_nn_linear_nn_norm` | `crates/vyre-libs/tests/all_tests_math_math_linalg_nn_activation_nn_attention_nn_linear_nn_norm.rs` | `math`, `math-linalg`, `nn-activation`, `nn-attention`, `nn-linear`, `nn-norm` | `./cargo_full test -p vyre-libs --test all_tests_math_math_linalg_nn_activation_nn_attention_nn_linear_nn_norm --features math,math-linalg,nn-activation,nn-attention,nn-linear,nn-norm` |
+| `test` | `all_tests_math_nn_attention` | `crates/vyre-libs/tests/all_tests_math_nn_attention.rs` | `math`, `nn-attention` | `./cargo_full test -p vyre-libs --test all_tests_math_nn_attention --features math,nn-attention` |
 
 ## Test classes
 

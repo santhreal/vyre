@@ -65,7 +65,7 @@ that lives in one op's source file is reuse nobody else gets.
 Before writing a new sub-op:
 
 1. **Search by name.** `git grep -n 'fn <verb>' -- 'vyre-libs-*/src'
-   vyre-primitives/src`. Named work usually exists already.
+   crates/vyre-primitives/src`. Named work usually exists already.
 2. **Search by op id.** `./cargo_full run --bin xtask -- print-composition
    --op-id <id>` walks a registered op's region tree. If a region's
    generator reads like the work you are about to do, that is the
@@ -149,7 +149,7 @@ reports duplicated line counts per crate against their pins.
 
 Those gates report in tiers. A tier is not a property a source file declares;
 it is derived from the registered op id alone, in
-`xtask-registry/src/gates/lego_audit/ops.rs`:
+`tools/xtask-registry/src/gates/lego_audit/ops.rs`:
 
 | Tier | Op id prefix | Meaning |
 | --- | --- | --- |
@@ -242,7 +242,7 @@ The third pass dissolved them:
 The `visual/` primitive domain was deleted. The one shared primitive that
 came out of it is `math::conv1d`, which blur composes and future signal
 and audio ops compose too. The domain compositions live in
-`vyre-libs-visual/src/visual/` over `math::conv1d`, existing IR expressions, and
+`crates/vyre-libs-visual/src/visual/` over `math::conv1d`, existing IR expressions, and
 private helpers where one caller exists.
 
 Domain thinking creates domain primitives, and composition thinking dissolves

@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Execute optimizer passes as Vyre Programs through compiler-owned semantic compilation and admitted artifact submission.
 
-The crate lives at `vyre-pass-engine` and owns the `pass-engine` seam in the `pass-engine` layer.
+The crate lives at `crates/vyre-pass-engine` and owns the `pass-engine` seam in the `pass-engine` layer.
 
 ## Commands
 
@@ -30,11 +30,11 @@ The crate lives at `vyre-pass-engine` and owns the `pass-engine` seam in the `pa
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_pass_engine_release_surface` | `vyre-pass-engine/examples/vyre_pass_engine_release_surface.rs` | None | `./cargo_full test -p vyre-pass-engine --example vyre_pass_engine_release_surface` |
-| `lib` | `vyre_pass_engine` | `vyre-pass-engine/src/lib.rs` | None | `./cargo_full test -p vyre-pass-engine` |
-| `test` | `all_tests` | `vyre-pass-engine/tests/all_tests.rs` | None | `./cargo_full test -p vyre-pass-engine --test all_tests` |
-| `test` | `all_tests_all_solvers` | `vyre-pass-engine/tests/all_tests_all_solvers.rs` | `all-solvers` | `./cargo_full test -p vyre-pass-engine --test all_tests_all_solvers --features all-solvers` |
-| `test` | `all_tests_optimizer` | `vyre-pass-engine/tests/all_tests_optimizer.rs` | `optimizer` | `./cargo_full test -p vyre-pass-engine --test all_tests_optimizer --features optimizer` |
+| `example` | `vyre_pass_engine_release_surface` | `crates/vyre-pass-engine/examples/vyre_pass_engine_release_surface.rs` | None | `./cargo_full test -p vyre-pass-engine --example vyre_pass_engine_release_surface` |
+| `lib` | `vyre_pass_engine` | `crates/vyre-pass-engine/src/lib.rs` | None | `./cargo_full test -p vyre-pass-engine` |
+| `test` | `all_tests` | `crates/vyre-pass-engine/tests/all_tests.rs` | None | `./cargo_full test -p vyre-pass-engine --test all_tests` |
+| `test` | `all_tests_all_solvers` | `crates/vyre-pass-engine/tests/all_tests_all_solvers.rs` | `all-solvers` | `./cargo_full test -p vyre-pass-engine --test all_tests_all_solvers --features all-solvers` |
+| `test` | `all_tests_optimizer` | `crates/vyre-pass-engine/tests/all_tests_optimizer.rs` | `optimizer` | `./cargo_full test -p vyre-pass-engine --test all_tests_optimizer --features optimizer` |
 
 ## Test classes
 

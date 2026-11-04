@@ -26,7 +26,9 @@ cargo run --manifest-path examples/external_ir_extension/Cargo.toml
 It resolves the linked semantic operation, builds a validated
 `ProgramGraph`, compiles the neutral artifact, attaches an
 extension-owned target payload, and verifies the derived
-operation-to-target facet.
+operation-to-target facet. Its manifest patches `vyre`, `vyre-driver` and
+`vyre-foundation` to the workspace copies under `crates/`, so the example
+builds against the checkout.
 
 ## Tier
 

@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own every inventory registry link anchor, report which sources a build links, and assert that each linked source reached the registry it submits into.
 
-The crate lives at `vyre-registry-link` and owns the `registry-link` seam in the `registry-link` layer.
+The crate lives at `crates/vyre-registry-link` and owns the `registry-link` seam in the `registry-link` layer.
 
 ## Commands
 
@@ -30,10 +30,10 @@ The crate lives at `vyre-registry-link` and owns the `registry-link` seam in the
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_registry_link` | `vyre-registry-link/src/lib.rs` | None | `./cargo_full test -p vyre-registry-link` |
-| `test` | `all_tests` | `vyre-registry-link/tests/all_tests.rs` | None | `./cargo_full test -p vyre-registry-link --test all_tests` |
-| `test` | `all_tests_device` | `vyre-registry-link/tests/all_tests_device.rs` | `device-tests` | `./cargo_full test -p vyre-registry-link --test all_tests_device --features device-tests` |
-| `test` | `all_tests_operations` | `vyre-registry-link/tests/all_tests_operations.rs` | `operations` | `./cargo_full test -p vyre-registry-link --test all_tests_operations --features operations` |
+| `lib` | `vyre_registry_link` | `crates/vyre-registry-link/src/lib.rs` | None | `./cargo_full test -p vyre-registry-link` |
+| `test` | `all_tests` | `crates/vyre-registry-link/tests/all_tests.rs` | None | `./cargo_full test -p vyre-registry-link --test all_tests` |
+| `test` | `all_tests_device` | `crates/vyre-registry-link/tests/all_tests_device.rs` | `device-tests` | `./cargo_full test -p vyre-registry-link --test all_tests_device --features device-tests` |
+| `test` | `all_tests_operations` | `crates/vyre-registry-link/tests/all_tests_operations.rs` | `operations` | `./cargo_full test -p vyre-registry-link --test all_tests_operations --features operations` |
 
 ## Test classes
 

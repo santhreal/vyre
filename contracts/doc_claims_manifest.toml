@@ -15,26 +15,26 @@
 
 [[claim]]
 id = "dispatch_hot_path_budgets"
-doc = "vyre-driver-wgpu/CONFIG.md"
+doc = "crates/vyre-driver-wgpu/CONFIG.md"
 phrase = "latency / throughput micro-benches"
-test = "vyre-driver-wgpu/tests/dispatch_hot_path.rs"
+test = "crates/vyre-driver-wgpu/tests/dispatch_hot_path.rs"
 description = "Cached small-program latency + 4 MiB throughput dispatch contract."
 
 [[claim]]
 id = "pipeline_cache_byte_budget"
-doc = "vyre-driver-wgpu/CONFIG.md"
+doc = "crates/vyre-driver-wgpu/CONFIG.md"
 phrase = "pipeline-cache byte budget"
-test = "vyre-driver-wgpu/tests/pipeline_cache_contract.rs"
+test = "crates/vyre-driver-wgpu/tests/pipeline_cache_contract.rs"
 description = "In-memory pipeline-cache byte-budget enforcement (audit item #17)."
 
 [[claim]]
 id = "pipeline_cache_entry_budget"
-doc = "vyre-driver-wgpu/CONFIG.md"
+doc = "crates/vyre-driver-wgpu/CONFIG.md"
 phrase = "pipeline-cache entry budget"
-test = "vyre-driver-wgpu/tests/pipeline_cache_contract.rs"
+test = "crates/vyre-driver-wgpu/tests/pipeline_cache_contract.rs"
 description = "In-memory pipeline-cache entry-count enforcement (audit item #18)."
 
-# primitives_lego_substrate removed. It required vyre-primitives/README.md to
+# primitives_lego_substrate removed. It required crates/vyre-primitives/README.md to
 # contain "reusable Tier 2.5 program builders", a phrase that README does not
 # carry and whose vocabulary the crate retired: the composition folders the
 # phrase described are a live defect that moves to vyre-libs, not the crate's
@@ -44,12 +44,12 @@ description = "In-memory pipeline-cache entry-count enforcement (audit item #18)
 
 [[claim]]
 id = "primitives_feature_classification"
-doc = "vyre-primitives/README.md"
+doc = "crates/vyre-primitives/README.md"
 phrase = "every_cargo_feature_is_classified_exactly_once"
-test = "vyre-primitives/tests/feature_organization.rs"
+test = "crates/vyre-primitives/tests/feature_organization.rs"
 description = "Every Cargo feature is classified exactly once by the crate's own feature table."
 
-# aot_no_runtime_dependency removed. It required vyre-aot/README.md to contain
+# aot_no_runtime_dependency removed. It required crates/vyre-aot/README.md to contain
 # "removes the entire vyre runtime from the deployed image", and that README makes
 # no claim about runtime removal at all. A manifest of doc claims tracks claims a
 # doc actually makes, so there is nothing here to prove. Restoring the row means
@@ -57,9 +57,9 @@ description = "Every Cargo feature is classified exactly once by the crate's own
 
 [[claim]]
 id = "cuda_unsafe_policy"
-doc = "vyre-driver-cuda/src/lib.rs"
+doc = "crates/vyre-driver-cuda/src/lib.rs"
 phrase = "unsafe FFI"
-test = "vyre-driver-cuda/src/lib.rs"
+test = "crates/vyre-driver-cuda/src/lib.rs"
 description = "CUDA crate documents its unsafe-code policy in lib.rs."
 
 # tier_b_zero_rust_extensibility removed. It pointed at rules/README.md and
@@ -69,7 +69,7 @@ description = "CUDA crate documents its unsafe-code policy in lib.rs."
 # live claim. Both the doc and the proving artifact are gone, so the row asserted
 # a contract with no subject on either side.
 #
-# Per-crate rule corpora do still exist, in vyre-libs-security/rules and
-# vyre-lower/rules. If the zero-Rust op contribution path is still a claim worth
+# Per-crate rule corpora do still exist, in crates/vyre-libs-security/rules and
+# crates/vyre-lower/rules. If the zero-Rust op contribution path is still a claim worth
 # gating, it needs a doc that states it and a corpus file that proves it.
 

@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own pure WGSL target compilation, portable GPU acquisition, materialization, dispatch, graph execution, and backend evidence.
 
-The crate lives at `vyre-driver-wgpu` and owns the `portable-driver` seam in the `concrete-backend` layer.
+The crate lives at `crates/vyre-driver-wgpu` and owns the `portable-driver` seam in the `concrete-backend` layer.
 
 ## Commands
 
@@ -34,11 +34,11 @@ The crate lives at `vyre-driver-wgpu` and owns the `portable-driver` seam in the
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `bin` | `vyre` | `vyre-driver-wgpu/src/bin/vyre.rs` | None | `./cargo_full test -p vyre-driver-wgpu --bin vyre` |
-| `bin` | `vyre-wgpu` | `vyre-driver-wgpu/src/bin/vyre.rs` | None | `./cargo_full test -p vyre-driver-wgpu --bin vyre-wgpu` |
-| `example` | `wgpu_release_surface` | `vyre-driver-wgpu/examples/wgpu_release_surface.rs` | None | `./cargo_full test -p vyre-driver-wgpu --example wgpu_release_surface` |
-| `lib` | `vyre_driver_wgpu` | `vyre-driver-wgpu/src/lib.rs` | None | `./cargo_full test -p vyre-driver-wgpu` |
-| `test` | `all_tests` | `vyre-driver-wgpu/tests/all_tests.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test all_tests` |
+| `bin` | `vyre` | `crates/vyre-driver-wgpu/src/bin/vyre.rs` | None | `./cargo_full test -p vyre-driver-wgpu --bin vyre` |
+| `bin` | `vyre-wgpu` | `crates/vyre-driver-wgpu/src/bin/vyre.rs` | None | `./cargo_full test -p vyre-driver-wgpu --bin vyre-wgpu` |
+| `example` | `wgpu_release_surface` | `crates/vyre-driver-wgpu/examples/wgpu_release_surface.rs` | None | `./cargo_full test -p vyre-driver-wgpu --example wgpu_release_surface` |
+| `lib` | `vyre_driver_wgpu` | `crates/vyre-driver-wgpu/src/lib.rs` | None | `./cargo_full test -p vyre-driver-wgpu` |
+| `test` | `all_tests` | `crates/vyre-driver-wgpu/tests/all_tests.rs` | None | `./cargo_full test -p vyre-driver-wgpu --test all_tests` |
 
 ## Test classes
 

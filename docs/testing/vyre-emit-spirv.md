@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Consume verified lowering products and emit SPIR-V artifacts through the shared writer.
 
-The crate lives at `vyre-emit-spirv` and owns the `spirv-emitter` seam in the `emitter` layer.
+The crate lives at `crates/vyre-emit-spirv` and owns the `spirv-emitter` seam in the `emitter` layer.
 
 ## Commands
 
@@ -24,9 +24,9 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_emit_spirv_release_surface` | `vyre-emit-spirv/examples/vyre_emit_spirv_release_surface.rs` | None | `./cargo_full test -p vyre-emit-spirv --example vyre_emit_spirv_release_surface` |
-| `lib` | `vyre_emit_spirv` | `vyre-emit-spirv/src/lib.rs` | None | `./cargo_full test -p vyre-emit-spirv` |
-| `test` | `all_tests` | `vyre-emit-spirv/tests/all_tests.rs` | None | `./cargo_full test -p vyre-emit-spirv --test all_tests` |
+| `example` | `vyre_emit_spirv_release_surface` | `crates/vyre-emit-spirv/examples/vyre_emit_spirv_release_surface.rs` | None | `./cargo_full test -p vyre-emit-spirv --example vyre_emit_spirv_release_surface` |
+| `lib` | `vyre_emit_spirv` | `crates/vyre-emit-spirv/src/lib.rs` | None | `./cargo_full test -p vyre-emit-spirv` |
+| `test` | `all_tests` | `crates/vyre-emit-spirv/tests/all_tests.rs` | None | `./cargo_full test -p vyre-emit-spirv --test all_tests` |
 
 ## Test classes
 

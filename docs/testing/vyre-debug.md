@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Inspect, explain, and diagnose typed programs, lowering, and product-library composition.
 
-The crate lives at `vyre-debug` and owns the `debugging` seam in the `tooling` layer.
+The crate lives at `crates/vyre-debug` and owns the `debugging` seam in the `tooling` layer.
 
 ## Commands
 
@@ -24,11 +24,11 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `bin` | `vyre-dbg` | `vyre-debug/src/bin/vyre_dbg.rs` | None | `./cargo_full test -p vyre-debug --bin vyre-dbg` |
-| `bin` | `vyre_dbg` | `vyre-debug/src/bin/vyre_dbg.rs` | None | `./cargo_full test -p vyre-debug --bin vyre_dbg` |
-| `example` | `vyre_debug_release_surface` | `vyre-debug/examples/vyre_debug_release_surface.rs` | None | `./cargo_full test -p vyre-debug --example vyre_debug_release_surface` |
-| `lib` | `vyre_debug` | `vyre-debug/src/lib.rs` | None | `./cargo_full test -p vyre-debug` |
-| `test` | `all_tests` | `vyre-debug/tests/all_tests.rs` | None | `./cargo_full test -p vyre-debug --test all_tests` |
+| `bin` | `vyre-dbg` | `crates/vyre-debug/src/bin/vyre_dbg.rs` | None | `./cargo_full test -p vyre-debug --bin vyre-dbg` |
+| `bin` | `vyre_dbg` | `crates/vyre-debug/src/bin/vyre_dbg.rs` | None | `./cargo_full test -p vyre-debug --bin vyre_dbg` |
+| `example` | `vyre_debug_release_surface` | `crates/vyre-debug/examples/vyre_debug_release_surface.rs` | None | `./cargo_full test -p vyre-debug --example vyre_debug_release_surface` |
+| `lib` | `vyre_debug` | `crates/vyre-debug/src/lib.rs` | None | `./cargo_full test -p vyre-debug` |
+| `test` | `all_tests` | `crates/vyre-debug/tests/all_tests.rs` | None | `./cargo_full test -p vyre-debug --test all_tests` |
 
 ## Test classes
 

@@ -15,7 +15,7 @@ on that destination's row is what crossing it provides, for every consumer.
 
 Enforce the crate roster, one operation identity per semantic operation, one home per concept, and one place per module. Depends on no vyre crate so it keeps running while the workspace does not compile.
 
-- Path: `structure-gate`
+- Path: `tools/structure-gate`
 - Layer: `standalone-tooling` (rank 0)
 - Publication class: `conformance-tooling`
 - Seam: `source-structure`
@@ -27,7 +27,7 @@ Enforce the crate roster, one operation identity per semantic operation, one hom
 
 Public facade. Re-export IR, driver, runtime, and the artifact compiler. Own no logic.
 
-- Path: `vyre`
+- Path: `crates/vyre`
 - Layer: `facade` (rank 6)
 - Publication class: `stable-consumer-sdk`
 - Seam: `public-facade`
@@ -49,7 +49,7 @@ Public facade. Re-export IR, driver, runtime, and the artifact compiler. Own no 
 
 Count heap traffic per thread behind a GlobalAlloc wrapper, so an allocation budget measures the code under test rather than the test schedule. Depends on no vyre crate, so a harness binary links it at run time and a driver suite links it as a dev-dependency.
 
-- Path: `vyre-alloc-probe`
+- Path: `crates/vyre-alloc-probe`
 - Layer: `standalone-tooling` (rank 0)
 - Publication class: `conformance-tooling`
 - Seam: `allocation-probe`
@@ -61,7 +61,7 @@ Count heap traffic per thread behind a GlobalAlloc wrapper, so an allocation bud
 
 Package the same megakernel artifact class ahead of time. Not a second compile path. No workspace crate currently depends on this one.
 
-- Path: `vyre-aot`
+- Path: `crates/vyre-aot`
 - Layer: `packaging` (rank 5)
 - Publication class: `internal-engine`
 - Seam: `aot-artifacts`
@@ -79,7 +79,7 @@ Package the same megakernel artifact class ahead of time. Not a second compile p
 
 Own reproducible workload benchmarks against the best available native baseline for each class, not against vyre's own unfused output.
 
-- Path: `vyre-bench`
+- Path: `crates/vyre-bench`
 - Layer: `tooling` (rank 7)
 - Publication class: `conformance-tooling`
 - Seam: `workload-benchmarks`
@@ -157,7 +157,7 @@ Define conformance case, result, and certificate schemas against the public faca
 
 Inspect, explain, and diagnose typed programs, lowering, and product-library composition.
 
-- Path: `vyre-debug`
+- Path: `crates/vyre-debug`
 - Layer: `tooling` (rank 7)
 - Publication class: `conformance-tooling`
 - Seam: `debugging`
@@ -177,7 +177,7 @@ Inspect, explain, and diagnose typed programs, lowering, and product-library com
 
 Define backend-neutral device, target compiler registration, artifact materialization, binding, submission, completion, capability, dispatch, and evidence contracts.
 
-- Path: `vyre-driver`
+- Path: `crates/vyre-driver`
 - Layer: `backend-neutral` (rank 4)
 - Publication class: `extension-sdk`
 - Seam: `backend-contract`
@@ -196,7 +196,7 @@ Define backend-neutral device, target compiler registration, artifact materializ
 
 Own pure PTX target compilation, native device acquisition, materialization, dispatch, graphs, and release-path evidence.
 
-- Path: `vyre-driver-cuda`
+- Path: `crates/vyre-driver-cuda`
 - Layer: `concrete-backend` (rank 5)
 - Publication class: `concrete-backend`
 - Seam: `cuda-driver`
@@ -216,7 +216,7 @@ Own pure PTX target compilation, native device acquisition, materialization, dis
 
 Own pure MSL target compilation, native Apple device acquisition, materialization, dispatch, and backend evidence.
 
-- Path: `vyre-driver-metal`
+- Path: `crates/vyre-driver-metal`
 - Layer: `concrete-backend` (rank 5)
 - Publication class: `concrete-backend`
 - Seam: `metal-driver`
@@ -236,7 +236,7 @@ Own pure MSL target compilation, native Apple device acquisition, materializatio
 
 Adapt the reference interpreter to the backend contract for deterministic conformance execution.
 
-- Path: `vyre-driver-reference`
+- Path: `crates/vyre-driver-reference`
 - Layer: `concrete-backend` (rank 5)
 - Publication class: `conformance-tooling`
 - Seam: `reference-driver`
@@ -255,7 +255,7 @@ Adapt the reference interpreter to the backend contract for deterministic confor
 
 Own SPIR-V target compilation, immutable module-bundle emission, Vulkan materialization and dispatch integration, and backend evidence.
 
-- Path: `vyre-driver-spirv`
+- Path: `crates/vyre-driver-spirv`
 - Layer: `concrete-backend` (rank 5)
 - Publication class: `concrete-backend`
 - Seam: `spirv-driver`
@@ -275,7 +275,7 @@ Own SPIR-V target compilation, immutable module-bundle emission, Vulkan material
 
 Own pure WGSL target compilation, portable GPU acquisition, materialization, dispatch, graph execution, and backend evidence.
 
-- Path: `vyre-driver-wgpu`
+- Path: `crates/vyre-driver-wgpu`
 - Layer: `concrete-backend` (rank 5)
 - Publication class: `concrete-backend`
 - Seam: `portable-driver`
@@ -296,7 +296,7 @@ Own pure WGSL target compilation, portable GPU acquisition, materialization, dis
 
 Consume verified lowering products and emit native Apple shader source through the shared emitter path.
 
-- Path: `vyre-emit-metal`
+- Path: `crates/vyre-emit-metal`
 - Layer: `emitter` (rank 2)
 - Publication class: `internal-engine`
 - Seam: `metal-emitter`
@@ -314,7 +314,7 @@ Consume verified lowering products and emit native Apple shader source through t
 
 Consume verified lowering products and emit the primary text representation and related binary targets.
 
-- Path: `vyre-emit-naga`
+- Path: `crates/vyre-emit-naga`
 - Layer: `emitter` (rank 2)
 - Publication class: `internal-engine`
 - Seam: `primary-text-emitter`
@@ -331,7 +331,7 @@ Consume verified lowering products and emit the primary text representation and 
 
 Consume verified lowering products and emit the primary binary backend text artifact.
 
-- Path: `vyre-emit-ptx`
+- Path: `crates/vyre-emit-ptx`
 - Layer: `emitter` (rank 2)
 - Publication class: `internal-engine`
 - Seam: `primary-binary-emitter`
@@ -348,7 +348,7 @@ Consume verified lowering products and emit the primary binary backend text arti
 
 Consume verified lowering products and emit SPIR-V artifacts through the shared writer.
 
-- Path: `vyre-emit-spirv`
+- Path: `crates/vyre-emit-spirv`
 - Layer: `emitter` (rank 2)
 - Publication class: `internal-engine`
 - Seam: `spirv-emitter`
@@ -366,7 +366,7 @@ Consume verified lowering products and emit SPIR-V artifacts through the shared 
 
 Own validated ProgramGraph, versioned schedule-free LogicalProgramGraph domains, versioned backend-neutral schedule IR and transform legality, semantic identity, neutral schedule-constraint composition, diagnostics, serialization, semantic operation registration, and backend-neutral optimization.
 
-- Path: `vyre-foundation`
+- Path: `crates/vyre-foundation`
 - Layer: `foundation` (rank 0)
 - Publication class: `extension-sdk`
 - Seam: `foundation-ir`
@@ -383,7 +383,7 @@ Own validated ProgramGraph, versioned schedule-free LogicalProgramGraph domains,
 
 Own every composition in the workspace: consumer dialects and compiler-internal solvers, encoding, analysis, scheduling, and reasoning. Returns Programs. No backend, no emitter, no host rewrite of IR.
 
-- Path: `vyre-libs`
+- Path: `crates/vyre-libs`
 - Layer: `libraries` (rank 3)
 - Publication class: `stable-consumer-sdk`
 - Seam: `semantic-library`
@@ -423,7 +423,7 @@ Own every composition in the workspace: consumer dialects and compiler-internal 
 
 Own compiler-internal static analysis, cost models, dataflow fixpoint routines, and diagnostic aggregation. Does not own pass engine scheduling, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-analysis`
+- Path: `crates/vyre-libs-analysis`
 - Layer: `libraries` (rank 3)
 - Publication class: `internal-engine`
 - Seam: `libs-analysis`
@@ -446,7 +446,7 @@ Own compiler-internal static analysis, cost models, dataflow fixpoint routines, 
 
 Own packed u32 bitset operations, word utilities, and logical bitwise IR compositions. Does not own reduction tree implementations, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-bitset`
+- Path: `crates/vyre-libs-bitset`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-bitset`
@@ -465,7 +465,7 @@ Own packed u32 bitset operations, word utilities, and logical bitwise IR composi
 
 Own shared IR composition infrastructure, child region skeletons, operand wrappers, and registration link anchors for library builders. Does not own concrete domain operations, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-builder`
+- Path: `crates/vyre-libs-builder`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-builder`
@@ -484,7 +484,7 @@ Own shared IR composition infrastructure, child region skeletons, operand wrappe
 
 Own Base64, hex, DEFLATE, and encodex data decoding and decompression IR compositions. Does not own parsing drivers, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-decode`
+- Path: `crates/vyre-libs-decode`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-decode`
@@ -504,7 +504,7 @@ Own Base64, hex, DEFLATE, and encodex data decoding and decompression IR composi
 
 Own compiler-internal device boundary contracts, memory ownership models, resident graph layout, and the virtual filesystem DMA block load and asset resolution compositions that fill device arenas. Does not own concrete backend implementations, driver dispatch, host file IO or runtime storage drivers.
 
-- Path: `vyre-libs-device`
+- Path: `crates/vyre-libs-device`
 - Layer: `libraries` (rank 3)
 - Publication class: `internal-engine`
 - Seam: `libs-device`
@@ -521,7 +521,7 @@ Own compiler-internal device boundary contracts, memory ownership models, reside
 
 Own compiler-internal bitset, provenance, matroid, and fingerprint encoding compositions. Does not own consumer decoding algorithms, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-encoding`
+- Path: `crates/vyre-libs-encoding`
 - Layer: `libraries` (rank 3)
 - Publication class: `internal-engine`
 - Seam: `libs-encoding`
@@ -548,7 +548,7 @@ Own compiler-internal bitset, provenance, matroid, and fingerprint encoding comp
 
 Own deterministic fixpoint iteration kernels, routing contracts, and grid synchronization barriers. Does not own domain dataflow analysis, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-fixpoint`
+- Path: `crates/vyre-libs-fixpoint`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-fixpoint`
@@ -566,7 +566,7 @@ Own deterministic fixpoint iteration kernels, routing contracts, and grid synchr
 
 Own graph algorithms, CSR traversal, AST walks, dominator trees, and topological sorting IR compositions. Does not own pattern matching engines, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-graph`
+- Path: `crates/vyre-libs-graph`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-graph`
@@ -591,7 +591,7 @@ Own graph algorithms, CSR traversal, AST walks, dominator trees, and topological
 
 Own hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3 IR builders. Does not own security taint logic, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-hash`
+- Path: `crates/vyre-libs-hash`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-hash`
@@ -609,7 +609,7 @@ Own hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE
 
 Own linear algebra, matrix operations, broadcasting, scans, optimization builders, and geometric algebra IR compositions. Does not own neural network layers, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-math`
+- Path: `crates/vyre-libs-math`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-math`
@@ -630,7 +630,7 @@ Own linear algebra, matrix operations, broadcasting, scans, optimization builder
 
 Own neural network activations, linear transformations, normalization, attention, mixture-of-experts, and language model inference IR compositions. Does not own general matrix kernels, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-nn`
+- Path: `crates/vyre-libs-nn`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-nn`
@@ -652,7 +652,7 @@ Own neural network activations, linear transformations, normalization, attention
 
 Own lexer drivers, LR(1) table walkers, and language-specific AST construction IR compositions. Does not own semantic analysis passes, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-parsing`
+- Path: `crates/vyre-libs-parsing`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-parsing`
@@ -674,7 +674,7 @@ Own lexer drivers, LR(1) table walkers, and language-specific AST construction I
 
 Own substring matching, DFA, NFA, bracket matching, and regular expression scanning pipeline IR compositions. Does not own token lexing or parser tables, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-pattern`
+- Path: `crates/vyre-libs-pattern`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-pattern`
@@ -694,7 +694,7 @@ Own substring matching, DFA, NFA, bracket matching, and regular expression scann
 
 Own compiler-internal logic, causal reasoning, categorical rewrites, and knowledge compilation compositions. Does not own cost model evaluation, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-reasoning`
+- Path: `crates/vyre-libs-reasoning`
 - Layer: `libraries` (rank 3)
 - Publication class: `internal-engine`
 - Seam: `libs-reasoning`
@@ -714,7 +714,7 @@ Own compiler-internal logic, causal reasoning, categorical rewrites, and knowled
 
 Own workgroup reduction trees, atomic scalar reductions, and prefix scan IR compositions. Does not own domain-specific algorithms, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-reduce`
+- Path: `crates/vyre-libs-reduce`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-reduce`
@@ -733,7 +733,7 @@ Own workgroup reduction trees, atomic scalar reductions, and prefix scan IR comp
 
 Own detection rule engine condition operators, formulas, and program evaluation builders. Does not own security predicate solvers, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-rule`
+- Path: `crates/vyre-libs-rule`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-rule`
@@ -752,7 +752,7 @@ Own detection rule engine condition operators, formulas, and program evaluation 
 
 Own compiler-internal scheduling, fusion, batching, and dispatch strategy compositions. Does not own physical lowering, device execution, or runtime lifecycle policy.
 
-- Path: `vyre-libs-scheduling`
+- Path: `crates/vyre-libs-scheduling`
 - Layer: `libraries` (rank 3)
 - Publication class: `internal-engine`
 - Seam: `libs-scheduling`
@@ -774,7 +774,7 @@ Own compiler-internal scheduling, fusion, batching, and dispatch strategy compos
 
 Own security taint analysis compositions, predicate evaluators, and label resolver IR builders. Does not own rule engine AST evaluation, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-security`
+- Path: `crates/vyre-libs-security`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-security`
@@ -796,7 +796,7 @@ Own security taint analysis compositions, predicate evaluators, and label resolv
 
 Own compiler-internal numerical solvers, autotuning routines, and spectral schedule analysis compositions. Does not own schedule search ranking, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-solvers`
+- Path: `crates/vyre-libs-solvers`
 - Layer: `libraries` (rank 3)
 - Publication class: `internal-engine`
 - Seam: `libs-solvers`
@@ -819,7 +819,7 @@ Own compiler-internal numerical solvers, autotuning routines, and spectral sched
 
 Own text processing, byte classification, UTF-8 validation, and line indexing IR compositions. Does not own decoding decompression algorithms, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-text`
+- Path: `crates/vyre-libs-text`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-text`
@@ -838,7 +838,7 @@ Own text processing, byte classification, UTF-8 validation, and line indexing IR
 
 Own visual rendering and compositing effects including blur, shadow, blend modes, gradients, and color conversions. Does not own display presentation, backend lowering, or runtime execution.
 
-- Path: `vyre-libs-visual`
+- Path: `crates/vyre-libs-visual`
 - Layer: `libraries` (rank 3)
 - Publication class: `extension-sdk`
 - Seam: `libs-visual`
@@ -857,7 +857,7 @@ Own visual rendering and compositing effects including blur, shadow, blend modes
 
 Consume validated selected schedule phases and semantic programs, then own the single validated PhysicalKernel lowering boundary plus its backend-neutral pre-emission transforms.
 
-- Path: `vyre-lower`
+- Path: `crates/vyre-lower`
 - Layer: `lowering` (rank 1)
 - Publication class: `internal-engine`
 - Seam: `lowering`
@@ -874,7 +874,7 @@ Consume validated selected schedule phases and semantic programs, then own the s
 
 Provide compile-time registration and declaration macros without depending on runtime crates.
 
-- Path: `vyre-macros`
+- Path: `crates/vyre-macros`
 - Layer: `foundation` (rank 0)
 - Publication class: `extension-sdk`
 - Seam: `registration-macros`
@@ -886,7 +886,7 @@ Provide compile-time registration and declaration macros without depending on ru
 
 Construct foundation-owned selected schedules through bounded whole-ProgramGraph search, and own immutable Artifact identity and authenticated TargetPayload construction. Does not own logical semantics, schedule schemas, physical-kernel lowering, admission, execution, or lifecycle policy.
 
-- Path: `vyre-megakernel`
+- Path: `crates/vyre-megakernel`
 - Layer: `compiler-boundary` (rank 2)
 - Publication class: `internal-engine`
 - Seam: `megakernel-compiler`
@@ -904,7 +904,7 @@ Construct foundation-owned selected schedules through bounded whole-ProgramGraph
 
 Execute optimizer passes as Vyre Programs through compiler-owned semantic compilation and admitted artifact submission.
 
-- Path: `vyre-pass-engine`
+- Path: `crates/vyre-pass-engine`
 - Layer: `pass-engine` (rank 4)
 - Publication class: `internal-engine`
 - Seam: `pass-engine`
@@ -923,7 +923,7 @@ Execute optimizer passes as Vyre Programs through compiler-owned semantic compil
 
 Own marker types and uncomposable hardware intrinsics. A composition belongs in vyre-libs, not here.
 
-- Path: `vyre-primitives`
+- Path: `crates/vyre-primitives`
 - Layer: `primitives` (rank 1)
 - Publication class: `extension-sdk`
 - Seam: `primitive-library`
@@ -939,7 +939,7 @@ Own marker types and uncomposable hardware intrinsics. A composition belongs in 
 
 The only crate permitted to compute on the CPU: the pure-Rust IR oracle. Not a backend and not a fallback.
 
-- Path: `vyre-reference`
+- Path: `crates/vyre-reference`
 - Layer: `semantics` (rank 2)
 - Publication class: `extension-sdk`
 - Seam: `reference-semantics`
@@ -957,7 +957,7 @@ The only crate permitted to compute on the CPU: the pure-Rust IR oracle. Not a b
 
 Own every inventory registry link anchor, report which sources a build links, and assert that each linked source reached the registry it submits into.
 
-- Path: `vyre-registry-link`
+- Path: `crates/vyre-registry-link`
 - Layer: `registry-link` (rank 6)
 - Publication class: `internal-engine`
 - Seam: `registry-link`
@@ -983,7 +983,7 @@ Own every inventory registry link anchor, report which sources a build links, an
 
 Execute the artifact's selected persistence: sessions, recovery, residency, scheduling, caches, telemetry, readback, and IO. Does not decide whether to be persistent.
 
-- Path: `vyre-runtime`
+- Path: `crates/vyre-runtime`
 - Layer: `runtime` (rank 5)
 - Publication class: `internal-engine`
 - Seam: `runtime`
@@ -1003,7 +1003,7 @@ Execute the artifact's selected persistence: sessions, recovery, residency, sche
 
 Validate safetensors metadata, shard indexes, compiler requirements, trusted shard digests, and immutable checkpoint identities without owning runtime residency.
 
-- Path: `vyre-safetensors`
+- Path: `crates/vyre-safetensors`
 - Layer: `runtime` (rank 5)
 - Publication class: `stable-consumer-sdk`
 - Seam: `safetensors-adapter`
@@ -1015,7 +1015,7 @@ Validate safetensors metadata, shard indexes, compiler requirements, trusted sha
 
 Own stable schemas, operation definitions, and compatibility contracts without runtime dependencies.
 
-- Path: `vyre-spec`
+- Path: `crates/vyre-spec`
 - Layer: `foundation` (rank 0)
 - Publication class: `extension-sdk`
 - Seam: `specification`
@@ -1027,7 +1027,7 @@ Own stable schemas, operation definitions, and compatibility contracts without r
 
 Provide shared deterministic fixtures and assertions for workspace tests.
 
-- Path: `vyre-test-support`
+- Path: `crates/vyre-test-support`
 - Layer: `test-tooling` (rank 5)
 - Publication class: `private-test-support`
 - Seam: `test-support`
@@ -1050,7 +1050,7 @@ Provide shared deterministic fixtures and assertions for workspace tests.
 
 Own the subcommand registry and every gate that judges the tree from source text, manifests, workflows, and recorded evidence, linking no vyre crate.
 
-- Path: `xtask`
+- Path: `tools/xtask`
 - Layer: `tooling` (rank 7)
 - Publication class: `conformance-tooling`
 - Seam: `gate-registry`
@@ -1066,7 +1066,7 @@ Own the subcommand registry and every gate that judges the tree from source text
 
 Own the xtask subcommands that decide whether a recorded benchmark or release measurement still describes this tree.
 
-- Path: `xtask-evidence`
+- Path: `tools/xtask-evidence`
 - Layer: `tooling` (rank 7)
 - Publication class: `conformance-tooling`
 - Seam: `evidence-gates`
@@ -1087,7 +1087,7 @@ Own the xtask subcommands that decide whether a recorded benchmark or release me
 
 Own the xtask subcommands that must observe the live operation registry, the primitive catalog behind it, or a linked backend driver.
 
-- Path: `xtask-registry`
+- Path: `tools/xtask-registry`
 - Layer: `tooling` (rank 7)
 - Publication class: `conformance-tooling`
 - Seam: `live-registry-gates`

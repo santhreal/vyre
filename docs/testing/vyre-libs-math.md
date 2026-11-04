@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own linear algebra, matrix operations, broadcasting, scans, optimization builders, and geometric algebra IR compositions. Does not own neural network layers, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-math` and owns the `libs-math` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-math` and owns the `libs-math` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-math` and owns the `libs-math` seam in the `librar
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_math` | `vyre-libs-math/src/lib.rs` | None | `./cargo_full test -p vyre-libs-math` |
-| `test` | `all_tests` | `vyre-libs-math/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-math --test all_tests` |
+| `lib` | `vyre_libs_math` | `crates/vyre-libs-math/src/lib.rs` | None | `./cargo_full test -p vyre-libs-math` |
+| `test` | `all_tests` | `crates/vyre-libs-math/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-math --test all_tests` |
 
 ## Test classes
 

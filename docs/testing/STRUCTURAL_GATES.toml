@@ -25,7 +25,7 @@
 schema = 2
 
 [[gate]]
-file = "vyre-spec/tests/token_ids_have_one_owner.rs"
+file = "crates/vyre-spec/tests/token_ids_have_one_owner.rs"
 tests = ["no_file_outside_the_owner_declares_a_token_id"]
 reason = """
 Asserts that no file outside vyre-spec declares a `TOK_`-prefixed constant. A
@@ -35,7 +35,7 @@ duplicate only shows up as a wrong parse on the GPU much later.
 """
 
 [[gate]]
-file = "vyre-spec/tests/token_ids_have_one_owner.rs"
+file = "crates/vyre-spec/tests/token_ids_have_one_owner.rs"
 tests = ["the_walk_actually_reaches_the_owner"]
 reason = """
 Floor check for the walk the gate above depends on. Its subject is the file set
@@ -43,7 +43,7 @@ that walk produced, which exists only inside the source scan.
 """
 
 [[gate]]
-file = "xtask/tests/tree_contracts/ci_workflow_references.rs"
+file = "tools/xtask/tests/tree_contracts/ci_workflow_references.rs"
 tests = ["every_target_a_workflow_names_exists_in_the_package_it_addresses"]
 reason = """
 Resolves every `--test`/`--bin` name a CI workflow step passes against the
@@ -53,7 +53,7 @@ process running locally.
 """
 
 [[gate]]
-file = "vyre-libs/tests/shared_owner_closure.rs"
+file = "crates/vyre-libs/tests/shared_owner_closure.rs"
 tests = ["no_operation_publishes_launch_geometry"]
 reason = """
 Asserts that no operation declares a launch grid a caller could pass back into a
@@ -64,7 +64,7 @@ every value it produced stayed correct.
 """
 
 [[gate]]
-file = "vyre-libs/tests/shared_owner_closure.rs"
+file = "crates/vyre-libs/tests/shared_owner_closure.rs"
 tests = ["no_binding_record_spells_its_full_name_set_twice"]
 reason = """
 Asserts that no file in the workspace respells a binding record's full name set
@@ -74,7 +74,7 @@ unnoticed; only the source distinguishes them.
 """
 
 [[gate]]
-file = "vyre-libs/tests/shared_owner_closure.rs"
+file = "crates/vyre-libs/tests/shared_owner_closure.rs"
 tests = ["every_buffer_binding_record_publishes_canonical_names"]
 reason = """
 Asserts that every declared `*Buffers` record publishes canonical names. The
@@ -83,7 +83,7 @@ without reflection.
 """
 
 [[gate]]
-file = "vyre-libs/tests/shared_owner_closure.rs"
+file = "crates/vyre-libs/tests/shared_owner_closure.rs"
 tests = ["every_routed_convergence_op_registers_with_the_routing_contract"]
 reason = """
 Asserts that every op calling `routed_persistent_fixpoint` also registers with
@@ -93,7 +93,7 @@ spans more than one workgroup in production.
 """
 
 [[gate]]
-file = "vyre-libs/tests/shared_owner_closure.rs"
+file = "crates/vyre-libs/tests/shared_owner_closure.rs"
 tests = ["no_op_re_asserts_the_routing_obligations_privately"]
 reason = """
 Asserts that no file outside the routing owner observes both halves of the
@@ -102,7 +102,7 @@ whole reason a copy survives; only the source shows there are two.
 """
 
 [[gate]]
-file = "vyre-libs/tests/shared_owner_closure.rs"
+file = "crates/vyre-libs/tests/shared_owner_closure.rs"
 tests = ["no_production_op_calls_unrouted_persistent_fixpoint"]
 reason = """
 Asserts that no production caller bypasses the shared persistent-fixpoint
@@ -112,7 +112,7 @@ dispatch.
 """
 
 [[gate]]
-file = "vyre-libs/tests/shared_owner_closure.rs"
+file = "crates/vyre-libs/tests/shared_owner_closure.rs"
 tests = ["no_graph_dispatch_wrapper_derives_its_own_result_set"]
 reason = """
 Asserts that no wrapper under the dispatch tree derives its own result set by
@@ -124,7 +124,7 @@ cannot enumerate without reflection.
 """
 
 [[gate]]
-file = "xtask-registry/tests/registry_contracts/registration_visibility.rs"
+file = "tools/xtask-registry/tests/registry_contracts/registration_visibility.rs"
 tests = ["every_submitted_registration_is_reachable_from_this_walker"]
 reason = """
 Asserts that no operation registration is gated behind a Cargo feature this
@@ -134,7 +134,7 @@ registry and every document generated from it agrees.
 """
 
 [[gate]]
-file = "xtask-registry/tests/registry_contracts/registration_visibility.rs"
+file = "tools/xtask-registry/tests/registry_contracts/registration_visibility.rs"
 tests = ["each_source_aggregate_covers_every_feature_that_gates_a_registration"]
 reason = """
 Asserts that each source crate's widest aggregate feature turns on every
@@ -143,7 +143,7 @@ which is consumed by cargo before any code runs.
 """
 
 [[gate]]
-file = "vyre-libs-solvers/tests/quantized_dispatch_variant_coverage_gate.rs"
+file = "crates/vyre-libs-solvers/tests/quantized_dispatch_variant_coverage_gate.rs"
 tests = ["every_published_quantized_entry_point_has_a_readback_contract_row"]
 reason = """
 Derives the published quantized dispatch entry points from the `pub use
@@ -153,7 +153,7 @@ export list, which no run of the covered entry points can report on.
 """
 
 [[gate]]
-file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
+file = "crates/vyre-libs/tests/host_dispatch_is_parity_only.rs"
 tests = ["no_production_crate_outside_the_oracle_executes_on_the_host"]
 reason = """
 Asserts that no crate except the parity oracle ships an execution-seam
@@ -164,7 +164,7 @@ consumer reaching host execution years later.
 """
 
 [[gate]]
-file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
+file = "crates/vyre-libs/tests/host_dispatch_is_parity_only.rs"
 tests = ["the_walk_actually_reaches_the_implementors_it_judges"]
 reason = """
 Floor check for the walk the gate above depends on. Its subject is the file set
@@ -172,7 +172,7 @@ that walk produced, which exists only inside the source scan.
 """
 
 [[gate]]
-file = "vyre-libs/tests/host_dispatch_is_parity_only.rs"
+file = "crates/vyre-libs/tests/host_dispatch_is_parity_only.rs"
 tests = ["every_policed_seam_is_a_trait_this_tree_declares"]
 reason = """
 Requires every policed seam name to resolve to a trait declaration in tracked
@@ -183,7 +183,7 @@ run of the seam observes.
 """
 
 [[gate]]
-file = "vyre-foundation/tests/expr_type_single_owner.rs"
+file = "crates/vyre-foundation/tests/expr_type_single_owner.rs"
 tests = ["owner_answers_every_expr_variant"]
 reason = """
 Requires a recorded type answer for every declared `Expr` variant, with the
@@ -194,7 +194,7 @@ expression returns.
 """
 
 [[gate]]
-file = "xtask/tests/tree_contracts/subcommand_dispatch.rs"
+file = "tools/xtask/tests/tree_contracts/subcommand_dispatch.rs"
 tests = ["no_other_build_task_source_resolves_its_own_binary"]
 reason = """
 Asserts that no build-task source except the dispatcher resolves the running
@@ -205,7 +205,7 @@ make, which no execution observes.
 """
 
 [[gate]]
-file = "xtask/src/gates/host_oracle_elimination_tests_part1.rs"
+file = "tools/xtask/src/gates/host_oracle_elimination_tests_part1.rs"
 tests = [
   "canonical_semantic_executor_exact_path_derives_execution_methods",
   "cfg_test_cpu_ref_is_permitted_and_not_flagged",
@@ -253,7 +253,7 @@ no source of its own and is declared nowhere.
 """
 
 [[gate]]
-file = "xtask/tests/tree_contracts/cargo_invocation_resolution.rs"
+file = "tools/xtask/tests/tree_contracts/cargo_invocation_resolution.rs"
 tests = ["every_cargo_run_in_a_workflow_or_script_resolves_to_one_binary"]
 reason = """
 Resolves literal workflow and script invocations against Cargo target
@@ -262,17 +262,17 @@ source and manifest text.
 """
 
 [[gate]]
-file = "structure-gate/tests/deletion_evidence_and_pass_registry.rs"
+file = "tools/structure-gate/tests/deletion_evidence_and_pass_registry.rs"
 tests = ["transform_mod_contains_classifications_for_every_transform_file"]
 reason = """
-Pairs the files under vyre-foundation/src/transform with the rows of
+Pairs the files under crates/vyre-foundation/src/transform with the rows of
 FOUNDATION_TRANSFORM_CLASSIFICATIONS. A transform file whose row is missing
 still compiles and still runs; the classification table is what a release reads,
 and no running program enumerates the directory the table is supposed to cover.
 """
 
 [[gate]]
-file = "structure-gate/tests/node_child_descent_owner.rs"
+file = "tools/structure-gate/tests/node_child_descent_owner.rs"
 tests = ["the_child_slot_vocabulary_is_read_off_the_enum_the_owner_walks"]
 reason = """
 Compares the child slots `Node` declares with the slots `child_bodies`
@@ -281,7 +281,7 @@ names is a body no traversal reaches and no execution reports.
 """
 
 [[gate]]
-file = "structure-gate/tests/checkout_provenance.rs"
+file = "tools/structure-gate/tests/checkout_provenance.rs"
 tests = ["no_source_file_resolves_the_checkout_from_a_compiled_in_path"]
 reason = """
 Asserts that no source file resolves the checkout from a path baked in at
@@ -291,7 +291,7 @@ names it.
 """
 
 [[gate]]
-file = "vyre-driver/tests/vyre_backend_forwarding_closure.rs"
+file = "crates/vyre-driver/tests/vyre_backend_forwarding_closure.rs"
 tests = ["the_grid_sync_wrapper_decides_the_split_on_every_program_carrying_method"]
 reason = """
 Requires every dispatch method the forwarding macro emits to be specialized by
@@ -303,7 +303,7 @@ macro body, which nothing enumerates at run time.
 """
 
 [[gate]]
-file = "vyre-libs/tests/family_duplication_budget.rs"
+file = "crates/vyre-libs/tests/family_duplication_budget.rs"
 tests = [
   "family_walk_finds_the_tree",
   "no_cross_file_block_exceeds_the_cap",
@@ -318,7 +318,7 @@ identically, which is the defect, so no execution separates them.
 """
 
 [[gate]]
-file = "vyre-libs/tests/device_resident_token_fact_graph_ownership.rs"
+file = "crates/vyre-libs/tests/device_resident_token_fact_graph_ownership.rs"
 tests = ["device_module_names_no_concrete_backend"]
 reason = """
 Holds a shared crate's device module to backend-neutral vocabulary. A concrete
@@ -327,7 +327,7 @@ to build without that backend, which no run of the built artifact reports.
 """
 
 [[gate]]
-file = "vyre-libs/tests/device_resident_token_fact_graph_ownership.rs"
+file = "crates/vyre-libs/tests/device_resident_token_fact_graph_ownership.rs"
 tests = ["the_resident_layout_is_declared_in_exactly_one_crate"]
 reason = """
 Asserts each resident layout declaration exists exactly once in the workspace and
@@ -337,7 +337,7 @@ from the owner only once a device reads a buffer laid out by the other copy.
 """
 
 [[gate]]
-file = "vyre-libs-graph/tests/graph_single_source_contracts.rs"
+file = "crates/vyre-libs-graph/tests/graph_single_source_contracts.rs"
 tests = ["the_wrapper_set_is_derived_and_not_empty"]
 reason = """
 Floor check for the dispatch-wrapper pairing the rules below are taken over. Its
@@ -346,7 +346,7 @@ source walk; without it every rule in the file would pass by judging nothing.
 """
 
 [[gate]]
-file = "vyre-libs-graph/tests/graph_single_source_contracts.rs"
+file = "crates/vyre-libs-graph/tests/graph_single_source_contracts.rs"
 tests = [
   "every_dispatch_wrapper_names_the_graph_primitive_it_wraps",
   "every_dispatch_wrapper_names_its_primitive_cpu_reference",
@@ -360,7 +360,7 @@ agrees.
 """
 
 [[gate]]
-file = "vyre-libs-graph/tests/graph_single_source_contracts.rs"
+file = "crates/vyre-libs-graph/tests/graph_single_source_contracts.rs"
 tests = ["no_dispatch_wrapper_is_shadowed_by_an_older_module_path"]
 reason = """
 Asserts the module a wrapper was migrated from no longer exists. A stale module
@@ -369,7 +369,7 @@ and the next edit lands in whichever copy the author opens.
 """
 
 [[gate]]
-file = "vyre-libs-graph/tests/graph_single_source_contracts.rs"
+file = "crates/vyre-libs-graph/tests/graph_single_source_contracts.rs"
 tests = ["the_dispatch_module_declares_every_wrapper_once"]
 reason = """
 Counts the `mod` declaration for each wrapper in the dispatch module. Module
@@ -378,7 +378,7 @@ wrapper declared twice or not at all is a source fact.
 """
 
 [[gate]]
-file = "vyre-bench/tests/case_declaration_contracts.rs"
+file = "crates/vyre-bench/tests/case_declaration_contracts.rs"
 tests = ["only_the_metric_owner_narrows_a_measured_span"]
 reason = """
 Holds the reading of a measured span to api::metric, which saturates. The
@@ -390,7 +390,7 @@ hygiene-matrix.
 """
 
 [[gate]]
-file = "vyre-bench/tests/case_declaration_contracts.rs"
+file = "crates/vyre-bench/tests/case_declaration_contracts.rs"
 tests = ["only_the_case_api_words_a_failed_payload_downcast"]
 reason = """
 Holds the wording of a failed payload downcast to api::case. Every copy produces
@@ -399,7 +399,7 @@ which no assertion over behavior distinguishes.
 """
 
 [[gate]]
-file = "vyre-driver-cuda/tests/trap_readback_launch_coverage.rs"
+file = "crates/vyre-driver-cuda/tests/trap_readback_launch_coverage.rs"
 tests = ["every_cuda_dispatch_path_records_how_it_reports_a_device_trap"]
 reason = """
 Derives the CUDA dispatch paths from their calls to the launch helpers and
@@ -409,7 +409,7 @@ a trap as success, which is the case that must fail before the device runs.
 """
 
 [[gate]]
-file = "vyre-foundation/tests/expr_type_single_owner.rs"
+file = "crates/vyre-foundation/tests/expr_type_single_owner.rs"
 tests = ["only_one_file_defines_expr_type"]
 reason = """
 Asserts one file defines `expr_type`. A second definition compiles, and its
@@ -418,7 +418,7 @@ on, so a behavioral sweep proves the copy it calls and nothing about the other.
 """
 
 [[gate]]
-file = "vyre-foundation/tests/async_tag_discipline.rs"
+file = "crates/vyre-foundation/tests/async_tag_discipline.rs"
 tests = ["every_async_rule_in_the_catalog_has_a_case"]
 reason = """
 Requires every async rule in the catalog to be named by a case somewhere in this
@@ -428,7 +428,7 @@ landed with its case in another file.
 """
 
 [[gate]]
-file = "vyre-foundation/tests/ir_variant_shape_owner_closure.rs"
+file = "crates/vyre-foundation/tests/ir_variant_shape_owner_closure.rs"
 tests = ["the_node_visitor_trait_declares_one_hook_per_declared_variant"]
 reason = """
 Requires one NodeVisitor hook per declared `Node` variant, or a recorded reason
@@ -439,7 +439,7 @@ run.
 """
 
 [[gate]]
-file = "vyre-foundation/tests/ir_variant_shape_owner_closure.rs"
+file = "crates/vyre-foundation/tests/ir_variant_shape_owner_closure.rs"
 tests = ["every_node_visitor_implementation_in_the_workspace_is_recorded"]
 reason = """
 Reads the NodeVisitor implementations out of workspace source. An implementation
@@ -448,7 +448,7 @@ copies are indistinguishable from deliberate no-ops when executed.
 """
 
 [[gate]]
-file = "vyre-foundation/tests/scalar_operator_agreement.rs"
+file = "crates/vyre-foundation/tests/scalar_operator_agreement.rs"
 tests = [
   "folder_and_interpreter_agree_on_every_binary_operator_and_width",
   "folder_and_interpreter_agree_on_every_unary_operator_and_width",
@@ -461,7 +461,7 @@ would let a new operator land proven nowhere while the suite stayed green.
 """
 
 [[gate]]
-file = "vyre-test-support/tests/cast_parity_tables.rs"
+file = "crates/vyre-test-support/tests/cast_parity_tables.rs"
 tests = ["the_matrix_covers_every_narrowing_target_the_cast_table_admits"]
 reason = """
 Takes the narrowing targets from the cast table that owns which integer casts
@@ -470,7 +470,7 @@ population is the table's, and it is readable only as source.
 """
 
 [[gate]]
-file = "vyre-registry-link/tests/registry_link_rules.rs"
+file = "crates/vyre-registry-link/tests/registry_link_rules.rs"
 tests = [
   "every_crate_that_submits_a_backend_registration_is_declared_here",
   "every_crate_that_submits_a_level_stage_is_declared_here",
@@ -483,7 +483,7 @@ submits nothing.
 """
 
 [[gate]]
-file = "vyre-driver-wgpu/tests/shared_backend_contract.rs"
+file = "crates/vyre-driver-wgpu/tests/shared_backend_contract.rs"
 tests = ["only_the_device_acquisition_module_constructs_a_wgpu_instance"]
 reason = """
 Asserts one module constructs the wgpu instance. A second construction site is a
@@ -492,7 +492,7 @@ inside the driver rather than failing an assertion.
 """
 
 [[gate]]
-file = "xtask/tests/tree_contracts/exit_states_a_cause.rs"
+file = "tools/xtask/tests/tree_contracts/exit_states_a_cause.rs"
 tests = ["no_xtask_command_exits_nonzero_without_stating_a_cause"]
 reason = """
 Census of every nonzero exit in the xtask sources, each of which must state a
@@ -501,7 +501,7 @@ every command; a silent exit is a source fact one parse reads completely.
 """
 
 [[gate]]
-file = "xtask/tests/tree_contracts/test_mutation_hygiene.rs"
+file = "tools/xtask/tests/tree_contracts/test_mutation_hygiene.rs"
 tests = ["tests_contain_no_write_environment_triggers"]
 reason = """
 Asserts no test source names the write trigger that regenerates artifacts. A
@@ -510,7 +510,7 @@ check, so the run it corrupts is the run that would have to observe it.
 """
 
 [[gate]]
-file = "xtask/src/gate_proof_validation.rs"
+file = "tools/xtask/src/gate_proof_validation.rs"
 tests = ["all_descriptor_proofs_resolve_to_real_tests"]
 reason = """
 Resolves every gate descriptor's proof symbol to a unique `#[test]` function in
@@ -520,7 +520,7 @@ runs.
 """
 
 [[gate]]
-file = "xtask/src/gates/ci_steps.rs"
+file = "tools/xtask/src/gates/ci_steps.rs"
 tests = ["every_selector_in_the_checkout_resolves"]
 reason = """
 Resolves every package selector in every workflow and script of this checkout
@@ -529,7 +529,7 @@ that resolves to nothing fails there rather than here.
 """
 
 [[gate]]
-file = "vyre-megakernel/tests/compile_objective.rs"
+file = "crates/vyre-megakernel/tests/compile_objective.rs"
 tests = ["every_declared_metric_is_listed_once_at_its_own_index"]
 reason = """
 Asserts that `ObjectiveMetric::ALL` lists every declared variant at its own
@@ -541,7 +541,7 @@ reflection: the declaration is the only witness.
 """
 
 [[gate]]
-file = "vyre-megakernel/tests/compile_objective.rs"
+file = "crates/vyre-megakernel/tests/compile_objective.rs"
 tests = ["every_declared_calibrated_fact_is_listed_and_names_its_builder"]
 reason = """
 Asserts that every declared `RequiredFact` is listed in `RequiredFact::ALL` and is
@@ -551,7 +551,7 @@ observable from a running program, because both are about which variants exist.
 """
 
 [[gate]]
-file = "vyre-megakernel/tests/compile_objective.rs"
+file = "crates/vyre-megakernel/tests/compile_objective.rs"
 tests = ["every_declared_policy_variant_is_listed"]
 reason = """
 Same closure for `WorkloadAggregation`, `RiskStatistic` and `CoveragePolicy`.
@@ -561,7 +561,7 @@ and no artifact can record.
 """
 
 [[gate]]
-file = "vyre-bench/tests/feature_cfg_contract.rs"
+file = "crates/vyre-bench/tests/feature_cfg_contract.rs"
 tests = ["every_benchmark_feature_guard_is_declared"]
 reason = """
 Resolves every `#[cfg(feature = ...)]` a benchmark module carries against the
@@ -571,7 +571,7 @@ defect and the source is the only place it exists.
 """
 
 [[gate]]
-file = "vyre-foundation/tests/law_derived_region_alternatives.rs"
+file = "crates/vyre-foundation/tests/law_derived_region_alternatives.rs"
 tests = ["every_declared_law_has_a_recorded_derivation"]
 reason = """
 Asserts that every declared `AlgebraicLaw` variant has a row stating what it
@@ -581,7 +581,7 @@ run; Rust has no reflection and the declaration is the only witness.
 """
 
 [[gate]]
-file = "vyre-foundation/tests/region_law_derivation.rs"
+file = "crates/vyre-foundation/tests/region_law_derivation.rs"
 tests = ["every_declared_family_cites_at_least_one_law"]
 reason = """
 Same closure for `RegionLawFamily`: a family absent from `all()` derives nothing
@@ -591,7 +591,7 @@ variants were declared.
 """
 
 [[gate]]
-file = "vyre-libs/tests/shared_owner_closure.rs"
+file = "crates/vyre-libs/tests/shared_owner_closure.rs"
 tests = ["both_crate_directories_are_the_ones_this_workspace_holds"]
 reason = """
 Floor check for the two crate directories every gate in this file walks. A
@@ -600,7 +600,7 @@ tree, which is indistinguishable from a clean sweep of this one at run time.
 """
 
 [[gate]]
-file = "vyre-test-support/src/monorepo.rs"
+file = "crates/vyre-test-support/src/monorepo.rs"
 tests = ["a_marker_quoted_inside_a_line_is_not_a_declaration"]
 reason = """
 Asserts that the marker resolver matches a declaration and not a mention of one.
@@ -610,18 +610,7 @@ resolver reads.
 """
 
 [[gate]]
-file = "xtask/src/gates/hygiene_matrix/tests.rs"
-tests = ["every_xtask_crate_carries_the_release_tooling_rules"]
-reason = """
-Derives the xtask crate list from the workspace manifest and checks that surface
-classification, owner attribution and the source walk key off that list rather
-than the literal name `xtask`. A crate added to the manifest is text until a
-build selects it, so no running process can report that a fourth xtask crate
-inherited production thresholds.
-"""
-
-[[gate]]
-file = "structure-gate/src/workspace_manifest.rs"
+file = "tools/structure-gate/src/workspace_manifest.rs"
 tests = [
     "a_second_request_for_the_tree_does_not_walk_it_again",
     "a_subtree_range_holds_exactly_the_sources_under_it",
@@ -638,7 +627,7 @@ nothing.
 """
 
 [[gate]]
-file = "vyre-driver/tests/error_code_catalog.rs"
+file = "crates/vyre-driver/tests/error_code_catalog.rs"
 tests = ["every_declared_variant_is_catalogued"]
 reason = """
 Derives the error variant space from the enum at run time so a variant added
@@ -649,7 +638,7 @@ only place the set exists.
 """
 
 [[gate]]
-file = "vyre-runtime/tests/ring_fault_selection_is_typed.rs"
+file = "crates/vyre-runtime/tests/ring_fault_selection_is_typed.rs"
 tests = ["no_assertion_selects_a_pipeline_error_by_shape_or_by_fix_clause"]
 reason = """
 The contract is over the assertions themselves: no test may select a pipeline
@@ -659,7 +648,7 @@ new one has to turn this red rather than be counted against a recorded number.
 """
 
 [[gate]]
-file = "vyre-test-support/tests/path_modules_stay_inside_their_package.rs"
+file = "crates/vyre-test-support/tests/path_modules_stay_inside_their_package.rs"
 tests = ["every_path_module_resolves_inside_its_own_package"]
 reason = """
 A `#[path]` target crossing a package boundary compiles a file into a second
@@ -669,7 +658,7 @@ it and the roster is derived from the tree rather than listed.
 """
 
 [[gate]]
-file = "xtask/tests/lint_policy_mutations.rs"
+file = "tools/xtask/tests/lint_policy_mutations.rs"
 tests = ["the_workspace_lint_floor_rejects_every_mutation_and_accepts_clean_source"]
 reason = """
 Writes mutated crates into the target temp directory and checks the lint floor
@@ -702,7 +691,7 @@ unhandled dtype.
 """
 
 [[gate]]
-file = "vyre/tests/downstream_workflow_fixture.rs"
+file = "crates/vyre/tests/downstream_workflow_fixture.rs"
 tests = ["public_seam_carries_zero_callbacks_zero_handles_and_zero_domain_vocabulary"]
 reason = """
 Asserts that the facade's public seam declares no callback parameter, no native
@@ -712,7 +701,7 @@ declarations are what a downstream crate compiles against.
 """
 
 [[gate]]
-file = "vyre/tests/downstream_workflow_fixture.rs"
+file = "crates/vyre/tests/downstream_workflow_fixture.rs"
 tests = ["no_workspace_member_names_a_downstream_model_family"]
 reason = """
 Asserts that no workspace member spells a downstream model family in a type, a
@@ -724,10 +713,10 @@ time, so a family added there extends the scan with no edit to the test.
 """
 
 [[gate]]
-file = "vyre/tests/facade_boundary.rs"
+file = "crates/vyre/tests/facade_boundary.rs"
 tests = ["facade_exposes_zero_internal_implementation_symbols", "facade_compiler_module_is_curated_not_whole_crate_alias"]
 reason = """
-Judge which re-exports `vyre/src/lib.rs` states: that no re-export originates in
+Judge which re-exports `crates/vyre/src/lib.rs` states: that no re-export originates in
 an optimizer pass, a search planner, a lowering stage, a concrete driver or a
 runtime worker, and that the compiler module is an enumerated namespace rather
 than a whole-crate alias. A `pub use` is resolved by the compiler, so the
@@ -735,7 +724,7 @@ published set has no run-time representation this crate can enumerate.
 """
 
 [[gate]]
-file = "vyre-aot/tests/compile_request_fidelity.rs"
+file = "crates/vyre-aot/tests/compile_request_fidelity.rs"
 tests = ["the_crate_constructs_no_compile_input_of_its_own", "every_public_target_compile_entry_point_consumes_a_validated_request"]
 reason = """
 Assert that no file in vyre-aot constructs a compile input of its own and that
@@ -746,7 +735,7 @@ file set and the signature set are read from the crate's source at run time.
 """
 
 [[gate]]
-file = "vyre-bench/tests/application_domain_release_evidence_contracts.rs"
+file = "crates/vyre-bench/tests/application_domain_release_evidence_contracts.rs"
 tests = ["test_every_record_field_has_a_recorded_source"]
 reason = """
 Holds the recorded-source table equal to the field set of
@@ -756,7 +745,7 @@ would otherwise be serialized into evidence with no stated origin.
 """
 
 [[gate]]
-file = "vyre-bench/tests/application_domain_release_evidence_contracts.rs"
+file = "crates/vyre-bench/tests/application_domain_release_evidence_contracts.rs"
 tests = ["test_producer_carries_no_measurement_constants"]
 reason = """
 Asserts that the whole-application producers state no literal timestamp, host
@@ -766,7 +755,7 @@ the absence of the literal in the producer source can.
 """
 
 [[gate]]
-file = "vyre-bench/tests/application_domain_release_evidence_contracts.rs"
+file = "crates/vyre-bench/tests/application_domain_release_evidence_contracts.rs"
 tests = ["test_no_test_writes_into_tracked_evidence_paths"]
 reason = """
 Asserts that no test in vyre-bench calls the tracked-evidence writer against the
@@ -776,7 +765,7 @@ site is the only witness. The test file set is read at run time.
 """
 
 [[gate]]
-file = "vyre-bench/tests/evidence_receipt_contracts.rs"
+file = "crates/vyre-bench/tests/evidence_receipt_contracts.rs"
 tests = ["compiler_source_crates_name_zero_workload_or_expert_baselines"]
 reason = """
 Asserts that no compiler-side crate names a benchmark workload or an expert
@@ -786,7 +775,7 @@ coupling.
 """
 
 [[gate]]
-file = "vyre-driver/tests/external_resource_path_agreement.rs"
+file = "crates/vyre-driver/tests/external_resource_path_agreement.rs"
 tests = ["every_concrete_driver_publishes_its_external_resource_surface_at_one_path", "concrete_drivers_agree_on_the_external_resource_path"]
 reason = """
 Assert that every concrete driver publishes its external-resource surface at one
@@ -797,7 +786,7 @@ caller reading the second one. The crate list is the concrete-backend layer of
 """
 
 [[gate]]
-file = "vyre-driver/tests/float_lowering_refusal.rs"
+file = "crates/vyre-driver/tests/float_lowering_refusal.rs"
 tests = ["every_wrapper_dispatch_entry_point_refuses_a_mode_the_backend_does_not_lower"]
 reason = """
 Holds the set of dispatch entry points this suite calls equal to the set the
@@ -808,7 +797,7 @@ wrapper source at run time.
 """
 
 [[gate]]
-file = "vyre-foundation/tests/buffer_decl_boundary.rs"
+file = "crates/vyre-foundation/tests/buffer_decl_boundary.rs"
 tests = ["output_byte_range_converts_from_no_signed_range"]
 reason = """
 Asserts that no signed range implements `IntoOutputByteRange`. An implementation
@@ -818,7 +807,7 @@ below `u64::MAX`. The admitted set is read from the source on every run.
 """
 
 [[gate]]
-file = "vyre-foundation/tests/schedule_calculus_contracts.rs"
+file = "crates/vyre-foundation/tests/schedule_calculus_contracts.rs"
 tests = ["schedule_calculus_operator_set_is_closed_against_source_at_runtime"]
 reason = """
 Holds the exercised schedule-calculus operator set equal to the operators the
@@ -828,7 +817,7 @@ carries.
 """
 
 [[gate]]
-file = "vyre-lower/tests/physical_ir_emitter_exhaustive_decisions.rs"
+file = "crates/vyre-lower/tests/physical_ir_emitter_exhaustive_decisions.rs"
 tests = ["emitter_dispatch_names_every_variant_rather_than_falling_through_a_catch_all"]
 reason = """
 Asserts that no emitter dispatch module carries a catch-all match arm. A
@@ -838,7 +827,7 @@ declaration. The emitter module set is read at run time.
 """
 
 [[gate]]
-file = "vyre-lower/tests/physical_kernel_ir_policy_boundary.rs"
+file = "crates/vyre-lower/tests/physical_kernel_ir_policy_boundary.rs"
 tests = ["no_physical_kernel_ir_type_names_a_schedule_owner_type", "no_backend_name_appears_as_a_literal_in_lowering"]
 reason = """
 Assert that no physical-kernel-IR type reuses a semantic policy type and that no
@@ -849,7 +838,7 @@ later.
 """
 
 [[gate]]
-file = "vyre-runtime/tests/generic_runtime_contracts.rs"
+file = "crates/vyre-runtime/tests/generic_runtime_contracts.rs"
 tests = ["proof_runtime_public_surface_contains_no_model_concepts"]
 reason = """
 Asserts that the runtime's public surface declares no model, token, expert,
@@ -859,7 +848,7 @@ declarations are the artifact that carries it.
 """
 
 [[gate]]
-file = "vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs"
+file = "crates/vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs"
 tests = ["runtime_closure_no_public_constructor_produces_unbounded_quota"]
 reason = """
 Exercises every standard quota constructor and every non-finite rejection by
@@ -870,7 +859,7 @@ function list at run time.
 """
 
 [[gate]]
-file = "vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs"
+file = "crates/vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs"
 tests = ["runtime_unsafe_permission_matches_the_recorded_set_and_every_grant_states_an_obligation"]
 reason = """
 Holds the recorded `unsafe` permission set equal to the modules whose source
@@ -880,7 +869,7 @@ marker, so the declaration is the only place the grant exists.
 """
 
 [[gate]]
-file = "vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs"
+file = "crates/vyre-runtime/tests/runtime_quota_and_concurrency_contracts.rs"
 tests = ["source_derived_quota_space_closure_fails_on_unrecorded_fields"]
 reason = """
 Holds the quota coverage table equal to the fields the quota structs declare.
@@ -889,18 +878,18 @@ would otherwise ship unbounded with the suite still green.
 """
 
 [[gate]]
-file = "vyre-spec/tests/one_public_path_per_item.rs"
+file = "crates/vyre-spec/tests/one_public_path_per_item.rs"
 tests = ["no_item_is_published_at_two_paths", "the_walk_actually_reaches_the_crate"]
 reason = """
 Assert that no item vyre-spec publishes is reachable at two public paths, and
 that the module walk that judges it reached the crate rather than an empty set.
 A second path compiles, renders and imports exactly like the first, so nothing a
 running program observes separates them. The module tree is read from
-`vyre-spec/src` at run time.
+`crates/vyre-spec/src` at run time.
 """
 
 [[gate]]
-file = "xtask/src/gates/platform_support_matrix.rs"
+file = "tools/xtask/src/gates/platform_support_matrix.rs"
 tests = ["every_driver_crate_reaches_the_roster_under_its_declared_identifier"]
 reason = """
 Holds the platform-support roster equal to the driver crates present in the
@@ -911,7 +900,7 @@ to.
 """
 
 [[gate]]
-file = "xtask/src/gates/platform_support_matrix.rs"
+file = "tools/xtask/src/gates/platform_support_matrix.rs"
 tests = ["every_declared_variant_reaches_the_document", "a_cell_with_no_recorded_run_is_published_as_unproven", "disagreeing_identity_digests_are_a_finding"]
 reason = """
 Judge the gate that renders the platform-support document, whose input is the
@@ -922,7 +911,7 @@ cell space has no run-time listing to derive instead.
 """
 
 [[gate]]
-file = "xtask-registry/src/gates/lego_audit/semantic_organization.rs"
+file = "tools/xtask-registry/src/gates/lego_audit/semantic_organization.rs"
 tests = ["a_registration_in_a_partition_crate_is_placed_by_its_own_domain", "every_production_file_in_the_family_has_exactly_one_role", "the_shared_builder_role_is_the_builder_module_of_a_family_crate", "a_file_outside_every_declared_domain_fails_role_closure", "every_canonical_block_skeleton_is_defined_in_a_shared_builder_module", "overlapping_file_roles_fails_role_closure"]
 reason = """
 Judge the file-role closure that classifies every composition-domain source
@@ -934,7 +923,7 @@ produces no run-time artifact to observe instead.
 """
 
 [[gate]]
-file = "vyre-emit-naga/tests/grid_sync_dispatch_segments.rs"
+file = "crates/vyre-emit-naga/tests/grid_sync_dispatch_segments.rs"
 tests = ["a_fence_is_cut_only_where_a_launch_boundary_expresses_it"]
 reason = """
 Read the nested-body control enum to enumerate the variant space this contract
@@ -946,7 +935,7 @@ enumerate instead.
 """
 
 [[gate]]
-file = "vyre-test-support/src/monorepo.rs"
+file = "crates/vyre-test-support/src/monorepo.rs"
 tests = ["a_resolved_declaring_file_holds_the_declaration_it_searched_for", "a_marker_no_file_declares_is_reported_rather_than_guessed"]
 reason = """
 Cover the resolver every other row in this registry depends on: it answers with
@@ -958,7 +947,7 @@ derive its member set from the wrong file and still pass.
 """
 
 [[gate]]
-file = "vyre-libs/tests/facade_reexport_closure.rs"
+file = "crates/vyre-libs/tests/facade_reexport_closure.rs"
 tests = ["the_facade_re_exports_every_module_its_partition_crates_publish", "link_anchor_references_every_partition_crate"]
 reason = """
 Hold the facade's re-export list equal to the modules its partition crates
@@ -970,7 +959,7 @@ each crate root's source.
 """
 
 [[gate]]
-file = "vyre-libs-hash/tests/fnv1a64_builder_parity.rs"
+file = "crates/vyre-libs-hash/tests/fnv1a64_builder_parity.rs"
 tests = ["the_rows_are_every_builder_the_source_publishes"]
 reason = """
 Holds the parity row set equal to the FNV-1a64 builders the source publishes. A
@@ -979,7 +968,7 @@ gap; the published family is a declaration and the only complete listing of it.
 """
 
 [[gate]]
-file = "vyre-reference/tests/oracle_transform_independence.rs"
+file = "crates/vyre-reference/tests/oracle_transform_independence.rs"
 tests = ["no_reference_path_calls_a_production_transform", "no_reference_path_names_a_transform_module"]
 reason = """
 Hold the oracle clear of every program transform the foundation publishes. The
@@ -992,7 +981,7 @@ added to any of them joins the scan without an edit here.
 """
 
 [[gate]]
-file = "xtask/tests/gate_write_ownership.rs"
+file = "tools/xtask/tests/gate_write_ownership.rs"
 tests = ["no_gate_command_runs_another_gates_writer"]
 reason = """
 Holds every gate clear of running another gate's writer as a child process.
@@ -1004,7 +993,7 @@ run time, so a gate registered tomorrow joins the scan without an edit here.
 """
 
 [[gate]]
-file = "vyre-libs/tests/go_tokenizer_semantics.rs"
+file = "crates/vyre-libs/tests/go_tokenizer_semantics.rs"
 tests = ["every_go_extractor_has_a_bounds_probe"]
 reason = """
 Holds the bounds-probe table equal to the set of extractors the Go parse module

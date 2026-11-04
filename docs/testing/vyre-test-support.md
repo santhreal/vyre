@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Provide shared deterministic fixtures and assertions for workspace tests.
 
-The crate lives at `vyre-test-support` and owns the `test-support` seam in the `test-tooling` layer.
+The crate lives at `crates/vyre-test-support` and owns the `test-support` seam in the `test-tooling` layer.
 
 ## Commands
 
@@ -34,10 +34,10 @@ The crate lives at `vyre-test-support` and owns the `test-support` seam in the `
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_test_support` | `vyre-test-support/src/lib.rs` | None | `./cargo_full test -p vyre-test-support` |
-| `test` | `all_tests` | `vyre-test-support/tests/all_tests.rs` | None | `./cargo_full test -p vyre-test-support --test all_tests` |
-| `test` | `all_tests_ir_fixtures` | `vyre-test-support/tests/all_tests_ir_fixtures.rs` | `ir-fixtures`, `parity-oracles` | `./cargo_full test -p vyre-test-support --test all_tests_ir_fixtures --features ir-fixtures,parity-oracles` |
-| `test` | `workspace_root_follows_the_working_directory` | `vyre-test-support/tests/workspace_root_follows_the_working_directory.rs` | None | `./cargo_full test -p vyre-test-support --test workspace_root_follows_the_working_directory` |
+| `lib` | `vyre_test_support` | `crates/vyre-test-support/src/lib.rs` | None | `./cargo_full test -p vyre-test-support` |
+| `test` | `all_tests` | `crates/vyre-test-support/tests/all_tests.rs` | None | `./cargo_full test -p vyre-test-support --test all_tests` |
+| `test` | `all_tests_ir_fixtures` | `crates/vyre-test-support/tests/all_tests_ir_fixtures.rs` | `ir-fixtures`, `parity-oracles` | `./cargo_full test -p vyre-test-support --test all_tests_ir_fixtures --features ir-fixtures,parity-oracles` |
+| `test` | `workspace_root_follows_the_working_directory` | `crates/vyre-test-support/tests/workspace_root_follows_the_working_directory.rs` | None | `./cargo_full test -p vyre-test-support --test workspace_root_follows_the_working_directory` |
 
 ## Test classes
 

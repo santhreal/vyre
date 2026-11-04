@@ -623,7 +623,7 @@ before admission; nothing after the compile alters a schedule.
 ## The cost model is open
 
 `CostBreakdown` has twenty-three fields and no hidden term. Each one states its
-unit and where its weight came from in `vyre-megakernel/src/cost/provenance.rs`,
+unit and where its weight came from in `crates/vyre-megakernel/src/cost/provenance.rs`,
 and `CostBreakdown::term` reads that row by field name. A field with no row
 fails `every_cost_field_states_its_unit_and_provenance`, which derives the field
 set from the serialized shape rather than from a list.
@@ -674,7 +674,7 @@ register file divided by its per-compute-unit invocation limit; the
 architectural per-invocation ceiling is a separate fact, and exceeding it has no
 execution to price. Launch overhead falls back to a recorded floor of 4224
 nanoseconds and bandwidth to 3788 bytes per nanosecond, both from
-`foundation.elementwise.add.1m` in `vyre-bench/snapshots`. Reproducing a
+`foundation.elementwise.add.1m` in `crates/vyre-bench/snapshots`. Reproducing a
 selection needs the graph, the budget and the device facts, and nothing else.
 
 ## Candidate order is deterministic

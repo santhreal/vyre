@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own the subcommand registry and every gate that judges the tree from source text, manifests, workflows, and recorded evidence, linking no vyre crate.
 
-The crate lives at `xtask` and owns the `gate-registry` seam in the `tooling` layer.
+The crate lives at `tools/xtask` and owns the `gate-registry` seam in the `tooling` layer.
 
 ## Commands
 
@@ -34,13 +34,13 @@ The crate lives at `xtask` and owns the `gate-registry` seam in the `tooling` la
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `bin` | `audit_rule_contracts` | `xtask/src/bin/audit_rule_contracts.rs` | None | `./cargo_full test -p xtask --bin audit_rule_contracts` |
-| `bin` | `publishable_packages` | `xtask/src/bin/publishable_packages.rs` | None | `./cargo_full test -p xtask --bin publishable_packages` |
-| `bin` | `scaffold_rule` | `xtask/src/bin/scaffold_rule.rs` | None | `./cargo_full test -p xtask --bin scaffold_rule` |
-| `bin` | `xtask` | `xtask/src/main.rs` | None | `./cargo_full test -p xtask --bin xtask` |
-| `lib` | `xtask` | `xtask/src/lib.rs` | None | `./cargo_full test -p xtask` |
-| `test` | `all_tests` | `xtask/tests/all_tests.rs` | None | `./cargo_full test -p xtask --test all_tests` |
-| `test` | `tree_contracts` | `xtask/tests/tree_contracts/main.rs` | None | `./cargo_full test -p xtask --test tree_contracts` |
+| `bin` | `audit_rule_contracts` | `tools/xtask/src/bin/audit_rule_contracts.rs` | None | `./cargo_full test -p xtask --bin audit_rule_contracts` |
+| `bin` | `publishable_packages` | `tools/xtask/src/bin/publishable_packages.rs` | None | `./cargo_full test -p xtask --bin publishable_packages` |
+| `bin` | `scaffold_rule` | `tools/xtask/src/bin/scaffold_rule.rs` | None | `./cargo_full test -p xtask --bin scaffold_rule` |
+| `bin` | `xtask` | `tools/xtask/src/main.rs` | None | `./cargo_full test -p xtask --bin xtask` |
+| `lib` | `xtask` | `tools/xtask/src/lib.rs` | None | `./cargo_full test -p xtask` |
+| `test` | `all_tests` | `tools/xtask/tests/all_tests.rs` | None | `./cargo_full test -p xtask --test all_tests` |
+| `test` | `tree_contracts` | `tools/xtask/tests/tree_contracts/main.rs` | None | `./cargo_full test -p xtask --test tree_contracts` |
 
 ## Test classes
 

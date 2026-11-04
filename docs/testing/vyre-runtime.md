@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Execute the artifact's selected persistence: sessions, recovery, residency, scheduling, caches, telemetry, readback, and IO. Does not decide whether to be persistent.
 
-The crate lives at `vyre-runtime` and owns the `runtime` seam in the `runtime` layer.
+The crate lives at `crates/vyre-runtime` and owns the `runtime` seam in the `runtime` layer.
 
 ## Commands
 
@@ -30,9 +30,9 @@ The crate lives at `vyre-runtime` and owns the `runtime` seam in the `runtime` l
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_runtime_release_surface` | `vyre-runtime/examples/vyre_runtime_release_surface.rs` | None | `./cargo_full test -p vyre-runtime --example vyre_runtime_release_surface` |
-| `lib` | `vyre_runtime` | `vyre-runtime/src/lib.rs` | None | `./cargo_full test -p vyre-runtime` |
-| `test` | `all_tests` | `vyre-runtime/tests/all_tests.rs` | None | `./cargo_full test -p vyre-runtime --test all_tests` |
+| `example` | `vyre_runtime_release_surface` | `crates/vyre-runtime/examples/vyre_runtime_release_surface.rs` | None | `./cargo_full test -p vyre-runtime --example vyre_runtime_release_surface` |
+| `lib` | `vyre_runtime` | `crates/vyre-runtime/src/lib.rs` | None | `./cargo_full test -p vyre-runtime` |
+| `test` | `all_tests` | `crates/vyre-runtime/tests/all_tests.rs` | None | `./cargo_full test -p vyre-runtime --test all_tests` |
 
 ## Test classes
 

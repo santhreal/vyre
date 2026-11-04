@@ -69,7 +69,7 @@ fn every_transcendental_op_builds_a_payload_on_every_artifact_route_backend() {
         .collect::<Vec<_>>();
     assert!(
         !programs.is_empty(),
-        "Fix: no registered op carries the transcendental parity window, so this class has no members left to hold. Read the classification from vyre-foundation/src/fp_parity.rs before deleting this."
+        "Fix: no registered op carries the transcendental parity window, so this class has no members left to hold. Read the classification from crates/vyre-foundation/src/fp_parity.rs before deleting this."
     );
 
     let mut refused = Vec::new();
@@ -97,7 +97,7 @@ fn every_transcendental_op_builds_a_payload_on_every_artifact_route_backend() {
     }
     assert!(
         refused.is_empty(),
-        "Fix: the production artifact route cannot build a payload for a transcendental op. A dialect emitter must not refuse a descriptor for want of a parity window: the window chooses between two instructions where the target offers both, and is never an admission gate. See vyre-emit-ptx/tests/ulp_budget_is_not_an_admission_gate.rs.\n{}",
+        "Fix: the production artifact route cannot build a payload for a transcendental op. A dialect emitter must not refuse a descriptor for want of a parity window: the window chooses between two instructions where the target offers both, and is never an admission gate. See crates/vyre-emit-ptx/tests/ulp_budget_is_not_an_admission_gate.rs.\n{}",
         refused.join("\n")
     );
 }

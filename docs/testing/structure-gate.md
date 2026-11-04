@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Enforce the crate roster, one operation identity per semantic operation, one home per concept, and one place per module. Depends on no vyre crate so it keeps running while the workspace does not compile.
 
-The crate lives at `structure-gate` and owns the `source-structure` seam in the `standalone-tooling` layer.
+The crate lives at `tools/structure-gate` and owns the `source-structure` seam in the `standalone-tooling` layer.
 
 ## Commands
 
@@ -24,9 +24,9 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `bin` | `structure-gate` | `structure-gate/src/main.rs` | None | `./cargo_full test -p structure-gate --bin structure-gate` |
-| `lib` | `structure_gate` | `structure-gate/src/lib.rs` | None | `./cargo_full test -p structure-gate` |
-| `test` | `all_tests` | `structure-gate/tests/all_tests.rs` | None | `./cargo_full test -p structure-gate --test all_tests` |
+| `bin` | `structure-gate` | `tools/structure-gate/src/main.rs` | None | `./cargo_full test -p structure-gate --bin structure-gate` |
+| `lib` | `structure_gate` | `tools/structure-gate/src/lib.rs` | None | `./cargo_full test -p structure-gate` |
+| `test` | `all_tests` | `tools/structure-gate/tests/all_tests.rs` | None | `./cargo_full test -p structure-gate --test all_tests` |
 
 ## Test classes
 

@@ -44,7 +44,7 @@ name spells.
 
 `xtask gates --subset prepublish` is what must hold before publishing,
 beyond what a `cargo publish --dry-run` catches. The subset is every gate
-whose descriptor in `xtask/src/gate_metadata/` lists the `prepublish` area.
+whose descriptor in `tools/xtask/src/gate_metadata/` lists the `prepublish` area.
 
 Run one gate by name, or a subset with `--subset`. `xtask gates` with no
 subset runs the whole registry. Every gate returns findings, and the runner
@@ -64,8 +64,10 @@ Each artifact records the source it was generated from as
 digest of the content every non-evidence path differs from it by. The
 `evidence-provenance` gate recomputes that value from the commit carrying the
 artifact, so an artifact recorded against a tree its own commit does not hold is
-a finding. Regenerate an artifact on a tree whose remaining changes the next
-commit captures, and commit both together.
+a finding. The `evidence-attribution` gate also reports an artifact whose
+provenance record was taken from a checkout with uncommitted changes. Commit the
+code first, regenerate the artifact on a clean checkout of that commit, and
+commit the regenerated artifacts on their own.
 
 Tooling reads a document, generated table or evidence artifact under a
 16 MiB bound, and a Rust source or Cargo manifest under a 4 MiB bound. A

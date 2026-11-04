@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own graph algorithms, CSR traversal, AST walks, dominator trees, and topological sorting IR compositions. Does not own pattern matching engines, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-graph` and owns the `libs-graph` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-graph` and owns the `libs-graph` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-graph` and owns the `libs-graph` seam in the `libr
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_graph` | `vyre-libs-graph/src/lib.rs` | None | `./cargo_full test -p vyre-libs-graph` |
-| `test` | `all_tests` | `vyre-libs-graph/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-graph --test all_tests` |
+| `lib` | `vyre_libs_graph` | `crates/vyre-libs-graph/src/lib.rs` | None | `./cargo_full test -p vyre-libs-graph` |
+| `test` | `all_tests` | `crates/vyre-libs-graph/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-graph --test all_tests` |
 
 ## Test classes
 

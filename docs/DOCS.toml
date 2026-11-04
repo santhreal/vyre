@@ -23,19 +23,19 @@ authority = "DOCS.toml"
 
 [[owner]]
 id = "operation-registry"
-authority = "../vyre-foundation/src/operation/mod.rs"
+authority = "../crates/vyre-foundation/src/operation/mod.rs"
 
 [[owner]]
 id = "public-facade"
-authority = "../vyre/src/lib.rs"
+authority = "../crates/vyre/src/lib.rs"
 
 [[owner]]
 id = "release-tooling"
-authority = "../xtask/src/release/release_docs.rs"
+authority = "../tools/xtask/src/release/release_docs.rs"
 
 [[owner]]
 id = "runtime"
-authority = "../vyre-runtime/src/lib.rs"
+authority = "../crates/vyre-runtime/src/lib.rs"
 
 [[owner]]
 id = "testing"
@@ -97,7 +97,7 @@ kind = "ownership"
 section = "Architecture and ownership"
 authority = "CRATE_OWNERSHIP.toml"
 generation = "generated"
-generator = "../xtask/src/gates/crate_registry/mod.rs"
+generator = "../tools/xtask/src/gates/crate_registry/mod.rs"
 nav = true
 
 [[page]]
@@ -110,7 +110,7 @@ kind = "governance"
 section = "Documentation authority"
 authority = "DOCS.toml"
 generation = "generated"
-generator = "../xtask/src/docs/docs_check.rs"
+generator = "../tools/xtask/src/docs/docs_check.rs"
 nav = true
 
 [[page]]
@@ -123,7 +123,7 @@ kind = "ownership"
 section = "Architecture and ownership"
 authority = "CRATE_OWNERSHIP.toml"
 generation = "generated"
-generator = "../xtask/src/gates/crate_registry/mod.rs"
+generator = "../tools/xtask/src/gates/crate_registry/mod.rs"
 nav = true
 
 [[page]]
@@ -136,7 +136,7 @@ kind = "architecture"
 section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
-covers = ["vyre-megakernel/src/envelope.rs", "vyre-megakernel/src/artifact.rs"]
+covers = ["crates/vyre-megakernel/src/envelope.rs", "crates/vyre-megakernel/src/artifact.rs"]
 nav = true
 
 [[page]]
@@ -149,7 +149,7 @@ kind = "architecture"
 section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
-covers = ["vyre-megakernel/src/search.rs", "vyre-megakernel/src/cost/mod.rs", "vyre-megakernel/src/select.rs", "vyre-megakernel/src/legality.rs", "vyre-megakernel/src/candidate.rs"]
+covers = ["crates/vyre-megakernel/src/search.rs", "crates/vyre-megakernel/src/cost/mod.rs", "crates/vyre-megakernel/src/select.rs", "crates/vyre-megakernel/src/legality.rs", "crates/vyre-megakernel/src/candidate.rs"]
 nav = true
 
 [[page]]
@@ -175,7 +175,7 @@ kind = "architecture"
 section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
-covers = ["vyre-libs-parsing/src/**"]
+covers = ["crates/vyre-libs-parsing/src/**"]
 nav = true
 
 [[page]]
@@ -188,7 +188,7 @@ kind = "architecture"
 section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
-covers = ["vyre-foundation/src/ir_inner/model/tile.rs"]
+covers = ["crates/vyre-foundation/src/ir_inner/model/tile.rs"]
 nav = true
 
 [[page]]
@@ -610,7 +610,7 @@ kind = "architecture"
 section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
-covers = ["vyre-foundation/src/geometry/**", "vyre-driver/src/device_profile.rs"]
+covers = ["crates/vyre-foundation/src/geometry/**", "crates/vyre-driver/src/device_profile.rs"]
 nav = true
 
 [[page]]
@@ -625,7 +625,7 @@ authority = "self"
 generation = "manual"
 covers = [
     "examples/external_backend_extension/**",
-    "vyre-driver/BACKEND_CONTRACT.md",
+    "crates/vyre-driver/BACKEND_CONTRACT.md",
 ]
 nav = true
 
@@ -655,7 +655,7 @@ kind = "guide"
 section = "User workflows"
 authority = "self"
 generation = "manual"
-covers = ["vyre-driver/src/backend/registry/**"]
+covers = ["crates/vyre-driver/src/backend/registry/**"]
 nav = true
 
 [[page]]
@@ -668,7 +668,7 @@ kind = "guide"
 section = "User workflows"
 authority = "self"
 generation = "manual"
-covers = ["vyre/tests/artifact_workflow.rs", "vyre/src/lib.rs"]
+covers = ["crates/vyre/tests/artifact_workflow.rs", "crates/vyre/src/lib.rs"]
 nav = true
 
 [[page]]
@@ -681,7 +681,7 @@ kind = "guide"
 section = "User workflows"
 authority = "self"
 generation = "manual"
-covers = ["vyre/Cargo.toml", "rust-toolchain.toml", "vyre-registry-link/src/**"]
+covers = ["crates/vyre/Cargo.toml", "rust-toolchain.toml", "crates/vyre-registry-link/src/**"]
 nav = true
 
 [[page]]
@@ -694,7 +694,7 @@ kind = "ownership"
 section = "Architecture and ownership"
 authority = "self"
 generation = "manual"
-covers = ["xtask-registry/src/gates/composition_budget.rs", "vyre-foundation/src/composition.rs"]
+covers = ["tools/xtask-registry/src/gates/composition_budget.rs", "crates/vyre-foundation/src/composition.rs"]
 nav = true
 
 [[page]]
@@ -707,7 +707,7 @@ kind = "reference"
 section = "API and operation reference"
 authority = "self"
 generation = "manual"
-covers = ["vyre-foundation/src/validate/catalog.rs", "vyre-driver/src/backend/error_catalog.rs"]
+covers = ["crates/vyre-foundation/src/validate/catalog.rs", "crates/vyre-driver/src/backend/error_catalog.rs"]
 nav = true
 
 [[page]]
@@ -720,7 +720,7 @@ kind = "reference"
 section = "API and operation reference"
 authority = "self"
 generation = "manual"
-covers = ["vyre-foundation/src/numeric/**", "vyre-foundation/src/operation/mod.rs", "vyre-megakernel/src/target.rs"]
+covers = ["crates/vyre-foundation/src/numeric/**", "crates/vyre-foundation/src/operation/mod.rs", "crates/vyre-megakernel/src/target.rs"]
 nav = true
 
 [[page]]
@@ -733,7 +733,7 @@ kind = "reference"
 section = "API and operation reference"
 authority = "self"
 generation = "manual"
-covers = ["vyre-foundation/src/operation/mod.rs"]
+covers = ["crates/vyre-foundation/src/operation/mod.rs"]
 nav = true
 
 [[page]]
@@ -746,7 +746,7 @@ kind = "reference"
 section = "API and operation reference"
 authority = "self"
 generation = "manual"
-covers = ["vyre-foundation/src/ir_inner/model/program_graph/**", "vyre-spec/src/buffer_access.rs", "vyre-spec/src/data_type/**"]
+covers = ["crates/vyre-foundation/src/ir_inner/model/program_graph/**", "crates/vyre-spec/src/buffer_access.rs", "crates/vyre-spec/src/data_type/**"]
 nav = true
 
 [[page]]
@@ -759,7 +759,7 @@ kind = "reference"
 section = "API and operation reference"
 authority = "self"
 generation = "manual"
-covers = ["vyre-foundation/src/serial/wire/**"]
+covers = ["crates/vyre-foundation/src/serial/wire/**"]
 nav = true
 
 [[page]]
@@ -772,7 +772,7 @@ kind = "release"
 section = "Performance and release"
 authority = "self"
 generation = "manual"
-covers = ["release/release-train.toml", "xtask/src/release/**"]
+covers = ["release/release-train.toml", "tools/xtask/src/release/**"]
 nav = true
 
 [[page]]
@@ -785,7 +785,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -798,7 +798,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -811,7 +811,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -824,7 +824,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -837,7 +837,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -850,7 +850,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -863,7 +863,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -876,7 +876,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -889,7 +889,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -902,7 +902,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -915,7 +915,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -928,7 +928,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -941,7 +941,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -954,7 +954,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -967,7 +967,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -980,7 +980,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -993,7 +993,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1006,7 +1006,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1019,7 +1019,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1032,7 +1032,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1045,7 +1045,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1058,7 +1058,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1071,7 +1071,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1084,7 +1084,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1097,7 +1097,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1110,7 +1110,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1123,7 +1123,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1136,7 +1136,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1149,7 +1149,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1162,7 +1162,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1175,7 +1175,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1188,7 +1188,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1201,7 +1201,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1214,7 +1214,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1227,7 +1227,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1240,7 +1240,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1253,7 +1253,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1266,7 +1266,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1279,7 +1279,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1292,7 +1292,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1305,7 +1305,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1318,7 +1318,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1331,7 +1331,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1344,7 +1344,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1357,7 +1357,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1370,7 +1370,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1383,7 +1383,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1396,7 +1396,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1409,7 +1409,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1422,7 +1422,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1435,7 +1435,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1448,7 +1448,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1461,7 +1461,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1474,7 +1474,7 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true
 
 [[page]]
@@ -1487,5 +1487,5 @@ kind = "testing"
 section = "Testing and conformance"
 authority = "testing/TESTING.toml"
 generation = "generated"
-generator = "../xtask/src/gates/testing_guides.rs"
+generator = "../tools/xtask/src/gates/testing_guides.rs"
 nav = true

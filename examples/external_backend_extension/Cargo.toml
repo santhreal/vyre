@@ -15,10 +15,10 @@ vyre-reference = "0.8.0"
 [workspace]
 
 [patch.crates-io]
-vyre = { path = "../../vyre" }
-vyre-driver = { path = "../../vyre-driver" }
-vyre-foundation = { path = "../../vyre-foundation" }
-vyre-reference = { path = "../../vyre-reference" }
+vyre = { path = "../../crates/vyre" }
+vyre-driver = { path = "../../crates/vyre-driver" }
+vyre-foundation = { path = "../../crates/vyre-foundation" }
+vyre-reference = { path = "../../crates/vyre-reference" }
 
 [[test]]
 name = "all_tests"

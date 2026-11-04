@@ -7,19 +7,19 @@
 
 # The algebraic law enum, the operation definitions and the cross-engine schemas every other crate is judged against.
 # Defends: oracle poisoning, decorative laws, monotonic weakening
-/vyre-spec/ @santhreal/core-maintainers
+/crates/vyre-spec/ @santhreal/core-maintainers
 
 # Typed IR, graph validation and the optimizer legality that decides which rewrites are semantically permitted.
 # Defends: monotonic weakening, oracle poisoning
-/vyre-foundation/ @santhreal/core-maintainers
+/crates/vyre-foundation/ @santhreal/core-maintainers
 
 # The CPU reference interpreter. It is the only independent semantic oracle, so a change to it changes what every parity result means.
 # Defends: oracle poisoning, rigged tests
-/vyre-reference/ @santhreal/core-maintainers
+/crates/vyre-reference/ @santhreal/core-maintainers
 
 # Registers the oracle as a backend, so it is the one place a host result can be presented as a device result.
 # Defends: oracle poisoning, silent host execution
-/vyre-driver-reference/ @santhreal/core-maintainers
+/crates/vyre-driver-reference/ @santhreal/core-maintainers
 
 # The conformance harness, its certificate schema and the parity matrices.
 # Defends: rigged tests, silent coverage holes, no proof for all inputs
@@ -27,59 +27,59 @@
 
 # The single schedule-selection owner. Legality, cost, search and artifact identity are decided here.
 # Defends: monotonic weakening, unmeasured winners
-/vyre-megakernel/ @santhreal/core-maintainers
+/crates/vyre-megakernel/ @santhreal/core-maintainers
 
 # Neutral lowering from selected schedule to physical kernel representation.
 # Defends: monotonic weakening
-/vyre-lower/ @santhreal/core-maintainers
+/crates/vyre-lower/ @santhreal/core-maintainers
 
 # Concrete emission. A downgraded memory scope or a dropped barrier is invisible in the emitted text.
 # Defends: silent scope downgrade
-/vyre-emit-naga/ @santhreal/core-maintainers
+/crates/vyre-emit-naga/ @santhreal/core-maintainers
 
 # Concrete emission. A downgraded memory scope or a dropped barrier is invisible in the emitted text.
 # Defends: silent scope downgrade
-/vyre-emit-ptx/ @santhreal/core-maintainers
+/crates/vyre-emit-ptx/ @santhreal/core-maintainers
 
 # Concrete emission. A downgraded memory scope or a dropped barrier is invisible in the emitted text.
 # Defends: silent scope downgrade
-/vyre-emit-spirv/ @santhreal/core-maintainers
+/crates/vyre-emit-spirv/ @santhreal/core-maintainers
 
 # Concrete emission. A downgraded memory scope or a dropped barrier is invisible in the emitted text.
 # Defends: silent scope downgrade
-/vyre-emit-metal/ @santhreal/core-maintainers
+/crates/vyre-emit-metal/ @santhreal/core-maintainers
 
 # The neutral backend contract, precedence and dispatch seam every concrete device is admitted through.
 # Defends: silent host execution, monotonic weakening
-/vyre-driver/ @santhreal/core-maintainers
+/crates/vyre-driver/ @santhreal/core-maintainers
 
 # Concrete device execution. A probe failure converted into a skip or a host result would be reported as a pass.
 # Defends: silent host execution
-/vyre-driver-cuda/ @santhreal/core-maintainers
+/crates/vyre-driver-cuda/ @santhreal/core-maintainers
 
 # Concrete device execution. A probe failure converted into a skip or a host result would be reported as a pass.
 # Defends: silent host execution
-/vyre-driver-wgpu/ @santhreal/core-maintainers
+/crates/vyre-driver-wgpu/ @santhreal/core-maintainers
 
 # Concrete device execution. A probe failure converted into a skip or a host result would be reported as a pass.
 # Defends: silent host execution
-/vyre-driver-metal/ @santhreal/core-maintainers
+/crates/vyre-driver-metal/ @santhreal/core-maintainers
 
 # Concrete device execution. A probe failure converted into a skip or a host result would be reported as a pass.
 # Defends: silent host execution
-/vyre-driver-spirv/ @santhreal/core-maintainers
+/crates/vyre-driver-spirv/ @santhreal/core-maintainers
 
 # Artifact admission, residency, tenant limits and the caches a stale record would be served from.
 # Defends: stale cache reuse, unbounded tenants
-/vyre-runtime/ @santhreal/core-maintainers
+/crates/vyre-runtime/ @santhreal/core-maintainers
 
 # The measurement harness. What it records is what a performance claim is read from.
 # Defends: rigged tests, contributor-chosen inputs
-/vyre-bench/ @santhreal/core-maintainers
+/crates/vyre-bench/ @santhreal/core-maintainers
 
 # The release and evidence tooling that decides what a measured claim is.
 # Defends: rigged tests, contributor-chosen inputs
-/xtask-evidence/ @santhreal/core-maintainers
+/tools/xtask-evidence/ @santhreal/core-maintainers
 
 # The recorded evidence and release train a claim is read from.
 # Defends: contributor-chosen inputs, rigged tests
@@ -91,11 +91,11 @@
 
 # The sweep that fails on any finding. An edit that tolerates a count certifies what the gate stopped checking.
 # Defends: monotonic weakening
-/xtask/src/gates/sweep.rs @santhreal/core-maintainers
+/tools/xtask/src/gates/sweep.rs @santhreal/core-maintainers
 
 # The generator and validator of the active CODEOWNERS file.
 # Defends: all boundaries (meta-gate)
-/xtask/src/gates/codeowners.rs @santhreal/core-maintainers
+/tools/xtask/src/gates/codeowners.rs @santhreal/core-maintainers
 
 # This manifest. It is the source the active CODEOWNERS is generated from.
 # Defends: all boundaries (meta-gate)

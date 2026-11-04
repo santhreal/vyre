@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
       # Dated, not floating: the snapshot records rustdoc's item paths, so a new
       # nightly rewrites committed lines with no source change behind it. The
-      # date is declared by RUSTDOC_TOOLCHAIN in xtask/src/gates/public_api.rs
+      # date is declared by RUSTDOC_TOOLCHAIN in tools/xtask/src/gates/public_api.rs
       # and the gate exports it for the extraction, so both must move together.
       - uses: dtolnay/rust-toolchain@master
         with:

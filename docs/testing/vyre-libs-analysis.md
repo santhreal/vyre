@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own compiler-internal static analysis, cost models, dataflow fixpoint routines, and diagnostic aggregation. Does not own pass engine scheduling, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-analysis` and owns the `libs-analysis` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-analysis` and owns the `libs-analysis` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-analysis` and owns the `libs-analysis` seam in the
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_analysis` | `vyre-libs-analysis/src/lib.rs` | None | `./cargo_full test -p vyre-libs-analysis` |
-| `test` | `all_tests` | `vyre-libs-analysis/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-analysis --test all_tests` |
+| `lib` | `vyre_libs_analysis` | `crates/vyre-libs-analysis/src/lib.rs` | None | `./cargo_full test -p vyre-libs-analysis` |
+| `test` | `all_tests` | `crates/vyre-libs-analysis/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-analysis --test all_tests` |
 
 ## Test classes
 

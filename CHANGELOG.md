@@ -1995,6 +1995,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   from `vyre-test-support` and resolve the checkout through
   `vyre_test_support::monorepo::vyre_workspace_root` instead of restating both
   per file.
+- Product crates are under `crates/` and repository tooling under `tools/`;
+  package names and the published crates are unchanged.
 - The cross-backend u32 parity suites read one op table instead of one
   hand-written test per op. `synthetic_binop_parity`, its CUDA twin, and both
   `div_zero_shift_mask` suites loop over the shared table with a per-backend
@@ -7769,6 +7771,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   fail with a protocol violation under `RUST_TEST_THREADS=1`.
 - The conformance CI lane now rejects a generated conformance matrix that
   differs from the committed release evidence.
+- A conformance case's wall budget no longer includes the read of the running
+  binary's digest, which the coordinator now takes when it is constructed.
 - The downstream graphics app consumer package compiles and passes its test
   suite against the current runtime API, and the consumer-compilation gate
   verifies that out-of-workspace consumer packages build without errors.
@@ -9525,6 +9529,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   rust frontend stages is a second frontend.
 - Govern mutable state owner locks under explicit failure domains and recovery
   classes with zero unhandled lock poisoning across production crates.
+- Benchmark runs on an RTX 3080 Ti record the roofline memory fraction against
+  its 912 GB/s peak instead of omitting it.
 - Every scalar rule leaf is runnable again.
   `vyre_libs::rule::condition_op::condition_program` declared its verdict slot
   as a backend-allocated output with no static element count, which fails IR

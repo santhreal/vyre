@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own neural network activations, linear transformations, normalization, attention, mixture-of-experts, and language model inference IR compositions. Does not own general matrix kernels, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-nn` and owns the `libs-nn` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-nn` and owns the `libs-nn` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-nn` and owns the `libs-nn` seam in the `libraries`
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_nn` | `vyre-libs-nn/src/lib.rs` | None | `./cargo_full test -p vyre-libs-nn` |
-| `test` | `all_tests` | `vyre-libs-nn/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-nn --test all_tests` |
+| `lib` | `vyre_libs_nn` | `crates/vyre-libs-nn/src/lib.rs` | None | `./cargo_full test -p vyre-libs-nn` |
+| `test` | `all_tests` | `crates/vyre-libs-nn/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-nn --test all_tests` |
 
 ## Test classes
 

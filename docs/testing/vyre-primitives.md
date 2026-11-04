@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own marker types and uncomposable hardware intrinsics. A composition belongs in vyre-libs, not here.
 
-The crate lives at `vyre-primitives` and owns the `primitive-library` seam in the `primitives` layer.
+The crate lives at `crates/vyre-primitives` and owns the `primitive-library` seam in the `primitives` layer.
 
 ## Commands
 
@@ -30,12 +30,12 @@ The crate lives at `vyre-primitives` and owns the `primitive-library` seam in th
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `bench` | `wire_throughput` | `vyre-primitives/benches/wire_throughput.rs` | None | `./cargo_full test -p vyre-primitives --bench wire_throughput` |
-| `example` | `vyre_primitives_release_surface` | `vyre-primitives/examples/vyre_primitives_release_surface.rs` | None | `./cargo_full test -p vyre-primitives --example vyre_primitives_release_surface` |
-| `example` | `wire_harness_smoke` | `vyre-primitives/examples/wire_harness_smoke.rs` | None | `./cargo_full test -p vyre-primitives --example wire_harness_smoke` |
-| `lib` | `vyre_primitives` | `vyre-primitives/src/lib.rs` | None | `./cargo_full test -p vyre-primitives` |
-| `test` | `all_tests` | `vyre-primitives/tests/all_tests.rs` | None | `./cargo_full test -p vyre-primitives --test all_tests` |
-| `test` | `all_tests_hardware` | `vyre-primitives/tests/all_tests_hardware.rs` | `hardware` | `./cargo_full test -p vyre-primitives --test all_tests_hardware --features hardware` |
+| `bench` | `wire_throughput` | `crates/vyre-primitives/benches/wire_throughput.rs` | None | `./cargo_full test -p vyre-primitives --bench wire_throughput` |
+| `example` | `vyre_primitives_release_surface` | `crates/vyre-primitives/examples/vyre_primitives_release_surface.rs` | None | `./cargo_full test -p vyre-primitives --example vyre_primitives_release_surface` |
+| `example` | `wire_harness_smoke` | `crates/vyre-primitives/examples/wire_harness_smoke.rs` | None | `./cargo_full test -p vyre-primitives --example wire_harness_smoke` |
+| `lib` | `vyre_primitives` | `crates/vyre-primitives/src/lib.rs` | None | `./cargo_full test -p vyre-primitives` |
+| `test` | `all_tests` | `crates/vyre-primitives/tests/all_tests.rs` | None | `./cargo_full test -p vyre-primitives --test all_tests` |
+| `test` | `all_tests_hardware` | `crates/vyre-primitives/tests/all_tests_hardware.rs` | `hardware` | `./cargo_full test -p vyre-primitives --test all_tests_hardware --features hardware` |
 
 ## Test classes
 

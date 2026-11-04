@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own compiler-internal bitset, provenance, matroid, and fingerprint encoding compositions. Does not own consumer decoding algorithms, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-encoding` and owns the `libs-encoding` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-encoding` and owns the `libs-encoding` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-encoding` and owns the `libs-encoding` seam in the
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_encoding` | `vyre-libs-encoding/src/lib.rs` | None | `./cargo_full test -p vyre-libs-encoding` |
-| `test` | `all_tests` | `vyre-libs-encoding/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-encoding --test all_tests` |
+| `lib` | `vyre_libs_encoding` | `crates/vyre-libs-encoding/src/lib.rs` | None | `./cargo_full test -p vyre-libs-encoding` |
+| `test` | `all_tests` | `crates/vyre-libs-encoding/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-encoding --test all_tests` |
 
 ## Test classes
 

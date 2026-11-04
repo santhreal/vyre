@@ -303,7 +303,7 @@ consumed_by = [
 
 [[crate]]
 package = "structure-gate"
-path = "structure-gate"
+path = "tools/structure-gate"
 layer = "standalone-tooling"
 seam = "source-structure"
 interface = "Whether a directory carries Rust source, which directory owns a domain, and the checkout root a gate reports on."
@@ -311,7 +311,7 @@ responsibility = "Enforce the crate roster, one operation identity per semantic 
 
 [[crate]]
 package = "vyre"
-path = "vyre"
+path = "crates/vyre"
 layer = "facade"
 seam = "public-facade"
 interface = "The curated public surface: IR, driver, runtime and the artifact compiler, re-exported."
@@ -319,7 +319,7 @@ responsibility = "Public facade. Re-export IR, driver, runtime, and the artifact
 
 [[crate]]
 package = "vyre-alloc-probe"
-path = "vyre-alloc-probe"
+path = "crates/vyre-alloc-probe"
 layer = "standalone-tooling"
 seam = "allocation-probe"
 interface = "Per-thread heap counters installed as the global allocator."
@@ -327,7 +327,7 @@ responsibility = "Count heap traffic per thread behind a GlobalAlloc wrapper, so
 
 [[crate]]
 package = "vyre-aot"
-path = "vyre-aot"
+path = "crates/vyre-aot"
 layer = "packaging"
 seam = "aot-artifacts"
 interface = "Ahead-of-time artifact packaging and load."
@@ -335,7 +335,7 @@ responsibility = "Package the same megakernel artifact class ahead of time. Not 
 
 [[crate]]
 package = "vyre-bench"
-path = "vyre-bench"
+path = "crates/vyre-bench"
 layer = "tooling"
 seam = "workload-benchmarks"
 interface = "Reproducible workload benchmarks and their recorded evidence."
@@ -359,7 +359,7 @@ responsibility = "Define conformance case, result, and certificate schemas again
 
 [[crate]]
 package = "vyre-debug"
-path = "vyre-debug"
+path = "crates/vyre-debug"
 layer = "tooling"
 seam = "debugging"
 interface = "Program and artifact inspection for a caller holding a compiled artifact."
@@ -367,7 +367,7 @@ responsibility = "Inspect, explain, and diagnose typed programs, lowering, and p
 
 [[crate]]
 package = "vyre-driver"
-path = "vyre-driver"
+path = "crates/vyre-driver"
 layer = "backend-neutral"
 seam = "backend-contract"
 interface = "The backend-neutral target, materialization, submission and completion contracts, and the driver registry every backend registers into."
@@ -376,7 +376,7 @@ facade_exported = true
 
 [[crate]]
 package = "vyre-driver-cuda"
-path = "vyre-driver-cuda"
+path = "crates/vyre-driver-cuda"
 layer = "concrete-backend"
 seam = "cuda-driver"
 interface = "Native accelerator backend registration, capability probing and dispatch."
@@ -385,7 +385,7 @@ facade_exported = true
 
 [[crate]]
 package = "vyre-driver-metal"
-path = "vyre-driver-metal"
+path = "crates/vyre-driver-metal"
 layer = "concrete-backend"
 seam = "metal-driver"
 interface = "Native Apple backend registration, capability probing and dispatch."
@@ -393,7 +393,7 @@ responsibility = "Own pure MSL target compilation, native Apple device acquisiti
 
 [[crate]]
 package = "vyre-driver-reference"
-path = "vyre-driver-reference"
+path = "crates/vyre-driver-reference"
 layer = "concrete-backend"
 seam = "reference-driver"
 interface = "Registration of the reference oracle as a backend."
@@ -401,7 +401,7 @@ responsibility = "Adapt the reference interpreter to the backend contract for de
 
 [[crate]]
 package = "vyre-driver-spirv"
-path = "vyre-driver-spirv"
+path = "crates/vyre-driver-spirv"
 layer = "concrete-backend"
 seam = "spirv-driver"
 interface = "SPIR-V backend registration, capability probing and dispatch."
@@ -409,7 +409,7 @@ responsibility = "Own SPIR-V target compilation, immutable module-bundle emissio
 
 [[crate]]
 package = "vyre-driver-wgpu"
-path = "vyre-driver-wgpu"
+path = "crates/vyre-driver-wgpu"
 layer = "concrete-backend"
 seam = "portable-driver"
 interface = "Portable backend registration, capability probing and dispatch."
@@ -418,7 +418,7 @@ facade_exported = true
 
 [[crate]]
 package = "vyre-emit-metal"
-path = "vyre-emit-metal"
+path = "crates/vyre-emit-metal"
 layer = "emitter"
 seam = "metal-emitter"
 interface = "Native Apple source emission for one selected module."
@@ -426,7 +426,7 @@ responsibility = "Consume verified lowering products and emit native Apple shade
 
 [[crate]]
 package = "vyre-emit-naga"
-path = "vyre-emit-naga"
+path = "crates/vyre-emit-naga"
 layer = "emitter"
 seam = "primary-text-emitter"
 interface = "Primary text emission and the related binary form for one selected module."
@@ -434,7 +434,7 @@ responsibility = "Consume verified lowering products and emit the primary text r
 
 [[crate]]
 package = "vyre-emit-ptx"
-path = "vyre-emit-ptx"
+path = "crates/vyre-emit-ptx"
 layer = "emitter"
 seam = "primary-binary-emitter"
 interface = "Primary binary text emission for one selected module."
@@ -442,7 +442,7 @@ responsibility = "Consume verified lowering products and emit the primary binary
 
 [[crate]]
 package = "vyre-emit-spirv"
-path = "vyre-emit-spirv"
+path = "crates/vyre-emit-spirv"
 layer = "emitter"
 seam = "spirv-emitter"
 interface = "SPIR-V emission for one selected module."
@@ -450,7 +450,7 @@ responsibility = "Consume verified lowering products and emit SPIR-V artifacts t
 
 [[crate]]
 package = "vyre-foundation"
-path = "vyre-foundation"
+path = "crates/vyre-foundation"
 layer = "foundation"
 seam = "foundation-ir"
 interface = "Typed IR, graph, diagnostics, validation and semantic optimization contracts."
@@ -459,7 +459,7 @@ facade_exported = true
 
 [[crate]]
 package = "vyre-libs"
-path = "vyre-libs"
+path = "crates/vyre-libs"
 layer = "libraries"
 seam = "semantic-library"
 interface = "Every composition in the workspace, re-exported from the domain crates behind one feature set. Returns Programs."
@@ -467,7 +467,7 @@ responsibility = "Own every composition in the workspace: consumer dialects and 
 
 [[crate]]
 package = "vyre-libs-analysis"
-path = "vyre-libs-analysis"
+path = "crates/vyre-libs-analysis"
 layer = "libraries"
 seam = "libs-analysis"
 interface = "Static analysis, cost model, dataflow fixpoint and diagnostic compositions."
@@ -475,7 +475,7 @@ responsibility = "Own compiler-internal static analysis, cost models, dataflow f
 
 [[crate]]
 package = "vyre-libs-bitset"
-path = "vyre-libs-bitset"
+path = "crates/vyre-libs-bitset"
 layer = "libraries"
 seam = "libs-bitset"
 interface = "Packed bitset word operations and logical bitwise compositions."
@@ -483,7 +483,7 @@ responsibility = "Own packed u32 bitset operations, word utilities, and logical 
 
 [[crate]]
 package = "vyre-libs-builder"
-path = "vyre-libs-builder"
+path = "crates/vyre-libs-builder"
 layer = "libraries"
 seam = "libs-builder"
 interface = "Shared IR composition infrastructure, child region skeletons, operands and registration link anchors."
@@ -491,7 +491,7 @@ responsibility = "Own shared IR composition infrastructure, child region skeleto
 
 [[crate]]
 package = "vyre-libs-decode"
-path = "vyre-libs-decode"
+path = "crates/vyre-libs-decode"
 layer = "libraries"
 seam = "libs-decode"
 interface = "Base64, hex, DEFLATE and encodex decoding compositions."
@@ -499,7 +499,7 @@ responsibility = "Own Base64, hex, DEFLATE, and encodex data decoding and decomp
 
 [[crate]]
 package = "vyre-libs-device"
-path = "vyre-libs-device"
+path = "crates/vyre-libs-device"
 layer = "libraries"
 seam = "libs-device"
 interface = "Device boundary contracts, memory ownership, resident graph layout and virtual filesystem block load compositions."
@@ -507,7 +507,7 @@ responsibility = "Own compiler-internal device boundary contracts, memory owners
 
 [[crate]]
 package = "vyre-libs-encoding"
-path = "vyre-libs-encoding"
+path = "crates/vyre-libs-encoding"
 layer = "libraries"
 seam = "libs-encoding"
 interface = "Provenance, matroid and fingerprint encoding compositions."
@@ -515,7 +515,7 @@ responsibility = "Own compiler-internal bitset, provenance, matroid, and fingerp
 
 [[crate]]
 package = "vyre-libs-fixpoint"
-path = "vyre-libs-fixpoint"
+path = "crates/vyre-libs-fixpoint"
 layer = "libraries"
 seam = "libs-fixpoint"
 interface = "Deterministic fixpoint iteration and grid synchronization compositions."
@@ -523,7 +523,7 @@ responsibility = "Own deterministic fixpoint iteration kernels, routing contract
 
 [[crate]]
 package = "vyre-libs-graph"
-path = "vyre-libs-graph"
+path = "crates/vyre-libs-graph"
 layer = "libraries"
 seam = "libs-graph"
 interface = "Graph algorithm compositions: CSR traversal, AST walks, dominator trees and topological sort."
@@ -531,7 +531,7 @@ responsibility = "Own graph algorithms, CSR traversal, AST walks, dominator tree
 
 [[crate]]
 package = "vyre-libs-hash"
-path = "vyre-libs-hash"
+path = "crates/vyre-libs-hash"
 layer = "libraries"
 seam = "libs-hash"
 interface = "Hash and checksum compositions."
@@ -539,7 +539,7 @@ responsibility = "Own hash and checksum compositions including FNV-1a, CRC-32, A
 
 [[crate]]
 package = "vyre-libs-math"
-path = "vyre-libs-math"
+path = "crates/vyre-libs-math"
 layer = "libraries"
 seam = "libs-math"
 interface = "Linear algebra, matrix, scan, broadcasting, algebra and succinct structure compositions."
@@ -547,7 +547,7 @@ responsibility = "Own linear algebra, matrix operations, broadcasting, scans, op
 
 [[crate]]
 package = "vyre-libs-nn"
-path = "vyre-libs-nn"
+path = "crates/vyre-libs-nn"
 layer = "libraries"
 seam = "libs-nn"
 interface = "Neural network activation, linear, normalization, attention and mixture-of-experts compositions."
@@ -555,7 +555,7 @@ responsibility = "Own neural network activations, linear transformations, normal
 
 [[crate]]
 package = "vyre-libs-parsing"
-path = "vyre-libs-parsing"
+path = "crates/vyre-libs-parsing"
 layer = "libraries"
 seam = "libs-parsing"
 interface = "Lexer driver, LR(1) table walker and AST construction compositions."
@@ -563,7 +563,7 @@ responsibility = "Own lexer drivers, LR(1) table walkers, and language-specific 
 
 [[crate]]
 package = "vyre-libs-pattern"
-path = "vyre-libs-pattern"
+path = "crates/vyre-libs-pattern"
 layer = "libraries"
 seam = "libs-pattern"
 interface = "Substring, DFA, NFA, regular expression and bracket matching compositions."
@@ -571,7 +571,7 @@ responsibility = "Own substring matching, DFA, NFA, bracket matching, and regula
 
 [[crate]]
 package = "vyre-libs-reasoning"
-path = "vyre-libs-reasoning"
+path = "crates/vyre-libs-reasoning"
 layer = "libraries"
 seam = "libs-reasoning"
 interface = "Logic, causal reasoning and knowledge compilation compositions."
@@ -579,7 +579,7 @@ responsibility = "Own compiler-internal logic, causal reasoning, categorical rew
 
 [[crate]]
 package = "vyre-libs-reduce"
-path = "vyre-libs-reduce"
+path = "crates/vyre-libs-reduce"
 layer = "libraries"
 seam = "libs-reduce"
 interface = "Workgroup reduction tree, atomic scalar reduction and prefix scan compositions."
@@ -587,7 +587,7 @@ responsibility = "Own workgroup reduction trees, atomic scalar reductions, and p
 
 [[crate]]
 package = "vyre-libs-rule"
-path = "vyre-libs-rule"
+path = "crates/vyre-libs-rule"
 layer = "libraries"
 seam = "libs-rule"
 interface = "Detection rule condition operator and formula compositions."
@@ -595,7 +595,7 @@ responsibility = "Own detection rule engine condition operators, formulas, and p
 
 [[crate]]
 package = "vyre-libs-scheduling"
-path = "vyre-libs-scheduling"
+path = "crates/vyre-libs-scheduling"
 layer = "libraries"
 seam = "libs-scheduling"
 interface = "Scheduling, fusion and batching compositions."
@@ -603,7 +603,7 @@ responsibility = "Own compiler-internal scheduling, fusion, batching, and dispat
 
 [[crate]]
 package = "vyre-libs-security"
-path = "vyre-libs-security"
+path = "crates/vyre-libs-security"
 layer = "libraries"
 seam = "libs-security"
 interface = "Security taint analysis and label resolver compositions."
@@ -611,7 +611,7 @@ responsibility = "Own security taint analysis compositions, predicate evaluators
 
 [[crate]]
 package = "vyre-libs-solvers"
-path = "vyre-libs-solvers"
+path = "crates/vyre-libs-solvers"
 layer = "libraries"
 seam = "libs-solvers"
 interface = "Numerical solver and autotuning compositions."
@@ -619,7 +619,7 @@ responsibility = "Own compiler-internal numerical solvers, autotuning routines, 
 
 [[crate]]
 package = "vyre-libs-text"
-path = "vyre-libs-text"
+path = "crates/vyre-libs-text"
 layer = "libraries"
 seam = "libs-text"
 interface = "Text classification, UTF-8 validation and line indexing compositions."
@@ -627,7 +627,7 @@ responsibility = "Own text processing, byte classification, UTF-8 validation, an
 
 [[crate]]
 package = "vyre-libs-visual"
-path = "vyre-libs-visual"
+path = "crates/vyre-libs-visual"
 layer = "libraries"
 seam = "libs-visual"
 interface = "Visual rendering and compositing effect compositions."
@@ -635,7 +635,7 @@ responsibility = "Own visual rendering and compositing effects including blur, s
 
 [[crate]]
 package = "vyre-lower"
-path = "vyre-lower"
+path = "crates/vyre-lower"
 layer = "lowering"
 seam = "lowering"
 interface = "The single verified selected-module representation, lowered from semantic IR."
@@ -643,7 +643,7 @@ responsibility = "Consume validated selected schedule phases and semantic progra
 
 [[crate]]
 package = "vyre-macros"
-path = "vyre-macros"
+path = "crates/vyre-macros"
 layer = "foundation"
 seam = "registration-macros"
 interface = "Compile-time registration generation."
@@ -651,7 +651,7 @@ responsibility = "Provide compile-time registration and declaration macros witho
 
 [[crate]]
 package = "vyre-megakernel"
-path = "vyre-megakernel"
+path = "crates/vyre-megakernel"
 layer = "compiler-boundary"
 seam = "megakernel-compiler"
 interface = "Schedule search, immutable artifact identity and authenticated target-payload construction."
@@ -660,7 +660,7 @@ facade_exported = true
 
 [[crate]]
 package = "vyre-pass-engine"
-path = "vyre-pass-engine"
+path = "crates/vyre-pass-engine"
 layer = "pass-engine"
 seam = "pass-engine"
 interface = "Optimizer pass execution as dispatched Programs."
@@ -668,7 +668,7 @@ responsibility = "Execute optimizer passes as Vyre Programs through compiler-own
 
 [[crate]]
 package = "vyre-primitives"
-path = "vyre-primitives"
+path = "crates/vyre-primitives"
 layer = "primitives"
 seam = "primitive-library"
 interface = "Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types."
@@ -676,7 +676,7 @@ responsibility = "Own marker types and uncomposable hardware intrinsics. A compo
 
 [[crate]]
 package = "vyre-reference"
-path = "vyre-reference"
+path = "crates/vyre-reference"
 layer = "semantics"
 seam = "reference-semantics"
 interface = "Independent semantic oracle evaluation and canonical ULP distance."
@@ -684,7 +684,7 @@ responsibility = "The only crate permitted to compute on the CPU: the pure-Rust 
 
 [[crate]]
 package = "vyre-registry-link"
-path = "vyre-registry-link"
+path = "crates/vyre-registry-link"
 layer = "registry-link"
 seam = "registry-link"
 interface = "Linked inventory registry sources and the per-source floor."
@@ -692,7 +692,7 @@ responsibility = "Own every inventory registry link anchor, report which sources
 
 [[crate]]
 package = "vyre-runtime"
-path = "vyre-runtime"
+path = "crates/vyre-runtime"
 layer = "runtime"
 seam = "runtime"
 interface = "Artifact admission, residency, submission, recovery and readback lifecycle."
@@ -701,7 +701,7 @@ facade_exported = true
 
 [[crate]]
 package = "vyre-safetensors"
-path = "vyre-safetensors"
+path = "crates/vyre-safetensors"
 layer = "runtime"
 seam = "safetensors-adapter"
 interface = "Container-format mapping into typed transfer descriptors."
@@ -709,7 +709,7 @@ responsibility = "Validate safetensors metadata, shard indexes, compiler require
 
 [[crate]]
 package = "vyre-spec"
-path = "vyre-spec"
+path = "crates/vyre-spec"
 layer = "foundation"
 seam = "specification"
 interface = "Stable cross-engine schemas, declared operation signatures and IR levels."
@@ -718,7 +718,7 @@ facade_exported = true
 
 [[crate]]
 package = "vyre-test-support"
-path = "vyre-test-support"
+path = "crates/vyre-test-support"
 layer = "test-tooling"
 seam = "test-support"
 interface = "Shared verification fixtures and harness support."
@@ -726,7 +726,7 @@ responsibility = "Provide shared deterministic fixtures and assertions for works
 
 [[crate]]
 package = "xtask"
-path = "xtask"
+path = "tools/xtask"
 layer = "tooling"
 seam = "gate-registry"
 interface = "The subcommand registry and every gate that judges the tree from source text, manifests, workflows and recorded evidence."
@@ -734,7 +734,7 @@ responsibility = "Own the subcommand registry and every gate that judges the tre
 
 [[crate]]
 package = "xtask-evidence"
-path = "xtask-evidence"
+path = "tools/xtask-evidence"
 layer = "tooling"
 seam = "evidence-gates"
 interface = "The gates that decide whether a recorded benchmark or release measurement still describes this tree."
@@ -1207,7 +1207,7 @@ name = "libs-compositions"
 reason = "vyre-driver and vyre-runtime each select the vyre-libs domains their own compositions need, and neither set is the other"
 [[crate]]
 package = "xtask-registry"
-path = "xtask-registry"
+path = "tools/xtask-registry"
 layer = "tooling"
 seam = "live-registry-gates"
 interface = "The gates that must observe the live operation registry, the primitive catalog or a linked backend driver."

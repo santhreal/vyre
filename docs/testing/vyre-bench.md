@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own reproducible workload benchmarks against the best available native baseline for each class, not against vyre's own unfused output.
 
-The crate lives at `vyre-bench` and owns the `workload-benchmarks` seam in the `tooling` layer.
+The crate lives at `crates/vyre-bench` and owns the `workload-benchmarks` seam in the `tooling` layer.
 
 ## Commands
 
@@ -38,13 +38,13 @@ The crate lives at `vyre-bench` and owns the `workload-benchmarks` seam in the `
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `bench` | `release` | `vyre-bench/benches/release.rs` | None | `./cargo_full test -p vyre-bench --bench release` |
-| `bin` | `vyre-bench` | `vyre-bench/src/main.rs` | None | `./cargo_full test -p vyre-bench --bin vyre-bench` |
-| `bin` | `vyre-bench` | `vyre-bench/src/main.rs` | `cli` | `./cargo_full test -p vyre-bench --bin vyre-bench --features cli` |
-| `lib` | `vyre_bench` | `vyre-bench/src/lib.rs` | None | `./cargo_full test -p vyre-bench` |
-| `test` | `all_tests` | `vyre-bench/tests/all_tests.rs` | None | `./cargo_full test -p vyre-bench --test all_tests` |
-| `test` | `determinism_gate` | `vyre-bench/tests/determinism_gate.rs` | None | `./cargo_full test -p vyre-bench --test determinism_gate` |
-| `test` | `min_samples_gate` | `vyre-bench/tests/min_samples_gate.rs` | None | `./cargo_full test -p vyre-bench --test min_samples_gate` |
+| `bench` | `release` | `crates/vyre-bench/benches/release.rs` | None | `./cargo_full test -p vyre-bench --bench release` |
+| `bin` | `vyre-bench` | `crates/vyre-bench/src/main.rs` | None | `./cargo_full test -p vyre-bench --bin vyre-bench` |
+| `bin` | `vyre-bench` | `crates/vyre-bench/src/main.rs` | `cli` | `./cargo_full test -p vyre-bench --bin vyre-bench --features cli` |
+| `lib` | `vyre_bench` | `crates/vyre-bench/src/lib.rs` | None | `./cargo_full test -p vyre-bench` |
+| `test` | `all_tests` | `crates/vyre-bench/tests/all_tests.rs` | None | `./cargo_full test -p vyre-bench --test all_tests` |
+| `test` | `determinism_gate` | `crates/vyre-bench/tests/determinism_gate.rs` | None | `./cargo_full test -p vyre-bench --test determinism_gate` |
+| `test` | `min_samples_gate` | `crates/vyre-bench/tests/min_samples_gate.rs` | None | `./cargo_full test -p vyre-bench --test min_samples_gate` |
 
 ## Test classes
 

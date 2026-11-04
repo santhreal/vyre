@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own deterministic fixpoint iteration kernels, routing contracts, and grid synchronization barriers. Does not own domain dataflow analysis, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-fixpoint` and owns the `libs-fixpoint` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-fixpoint` and owns the `libs-fixpoint` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-fixpoint` and owns the `libs-fixpoint` seam in the
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_fixpoint` | `vyre-libs-fixpoint/src/lib.rs` | None | `./cargo_full test -p vyre-libs-fixpoint` |
-| `test` | `all_tests` | `vyre-libs-fixpoint/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-fixpoint --test all_tests` |
+| `lib` | `vyre_libs_fixpoint` | `crates/vyre-libs-fixpoint/src/lib.rs` | None | `./cargo_full test -p vyre-libs-fixpoint` |
+| `test` | `all_tests` | `crates/vyre-libs-fixpoint/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-fixpoint --test all_tests` |
 
 ## Test classes
 

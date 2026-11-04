@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Adapt the reference interpreter to the backend contract for deterministic conformance execution.
 
-The crate lives at `vyre-driver-reference` and owns the `reference-driver` seam in the `concrete-backend` layer.
+The crate lives at `crates/vyre-driver-reference` and owns the `reference-driver` seam in the `concrete-backend` layer.
 
 ## Commands
 
@@ -24,9 +24,9 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_driver_reference_release_surface` | `vyre-driver-reference/examples/vyre_driver_reference_release_surface.rs` | None | `./cargo_full test -p vyre-driver-reference --example vyre_driver_reference_release_surface` |
-| `lib` | `vyre_driver_reference` | `vyre-driver-reference/src/lib.rs` | None | `./cargo_full test -p vyre-driver-reference` |
-| `test` | `all_tests` | `vyre-driver-reference/tests/all_tests.rs` | None | `./cargo_full test -p vyre-driver-reference --test all_tests` |
+| `example` | `vyre_driver_reference_release_surface` | `crates/vyre-driver-reference/examples/vyre_driver_reference_release_surface.rs` | None | `./cargo_full test -p vyre-driver-reference --example vyre_driver_reference_release_surface` |
+| `lib` | `vyre_driver_reference` | `crates/vyre-driver-reference/src/lib.rs` | None | `./cargo_full test -p vyre-driver-reference` |
+| `test` | `all_tests` | `crates/vyre-driver-reference/tests/all_tests.rs` | None | `./cargo_full test -p vyre-driver-reference --test all_tests` |
 
 ## Test classes
 

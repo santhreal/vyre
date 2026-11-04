@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own shared IR composition infrastructure, child region skeletons, operand wrappers, and registration link anchors for library builders. Does not own concrete domain operations, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-builder` and owns the `libs-builder` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-builder` and owns the `libs-builder` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-builder` and owns the `libs-builder` seam in the `
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_builder` | `vyre-libs-builder/src/lib.rs` | None | `./cargo_full test -p vyre-libs-builder` |
-| `test` | `all_tests` | `vyre-libs-builder/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-builder --test all_tests` |
+| `lib` | `vyre_libs_builder` | `crates/vyre-libs-builder/src/lib.rs` | None | `./cargo_full test -p vyre-libs-builder` |
+| `test` | `all_tests` | `crates/vyre-libs-builder/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-builder --test all_tests` |
 
 ## Test classes
 

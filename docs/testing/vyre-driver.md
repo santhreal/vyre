@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Define backend-neutral device, target compiler registration, artifact materialization, binding, submission, completion, capability, dispatch, and evidence contracts.
 
-The crate lives at `vyre-driver` and owns the `backend-contract` seam in the `backend-neutral` layer.
+The crate lives at `crates/vyre-driver` and owns the `backend-contract` seam in the `backend-neutral` layer.
 
 ## Commands
 
@@ -30,14 +30,14 @@ The crate lives at `vyre-driver` and owns the `backend-contract` seam in the `ba
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_driver_release_surface` | `vyre-driver/examples/vyre_driver_release_surface.rs` | None | `./cargo_full test -p vyre-driver --example vyre_driver_release_surface` |
-| `lib` | `vyre_driver` | `vyre-driver/src/lib.rs` | None | `./cargo_full test -p vyre-driver` |
-| `test` | `all_tests` | `vyre-driver/tests/all_tests.rs` | None | `./cargo_full test -p vyre-driver --test all_tests` |
-| `test` | `all_tests_libs_compositions` | `vyre-driver/tests/all_tests_libs_compositions.rs` | `libs-compositions` | `./cargo_full test -p vyre-driver --test all_tests_libs_compositions --features libs-compositions` |
-| `test` | `backend_registry` | `vyre-driver/tests/backend_registry.rs` | None | `./cargo_full test -p vyre-driver --test backend_registry` |
-| `test` | `backend_registry_duplicate_provider` | `vyre-driver/tests/backend_registry_duplicate_provider.rs` | None | `./cargo_full test -p vyre-driver --test backend_registry_duplicate_provider` |
-| `test` | `gap_duplicate_op_id` | `vyre-driver/tests/gap_duplicate_op_id.rs` | None | `./cargo_full test -p vyre-driver --test gap_duplicate_op_id` |
-| `test` | `reference_oracle_is_never_implicit` | `vyre-driver/tests/reference_oracle_is_never_implicit.rs` | None | `./cargo_full test -p vyre-driver --test reference_oracle_is_never_implicit` |
+| `example` | `vyre_driver_release_surface` | `crates/vyre-driver/examples/vyre_driver_release_surface.rs` | None | `./cargo_full test -p vyre-driver --example vyre_driver_release_surface` |
+| `lib` | `vyre_driver` | `crates/vyre-driver/src/lib.rs` | None | `./cargo_full test -p vyre-driver` |
+| `test` | `all_tests` | `crates/vyre-driver/tests/all_tests.rs` | None | `./cargo_full test -p vyre-driver --test all_tests` |
+| `test` | `all_tests_libs_compositions` | `crates/vyre-driver/tests/all_tests_libs_compositions.rs` | `libs-compositions` | `./cargo_full test -p vyre-driver --test all_tests_libs_compositions --features libs-compositions` |
+| `test` | `backend_registry` | `crates/vyre-driver/tests/backend_registry.rs` | None | `./cargo_full test -p vyre-driver --test backend_registry` |
+| `test` | `backend_registry_duplicate_provider` | `crates/vyre-driver/tests/backend_registry_duplicate_provider.rs` | None | `./cargo_full test -p vyre-driver --test backend_registry_duplicate_provider` |
+| `test` | `gap_duplicate_op_id` | `crates/vyre-driver/tests/gap_duplicate_op_id.rs` | None | `./cargo_full test -p vyre-driver --test gap_duplicate_op_id` |
+| `test` | `reference_oracle_is_never_implicit` | `crates/vyre-driver/tests/reference_oracle_is_never_implicit.rs` | None | `./cargo_full test -p vyre-driver --test reference_oracle_is_never_implicit` |
 
 ## Test classes
 

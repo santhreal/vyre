@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own compiler-internal device boundary contracts, memory ownership models, resident graph layout, and the virtual filesystem DMA block load and asset resolution compositions that fill device arenas. Does not own concrete backend implementations, driver dispatch, host file IO or runtime storage drivers.
 
-The crate lives at `vyre-libs-device` and owns the `libs-device` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-device` and owns the `libs-device` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-device` and owns the `libs-device` seam in the `li
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_device` | `vyre-libs-device/src/lib.rs` | None | `./cargo_full test -p vyre-libs-device` |
-| `test` | `all_tests` | `vyre-libs-device/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-device --test all_tests` |
+| `lib` | `vyre_libs_device` | `crates/vyre-libs-device/src/lib.rs` | None | `./cargo_full test -p vyre-libs-device` |
+| `test` | `all_tests` | `crates/vyre-libs-device/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-device --test all_tests` |
 
 ## Test classes
 

@@ -63,7 +63,7 @@ pub(crate) fn string_set(values: &[Value]) -> BTreeSet<&str> {
 }
 
 /// WHY: a row path that matches nothing records a decision about no code while
-/// reading as policy. The pre-split `vyre-libs/src/<domain>` spelling was
+/// reading as policy. The pre-split `crates/vyre-libs/src/<domain>` spelling was
 /// resolved here against every `vyre-libs*` crate, which kept 349 dead owner
 /// paths reading as live and left the generator free to emit them. The path is
 /// now read as written, so the generator has to name the directory that carries

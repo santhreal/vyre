@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Construct foundation-owned selected schedules through bounded whole-ProgramGraph search, and own immutable Artifact identity and authenticated TargetPayload construction. Does not own logical semantics, schedule schemas, physical-kernel lowering, admission, execution, or lifecycle policy.
 
-The crate lives at `vyre-megakernel` and owns the `megakernel-compiler` seam in the `compiler-boundary` layer.
+The crate lives at `crates/vyre-megakernel` and owns the `megakernel-compiler` seam in the `compiler-boundary` layer.
 
 ## Commands
 
@@ -24,8 +24,8 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_megakernel` | `vyre-megakernel/src/lib.rs` | None | `./cargo_full test -p vyre-megakernel` |
-| `test` | `all_tests` | `vyre-megakernel/tests/all_tests.rs` | None | `./cargo_full test -p vyre-megakernel --test all_tests` |
+| `lib` | `vyre_megakernel` | `crates/vyre-megakernel/src/lib.rs` | None | `./cargo_full test -p vyre-megakernel` |
+| `test` | `all_tests` | `crates/vyre-megakernel/tests/all_tests.rs` | None | `./cargo_full test -p vyre-megakernel --test all_tests` |
 
 ## Test classes
 

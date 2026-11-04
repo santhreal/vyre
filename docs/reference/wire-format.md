@@ -107,12 +107,12 @@ its own list.
 
 ## What is proved
 
-`vyre/tests/wire_v1_round_trip.rs` covers the round trip, encoder
+`crates/vyre/tests/wire_v1_round_trip.rs` covers the round trip, encoder
 determinism and a non-empty encoding.
-`vyre-foundation/tests/terminal_wire_round_trip.rs` is the exhaustive
-property coverage over IR variants. `vyre/tests/wire_malformed_adversarial.rs`
+`crates/vyre-foundation/tests/terminal_wire_round_trip.rs` is the exhaustive
+property coverage over IR variants. `crates/vyre/tests/wire_malformed_adversarial.rs`
 covers rejection. The fuzz corpus under
-`vyre-foundation/fuzz/corpus/program_wire/` is tracked and replayed.
+`crates/vyre-foundation/fuzz/corpus/program_wire/` is tracked and replayed.
 
 A public enum variant with no registered stable wire tag is an encode
 error, not a silent omission: adding an IR variant without a tag fails at

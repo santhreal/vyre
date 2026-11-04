@@ -221,7 +221,7 @@ fn every_frozen_un_op_carries_exactly_one_ulp_classification() {
         unclassified.is_empty(),
         "Fix: decide the f32 ULP window for UnOp variant(s) {unclassified:?}. Put each in \
          APPROXIMATE_UN_OPS if a backend may lower it to an approximate native instruction, \
-         and in vyre-foundation/src/fp_parity.rs expr_has_transcendental as well; otherwise \
+         and in crates/vyre-foundation/src/fp_parity.rs expr_has_transcendental as well; otherwise \
          put it in EXACT_UN_OPS."
     );
     assert!(
@@ -262,7 +262,7 @@ fn each_frozen_un_op_gets_the_window_its_classification_declares() {
             f32_ulp_tolerance(&single_un_op_f32_program(op)),
             expected,
             "UnOp::{name} is classified in this suite but \
-             vyre-foundation/src/fp_parity.rs expr_has_transcendental disagrees"
+             crates/vyre-foundation/src/fp_parity.rs expr_has_transcendental disagrees"
         );
     }
 }

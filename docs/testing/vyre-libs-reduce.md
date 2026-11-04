@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own workgroup reduction trees, atomic scalar reductions, and prefix scan IR compositions. Does not own domain-specific algorithms, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-reduce` and owns the `libs-reduce` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-reduce` and owns the `libs-reduce` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-reduce` and owns the `libs-reduce` seam in the `li
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_reduce` | `vyre-libs-reduce/src/lib.rs` | None | `./cargo_full test -p vyre-libs-reduce` |
-| `test` | `all_tests` | `vyre-libs-reduce/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-reduce --test all_tests` |
+| `lib` | `vyre_libs_reduce` | `crates/vyre-libs-reduce/src/lib.rs` | None | `./cargo_full test -p vyre-libs-reduce` |
+| `test` | `all_tests` | `crates/vyre-libs-reduce/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-reduce --test all_tests` |
 
 ## Test classes
 

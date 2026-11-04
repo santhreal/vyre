@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Consume verified lowering products and emit the primary text representation and related binary targets.
 
-The crate lives at `vyre-emit-naga` and owns the `primary-text-emitter` seam in the `emitter` layer.
+The crate lives at `crates/vyre-emit-naga` and owns the `primary-text-emitter` seam in the `emitter` layer.
 
 ## Commands
 
@@ -24,9 +24,9 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_emit_naga_release_surface` | `vyre-emit-naga/examples/vyre_emit_naga_release_surface.rs` | None | `./cargo_full test -p vyre-emit-naga --example vyre_emit_naga_release_surface` |
-| `lib` | `vyre_emit_naga` | `vyre-emit-naga/src/lib.rs` | None | `./cargo_full test -p vyre-emit-naga` |
-| `test` | `all_tests` | `vyre-emit-naga/tests/all_tests.rs` | None | `./cargo_full test -p vyre-emit-naga --test all_tests` |
+| `example` | `vyre_emit_naga_release_surface` | `crates/vyre-emit-naga/examples/vyre_emit_naga_release_surface.rs` | None | `./cargo_full test -p vyre-emit-naga --example vyre_emit_naga_release_surface` |
+| `lib` | `vyre_emit_naga` | `crates/vyre-emit-naga/src/lib.rs` | None | `./cargo_full test -p vyre-emit-naga` |
+| `test` | `all_tests` | `crates/vyre-emit-naga/tests/all_tests.rs` | None | `./cargo_full test -p vyre-emit-naga --test all_tests` |
 
 ## Test classes
 

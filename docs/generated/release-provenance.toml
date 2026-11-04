@@ -4135,7 +4135,7 @@ digest = "1ce802b6b44fdfb041388d0c461fb15215dd135f680ec7b3c5dccc6ea66aa9df"
 
 [[build_scripts]]
 crate_name = "vyre-emit-ptx"
-path = "vyre-emit-ptx/build.rs"
+path = "crates/vyre-emit-ptx/build.rs"
 declared_inputs = [
     "src/**",
     "Cargo.toml",
@@ -4149,7 +4149,7 @@ has_bounded_reads = true
 
 [[build_scripts]]
 crate_name = "vyre-emit-naga"
-path = "vyre-emit-naga/build.rs"
+path = "crates/vyre-emit-naga/build.rs"
 declared_inputs = [
     "src/**",
     "Cargo.toml",
@@ -4163,7 +4163,7 @@ has_bounded_reads = true
 
 [[build_scripts]]
 crate_name = "vyre-bench"
-path = "vyre-bench/build.rs"
+path = "crates/vyre-bench/build.rs"
 declared_inputs = ["env:OPT_LEVEL"]
 declared_outputs = ["cargo:rustc-env=VYRE_BENCH_OPT_LEVEL"]
 has_network_access = false
@@ -4171,7 +4171,7 @@ has_bounded_reads = true
 
 [[build_scripts]]
 crate_name = "vyre-driver-wgpu"
-path = "vyre-driver-wgpu/build.rs"
+path = "crates/vyre-driver-wgpu/build.rs"
 declared_inputs = ["Cargo.toml"]
 declared_outputs = [
     "cargo:rustc-env=VYRE_NAGA_VERSION",

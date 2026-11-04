@@ -1,7 +1,7 @@
 # CI-safe benchmark budgets consumed by maintained workflow gates.
 
 [crates.vyre-bench.targets.smoke_runtime]
-bench = "vyre-bench/src/main.rs"
+bench = "crates/vyre-bench/src/main.rs"
 metric = "time_ms"
 budget = 4000
 direction = "max"

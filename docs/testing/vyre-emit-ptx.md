@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Consume verified lowering products and emit the primary binary backend text artifact.
 
-The crate lives at `vyre-emit-ptx` and owns the `primary-binary-emitter` seam in the `emitter` layer.
+The crate lives at `crates/vyre-emit-ptx` and owns the `primary-binary-emitter` seam in the `emitter` layer.
 
 ## Commands
 
@@ -30,9 +30,9 @@ The crate lives at `vyre-emit-ptx` and owns the `primary-binary-emitter` seam in
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_emit_ptx_release_surface` | `vyre-emit-ptx/examples/vyre_emit_ptx_release_surface.rs` | None | `./cargo_full test -p vyre-emit-ptx --example vyre_emit_ptx_release_surface` |
-| `lib` | `vyre_emit_ptx` | `vyre-emit-ptx/src/lib.rs` | None | `./cargo_full test -p vyre-emit-ptx` |
-| `test` | `all_tests` | `vyre-emit-ptx/tests/all_tests.rs` | None | `./cargo_full test -p vyre-emit-ptx --test all_tests` |
+| `example` | `vyre_emit_ptx_release_surface` | `crates/vyre-emit-ptx/examples/vyre_emit_ptx_release_surface.rs` | None | `./cargo_full test -p vyre-emit-ptx --example vyre_emit_ptx_release_surface` |
+| `lib` | `vyre_emit_ptx` | `crates/vyre-emit-ptx/src/lib.rs` | None | `./cargo_full test -p vyre-emit-ptx` |
+| `test` | `all_tests` | `crates/vyre-emit-ptx/tests/all_tests.rs` | None | `./cargo_full test -p vyre-emit-ptx --test all_tests` |
 
 ## Test classes
 

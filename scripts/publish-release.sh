@@ -40,7 +40,7 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 2
 fi
 
-./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- package-readiness --write
+./cargo_full run --manifest-path tools/xtask/Cargo.toml --bin xtask -- package-readiness --write
 
 blocker_count="$(jq '.blockers | length' "$PACKAGE_READINESS")"
 if [[ "$blocker_count" != "0" ]]; then

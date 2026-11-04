@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own pure MSL target compilation, native Apple device acquisition, materialization, dispatch, and backend evidence.
 
-The crate lives at `vyre-driver-metal` and owns the `metal-driver` seam in the `concrete-backend` layer.
+The crate lives at `crates/vyre-driver-metal` and owns the `metal-driver` seam in the `concrete-backend` layer.
 
 ## Commands
 
@@ -34,9 +34,9 @@ The crate lives at `vyre-driver-metal` and owns the `metal-driver` seam in the `
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `metal_release_surface` | `vyre-driver-metal/examples/metal_release_surface.rs` | None | `./cargo_full test -p vyre-driver-metal --example metal_release_surface` |
-| `lib` | `vyre_driver_metal` | `vyre-driver-metal/src/lib.rs` | None | `./cargo_full test -p vyre-driver-metal` |
-| `test` | `all_tests` | `vyre-driver-metal/tests/all_tests.rs` | None | `./cargo_full test -p vyre-driver-metal --test all_tests` |
+| `example` | `metal_release_surface` | `crates/vyre-driver-metal/examples/metal_release_surface.rs` | None | `./cargo_full test -p vyre-driver-metal --example metal_release_surface` |
+| `lib` | `vyre_driver_metal` | `crates/vyre-driver-metal/src/lib.rs` | None | `./cargo_full test -p vyre-driver-metal` |
+| `test` | `all_tests` | `crates/vyre-driver-metal/tests/all_tests.rs` | None | `./cargo_full test -p vyre-driver-metal --test all_tests` |
 
 ## Test classes
 

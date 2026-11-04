@@ -54,10 +54,10 @@ with contracted arithmetic. Declare a mode after the emitter implements it:
 the strict mode requires the exact expansion from
 `vyre_foundation::fp_expansion` and an emission that no adjacent add can fuse.
 
-Record the answer in `vyre-driver/float-lowering-decisions.toml`, one row per
+Record the answer in `crates/vyre-driver/float-lowering-decisions.toml`, one row per
 backend with one key per mode and the reason the answer holds. A backend the
 registry serves with no row there fails
-`vyre-registry-link/tests/float_lowering_decisions.rs`, which also dispatches a
+`crates/vyre-registry-link/tests/float_lowering_decisions.rs`, which also dispatches a
 strict program and requires the result to match the reference oracle bit for
 bit or the refusal to name both the mode and the backend.
 
@@ -74,7 +74,7 @@ bindings cannot resize or replace it.
 
 ## What your tests must prove
 
-Seven properties, per `vyre-driver/BACKEND_CONTRACT.md`:
+Seven properties, per `crates/vyre-driver/BACKEND_CONTRACT.md`:
 
 - payload authentication,
 - materialization,

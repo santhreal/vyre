@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own visual rendering and compositing effects including blur, shadow, blend modes, gradients, and color conversions. Does not own display presentation, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-visual` and owns the `libs-visual` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-visual` and owns the `libs-visual` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-visual` and owns the `libs-visual` seam in the `li
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_visual` | `vyre-libs-visual/src/lib.rs` | None | `./cargo_full test -p vyre-libs-visual` |
-| `test` | `all_tests` | `vyre-libs-visual/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-visual --test all_tests` |
+| `lib` | `vyre_libs_visual` | `crates/vyre-libs-visual/src/lib.rs` | None | `./cargo_full test -p vyre-libs-visual` |
+| `test` | `all_tests` | `crates/vyre-libs-visual/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-visual --test all_tests` |
 
 ## Test classes
 

@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own lexer drivers, LR(1) table walkers, and language-specific AST construction IR compositions. Does not own semantic analysis passes, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-parsing` and owns the `libs-parsing` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-parsing` and owns the `libs-parsing` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-parsing` and owns the `libs-parsing` seam in the `
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_parsing` | `vyre-libs-parsing/src/lib.rs` | None | `./cargo_full test -p vyre-libs-parsing` |
-| `test` | `all_tests` | `vyre-libs-parsing/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-parsing --test all_tests` |
+| `lib` | `vyre_libs_parsing` | `crates/vyre-libs-parsing/src/lib.rs` | None | `./cargo_full test -p vyre-libs-parsing` |
+| `test` | `all_tests` | `crates/vyre-libs-parsing/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-parsing --test all_tests` |
 
 ## Test classes
 

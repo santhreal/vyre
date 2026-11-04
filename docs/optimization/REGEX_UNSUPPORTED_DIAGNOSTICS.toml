@@ -19,7 +19,7 @@ dialect_expectation = "PCRE2 supports this construct; RE2, Rust regex, Hyperscan
 safe_fallback = "reject"
 verifier_required = false
 remediation = "Remove the backreference, rewrite as a regular-language pattern, or run an explicit PCRE2 comparator outside accelerator claims."
-evidence_path = "vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
+evidence_path = "crates/vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
 
 [[diagnostic]]
 construct_id = "lookaround"
@@ -29,7 +29,7 @@ dialect_expectation = "PCRE2 supports lookaround; Hyperscan-compatible routes ca
 safe_fallback = "prefilter-plus-verifier"
 verifier_required = true
 remediation = "Keep the verifier route enabled or rewrite the assertion into regular-language context."
-evidence_path = "vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
+evidence_path = "crates/vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
 
 [[diagnostic]]
 construct_id = "unicode_classes_gpu"
@@ -39,7 +39,7 @@ dialect_expectation = "Unicode classes require a Unicode semantic profile; byte-
 safe_fallback = "host-reference-or-verifier"
 verifier_required = true
 remediation = "Use byte mode, host Unicode reference, or a verifier-backed Unicode profile."
-evidence_path = "vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
+evidence_path = "crates/vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
 
 [[diagnostic]]
 construct_id = "capture_extraction"
@@ -49,7 +49,7 @@ dialect_expectation = "Whole-match accelerators do not prove submatch extraction
 safe_fallback = "whole-match-plus-capture-verifier"
 verifier_required = true
 remediation = "Use noncapturing groups for acceleration-only scans or keep capture verifier output enabled."
-evidence_path = "vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
+evidence_path = "crates/vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
 
 [[diagnostic]]
 construct_id = "huge_alternation"
@@ -59,7 +59,7 @@ dialect_expectation = "Huge alternations must fit construct and decode budgets b
 safe_fallback = "reject-or-split-pattern-set"
 verifier_required = false
 remediation = "Split the pattern set or lower it through a literal-set table with bounded budget evidence."
-evidence_path = "vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
+evidence_path = "crates/vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
 
 [[diagnostic]]
 construct_id = "nested_repeats"
@@ -69,4 +69,4 @@ dialect_expectation = "Nested repeats must fit state-growth and transition-densi
 safe_fallback = "reject-or-quarantine"
 verifier_required = false
 remediation = "Rewrite the nested repeat or quarantine the pattern from accelerator benchmarks."
-evidence_path = "vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"
+evidence_path = "crates/vyre-libs/tests/regex_unsupported_diagnostic_registry.rs"

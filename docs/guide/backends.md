@@ -64,7 +64,7 @@ routes a user's answer to it because a device was missing.
 
 ## What a registration carries
 
-Four facets, per `vyre-driver/BACKEND_CONTRACT.md`: a lower-level backend
+Four facets, per `crates/vyre-driver/BACKEND_CONTRACT.md`: a lower-level backend
 factory, the semantic operation view the backend supports, a
 `TargetCompiler` factory, and an `ArtifactMaterializer` factory. A missing
 compiler or materializer facet fails closed. Supported operations derive

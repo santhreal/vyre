@@ -21,6 +21,16 @@ IR that already exists. It belongs in `vyre-libs`, whoever calls it.
 only when it needs its own backend emitter arm and its own reference
 interpreter arm.
 
+## Directories
+
+Product crates are under `crates/`. Repository tooling, which no published
+crate links, is under `tools/`: `xtask`, `xtask-registry`, `xtask-evidence`
+and `structure-gate`. The conformance harness is under `conform/`, and consumer
+applications outside the workspace are under `consumers/`. The last segment of
+a member directory is its package name. Tooling resolves a package's directory
+through the `members` roster in the root `Cargo.toml` and never joins a package
+name to the repository root.
+
 ## Layers
 
 Every workspace member declares one layer in `docs/CRATE_OWNERSHIP.toml`, and

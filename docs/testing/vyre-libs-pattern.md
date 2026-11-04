@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own substring matching, DFA, NFA, bracket matching, and regular expression scanning pipeline IR compositions. Does not own token lexing or parser tables, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-pattern` and owns the `libs-pattern` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-pattern` and owns the `libs-pattern` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-pattern` and owns the `libs-pattern` seam in the `
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_pattern` | `vyre-libs-pattern/src/lib.rs` | None | `./cargo_full test -p vyre-libs-pattern` |
-| `test` | `all_tests` | `vyre-libs-pattern/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-pattern --test all_tests` |
+| `lib` | `vyre_libs_pattern` | `crates/vyre-libs-pattern/src/lib.rs` | None | `./cargo_full test -p vyre-libs-pattern` |
+| `test` | `all_tests` | `crates/vyre-libs-pattern/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-pattern --test all_tests` |
 
 ## Test classes
 

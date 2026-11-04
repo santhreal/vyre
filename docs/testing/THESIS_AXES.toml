@@ -2,7 +2,7 @@
 #
 # This file is a contract, not a measurement. It states which compound
 # compiler and security workloads the release suite must carry, and
-# `vyre-bench/tests/release_matrix_contracts/thesis_axes.rs` reads it and
+# `crates/vyre-bench/tests/release_matrix_contracts/thesis_axes.rs` reads it and
 # fails when the registry no longer satisfies one of them.
 #
 # It is hand-authored on purpose. Deriving the axes from the registry would

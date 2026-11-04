@@ -21,25 +21,25 @@ protected_branch = "main"
 # ─── Specification and semantics ───────────────────────────────────
 
 [[boundary]]
-pattern = "/vyre-spec/"
+pattern = "/crates/vyre-spec/"
 packages = ["vyre-spec"]
 reason = "The algebraic law enum, the operation definitions and the cross-engine schemas every other crate is judged against."
 defends = "oracle poisoning, decorative laws, monotonic weakening"
 
 [[boundary]]
-pattern = "/vyre-foundation/"
+pattern = "/crates/vyre-foundation/"
 packages = ["vyre-foundation"]
 reason = "Typed IR, graph validation and the optimizer legality that decides which rewrites are semantically permitted."
 defends = "monotonic weakening, oracle poisoning"
 
 [[boundary]]
-pattern = "/vyre-reference/"
+pattern = "/crates/vyre-reference/"
 packages = ["vyre-reference"]
 reason = "The CPU reference interpreter. It is the only independent semantic oracle, so a change to it changes what every parity result means."
 defends = "oracle poisoning, rigged tests"
 
 [[boundary]]
-pattern = "/vyre-driver-reference/"
+pattern = "/crates/vyre-driver-reference/"
 packages = ["vyre-driver-reference"]
 reason = "Registers the oracle as a backend, so it is the one place a host result can be presented as a device result."
 defends = "oracle poisoning, silent host execution"
@@ -53,37 +53,37 @@ defends = "rigged tests, silent coverage holes, no proof for all inputs"
 # ─── Schedule selection, lowering and emission ─────────────────────
 
 [[boundary]]
-pattern = "/vyre-megakernel/"
+pattern = "/crates/vyre-megakernel/"
 packages = ["vyre-megakernel"]
 reason = "The single schedule-selection owner. Legality, cost, search and artifact identity are decided here."
 defends = "monotonic weakening, unmeasured winners"
 
 [[boundary]]
-pattern = "/vyre-lower/"
+pattern = "/crates/vyre-lower/"
 packages = ["vyre-lower"]
 reason = "Neutral lowering from selected schedule to physical kernel representation."
 defends = "monotonic weakening"
 
 [[boundary]]
-pattern = "/vyre-emit-naga/"
+pattern = "/crates/vyre-emit-naga/"
 packages = ["vyre-emit-naga"]
 reason = "Concrete emission. A downgraded memory scope or a dropped barrier is invisible in the emitted text."
 defends = "silent scope downgrade"
 
 [[boundary]]
-pattern = "/vyre-emit-ptx/"
+pattern = "/crates/vyre-emit-ptx/"
 packages = ["vyre-emit-ptx"]
 reason = "Concrete emission. A downgraded memory scope or a dropped barrier is invisible in the emitted text."
 defends = "silent scope downgrade"
 
 [[boundary]]
-pattern = "/vyre-emit-spirv/"
+pattern = "/crates/vyre-emit-spirv/"
 packages = ["vyre-emit-spirv"]
 reason = "Concrete emission. A downgraded memory scope or a dropped barrier is invisible in the emitted text."
 defends = "silent scope downgrade"
 
 [[boundary]]
-pattern = "/vyre-emit-metal/"
+pattern = "/crates/vyre-emit-metal/"
 packages = ["vyre-emit-metal"]
 reason = "Concrete emission. A downgraded memory scope or a dropped barrier is invisible in the emitted text."
 defends = "silent scope downgrade"
@@ -91,37 +91,37 @@ defends = "silent scope downgrade"
 # ─── Backends, runtime and caches ──────────────────────────────────
 
 [[boundary]]
-pattern = "/vyre-driver/"
+pattern = "/crates/vyre-driver/"
 packages = ["vyre-driver"]
 reason = "The neutral backend contract, precedence and dispatch seam every concrete device is admitted through."
 defends = "silent host execution, monotonic weakening"
 
 [[boundary]]
-pattern = "/vyre-driver-cuda/"
+pattern = "/crates/vyre-driver-cuda/"
 packages = ["vyre-driver-cuda"]
 reason = "Concrete device execution. A probe failure converted into a skip or a host result would be reported as a pass."
 defends = "silent host execution"
 
 [[boundary]]
-pattern = "/vyre-driver-wgpu/"
+pattern = "/crates/vyre-driver-wgpu/"
 packages = ["vyre-driver-wgpu"]
 reason = "Concrete device execution. A probe failure converted into a skip or a host result would be reported as a pass."
 defends = "silent host execution"
 
 [[boundary]]
-pattern = "/vyre-driver-metal/"
+pattern = "/crates/vyre-driver-metal/"
 packages = ["vyre-driver-metal"]
 reason = "Concrete device execution. A probe failure converted into a skip or a host result would be reported as a pass."
 defends = "silent host execution"
 
 [[boundary]]
-pattern = "/vyre-driver-spirv/"
+pattern = "/crates/vyre-driver-spirv/"
 packages = ["vyre-driver-spirv"]
 reason = "Concrete device execution. A probe failure converted into a skip or a host result would be reported as a pass."
 defends = "silent host execution"
 
 [[boundary]]
-pattern = "/vyre-runtime/"
+pattern = "/crates/vyre-runtime/"
 packages = ["vyre-runtime"]
 reason = "Artifact admission, residency, tenant limits and the caches a stale record would be served from."
 defends = "stale cache reuse, unbounded tenants"
@@ -129,13 +129,13 @@ defends = "stale cache reuse, unbounded tenants"
 # ─── Measurement and evidence ──────────────────────────────────────
 
 [[boundary]]
-pattern = "/vyre-bench/"
+pattern = "/crates/vyre-bench/"
 packages = ["vyre-bench"]
 reason = "The measurement harness. What it records is what a performance claim is read from."
 defends = "rigged tests, contributor-chosen inputs"
 
 [[boundary]]
-pattern = "/xtask-evidence/"
+pattern = "/tools/xtask-evidence/"
 packages = ["xtask-evidence"]
 reason = "The release and evidence tooling that decides what a measured claim is."
 defends = "rigged tests, contributor-chosen inputs"
@@ -155,13 +155,13 @@ defends = "monotonic weakening"
 # ─── The gates and their verdict ───────────────────────────────────
 
 [[boundary]]
-pattern = "/xtask/src/gates/sweep.rs"
+pattern = "/tools/xtask/src/gates/sweep.rs"
 packages = []
 reason = "The sweep that fails on any finding. An edit that tolerates a count certifies what the gate stopped checking."
 defends = "monotonic weakening"
 
 [[boundary]]
-pattern = "/xtask/src/gates/codeowners.rs"
+pattern = "/tools/xtask/src/gates/codeowners.rs"
 packages = []
 reason = "The generator and validator of the active CODEOWNERS file."
 defends = "all boundaries (meta-gate)"

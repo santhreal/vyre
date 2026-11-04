@@ -9,7 +9,7 @@ scheduled_cells = 300
 
 [[crates]]
 name = "structure-gate"
-manifest_path = "structure-gate/Cargo.toml"
+manifest_path = "tools/structure-gate/Cargo.toml"
 publication_class = "conformance-tooling"
 features = []
 default_features = []
@@ -18,7 +18,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre"
-manifest_path = "vyre/Cargo.toml"
+manifest_path = "crates/vyre/Cargo.toml"
 publication_class = "stable-consumer-sdk"
 features = [
     "cpu-parity",
@@ -35,7 +35,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-alloc-probe"
-manifest_path = "vyre-alloc-probe/Cargo.toml"
+manifest_path = "crates/vyre-alloc-probe/Cargo.toml"
 publication_class = "conformance-tooling"
 features = []
 default_features = []
@@ -44,7 +44,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-aot"
-manifest_path = "vyre-aot/Cargo.toml"
+manifest_path = "crates/vyre-aot/Cargo.toml"
 publication_class = "internal-engine"
 features = [
     "default",
@@ -56,7 +56,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-bench"
-manifest_path = "vyre-bench/Cargo.toml"
+manifest_path = "crates/vyre-bench/Cargo.toml"
 publication_class = "conformance-tooling"
 features = [
     "cli",
@@ -98,7 +98,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-debug"
-manifest_path = "vyre-debug/Cargo.toml"
+manifest_path = "crates/vyre-debug/Cargo.toml"
 publication_class = "conformance-tooling"
 features = []
 default_features = []
@@ -107,7 +107,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-driver"
-manifest_path = "vyre-driver/Cargo.toml"
+manifest_path = "crates/vyre-driver/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "default",
@@ -120,7 +120,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-driver-cuda"
-manifest_path = "vyre-driver-cuda/Cargo.toml"
+manifest_path = "crates/vyre-driver-cuda/Cargo.toml"
 publication_class = "concrete-backend"
 features = [
     "cuda",
@@ -133,7 +133,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-driver-metal"
-manifest_path = "vyre-driver-metal/Cargo.toml"
+manifest_path = "crates/vyre-driver-metal/Cargo.toml"
 publication_class = "concrete-backend"
 features = [
     "default",
@@ -145,7 +145,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-driver-reference"
-manifest_path = "vyre-driver-reference/Cargo.toml"
+manifest_path = "crates/vyre-driver-reference/Cargo.toml"
 publication_class = "conformance-tooling"
 features = []
 default_features = []
@@ -154,7 +154,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-driver-spirv"
-manifest_path = "vyre-driver-spirv/Cargo.toml"
+manifest_path = "crates/vyre-driver-spirv/Cargo.toml"
 publication_class = "concrete-backend"
 features = [
     "default",
@@ -167,7 +167,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-driver-wgpu"
-manifest_path = "vyre-driver-wgpu/Cargo.toml"
+manifest_path = "crates/vyre-driver-wgpu/Cargo.toml"
 publication_class = "concrete-backend"
 features = [
     "default",
@@ -181,7 +181,7 @@ has_build_script = true
 
 [[crates]]
 name = "vyre-emit-metal"
-manifest_path = "vyre-emit-metal/Cargo.toml"
+manifest_path = "crates/vyre-emit-metal/Cargo.toml"
 publication_class = "internal-engine"
 features = []
 default_features = []
@@ -190,7 +190,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-emit-naga"
-manifest_path = "vyre-emit-naga/Cargo.toml"
+manifest_path = "crates/vyre-emit-naga/Cargo.toml"
 publication_class = "internal-engine"
 features = []
 default_features = []
@@ -199,7 +199,7 @@ has_build_script = true
 
 [[crates]]
 name = "vyre-emit-ptx"
-manifest_path = "vyre-emit-ptx/Cargo.toml"
+manifest_path = "crates/vyre-emit-ptx/Cargo.toml"
 publication_class = "internal-engine"
 features = [
     "default",
@@ -211,7 +211,7 @@ has_build_script = true
 
 [[crates]]
 name = "vyre-emit-spirv"
-manifest_path = "vyre-emit-spirv/Cargo.toml"
+manifest_path = "crates/vyre-emit-spirv/Cargo.toml"
 publication_class = "internal-engine"
 features = []
 default_features = []
@@ -220,7 +220,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-foundation"
-manifest_path = "vyre-foundation/Cargo.toml"
+manifest_path = "crates/vyre-foundation/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "default",
@@ -232,7 +232,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs"
-manifest_path = "vyre-libs/Cargo.toml"
+manifest_path = "crates/vyre-libs/Cargo.toml"
 publication_class = "stable-consumer-sdk"
 features = [
     "analysis",
@@ -338,7 +338,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-analysis"
-manifest_path = "vyre-libs-analysis/Cargo.toml"
+manifest_path = "crates/vyre-libs-analysis/Cargo.toml"
 publication_class = "internal-engine"
 features = [
     "analysis",
@@ -350,7 +350,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-bitset"
-manifest_path = "vyre-libs-bitset/Cargo.toml"
+manifest_path = "crates/vyre-libs-bitset/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "bitset",
@@ -367,7 +367,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-builder"
-manifest_path = "vyre-libs-builder/Cargo.toml"
+manifest_path = "crates/vyre-libs-builder/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "builder",
@@ -387,7 +387,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-decode"
-manifest_path = "vyre-libs-decode/Cargo.toml"
+manifest_path = "crates/vyre-libs-decode/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "decode",
@@ -399,7 +399,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-device"
-manifest_path = "vyre-libs-device/Cargo.toml"
+manifest_path = "crates/vyre-libs-device/Cargo.toml"
 publication_class = "internal-engine"
 features = [
     "default",
@@ -412,7 +412,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-encoding"
-manifest_path = "vyre-libs-encoding/Cargo.toml"
+manifest_path = "crates/vyre-libs-encoding/Cargo.toml"
 publication_class = "internal-engine"
 features = [
     "default",
@@ -425,7 +425,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-fixpoint"
-manifest_path = "vyre-libs-fixpoint/Cargo.toml"
+manifest_path = "crates/vyre-libs-fixpoint/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "default",
@@ -438,7 +438,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-graph"
-manifest_path = "vyre-libs-graph/Cargo.toml"
+manifest_path = "crates/vyre-libs-graph/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "default",
@@ -455,7 +455,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-hash"
-manifest_path = "vyre-libs-hash/Cargo.toml"
+manifest_path = "crates/vyre-libs-hash/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "crypto-blake3",
@@ -468,7 +468,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-math"
-manifest_path = "vyre-libs-math/Cargo.toml"
+manifest_path = "crates/vyre-libs-math/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "default",
@@ -495,7 +495,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-nn"
-manifest_path = "vyre-libs-nn/Cargo.toml"
+manifest_path = "crates/vyre-libs-nn/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "default",
@@ -520,7 +520,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-parsing"
-manifest_path = "vyre-libs-parsing/Cargo.toml"
+manifest_path = "crates/vyre-libs-parsing/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "default",
@@ -535,7 +535,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-pattern"
-manifest_path = "vyre-libs-pattern/Cargo.toml"
+manifest_path = "crates/vyre-libs-pattern/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "default",
@@ -553,7 +553,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-reasoning"
-manifest_path = "vyre-libs-reasoning/Cargo.toml"
+manifest_path = "crates/vyre-libs-reasoning/Cargo.toml"
 publication_class = "internal-engine"
 features = [
     "default",
@@ -565,7 +565,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-reduce"
-manifest_path = "vyre-libs-reduce/Cargo.toml"
+manifest_path = "crates/vyre-libs-reduce/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "default",
@@ -577,7 +577,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-rule"
-manifest_path = "vyre-libs-rule/Cargo.toml"
+manifest_path = "crates/vyre-libs-rule/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "default",
@@ -589,7 +589,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-scheduling"
-manifest_path = "vyre-libs-scheduling/Cargo.toml"
+manifest_path = "crates/vyre-libs-scheduling/Cargo.toml"
 publication_class = "internal-engine"
 features = [
     "default",
@@ -601,7 +601,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-security"
-manifest_path = "vyre-libs-security/Cargo.toml"
+manifest_path = "crates/vyre-libs-security/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "default",
@@ -615,7 +615,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-solvers"
-manifest_path = "vyre-libs-solvers/Cargo.toml"
+manifest_path = "crates/vyre-libs-solvers/Cargo.toml"
 publication_class = "internal-engine"
 features = [
     "default",
@@ -627,7 +627,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-text"
-manifest_path = "vyre-libs-text/Cargo.toml"
+manifest_path = "crates/vyre-libs-text/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "default",
@@ -639,7 +639,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-libs-visual"
-manifest_path = "vyre-libs-visual/Cargo.toml"
+manifest_path = "crates/vyre-libs-visual/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "default",
@@ -651,7 +651,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-lower"
-manifest_path = "vyre-lower/Cargo.toml"
+manifest_path = "crates/vyre-lower/Cargo.toml"
 publication_class = "internal-engine"
 features = [
     "default",
@@ -663,7 +663,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-macros"
-manifest_path = "vyre-macros/Cargo.toml"
+manifest_path = "crates/vyre-macros/Cargo.toml"
 publication_class = "extension-sdk"
 features = []
 default_features = []
@@ -672,7 +672,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-megakernel"
-manifest_path = "vyre-megakernel/Cargo.toml"
+manifest_path = "crates/vyre-megakernel/Cargo.toml"
 publication_class = "internal-engine"
 features = []
 default_features = []
@@ -681,7 +681,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-pass-engine"
-manifest_path = "vyre-pass-engine/Cargo.toml"
+manifest_path = "crates/vyre-pass-engine/Cargo.toml"
 publication_class = "internal-engine"
 features = [
     "all-solvers",
@@ -694,7 +694,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-primitives"
-manifest_path = "vyre-primitives/Cargo.toml"
+manifest_path = "crates/vyre-primitives/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "cpu-parity",
@@ -713,7 +713,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-reference"
-manifest_path = "vyre-reference/Cargo.toml"
+manifest_path = "crates/vyre-reference/Cargo.toml"
 publication_class = "extension-sdk"
 features = [
     "default",
@@ -725,7 +725,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-registry-link"
-manifest_path = "vyre-registry-link/Cargo.toml"
+manifest_path = "crates/vyre-registry-link/Cargo.toml"
 publication_class = "internal-engine"
 features = [
     "cuda",
@@ -755,7 +755,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-runtime"
-manifest_path = "vyre-runtime/Cargo.toml"
+manifest_path = "crates/vyre-runtime/Cargo.toml"
 publication_class = "internal-engine"
 features = [
     "default",
@@ -774,7 +774,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-safetensors"
-manifest_path = "vyre-safetensors/Cargo.toml"
+manifest_path = "crates/vyre-safetensors/Cargo.toml"
 publication_class = "stable-consumer-sdk"
 features = []
 default_features = []
@@ -783,7 +783,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-spec"
-manifest_path = "vyre-spec/Cargo.toml"
+manifest_path = "crates/vyre-spec/Cargo.toml"
 publication_class = "extension-sdk"
 features = []
 default_features = []
@@ -792,7 +792,7 @@ has_build_script = false
 
 [[crates]]
 name = "vyre-test-support"
-manifest_path = "vyre-test-support/Cargo.toml"
+manifest_path = "crates/vyre-test-support/Cargo.toml"
 publication_class = "private-test-support"
 features = [
     "default",
@@ -823,7 +823,7 @@ has_build_script = false
 
 [[crates]]
 name = "xtask"
-manifest_path = "xtask/Cargo.toml"
+manifest_path = "tools/xtask/Cargo.toml"
 publication_class = "conformance-tooling"
 features = [
     "default",
@@ -835,7 +835,7 @@ has_build_script = false
 
 [[crates]]
 name = "xtask-evidence"
-manifest_path = "xtask-evidence/Cargo.toml"
+manifest_path = "tools/xtask-evidence/Cargo.toml"
 publication_class = "conformance-tooling"
 features = []
 default_features = []
@@ -844,7 +844,7 @@ has_build_script = false
 
 [[crates]]
 name = "xtask-registry"
-manifest_path = "xtask-registry/Cargo.toml"
+manifest_path = "tools/xtask-registry/Cargo.toml"
 publication_class = "conformance-tooling"
 features = []
 default_features = []
@@ -2669,28 +2669,28 @@ target_cell = "base_no_features"
 isolated_build_command = "./cargo_full check -p xtask-registry --no-default-features"
 
 [[build_script_audits]]
-path = "vyre-bench/build.rs"
+path = "crates/vyre-bench/build.rs"
 declares_rerun_inputs = false
 declared_inputs = []
 accesses_undeclared_host_state = false
 is_deterministic = true
 
 [[build_script_audits]]
-path = "vyre-driver-wgpu/build.rs"
+path = "crates/vyre-driver-wgpu/build.rs"
 declares_rerun_inputs = true
 declared_inputs = ['{}", manifest_path.display());']
 accesses_undeclared_host_state = false
 is_deterministic = true
 
 [[build_script_audits]]
-path = "vyre-emit-naga/build.rs"
+path = "crates/vyre-emit-naga/build.rs"
 declares_rerun_inputs = true
 declared_inputs = []
 accesses_undeclared_host_state = false
 is_deterministic = true
 
 [[build_script_audits]]
-path = "vyre-emit-ptx/build.rs"
+path = "crates/vyre-emit-ptx/build.rs"
 declares_rerun_inputs = true
 declared_inputs = []
 accesses_undeclared_host_state = false

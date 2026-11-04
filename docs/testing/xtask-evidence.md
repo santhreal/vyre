@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own the xtask subcommands that decide whether a recorded benchmark or release measurement still describes this tree.
 
-The crate lives at `xtask-evidence` and owns the `evidence-gates` seam in the `tooling` layer.
+The crate lives at `tools/xtask-evidence` and owns the `evidence-gates` seam in the `tooling` layer.
 
 ## Commands
 
@@ -24,9 +24,9 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `bin` | `xtask-evidence` | `xtask-evidence/src/main.rs` | None | `./cargo_full test -p xtask-evidence --bin xtask-evidence` |
-| `lib` | `xtask_evidence` | `xtask-evidence/src/lib.rs` | None | `./cargo_full test -p xtask-evidence` |
-| `test` | `all_tests` | `xtask-evidence/tests/all_tests.rs` | None | `./cargo_full test -p xtask-evidence --test all_tests` |
+| `bin` | `xtask-evidence` | `tools/xtask-evidence/src/main.rs` | None | `./cargo_full test -p xtask-evidence --bin xtask-evidence` |
+| `lib` | `xtask_evidence` | `tools/xtask-evidence/src/lib.rs` | None | `./cargo_full test -p xtask-evidence` |
+| `test` | `all_tests` | `tools/xtask-evidence/tests/all_tests.rs` | None | `./cargo_full test -p xtask-evidence --test all_tests` |
 
 ## Test classes
 

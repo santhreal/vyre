@@ -12,7 +12,7 @@ qualification_reason = "missing qualification document: release/engineering-qual
 
 [[crate]]
 name = "structure-gate"
-path = "structure-gate"
+path = "tools/structure-gate"
 tier = "tooling"
 public_api_symbols = 0
 testing_guide_present = true
@@ -23,7 +23,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre"
-path = "vyre"
+path = "crates/vyre"
 tier = "core"
 public_api_symbols = 172
 testing_guide_present = true
@@ -34,7 +34,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-alloc-probe"
-path = "vyre-alloc-probe"
+path = "crates/vyre-alloc-probe"
 tier = "middleware"
 public_api_symbols = 0
 testing_guide_present = true
@@ -45,7 +45,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-aot"
-path = "vyre-aot"
+path = "crates/vyre-aot"
 tier = "middleware"
 public_api_symbols = 0
 testing_guide_present = true
@@ -56,7 +56,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-bench"
-path = "vyre-bench"
+path = "crates/vyre-bench"
 tier = "middleware"
 public_api_symbols = 0
 testing_guide_present = true
@@ -89,7 +89,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-debug"
-path = "vyre-debug"
+path = "crates/vyre-debug"
 tier = "middleware"
 public_api_symbols = 0
 testing_guide_present = true
@@ -100,7 +100,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-driver"
-path = "vyre-driver"
+path = "crates/vyre-driver"
 tier = "driver"
 public_api_symbols = 2742
 testing_guide_present = true
@@ -111,7 +111,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-driver-cuda"
-path = "vyre-driver-cuda"
+path = "crates/vyre-driver-cuda"
 tier = "driver"
 public_api_symbols = 1018
 testing_guide_present = true
@@ -122,7 +122,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-driver-metal"
-path = "vyre-driver-metal"
+path = "crates/vyre-driver-metal"
 tier = "driver"
 public_api_symbols = 22
 testing_guide_present = true
@@ -133,7 +133,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-driver-reference"
-path = "vyre-driver-reference"
+path = "crates/vyre-driver-reference"
 tier = "driver"
 public_api_symbols = 15
 testing_guide_present = true
@@ -144,7 +144,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-driver-spirv"
-path = "vyre-driver-spirv"
+path = "crates/vyre-driver-spirv"
 tier = "driver"
 public_api_symbols = 36
 testing_guide_present = true
@@ -155,7 +155,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-driver-wgpu"
-path = "vyre-driver-wgpu"
+path = "crates/vyre-driver-wgpu"
 tier = "driver"
 public_api_symbols = 515
 testing_guide_present = true
@@ -166,7 +166,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-emit-metal"
-path = "vyre-emit-metal"
+path = "crates/vyre-emit-metal"
 tier = "emitter"
 public_api_symbols = 66
 testing_guide_present = true
@@ -177,7 +177,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-emit-naga"
-path = "vyre-emit-naga"
+path = "crates/vyre-emit-naga"
 tier = "emitter"
 public_api_symbols = 95
 testing_guide_present = true
@@ -188,7 +188,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-emit-ptx"
-path = "vyre-emit-ptx"
+path = "crates/vyre-emit-ptx"
 tier = "emitter"
 public_api_symbols = 211
 testing_guide_present = true
@@ -199,7 +199,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-emit-spirv"
-path = "vyre-emit-spirv"
+path = "crates/vyre-emit-spirv"
 tier = "emitter"
 public_api_symbols = 53
 testing_guide_present = true
@@ -210,7 +210,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-foundation"
-path = "vyre-foundation"
+path = "crates/vyre-foundation"
 tier = "core"
 public_api_symbols = 8807
 testing_guide_present = true
@@ -221,7 +221,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs"
-path = "vyre-libs"
+path = "crates/vyre-libs"
 tier = "middleware"
 public_api_symbols = 43
 testing_guide_present = true
@@ -232,7 +232,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-analysis"
-path = "vyre-libs-analysis"
+path = "crates/vyre-libs-analysis"
 tier = "middleware"
 public_api_symbols = 111
 testing_guide_present = true
@@ -243,7 +243,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-bitset"
-path = "vyre-libs-bitset"
+path = "crates/vyre-libs-bitset"
 tier = "middleware"
 public_api_symbols = 171
 testing_guide_present = true
@@ -254,7 +254,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-builder"
-path = "vyre-libs-builder"
+path = "crates/vyre-libs-builder"
 tier = "middleware"
 public_api_symbols = 612
 testing_guide_present = true
@@ -265,7 +265,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-decode"
-path = "vyre-libs-decode"
+path = "crates/vyre-libs-decode"
 tier = "middleware"
 public_api_symbols = 97
 testing_guide_present = true
@@ -276,7 +276,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-device"
-path = "vyre-libs-device"
+path = "crates/vyre-libs-device"
 tier = "middleware"
 public_api_symbols = 143
 testing_guide_present = true
@@ -287,7 +287,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-encoding"
-path = "vyre-libs-encoding"
+path = "crates/vyre-libs-encoding"
 tier = "middleware"
 public_api_symbols = 129
 testing_guide_present = true
@@ -298,7 +298,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-fixpoint"
-path = "vyre-libs-fixpoint"
+path = "crates/vyre-libs-fixpoint"
 tier = "middleware"
 public_api_symbols = 41
 testing_guide_present = true
@@ -309,7 +309,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-graph"
-path = "vyre-libs-graph"
+path = "crates/vyre-libs-graph"
 tier = "middleware"
 public_api_symbols = 1043
 testing_guide_present = true
@@ -320,7 +320,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-hash"
-path = "vyre-libs-hash"
+path = "crates/vyre-libs-hash"
 tier = "middleware"
 public_api_symbols = 109
 testing_guide_present = true
@@ -331,7 +331,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-math"
-path = "vyre-libs-math"
+path = "crates/vyre-libs-math"
 tier = "middleware"
 public_api_symbols = 480
 testing_guide_present = true
@@ -342,7 +342,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-nn"
-path = "vyre-libs-nn"
+path = "crates/vyre-libs-nn"
 tier = "middleware"
 public_api_symbols = 491
 testing_guide_present = true
@@ -353,7 +353,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-parsing"
-path = "vyre-libs-parsing"
+path = "crates/vyre-libs-parsing"
 tier = "middleware"
 public_api_symbols = 203
 testing_guide_present = true
@@ -364,7 +364,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-pattern"
-path = "vyre-libs-pattern"
+path = "crates/vyre-libs-pattern"
 tier = "middleware"
 public_api_symbols = 379
 testing_guide_present = true
@@ -375,7 +375,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-reasoning"
-path = "vyre-libs-reasoning"
+path = "crates/vyre-libs-reasoning"
 tier = "middleware"
 public_api_symbols = 34
 testing_guide_present = true
@@ -386,7 +386,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-reduce"
-path = "vyre-libs-reduce"
+path = "crates/vyre-libs-reduce"
 tier = "middleware"
 public_api_symbols = 154
 testing_guide_present = true
@@ -397,7 +397,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-rule"
-path = "vyre-libs-rule"
+path = "crates/vyre-libs-rule"
 tier = "middleware"
 public_api_symbols = 156
 testing_guide_present = true
@@ -408,7 +408,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-scheduling"
-path = "vyre-libs-scheduling"
+path = "crates/vyre-libs-scheduling"
 tier = "middleware"
 public_api_symbols = 53
 testing_guide_present = true
@@ -419,7 +419,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-security"
-path = "vyre-libs-security"
+path = "crates/vyre-libs-security"
 tier = "middleware"
 public_api_symbols = 202
 testing_guide_present = true
@@ -430,7 +430,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-solvers"
-path = "vyre-libs-solvers"
+path = "crates/vyre-libs-solvers"
 tier = "middleware"
 public_api_symbols = 182
 testing_guide_present = true
@@ -441,7 +441,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-text"
-path = "vyre-libs-text"
+path = "crates/vyre-libs-text"
 tier = "middleware"
 public_api_symbols = 78
 testing_guide_present = true
@@ -452,7 +452,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-libs-visual"
-path = "vyre-libs-visual"
+path = "crates/vyre-libs-visual"
 tier = "middleware"
 public_api_symbols = 90
 testing_guide_present = true
@@ -463,7 +463,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-lower"
-path = "vyre-lower"
+path = "crates/vyre-lower"
 tier = "middleware"
 public_api_symbols = 1359
 testing_guide_present = true
@@ -474,7 +474,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-macros"
-path = "vyre-macros"
+path = "crates/vyre-macros"
 tier = "middleware"
 public_api_symbols = 3
 testing_guide_present = true
@@ -485,7 +485,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-megakernel"
-path = "vyre-megakernel"
+path = "crates/vyre-megakernel"
 tier = "middleware"
 public_api_symbols = 1331
 testing_guide_present = true
@@ -496,7 +496,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-pass-engine"
-path = "vyre-pass-engine"
+path = "crates/vyre-pass-engine"
 tier = "middleware"
 public_api_symbols = 0
 testing_guide_present = true
@@ -507,7 +507,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-primitives"
-path = "vyre-primitives"
+path = "crates/vyre-primitives"
 tier = "middleware"
 public_api_symbols = 130
 testing_guide_present = true
@@ -518,7 +518,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-reference"
-path = "vyre-reference"
+path = "crates/vyre-reference"
 tier = "middleware"
 public_api_symbols = 1134
 testing_guide_present = true
@@ -529,7 +529,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-registry-link"
-path = "vyre-registry-link"
+path = "crates/vyre-registry-link"
 tier = "middleware"
 public_api_symbols = 0
 testing_guide_present = true
@@ -540,7 +540,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-runtime"
-path = "vyre-runtime"
+path = "crates/vyre-runtime"
 tier = "middleware"
 public_api_symbols = 2833
 testing_guide_present = true
@@ -551,7 +551,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-safetensors"
-path = "vyre-safetensors"
+path = "crates/vyre-safetensors"
 tier = "middleware"
 public_api_symbols = 169
 testing_guide_present = true
@@ -562,7 +562,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-spec"
-path = "vyre-spec"
+path = "crates/vyre-spec"
 tier = "core"
 public_api_symbols = 2019
 testing_guide_present = true
@@ -573,7 +573,7 @@ status = "unqualified"
 
 [[crate]]
 name = "vyre-test-support"
-path = "vyre-test-support"
+path = "crates/vyre-test-support"
 tier = "middleware"
 public_api_symbols = 0
 testing_guide_present = true
@@ -584,7 +584,7 @@ status = "unqualified"
 
 [[crate]]
 name = "xtask"
-path = "xtask"
+path = "tools/xtask"
 tier = "tooling"
 public_api_symbols = 0
 testing_guide_present = true
@@ -595,7 +595,7 @@ status = "unqualified"
 
 [[crate]]
 name = "xtask-evidence"
-path = "xtask-evidence"
+path = "tools/xtask-evidence"
 tier = "tooling"
 public_api_symbols = 0
 testing_guide_present = true
@@ -606,7 +606,7 @@ status = "unqualified"
 
 [[crate]]
 name = "xtask-registry"
-path = "xtask-registry"
+path = "tools/xtask-registry"
 tier = "tooling"
 public_api_symbols = 0
 testing_guide_present = true

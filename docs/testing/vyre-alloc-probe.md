@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Count heap traffic per thread behind a GlobalAlloc wrapper, so an allocation budget measures the code under test rather than the test schedule. Depends on no vyre crate, so a harness binary links it at run time and a driver suite links it as a dev-dependency.
 
-The crate lives at `vyre-alloc-probe` and owns the `allocation-probe` seam in the `standalone-tooling` layer.
+The crate lives at `crates/vyre-alloc-probe` and owns the `allocation-probe` seam in the `standalone-tooling` layer.
 
 ## Commands
 
@@ -24,8 +24,8 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_alloc_probe` | `vyre-alloc-probe/src/lib.rs` | None | `./cargo_full test -p vyre-alloc-probe` |
-| `test` | `all_tests` | `vyre-alloc-probe/tests/all_tests.rs` | None | `./cargo_full test -p vyre-alloc-probe --test all_tests` |
+| `lib` | `vyre_alloc_probe` | `crates/vyre-alloc-probe/src/lib.rs` | None | `./cargo_full test -p vyre-alloc-probe` |
+| `test` | `all_tests` | `crates/vyre-alloc-probe/tests/all_tests.rs` | None | `./cargo_full test -p vyre-alloc-probe --test all_tests` |
 
 ## Test classes
 

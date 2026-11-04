@@ -71,13 +71,13 @@ Run one gate by name, or a related set with `--subset`:
 
 `./cargo_full run -p xtask --bin xtask -- --help` prints every gate and every
 subset with what it judges. A subset is every gate whose descriptor in
-`xtask/src/gate_metadata/` lists that area.
+`tools/xtask/src/gate_metadata/` lists that area.
 
 A gate reports findings, and every gate holds zero: `xtask gates` fails on any
 finding. A gate that owns a generated artifact checks it by default and
 rewrites it only when you pass `--write`.
 
-`xtask/ci-registry.toml` declares the wiring: which subsets hold each gate,
+`tools/xtask/ci-registry.toml` declares the wiring: which subsets hold each gate,
 which workflows run it, every check CI runs that is not a gate, and every
 workflow path the tree carries or once carried. Regenerate it with
 `./cargo_full run -p xtask --bin xtask -- ci-registry --write` after adding a

@@ -7,6 +7,10 @@ boundary is an application of one of the two placement rules in
 `docs/CRATE_GRAPH.md` and `docs/OWNERSHIP.md` are generated from the
 manifests and are the machine-readable form of this page.
 
+Each crate below is at `crates/<name>`, except the tooling crates under
+`tools/` and the conformance crates under `conform/`;
+[the architecture overview](../ARCHITECTURE.md#directories) states the layout.
+
 ## Contract
 
 ### vyre-spec
@@ -288,7 +292,7 @@ none is built by a workspace command.
 | `examples/external_ir_extension` | An out-of-tree crate registers a semantic operation and a compile-only target facet. |
 | `examples/external_backend_extension` | An out-of-tree crate implements `vyre_driver::VyreBackend` and is served by `vyre_driver::acquire`. |
 | `examples/libs-template` | The Category A author path, from scaffold to a passing conformance test. |
-| `vyre-foundation/fuzz` | The libFuzzer targets for the wire decoder, the byte decoder and the registry TOML reader. |
+| `crates/vyre-foundation/fuzz` | The libFuzzer targets for the wire decoder, the byte decoder and the registry TOML reader. |
 
 The `example-capability` gate builds each example against the published surface
 and runs what it asserts. See [add an operation](../extending/operation.md) and

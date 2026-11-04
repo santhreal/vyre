@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Consume validated selected schedule phases and semantic programs, then own the single validated PhysicalKernel lowering boundary plus its backend-neutral pre-emission transforms.
 
-The crate lives at `vyre-lower` and owns the `lowering` seam in the `lowering` layer.
+The crate lives at `crates/vyre-lower` and owns the `lowering` seam in the `lowering` layer.
 
 ## Commands
 
@@ -30,9 +30,9 @@ The crate lives at `vyre-lower` and owns the `lowering` seam in the `lowering` l
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_lower` | `vyre-lower/src/lib.rs` | None | `./cargo_full test -p vyre-lower` |
-| `test` | `all_tests` | `vyre-lower/tests/all_tests.rs` | None | `./cargo_full test -p vyre-lower --test all_tests` |
-| `test` | `variant_space_is_independent_of_the_working_directory` | `vyre-lower/tests/variant_space_is_independent_of_the_working_directory.rs` | None | `./cargo_full test -p vyre-lower --test variant_space_is_independent_of_the_working_directory` |
+| `lib` | `vyre_lower` | `crates/vyre-lower/src/lib.rs` | None | `./cargo_full test -p vyre-lower` |
+| `test` | `all_tests` | `crates/vyre-lower/tests/all_tests.rs` | None | `./cargo_full test -p vyre-lower --test all_tests` |
+| `test` | `variant_space_is_independent_of_the_working_directory` | `crates/vyre-lower/tests/variant_space_is_independent_of_the_working_directory.rs` | None | `./cargo_full test -p vyre-lower --test variant_space_is_independent_of_the_working_directory` |
 
 ## Test classes
 

@@ -336,7 +336,7 @@ mod tests {
     /// one. The `reg.id != "cpu-ref"` half of the condition is gone: naming the
     /// id the interpreter used to register under judged one spelling, and the
     /// execution-domain closure in
-    /// `vyre-driver-reference/tests/production_registry_execution_domain.rs`
+    /// `crates/vyre-driver-reference/tests/production_registry_execution_domain.rs`
     /// judges every entry.
     #[test]
     fn no_registered_backend_is_a_reference_oracle() {

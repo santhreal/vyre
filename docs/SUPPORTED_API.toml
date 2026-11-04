@@ -5,7 +5,7 @@ schema_version = 2
 
 [[package]]
 name = "vyre"
-path = "vyre"
+path = "crates/vyre"
 seam = "public-facade"
 publication_class = "stable-consumer-sdk"
 publication_contract = "consumer-seam:vyre-graphics-app"
@@ -1218,7 +1218,7 @@ exported_item_count = 172
 
 [[package]]
 name = "vyre-driver"
-path = "vyre-driver"
+path = "crates/vyre-driver"
 seam = "backend-contract"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
@@ -20421,7 +20421,7 @@ exported_item_count = 2742
 
 [[package]]
 name = "vyre-driver-cuda"
-path = "vyre-driver-cuda"
+path = "crates/vyre-driver-cuda"
 seam = "cuda-driver"
 publication_class = "concrete-backend"
 publication_contract = "target-support:cuda"
@@ -27556,7 +27556,7 @@ exported_item_count = 1018
 
 [[package]]
 name = "vyre-driver-metal"
-path = "vyre-driver-metal"
+path = "crates/vyre-driver-metal"
 seam = "metal-driver"
 publication_class = "concrete-backend"
 publication_contract = "target-support:metal"
@@ -27719,7 +27719,7 @@ exported_item_count = 22
 
 [[package]]
 name = "vyre-driver-reference"
-path = "vyre-driver-reference"
+path = "crates/vyre-driver-reference"
 seam = "reference-driver"
 publication_class = "conformance-tooling"
 publication_contract = "consumer-seam:vyre-graphics-app"
@@ -27833,7 +27833,7 @@ exported_item_count = 15
 
 [[package]]
 name = "vyre-driver-spirv"
-path = "vyre-driver-spirv"
+path = "crates/vyre-driver-spirv"
 seam = "spirv-driver"
 publication_class = "concrete-backend"
 publication_contract = "target-support:spirv"
@@ -28094,7 +28094,7 @@ exported_item_count = 36
 
 [[package]]
 name = "vyre-driver-wgpu"
-path = "vyre-driver-wgpu"
+path = "crates/vyre-driver-wgpu"
 seam = "portable-driver"
 publication_class = "concrete-backend"
 publication_contract = "target-support:wgpu"
@@ -31708,7 +31708,7 @@ exported_item_count = 515
 
 [[package]]
 name = "vyre-emit-metal"
-path = "vyre-emit-metal"
+path = "crates/vyre-emit-metal"
 seam = "metal-emitter"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-driver-metal"
@@ -32179,7 +32179,7 @@ exported_item_count = 66
 
 [[package]]
 name = "vyre-emit-naga"
-path = "vyre-emit-naga"
+path = "crates/vyre-emit-naga"
 seam = "primary-text-emitter"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-driver-wgpu"
@@ -32853,7 +32853,7 @@ exported_item_count = 95
 
 [[package]]
 name = "vyre-emit-ptx"
-path = "vyre-emit-ptx"
+path = "crates/vyre-emit-ptx"
 seam = "primary-binary-emitter"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-driver-cuda"
@@ -34339,7 +34339,7 @@ exported_item_count = 211
 
 [[package]]
 name = "vyre-emit-spirv"
-path = "vyre-emit-spirv"
+path = "crates/vyre-emit-spirv"
 seam = "spirv-emitter"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-driver-spirv"
@@ -34719,7 +34719,7 @@ exported_item_count = 53
 
 [[package]]
 name = "vyre-foundation"
-path = "vyre-foundation"
+path = "crates/vyre-foundation"
 seam = "foundation-ir"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
@@ -96377,7 +96377,7 @@ exported_item_count = 8807
 
 [[package]]
 name = "vyre-libs"
-path = "vyre-libs"
+path = "crates/vyre-libs"
 seam = "semantic-library"
 publication_class = "stable-consumer-sdk"
 publication_contract = "consumer-seam:vyre-graphics-app"
@@ -96687,7 +96687,7 @@ exported_item_count = 43
 
 [[package]]
 name = "vyre-libs-analysis"
-path = "vyre-libs-analysis"
+path = "crates/vyre-libs-analysis"
 seam = "libs-analysis"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-libs"
@@ -97473,7 +97473,7 @@ exported_item_count = 111
 
 [[package]]
 name = "vyre-libs-bitset"
-path = "vyre-libs-bitset"
+path = "crates/vyre-libs-bitset"
 seam = "libs-bitset"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -98651,7 +98651,7 @@ exported_item_count = 167
 
 [[package]]
 name = "vyre-libs-builder"
-path = "vyre-libs-builder"
+path = "crates/vyre-libs-builder"
 seam = "libs-builder"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -102944,7 +102944,7 @@ exported_item_count = 612
 
 [[package]]
 name = "vyre-libs-decode"
-path = "vyre-libs-decode"
+path = "crates/vyre-libs-decode"
 seam = "libs-decode"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -103632,12 +103632,12 @@ exported_item_count = 97
 
 [[package]]
 name = "vyre-libs-device"
-path = "vyre-libs-device"
+path = "crates/vyre-libs-device"
 seam = "libs-device"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-libs"
 stability = "internal"
-exported_item_count = 139
+exported_item_count = 143
 
   [[package.item]]
   path = "impl core::error::Error for vyre_libs_device::device::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError"
@@ -104612,9 +104612,37 @@ exported_item_count = 139
   feature = "unconditional"
   wire_compatibility = "api-only"
 
+  [[package.item]]
+  path = "vyre_libs_device::vfs"
+  kind = "mod"
+  stability = "internal"
+  feature = "vfs"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_device::vfs::resolve"
+  kind = "mod"
+  stability = "internal"
+  feature = "vfs"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_device::vfs::resolve::VFS_RESOLVE_OP_ID: &str"
+  kind = "const"
+  stability = "internal"
+  feature = "vfs"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_libs_device::vfs::resolve::vfs_resolve_dma(include_hashes: &str, out_file_buffers: &str, block_words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program"
+  kind = "fn"
+  stability = "internal"
+  feature = "vfs"
+  wire_compatibility = "api-only"
+
 [[package]]
 name = "vyre-libs-encoding"
-path = "vyre-libs-encoding"
+path = "crates/vyre-libs-encoding"
 seam = "libs-encoding"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-libs"
@@ -105526,7 +105554,7 @@ exported_item_count = 129
 
 [[package]]
 name = "vyre-libs-fixpoint"
-path = "vyre-libs-fixpoint"
+path = "crates/vyre-libs-fixpoint"
 seam = "libs-fixpoint"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -105822,7 +105850,7 @@ exported_item_count = 41
 
 [[package]]
 name = "vyre-libs-graph"
-path = "vyre-libs-graph"
+path = "crates/vyre-libs-graph"
 seam = "libs-graph"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -113132,7 +113160,7 @@ exported_item_count = 1043
 
 [[package]]
 name = "vyre-libs-hash"
-path = "vyre-libs-hash"
+path = "crates/vyre-libs-hash"
 seam = "libs-hash"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -113904,7 +113932,7 @@ exported_item_count = 109
 
 [[package]]
 name = "vyre-libs-math"
-path = "vyre-libs-math"
+path = "crates/vyre-libs-math"
 seam = "libs-math"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -117273,7 +117301,7 @@ exported_item_count = 480
 
 [[package]]
 name = "vyre-libs-nn"
-path = "vyre-libs-nn"
+path = "crates/vyre-libs-nn"
 seam = "libs-nn"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -120719,7 +120747,7 @@ exported_item_count = 491
 
 [[package]]
 name = "vyre-libs-parsing"
-path = "vyre-libs-parsing"
+path = "crates/vyre-libs-parsing"
 seam = "libs-parsing"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -122149,7 +122177,7 @@ exported_item_count = 203
 
 [[package]]
 name = "vyre-libs-pattern"
-path = "vyre-libs-pattern"
+path = "crates/vyre-libs-pattern"
 seam = "libs-pattern"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -124811,7 +124839,7 @@ exported_item_count = 379
 
 [[package]]
 name = "vyre-libs-reasoning"
-path = "vyre-libs-reasoning"
+path = "crates/vyre-libs-reasoning"
 seam = "libs-reasoning"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-libs"
@@ -125058,7 +125086,7 @@ exported_item_count = 34
 
 [[package]]
 name = "vyre-libs-reduce"
-path = "vyre-libs-reduce"
+path = "crates/vyre-libs-reduce"
 seam = "libs-reduce"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -126145,7 +126173,7 @@ exported_item_count = 154
 
 [[package]]
 name = "vyre-libs-rule"
-path = "vyre-libs-rule"
+path = "crates/vyre-libs-rule"
 seam = "libs-rule"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -127246,7 +127274,7 @@ exported_item_count = 156
 
 [[package]]
 name = "vyre-libs-scheduling"
-path = "vyre-libs-scheduling"
+path = "crates/vyre-libs-scheduling"
 seam = "libs-scheduling"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-libs"
@@ -127626,7 +127654,7 @@ exported_item_count = 53
 
 [[package]]
 name = "vyre-libs-security"
-path = "vyre-libs-security"
+path = "crates/vyre-libs-security"
 seam = "libs-security"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -129049,7 +129077,7 @@ exported_item_count = 202
 
 [[package]]
 name = "vyre-libs-solvers"
-path = "vyre-libs-solvers"
+path = "crates/vyre-libs-solvers"
 seam = "libs-solvers"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-libs"
@@ -130332,7 +130360,7 @@ exported_item_count = 182
 
 [[package]]
 name = "vyre-libs-text"
-path = "vyre-libs-text"
+path = "crates/vyre-libs-text"
 seam = "libs-text"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -130887,7 +130915,7 @@ exported_item_count = 78
 
 [[package]]
 name = "vyre-libs-visual"
-path = "vyre-libs-visual"
+path = "crates/vyre-libs-visual"
 seam = "libs-visual"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-libs"
@@ -131526,7 +131554,7 @@ exported_item_count = 90
 
 [[package]]
 name = "vyre-lower"
-path = "vyre-lower"
+path = "crates/vyre-lower"
 seam = "lowering"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre-megakernel"
@@ -141048,7 +141076,7 @@ exported_item_count = 1359
 
 [[package]]
 name = "vyre-macros"
-path = "vyre-macros"
+path = "crates/vyre-macros"
 seam = "registration-macros"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre-foundation"
@@ -141078,7 +141106,7 @@ exported_item_count = 3
 
 [[package]]
 name = "vyre-megakernel"
-path = "vyre-megakernel"
+path = "crates/vyre-megakernel"
 seam = "megakernel-compiler"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre"
@@ -150404,7 +150432,7 @@ exported_item_count = 1331
 
 [[package]]
 name = "vyre-primitives"
-path = "vyre-primitives"
+path = "crates/vyre-primitives"
 seam = "primitive-library"
 publication_class = "extension-sdk"
 publication_contract = "consumer-seam:vyre-graphics-app"
@@ -151323,7 +151351,7 @@ exported_item_count = 130
 
 [[package]]
 name = "vyre-reference"
-path = "vyre-reference"
+path = "crates/vyre-reference"
 seam = "reference-semantics"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_backend_extension"
@@ -159270,7 +159298,7 @@ exported_item_count = 1134
 
 [[package]]
 name = "vyre-runtime"
-path = "vyre-runtime"
+path = "crates/vyre-runtime"
 seam = "runtime"
 publication_class = "internal-engine"
 publication_contract = "closure:vyre"
@@ -179110,7 +179138,7 @@ exported_item_count = 2833
 
 [[package]]
 name = "vyre-safetensors"
-path = "vyre-safetensors"
+path = "crates/vyre-safetensors"
 seam = "safetensors-adapter"
 publication_class = "stable-consumer-sdk"
 publication_contract = "consumer-seam:vyre-model-compiler"
@@ -180302,7 +180330,7 @@ exported_item_count = 169
 
 [[package]]
 name = "vyre-spec"
-path = "vyre-spec"
+path = "crates/vyre-spec"
 seam = "specification"
 publication_class = "extension-sdk"
 publication_contract = "closure:vyre"

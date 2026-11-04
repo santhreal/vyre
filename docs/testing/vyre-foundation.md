@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own validated ProgramGraph, versioned schedule-free LogicalProgramGraph domains, versioned backend-neutral schedule IR and transform legality, semantic identity, neutral schedule-constraint composition, diagnostics, serialization, semantic operation registration, and backend-neutral optimization.
 
-The crate lives at `vyre-foundation` and owns the `foundation-ir` seam in the `foundation` layer.
+The crate lives at `crates/vyre-foundation` and owns the `foundation-ir` seam in the `foundation` layer.
 
 ## Commands
 
@@ -30,10 +30,10 @@ The crate lives at `vyre-foundation` and owns the `foundation-ir` seam in the `f
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `bench` | `optimizer_pipeline` | `vyre-foundation/benches/optimizer_pipeline.rs` | None | `./cargo_full test -p vyre-foundation --bench optimizer_pipeline` |
-| `example` | `vyre_foundation_release_surface` | `vyre-foundation/examples/vyre_foundation_release_surface.rs` | None | `./cargo_full test -p vyre-foundation --example vyre_foundation_release_surface` |
-| `lib` | `vyre_foundation` | `vyre-foundation/src/lib.rs` | None | `./cargo_full test -p vyre-foundation` |
-| `test` | `all_tests` | `vyre-foundation/tests/all_tests.rs` | None | `./cargo_full test -p vyre-foundation --test all_tests` |
+| `bench` | `optimizer_pipeline` | `crates/vyre-foundation/benches/optimizer_pipeline.rs` | None | `./cargo_full test -p vyre-foundation --bench optimizer_pipeline` |
+| `example` | `vyre_foundation_release_surface` | `crates/vyre-foundation/examples/vyre_foundation_release_surface.rs` | None | `./cargo_full test -p vyre-foundation --example vyre_foundation_release_surface` |
+| `lib` | `vyre_foundation` | `crates/vyre-foundation/src/lib.rs` | None | `./cargo_full test -p vyre-foundation` |
+| `test` | `all_tests` | `crates/vyre-foundation/tests/all_tests.rs` | None | `./cargo_full test -p vyre-foundation --test all_tests` |
 
 ## Test classes
 

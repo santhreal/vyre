@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own text processing, byte classification, UTF-8 validation, and line indexing IR compositions. Does not own decoding decompression algorithms, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-text` and owns the `libs-text` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-text` and owns the `libs-text` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-text` and owns the `libs-text` seam in the `librar
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_text` | `vyre-libs-text/src/lib.rs` | None | `./cargo_full test -p vyre-libs-text` |
-| `test` | `all_tests` | `vyre-libs-text/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-text --test all_tests` |
+| `lib` | `vyre_libs_text` | `crates/vyre-libs-text/src/lib.rs` | None | `./cargo_full test -p vyre-libs-text` |
+| `test` | `all_tests` | `crates/vyre-libs-text/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-text --test all_tests` |
 
 ## Test classes
 

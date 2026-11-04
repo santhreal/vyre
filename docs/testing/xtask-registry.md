@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own the xtask subcommands that must observe the live operation registry, the primitive catalog behind it, or a linked backend driver.
 
-The crate lives at `xtask-registry` and owns the `live-registry-gates` seam in the `tooling` layer.
+The crate lives at `tools/xtask-registry` and owns the `live-registry-gates` seam in the `tooling` layer.
 
 ## Commands
 
@@ -24,9 +24,9 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `bin` | `xtask-registry` | `xtask-registry/src/main.rs` | None | `./cargo_full test -p xtask-registry --bin xtask-registry` |
-| `lib` | `xtask_registry` | `xtask-registry/src/lib.rs` | None | `./cargo_full test -p xtask-registry` |
-| `test` | `registry_contracts` | `xtask-registry/tests/registry_contracts/main.rs` | None | `./cargo_full test -p xtask-registry --test registry_contracts` |
+| `bin` | `xtask-registry` | `tools/xtask-registry/src/main.rs` | None | `./cargo_full test -p xtask-registry --bin xtask-registry` |
+| `lib` | `xtask_registry` | `tools/xtask-registry/src/lib.rs` | None | `./cargo_full test -p xtask-registry` |
+| `test` | `registry_contracts` | `tools/xtask-registry/tests/registry_contracts/main.rs` | None | `./cargo_full test -p xtask-registry --test registry_contracts` |
 
 ## Test classes
 

@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Public facade. Re-export IR, driver, runtime, and the artifact compiler. Own no logic.
 
-The crate lives at `vyre` and owns the `public-facade` seam in the `facade` layer.
+The crate lives at `crates/vyre` and owns the `public-facade` seam in the `facade` layer.
 
 ## Commands
 
@@ -30,9 +30,9 @@ The crate lives at `vyre` and owns the `public-facade` seam in the `facade` laye
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_release_surface` | `vyre/examples/vyre_release_surface.rs` | None | `./cargo_full test -p vyre --example vyre_release_surface` |
-| `lib` | `vyre` | `vyre/src/lib.rs` | None | `./cargo_full test -p vyre` |
-| `test` | `all_tests` | `vyre/tests/all_tests.rs` | None | `./cargo_full test -p vyre --test all_tests` |
+| `example` | `vyre_release_surface` | `crates/vyre/examples/vyre_release_surface.rs` | None | `./cargo_full test -p vyre --example vyre_release_surface` |
+| `lib` | `vyre` | `crates/vyre/src/lib.rs` | None | `./cargo_full test -p vyre` |
+| `test` | `all_tests` | `crates/vyre/tests/all_tests.rs` | None | `./cargo_full test -p vyre --test all_tests` |
 
 ## Test classes
 

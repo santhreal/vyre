@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own compiler-internal numerical solvers, autotuning routines, and spectral schedule analysis compositions. Does not own schedule search ranking, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-solvers` and owns the `libs-solvers` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-solvers` and owns the `libs-solvers` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-solvers` and owns the `libs-solvers` seam in the `
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_solvers` | `vyre-libs-solvers/src/lib.rs` | None | `./cargo_full test -p vyre-libs-solvers` |
-| `test` | `all_tests` | `vyre-libs-solvers/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-solvers --test all_tests` |
+| `lib` | `vyre_libs_solvers` | `crates/vyre-libs-solvers/src/lib.rs` | None | `./cargo_full test -p vyre-libs-solvers` |
+| `test` | `all_tests` | `crates/vyre-libs-solvers/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-solvers --test all_tests` |
 
 ## Test classes
 

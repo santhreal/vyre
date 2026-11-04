@@ -13,7 +13,7 @@ the rule, not a style question.
 
 `docs/generated/error-codes.toml` is the whole validation rule set: 105
 rules at schema version 1, rendered from
-`vyre-foundation/src/validate/catalog.rs`. Each row carries `code`,
+`crates/vyre-foundation/src/validate/catalog.rs`. Each row carries `code`,
 `phase`, `invariant` and `corrective_action`.
 
 The eight phases and how many rules each owns:
@@ -30,7 +30,7 @@ The eight phases and how many rules each owns:
 | capability | 1 |
 
 The catalog in source is the authority and the file is rendered from it.
-`vyre-foundation/tests/validator_error_docs.rs` fails on divergence and
+`crates/vyre-foundation/tests/validator_error_docs.rs` fails on divergence and
 reports one finding per divergent code, so the two cannot disagree.
 
 ## Backend errors
@@ -51,8 +51,8 @@ variants with their stable numeric ids:
 | 1999 | `Unknown` |
 
 `1999` is the terminal id, not a bucket to grow: a new failure mode gets
-its own id. `vyre-driver/tests/error_code_catalog.rs` compares the
-committed file against `vyre-driver/src/backend/error_catalog.rs`.
+its own id. `crates/vyre-driver/tests/error_code_catalog.rs` compares the
+committed file against `crates/vyre-driver/src/backend/error_catalog.rs`.
 
 The same file carries the compile-time diagnostic set.
 `W-OP-DEPRECATED` fires when a resolved operation is marked deprecated in

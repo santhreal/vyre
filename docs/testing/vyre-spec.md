@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own stable schemas, operation definitions, and compatibility contracts without runtime dependencies.
 
-The crate lives at `vyre-spec` and owns the `specification` seam in the `foundation` layer.
+The crate lives at `crates/vyre-spec` and owns the `specification` seam in the `foundation` layer.
 
 ## Commands
 
@@ -24,9 +24,9 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_spec_release_surface` | `vyre-spec/examples/vyre_spec_release_surface.rs` | None | `./cargo_full test -p vyre-spec --example vyre_spec_release_surface` |
-| `lib` | `vyre_spec` | `vyre-spec/src/lib.rs` | None | `./cargo_full test -p vyre-spec` |
-| `test` | `all_tests` | `vyre-spec/tests/all_tests.rs` | None | `./cargo_full test -p vyre-spec --test all_tests` |
+| `example` | `vyre_spec_release_surface` | `crates/vyre-spec/examples/vyre_spec_release_surface.rs` | None | `./cargo_full test -p vyre-spec --example vyre_spec_release_surface` |
+| `lib` | `vyre_spec` | `crates/vyre-spec/src/lib.rs` | None | `./cargo_full test -p vyre-spec` |
+| `test` | `all_tests` | `crates/vyre-spec/tests/all_tests.rs` | None | `./cargo_full test -p vyre-spec --test all_tests` |
 
 ## Test classes
 

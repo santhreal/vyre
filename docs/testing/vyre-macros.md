@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Provide compile-time registration and declaration macros without depending on runtime crates.
 
-The crate lives at `vyre-macros` and owns the `registration-macros` seam in the `foundation` layer.
+The crate lives at `crates/vyre-macros` and owns the `registration-macros` seam in the `foundation` layer.
 
 ## Commands
 
@@ -24,9 +24,9 @@ This crate declares no Cargo features.
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_macros_release_surface` | `vyre-macros/examples/vyre_macros_release_surface.rs` | None | `./cargo_full test -p vyre-macros --example vyre_macros_release_surface` |
-| `lib` | `vyre_macros` | `vyre-macros/src/lib.rs` | None | `./cargo_full test -p vyre-macros` |
-| `test` | `all_tests` | `vyre-macros/tests/all_tests.rs` | None | `./cargo_full test -p vyre-macros --test all_tests` |
+| `example` | `vyre_macros_release_surface` | `crates/vyre-macros/examples/vyre_macros_release_surface.rs` | None | `./cargo_full test -p vyre-macros --example vyre_macros_release_surface` |
+| `lib` | `vyre_macros` | `crates/vyre-macros/src/lib.rs` | None | `./cargo_full test -p vyre-macros` |
+| `test` | `all_tests` | `crates/vyre-macros/tests/all_tests.rs` | None | `./cargo_full test -p vyre-macros --test all_tests` |
 
 ## Test classes
 

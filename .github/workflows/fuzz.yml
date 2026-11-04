@@ -23,11 +23,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - crate: vyre-foundation/fuzz
+          - crate: crates/vyre-foundation/fuzz
             target: decoder
-          - crate: vyre-foundation/fuzz
+          - crate: crates/vyre-foundation/fuzz
             target: program_wire
-          - crate: vyre-foundation/fuzz
+          - crate: crates/vyre-foundation/fuzz
             target: registry_toml
           - crate: fuzz
             target: dispatch
@@ -55,11 +55,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - crate: vyre-foundation/fuzz
+          - crate: crates/vyre-foundation/fuzz
             target: decoder
-          - crate: vyre-foundation/fuzz
+          - crate: crates/vyre-foundation/fuzz
             target: program_wire
-          - crate: vyre-foundation/fuzz
+          - crate: crates/vyre-foundation/fuzz
             target: registry_toml
           - crate: fuzz
             target: dispatch

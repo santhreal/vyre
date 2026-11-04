@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own packed u32 bitset operations, word utilities, and logical bitwise IR compositions. Does not own reduction tree implementations, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-bitset` and owns the `libs-bitset` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-bitset` and owns the `libs-bitset` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-bitset` and owns the `libs-bitset` seam in the `li
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_bitset` | `vyre-libs-bitset/src/lib.rs` | None | `./cargo_full test -p vyre-libs-bitset` |
-| `test` | `all_tests` | `vyre-libs-bitset/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-bitset --test all_tests` |
+| `lib` | `vyre_libs_bitset` | `crates/vyre-libs-bitset/src/lib.rs` | None | `./cargo_full test -p vyre-libs-bitset` |
+| `test` | `all_tests` | `crates/vyre-libs-bitset/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-bitset --test all_tests` |
 
 ## Test classes
 

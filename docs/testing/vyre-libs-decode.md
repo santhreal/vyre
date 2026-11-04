@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own Base64, hex, DEFLATE, and encodex data decoding and decompression IR compositions. Does not own parsing drivers, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-decode` and owns the `libs-decode` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-decode` and owns the `libs-decode` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-decode` and owns the `libs-decode` seam in the `li
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_decode` | `vyre-libs-decode/src/lib.rs` | None | `./cargo_full test -p vyre-libs-decode` |
-| `test` | `all_tests` | `vyre-libs-decode/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-decode --test all_tests` |
+| `lib` | `vyre_libs_decode` | `crates/vyre-libs-decode/src/lib.rs` | None | `./cargo_full test -p vyre-libs-decode` |
+| `test` | `all_tests` | `crates/vyre-libs-decode/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-decode --test all_tests` |
 
 ## Test classes
 

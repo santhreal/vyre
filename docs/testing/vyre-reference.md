@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 The only crate permitted to compute on the CPU: the pure-Rust IR oracle. Not a backend and not a fallback.
 
-The crate lives at `vyre-reference` and owns the `reference-semantics` seam in the `semantics` layer.
+The crate lives at `crates/vyre-reference` and owns the `reference-semantics` seam in the `semantics` layer.
 
 ## Commands
 
@@ -30,9 +30,9 @@ The crate lives at `vyre-reference` and owns the `reference-semantics` seam in t
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_reference_release_surface` | `vyre-reference/examples/vyre_reference_release_surface.rs` | None | `./cargo_full test -p vyre-reference --example vyre_reference_release_surface` |
-| `lib` | `vyre_reference` | `vyre-reference/src/lib.rs` | None | `./cargo_full test -p vyre-reference` |
-| `test` | `all_tests` | `vyre-reference/tests/all_tests.rs` | None | `./cargo_full test -p vyre-reference --test all_tests` |
+| `example` | `vyre_reference_release_surface` | `crates/vyre-reference/examples/vyre_reference_release_surface.rs` | None | `./cargo_full test -p vyre-reference --example vyre_reference_release_surface` |
+| `lib` | `vyre_reference` | `crates/vyre-reference/src/lib.rs` | None | `./cargo_full test -p vyre-reference` |
+| `test` | `all_tests` | `crates/vyre-reference/tests/all_tests.rs` | None | `./cargo_full test -p vyre-reference --test all_tests` |
 
 ## Test classes
 

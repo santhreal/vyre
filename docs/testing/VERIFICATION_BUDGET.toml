@@ -32,7 +32,7 @@ disk_use_bytes = 549688
 compile_units = 1
 link_units = 2
 duplicate_source_bytes = 0
-disk_use_bytes = 454086
+disk_use_bytes = 454106
 
 [tier.concrete-backend]
 compile_units = 7
@@ -68,7 +68,7 @@ disk_use_bytes = 2736886
 compile_units = 31
 link_units = 53
 duplicate_source_bytes = 0
-disk_use_bytes = 2812769
+disk_use_bytes = 2813618
 
 [tier.lowering]
 compile_units = 2
@@ -86,13 +86,13 @@ disk_use_bytes = 89377
 compile_units = 3
 link_units = 4
 duplicate_source_bytes = 0
-disk_use_bytes = 82249
+disk_use_bytes = 82268
 
 [tier.primitives]
 compile_units = 2
 link_units = 3
 duplicate_source_bytes = 0
-disk_use_bytes = 74871
+disk_use_bytes = 74890
 
 [tier.registry-link]
 compile_units = 3
@@ -116,13 +116,13 @@ disk_use_bytes = 590639
 compile_units = 2
 link_units = 5
 duplicate_source_bytes = 0
-disk_use_bytes = 181128
+disk_use_bytes = 187985
 
 [tier.test-tooling]
 compile_units = 3
 link_units = 4
 duplicate_source_bytes = 0
-disk_use_bytes = 64492
+disk_use_bytes = 64504
 
 [tier.tooling]
 compile_units = 8

@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own detection rule engine condition operators, formulas, and program evaluation builders. Does not own security predicate solvers, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-rule` and owns the `libs-rule` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-rule` and owns the `libs-rule` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-rule` and owns the `libs-rule` seam in the `librar
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_rule` | `vyre-libs-rule/src/lib.rs` | None | `./cargo_full test -p vyre-libs-rule` |
-| `test` | `all_tests` | `vyre-libs-rule/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-rule --test all_tests` |
+| `lib` | `vyre_libs_rule` | `crates/vyre-libs-rule/src/lib.rs` | None | `./cargo_full test -p vyre-libs-rule` |
+| `test` | `all_tests` | `crates/vyre-libs-rule/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-rule --test all_tests` |
 
 ## Test classes
 

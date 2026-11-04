@@ -528,9 +528,10 @@ fn conform_manifest_disables_registry_link_default_features() {
 /// A driver added to that crate appears here without an edit, which is what
 /// makes the decision record below go red instead of stale.
 fn registry_link_driver_features() -> std::collections::BTreeMap<String, String> {
-    let manifest: toml::Value =
-        toml::from_str(include_str!("../../../vyre-registry-link/Cargo.toml"))
-            .expect("vyre-registry-link/Cargo.toml must parse as valid TOML");
+    let manifest: toml::Value = toml::from_str(include_str!(
+        "../../../crates/vyre-registry-link/Cargo.toml"
+    ))
+    .expect("crates/vyre-registry-link/Cargo.toml must parse as valid TOML");
     let features = manifest
         .get("features")
         .and_then(toml::Value::as_table)

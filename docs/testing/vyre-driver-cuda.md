@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own pure PTX target compilation, native device acquisition, materialization, dispatch, graphs, and release-path evidence.
 
-The crate lives at `vyre-driver-cuda` and owns the `cuda-driver` seam in the `concrete-backend` layer.
+The crate lives at `crates/vyre-driver-cuda` and owns the `cuda-driver` seam in the `concrete-backend` layer.
 
 ## Commands
 
@@ -34,9 +34,9 @@ The crate lives at `vyre-driver-cuda` and owns the `cuda-driver` seam in the `co
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `cuda_release_surface` | `vyre-driver-cuda/examples/cuda_release_surface.rs` | None | `./cargo_full test -p vyre-driver-cuda --example cuda_release_surface` |
-| `lib` | `vyre_driver_cuda` | `vyre-driver-cuda/src/lib.rs` | None | `./cargo_full test -p vyre-driver-cuda` |
-| `test` | `all_tests` | `vyre-driver-cuda/tests/all_tests.rs` | None | `./cargo_full test -p vyre-driver-cuda --test all_tests` |
+| `example` | `cuda_release_surface` | `crates/vyre-driver-cuda/examples/cuda_release_surface.rs` | None | `./cargo_full test -p vyre-driver-cuda --example cuda_release_surface` |
+| `lib` | `vyre_driver_cuda` | `crates/vyre-driver-cuda/src/lib.rs` | None | `./cargo_full test -p vyre-driver-cuda` |
+| `test` | `all_tests` | `crates/vyre-driver-cuda/tests/all_tests.rs` | None | `./cargo_full test -p vyre-driver-cuda --test all_tests` |
 
 ## Test classes
 

@@ -53,7 +53,7 @@ jobs:
       # added to that toolchain rather than to whichever one an action
       # installed last.
       - name: Install the cross targets the tree declares
-        run: rustup target add $(awk '!/^#/ && NF { print $2 }' xtask-registry/cross-target-triples.txt)
+        run: rustup target add $(awk '!/^#/ && NF { print $2 }' tools/xtask-registry/cross-target-triples.txt)
 
       # Every gate declares at least one area, and the areas split between this
       # job and `tree-rules` below, so the two jobs together run the registry
@@ -141,7 +141,7 @@ jobs:
       # matrix and reports pass or fail, so a pair that cannot stand alone has
       # nowhere to be recorded and the whole job is red until someone deletes a
       # feature. This holds each (member, feature) pair to the outcome recorded
-      # in xtask/feature-isolation.toml. The pair set is re-derived from the
+      # in tools/xtask/feature-isolation.toml. The pair set is re-derived from the
       # tracked manifests inside the gate, so a new feature or member fails here
       # until a decision is recorded for it, and a row naming a pair that no
       # longer exists fails as stale. The declaration half also runs inside

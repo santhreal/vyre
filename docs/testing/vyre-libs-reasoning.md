@@ -8,7 +8,7 @@ Run the default crate suite from the workspace root:
 
 Own compiler-internal logic, causal reasoning, categorical rewrites, and knowledge compilation compositions. Does not own cost model evaluation, backend lowering, or runtime execution.
 
-The crate lives at `vyre-libs-reasoning` and owns the `libs-reasoning` seam in the `libraries` layer.
+The crate lives at `crates/vyre-libs-reasoning` and owns the `libs-reasoning` seam in the `libraries` layer.
 
 ## Commands
 
@@ -30,8 +30,8 @@ The crate lives at `vyre-libs-reasoning` and owns the `libs-reasoning` seam in t
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `lib` | `vyre_libs_reasoning` | `vyre-libs-reasoning/src/lib.rs` | None | `./cargo_full test -p vyre-libs-reasoning` |
-| `test` | `all_tests` | `vyre-libs-reasoning/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-reasoning --test all_tests` |
+| `lib` | `vyre_libs_reasoning` | `crates/vyre-libs-reasoning/src/lib.rs` | None | `./cargo_full test -p vyre-libs-reasoning` |
+| `test` | `all_tests` | `crates/vyre-libs-reasoning/tests/all_tests.rs` | None | `./cargo_full test -p vyre-libs-reasoning --test all_tests` |
 
 ## Test classes
 

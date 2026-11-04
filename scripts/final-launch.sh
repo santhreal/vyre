@@ -117,7 +117,7 @@ export VYRE_RELEASE_CERT_DIR="${VYRE_RELEASE_CERT_DIR:-.internals/certs/release-
 # merge it prints to the key it carries and the plan it states, and records it
 # under the provenance of this run. A `cp` of the merge into the evidence tree
 # left the committed certificate carrying no provenance head at all.
-./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- release-certificate --write
+./cargo_full run --manifest-path tools/xtask/Cargo.toml --bin xtask -- release-certificate --write
 release_conformance_evidence="release/evidence/conformance/release-all-backends-certificate.json"
 if [[ ! -s "$release_conformance_evidence" ]]; then
     printf 'Fix: release conformance certificate evidence was not written: %s\n' "$release_conformance_evidence" >&2
@@ -130,7 +130,7 @@ git push origin "$release_branch"
 git push origin "$VYRE_RELEASE_TAG_VYRE_RC"
 
 
-./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate
+./cargo_full run --manifest-path tools/xtask/Cargo.toml --bin xtask -- vyre-release-gate
 VYRE_RELEASE_APPROVED="$VYRE_RELEASE_PUBLISH_APPROVAL_TOKEN" bash scripts/publish-release.sh
 printf 'verified GitHub repository is public: %s\n' "$VYRE_RELEASE_PUBLIC_REPO"
 
@@ -191,8 +191,8 @@ jq -n \
         completion_status: "complete"
     }' > release/evidence/final/public-launch-completion.json
 
-./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- launch-state --write
-./cargo_full run --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate --launch-complete
+./cargo_full run --manifest-path tools/xtask/Cargo.toml --bin xtask -- launch-state --write
+./cargo_full run --manifest-path tools/xtask/Cargo.toml --bin xtask -- vyre-release-gate --launch-complete
 
 git add \
     release/evidence/package/publish-readiness.json \
