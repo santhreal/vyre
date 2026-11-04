@@ -48,32 +48,32 @@ reason = "changes the process working directory, which every test resolving a re
 [[test]]
 path = "vyre-driver/tests/driver_contracts.rs"
 grouping = "grouped"
-reason = "the OnceLock holds an empty operation set as a cache; no case observes when it was filled"
+reason = "the LazyLock holds an empty operation set as a cache; no case observes when it was filled"
 
 [[test]]
 path = "vyre-driver-wgpu/tests/cat_a_conform.rs"
 grouping = "grouped"
-reason = "the OnceLock holds this file's own adapter; grouping merges five per-file adapter acquisitions into one"
+reason = "the LazyLock holds this file's own adapter; grouping merges five per-file adapter acquisitions into one"
 
 [[test]]
 path = "vyre-driver-wgpu/tests/cat_a_gpu_differential.rs"
 grouping = "grouped"
-reason = "the OnceLock holds this file's own adapter; grouping merges five per-file adapter acquisitions into one"
+reason = "the LazyLock holds this file's own adapter; grouping merges five per-file adapter acquisitions into one"
 
 [[test]]
 path = "vyre-driver-wgpu/tests/determinism_contract.rs"
 grouping = "grouped"
-reason = "the OnceLock holds this file's own adapter; grouping merges five per-file adapter acquisitions into one"
+reason = "the LazyLock holds this file's own adapter; grouping merges five per-file adapter acquisitions into one"
 
 [[test]]
 path = "vyre-driver-wgpu/tests/every_op_random_inputs.rs"
 grouping = "grouped"
-reason = "the OnceLock holds this file's own adapter; grouping merges five per-file adapter acquisitions into one"
+reason = "the LazyLock holds this file's own adapter; grouping merges five per-file adapter acquisitions into one"
 
 [[test]]
 path = "vyre-driver-wgpu/tests/transcendentals_parity.rs"
 grouping = "grouped"
-reason = "the OnceLock holds this file's own adapter; grouping merges five per-file adapter acquisitions into one"
+reason = "the LazyLock holds this file's own adapter; grouping merges five per-file adapter acquisitions into one"
 
 [[test]]
 path = "vyre-driver-wgpu/tests/nvme_gpu_ingest_e2e.rs"
@@ -128,7 +128,7 @@ reason = "registers test::split_lowering::caller and its callee for this file's 
 [[test]]
 path = "vyre-driver-wgpu/tests/buf_len_array_length/mod.rs"
 grouping = "grouped"
-reason = "the OnceLock holds this module's own adapter, the same acquisition the five sibling files share"
+reason = "the LazyLock holds this module's own adapter, the same acquisition the five sibling files share"
 
 [[test]]
 path = "vyre-driver-wgpu/tests/runtime_router_contracts.rs"
@@ -304,3 +304,48 @@ reason = "the crate links one concrete backend, so precedence enumeration in thi
 path = "conform/vyre-conform/tests/target_facet_backend_closure.rs"
 grouping = "grouped"
 reason = "reads the registry to enumerate compiling targets and compares each declared catalog against the operation registry; dialect_only_supported_ops is derived from that same registry, so a fixture operation a sibling registers enters both sides and the comparison stays balanced"
+
+[[test]]
+path = "conform/vyre-conform/tests/contract_cases/composition_discipline__measure_program.rs"
+grouping = "grouped"
+reason = "the LazyLock holds the id set read from the append-only operation registry; no case writes it"
+
+[[test]]
+path = "vyre-driver-cuda/tests/grid_sync_dispatch_contracts.rs"
+grouping = "grouped"
+reason = "the LazyLock holds the lane count probed from device 0, which no case changes"
+
+[[test]]
+path = "vyre-driver-wgpu/tests/gap_transcendentals_parity.rs"
+grouping = "grouped"
+reason = "the LazyLock holds this file's own adapter and the strict-lowering probe it answers; no case observes when either was filled"
+
+[[test]]
+path = "vyre-driver-wgpu/tests/op_pairwise/all_entries_vec.rs"
+grouping = "grouped"
+reason = "the LazyLock holds the entry list and this module's own adapter; no case observes when either was filled"
+
+[[test]]
+path = "vyre-driver-wgpu/tests/op_pairwise/entry_cases.rs"
+grouping = "grouped"
+reason = "the LazyLock holds the pair space built from the entry list; no case writes it"
+
+[[test]]
+path = "vyre-driver/tests/float_lowering_refusal.rs"
+grouping = "grouped"
+reason = "the LazyLock holds an empty operation set as a cache; no case observes when it was filled"
+
+[[test]]
+path = "vyre-driver/tests/routing_registry_surface.rs"
+grouping = "grouped"
+reason = "the LazyLock holds an empty operation set as a cache; no case observes when it was filled"
+
+[[test]]
+path = "vyre-primitives/tests/wire_harness_smoke_test.rs"
+grouping = "grouped"
+reason = "the LazyLock holds the path of the example binary built once for the file; no case writes it"
+
+[[test]]
+path = "vyre-runtime/tests/artifact_session_fixtures/mod.rs"
+grouping = "grouped"
+reason = "the LazyLock holds an empty operation set as a cache; no case observes when it was filled"

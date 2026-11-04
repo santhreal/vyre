@@ -9711,6 +9711,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The panic budget reads a module gated behind cfg(test) as test code, derived
   from the declarations the tree writes, so a fixture module no shipped build
   compiles no longer counts against its crate.
+- `test-harness-isolation` treats a `LazyLock` static in an integration test as
+  one-time initialization, as it does `OnceLock`, `OnceCell` and `Once`.
 - A publishable crate's src tree is held to product. The
   test-material-placement gate reads every source file whose name says fixture,
   oracle, mock, stub, sample, golden or harness, and reports the ones a default

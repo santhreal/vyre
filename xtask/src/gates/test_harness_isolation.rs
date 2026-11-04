@@ -58,6 +58,7 @@ const PROCESS_GLOBAL_APIS: &[(&str, &str)] = &[
     ("atexit", "registers a process exit handler"),
     ("OnceLock", "holds one-time initialization"),
     ("OnceCell", "holds one-time initialization"),
+    ("LazyLock", "holds one-time initialization"),
     ("std::sync::Once", "holds one-time initialization"),
     (
         "inventory::submit",
@@ -461,6 +462,39 @@ mod tests {
             "only the candidate with no decision is reported: {:?}",
             messages(&report)
         );
+    }
+
+    /// WHY: a file-level one-time-init static is shared by every test in the
+    /// binary, whichever std type spells it. Converting the wgpu tests from
+    /// `OnceLock` to `LazyLock` dropped seven files out of the candidate set,
+    /// and their recorded decisions then failed as decisions for nothing.
+    ///
+    /// What this does not catch: a one-time-init type from a crate other than
+    /// std, such as `once_cell::sync::Lazy`, which the workspace does not use.
+    #[test]
+    fn every_std_one_time_init_static_makes_a_file_a_candidate() {
+        for spelling in [
+            "static CELL: std::sync::OnceLock<u32> = std::sync::OnceLock::new();",
+            "static CELL: std::cell::OnceCell<u32> = std::cell::OnceCell::new();",
+            "static CELL: std::sync::LazyLock<u32> = std::sync::LazyLock::new(|| 7);",
+            "static ONCE: std::sync::Once = std::sync::Once::new();",
+        ] {
+            let source = format!("{spelling}\n#[test]\nfn it_runs() {{}}\n");
+            let (_directory, root) = checkout(&[
+                ("pkg/tests/cell.rs", source.as_str()),
+                (DECISIONS, &record("")),
+            ]);
+
+            let report = TestHarnessIsolation
+                .run(&GateCtx::new(root, Vec::new()))
+                .expect("Fix: the gate must read the fixture tree; check the fixture git step");
+            assert_eq!(
+                files(&report),
+                ["pkg/tests/cell.rs"],
+                "`{spelling}` must make the file a candidate: {:?}",
+                messages(&report)
+            );
+        }
     }
 
     /// WHY: a decision that outlives its subject overstates what was reviewed,
