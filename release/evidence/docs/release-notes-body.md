@@ -3675,6 +3675,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   layer had already produced. Each planner's rendered message stays its own,
   because it names the planner and the sharding that fixes it. Error variants,
   message text and reservation behavior are unchanged.
+- `platform-consumer-docs` scans every Rust comment and Markdown file of each
+  crate in a shipped layer, and `platform-boundary` is deleted.
 - Comments and doc comments in `vyre-foundation`, `vyre-primitives`,
   `vyre-runtime` and `vyre-pass-engine` state the hardware fact instead of
   naming a backend product. A load past a buffer end is undefined behaviour on

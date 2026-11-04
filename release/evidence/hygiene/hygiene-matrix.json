@@ -1,10 +1,10 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"fb068a695503ec61c623697678b978e96277125f","commit_timestamp":"1793762836","parent_commit":"5105719e76be988ccd15e8779ce214b47ce8b8ee","dirty":false,"source_fingerprint":"git:fb068a695503ec61c623697678b978e96277125f:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"3012be0f95ea29b782bf5362235253ebbbb09a05","commit_timestamp":"1793765962","parent_commit":"bf9e3bb24d2f1c477af14463178800b9b090172e","dirty":false,"source_fingerprint":"git:3012be0f95ea29b782bf5362235253ebbbb09a05:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 7,
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 4786,
+  "scanned_files": 4785,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -50,7 +50,7 @@
     },
     {
       "pattern": "documented_panic_contract",
-      "count": 216
+      "count": 213
     },
     {
       "pattern": "expect_call",
@@ -532,7 +532,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 22
+      "count": 19
     },
     {
       "member": "xtask",
@@ -1150,7 +1150,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 10
+      "count": 7
     },
     {
       "member": "xtask",
@@ -7161,36 +7161,6 @@
       "release_blocker": false
     },
     {
-      "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 154,
-      "pattern": "documented_panic_contract",
-      "member": "xtask",
-      "surface": "release_tooling",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 315,
-      "pattern": "documented_panic_contract",
-      "member": "xtask",
-      "surface": "release_tooling",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 326,
-      "pattern": "documented_panic_contract",
-      "member": "xtask",
-      "surface": "release_tooling",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "xtask/src/gates/ci_steps.rs",
       "line": 1614,
       "pattern": "source_inspection_test",
@@ -10641,24 +10611,6 @@
       "pattern": "source_inspection_test",
       "text": "test `all_descriptor_proofs_resolve_to_real_tests` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead, or declare the property as unobservable in docs/testing/STRUCTURAL_GATES.toml.",
       "test": "all_descriptor_proofs_resolve_to_real_tests"
-    },
-    {
-      "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 154,
-      "pattern": "documented_panic_contract",
-      "text": ".unwrap_or_else(|| panic!(\"Fix: {} declares no [package] name\", manifest.display()))"
-    },
-    {
-      "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 315,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"Fix: cannot read {}: {error}\", path.display());"
-    },
-    {
-      "path": "xtask/src/gates/check_tier_deps.rs",
-      "line": 326,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"Fix: parse {}: {e}\", path.display());"
     },
     {
       "path": "xtask/src/gates/ci_steps.rs",
