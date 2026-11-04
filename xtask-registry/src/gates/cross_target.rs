@@ -282,13 +282,7 @@ fn declared_target_oses(root: &Path) -> Result<BTreeMap<String, Option<Origin>>,
     let mut found = BTreeMap::new();
     found.insert(std::env::consts::OS.to_string(), None);
     for relative in tree.all_rust() {
-        let source =
-            structure_gate::read_source_bounded(&tree.absolute(&relative)).map_err(|error| {
-                GateError::new(
-                    error.to_string(),
-                    "make the source readable; an unread file could hide a target_os arm",
-                )
-            })?;
+        let source = tree.read(&relative)?;
         collect_target_oses(&source, &relative, &mut found);
     }
     Ok(found)

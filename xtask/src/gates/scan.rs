@@ -26,14 +26,27 @@
 //! and finding the end of a brace-delimited block belong to `source_scan`.
 
 use std::collections::BTreeSet;
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::gate::GateError;
 
-/// Largest file any gate reads.
+/// Largest non-source file any gate reads: generated tables and evidence.
+///
+/// Rust sources and `Cargo.toml` manifests are held to the smaller
+/// [`structure_gate::MAX_SOURCE_BYTES`] instead.
 pub const MAX_FILE_BYTES: u64 = 16_777_216;
+
+/// Whether a path is a Rust source or a Cargo manifest, which the shared
+/// source reader bounds.
+fn is_source(relative: &Path) -> bool {
+    relative
+        .extension()
+        .is_some_and(|extension| extension == "rs")
+        || relative
+            .file_name()
+            .is_some_and(|name| name == "Cargo.toml")
+}
 
 /// One matching line.
 pub struct Hit {
@@ -164,31 +177,34 @@ impl Tree {
         self.root.join(relative)
     }
 
-    /// Read one file under the read bound.
+    /// Read one file under its read bound.
+    ///
+    /// A Rust source or `Cargo.toml` goes through
+    /// [`structure_gate::read_source_bounded`], the reader every source gate
+    /// shares; any other file is held to [`MAX_FILE_BYTES`]. Either read is one
+    /// open, so a file that grows between a size check and the read cannot
+    /// slip past the bound.
     pub fn read(&self, relative: impl AsRef<Path>) -> Result<String, GateError> {
         let relative = relative.as_ref();
         let path = self.root.join(relative);
-        let size = fs::metadata(&path)
-            .map_err(|error| {
+        if is_source(relative) {
+            return structure_gate::read_source_bounded(&path).map_err(|error| {
                 GateError::new(
-                    format!("cannot inspect `{}`: {error}", relative.display()),
-                    "restore the file the gate reads, or repoint the gate at the path it moved to",
+                    error.to_string(),
+                    "restore the file as valid UTF-8 text, or split it under the source cap",
                 )
-            })?
-            .len();
-        if size > MAX_FILE_BYTES {
-            return Err(GateError::new(
-                format!(
-                    "`{}` is {size} bytes, above the {MAX_FILE_BYTES}-byte read bound",
-                    relative.display()
-                ),
-                "split the file, or raise the bound in xtask/src/gates/scan.rs deliberately",
-            ));
+            });
         }
-        fs::read_to_string(&path).map_err(|error| {
+        crate::output_arg::read_text_bounded(&path, MAX_FILE_BYTES, "tree").map_err(|error| {
+            let fix = if error.kind() == std::io::ErrorKind::InvalidData {
+                "split the file, restore it as valid UTF-8 text, or raise the bound in \
+                 xtask/src/gates/scan.rs deliberately"
+            } else {
+                "restore the file the gate reads, or repoint the gate at the path it moved to"
+            };
             GateError::new(
                 format!("cannot read `{}`: {error}", relative.display()),
-                "restore the file as valid UTF-8 text",
+                fix,
             )
         })
     }
@@ -1687,6 +1703,44 @@ mod tests {
             report.findings.len(),
             2,
             "the same rule reports the occurrence once the skip stops covering it"
+        );
+    }
+
+    /// WHY: `Tree::read` is the reader most gates use, and it holds a Rust
+    /// source to the shared source cap while letting a generated table run to
+    /// the larger tree bound. A source one byte over the cap must fail, not be
+    /// judged in part, and the same bytes under a non-source name must read.
+    ///
+    /// What this does not catch: a gate that reads a source with its own
+    /// `fs::read_to_string` instead of the tree.
+    #[test]
+    fn a_source_over_the_source_cap_fails_where_a_table_of_the_same_size_reads() {
+        let over = "a".repeat(
+            usize::try_from(structure_gate::MAX_SOURCE_BYTES).expect("cap fits in usize") + 1,
+        );
+        let (_directory, root) = crate::gates::fixture_checkout::checkout(&[
+            ("src/generated.rs", over.as_str()),
+            ("docs/generated.toml", over.as_str()),
+        ]);
+        let tree = Tree::open(&root).expect("fixture tree");
+
+        let error = tree
+            .read("src/generated.rs")
+            .expect_err("a source over the source cap must fail");
+        assert!(
+            error.message.contains("src/generated.rs")
+                && error
+                    .message
+                    .contains(&structure_gate::MAX_SOURCE_BYTES.to_string()),
+            "the error states the file and the cap, got: {}",
+            error.message
+        );
+        assert_eq!(
+            tree.read("docs/generated.toml")
+                .expect("a table under the tree bound reads")
+                .len(),
+            over.len(),
+            "a non-source reads whole under the tree bound"
         );
     }
 

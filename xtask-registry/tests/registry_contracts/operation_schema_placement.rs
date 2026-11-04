@@ -346,7 +346,7 @@ fn a_source_file_over_the_read_cap_is_an_error_naming_the_file() {
         errors
             .iter()
             .any(|error| error.contains(&named.display().to_string())
-                && error.contains("over the 4194304 byte read cap")),
+                && error.contains("holds more than 4194304 bytes")),
         "{errors:?}"
     );
 }

@@ -12,7 +12,6 @@
 use std::path::Path;
 
 use structure_gate::cfg_test::TestSources;
-use walkdir::WalkDir;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::Tree;
@@ -159,40 +158,20 @@ impl crate::gate::GateBehavior for OpNames {
         let mut public_functions = 0usize;
         let tests = TestSources::of(&ctx.root);
         for root in &roots {
-            let source = ctx.root.join(root).join("src");
-            if !structure_gate::source_scan::carries_rust_source(&source) {
+            let source = format!("{root}/src");
+            if !tree.exists(&source) {
                 continue;
             }
-            for entry in WalkDir::new(&source) {
-                let entry = entry.map_err(|error| {
-                    GateError::new(
-                        format!("cannot walk {}: {error}", source.display()),
-                        "make every directory under a library family member readable",
-                    )
-                })?;
-                let path = entry.path();
-                if !entry.file_type().is_file()
-                    || !is_op_source(path)
-                    || tests.contains(path.strip_prefix(&ctx.root).unwrap_or(path))
-                {
+            for relative in tree.rust(&[source.as_str()])? {
+                if !is_op_source(&relative) || tests.contains(&relative) {
                     continue;
                 }
-                let text = structure_gate::read_source_bounded(path).map_err(|error| {
-                    GateError::new(
-                        error.to_string(),
-                        "make the file readable, or split it under the source cap",
-                    )
-                })?;
+                let text = tree.read(&relative)?;
                 scanned += 1;
                 for func in extract_public_functions(&text) {
                     public_functions += 1;
                     for violation in violations(&func.name) {
-                        report.find(Finding::at(
-                            path.strip_prefix(&ctx.root).unwrap_or(path),
-                            func.line,
-                            violation,
-                            FIX,
-                        ));
+                        report.find(Finding::at(&relative, func.line, violation, FIX));
                     }
                 }
             }
