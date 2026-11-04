@@ -78,7 +78,6 @@ pub mod oracle_independence;
 pub mod oracle_sweeps;
 pub mod parity_testing;
 pub mod placement_predicate;
-pub mod platform_boundary;
 pub mod platform_docs;
 pub mod platform_support_matrix;
 pub mod portability_evidence;
@@ -226,7 +225,6 @@ pub static GATES: &[(&str, &dyn GateBehavior)] = &[
         "placement-predicates",
         &placement_predicate::PlacementPredicates,
     ),
-    ("platform-boundary", &platform_boundary::PlatformBoundary),
     (
         "platform-consumer-docs",
         &platform_docs::PlatformConsumerDocs,

@@ -49,14 +49,6 @@ use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::crate_registry;
 use crate::gates::scan::{self, Tree};
 
-/// Crate layers from `docs/CRATE_OWNERSHIP.toml` exempt from production capability rules.
-const EXEMPT_LAYERS: &[&str] = &[
-    "tooling",
-    "test-tooling",
-    "standalone-tooling",
-    "conformance",
-];
-
 /// A gate verifying that production crates do not declare test-only capability.
 pub struct TestOnlyCapability;
 
@@ -65,13 +57,19 @@ impl crate::gate::GateBehavior for TestOnlyCapability {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
 
-        let registry = CrateLayerRegistry::read(&tree)?;
+        let layers: BTreeMap<String, String> = crate_registry::declared_crates(&tree)?
+            .into_iter()
+            .map(|declared| (declared.package, declared.layer))
+            .collect();
         let members = tree.member_manifests()?;
 
+        // A member with no row keeps an empty layer and is judged: the rule
+        // fails closed on a crate the manifest does not place.
         let mut member_packages: Vec<(String, String, bool)> = Vec::new();
         for member in &members {
-            let layer = registry.layer_of(&member.name);
-            let is_exempt = EXEMPT_LAYERS.contains(&layer.as_str());
+            let is_exempt = layers
+                .get(&member.name)
+                .is_some_and(|layer| crate_registry::UNSHIPPED_LAYERS.contains(&layer.as_str()));
             member_packages.push((member.path.clone(), member.name.clone(), is_exempt));
         }
 
@@ -108,27 +106,6 @@ impl crate::gate::GateBehavior for TestOnlyCapability {
         }
 
         Ok(report)
-    }
-}
-
-/// Registry mapping crates to their declared layer in `docs/CRATE_OWNERSHIP.toml`.
-struct CrateLayerRegistry {
-    layers: BTreeMap<String, String>,
-}
-
-impl CrateLayerRegistry {
-    /// Read layer mappings from `docs/CRATE_OWNERSHIP.toml`.
-    fn read(tree: &Tree) -> Result<Self, GateError> {
-        let layers = crate_registry::declared_crates(tree)?
-            .into_iter()
-            .map(|declared| (declared.package, declared.layer))
-            .collect();
-        Ok(Self { layers })
-    }
-
-    /// The layer declared for a package.
-    fn layer_of(&self, package: &str) -> String {
-        self.layers.get(package).cloned().unwrap_or_default()
     }
 }
 

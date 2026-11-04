@@ -1,46 +1,26 @@
-//! Platform crate documentation names capabilities, not consumers.
+//! Published crates and the workspace documentation name capabilities, not
+//! consumers.
 //!
 //! Dependency rules catch a `use` edge. Semantic coupling arrives through prose:
-//! a comment that names the downstream product tells a reader the platform knows
-//! who is calling it. The scanned set is enumerated from the tree rather than
-//! listed. The listed version named seventeen documents, fifteen of which the
-//! documentation collapse removed, and it skipped each missing one silently: a
-//! guard that scans two files while naming seventeen reports a boundary it never
-//! measured. The enumeration covers both survivors and every document added
-//! since, so the roll call of what was lost is gone with the rows. The comment
-//! match is anchored after leading whitespace, which the shell version required
-//! to be present, so a crate-level `//!` block at column zero was outside its
-//! scope entirely.
+//! a comment or a document that names the downstream product states that the
+//! platform depends on who calls it. The subject is derived, not listed: every
+//! Rust comment and Markdown file under a crate whose layer ships
+//! ([`crate_registry::shipped_crates`]), every Markdown file at the root or under
+//! `docs/`, and the data files in `PLATFORM_TEXT_FILES`. A crate given a
+//! shipped layer in `docs/CRATE_OWNERSHIP.toml` is scanned on the next run.
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
-use crate::gates::scan::Tree;
+use crate::gates::crate_registry;
+use crate::gates::scan::{under, Tree};
 
-/// Crates that must stay consumer-neutral.
-const PLATFORM_CRATES: &[&str] = &[
-    "vyre",
-    "vyre-spec",
-    "vyre-macros",
-    "vyre-foundation",
-    "vyre-primitives",
-    "vyre-libs",
-    "vyre-reference",
-    "vyre-driver",
-    "vyre-driver-cuda",
-    "vyre-driver-wgpu",
-    "vyre-driver-spirv",
-    "vyre-runtime",
-    "vyre-pass-engine",
-];
-
-/// Data files that carry prose and are scanned like a document.
+/// Data files that hold prose and are scanned like a document.
 const PLATFORM_TEXT_FILES: &[&str] = &["docs/optimization/OP_MATRIX.toml"];
 
 /// Names that must not appear in platform documentation.
 const CONSUMER_NAMES: &[&str] = &["weir", "surgec", "gossan", "keyhog"];
 
 /// Documents that may name the partner product, because the release train ships
-/// both under joint tags and a runbook nobody can follow is not a runbook. The
-/// list is a data file, so a second guard on the boundary reads the same rows.
+/// both under joint tags and a runbook must name the other repository.
 const RELEASE_COORDINATION: &str = "xtask/release-coordination-docs.txt";
 
 /// Platform documentation stays consumer-neutral.
@@ -50,51 +30,46 @@ impl crate::gate::GateBehavior for PlatformConsumerDocs {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
-        report.cover_complete("platform crates", PLATFORM_CRATES.len());
         let exempt = release_coordination_entries(&tree)?;
+        let shipped: Vec<String> = crate_registry::shipped_crates(&tree)?
+            .into_iter()
+            .map(|row| row.path)
+            .collect();
+        if shipped.is_empty() {
+            return Err(GateError::new(
+                "docs/CRATE_OWNERSHIP.toml places no crate in a shipped layer, so no platform \
+                 crate is scanned",
+                "restore the [[crate]] rows; an empty subject passes every rule",
+            ));
+        }
+        report.cover_complete("shipped crates", shipped.len());
+        let roots: Vec<&str> = shipped.iter().map(String::as_str).collect();
 
-        for crate_name in PLATFORM_CRATES {
-            let source_root = format!("{crate_name}/src");
-            if !tree.exists(&source_root) {
-                report.find(Finding::in_file(
-                    source_root,
-                    "the guard names a platform crate that does not exist",
-                    "delete the row, or restore the crate; a crate that is not scanned is \
-                     not held to the boundary",
-                ));
-                continue;
-            }
-            for hit in tree.hits(&tree.rust(&[&source_root])?, |line| {
-                is_comment(line) && names_consumer(line)
-            })? {
-                report.find(Finding::at(
-                    hit.file,
-                    hit.line,
-                    format!(
-                        "a platform comment names a downstream consumer: {}",
-                        hit.text
-                    ),
-                    "describe the capability generically; a consumer name belongs in the \
-                     consumer crate or in release integration evidence",
-                ));
-            }
-            for document in ["README.md", "ARCHITECTURE.md", "CONFIG.md"] {
-                let path = format!("{crate_name}/{document}");
-                if tree.exists(&path) {
-                    scan_document(&tree, &path, &exempt, &mut report)?;
-                }
-            }
+        for hit in tree.hits(&tree.rust(&roots)?, |line| {
+            is_comment(line) && names_consumer(line)
+        })? {
+            report.find(Finding::at(
+                hit.file,
+                hit.line,
+                format!(
+                    "a platform comment names a downstream consumer: {}",
+                    hit.text
+                ),
+                "describe the capability generically; a consumer name belongs in the \
+                 consumer crate or in release integration evidence",
+            ));
         }
 
-        // Enumerated, not listed: a document added or deleted changes the scanned
-        // set without anyone editing a table.
         let mut documents: Vec<String> = tree
             .paths()
             .iter()
-            .map(|path| path.to_string_lossy().to_string())
             .filter(|path| {
-                path.ends_with(".md") && (!path.contains('/') || path.starts_with("docs/"))
+                path.extension().and_then(|extension| extension.to_str()) == Some("md")
+                    && (path.parent() == Some(std::path::Path::new(""))
+                        || under(path, "docs")
+                        || roots.iter().any(|root| under(path, root)))
             })
+            .map(|path| path.to_string_lossy().into_owned())
             .collect();
         documents.extend(
             PLATFORM_TEXT_FILES
@@ -158,11 +133,7 @@ fn boundary_is_word(character: Option<char>) -> bool {
 /// literal naming a consumer is a code question, not a documentation one.
 fn is_comment(line: &str) -> bool {
     let trimmed = line.trim_start();
-    trimmed.starts_with("//!")
-        || trimmed.starts_with("///")
-        || trimmed.starts_with("// ")
-        || trimmed.starts_with('*')
-        || line.contains("/*")
+    trimmed.starts_with("//") || trimmed.starts_with('*') || line.contains("/*")
 }
 
 /// The exemption entries, comments and whitespace stripped.
@@ -223,14 +194,79 @@ mod tests {
 
     /// WHY: the rule reads prose, so a comment is what counts. Widening it to
     /// every line would make the gate a code rule it was never scoped as, and
-    /// narrowing it below these four forms is how a block comment escapes.
+    /// narrowing it below these forms is how a block comment escapes.
     #[test]
     fn only_comment_lines_are_read() {
         assert!(is_comment("    /// doc comment"));
         assert!(is_comment("//! crate doc"));
         assert!(is_comment("    // ordinary comment"));
+        assert!(is_comment("    //unspaced comment"));
         assert!(is_comment("    * continuation of a block comment"));
         assert!(is_comment("let x = 1; /* trailing block */"));
         assert!(!is_comment("    let name = \"weir\";"));
+    }
+
+    /// WHY: the subject is every crate in a shipped layer, not a list. A list
+    /// held thirteen crates while forty-three shipped, and a second gate covered
+    /// six of them through `tests/` and nested documents only. A shipped crate's
+    /// test comment, its nested document and a crate added under a nested path
+    /// are scanned whether or not Cargo publishes it; a tooling crate is not,
+    /// and a source string is code.
+    #[test]
+    fn every_shipped_crate_is_scanned_through_its_whole_directory() {
+        use crate::gate::GateBehavior;
+        use crate::gates::fixture_checkout;
+
+        let (_temporary, root) = fixture_checkout::checkout(&[
+            (
+                "Cargo.toml",
+                "[workspace]\nresolver = \"2\"\nmembers = [\"shipped\", \"nest/added\", \"internal\"]\n",
+            ),
+            ("xtask/release-coordination-docs.txt", "CHANGELOG.md\n"),
+            (
+                "docs/CRATE_OWNERSHIP.toml",
+                "[[layer]]\nname = \"runtime\"\nrank = 0\n\n[[layer]]\nname = \"tooling\"\nrank = 1\n\n\
+                 [[crate]]\npackage = \"shipped\"\npath = \"shipped\"\nlayer = \"runtime\"\n\n\
+                 [[crate]]\npackage = \"added\"\npath = \"nest/added\"\nlayer = \"runtime\"\n\n\
+                 [[crate]]\npackage = \"internal\"\npath = \"internal\"\nlayer = \"tooling\"\n",
+            ),
+            (
+                "shipped/Cargo.toml",
+                "[package]\nname = \"shipped\"\nversion = \"0.0.0\"\n",
+            ),
+            ("shipped/src/lib.rs", "pub fn f() -> &'static str { \"weir\" }\n"),
+            ("shipped/tests/case.rs", "// drives the gossan path\n"),
+            ("shipped/docs/guide.md", "Built for Keyhog.\n"),
+            (
+                "nest/added/Cargo.toml",
+                "[package]\nname = \"added\"\nversion = \"0.0.0\"\npublish = false\n",
+            ),
+            ("nest/added/src/lib.rs", "//! The surgec bridge.\n"),
+            (
+                "internal/Cargo.toml",
+                "[package]\nname = \"internal\"\nversion = \"0.0.0\"\n",
+            ),
+            ("internal/src/lib.rs", "// weir fixture\n"),
+            ("internal/NOTES.md", "weir\n"),
+            ("CHANGELOG.md", "Renamed the weir bridge.\n"),
+        ]);
+        let report = PlatformConsumerDocs
+            .run(&GateCtx::new(root, Vec::new()))
+            .expect("the fixture checkout is readable");
+        let mut files: Vec<String> = report
+            .findings
+            .iter()
+            .filter_map(|finding| finding.file.as_ref())
+            .map(|file| file.display().to_string())
+            .collect();
+        files.sort();
+        assert_eq!(
+            files,
+            [
+                "nest/added/src/lib.rs",
+                "shipped/docs/guide.md",
+                "shipped/tests/case.rs"
+            ]
+        );
     }
 }

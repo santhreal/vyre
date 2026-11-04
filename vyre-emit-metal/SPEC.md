@@ -50,5 +50,5 @@ two crates one crate that cannot be built, reviewed or published apart.
 ## Enforcing gates
 
 `layering`, `dep-drift`, `workspace-membership`, `file-size`,
-`public-api-snapshot`, `public-api-paths`, `platform-boundary`,
+`public-api-snapshot`, `public-api-paths`, `platform-consumer-docs`,
 `neutral-crates`.

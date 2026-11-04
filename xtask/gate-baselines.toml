@@ -444,10 +444,6 @@ name = "placement-predicates"
 findings = 0
 
 [[gate]]
-name = "platform-boundary"
-findings = 0
-
-[[gate]]
 name = "platform-consumer-docs"
 findings = 0
 

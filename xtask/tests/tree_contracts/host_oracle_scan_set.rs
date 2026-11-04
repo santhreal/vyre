@@ -15,7 +15,6 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use xtask::gate::Report;
 use xtask::gates::host_oracle_closure::shipped_source_roots;
 use xtask::gates::host_oracle_elimination::operation_bearing_roots;
 use xtask::gates::scan::Tree;
@@ -50,14 +49,12 @@ fn members_whose_sources(root: &Path, predicate: impl Fn(&str) -> bool) -> BTree
 fn the_host_oracle_scan_set_is_the_operation_registering_roster() {
     let root = workspace_root();
     let tree = Tree::open(&root).expect("the workspace manifest is readable");
-    let mut report = Report::clean();
-
-    let scanned: BTreeSet<String> = operation_bearing_roots(&tree, &mut report)
+    let scanned: BTreeSet<String> = operation_bearing_roots(&tree)
         .expect("the roster derivation reads the tree")
         .into_iter()
         .collect();
 
-    let shipped: BTreeSet<String> = shipped_source_roots(&tree, &mut report)
+    let shipped: BTreeSet<String> = shipped_source_roots(&tree)
         .expect("the shipped roster reads the tree")
         .into_iter()
         .collect();
@@ -84,10 +81,7 @@ fn the_host_oracle_scan_set_is_the_operation_registering_roster() {
 fn the_host_oracle_scan_set_is_not_a_vestigial_handful() {
     let root = workspace_root();
     let tree = Tree::open(&root).expect("the workspace manifest is readable");
-    let mut report = Report::clean();
-
-    let scanned =
-        operation_bearing_roots(&tree, &mut report).expect("the roster derivation reads the tree");
+    let scanned = operation_bearing_roots(&tree).expect("the roster derivation reads the tree");
     let files = tree
         .rust(&scanned.iter().map(String::as_str).collect::<Vec<_>>())
         .expect("the scanned roster is walkable");
@@ -111,9 +105,7 @@ fn the_host_oracle_scan_set_is_not_a_vestigial_handful() {
 fn the_crate_declaring_the_registration_trait_is_out_of_scope() {
     let root = workspace_root();
     let tree = Tree::open(&root).expect("the workspace manifest is readable");
-    let mut report = Report::clean();
-
-    let scanned: BTreeSet<String> = operation_bearing_roots(&tree, &mut report)
+    let scanned: BTreeSet<String> = operation_bearing_roots(&tree)
         .expect("the roster derivation reads the tree")
         .into_iter()
         .collect();

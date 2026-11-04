@@ -17,16 +17,15 @@
 //! the interpreter, and a rule that convicted it would be switched off rather
 //! than obeyed.
 //!
-//! `EXEMPT_LAYERS` names the layers that may link one; every other layer the
-//! architecture manifest declares ships and is held to the rule. Deriving it
-//! that way rather than listing the shipped layers is what makes a new layer
-//! fail closed: it is subject to the rule the moment a `[[layer]]` row exists,
-//! and nobody has to remember this file exists.
+//! [`crate_registry::UNSHIPPED_LAYERS`] states the layers that may link one;
+//! every other layer the architecture manifest declares ships and is held to
+//! the rule, so a new layer is subject to it the moment a `[[layer]]` row
+//! exists.
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use crate::gate::{Finding, GateError, Report};
-use crate::gates::crate_registry::{self, CrateRecord, WorkspaceState};
+use crate::gates::crate_registry::{self, ships, CrateRecord, WorkspaceState};
 use crate::gates::scan::Tree;
 
 /// Crates that evaluate a user program on the host.
@@ -44,25 +43,6 @@ const HOST_EVALUATORS: &[&str] = &["vyre-reference", "vyre-driver-reference"];
 /// at all, so neither carries an interpreter into a shipped binary.
 const SHIPPED_KIND: &str = "normal";
 
-/// Layers whose crates exist to test, measure, or register, and are expected to
-/// link a host evaluator.
-///
-/// Every other declared layer ships. A layer added to the architecture manifest
-/// is therefore held to the rule until someone decides it belongs here, which
-/// is the direction a default should fail in.
-const EXEMPT_LAYERS: &[&str] = &[
-    "standalone-tooling",
-    "test-tooling",
-    "registry-link",
-    "conformance",
-    "tooling",
-];
-
-/// Whether a crate in `layer` ends up in a shipped artifact.
-fn ships(layer: &str, declared: &BTreeSet<&str>) -> bool {
-    declared.contains(layer) && !EXEMPT_LAYERS.contains(&layer)
-}
-
 /// Findings for every shipped crate that can reach a host evaluator.
 pub(crate) fn findings(tree: &Tree, report: &mut Report) -> Result<Vec<Finding>, GateError> {
     let records = crate_registry::load_registry(tree, report)?;
@@ -79,15 +59,9 @@ pub(crate) fn findings(tree: &Tree, report: &mut Report) -> Result<Vec<Finding>,
 /// verdict over the whole of it. Deriving the set from the same registry the
 /// dependency half already reads means a crate is scanned the moment it has a
 /// row, and a crate whose sources move with it stays scanned.
-pub fn shipped_source_roots(tree: &Tree, report: &mut Report) -> Result<Vec<String>, GateError> {
-    let records = crate_registry::load_registry(tree, report)?;
-    let ranks = crate_registry::declared_layer_ranks(tree)?;
-    let declared: BTreeSet<&str> = ranks.keys().map(String::as_str).collect();
+pub fn shipped_source_roots(tree: &Tree) -> Result<Vec<String>, GateError> {
     let mut roots = BTreeSet::new();
-    for record in &records {
-        if !ships(&record.layer, &declared) {
-            continue;
-        }
+    for record in crate_registry::shipped_crates(tree)? {
         if HOST_EVALUATORS.contains(&record.package.as_str()) {
             continue;
         }
@@ -119,7 +93,7 @@ fn evaluate(
                     "`{}` declares layer `{layer}`, which is not a layer this workspace has",
                     record.package
                 ),
-                "declare a layer with a `[[layer]]` row in docs/CRATE_OWNERSHIP.toml, and decide in xtask/src/gates/host_oracle_closure.rs whether its crates ship",
+                "declare a layer with a `[[layer]]` row in docs/CRATE_OWNERSHIP.toml, and add it to crate_registry::UNSHIPPED_LAYERS when its crates do not ship",
             ));
             continue;
         }
@@ -209,7 +183,7 @@ mod tests {
             "libraries",
             "runtime",
         ];
-        layers.extend(EXEMPT_LAYERS);
+        layers.extend(crate_registry::UNSHIPPED_LAYERS);
         ranks(&layers)
     }
 
@@ -362,41 +336,6 @@ mod tests {
         assert!(
             found[0].message.contains("not a layer this workspace has"),
             "{found:?}"
-        );
-    }
-
-    /// WHY: the fail-closed direction, against the layers this checkout
-    /// actually declares rather than a list beside them. Adding a `[[layer]]`
-    /// row makes its crates shipped, so the new layer is held to the rule until
-    /// someone adds it to [`EXEMPT_LAYERS`]; retiring one that is exempt turns
-    /// this red instead of leaving a dead exemption behind.
-    #[test]
-    fn a_new_layer_ships_until_it_is_exempted() {
-        let tree = Tree::open(&crate::checkout::checkout_root())
-            .expect("Fix: the checkout must be readable");
-        let ranks = crate_registry::declared_layer_ranks(&tree)
-            .expect("Fix: docs/CRATE_OWNERSHIP.toml must declare [[layer]] rows");
-        let declared: BTreeSet<&str> = ranks.keys().map(String::as_str).collect();
-        assert!(
-            !declared.is_empty(),
-            "the architecture manifest declares no layers"
-        );
-        for layer in &declared {
-            assert_eq!(
-                ships(layer, &declared),
-                !EXEMPT_LAYERS.contains(layer),
-                "`{layer}` must ship unless it is exempt"
-            );
-        }
-        for layer in EXEMPT_LAYERS {
-            assert!(
-                declared.contains(layer),
-                "`{layer}` is exempted and no [[layer]] row declares it"
-            );
-        }
-        assert!(
-            !ships("quantum-boundary", &declared),
-            "an undeclared layer is not shipped"
         );
     }
 }

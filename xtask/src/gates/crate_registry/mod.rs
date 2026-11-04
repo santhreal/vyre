@@ -906,6 +906,40 @@ pub fn declared_layer_ranks(tree: &Tree) -> Result<BTreeMap<String, i64>, GateEr
     Ok(ranks)
 }
 
+/// Layers whose crates never reach a shipped artifact.
+///
+/// Their crates test, measure, register or judge the tree, and only the
+/// tooling and conformance layers consume them. Every other declared layer
+/// ships, so a layer added to the architecture manifest is held to every
+/// shipped-crate rule until a row here records otherwise.
+pub const UNSHIPPED_LAYERS: &[&str] = &[
+    "standalone-tooling",
+    "test-tooling",
+    "registry-link",
+    "conformance",
+    "tooling",
+];
+
+/// Whether crates in `layer` reach a shipped artifact. An undeclared layer
+/// does not, because no crate can sit in it.
+#[must_use]
+pub fn ships(layer: &str, declared: &BTreeSet<&str>) -> bool {
+    declared.contains(layer) && !UNSHIPPED_LAYERS.contains(&layer)
+}
+
+/// Every declared crate that reaches a shipped artifact, in manifest order.
+///
+/// Read through [`declared_crates`], so a gate taking its subject from here
+/// does not repeat the manifest's own findings under its name.
+pub fn shipped_crates(tree: &Tree) -> Result<Vec<DeclaredCrate>, GateError> {
+    let ranks = declared_layer_ranks(tree)?;
+    let declared: BTreeSet<&str> = ranks.keys().map(String::as_str).collect();
+    Ok(declared_crates(tree)?
+        .into_iter()
+        .filter(|row| ships(&row.layer, &declared))
+        .collect())
+}
+
 /// Whether a production edge from one layer to another points down the DAG.
 ///
 /// One statement of the direction rule. An edge inside a layer is always

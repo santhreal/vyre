@@ -563,11 +563,6 @@ subsets = ["contract-rules"]
 workflows = ["gates.yml"]
 
 [[gate]]
-name = "platform-boundary"
-subsets = ["contract-rules"]
-workflows = ["gates.yml"]
-
-[[gate]]
 name = "platform-consumer-docs"
 subsets = ["docs"]
 workflows = ["gates.yml"]

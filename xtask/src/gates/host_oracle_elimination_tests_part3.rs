@@ -718,9 +718,7 @@ pub fn execute_two_stage_pipeline(
 /// scan narrow to three directories across a crate split while still reporting
 /// a clean verdict over the workspace.
 fn workspace_production_sources(tree: &Tree) -> Vec<PathBuf> {
-    let mut report = crate::gate::Report::clean();
-    let roots =
-        crate::gates::host_oracle_elimination::operation_bearing_roots(tree, &mut report).unwrap();
+    let roots = crate::gates::host_oracle_elimination::operation_bearing_roots(tree).unwrap();
     assert!(
         roots.len() > 3,
         "the operation-registering roster is the scan set and this workspace has more than three such crates: {roots:?}"

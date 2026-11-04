@@ -49,4 +49,4 @@ cannot be built, reviewed or published apart.
 
 `layering`, `dep-drift`, `workspace-membership`, `file-size`,
 `public-api-snapshot`, `public-api-paths`, `feature-isolation`,
-`feature-matrix`, `platform-boundary`, `neutral-crates`.
+`feature-matrix`, `platform-consumer-docs`, `neutral-crates`.

@@ -38,9 +38,8 @@ binds into `[tags]`, which drops it from the parsed manifest and makes
 `xtask version-matrix` reads the manifest and reports blockers.
 
 `xtask gates --subset prepublish` is what must hold before publishing,
-beyond what a `cargo publish --dry-run` catches: `operation-schema`,
-`list-ops`, `catalog`, `gate1`, `abstraction-gate`, `cross-target`,
-`dep-drift`, `platform-boundary`, `vyre-release-gate`, `lockfile-clean`.
+beyond what a `cargo publish --dry-run` catches. The subset is every gate
+whose descriptor in `xtask/src/gate_metadata/` lists the `prepublish` area.
 
 Run one gate by name, or a subset with `--subset`. `xtask gates` with no
 subset runs the whole registry. Every gate returns findings; the runner

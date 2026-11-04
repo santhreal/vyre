@@ -63,7 +63,7 @@ impl crate::gate::GateBehavior for HostOracleElimination {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let tree = Tree::open(&ctx.root)?;
         let mut report = Report::clean();
-        let roots = operation_bearing_roots(&tree, &mut report)?;
+        let roots = operation_bearing_roots(&tree)?;
         if roots.is_empty() {
             return Err(GateError::new(
                 "no shipped crate registers a semantic operation, so there is nothing this rule describes".to_string(),
@@ -122,9 +122,9 @@ const REGISTRATION_DEFINITION: &str = "impl OperationRegistration";
 /// The crate that declares `OperationRegistration` is excluded by the shape of
 /// its own source rather than by name, so moving the type does not silently
 /// drop its new home out of scope or pull the old one back in.
-pub fn operation_bearing_roots(tree: &Tree, report: &mut Report) -> Result<Vec<String>, GateError> {
+pub fn operation_bearing_roots(tree: &Tree) -> Result<Vec<String>, GateError> {
     let mut roots = Vec::new();
-    for root in super::host_oracle_closure::shipped_source_roots(tree, report)? {
+    for root in super::host_oracle_closure::shipped_source_roots(tree)? {
         let mut calls = false;
         let mut defines = false;
         for path in &tree.rust(&[root.as_str()])? {

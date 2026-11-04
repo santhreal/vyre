@@ -564,3 +564,38 @@ fn an_unactivatable_optional_edge_is_a_finding() {
         .message
         .contains("`a` declares `b` optional and no feature activates it"));
 }
+
+/// WHY: the fail-closed direction, against the layers this checkout
+/// actually declares rather than a list beside them. Adding a `[[layer]]`
+/// row makes its crates shipped, so the new layer is held to the rule until
+/// someone adds it to [`UNSHIPPED_LAYERS`]; retiring one that is exempt turns
+/// this red instead of leaving a dead exemption behind.
+#[test]
+fn a_new_layer_ships_until_it_is_exempted() {
+    let tree =
+        Tree::open(&crate::checkout::checkout_root()).expect("Fix: the checkout must be readable");
+    let ranks = declared_layer_ranks(&tree)
+        .expect("Fix: docs/CRATE_OWNERSHIP.toml must declare [[layer]] rows");
+    let declared: BTreeSet<&str> = ranks.keys().map(String::as_str).collect();
+    assert!(
+        !declared.is_empty(),
+        "the architecture manifest declares no layers"
+    );
+    for layer in &declared {
+        assert_eq!(
+            ships(layer, &declared),
+            !UNSHIPPED_LAYERS.contains(layer),
+            "`{layer}` must ship unless it is exempt"
+        );
+    }
+    for layer in UNSHIPPED_LAYERS {
+        assert!(
+            declared.contains(layer),
+            "`{layer}` is exempted and no [[layer]] row declares it"
+        );
+    }
+    assert!(
+        !ships("quantum-boundary", &declared),
+        "an undeclared layer is not shipped"
+    );
+}
