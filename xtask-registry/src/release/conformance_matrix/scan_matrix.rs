@@ -9,7 +9,7 @@ use vyre_libs::pattern::{regex_construct_diagnostic_code, RegexConstruct};
 use super::evidence::{
     ScanConformanceFinding, ScanConformanceMatrixToml, ScanConformanceRowEvidence,
 };
-use super::read_text_bounded;
+use xtask::output_arg::read_tracked_text;
 
 const SCAN_CONFORMANCE_MATRIX: &str = "docs/optimization/SCAN_CONFORMANCE_MATRIX.toml";
 /// Regex semantics a release must report on. This is a release decision about
@@ -47,7 +47,7 @@ pub(super) fn read_scan_conformance_matrix(
     vyre_root: &Path,
 ) -> (Vec<ScanConformanceRowEvidence>, Vec<ScanConformanceFinding>) {
     let path = vyre_root.join(SCAN_CONFORMANCE_MATRIX);
-    let text = match read_text_bounded(&path) {
+    let text = match read_tracked_text(&path) {
         Ok(text) => text,
         Err(error) => {
             return (
@@ -140,7 +140,7 @@ pub(super) fn read_scan_conformance_matrix(
                     .to_string(),
             });
         } else {
-            match read_text_bounded(&vyre_root.join(evidence_path)) {
+            match read_tracked_text(&vyre_root.join(evidence_path)) {
                 Err(error) => findings.push(ScanConformanceFinding {
                     semantics: semantics.clone(),
                     engine: None,

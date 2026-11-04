@@ -80,9 +80,6 @@ const COMPILES: &str = "compiles";
 /// Recorded outcome: the pair cannot compile on its own, for a stated reason.
 const BLOCKED: &str = "blocked";
 
-/// Largest manifest this gate will read.
-const MAX_MANIFEST_BYTES: u64 = 1_048_576;
-
 /// One judged point on the feature axis.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Pair {
@@ -670,16 +667,7 @@ pub fn host_oracle_reach_failures(manifests: &BTreeMap<String, toml::Value>) -> 
 }
 
 fn read_manifest(path: &Path) -> Result<String, String> {
-    let metadata =
-        fs::metadata(path).map_err(|error| format!("cannot stat {}: {error}", path.display()))?;
-    if metadata.len() > MAX_MANIFEST_BYTES {
-        return Err(format!(
-            "{} is {} bytes, past the {MAX_MANIFEST_BYTES}-byte manifest bound",
-            path.display(),
-            metadata.len()
-        ));
-    }
-    fs::read_to_string(path).map_err(|error| format!("cannot read {}: {error}", path.display()))
+    structure_gate::read_source_bounded(path).map_err(|error| error.to_string())
 }
 
 /// Rows recorded in `xtask/feature-isolation.toml`.

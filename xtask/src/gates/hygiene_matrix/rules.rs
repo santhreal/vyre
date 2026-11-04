@@ -1,9 +1,7 @@
 use std::borrow::Cow;
-use std::io;
 use std::path::Path;
 
 use super::classification::is_xtask_source_path;
-use super::records::MAX_HYGIENE_SCAN_FILE_BYTES;
 
 /// True when a `#[cfg(...)]` attribute gates the item to test builds only.
 ///
@@ -761,8 +759,4 @@ pub(crate) fn raw_string_end_at(bytes: &[u8], index: usize, hashes: usize) -> bo
         && bytes
             .get(index + 1..index + 1 + hashes)
             .is_some_and(|suffix| suffix.iter().all(|byte| *byte == b'#'))
-}
-
-pub(crate) fn read_text_bounded(path: &Path) -> io::Result<String> {
-    crate::output_arg::read_text_bounded(path, MAX_HYGIENE_SCAN_FILE_BYTES, "hygiene scan")
 }

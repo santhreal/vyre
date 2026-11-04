@@ -8,13 +8,10 @@ use std::process::Command;
 use serde::Serialize;
 
 use crate::artifact_gate::Inspection;
-use crate::manifest_walk::MAX_MANIFEST_BYTES;
 use crate::release::release_train;
 
 /// The artifact this gate owns, relative to the workspace root.
 const ARTIFACT: &str = "release/evidence/package/publish-readiness.json";
-
-const MAX_JSON_BYTES: u64 = 8_388_608;
 
 #[derive(Debug, Serialize)]
 struct PackageReadiness {
@@ -471,7 +468,7 @@ fn cargo_package_patch_args(
     publish_order: &[PublishStep],
 ) -> Result<Vec<OsString>, String> {
     let manifest = root.join(&step.manifest);
-    let text = crate::output_arg::read_text_bounded(&manifest, MAX_MANIFEST_BYTES, "")
+    let text = structure_gate::read_source_bounded(&manifest)
         .map_err(|error| format!("failed to read `{}`: {error}", manifest.display()))?;
     let value = toml::from_str::<toml::Value>(&text)
         .map_err(|error| format!("failed to parse `{}`: {error}", manifest.display()))?;
@@ -783,7 +780,7 @@ pub fn package_content_evidence_issues(value: &serde_json::Value) -> Vec<String>
 }
 
 fn read_metadata_matrix(path: &Path, blockers: &mut Vec<String>) -> Option<serde_json::Value> {
-    match crate::json_document::read(path, MAX_JSON_BYTES) {
+    match crate::json_document::read(path) {
         Ok(value) => Some(value),
         Err(error) => {
             blockers.push(format!("cannot use the metadata matrix: {error}"));
@@ -924,8 +921,7 @@ fn workspace_dependencies(
 fn workspace_root_for_manifest(manifest: &Path) -> Option<PathBuf> {
     for ancestor in manifest.ancestors().skip(1) {
         let candidate = ancestor.join("Cargo.toml");
-        let Ok(text) = crate::output_arg::read_text_bounded(&candidate, MAX_MANIFEST_BYTES, "")
-        else {
+        let Ok(text) = structure_gate::read_source_bounded(&candidate) else {
             continue;
         };
         let Ok(value) = toml::from_str::<toml::Value>(&text) else {
@@ -991,7 +987,7 @@ fn package_version(package: &toml::value::Table) -> Option<&str> {
 }
 
 fn read_manifest(path: &Path, blockers: &mut Vec<String>) -> Option<toml::Value> {
-    let text = match crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, "") {
+    let text = match structure_gate::read_source_bounded(path) {
         Ok(text) => text,
         Err(error) => {
             blockers.push(format!(

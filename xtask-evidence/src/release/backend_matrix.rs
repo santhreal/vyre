@@ -12,8 +12,6 @@ use vyre_driver::{
 use xtask::artifact_gate::Inspection;
 use xtask::tree_walk;
 
-const MAX_BACKEND_EVIDENCE_TEXT_BYTES: u64 = 4_194_304;
-
 #[derive(Debug, Serialize)]
 struct BackendMatrix {
     schema_version: u32,
@@ -912,7 +910,7 @@ fn scan_hidden_fallback_file(
     scan_errors: &mut Vec<String>,
     blockers: &mut Vec<String>,
 ) {
-    let text = match read_text_bounded(path) {
+    let text = match structure_gate::read_source_bounded(path) {
         Ok(text) => text,
         Err(error) => {
             let message = format!(
@@ -1198,9 +1196,6 @@ fn parse_header_value(line: &str, label: &str) -> Option<String> {
     let value = rest.get(..end)?.trim();
     (!value.is_empty()).then(|| value.to_string())
 }
-fn read_text_bounded(path: &Path) -> io::Result<String> {
-    xtask::output_arg::read_text_bounded(path, MAX_BACKEND_EVIDENCE_TEXT_BYTES, "backend evidence")
-}
 
 /// Read the source a feature marker names.
 ///
@@ -1215,7 +1210,7 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
 /// is read through the bounded read; the walk is bounded by the module
 /// directory.
 fn read_marker_module(path: &Path) -> io::Result<String> {
-    let mut text = read_text_bounded(path)?;
+    let mut text = structure_gate::read_source_bounded(path)?;
     let root = path.file_name().and_then(|name| name.to_str());
     if !matches!(root, Some("mod.rs" | "lib.rs")) {
         return Ok(text);
@@ -1243,7 +1238,7 @@ fn read_marker_module(path: &Path) -> io::Result<String> {
                 continue;
             }
             text.push('\n');
-            text.push_str(&read_text_bounded(&child)?);
+            text.push_str(&structure_gate::read_source_bounded(&child)?);
         }
     }
     Ok(text)
@@ -1556,7 +1551,8 @@ mod tests {
             .expect("Fix: the test needs a nested submodule file.");
 
         let module_text = read_marker_module(&cited).expect("Fix: the module must be readable.");
-        let cited_text = read_text_bounded(&cited).expect("Fix: the cited file must be readable.");
+        let cited_text = structure_gate::read_source_bounded(&cited)
+            .expect("Fix: the cited file must be readable.");
 
         assert!(
             module_text.contains("MAX_PENDING_DURABLE_CACHE_FILES"),

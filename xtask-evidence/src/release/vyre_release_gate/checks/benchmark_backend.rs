@@ -10,7 +10,7 @@ pub(crate) fn check_release_bench_targets(
     failures: &mut Vec<String>,
 ) {
     let path = base_dir.join("../docs/optimization/BENCH_TARGETS.toml");
-    let text = match read_text_bounded(&path) {
+    let text = match read_tracked_text(&path) {
         Ok(text) => text,
         Err(error) => {
             failures.push(format!(
@@ -75,7 +75,7 @@ pub(crate) fn declared_case_min_speedup(
     failures: &mut Vec<String>,
 ) -> Option<f64> {
     let path = base_dir.join("../docs/optimization/BENCH_TARGETS.toml");
-    let text = match read_text_bounded(&path) {
+    let text = match read_tracked_text(&path) {
         Ok(text) => text,
         Err(error) => {
             failures.push(format!(
@@ -131,7 +131,7 @@ pub(crate) fn check_benchmark_evidence_reports(
         }
         matched += 1;
         let path = resolve_manifest_path(base_dir, evidence);
-        let text = match read_text_bounded(&path) {
+        let text = match read_tracked_text(&path) {
             Ok(text) => text,
             Err(error) => {
                 failures.push(format!(

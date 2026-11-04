@@ -1,9 +1,7 @@
-//! What the release gate is given: the evidence manifest it reads, the mode it
-//! was invoked in, and the cap on any text it will read.
+//! What the release gate is given: the evidence manifest it reads and the mode
+//! it was invoked in.
 
 use serde::Deserialize;
-
-pub(super) const MAX_RELEASE_GATE_TEXT_BYTES: u64 = 16_777_216;
 
 /// Which release question the gate answers.
 ///

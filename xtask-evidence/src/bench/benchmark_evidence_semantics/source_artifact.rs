@@ -12,7 +12,7 @@ use std::path::{Component, Path, PathBuf};
 
 use serde_json::Value;
 
-use super::data::{BenchmarkArtifactPathIssue, MAX_BENCHMARK_EVIDENCE_SEMANTIC_TEXT_BYTES};
+use super::data::BenchmarkArtifactPathIssue;
 use super::json_reader::non_empty_str;
 
 pub(crate) fn benchmark_report_has_source_provenance(report: &Value) -> bool {
@@ -138,11 +138,7 @@ pub(crate) fn read_cited_source_artifact(
         return None;
     }
     let artifact_path = resolve_benchmark_artifact_path(workspace_root, artifact);
-    let text = match xtask::output_arg::read_text_bounded(
-        &artifact_path,
-        MAX_BENCHMARK_EVIDENCE_SEMANTIC_TEXT_BYTES,
-        "evidence",
-    ) {
+    let text = match xtask::output_arg::read_tracked_text(&artifact_path) {
         Ok(text) => text,
         Err(error) => {
             issues.push(format!(

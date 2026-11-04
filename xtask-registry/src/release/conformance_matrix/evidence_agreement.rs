@@ -136,7 +136,7 @@ fn record_is_about_this_tree(
     let Some(carrier) = carrier else {
         return Ok(());
     };
-    let Ok(worktree) = super::read_text_bounded(&root.join(artifact)) else {
+    let Ok(worktree) = xtask::output_arg::read_tracked_text(&root.join(artifact)) else {
         // Unreadable here means `read_pairs` reports it against its own path.
         return Ok(());
     };
@@ -175,7 +175,7 @@ fn read_pairs(path: &Path, recorded_id: &str) -> Result<BTreeMap<String, bool>, 
         passed: Option<bool>,
     }
 
-    let text = super::read_text_bounded(path)
+    let text = xtask::output_arg::read_tracked_text(path)
         .map_err(|error| format!("{} is unreadable: {error}", path.display()))?;
     let document: ConformanceEvidenceDoc = serde_json::from_str(&text)
         .map_err(|error| format!("{} is not JSON: {error}", path.display()))?;

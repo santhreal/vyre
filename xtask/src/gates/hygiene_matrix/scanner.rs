@@ -11,7 +11,7 @@ use super::rules::{
     has_documented_panic_contract, is_hidden_fallback_guard_source, is_non_release_cfg_attr,
     line_contains_blocked_pattern, line_contains_heredoc, line_contains_invalid_cargo_full_xtask,
     line_contains_raw_workspace_cargo, line_contains_read_call, line_contains_unbounded_read,
-    read_text_bounded, truncating_duration_cast_lines, BraceDepthState,
+    truncating_duration_cast_lines, BraceDepthState,
 };
 use super::syntax::scan_source_inspection_tests;
 use super::{CARGO_WRAPPER_PATTERNS, HIDDEN_FALLBACK_PATTERNS, RESOURCE_BOUND_PATTERNS};
@@ -109,7 +109,7 @@ pub(crate) fn scan_source_inspection_test_files(
         if !tests.contains(path.strip_prefix(root).unwrap_or(path)) {
             continue;
         }
-        let text = match read_text_bounded(path) {
+        let text = match structure_gate::read_source_bounded(path) {
             Ok(text) => text,
             Err(error) => {
                 push_read_error(path, "unreadable_source_file", error, findings);
@@ -325,7 +325,7 @@ pub(crate) fn scan_file(
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
-    let text = match read_text_bounded(path) {
+    let text = match structure_gate::read_source_bounded(path) {
         Ok(text) => text,
         Err(error) => {
             push_read_error(path, "unreadable_source_file", error, findings);
@@ -498,7 +498,7 @@ pub(crate) fn scan_command_file(
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
-    let text = match read_text_bounded(path) {
+    let text = match structure_gate::read_source_bounded(path) {
         Ok(text) => text,
         Err(error) => {
             push_read_error(path, read_error_pattern, error, findings);

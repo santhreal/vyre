@@ -50,11 +50,8 @@ use serde::Deserialize;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan;
-use crate::output_arg::read_text_bounded;
+use crate::output_arg::read_tracked_text;
 use crate::toml_text::quote;
-
-/// Largest snapshot this gate will read. The widest committed one is under 300 KiB.
-const MAX_SNAPSHOT_BYTES: u64 = 4_194_304;
 
 /// Schema this gate accepts in its data file.
 const SCHEMA_VERSION: u64 = 1;
@@ -139,8 +136,7 @@ fn snapshot_dir(root: &Path) -> PathBuf {
 /// Returns the reason the data file could not be read as rows.
 pub fn load_rows(root: &Path) -> Result<Vec<Row>, String> {
     let path = data_path(root);
-    let text = read_text_bounded(&path, MAX_SNAPSHOT_BYTES, "public-api-paths data file")
-        .map_err(|error| format!("{}: {error}", path.display()))?;
+    let text = read_tracked_text(&path).map_err(|error| format!("{}: {error}", path.display()))?;
     let file: RowFile =
         toml::from_str(&text).map_err(|error| format!("{}: {error}", path.display()))?;
     if file.schema_version != SCHEMA_VERSION {
@@ -786,9 +782,9 @@ impl crate::gate::GateBehavior for PublicApiPaths {
         let mut shared_names = 0;
         let mut refusals = 0;
         for (name, path) in &files {
-            let text = read_text_bounded(path, MAX_SNAPSHOT_BYTES, "public-api snapshot").map_err(
-                |error| GateError::new(format!("{}: {error}", path.display()), SNAPSHOT_FIX),
-            )?;
+            let text = read_tracked_text(path).map_err(|error| {
+                GateError::new(format!("{}: {error}", path.display()), SNAPSHOT_FIX)
+            })?;
             let directory = directories.get(name).ok_or_else(|| {
                 GateError::new(
                     format!("docs/public-api/{name}.txt names no workspace member"),

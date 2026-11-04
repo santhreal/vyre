@@ -64,12 +64,6 @@ use crate::evidence_record::{
     self, EvidenceArtifact, EvidenceProvenance, MeasurementRecord, ProvenanceIssue,
 };
 use crate::gate::{Coverage, Finding, GateCtx, Report};
-/// Largest committed artifact this module will read into memory.
-///
-/// The op matrix carried this cap on its own reader before it became a gate.
-/// It belongs here now, because every artifact is read through one place.
-pub const MAX_ARTIFACT_BYTES: u64 = 16_777_216;
-
 /// How one generated artifact is read, and therefore what it must carry.
 ///
 /// There is no third state and no default. A generator picks the arm that
@@ -913,7 +907,7 @@ pub fn split_provenance(committed: &str) -> (Result<EvidenceProvenance, Provenan
 
 /// Read the committed copy of `path`, bounded.
 fn read_committed(root: &Path, path: &Path) -> std::io::Result<String> {
-    crate::output_arg::read_text_bounded(&root.join(path), MAX_ARTIFACT_BYTES, "evidence artifact")
+    crate::output_arg::read_tracked_text(&root.join(path))
 }
 
 /// Name every way the committed artifact differs from what the tree generates.

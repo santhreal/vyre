@@ -17,7 +17,8 @@ use std::path::Path;
 
 use super::super::checks::{check_readme_contract, first_json_evidence};
 use super::super::gate_inputs::Requirement;
-use super::super::paths::{read_text_bounded, resolve_manifest_path};
+use super::super::paths::resolve_manifest_path;
+use xtask::output_arg::read_tracked_text;
 
 /// The evidence document that lists the documentation authority.
 const MAP: &str = "evidence/docs/docs-evidence-map.md";
@@ -42,7 +43,7 @@ fn check_authority_map(requirement: &Requirement, base_dir: &Path, failures: &mu
         return;
     }
     let path = resolve_manifest_path(base_dir, MAP);
-    let text = match read_text_bounded(&path) {
+    let text = match read_tracked_text(&path) {
         Ok(text) => text,
         Err(error) => {
             failures.push(format!(

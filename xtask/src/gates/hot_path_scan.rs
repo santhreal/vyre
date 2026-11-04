@@ -38,8 +38,6 @@ use serde::{Deserialize, Serialize};
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan::{cfg_test_lines, error_construction_lines, scan_code};
 
-const MAX_HOT_PATH_SCAN_FILE_BYTES: u64 = 2_097_152;
-
 #[derive(Debug, Deserialize)]
 struct HotPathsConfig {
     #[serde(default)]
@@ -284,7 +282,7 @@ impl crate::gate::GateBehavior for HotPathScan {
                 continue;
             }
             scanned += 1;
-            match read_text_bounded(&path) {
+            match structure_gate::read_source_bounded(&path) {
                 Ok(text) => {
                     code_lines_by_file.insert(entry.file.clone(), count_code_lines(&text));
                     let on_error_paths = collect_findings(&entry.file, &text, &mut hits);
@@ -414,7 +412,7 @@ fn parse_budget_vx_json(args: &[String]) -> Result<Option<PathBuf>, String> {
 }
 
 fn load_config(path: &Path) -> Result<Vec<HotPathEntry>, String> {
-    let text = read_text_bounded(path).map_err(|e| e.to_string())?;
+    let text = structure_gate::read_source_bounded(path).map_err(|e| e.to_string())?;
     let cfg: HotPathsConfig = toml::from_str(&text).map_err(|e| e.to_string())?;
     if cfg.schema != 1 {
         return Err(format!(
@@ -423,10 +421,6 @@ fn load_config(path: &Path) -> Result<Vec<HotPathEntry>, String> {
         ));
     }
     Ok(cfg.hot_path)
-}
-
-fn read_text_bounded(path: &Path) -> io::Result<String> {
-    crate::output_arg::read_text_bounded(path, MAX_HOT_PATH_SCAN_FILE_BYTES, "hot-path scan")
 }
 
 fn write_budget_vx_candidates(path: &Path, candidates: &[BudgetVxCandidate]) -> io::Result<()> {

@@ -6,7 +6,7 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use crate::release::conformance_evidence_semantics::read_conformance_text;
+use crate::output_arg::read_tracked_text;
 
 /// The backends release evidence must cover, as the op matrix names them.
 ///
@@ -73,7 +73,7 @@ pub struct OpMatrixReleaseBackendSpec {
 /// file is reported in one run.
 pub fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixCatalog {
     let matrix_path = vyre_root.join("docs/optimization/OP_MATRIX.toml");
-    let text = match read_conformance_text(&matrix_path) {
+    let text = match read_tracked_text(&matrix_path) {
         Ok(text) => text,
         Err(error) => {
             return OpMatrixCatalog {
@@ -349,7 +349,7 @@ pub fn inspect_conformance_test_evidence(
     let mut unreadable_paths = Vec::new();
     for test_path in test_paths {
         let path = vyre_root.join(test_path);
-        let text = match read_conformance_text(&path) {
+        let text = match read_tracked_text(&path) {
             Ok(text) => text,
             Err(error) => {
                 unreadable_paths.push(format!("{test_path} ({error})"));

@@ -96,11 +96,7 @@ impl crate::gate::GateBehavior for EvidenceAttribution {
                 prose += 1;
                 continue;
             }
-            let text = match crate::output_arg::read_text_bounded(
-                &ctx.root.join(relative),
-                artifact_gate::MAX_ARTIFACT_BYTES,
-                "release evidence artifact",
-            ) {
+            let text = match crate::output_arg::read_tracked_text(&ctx.root.join(relative)) {
                 Ok(text) => text,
                 Err(error) => {
                     inspection.find(Finding::in_file(

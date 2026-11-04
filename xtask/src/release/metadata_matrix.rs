@@ -5,9 +5,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use crate::artifact_gate::Inspection;
-use crate::manifest_walk::{
-    self, workspace_package as load_workspace_package, PackageManifest, MAX_MANIFEST_BYTES,
-};
+use crate::manifest_walk::{self, PackageManifest};
 use crate::release::release_train;
 
 /// The artifact this gate owns, relative to the workspace root.
@@ -56,8 +54,6 @@ struct RequiredReleaseSurface {
     release_surface: &'static str,
 }
 
-const MAX_README_BYTES: u64 = 2_097_152;
-
 fn required_release_surfaces() -> Vec<RequiredReleaseSurface> {
     vec![
         RequiredReleaseSurface {
@@ -90,8 +86,7 @@ fn inspect(vyre_root: &Path) -> Inspection {
     let mut inspection = Inspection::new();
     let mut packages = Vec::new();
     let mut metadata_blockers = Vec::new();
-    let workspace_package =
-        load_workspace_package(vyre_root, "release metadata", &mut metadata_blockers);
+    let workspace_package = manifest_walk::workspace_package(vyre_root, &mut metadata_blockers);
     collect_packages(
         vyre_root,
         workspace_package.as_ref(),
@@ -197,12 +192,8 @@ fn root_patch_section_count(manifests: &[PathBuf]) -> (usize, Vec<String>) {
     let mut blockers = Vec::new();
     let count = manifests
         .iter()
-        .map(|manifest| {
-            match crate::output_arg::read_text_bounded(
-                manifest,
-                MAX_MANIFEST_BYTES,
-                "release metadata",
-            ) {
+        .map(
+            |manifest| match structure_gate::read_source_bounded(manifest) {
                 Ok(text) => text
                     .lines()
                     .filter(|line| line.trim() == "[patch.crates-io]")
@@ -214,8 +205,8 @@ fn root_patch_section_count(manifests: &[PathBuf]) -> (usize, Vec<String>) {
                     ));
                     0
                 }
-            }
-        })
+            },
+        )
         .sum();
     (count, blockers)
 }
@@ -235,8 +226,7 @@ fn parse_package(
     path: &Path,
     workspace_package: Option<&toml::value::Table>,
 ) -> Result<Option<PackageMetadata>, String> {
-    let Some(PackageManifest { document, name }) =
-        manifest_walk::parse_package_manifest(path, "release metadata")?
+    let Some(PackageManifest { document, name }) = manifest_walk::parse_package_manifest(path)?
     else {
         return Ok(None);
     };
@@ -303,11 +293,7 @@ fn parse_package(
         if !readme_path.exists() {
             blockers.push(format!("readme `{readme}` does not exist"));
         } else {
-            match crate::output_arg::read_text_bounded(
-                &readme_path,
-                MAX_README_BYTES,
-                "release metadata",
-            ) {
+            match crate::output_arg::read_tracked_text(&readme_path) {
                 Ok(text) if text.trim().is_empty() => {
                     blockers.push(format!("readme `{readme}` is empty"));
                 }

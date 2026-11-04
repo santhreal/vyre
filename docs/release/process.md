@@ -64,6 +64,11 @@ artifact, so an artifact recorded against a tree its own commit does not hold is
 a finding. Regenerate an artifact on a tree whose remaining changes the next
 commit captures, and commit both together.
 
+Tooling reads a document, generated table or evidence artifact under a
+16 MiB bound, and a Rust source or Cargo manifest under a 4 MiB bound. A
+larger or non-UTF-8 file is a read error that names the path; no reader
+truncates or skips it.
+
 ## Changelog
 
 An observable change adds one fragment under

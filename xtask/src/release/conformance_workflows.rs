@@ -9,7 +9,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::release::conformance_evidence_semantics::read_conformance_text;
+use crate::output_arg::read_tracked_text;
 use crate::tree_walk::{self, BUILD_OUTPUT_AND_VCS};
 
 /// One conformance gate as a workflow file declares it.
@@ -78,7 +78,7 @@ fn inspect_ci_gate(
     artifact_marker: &str,
 ) -> CiConformanceGate {
     let workflow_path = vyre_root.join(workflow);
-    let (text, read_error) = match read_conformance_text(&workflow_path) {
+    let (text, read_error) = match read_tracked_text(&workflow_path) {
         Ok(text) => (text, None),
         Err(error) => (String::new(), Some(error.to_string())),
     };
@@ -95,7 +95,7 @@ fn inspect_ci_gate(
 /// The required CI status names, and the errors hit reading them.
 pub fn parse_required_ci_statuses(vyre_root: &Path) -> (Vec<String>, Vec<String>) {
     let path = vyre_root.join(".github/CI_REQUIRED.md");
-    let text = match read_conformance_text(&path) {
+    let text = match read_tracked_text(&path) {
         Ok(text) => text,
         Err(error) => {
             return (
@@ -149,7 +149,7 @@ pub fn ci_status_defined(vyre_root: &Path, status: &str, scan_errors: &mut Vec<S
         if !matches!(extension, "yml" | "yaml") {
             continue;
         }
-        let text = match read_conformance_text(path) {
+        let text = match read_tracked_text(path) {
             Ok(text) => text,
             Err(error) => {
                 scan_errors.push(format!(
@@ -185,7 +185,7 @@ pub fn inspect_path_filtered_required_workflows(vyre_root: &Path) -> Vec<String>
     let mut findings = Vec::new();
     for workflow in REQUIRED_WORKFLOWS {
         let path = vyre_root.join(workflow);
-        let Ok(text) = read_conformance_text(&path) else {
+        let Ok(text) = read_tracked_text(&path) else {
             continue;
         };
         let trigger_prefix = text
@@ -211,7 +211,7 @@ pub fn inspect_required_workflow_triggers(vyre_root: &Path) -> Vec<String> {
     let mut missing = Vec::new();
     for workflow in REQUIRED_WORKFLOWS {
         let path = vyre_root.join(workflow);
-        let Ok(text) = read_conformance_text(&path) else {
+        let Ok(text) = read_tracked_text(&path) else {
             missing.push(format!("{}:unreadable", path.display()));
             continue;
         };
@@ -310,7 +310,7 @@ pub fn inspect_fail_closed_fanins(vyre_root: &Path) -> Vec<String> {
         (".github/workflows/gpu-parity.yml", "GPU release gate"),
     ] {
         let path = vyre_root.join(workflow);
-        let Ok(text) = read_conformance_text(&path) else {
+        let Ok(text) = read_tracked_text(&path) else {
             missing.push(format!("{}:{job_name}", path.display()));
             continue;
         };

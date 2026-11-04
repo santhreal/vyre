@@ -204,7 +204,6 @@ pub(crate) const BLOCKED_PATTERNS: &[(&str, &str)] = &[
 /// tree-wide table so neither scan carries a list of its own.
 pub(crate) const DRIVER_SURFACE_ONLY_MARKERS: &[(&str, &str)] = &[("tbd_text", "tbd")];
 
-pub(crate) const MAX_HYGIENE_SCAN_FILE_BYTES: u64 = 4_194_304;
 pub(crate) const THRESHOLD_POLICY_SCHEMA_VERSION: u32 = 1;
 pub(crate) const THRESHOLD_POLICY_SOURCE: &str = "docs/optimization/THRESHOLD_POLICY.toml";
 pub(crate) const THRESHOLD_POLICY_ARTIFACT: &str = "release/evidence/hygiene/threshold-policy.json";

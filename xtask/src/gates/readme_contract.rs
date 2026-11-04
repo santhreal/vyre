@@ -32,9 +32,6 @@ pub const ARTIFACT: &str = "release/evidence/docs/vyre-readme-contracts.json";
 /// The published landing page this gate judges.
 const README: &str = "README.md";
 
-/// Largest landing page this gate reads.
-const MAX_README_BYTES: u64 = 1024 * 1024;
-
 /// What the published landing page carries.
 #[derive(Serialize)]
 struct ReadmeContract {
@@ -126,15 +123,7 @@ fn required_tokens() -> Vec<String> {
 
 /// The landing page text, or why it could not be read.
 fn read_landing_page(path: &Path) -> Result<String, String> {
-    let length = std::fs::metadata(path)
-        .map_err(|error| error.to_string())?
-        .len();
-    if length > MAX_README_BYTES {
-        return Err(format!(
-            "{length} bytes exceeds the {MAX_README_BYTES} this gate reads"
-        ));
-    }
-    std::fs::read_to_string(path).map_err(|error| error.to_string())
+    crate::output_arg::read_tracked_text(path).map_err(|error| error.to_string())
 }
 
 /// What `text` carries, against `required`.

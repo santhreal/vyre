@@ -16,9 +16,10 @@ mod semantic;
 
 use checks::check_markdown_evidence_path_ready;
 use gate_inputs::{EvidenceManifest, GateMode};
-use paths::{escapes_repository, options_from_args, read_text_bounded, resolve_manifest_path};
+use paths::{escapes_repository, options_from_args, resolve_manifest_path};
 use semantic::run_semantic_requirement_checks;
 use xtask::gate::{GateCtx, GateError, Report};
+use xtask::output_arg::read_tracked_text;
 
 /// Holds the release to the evidence manifest: every requirement closed and
 /// every cited artifact present, fresh, and internally consistent.
@@ -46,7 +47,7 @@ fn inspect(root: &Path, args: &[String]) -> Result<Report, GateError> {
     })?;
     let manifest_path = options.manifest_path;
 
-    let manifest_text = read_text_bounded(&manifest_path).map_err(|error| {
+    let manifest_text = read_tracked_text(&manifest_path).map_err(|error| {
         GateError::new(
             format!(
                 "failed to read release evidence manifest `{}`: {error}",
@@ -90,7 +91,7 @@ fn inspect(root: &Path, args: &[String]) -> Result<Report, GateError> {
             release_contract_path.display()
         ));
     } else {
-        match read_text_bounded(&release_contract_path) {
+        match read_tracked_text(&release_contract_path) {
             Ok(_) => {}
             Err(error) => failures.push(format!(
                 "release contract `{}` could not be read: {error}",

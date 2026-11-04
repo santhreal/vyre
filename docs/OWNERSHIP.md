@@ -21,7 +21,7 @@ Enforce the crate roster, one operation identity per semantic operation, one hom
 - Seam: `source-structure`
 - Interface: Whether a directory carries Rust source, which directory owns a domain, and the checkout root a gate reports on.
 - Carried by the curated surface: `false`
-- Consumed by 3 production edge(s)
+- Consumed by 4 production edge(s)
 
 ### `vyre`
 
@@ -1094,6 +1094,7 @@ Own the xtask subcommands that decide whether a recorded benchmark or release me
 
 | Dependency | Seam crossed | Interface | Activated by |
 | --- | --- | --- | --- |
+| `structure-gate` | `source-structure` | Whether a directory carries Rust source, which directory owns a domain, and the checkout root a gate reports on. | None |
 | `vyre-bench` | `workload-benchmarks` | Reproducible workload benchmarks and their recorded evidence. | None |
 | `vyre-driver` | `backend-contract` | The backend-neutral target, materialization, submission and completion contracts, and the driver registry every backend registers into. | None |
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |

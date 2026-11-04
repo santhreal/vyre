@@ -26,9 +26,6 @@ const DECLARING_CRATE: &str = "vyre-driver-wgpu";
 /// The corrective action for every leak this gate reports.
 const FIX: &str = "move the activation into the crate's [dev-dependencies] or [target.'cfg(...)'.dev-dependencies] block, because a production build must never link the raw-shader probe path";
 
-/// Largest manifest this gate will read.
-const MAX_MANIFEST_BYTES: u64 = 1_048_576;
-
 /// Every manifest in the checkout, ignoring build output.
 fn manifests(root: &Path) -> Result<Vec<PathBuf>, GateError> {
     let mut found = Vec::new();
@@ -67,12 +64,7 @@ impl crate::gate::GateBehavior for ParityTestingIsolated {
         let paths = manifests(&ctx.root)?;
         report.cover_complete("parity test manifests", paths.len());
         for path in &paths {
-            let text = crate::output_arg::read_text_bounded(
-                path,
-                MAX_MANIFEST_BYTES,
-                "parity-testing scan",
-            )
-            .map_err(|error| {
+            let text = structure_gate::read_source_bounded(path).map_err(|error| {
                 GateError::new(
                     format!("cannot read {}: {error}", path.display()),
                     "make every manifest in the checkout readable",

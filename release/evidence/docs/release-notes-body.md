@@ -3487,6 +3487,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   tests/ directory. A suite that stays beside the code it exercises states
   which crate-private item it covers. Shared test fixtures that had been copied
   per target now have one owner. Test counts are unchanged.
+- Tooling reads every document, generated table and evidence artifact under one
+  16 MiB bound, and every Rust source and Cargo manifest under the 4 MiB source
+  bound.
 - IR traversal has one module. vyre-foundation published two modules named
   visit, each with its own ExprVisitor and NodeVisitor trait: one the
   exhaustive per-variant contract, one a pair of one-method callbacks a walk

@@ -23,7 +23,6 @@ use toml::Value;
 use crate::gate::{GateCtx, GateError, Report};
 use crate::gates::crate_registry;
 use crate::gates::scan::Tree;
-use crate::manifest_walk::MAX_MANIFEST_BYTES;
 
 /// What an upward edge or an unclaimed layer costs the reader.
 const FIX: &str = "remove the upward dependency, or move the crate to the layer that matches it in docs/CRATE_OWNERSHIP.toml, then regenerate the ownership docs";
@@ -309,12 +308,12 @@ fn cross_crate_promotion_contract_text_failures(crate_graph: &str, lego_rule: &s
 ///
 /// # Panics
 ///
-/// Panics when the manifest file cannot be read or exceeds `MAX_MANIFEST_BYTES`.
+/// Panics when the manifest file cannot be read or exceeds
+/// [`structure_gate::MAX_SOURCE_BYTES`].
 fn read_bounded(path: &Path) -> String {
-    crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, "tier dependency manifest")
-        .unwrap_or_else(|error| {
-            panic!("Fix: cannot read {}: {error}", path.display());
-        })
+    structure_gate::read_source_bounded(path).unwrap_or_else(|error| {
+        panic!("Fix: cannot read {}: {error}", path.display());
+    })
 }
 
 /// Parse a manifest TOML string into a Value table.

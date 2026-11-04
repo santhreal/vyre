@@ -1,6 +1,5 @@
 //! Hold the release version story to the manifests, lockfile and release docs.
 
-use std::io;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
@@ -19,8 +18,6 @@ const TAG_PLAN: &str = "release/evidence/version/release-tag-plan.json";
 /// flag that no longer exists because the artifact path is owned by the gate.
 const REQUIRED_GATE_BEFORE_TAG: &str = "cargo_full run --bin xtask -- version-matrix && \
      cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main";
-
-const MAX_VERSION_EVIDENCE_TEXT_BYTES: u64 = 8_388_608;
 
 #[derive(Debug, Serialize)]
 struct VersionMatrix {
@@ -259,7 +256,7 @@ fn scan_bare_release_tags(vyre_root: &Path) -> (Vec<ReleaseDocTagFinding>, Vec<S
     let bare_tag = format!("v{}", release_train::vyre_version());
     let bare_rc_tag = format!("{bare_tag}-rc.1");
     for path in release_doc_paths(vyre_root) {
-        let text = match read_text_bounded(&path) {
+        let text = match crate::output_arg::read_tracked_text(&path) {
             Ok(text) => text,
             Err(error) => {
                 blockers.push(format!(
@@ -313,7 +310,7 @@ fn scan_release_note_tokens(vyre_root: &Path) -> Vec<ReleaseNoteTokenFinding> {
         vyre_root.join("release/evidence/docs/release-notes-version-story.md"),
         current_release_notes_path(vyre_root),
     ] {
-        let text = match read_text_bounded(&path) {
+        let text = match crate::output_arg::read_tracked_text(&path) {
             Ok(text) => text,
             Err(error) => {
                 findings.push(ReleaseNoteTokenFinding {
@@ -334,7 +331,7 @@ fn scan_release_note_tokens(vyre_root: &Path) -> Vec<ReleaseNoteTokenFinding> {
         append_release_version_issues(&path, &text, &mut findings);
     }
     for path in [vyre_root.join("release/evidence/docs/crate-metadata-proof.md")] {
-        match read_text_bounded(&path) {
+        match crate::output_arg::read_tracked_text(&path) {
             Ok(text) => append_release_version_issues(&path, &text, &mut findings),
             Err(error) => findings.push(ReleaseNoteTokenFinding {
                 path: path.display().to_string(),
@@ -429,7 +426,7 @@ fn collect_lockfile_versions(
     packages: &mut Vec<LockfilePackageVersion>,
     blockers: &mut Vec<String>,
 ) {
-    let text = match read_text_bounded(path) {
+    let text = match crate::output_arg::read_tracked_text(path) {
         Ok(text) => text,
         Err(error) => {
             blockers.push(format!(
@@ -482,7 +479,7 @@ fn collect_workspace_dependency_hints(
 ) {
     let root_manifest = root.join("Cargo.toml");
     collect_one_dependency_hints(&root_manifest, hints, blockers);
-    let text = match read_text_bounded(&root_manifest) {
+    let text = match structure_gate::read_source_bounded(&root_manifest) {
         Ok(text) => text,
         Err(error) => {
             blockers.push(format!(
@@ -525,7 +522,7 @@ fn collect_one_dependency_hints(
     hints: &mut Vec<DependencyVersionHint>,
     blockers: &mut Vec<String>,
 ) {
-    let text = match read_text_bounded(path) {
+    let text = match structure_gate::read_source_bounded(path) {
         Ok(text) => text,
         Err(error) => {
             blockers.push(format!(
@@ -617,11 +614,7 @@ fn collect_workspace_versions(
         versions,
         blockers,
     );
-    let text = match crate::output_arg::read_text_bounded(
-        &root_manifest,
-        manifest_walk::MAX_MANIFEST_BYTES,
-        "version evidence",
-    ) {
+    let text = match structure_gate::read_source_bounded(&root_manifest) {
         Ok(text) => text,
         Err(error) => {
             blockers.push(format!(
@@ -666,7 +659,7 @@ fn collect_workspace_versions(
 }
 
 fn workspace_package_version(root: &Path, blockers: &mut Vec<String>) -> Option<String> {
-    crate::manifest_walk::workspace_package(root, "version evidence", blockers)?
+    crate::manifest_walk::workspace_package(root, blockers)?
         .get("version")
         .and_then(toml::Value::as_str)
         .map(str::to_string)
@@ -684,7 +677,7 @@ fn collect_one_version(
     versions: &mut Vec<CrateVersion>,
     blockers: &mut Vec<String>,
 ) {
-    let manifest = match manifest_walk::parse_package_manifest(path, "version evidence") {
+    let manifest = match manifest_walk::parse_package_manifest(path) {
         Ok(Some(manifest)) => manifest,
         Ok(None) => return,
         Err(error) => {
@@ -722,14 +715,6 @@ fn collect_one_version(
         release_group,
         publishable,
     });
-}
-
-/// Read version evidence text under this generator's cap.
-///
-/// The bound check itself lives in `output_arg`; this only binds the cap and the
-/// error context for the nine call sites below.
-fn read_text_bounded(path: &Path) -> io::Result<String> {
-    crate::output_arg::read_text_bounded(path, MAX_VERSION_EVIDENCE_TEXT_BYTES, "version evidence")
 }
 
 #[cfg(test)]

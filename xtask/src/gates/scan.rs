@@ -31,12 +31,6 @@ use std::process::Command;
 
 use crate::gate::GateError;
 
-/// Largest non-source file any gate reads: generated tables and evidence.
-///
-/// Rust sources and `Cargo.toml` manifests are held to the smaller
-/// [`structure_gate::MAX_SOURCE_BYTES`] instead.
-pub const MAX_FILE_BYTES: u64 = 16_777_216;
-
 /// Whether a path is a Rust source or a Cargo manifest, which the shared
 /// source reader bounds.
 fn is_source(relative: &Path) -> bool {
@@ -181,7 +175,8 @@ impl Tree {
     ///
     /// A Rust source or `Cargo.toml` goes through
     /// [`structure_gate::read_source_bounded`], the reader every source gate
-    /// shares; any other file is held to [`MAX_FILE_BYTES`]. Either read is one
+    /// shares; any other file is held to
+    /// [`crate::output_arg::MAX_TRACKED_TEXT_BYTES`]. Either read is one
     /// open, so a file that grows between a size check and the read cannot
     /// slip past the bound.
     pub fn read(&self, relative: impl AsRef<Path>) -> Result<String, GateError> {
@@ -195,10 +190,9 @@ impl Tree {
                 )
             });
         }
-        crate::output_arg::read_text_bounded(&path, MAX_FILE_BYTES, "tree").map_err(|error| {
+        crate::output_arg::read_tracked_text(&path).map_err(|error| {
             let fix = if error.kind() == std::io::ErrorKind::InvalidData {
-                "split the file, restore it as valid UTF-8 text, or raise the bound in \
-                 xtask/src/gates/scan.rs deliberately"
+                "split the file, or restore it as valid UTF-8 text"
             } else {
                 "restore the file the gate reads, or repoint the gate at the path it moved to"
             };

@@ -39,7 +39,7 @@ use std::process::Command;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
 use crate::gates::scan;
-use crate::output_arg::read_text_bounded;
+use crate::output_arg::read_tracked_text;
 
 /// The manifest that declares every page and what it covers.
 const MANIFEST: &str = "docs/DOCS.toml";
@@ -47,8 +47,6 @@ const MANIFEST: &str = "docs/DOCS.toml";
 const DOCS: &str = "docs";
 /// Where a changelog fragment lives.
 const FRAGMENTS: &str = "release/changes/unreleased";
-/// Bound on any one document this gate reads.
-const MAX_DOCUMENT_BYTES: u64 = 8_388_608;
 /// Lifecycle states whose pages are still current claims.
 const ACTIVE_STATUSES: [&str; 2] = ["current", "generated"];
 /// Directories that hold snapshots rather than current claims.
@@ -501,7 +499,7 @@ fn matches_any(pattern: &str, paths: &BTreeSet<String>) -> bool {
 
 /// Read one document under the checkout root, under the read bound.
 fn read_document(root: &Path, relative: &str) -> Result<String, GateError> {
-    read_text_bounded(&root.join(relative), MAX_DOCUMENT_BYTES, "documentation").map_err(|error| {
+    read_tracked_text(&root.join(relative)).map_err(|error| {
         GateError::new(
             format!("could not read `{relative}`: {error}"),
             "restore the document; the manifest declares it as a current page",

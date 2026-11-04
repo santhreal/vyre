@@ -6,7 +6,7 @@ pub(crate) fn check_markdown_evidence_path_ready(
     manifest_path: &str,
     failures: &mut Vec<String>,
 ) {
-    let text = match read_text_bounded(path) {
+    let text = match read_tracked_text(path) {
         Ok(text) => text,
         Err(error) => {
             failures.push(format!(

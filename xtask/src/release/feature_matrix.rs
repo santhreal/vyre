@@ -195,8 +195,7 @@ fn collect_package_blockers(
 }
 
 fn parse_features(path: &Path) -> Result<Option<PackageFeatures>, String> {
-    let Some(PackageManifest { document, name }) =
-        manifest_walk::parse_package_manifest(path, "release feature")?
+    let Some(PackageManifest { document, name }) = manifest_walk::parse_package_manifest(path)?
     else {
         return Ok(None);
     };

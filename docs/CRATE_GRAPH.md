@@ -35,7 +35,7 @@ each other; a layer that admits none states `None`.
 
 ## Workspace dependency graph
 
-The workspace contains 56 crates and 290 internal production edges, resolved
+The workspace contains 56 crates and 291 internal production edges, resolved
 under the union of every feature. An arrow points from a crate to an internal
 normal or build dependency. Development dependencies are excluded.
 
@@ -371,6 +371,7 @@ graph TD
   C52 --> C47
   C52 --> C51
   C53 --> C0
+  C54 --> C0
   C54 --> C4
   C54 --> C8
   C54 --> C18
@@ -667,6 +668,7 @@ graph TD
 | `vyre-test-support` | `vyre-reference` | `reference-semantics` | `normal` | `always` | None | `true` | `true` | `dense-matvec-cases`, `host-input-abi`, `parity-oracles`, `semantic-parity` |
 | `vyre-test-support` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `xtask` | `structure-gate` | `source-structure` | `normal` | `always` | None | `false` | `true` | None |
+| `xtask-evidence` | `structure-gate` | `source-structure` | `normal` | `always` | None | `false` | `true` | None |
 | `xtask-evidence` | `vyre-bench` | `workload-benchmarks` | `normal` | `always` | None | `false` | `true` | None |
 | `xtask-evidence` | `vyre-driver` | `backend-contract` | `normal` | `always` | None | `false` | `true` | None |
 | `xtask-evidence` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | None | `false` | `true` | None |

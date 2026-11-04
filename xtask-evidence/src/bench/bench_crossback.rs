@@ -21,7 +21,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 use xtask::gate::{Finding, GateCtx, GateError, Report};
-use xtask::output_arg::read_text_bounded;
+use xtask::output_arg::read_tracked_text;
 
 /// The committed release benchmark evidence, and the table derived from it.
 const EVIDENCE_DIR: &str = "release/evidence/benchmarks";
@@ -31,12 +31,6 @@ const TABLE: &str = "release/evidence/benchmarks/cross-backend-comparison.md";
 /// aggregates and the multi-device artifacts in the same directory carry other
 /// schemas, and are read by their own gates.
 const RESULT_SCHEMA: &str = "vyre-bench.result.v1";
-
-/// A result artifact is a few hundred kilobytes of percentile tables.
-const MAX_ARTIFACT_BYTES: u64 = 8_388_608;
-
-/// The rendered table is small. Anything larger than this is not one of ours.
-const MAX_TABLE_BYTES: u64 = 262_144;
 
 /// Fingerprints are printed to a fixed width so the table stays legible. The
 /// full value stays in the artifact the row cites.
@@ -171,13 +165,12 @@ fn collect(root: &Path, report: &mut Report) -> Result<BTreeMap<String, Case>, G
             "{EVIDENCE_DIR}/{}",
             path.file_name().unwrap_or_default().to_string_lossy()
         );
-        let text = read_text_bounded(&path, MAX_ARTIFACT_BYTES, "benchmark result artifact")
-            .map_err(|error| {
-                GateError::new(
-                    format!("failed to read `{relative}`: {error}"),
-                    "The committed evidence has to be readable to be compared against.",
-                )
-            })?;
+        let text = read_tracked_text(&path).map_err(|error| {
+            GateError::new(
+                format!("failed to read `{relative}`: {error}"),
+                "The committed evidence has to be readable to be compared against.",
+            )
+        })?;
         let document: Value = match serde_json::from_str(&text) {
             Ok(document) => document,
             Err(error) => {
@@ -382,7 +375,7 @@ fn render(cases: &BTreeMap<String, Case>) -> String {
 
 /// Compare the committed table against the one the evidence renders.
 fn audit_table(absolute: &Path, rendered: &str, report: &mut Report) {
-    let text = match read_text_bounded(absolute, MAX_TABLE_BYTES, "cross-backend table") {
+    let text = match read_tracked_text(absolute) {
         Ok(text) => text,
         Err(error) => {
             report.find(Finding::in_file(

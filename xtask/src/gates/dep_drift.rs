@@ -1,14 +1,11 @@
 //! The `dep-drift` gate: workspace-managed dependency pins stay aligned.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::io;
 use std::path::{Path, PathBuf};
 
 use toml::Value;
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
-
-const MAX_DEP_DRIFT_MANIFEST_BYTES: u64 = 1_048_576;
 
 /// What a manifest that disagrees with the workspace table must do about it.
 const FIX: &str = "pin the dependency with `workspace = true`, or align the version with the workspace-managed dependency table";
@@ -19,15 +16,16 @@ pub struct DepDrift;
 impl crate::gate::GateBehavior for DepDrift {
     fn run(&self, ctx: &GateCtx) -> Result<Report, GateError> {
         let workspace_manifest = ctx.root.join("Cargo.toml");
-        let workspace_text = read_text_bounded(&workspace_manifest).map_err(|error| {
-            GateError::new(
-                format!(
-                    "cannot read the workspace manifest {}: {error}",
-                    workspace_manifest.display()
-                ),
-                "restore the workspace manifest before running any gate",
-            )
-        })?;
+        let workspace_text =
+            structure_gate::read_source_bounded(&workspace_manifest).map_err(|error| {
+                GateError::new(
+                    format!(
+                        "cannot read the workspace manifest {}: {error}",
+                        workspace_manifest.display()
+                    ),
+                    "restore the workspace manifest before running any gate",
+                )
+            })?;
         let workspace_toml = parse_manifest(&workspace_manifest, &workspace_text)?;
 
         let managed = managed_dependency_versions(&workspace_toml);
@@ -43,7 +41,7 @@ impl crate::gate::GateBehavior for DepDrift {
             manifests.len()
         ));
         for manifest in &manifests {
-            let text = read_text_bounded(manifest).map_err(|error| {
+            let text = structure_gate::read_source_bounded(manifest).map_err(|error| {
                 GateError::new(
                     format!("cannot read {}: {error}", manifest.display()),
                     "make every tracked manifest readable",
@@ -199,13 +197,6 @@ fn explicit_version(value: &Value) -> Option<String> {
     }
 }
 
-fn read_text_bounded(path: &Path) -> io::Result<String> {
-    crate::output_arg::read_text_bounded(
-        path,
-        MAX_DEP_DRIFT_MANIFEST_BYTES,
-        "dependency drift manifest",
-    )
-}
 #[cfg(test)]
 mod tests {
     use super::*;

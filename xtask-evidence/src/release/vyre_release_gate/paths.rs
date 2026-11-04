@@ -1,7 +1,6 @@
-use std::io;
 use std::path::{Path, PathBuf};
 
-use super::gate_inputs::{GateMode, MAX_RELEASE_GATE_TEXT_BYTES};
+use super::gate_inputs::GateMode;
 
 #[derive(Debug)]
 pub(super) struct GateOptions {
@@ -48,13 +47,10 @@ pub(super) fn resolve_manifest_path(base_dir: &Path, path: &str) -> PathBuf {
 pub(super) fn resolve_artifact_path(base_dir: &Path, path: &str) -> PathBuf {
     xtask::output_arg::resolve_release_artifact_path(base_dir, path)
 }
-pub(super) fn read_text_bounded(path: &Path) -> io::Result<String> {
-    xtask::output_arg::read_text_bounded(path, MAX_RELEASE_GATE_TEXT_BYTES, "release gate")
-}
 
 /// One JSON artifact this gate judges, read under the same bound.
 pub(super) fn read_json(path: &Path) -> Result<serde_json::Value, String> {
-    xtask::json_document::read(path, MAX_RELEASE_GATE_TEXT_BYTES)
+    xtask::json_document::read(path)
 }
 
 /// Whether a manifest evidence entry resolves outside the repository.
@@ -143,7 +139,8 @@ mod tests {
     #[test]
     fn the_shipped_manifest_cites_only_repository_paths() {
         let manifest = default_manifest_path(&xtask::checkout::checkout_root());
-        let text = read_text_bounded(&manifest).expect("release evidence manifest is readable");
+        let text = xtask::output_arg::read_tracked_text(&manifest)
+            .expect("release evidence manifest is readable");
         let manifest: super::super::gate_inputs::EvidenceManifest =
             toml::from_str(&text).expect("release evidence manifest is valid TOML");
 

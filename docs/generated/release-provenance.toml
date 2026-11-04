@@ -9,9 +9,9 @@ target_triples = [
     "aarch64-apple-darwin",
     "aarch64-unknown-linux-gnu",
 ]
-lockfile_digest = "d314e72f3d35c3f043aa253992ffcd4cc87ad3b4cfaf48725243639a3af91c6f"
+lockfile_digest = "ca0bc0a37bbf683ac772d827b31e654d5ea6e4428b3dd9e1d09c2e8cf892e9ac"
 is_offline_capable = true
-reproducible_archive_hash = "f8942d2bef3508c3ec9b65e00ef8063a35d08cde91c00cd8192bddf774c82035"
+reproducible_archive_hash = "4af795050d09f72325b2a9e15576033ebcbc9038ee62cb675a1b0ff0bca8bd1c"
 
 [[dependencies]]
 name = "adler2"
@@ -3882,7 +3882,7 @@ target_outputs = [
 
 [[code_generators]]
 name = "xtask-registry"
-source_digest = "06917e43bb1fb3542b14ef6e12e7f65834afacd5fbb68483825f404f6a585f55"
+source_digest = "038aa6b4ba3974a98e3fbbcf6e15cd1761bca9c7d45429ec9cec875f3e75b116"
 target_outputs = [
     "docs/generated/op-inventory.toml",
     "docs/generated/catalog.toml",
@@ -3939,7 +3939,7 @@ digest = "5d4a12d89211943294bb3b1cf4ffe776c3d8acc2e1b16afae67c16e7c5de50f1"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/release-workload-matrix.json"
-digest = "0235b39f3311fa43563bbba81d69e3a22beacd842cef13ab4fbad7e85913f966"
+digest = "6667428015fb98e81f078818dd0eb4d358d7ab7edb5655f6707a01eedef5721b"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/resident-optimizer-pipeline.json"

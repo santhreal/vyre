@@ -10,7 +10,6 @@ use super::records::{
     THRESHOLD_POLICY_ARTIFACT, THRESHOLD_POLICY_SCHEMA_VERSION, THRESHOLD_POLICY_SOURCE,
     THRESHOLD_SUFFIXES,
 };
-use super::rules::read_text_bounded;
 
 pub(crate) fn collect_threshold_policy(vyre_root: &Path) -> ThresholdPolicyArtifact {
     let observed = scan_threshold_constants(vyre_root);
@@ -222,7 +221,7 @@ pub(crate) fn scan_threshold_constants(vyre_root: &Path) -> Vec<ObservedThreshol
             if path.extension().and_then(|extension| extension.to_str()) != Some("rs") {
                 continue;
             }
-            let Ok(text) = read_text_bounded(path) else {
+            let Ok(text) = structure_gate::read_source_bounded(path) else {
                 thresholds.push(ObservedThresholdConst {
                     path: relative_to_vyre(vyre_root, path),
                     line: 1,

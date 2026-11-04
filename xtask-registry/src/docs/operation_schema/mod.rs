@@ -10,7 +10,6 @@
 //! - `assemble` the live registry join that produces the document
 //! - `validate` the judgment every document has to pass
 
-use std::io;
 use std::path::Path;
 
 use xtask::gate::{GateCtx, GateError, Report};
@@ -28,7 +27,6 @@ mod signature;
 mod validate;
 
 const DEFAULT_OUTPUT: &str = "docs/generated/OP_SCHEMA.json";
-const MAX_SCHEMA_BYTES: u64 = 16_777_216;
 
 /// Turns operation schema build errors into one gate error, because a schema
 /// that does not build leaves a gate nothing to compare the tree against.
@@ -115,13 +113,9 @@ impl xtask::gate::GateBehavior for OperationSchemaGate {
 }
 
 fn read_schema(path: &Path) -> Result<OperationSchema, String> {
-    let text =
-        read_text_bounded(path).map_err(|error| format!("read {}: {error}", path.display()))?;
+    let text = xtask::output_arg::read_tracked_text(path)
+        .map_err(|error| format!("read {}: {error}", path.display()))?;
     serde_json::from_str(&text).map_err(|error| format!("parse {}: {error}", path.display()))
-}
-
-pub(super) fn read_text_bounded(path: &Path) -> io::Result<String> {
-    xtask::output_arg::read_text_bounded(path, MAX_SCHEMA_BYTES, "operation schema")
 }
 
 #[cfg(test)]

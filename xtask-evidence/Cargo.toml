@@ -24,6 +24,8 @@ workspace = true
 # from the ones that link nothing.
 [dependencies]
 xtask = { path = "../xtask" }
+# Every tracked Rust source is read through the one bounded source reader.
+structure-gate = { path = "../structure-gate" }
 vyre-bench.workspace = true
 vyre-driver.workspace = true
 # `vyre-foundation` owns the optimizer whose release corpus these subcommands

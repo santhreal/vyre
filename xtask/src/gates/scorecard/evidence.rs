@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
-use std::io::{Read, Take};
+use std::io::Read;
 use std::path::{Component, Path};
 
 use ed25519_dalek::{Signature, VerifyingKey};
@@ -14,7 +14,6 @@ use super::ENGINEERING_AXES;
 pub(super) const POLICY_PATH: &str = "release/engineering-qualification.toml";
 pub(super) const RECORDS_PATH: &str = "release/evidence/engineering/qualification.json";
 const VERSION: u32 = 1;
-const MAX_DOCUMENT_BYTES: u64 = 8 * 1024 * 1024;
 const MAX_RAW_BYTES: u64 = 256 * 1024 * 1024;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -191,23 +190,10 @@ fn read_document(root: &Path, relative: &str) -> Result<String, String> {
     let metadata = path
         .symlink_metadata()
         .map_err(|error| document_error(relative, &error))?;
-    if !metadata.is_file() || metadata.len() > MAX_DOCUMENT_BYTES {
-        return Err(format!(
-            "{relative} must be a regular file within the qualification document limit"
-        ));
+    if !metadata.is_file() {
+        return Err(format!("{relative} must be a regular file"));
     }
-    let file = File::open(&path).map_err(|error| document_error(relative, &error))?;
-    let mut reader: Take<File> = file.take(MAX_DOCUMENT_BYTES + 1);
-    let mut text = String::new();
-    reader
-        .read_to_string(&mut text)
-        .map_err(|error| document_error(relative, &error))?;
-    if text.len() as u64 > MAX_DOCUMENT_BYTES {
-        return Err(format!(
-            "{relative} exceeds the qualification document limit"
-        ));
-    }
-    Ok(text)
+    crate::output_arg::read_tracked_text(&path).map_err(|error| document_error(relative, &error))
 }
 
 fn document_error(relative: &str, error: &std::io::Error) -> String {

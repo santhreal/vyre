@@ -603,7 +603,7 @@ fn collect_drivers(root: &Path, findings: &mut Vec<Finding>) -> Vec<DriverEntry>
         &mut located,
         &mut blockers,
         |path| {
-            let parsed = manifest_walk::parse_package_manifest(path, "platform support matrix")?;
+            let parsed = manifest_walk::parse_package_manifest(path)?;
             let Some(manifest) = parsed else {
                 return Ok(None);
             };
@@ -730,7 +730,7 @@ fn collect_package_features(root: &Path, findings: &mut Vec<Finding>) -> Vec<Pac
         "platform support matrix",
         &mut manifests,
         &mut blockers,
-        |path| manifest_walk::parse_package_manifest(path, "platform support matrix"),
+        |path| manifest_walk::parse_package_manifest(path),
     );
     for blocker in blockers {
         findings.push(Finding::in_file(

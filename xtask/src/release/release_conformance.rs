@@ -2,7 +2,6 @@
 
 use std::collections::BTreeSet;
 use std::fs;
-use std::io;
 use std::path::Path;
 use std::process::Command;
 
@@ -17,7 +16,6 @@ use crate::release::conformance_op_matrix::{
 use serde::{Deserialize, Serialize};
 
 const MIN_RELEASE_OP_PAIRS: usize = 49;
-const MAX_RELEASE_CONFORMANCE_TEXT_BYTES: u64 = 8_388_608;
 
 /// Shape version of a per-backend conformance artifact.
 ///
@@ -212,7 +210,7 @@ fn audit(workspace_root: &Path, config: &Config) -> Inspection {
             ));
             continue;
         };
-        let recorded = match read_text_bounded(&workspace_root.join(artifact)) {
+        let recorded = match crate::output_arg::read_tracked_text(&workspace_root.join(artifact)) {
             Ok(text) => {
                 let (_, body) = artifact_gate::split_provenance(&text);
                 inspection.generates_evidence_text(artifact, measurement_of(backend_id), body);
@@ -280,7 +278,7 @@ fn audit(workspace_root: &Path, config: &Config) -> Inspection {
 
 /// Blockers the release log recorded, and whether it is there to read at all.
 fn audit_release_log(workspace_root: &Path, inspection: &mut Inspection) {
-    let text = match read_text_bounded(&workspace_root.join(RELEASE_LOG)) {
+    let text = match crate::output_arg::read_tracked_text(&workspace_root.join(RELEASE_LOG)) {
         Ok(text) => {
             let (_, body) = artifact_gate::split_provenance(&text);
             inspection.generates_evidence_text(
@@ -1050,14 +1048,6 @@ fn parse_args(args: &[String]) -> Result<Config, String> {
         }
     }
     Ok(Config { backends })
-}
-
-fn read_text_bounded(path: &Path) -> io::Result<String> {
-    crate::output_arg::read_text_bounded(
-        path,
-        MAX_RELEASE_CONFORMANCE_TEXT_BYTES,
-        "release conformance",
-    )
 }
 
 /// Read a recorded artifact, or say which of the two ways it is unreadable.

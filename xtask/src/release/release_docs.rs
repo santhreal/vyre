@@ -50,8 +50,6 @@ const CATEGORIES: [&str; 6] = [
 ];
 /// Column the changelog wraps entry text at.
 const WRAP_COLUMN: usize = 79;
-/// Bound on any one document this gate reads.
-const MAX_DOCUMENT_BYTES: u64 = 8_388_608;
 
 /// The launch steps, in the order `final-launch.sh` must perform them.
 ///
@@ -555,24 +553,9 @@ fn launch_order_findings(root: &Path, report: &mut Report) -> Result<(), GateErr
     Ok(())
 }
 
-/// Read one file under a bound no release document approaches.
+/// Read one file under the tracked-text bound.
 fn read_text(root: &Path, relative: &str) -> Result<String, GateError> {
-    let path = root.join(relative);
-    let size = fs::metadata(&path)
-        .map_err(|error| {
-            GateError::new(
-                format!("could not read `{relative}`: {error}"),
-                "restore the file the release documents are generated from",
-            )
-        })?
-        .len();
-    if size > MAX_DOCUMENT_BYTES {
-        return Err(GateError::new(
-            format!("`{relative}` is {size} bytes, over the {MAX_DOCUMENT_BYTES} byte bound"),
-            "a release document this large is not a release document; check what wrote it",
-        ));
-    }
-    fs::read_to_string(&path).map_err(|error| {
+    crate::output_arg::read_tracked_text(&root.join(relative)).map_err(|error| {
         GateError::new(
             format!("could not read `{relative}`: {error}"),
             "restore the file the release documents are generated from",

@@ -35,7 +35,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use crate::gate::{Finding, GateCtx, GateError, Report};
-use crate::output_arg::read_text_bounded;
+use crate::output_arg::read_tracked_text;
 use crate::tree_walk::{self, BUILD_OUTPUT_AND_VCS};
 
 /// The documentation tree this gate judges.
@@ -46,8 +46,6 @@ const MANIFEST: &str = "docs/DOCS.toml";
 const SUMMARY: &str = "docs/SUMMARY.md";
 /// Generated navigation: the authority and lifecycle table.
 const INDEX: &str = "docs/INDEX.md";
-/// Bound on any one document this gate reads.
-const MAX_DOCUMENT_BYTES: u64 = 8_388_608;
 /// Manifest schema this gate reads.
 const MANIFEST_VERSION: i64 = 2;
 
@@ -690,7 +688,7 @@ fn navigation_link_findings(root: &Path, report: &mut Report) -> Result<usize, G
     let mut sites: Vec<(String, u32, String, String)> = Vec::new();
     for document in &documents {
         let path = root.join(document);
-        let Ok(content) = read_text_bounded(&path, MAX_DOCUMENT_BYTES, "documentation link") else {
+        let Ok(content) = read_tracked_text(&path) else {
             continue;
         };
         let base = Path::new(document)
@@ -991,7 +989,7 @@ fn render_index(owners: &BTreeMap<String, String>, pages: &[Page]) -> String {
 
 /// Read one document under the checkout root, under the read bound.
 fn read_text(root: &Path, relative: &str) -> Result<String, GateError> {
-    read_text_bounded(&root.join(relative), MAX_DOCUMENT_BYTES, "documentation").map_err(|error| {
+    read_tracked_text(&root.join(relative)).map_err(|error| {
         GateError::new(
             format!("could not read `{relative}`: {error}"),
             "restore the document; the documentation surface is declared and rendered from it",

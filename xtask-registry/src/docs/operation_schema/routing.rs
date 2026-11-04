@@ -39,7 +39,7 @@ pub(super) fn read_manifest_features(
     let mut catalog = BTreeMap::new();
     for (crate_name, directory) in crates {
         let path = root.join(directory).join("Cargo.toml");
-        let text = match super::read_text_bounded(&path) {
+        let text = match structure_gate::read_source_bounded(&path) {
             Ok(value) => value,
             Err(error) => {
                 errors.push(format!(

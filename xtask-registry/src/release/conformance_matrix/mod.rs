@@ -8,8 +8,7 @@
 //! - `scan_matrix` the scan compatibility rows and what invalidates one
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::io;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use vyre_driver::backend_dispatches;
 use xtask::gate::{Finding, GateCtx, GateError, Report};
@@ -41,7 +40,6 @@ pub use self::evidence_agreement::RECORDED_BACKENDS;
 /// recorded-artifact reader in `xtask::release::conformance_evidence_semantics`
 /// hold the same number.
 const MIN_RELEASE_OP_COUNT: usize = 49;
-const MAX_CONFORMANCE_EVIDENCE_TEXT_BYTES: u64 = 8_388_608;
 
 /// Operation id prefix that marks an INT4 conformance subject. The subject set
 /// is derived from this prefix at run time, over the live registry and the op
@@ -385,12 +383,4 @@ pub fn dispatch_backend_roster() -> Result<Vec<String>, GateError> {
 
 fn default_output() -> PathBuf {
     xtask::checkout::checkout_root().join("release/evidence/conformance/conformance-matrix.json")
-}
-
-pub(super) fn read_text_bounded(path: &Path) -> io::Result<String> {
-    xtask::output_arg::read_text_bounded(
-        path,
-        MAX_CONFORMANCE_EVIDENCE_TEXT_BYTES,
-        "conformance evidence",
-    )
 }

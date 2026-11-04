@@ -5,7 +5,6 @@ use super::records::{
     HygieneFinding, StructuralGateArtifact, StructuralGateDeclaration, StructuralGateDocument,
     STRUCTURAL_GATE_SCHEMA_VERSION, STRUCTURAL_GATE_SOURCE,
 };
-use super::rules::read_text_bounded;
 use super::threshold_policy::relative_to_vyre;
 
 /// Read the structural-gate registry, or report why it could not be trusted.
@@ -20,7 +19,7 @@ pub(crate) fn load_structural_gates(vyre_root: &Path) -> StructuralGateArtifact 
         blockers: Vec::new(),
     };
     let path = vyre_root.join(STRUCTURAL_GATE_SOURCE);
-    let text = match read_text_bounded(&path) {
+    let text = match structure_gate::read_source_bounded(&path) {
         Ok(text) => text,
         Err(error) => {
             artifact.blockers.push(format!(

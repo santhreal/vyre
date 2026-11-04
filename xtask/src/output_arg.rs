@@ -30,6 +30,26 @@ pub fn escapes_root(path: &Path, earned: i32) -> bool {
     false
 }
 
+/// Largest tracked text file a tool reads: documents, generated tables and
+/// evidence.
+///
+/// The largest tracked text file is under 7 MiB. Rust sources and Cargo
+/// manifests are held to the smaller [`structure_gate::MAX_SOURCE_BYTES`].
+pub const MAX_TRACKED_TEXT_BYTES: u64 = 16_777_216;
+
+/// Read one tracked text file under [`MAX_TRACKED_TEXT_BYTES`].
+///
+/// Every reader of a document, a generated table or an evidence artifact
+/// reads here, so one bound holds for all of them.
+///
+/// # Errors
+///
+/// The open or read failure, or `InvalidData` when the file is not UTF-8 or
+/// exceeds the bound.
+pub fn read_tracked_text(path: &Path) -> io::Result<String> {
+    read_text_bounded(path, MAX_TRACKED_TEXT_BYTES, "tracked text")
+}
+
 /// Read a text file, failing rather than allocating past `max_bytes`.
 ///
 /// `context` names the cap in the error, so an operator can tell which reader

@@ -19,7 +19,6 @@ const PLATFORM_ROOTS: &[&str] = &[
 ];
 
 const FORBIDDEN_CONSUMERS: &[&str] = &["surgec", "weir", "gossan", "keyhog"];
-const MAX_PLATFORM_BOUNDARY_FILE_BYTES: u64 = 16_777_216;
 
 /// One consumer name found in one platform line.
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -92,14 +91,7 @@ fn scan_tree(root: &Path, workspace: &Path, hits: &mut Vec<Hit>, errors: &mut Ve
         if !is_scanned_file(&path) {
             continue;
         }
-        if metadata.len() > MAX_PLATFORM_BOUNDARY_FILE_BYTES {
-            errors.push(format!(
-                "{} exceeds {MAX_PLATFORM_BOUNDARY_FILE_BYTES} byte platform-boundary read cap",
-                path.display()
-            ));
-            continue;
-        }
-        let text = match fs::read_to_string(&path) {
+        let text = match crate::output_arg::read_tracked_text(&path) {
             Ok(text) => text,
             Err(error) => {
                 errors.push(format!("{}: {error}", path.display()));

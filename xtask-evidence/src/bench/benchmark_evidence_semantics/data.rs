@@ -9,9 +9,6 @@
 //! all of it, so changing what release evidence must contain is a change to
 //! this file alone.
 
-/// Bound on one evidence file read while checking benchmark semantics.
-pub(crate) const MAX_BENCHMARK_EVIDENCE_SEMANTIC_TEXT_BYTES: u64 = 16_777_216;
-
 /// Prefix every benchmark schema digest chain carries.
 pub(crate) const BENCHMARK_SCHEMA_DIGEST_CHAIN_PREFIX: &str = "benchmark-schema-digest-chain:v1:";
 

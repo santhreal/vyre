@@ -35,13 +35,13 @@ pub fn write(path: &Path, value: &impl Serialize) -> Result<(), String> {
         .map_err(|error| format!("failed to write `{}`: {error}", path.display()))
 }
 
-/// Read one JSON artifact under a byte bound.
+/// Read one JSON artifact under the tracked-text bound.
 ///
 /// The error names whether the file could not be read or could not be parsed,
 /// so a caller pushes one message and does not need two arms of its own: a
 /// release gate and the package-readiness report each held the same pair.
-pub fn read(path: &Path, max_bytes: u64) -> Result<serde_json::Value, String> {
-    let text = crate::output_arg::read_text_bounded(path, max_bytes, "")
+pub fn read(path: &Path) -> Result<serde_json::Value, String> {
+    let text = crate::output_arg::read_tracked_text(path)
         .map_err(|error| format!("cannot read `{}`: {error}", path.display()))?;
     serde_json::from_str::<serde_json::Value>(&text)
         .map_err(|error| format!("`{}` is invalid JSON: {error}", path.display()))

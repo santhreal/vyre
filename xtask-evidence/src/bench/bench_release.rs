@@ -10,7 +10,6 @@
 //! saved, lives behind `VYRE_TRACE=1` and the substrate audit log. This gate
 //! reports the headline numbers as notes and judges only their provenance.
 
-use std::io;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
@@ -28,7 +27,6 @@ const AXIS_COLD_PIPELINE_BUILD_MS: &str = "cold_pipeline_build_ms";
 const AXIS_GBS_SCAN_THROUGHPUT: &str = "gbs_scan_throughput";
 const AXIS_ULP_DRIFT_MAX: &str = "ulp_drift_max";
 const AXIS_MAX_VRAM_MIB: &str = "max_vram_mib";
-const MAX_BENCH_RELEASE_REPORT_BYTES: u64 = 16_777_216;
 
 /// Default location of the recorded release benchmark evidence.
 const DEFAULT_EVIDENCE_DIR: &str = "release/evidence/benchmarks";
@@ -176,7 +174,7 @@ fn load_release_axes(evidence_dir: &Path, report: &mut Report) -> Option<Value> 
 }
 
 fn read_json_report(path: &Path, label: &str, report: &mut Report) -> Option<Value> {
-    let contents = match read_text_bounded(path) {
+    let contents = match xtask::output_arg::read_tracked_text(path) {
         Ok(contents) => contents,
         Err(error) => {
             report.find(Finding::in_file(
@@ -241,14 +239,6 @@ fn json_axis_text(value: &Value, axis: &str) -> Option<String> {
         Value::String(text) if !text.trim().is_empty() => Some(text.clone()),
         _ => None,
     }
-}
-
-fn read_text_bounded(path: &Path) -> io::Result<String> {
-    xtask::output_arg::read_text_bounded(
-        path,
-        MAX_BENCH_RELEASE_REPORT_BYTES,
-        "release bench report",
-    )
 }
 
 #[cfg(test)]

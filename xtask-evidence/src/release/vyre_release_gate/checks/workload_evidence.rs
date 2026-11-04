@@ -26,7 +26,7 @@ pub(crate) fn first_json_evidence_with_path(
         return None;
     };
     let path = resolve_manifest_path(base_dir, evidence);
-    let text = match read_text_bounded(&path) {
+    let text = match read_tracked_text(&path) {
         Ok(text) => text,
         Err(error) => {
             failures.push(format!(
@@ -56,7 +56,7 @@ pub(crate) fn read_json_artifact_ref(
     failures: &mut Vec<String>,
 ) -> Option<serde_json::Value> {
     let path = resolve_artifact_path(base_dir, artifact);
-    let text = match read_text_bounded(&path) {
+    let text = match read_tracked_text(&path) {
         Ok(text) => text,
         Err(error) => {
             failures.push(format!(
@@ -335,7 +335,7 @@ pub(crate) fn check_workload_matrix_artifact_coverage(
         }
 
         let artifact_path = resolve_manifest_path(base_dir, manifest_artifact);
-        let Ok(text) = read_text_bounded(&artifact_path) else {
+        let Ok(text) = read_tracked_text(&artifact_path) else {
             failures.push(format!(
                 "requirement `{}` workload family `{id}` failed to read benchmark artifact `{}`",
                 requirement.id,

@@ -11,9 +11,6 @@ use std::path::Path;
 
 use crate::tree_walk::{self, BUILD_OUTPUT_AND_VCS};
 
-/// Largest `Cargo.toml` this tooling will read.
-pub const MAX_MANIFEST_BYTES: u64 = 1_048_576;
-
 /// One parsed package manifest: the whole document, and the package name.
 pub struct PackageManifest {
     /// The parsed manifest.
@@ -35,11 +32,8 @@ pub struct PackageManifest {
 ///
 /// One sentence naming the manifest when it cannot be read, cannot be parsed,
 /// or declares a `[package]` without a `name`.
-pub fn parse_package_manifest(
-    path: &Path,
-    surface: &str,
-) -> Result<Option<PackageManifest>, String> {
-    let text = crate::output_arg::read_text_bounded(path, MAX_MANIFEST_BYTES, surface)
+pub fn parse_package_manifest(path: &Path) -> Result<Option<PackageManifest>, String> {
+    let text = structure_gate::read_source_bounded(path)
         .map_err(|error| format!("failed to read manifest `{}`: {error}", path.display()))?;
     let document = toml::from_str::<toml::Table>(&text)
         .map_err(|error| format!("failed to parse manifest `{}`: {error}", path.display()))?;
@@ -59,16 +53,14 @@ pub fn parse_package_manifest(
 /// The `[workspace.package]` table of the workspace root manifest.
 ///
 /// Two generators read this identically, down to the blocker text, one to
-/// resolve every inherited field and one to resolve `version` alone. Both now
-/// read a manifest under the manifest bound rather than one of them reaching for
-/// an unrelated eight-megabyte evidence-text bound.
+/// resolve every inherited field and one to resolve `version` alone. The
+/// manifest is read through the shared source reader.
 pub(crate) fn workspace_package(
     root: &Path,
-    surface: &str,
     blockers: &mut Vec<String>,
 ) -> Option<toml::value::Table> {
     let manifest = root.join("Cargo.toml");
-    let text = match crate::output_arg::read_text_bounded(&manifest, MAX_MANIFEST_BYTES, surface) {
+    let text = match structure_gate::read_source_bounded(&manifest) {
         Ok(text) => text,
         Err(error) => {
             blockers.push(format!(
