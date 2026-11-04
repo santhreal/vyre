@@ -2515,6 +2515,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre-megakernel` as `frontier_topology: FrontierTopology` on `SelectedPlan`,
   with `ARTIFACT_SCHEMA_VERSION` bumped to 18 and driver/backend modules
   reduced to fact providers.
+- `xtask <gate> --help` states what each gate checks for the 89 gates whose
+  help line read `Enforce <gate> contracts`, `cuda-parity`, `spirv-parity` and
+  `metal-parity` document `--device`, `--validate`, `--host` and
+  `--remote-root`, and a descriptor with the placeholder help line fails
+  registry validation.
 - Five shapes the gate crates repeated per gate have one owner each.
   `xtask::toml_text` renders a TOML basic string and a one-line string array,
   which four generators spelled with two different escapers. `xtask::tree_walk`
