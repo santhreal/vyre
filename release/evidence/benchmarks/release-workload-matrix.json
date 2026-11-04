@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"9aa6f79517093234950d1fe007f7dd73f096fa88","commit_timestamp":"1789268024","parent_commit":"d1dfd72ef88f329f8804876243fa1594b00bd14c","dirty":false,"source_fingerprint":"git:9aa6f79517093234950d1fe007f7dd73f096fa88:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"19b78839271a298a4ca5534b445ffa9769941e5e","commit_timestamp":"1793751924","parent_commit":"137bc59805ecbe8273e00536a40bc17fbef39bce","dirty":true,"source_fingerprint":"git:19b78839271a298a4ca5534b445ffa9769941e5e:dirty=true:worktree=499467d758cfffd95a80882c449f3f3e91c671631b150a5c1dd374588a9f5160"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "benchmark_evidence_schema_version": 1,
   "required_benchmark_case_fields": [
@@ -29,8 +29,8 @@
   "missing_required_cpu_sota_100x_families": [],
   "matched_required_families": 14,
   "release_suite_case_count": 24,
-  "cpu_sota_contract_count": 29,
-  "cpu_sota_100x_contract_count": 12,
+  "cpu_sota_contract_count": 28,
+  "cpu_sota_100x_contract_count": 11,
   "cpu_sota_100x_contract_cases": [
     "nn.linear_4bit_affine_grouped.1m",
     "release.alias_reaching_def.1m",
@@ -42,7 +42,6 @@
     "release.megakernel_queue.1m",
     "release.offset_count_aggregation.1m",
     "release.quantified_condition_loops.1m",
-    "runtime.megakernel.condition.64k",
     "sparse.compaction.count.1m"
   ],
   "cpu_sota_100x_family_count": 10,
@@ -87,18 +86,15 @@
         "release.condition_eval.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x",
         "release.megakernel_queue.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x",
         "release.quantified_condition_loops.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x",
-        "release.string_bitmap_scatter.1m => single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words) 25x",
-        "runtime.megakernel.condition.64k => optimized CPU condition evaluator baseline 100x"
+        "release.string_bitmap_scatter.1m => single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words) 25x"
       ],
       "cpu_sota_100x_cases": [
         "release.condition_eval.1m",
         "release.megakernel_queue.1m",
-        "release.quantified_condition_loops.1m",
-        "runtime.megakernel.condition.64k"
+        "release.quantified_condition_loops.1m"
       ],
       "cpu_sota_baseline_names": [
         "optimized CPU PE-header predicate evaluator",
-        "optimized CPU condition evaluator baseline",
         "single-threaded scalar CPU reference bitmap materialization over the same host input buffers (string_bitmap_scatter_expected_words)",
         "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
       ],
@@ -422,15 +418,12 @@
         "release.workload.megakernel_stream"
       ],
       "cpu_sota_contracts": [
-        "release.megakernel_queue.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x",
-        "runtime.megakernel.condition.64k => optimized CPU condition evaluator baseline 100x"
+        "release.megakernel_queue.1m => single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs) 100x"
       ],
       "cpu_sota_100x_cases": [
-        "release.megakernel_queue.1m",
-        "runtime.megakernel.condition.64k"
+        "release.megakernel_queue.1m"
       ],
       "cpu_sota_baseline_names": [
-        "optimized CPU condition evaluator baseline",
         "single-threaded scalar CPU reference predicate count over the same host input buffers (synthetic_cpu_count_over_inputs)"
       ],
       "cpu_sota_baseline_crates": [

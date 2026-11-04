@@ -2853,6 +2853,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The megakernel empty-template cache and the resident launch recommendation
   cache now share one bounded least-recently-used map, so eviction order and
   tick saturation are decided in one place instead of two.
+- `runtime.megakernel.condition.64k` asserts a 24000 ns device active-time
+  ceiling in place of a 100x ratio over the pinned CPU baseline, which no
+  release device could reach.
 - Persistent, finite and JIT megakernel lane bodies now share one assembly path
   and one published-slot claim body, so the node reservation bound, the
   slot-base binding order and the IO polling block are decided in a single

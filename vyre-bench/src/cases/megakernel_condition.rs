@@ -31,6 +31,8 @@ const CONDITION_OPCODE: u32 = 0x1000;
 const CONDITION_FIRED_WORD: u32 = control::METRICS_BASE;
 const SUITES: &[SuiteKind] = &[SuiteKind::Release, SuiteKind::Gpu, SuiteKind::Deep];
 const RESIDENT_SAMPLE_SETS: usize = 64;
+/// Device active time one sample may take; the contract states the derivation.
+const CONDITION_CEILING_NS: u64 = 24_000;
 
 struct MegakernelConditionPrepared {
     program: Arc<vyre_foundation::ir::Program>,
@@ -70,10 +72,18 @@ impl BenchCase for MegakernelCondition {
     }
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
-        Some(PerformanceContract::cpu_sota_100x(
+        Some(PerformanceContract::active_time_ceiling_ns(
             "resident megakernel condition evaluation",
-            "vyre-runtime",
-            "optimized CPU condition evaluator baseline",
+            CONDITION_CEILING_NS,
+            "The quantity under test is how long the resident megakernel takes to claim and evaluate \
+             65536 condition slots, so the contract states that time. On an RTX 3080 Ti the device \
+             active time p50 is 14336 ns to 16384 ns on CUDA and 16608 ns to 16768 ns on wgpu over \
+             Vulkan across runs. The 24000 ns ceiling is 1.43x the worst measured p50, so it holds \
+             through run-to-run spread and goes red when slot claiming or evaluation stops scaling \
+             with the grid. It is not a ratio: the pinned CPU baseline evaluates the same ring in \
+             61 us to 103 us, and 100x over the fastest of those needs the kernel done in 616 ns, \
+             which is 3.4 TB/s reading only the 32-byte sector of each slot that holds its words, \
+             against the device's 912 GB/s peak.",
         ))
     }
 

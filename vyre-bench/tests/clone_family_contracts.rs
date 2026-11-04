@@ -145,14 +145,14 @@ const FAMILY_CASE_IDS: &[&str] = &[
 /// blake3 over the compact JSON surface of every `FAMILY_CASE_IDS` member.
 /// Regenerate only with a recorded decision about what changed and why.
 ///
-/// Last changed when a performance contract gained device bounds. Every
-/// contract now serializes a `device_bounds` list, empty for a case that
-/// asserts only a baseline speedup, and two family members changed what they
-/// assert: `runtime.megakernel.dispatch.256` states a device active-time
-/// ceiling in place of a ratio over a host simulator faster than one launch,
-/// and `runtime.megakernel.condition.64k` keeps its baseline contract.
+/// Last changed when `runtime.megakernel.condition.64k` traded its 100x ratio
+/// over the pinned CPU baseline for a 24000 ns device active-time ceiling: the
+/// ratio needed the kernel to read 2 MiB at 3.4 TB/s on a 912 GB/s device, so
+/// no release device could meet it. Before that, every contract gained a
+/// `device_bounds` list and `runtime.megakernel.dispatch.256` took a ceiling in
+/// place of a ratio over a host simulator faster than one launch.
 const FAMILY_SURFACE_DIGEST: &str =
-    "c3ac984081f5bd93182eb681246ff314d2360c02dc96492bb282bc45879c3432";
+    "218665766771e513af050d031e05ff6cdf447efd2ffa5e83800b6c0a9b07f01c";
 
 /// The pinned ids the registry only publishes on Linux.
 ///
