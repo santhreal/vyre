@@ -1,5 +1,5 @@
 schema_version = 2
-bom_timestamp = "2026-11-04T00:05:05Z"
+bom_timestamp = "2026-11-04T02:30:51Z"
 rustc_version = "1.86.0 (05f9846f8 2025-03-31)"
 cargo_version = "1.86.0 (adf9b6ad1 2025-02-28)"
 target_triples = [
@@ -9,9 +9,9 @@ target_triples = [
     "aarch64-apple-darwin",
     "aarch64-unknown-linux-gnu",
 ]
-lockfile_digest = "464f158bb4606a221121868d709f0ff28a6ae31afbc0cee8cea7d3e5ec6762aa"
+lockfile_digest = "d314e72f3d35c3f043aa253992ffcd4cc87ad3b4cfaf48725243639a3af91c6f"
 is_offline_capable = true
-reproducible_archive_hash = "38a7203761566b1f13f6477b42e2a6fbbe9ebf7a34a98783dadeb3c1addc45a7"
+reproducible_archive_hash = "f8942d2bef3508c3ec9b65e00ef8063a35d08cde91c00cd8192bddf774c82035"
 
 [[dependencies]]
 name = "adler2"
@@ -3182,14 +3182,6 @@ license = "Apache-2.0 OR MIT"
 is_policy_approved = true
 
 [[dependencies]]
-name = "vyre-lints"
-version = "0.8.0"
-checksum = "local_workspace"
-source = "workspace"
-license = "Apache-2.0 OR MIT"
-is_policy_approved = true
-
-[[dependencies]]
 name = "vyre-lower"
 version = "0.8.0"
 checksum = "local_workspace"
@@ -3890,7 +3882,7 @@ target_outputs = [
 
 [[code_generators]]
 name = "xtask-registry"
-source_digest = "b8b285870d88490f9c25d2d029af66f62b5e33fc182772d86a940840c5c37e3d"
+source_digest = "06917e43bb1fb3542b14ef6e12e7f65834afacd5fbb68483825f404f6a585f55"
 target_outputs = [
     "docs/generated/op-inventory.toml",
     "docs/generated/catalog.toml",
@@ -3898,7 +3890,7 @@ target_outputs = [
 
 [[code_generators]]
 name = "structure-gate"
-source_digest = "ff6b74764c4053d9c34a6640c540dd35d98615f9d50d4fb62114722218a6c9e6"
+source_digest = "644a989dca6cf33c3a29cb1e6667b34d3cc261b04dfac877a9794cde1caf59ca"
 target_outputs = ["structure-assertions"]
 
 [[code_generators]]
@@ -3947,7 +3939,7 @@ digest = "5d4a12d89211943294bb3b1cf4ffe776c3d8acc2e1b16afae67c16e7c5de50f1"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/release-workload-matrix.json"
-digest = "ecab9b1bd380d9a758775b308a94589de082187acd5ccef60a8fe3f1372f97ff"
+digest = "0235b39f3311fa43563bbba81d69e3a22beacd842cef13ab4fbad7e85913f966"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/resident-optimizer-pipeline.json"
@@ -4123,7 +4115,7 @@ digest = "9fc92a0786cdc3452171967bf5a80c832b175a7d2ddb3bec1621ab7a62127c2d"
 
 [[schemas]]
 path = "docs/generated/configuration-space.toml"
-digest = "ff5f13b8fab88adefd5ce70178eff5ec70997723a813188529920824d4626683"
+digest = "01bdccab5b5b1e62bbe694ed8506d110c35f0c3f4efd4cd1717efd9e70d8f0af"
 
 [[schemas]]
 path = "docs/generated/driver-error-codes.toml"
@@ -4131,7 +4123,7 @@ digest = "2fbb1f049e9985434e389a67eedd95c9c20315bab34655ce8ebc1b0f4d2438d6"
 
 [[schemas]]
 path = "docs/generated/engineering-scorecard.toml"
-digest = "731e0a5ae3c619d9078b17f5096aa6b774f692b82e25dc5695e9ef95b776721b"
+digest = "a84923ca6327b6842f85e5532b177fc67d6954dadb4d4d5a660c77e1742b6a76"
 
 [[schemas]]
 path = "docs/generated/error-codes.toml"
@@ -4147,7 +4139,7 @@ digest = "c4b44b5404a056ce1f3b516fb569c9937dc53353cf37bc9518faacd729ca83e7"
 
 [[schemas]]
 path = "docs/generated/platform-support-matrix.toml"
-digest = "877645b6d2e50fdb2e4a065a64a2beca2b993557e3ada14eacfe085a9ab1b970"
+digest = "fc5adb8e4c102b27f1095a4cd310d8dbf6d824231853285e3532794ab42b8c85"
 
 [[build_scripts]]
 crate_name = "vyre-emit-ptx"
