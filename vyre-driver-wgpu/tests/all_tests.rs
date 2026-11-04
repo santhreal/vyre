@@ -162,12 +162,6 @@ pub mod determinism_contract;
 #[path = "device_lost_recovery.rs"]
 pub mod device_lost_recovery;
 
-/// Integration tests from `tests/differential_fuzz.rs`.
-#[cfg(feature = "device-tests")]
-#[allow(deprecated)]
-#[path = "differential_fuzz.rs"]
-pub mod differential_fuzz;
-
 /// Integration tests from `tests/dispatch_adversarial.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "dispatch_adversarial.rs"]

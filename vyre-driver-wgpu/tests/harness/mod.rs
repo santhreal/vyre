@@ -57,8 +57,6 @@ pub(crate) use vyre_primitives::wire::pack_f32_slice as f32_bytes;
 /// Decode backend output bytes into little-endian `f32` lanes.
 pub(crate) use vyre_primitives::wire::decode_f32_le_bytes_all as bytes_f32;
 
-pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as decode_u32_words;
-
 /// Alias used by C parser integration tests.
 
 /// Lower a test program with the canonical unit workgroup, validate it, and return WGSL.

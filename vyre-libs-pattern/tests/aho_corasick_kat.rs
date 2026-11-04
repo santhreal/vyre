@@ -203,3 +203,19 @@ fn kat_long_single_pattern() {
     let haystack: Vec<u8> = b"xxxabcdefghijklmnopqrstuvwxyzxxx".to_vec();
     assert_match(&[&needle], &haystack, "long-needle");
 }
+
+proptest::proptest! {
+    #![proptest_config(proptest::prelude::ProptestConfig::with_cases(64))]
+
+    /// Random pattern sets over a three-letter alphabet share prefixes and
+    /// suffixes far more often than the hand-written corpus, which is where
+    /// failure-link collapse goes wrong.
+    #[test]
+    fn random_pattern_sets_agree_with_the_dfa_walk(
+        patterns in proptest::collection::vec("[a-c]{1,4}", 1..6),
+        haystack in "[a-c]{1,32}",
+    ) {
+        let refs: Vec<&[u8]> = patterns.iter().map(String::as_bytes).collect();
+        assert_match(&refs, haystack.as_bytes(), "random-pattern-set");
+    }
+}

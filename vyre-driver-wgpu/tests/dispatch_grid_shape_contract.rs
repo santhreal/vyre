@@ -121,8 +121,8 @@ fn a_grid_wider_than_the_device_ceiling_is_refused_on_every_axis() {
 /// the value, and `validate_program_for_backend` answers that in full.
 ///
 /// What it does not catch: a refusal raised after validation, inside command
-/// recording. The test below covers execution at a grid wide enough to prove a
-/// launch past the WebGPU per-axis minimum runs, and does it in a bounded time.
+/// recording. The test below executes a grid at or one past the WebGPU per-axis
+/// minimum, in a bounded time.
 #[test]
 fn a_grid_at_the_device_ceiling_is_admitted() {
     let backend = live_backend();
@@ -146,27 +146,36 @@ fn a_grid_at_the_device_ceiling_is_admitted() {
 }
 
 /// WHY: the executable half of the boundary. A per-axis ceiling check is worth
-/// nothing if a launch past the WebGPU per-axis minimum of 65535 does not run, so
-/// one grid wider than that minimum dispatches and its bytes are read back.
+/// nothing if the widest launch it admits does not run, so one grid at the
+/// WebGPU per-axis minimum of 65535 plus one dispatches and its bytes are read
+/// back. A device whose ceiling is the minimum itself, as wgpu reports for
+/// Vulkan on NVIDIA, admits no wider grid; there the grid is the ceiling, which
+/// executes the exact value `a_grid_at_the_device_ceiling_is_admitted` only
+/// validates. A ceiling below the minimum is a non-conformant device and fails.
 ///
-/// The width is the minimum plus one rather than the device ceiling: the property
-/// is that the folding path is entered at all, and the smallest grid that enters
-/// it proves the same thing in milliseconds.
+/// The width is capped at the minimum plus one rather than the device ceiling:
+/// a launch past the minimum proves the same thing in milliseconds that a launch
+/// at a 2147483647 ceiling would prove in hours.
 #[test]
-fn a_grid_wider_than_the_per_axis_minimum_dispatches() {
+fn the_widest_admitted_grid_up_to_one_past_the_per_axis_minimum_dispatches() {
     let backend = live_backend();
     let floor = harness::WEBGPU_MAX_WORKGROUPS_PER_AXIS;
     let ceiling = backend.max_compute_workgroups_per_dimension();
     assert!(
-        ceiling > floor,
-        "Fix: this backend reports a per-axis ceiling of {ceiling}, at or below the WebGPU \
-         minimum of {floor}, so there is no wider grid to dispatch."
+        ceiling >= floor,
+        "Fix: this backend reports a per-axis ceiling of {ceiling}, below the WebGPU \
+         minimum of {floor}, which no conformant adapter reports."
     );
+    let width = ceiling.min(floor + 1);
     let mut config = DispatchConfig::default();
-    config.grid_override = Some([floor + 1, 1, 1]);
+    config.grid_override = Some([width, 1, 1]);
     let outputs = backend
         .dispatch(&one_dimensional_program(1024), &[], &config)
-        .expect("Fix: a grid wider than the WebGPU per-axis minimum must dispatch.");
+        .unwrap_or_else(|error| {
+            panic!(
+                "Fix: a grid of {width} workgroups on x, ceiling {ceiling}, must dispatch: {error}"
+            )
+        });
     assert_eq!(outputs.len(), 1);
     assert_eq!(outputs[0], 7_u32.to_le_bytes().repeat(4));
 }
