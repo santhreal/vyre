@@ -37,6 +37,7 @@ mod host_oracle_scan_set;
 mod manifest_dependency_tables;
 mod msrv_toolchain;
 mod nested_byte_rows;
+mod proptest_regression_corpora;
 #[cfg(feature = "public-api-tool")]
 mod public_api_snapshot_inventory;
 mod release_provenance_contracts;

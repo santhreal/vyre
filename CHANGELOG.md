@@ -4424,6 +4424,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre_driver::validation::ProgramValidationCaps::support` and
   `vyre_pass_engine::optimizer::pipeline::gpu_sequential_three_pass`, which the
   crates already exported without a snapshot entry to diff against.
+- Debug and test builds compile `vyre-reference` and `vyre-foundation` at
+  opt-level 3, so a 300-case reference-interpreter sweep runs in 22 s instead
+  of 318 s, with debug assertions and overflow checks still on.
 - The reference oracle evaluates a program through one route. The
   dual-reference registry, the statement executor, the storage-graph
   interpreter and the flat adapters were four more answers to the same node
@@ -7728,6 +7731,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   declines the fusion instead of guessing at it. The test that should have
   caught this compared two inline copies of the walk against each other and
   never called the production one.
+- Committed proptest regression corpora replay again: the workspace no longer
+  sets `PROPTEST_DISABLE_FAILURE_PERSISTENCE`, sixteen corpora left behind when
+  their tests moved sit beside those tests, two whose tests no longer exist are
+  deleted, published packages exclude the `proptest-regressions/` directory,
+  and a tree contract fails on any corpus no `proptest!` block reads.
 - The composition complexity budget now holds across all registered library
   operations without exemptions. Eleven operations exceeding complexity limits
   (AST CSE hashing, Shunting-Yard, planar rewrite scheduling, CSR queue

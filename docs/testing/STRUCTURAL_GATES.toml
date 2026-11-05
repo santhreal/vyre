@@ -1005,3 +1005,16 @@ past their guard. The roster is walked out of the module tree at run time, so a
 file added to it, or a file split into a directory, joins the scan without an
 edit here.
 """
+
+[[gate]]
+file = "tools/xtask/tests/tree_contracts/proptest_regression_corpora.rs"
+tests = ["every_committed_regression_corpus_sits_where_a_proptest_block_reads_it"]
+reason = """
+Holds every committed proptest regression corpus at the path proptest derives
+from a source file that holds a `proptest!` block. A corpus at any other path is
+never opened, so no test run reads it and no execution can show that its seeds
+stopped replaying: the missing replay is the defect. Eighteen corpora sat at
+such paths after their tests moved. Which files hold a block is a fact of their
+source, read from the index at run time, so a block added or moved tomorrow is
+judged without an edit here.
+"""
