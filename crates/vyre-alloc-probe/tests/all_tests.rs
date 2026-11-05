@@ -13,6 +13,8 @@
 #![allow(unsafe_code)]
 
 use std::alloc::{alloc, dealloc, realloc, Layout};
+use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::Arc;
 
 use vyre_alloc_probe::{AllocStats, Region, RegionChange, ThreadAlloc};
 
@@ -22,28 +24,74 @@ static GLOBAL: ThreadAlloc = ThreadAlloc;
 /// One megabyte, large enough that no incidental harness allocation reaches it.
 const LARGE: usize = 1 << 20;
 
-#[test]
-fn a_region_charges_only_the_thread_that_opened_it() {
-    let outer = Region::new();
-    let child_bytes = std::thread::spawn(|| {
-        let inner = Region::new();
-        let buffer = vec![0u8; LARGE];
-        let change = inner.change();
-        drop(buffer);
-        change.bytes_allocated
-    })
-    .join()
-    .expect("Fix: the measuring thread must not panic");
-    let outer_change = outer.change();
+/// Spin until `phase` reaches `at`. Spinning rather than a `Barrier` or a
+/// channel keeps the waiting thread free of heap traffic, so a region open across
+/// the wait measures exactly what the thread itself did.
+fn wait_for(phase: &AtomicU8, at: u8) {
+    while phase.load(Ordering::Acquire) < at {
+        std::hint::spin_loop();
+        std::thread::yield_now();
+    }
+}
 
-    assert!(
-        child_bytes >= LARGE,
-        "the child thread's own region must see its own megabyte, saw {child_bytes}"
+/// WHY: a process-wide counter charges a measuring thread for every allocation
+/// another thread makes inside its region, so an allocation budget measures the
+/// test schedule. Each thread here holds a region open while the other one
+/// allocates a megabyte and does nothing itself, and each region must report
+/// exactly zero traffic: a count leaking from the background thread into the
+/// measuring thread fails the first assertion, and one leaking back fails the
+/// second. The megabyte each thread does allocate is asserted on its own
+/// region, so a probe that counted nothing at all fails too. It does not cover
+/// allocations made during thread-local destruction, which go uncounted by
+/// design.
+#[test]
+fn a_region_sees_exactly_zero_while_another_thread_allocates() {
+    let phase = Arc::new(AtomicU8::new(0));
+    let background_phase = Arc::clone(&phase);
+    let background = std::thread::spawn(move || {
+        wait_for(&background_phase, 1);
+        let own = Region::new();
+        let buffer = vec![1u8; LARGE];
+        let own_change = own.change();
+        background_phase.store(2, Ordering::Release);
+        let measured = Region::new();
+        background_phase.store(3, Ordering::Release);
+        wait_for(&background_phase, 4);
+        let measured_change = measured.change();
+        drop(buffer);
+        (own_change, measured_change)
+    });
+
+    let measured = Region::new();
+    phase.store(1, Ordering::Release);
+    wait_for(&phase, 2);
+    let measured_change = measured.change();
+
+    wait_for(&phase, 3);
+    let own = Region::new();
+    let held = vec![2u8; LARGE];
+    let own_change = own.change();
+    phase.store(4, Ordering::Release);
+    let (background_own, background_measured) = background
+        .join()
+        .expect("Fix: the background thread must not panic");
+    drop(held);
+
+    assert_eq!(
+        measured_change,
+        RegionChange::default(),
+        "Fix: a region must not be charged the megabyte another thread allocated while it was open"
+    );
+    assert_eq!(
+        background_measured,
+        RegionChange::default(),
+        "Fix: a background thread's region must not be charged the measuring thread's allocation"
     );
     assert!(
-        outer_change.bytes_allocated < LARGE,
-        "the parent region must not be charged the child's megabyte, saw {} bytes",
-        outer_change.bytes_allocated
+        own_change.bytes_allocated >= LARGE && background_own.bytes_allocated >= LARGE,
+        "Fix: each thread must see its own megabyte, saw {} and {}",
+        own_change.bytes_allocated,
+        background_own.bytes_allocated
     );
 }
 

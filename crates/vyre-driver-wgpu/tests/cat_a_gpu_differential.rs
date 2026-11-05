@@ -35,7 +35,8 @@
 #![cfg(feature = "device-tests")]
 #![allow(deprecated)]
 use crate::harness;
-use harness::{cat_a_dispatch_config, f32_to_ordered};
+use harness::{cat_a_dispatch_config, f32_to_ordered, u32_bytes};
+use proptest::prelude::*;
 use std::sync::LazyLock;
 
 use vyre_driver::VyreBackend;
@@ -336,5 +337,131 @@ fn diff_universal_registry() {
             "The following GPU-CPU differential checks failed: {:?}",
             failures
         );
+    }
+}
+
+/// One input per buffer `vyre_reference::is_reference_input` admits, in
+/// `Program::buffers` order, taken by name from `named`.
+///
+/// A name `named` supplies that the program does not admit is refused: passing
+/// a value for a backend-allocated output is the drift that made the oracle
+/// reject every differential case before any device ran.
+fn reference_inputs(program: &Program, named: &[(&str, Vec<u8>)]) -> Vec<Vec<u8>> {
+    let op = program.entry_op_id().unwrap_or("unknown");
+    let admitted: Vec<_> = program
+        .buffers()
+        .iter()
+        .filter(|buffer| vyre_reference::is_reference_input(buffer))
+        .collect();
+    for (name, _) in named {
+        assert!(
+            admitted.iter().any(|buffer| buffer.name() == *name),
+            "Fix: `{name}` is not a reference input of `{op}`. Supply bytes only for buffers `is_reference_input` admits."
+        );
+    }
+    admitted
+        .iter()
+        .map(|buffer| {
+            named
+                .iter()
+                .find(|(name, _)| *name == buffer.name())
+                .map(|(_, bytes)| bytes.clone())
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Fix: the differential case supplies no bytes for input `{}` of `{op}`.",
+                        buffer.name()
+                    )
+                })
+        })
+        .collect()
+}
+
+/// Bytes of `text`, one `u32` per byte, the layout the pattern builders read.
+fn byte_words(text: &str) -> Vec<u8> {
+    u32_bytes(&text.bytes().map(u32::from).collect::<Vec<_>>())
+}
+
+// WHY: the registry sweep above runs each registered operation on its fixed
+// fixture inputs. These run four builders on generated inputs, CPU reference
+// against the wgpu backend byte for byte, so a divergence that only some input
+// shape reaches fails here and shrinks to its smallest case. A failing case
+// persists its seed beside this file, in
+// `cat_a_gpu_differential.proptest-regressions`, and replays first on every
+// later run. Sizes stay small: each distinct length is a distinct program and so
+// a distinct pipeline compile.
+proptest! {
+    #![proptest_config(ProptestConfig {
+        failure_persistence: Some(Box::new(
+            proptest::test_runner::FileFailurePersistence::WithSource("proptest-regressions"),
+        )),
+        ..ProptestConfig::with_cases(24)
+    })]
+
+    #[test]
+    fn fuzz_dot_matches_the_reference_on_the_device(
+        lhs in prop::collection::vec(any::<u32>(), 1..32),
+        rhs_seed in any::<u64>(),
+    ) {
+        let rhs: Vec<u32> = (0..lhs.len() as u64)
+            .map(|lane| (rhs_seed.wrapping_mul(lane + 1) ^ 0xdead_beef) as u32)
+            .collect();
+        let program = vyre_libs::math::linalg::dot("a", "b", "c", lhs.len() as u32)
+            .expect("Fix: dot must build for a non-empty length");
+        let inputs = reference_inputs(&program, &[("a", u32_bytes(&lhs)), ("b", u32_bytes(&rhs))]);
+        assert_diff("vyre-libs::math::linalg::dot", 0, &program, inputs);
+    }
+
+    #[test]
+    fn fuzz_scan_prefix_sum_matches_the_reference_on_the_device(
+        input in prop::collection::vec(any::<u32>(), 1..64),
+    ) {
+        let program = vyre_libs::math::scan::scan_prefix_sum("input", "output", input.len() as u32);
+        let inputs = reference_inputs(&program, &[("input", u32_bytes(&input))]);
+        assert_diff("vyre-libs::math::scan::scan_prefix_sum", 0, &program, inputs);
+    }
+
+    #[test]
+    fn fuzz_substring_search_matches_the_reference_on_the_device(
+        haystack in "[a-e]{1,24}",
+        needle in "[a-e]{1,4}",
+    ) {
+        let program = vyre_libs::pattern::substring_search(
+            "haystack",
+            "needle",
+            "matches",
+            haystack.len() as u32,
+            needle.len() as u32,
+        );
+        let inputs = reference_inputs(
+            &program,
+            &[("haystack", byte_words(&haystack)), ("needle", byte_words(&needle))],
+        );
+        assert_diff("vyre-libs::pattern::substring_search", 0, &program, inputs);
+    }
+
+    #[test]
+    fn fuzz_aho_corasick_matches_the_reference_on_the_device(
+        patterns in prop::collection::vec("[a-c]{1,4}", 1..6),
+        haystack in "[a-c]{1,32}",
+    ) {
+        let pattern_bytes: Vec<&[u8]> = patterns.iter().map(String::as_bytes).collect();
+        let compiled = vyre_libs::pattern::dfa_compile(&pattern_bytes);
+        let program = vyre_libs::pattern::aho_corasick(
+            "haystack",
+            "transitions",
+            "accept",
+            "matches",
+            haystack.len() as u32,
+            compiled.accept.len() as u32,
+        );
+        let inputs = reference_inputs(
+            &program,
+            &[
+                ("haystack", byte_words(&haystack)),
+                ("transitions", u32_bytes(&compiled.transitions)),
+                ("accept", u32_bytes(&compiled.accept)),
+            ],
+        );
+        assert_diff("vyre-libs::pattern::aho_corasick", 0, &program, inputs);
     }
 }

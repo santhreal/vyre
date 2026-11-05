@@ -425,3 +425,77 @@ fn reference_request_carries_mandatory_budget_and_envelope() {
         DeterministicSchedulePolicy::LaneReversed
     );
 }
+
+/// WHY: the async transfer fixture once failed with "out-of-bounds store at
+/// element index 0 of a U32 buffer holding 6 elements", an in-range store
+/// refused. The bounds check reads the extent of the buffer stored to, for
+/// every declaration class a program can store through: every index of a
+/// six-element `U32` buffer lands where it was sent, and index 6 is refused
+/// with `OutOfBoundsAccess`. Only invocation 0 stores, at its invocation id
+/// plus the index, so the index is computed at run time and the interpreter's
+/// bound decides it rather than the validator's literal-index rule. It does not
+/// cover loads or atomics, which other cases in this file drive.
+#[test]
+fn a_store_is_admitted_at_every_index_of_its_buffer_and_refused_one_past_it() {
+    const WORDS: u32 = 6;
+    const MARK: u32 = 0xA5A5_0000;
+    let classes = [
+        ("output", BufferDecl::output("dst", 0, DataType::U32)),
+        (
+            "read-write storage",
+            BufferDecl::storage("dst", 0, BufferAccess::ReadWrite, DataType::U32),
+        ),
+        (
+            "write-only storage",
+            BufferDecl::storage("dst", 0, BufferAccess::WriteOnly, DataType::U32),
+        ),
+    ];
+    for (class, decl) in classes {
+        for index in 0..=WORDS {
+            let program = Program::wrapped(
+                vec![decl.clone().with_count(WORDS)],
+                [1, 1, 1],
+                vec![Node::if_then(
+                    Expr::eq(Expr::gid_x(), Expr::u32(0)),
+                    vec![Node::store(
+                        "dst",
+                        Expr::add(Expr::gid_x(), Expr::u32(index)),
+                        Expr::u32(MARK + index),
+                    )],
+                )],
+            );
+            let inputs: Vec<Value> = program
+                .buffers()
+                .iter()
+                .filter(|buffer| vyre_reference::is_reference_input(buffer))
+                .map(|_| Value::from(vec![0u8; WORDS as usize * 4]))
+                .collect();
+            let outcome =
+                ReferenceRequest::new(&program, &inputs, ReferenceBudget::bounded(65_536))
+                    .execute();
+            if index == WORDS {
+                let error = outcome.err().unwrap_or_else(|| {
+                    panic!("Fix: a store one past a {WORDS}-element {class} buffer must be refused")
+                });
+                assert_eq!(
+                    error.error_class(),
+                    ReferenceErrorClass::OutOfBoundsAccess,
+                    "Fix: a store one past a {class} buffer must be refused as out of bounds, got: {error}"
+                );
+                continue;
+            }
+            let result = outcome.unwrap_or_else(|error| {
+                panic!("Fix: a store at index {index} of a {WORDS}-element {class} buffer is in range and must run: {error}")
+            });
+            let slot = vyre_reference::output_index(&program, "dst")
+                .unwrap_or_else(|| panic!("Fix: a stored {class} buffer must be returned"));
+            let bytes = result.outputs[slot].to_bytes();
+            let at = index as usize * 4;
+            assert_eq!(
+                bytes.get(at..at + 4),
+                Some(&(MARK + index).to_le_bytes()[..]),
+                "Fix: the store at index {index} of a {class} buffer must land at that element"
+            );
+        }
+    }
+}
