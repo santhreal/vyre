@@ -317,8 +317,8 @@ fn fragment_entries(
         let where_ = path
             .strip_prefix(root)
             .unwrap_or(path.as_path())
-            .display()
-            .to_string();
+            .to_string_lossy()
+            .replace('\\', "/");
         let fragment = read_toml(root, &where_)?;
         let unexpected: Vec<&str> = fragment
             .keys()

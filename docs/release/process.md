@@ -87,7 +87,8 @@ text = "One sentence naming what changed and what it changed from."
 
 The six categories, in the order a section renders them: `Added`,
 `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`. Any other
-`category` value, and any third key, is a finding.
+`category` value, and any third key, is a finding. A finding names the
+fragment by its repository-relative path with `/` separators on every host.
 
 `release-docs` regenerates two documents from the fragments and the release
 train: `CHANGELOG.md` and `release/evidence/docs/release-notes-body.md`.
