@@ -1,15 +1,15 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"78f30e64dea59a908709aedfffb10ba6149653cb","commit_timestamp":"1793860853","parent_commit":"a6d9ff7131635b1d95d9e4b110f80f78841e8432","dirty":false,"source_fingerprint":"git:78f30e64dea59a908709aedfffb10ba6149653cb:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":8},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.178.04"}]}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"4b1c1f824d1122673d950889efd303aae8918ebb","commit_timestamp":"1793909057","parent_commit":"cc9e3f3c5d24685377737a97433adbcf3be10ca7","dirty":false,"source_fingerprint":"git:4b1c1f824d1122673d950889efd303aae8918ebb:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":8},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 5090","driver_version":"580.178.04"}]}},
   "schema_version": 2,
   "backend": "cuda",
   "selected_backend": "cuda",
-  "source_fingerprint": "git:78f30e64dea59a908709aedfffb10ba6149653cb:dirty=false",
-  "source_tree_fingerprint": "source-tree-v1:088d7c3c2c8b1fa2b406e95e11affe27f7e3ca36035359ebcb4ab1b1b528cf61",
+  "source_fingerprint": "git:4b1c1f824d1122673d950889efd303aae8918ebb:dirty=false",
+  "source_tree_fingerprint": "source-tree-v1:d931dcfdec77964e06257c2f3465358e733bc65f3e5882052f2a9c867c741ef9",
   "environment": {
     "architecture": "x86_64",
     "build_profile": "release",
     "cpu_cores": 8,
-    "cpu_model": "13th Gen Intel(R) Core(TM) i9-13900K",
+    "cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
     "features": [
       "vyre-bench",
       "build.opt_level:3",
@@ -27,11 +27,11 @@
     ],
     "gpu_devices": [
       {
-        "compute_capability_major": 8,
-        "compute_capability_minor": 9,
+        "compute_capability_major": 12,
+        "compute_capability_minor": 0,
         "driver_version": "580.178.04",
-        "memory_total_mib": 24564,
-        "name": "NVIDIA GeForce RTX 4090"
+        "memory_total_mib": 32607,
+        "name": "NVIDIA GeForce RTX 5090"
       }
     ],
     "has_gpu": true,
@@ -43,7 +43,7 @@
     "total_cases": 1,
     "passed": 1,
     "failed": 0,
-    "total_time_ns": 7089464264,
+    "total_time_ns": 349847306,
     "cache_hit_rate": null
   },
   "required_case_count": 1,
@@ -98,14 +98,14 @@
       "read_error": null,
       "case_count": 1,
       "min_wall_samples": 30,
-      "min_wall_p50": 951350,
-      "min_wall_p95": 961581,
-      "min_wall_p99": 963518,
+      "min_wall_p50": 315424,
+      "min_wall_p95": 392039,
+      "min_wall_p99": 399933,
       "min_baseline_wall_samples": 30,
-      "min_baseline_wall_p50": 940786,
-      "min_baseline_wall_p95": 953179,
-      "min_baseline_wall_p99": 954475,
-      "min_wall_speedup_x1000": null,
+      "min_baseline_wall_p50": 318941,
+      "min_baseline_wall_p95": 392139,
+      "min_baseline_wall_p99": 400965,
+      "min_wall_speedup_x1000": 1011,
       "missing_custom_metrics": [],
       "non_positive_required_metrics": [],
       "non_winning_cases": [],
