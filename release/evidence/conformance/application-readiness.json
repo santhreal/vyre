@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"7b83434517c399ddfd7e981bbbfad29c47546fbf","commit_timestamp":"1789882968","parent_commit":"0156a229d2527561a0e244e9032dda8598bc2c60","dirty":false,"source_fingerprint":"git:7b83434517c399ddfd7e981bbbfad29c47546fbf:dirty=false"},"host":{"state":"recorded","hostname":"mukund-thiru-X870E-AORUS-PRO","os":"linux","architecture":"x86_64","cpu_model":"AMD Ryzen 9 9950X 16-Core Processor","cpu_cores":22},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"5a9a27507ca04b811ae672dbcea1461e098fbd1f","commit_timestamp":"1793846968","parent_commit":"9133b7ff09d78388b1ca7d219607d7ea229173e8","dirty":false,"source_fingerprint":"git:5a9a27507ca04b811ae672dbcea1461e098fbd1f:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":16},"measurement":{"state":"host_only"}},
   "schema_version": 2,
   "receipt_schema_version": 1,
   "generic_frontend_dialects": [
@@ -190,7 +190,7 @@
       "schema_version": 4,
       "device_measured": true,
       "devices": [
-        "NVIDIA GeForce RTX 3080 Ti"
+        "NVIDIA GeForce RTX 4090"
       ],
       "total_pairs": 358,
       "distinct_op_count": 358,
@@ -218,7 +218,7 @@
       "schema_version": 4,
       "device_measured": true,
       "devices": [
-        "NVIDIA GeForce RTX 3080 Ti"
+        "NVIDIA GeForce RTX 4090"
       ],
       "total_pairs": 358,
       "distinct_op_count": 358,

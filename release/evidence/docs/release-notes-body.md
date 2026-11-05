@@ -1121,6 +1121,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   floor or a member of the aggregate percentile field list. A minimum added to
   the record that no reader checks now fails the suite by name instead of
   reaching the artifacts unexamined.
+- `WgpuBackendStats` reports `persisted_pipeline_seeded` and
+  `persisted_pipeline_cold`, the pipeline compiles whose driver cache was or
+  was not created from a persisted blob.
 - Vyre-bench now establishes a typed whole-application workload class and
   records release evidence across dense numerical, irregular stateful, and
   latency-sensitive interactive application domains. Each case compiles a
@@ -4417,6 +4420,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `vyre_driver::validation::ProgramValidationCaps::support` and
   `vyre_pass_engine::optimizer::pipeline::gpu_sequential_three_pass`, which the
   crates already exported without a snapshot entry to diff against.
+- Debug and test builds compile `vyre-reference` and `vyre-foundation` at
+  opt-level 3, so a 300-case reference-interpreter sweep runs in 22 s instead
+  of 318 s, with debug assertions and overflow checks still on.
 - The reference oracle evaluates a program through one route. The
   dual-reference registry, the statement executor, the storage-graph
   interpreter and the flat adapters were four more answers to the same node
@@ -6992,6 +6998,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   one request a dispatch can resolve and takes `block_words`, which sizes the
   destination and the transfer together instead of naming a fixed 4096-byte
   length that was silently clamped to whatever the destination held.
+- A multi-threaded consumer of `vyre-driver-wgpu` no longer deadlocks in the
+  GPU driver when one thread releases a device while another creates or
+  releases one: the driver holds one device per adapter for the process
+  lifetime and hands it to every caller of that adapter, so no release is the
+  last reference and `vkDestroyDevice` is never reached, and device-loss
+  recovery replaces the held device and keeps the lost handle. On an RTX 3080
+  Ti with driver 580.173.02 the previous code hung 6 of 8 runs of a four-thread
+  create-and-release loop.
 - The conformance worker bounds the request it reads from stdin, digests its
   own binary in fixed-size chunks, and reads a bounded prefix of the process
   memory record; an AOT bundle bounds both the compressed and the decompressed
@@ -7721,6 +7735,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   declines the fusion instead of guessing at it. The test that should have
   caught this compared two inline copies of the walk against each other and
   never called the production one.
+- Committed proptest regression corpora replay again: the workspace no longer
+  sets `PROPTEST_DISABLE_FAILURE_PERSISTENCE`, sixteen corpora left behind when
+  their tests moved sit beside those tests, two whose tests no longer exist are
+  deleted, published packages exclude the `proptest-regressions/` directory,
+  and a tree contract fails on any corpus no `proptest!` block reads.
 - The composition complexity budget now holds across all registered library
   operations without exemptions. Eleven operations exceeding complexity limits
   (AST CSE hashing, Shunting-Yard, planar rewrite scheduling, CSR queue
@@ -8441,6 +8460,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   expressions and the enclosing branch that admit them, and the golden still
   carried the pre-fix digests, so the guard reported a drift for
   `go/packages_and_imports` and `go/declarations` on every run.
+- WGPU adapter probing, device requests, selected-adapter acquisition and
+  device-loss recovery each run under a 120 second deadline and return an error
+  naming the stage, instead of parking forever on a driver that never wakes the
+  future.
 - GPU routing, conformance, and release evidence now select hardware by
   reported capabilities rather than a product name. Benchmark reuse and release
   validation inspect every device in a multi-GPU inventory, reject missing or
@@ -9090,6 +9113,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   analysis programs, the two rule bodies, the decoder and the driver, and it
   reads the shared arena workgroup size instead of declaring a second copy of
   it.
+- A target payload whose module reads a value that no caller binds and no
+  earlier module writes is rejected when it is loaded, with the module, the
+  value and the target binding in the error, instead of failing every
+  submission as an unbound input.
 - Every per-node validation rule lives in
   `vyre-foundation/src/validate/node_rules.rs`, which both the production
   single-pass validator and the legacy multi-walk arm call. The two walks each
@@ -10378,6 +10405,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   an adapter whose probe never dispatched produced the same message and a
   caller could not tell a hardware fact from a configuration failure. The
   verdict carries the measured outcome, and the refusal names it.
+- A WGPU validation error raised while another thread records, submits or
+  compiles on the same device is reported to the caller that caused it, and a
+  recording or submission that returns early no longer leaves an error scope on
+  the device that captures a later caller's error.
 - The registered-operation similarity gate now owns one fixed comparison-safe
   report and qualifies structural matches with canonical semantic identity.
 - Whole-application evidence records state measured device execution: the

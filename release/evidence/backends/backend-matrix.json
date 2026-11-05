@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"6e8ce09485b313ea19669218077595e3bd7c4dff","commit_timestamp":"1789991437","parent_commit":"5d4575a1bc238316029864cc83c0fbafe9d09761","dirty":false,"source_fingerprint":"git:6e8ce09485b313ea19669218077595e3bd7c4dff:dirty=false"},"host":{"state":"recorded","hostname":"santhserver","os":"linux","architecture":"x86_64","cpu_model":"11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz","cpu_cores":8},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 3080 Ti","driver_version":"580.173.02"}]}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"5a9a27507ca04b811ae672dbcea1461e098fbd1f","commit_timestamp":"1793846968","parent_commit":"9133b7ff09d78388b1ca7d219607d7ea229173e8","dirty":false,"source_fingerprint":"git:5a9a27507ca04b811ae672dbcea1461e098fbd1f:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":16},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.178.04"}]}},
   "schema_version": 3,
   "cuda_first": true,
   "wgpu_fallback_present": true,
@@ -8,25 +8,25 @@
   "gpu_probe": {
     "nvidia_smi_ok": true,
     "nvidia_smi_devices": [
-      "GPU 0: NVIDIA GeForce RTX 3080 Ti (UUID: GPU-1a712ff2-2809-aae9-3889-68a9e34c2a4e)"
+      "GPU 0: NVIDIA GeForce RTX 4090 (UUID: GPU-8859fa47-56e3-5c4c-27dd-f537b778ca37)"
     ],
     "nvidia_smi_device_details": [
       {
-        "name": "NVIDIA GeForce RTX 3080 Ti",
-        "driver_version": "580.173.02",
-        "memory_total_mib": 12288,
+        "name": "NVIDIA GeForce RTX 4090",
+        "driver_version": "580.178.04",
+        "memory_total_mib": 24564,
         "compute_capability_major": 8,
-        "compute_capability_minor": 6
+        "compute_capability_minor": 9
       }
     ],
-    "nvidia_driver_version": "580.173.02",
+    "nvidia_driver_version": "580.178.04",
     "nvidia_cuda_version": "13.0",
     "nvidia_smi_error": null
   },
   "cuda_feature_markers": [
     {
       "id": "tensor-core-fragment",
-      "path": "vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
+      "path": "crates/vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 4509,
@@ -40,7 +40,7 @@
     },
     {
       "id": "ldmatrix-cp-async",
-      "path": "vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
+      "path": "crates/vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 15566,
@@ -55,7 +55,7 @@
     },
     {
       "id": "predicated-execution",
-      "path": "vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
+      "path": "crates/vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 14827,
@@ -69,7 +69,7 @@
     },
     {
       "id": "instruction-scheduling",
-      "path": "vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
+      "path": "crates/vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 3598,
@@ -83,7 +83,7 @@
     },
     {
       "id": "ptx-vector-load-gap-scheduling",
-      "path": "vyre-emit-ptx/src/emitter/body.rs",
+      "path": "crates/vyre-emit-ptx/src/emitter/body.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 17721,
@@ -97,7 +97,7 @@
     },
     {
       "id": "ptx-compute-load-gap-scheduling",
-      "path": "vyre-emit-ptx/src/emitter/schedule.rs",
+      "path": "crates/vyre-emit-ptx/src/emitter/schedule.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 4043,
@@ -112,7 +112,7 @@
     },
     {
       "id": "ptx-vector-load-fusion",
-      "path": "vyre-emit-ptx/src/emitter/vector.rs",
+      "path": "crates/vyre-emit-ptx/src/emitter/vector.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 15571,
@@ -126,7 +126,7 @@
     },
     {
       "id": "ptx-vector-store-fusion",
-      "path": "vyre-emit-ptx/src/emitter/vector.rs",
+      "path": "crates/vyre-emit-ptx/src/emitter/vector.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 15571,
@@ -140,7 +140,7 @@
     },
     {
       "id": "async-copy-emitter",
-      "path": "vyre-emit-ptx/src/emitter/async_copy.rs",
+      "path": "crates/vyre-emit-ptx/src/emitter/async_copy.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 27501,
@@ -154,7 +154,7 @@
     },
     {
       "id": "mma-emitter",
-      "path": "vyre-emit-ptx/src/emitter/mma.rs",
+      "path": "crates/vyre-emit-ptx/src/emitter/mma.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 4365,
@@ -168,7 +168,7 @@
     },
     {
       "id": "cuda-resident-dispatch",
-      "path": "vyre-driver-cuda/src/backend/resident_dispatch/sync.rs",
+      "path": "crates/vyre-driver-cuda/src/backend/resident_dispatch/sync.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 2177,
@@ -183,7 +183,7 @@
     },
     {
       "id": "cuda-resident-io",
-      "path": "vyre-driver-cuda/src/backend/resident_io.rs",
+      "path": "crates/vyre-driver-cuda/src/backend/resident_io.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 18284,
@@ -197,7 +197,7 @@
     },
     {
       "id": "cuda-resident-readback",
-      "path": "vyre-driver-cuda/src/backend/resident_io_download.rs",
+      "path": "crates/vyre-driver-cuda/src/backend/resident_io_download.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 24168,
@@ -211,7 +211,7 @@
     },
     {
       "id": "cuda-graph-launch",
-      "path": "vyre-driver-cuda/src/backend/cuda_graph.rs",
+      "path": "crates/vyre-driver-cuda/src/backend/cuda_graph.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 28867,
@@ -225,7 +225,7 @@
     },
     {
       "id": "cuda-module-cache",
-      "path": "vyre-driver-cuda/src/backend/module_cache/module_registry.rs",
+      "path": "crates/vyre-driver-cuda/src/backend/module_cache/module_registry.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 21692,
@@ -239,7 +239,7 @@
     },
     {
       "id": "cuda-ptx-source-cache",
-      "path": "vyre-driver-cuda/src/backend/module_cache/ptx_source_cache.rs",
+      "path": "crates/vyre-driver-cuda/src/backend/module_cache/ptx_source_cache.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 20955,
@@ -257,7 +257,7 @@
     },
     {
       "id": "cuda-ptx-target-probe",
-      "path": "vyre-driver-cuda/src/backend/ptx_target.rs",
+      "path": "crates/vyre-driver-cuda/src/backend/ptx_target.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 4024,
@@ -271,7 +271,7 @@
     },
     {
       "id": "megakernel-paired-speculation",
-      "path": "vyre-runtime/src/resident_work_queue/speculation.rs",
+      "path": "crates/vyre-runtime/src/resident_work_queue/speculation.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 10157,
@@ -289,7 +289,7 @@
   "wgpu_feature_markers": [
     {
       "id": "wgpu-artifact-materializer",
-      "path": "vyre-driver-wgpu/src/materializer.rs",
+      "path": "crates/vyre-driver-wgpu/src/materializer.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 15043,
@@ -304,7 +304,7 @@
     },
     {
       "id": "runtime-artifact-admission",
-      "path": "vyre-runtime/src/artifact_admission/mod.rs",
+      "path": "crates/vyre-runtime/src/artifact_admission/mod.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 128842,
@@ -318,7 +318,7 @@
     },
     {
       "id": "wgpu-readback-ring",
-      "path": "vyre-driver-wgpu/src/runtime/readback_ring/ring.rs",
+      "path": "crates/vyre-driver-wgpu/src/runtime/readback_ring/ring.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 19130,
@@ -332,7 +332,7 @@
     },
     {
       "id": "wgpu-async-dispatch-prefetch",
-      "path": "vyre-driver-wgpu/src/async_dispatch.rs",
+      "path": "crates/vyre-driver-wgpu/src/async_dispatch.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 14500,
@@ -346,7 +346,7 @@
     },
     {
       "id": "wgpu-dispatch-scratch-reuse",
-      "path": "vyre-driver-wgpu/src/engine/dispatch_scratch.rs",
+      "path": "crates/vyre-driver-wgpu/src/engine/dispatch_scratch.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 6253,
@@ -360,10 +360,10 @@
     },
     {
       "id": "wgpu-disk-cache",
-      "path": "vyre-driver-wgpu/src/pipeline/disk_cache/mod.rs",
+      "path": "crates/vyre-driver-wgpu/src/pipeline/disk_cache/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 24820,
+      "source_bytes": 23570,
       "implementation_tokens": [
         "cache",
         "pipeline",
@@ -375,7 +375,7 @@
     },
     {
       "id": "wgpu-megakernel-dispatcher",
-      "path": "vyre-driver-wgpu/src/pipeline/persistent.rs",
+      "path": "crates/vyre-driver-wgpu/src/pipeline/persistent.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 29913,
@@ -390,10 +390,10 @@
     },
     {
       "id": "wgpu-no-cpu-fallback",
-      "path": "vyre-driver-wgpu/src/runtime/device/selector.rs",
+      "path": "crates/vyre-driver-wgpu/src/runtime/device/selector.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 23851,
+      "source_bytes": 23971,
       "implementation_tokens": [
         "has_real_gpu_adapter",
         "DeviceType::Cpu"
@@ -404,7 +404,7 @@
     },
     {
       "id": "megakernel-paired-speculation",
-      "path": "vyre-runtime/src/resident_work_queue/speculation.rs",
+      "path": "crates/vyre-runtime/src/resident_work_queue/speculation.rs",
       "exists": true,
       "read_error": null,
       "source_bytes": 10157,
@@ -442,7 +442,7 @@
       "backend_id": "cuda",
       "capability_id": "live-sm-release-floor",
       "probe_source": "nvidia-smi --query-gpu=compute_cap",
-      "probed_value": "sm_86",
+      "probed_value": "sm_89",
       "supported": true,
       "unsupported_reason": null,
       "fix": "Fix: repair CUDA driver/device visibility or route release benchmarks to a supported NVIDIA GPU."
@@ -451,7 +451,7 @@
       "backend_id": "cuda",
       "capability_id": "live-memory-release-floor",
       "probe_source": "nvidia-smi --query-gpu=memory.total",
-      "probed_value": "12288 MiB",
+      "probed_value": "24564 MiB",
       "supported": true,
       "unsupported_reason": null,
       "fix": "Fix: run release benchmark evidence on a CUDA GPU with at least 2048 MiB VRAM, which is the largest registered workload plus its CUDA context."

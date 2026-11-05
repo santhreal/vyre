@@ -1,15 +1,15 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"6e8ce09485b313ea19669218077595e3bd7c4dff","commit_timestamp":"1789991437","parent_commit":"5d4575a1bc238316029864cc83c0fbafe9d09761","dirty":false,"source_fingerprint":"git:6e8ce09485b313ea19669218077595e3bd7c4dff:dirty=false"},"host":{"state":"recorded","hostname":"santhserver","os":"linux","architecture":"x86_64","cpu_model":"11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz","cpu_cores":8},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 3080 Ti","driver_version":"580.173.02"}]}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"5a9a27507ca04b811ae672dbcea1461e098fbd1f","commit_timestamp":"1793846968","parent_commit":"9133b7ff09d78388b1ca7d219607d7ea229173e8","dirty":false,"source_fingerprint":"git:5a9a27507ca04b811ae672dbcea1461e098fbd1f:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":8},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.178.04"}]}},
   "schema_version": 2,
   "backend": "cuda",
   "selected_backend": "cuda",
-  "source_fingerprint": "git:6e8ce09485b313ea19669218077595e3bd7c4dff:dirty=false",
-  "source_tree_fingerprint": "source-tree-v1:2727ecd1e1c85961d084e90687d74001b322f2b11f1a294f19b320957b59ea07",
+  "source_fingerprint": "git:5a9a27507ca04b811ae672dbcea1461e098fbd1f:dirty=false",
+  "source_tree_fingerprint": "source-tree-v1:088d7c3c2c8b1fa2b406e95e11affe27f7e3ca36035359ebcb4ab1b1b528cf61",
   "environment": {
     "architecture": "x86_64",
     "build_profile": "release",
     "cpu_cores": 8,
-    "cpu_model": "11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz",
+    "cpu_model": "13th Gen Intel(R) Core(TM) i9-13900K",
     "features": [
       "vyre-bench",
       "build.opt_level:3",
@@ -28,22 +28,22 @@
     "gpu_devices": [
       {
         "compute_capability_major": 8,
-        "compute_capability_minor": 6,
-        "driver_version": "580.173.02",
-        "memory_total_mib": 12288,
-        "name": "NVIDIA GeForce RTX 3080 Ti"
+        "compute_capability_minor": 9,
+        "driver_version": "580.178.04",
+        "memory_total_mib": 24564,
+        "name": "NVIDIA GeForce RTX 4090"
       }
     ],
     "has_gpu": true,
     "nvidia_cuda_version": "13.0",
-    "nvidia_driver_version": "580.173.02",
+    "nvidia_driver_version": "580.178.04",
     "os": "linux"
   },
   "summary": {
     "total_cases": 1,
     "passed": 1,
     "failed": 0,
-    "total_time_ns": 1970148712,
+    "total_time_ns": 7291636416,
     "cache_hit_rate": null
   },
   "required_case_count": 1,
@@ -98,14 +98,14 @@
       "read_error": null,
       "case_count": 1,
       "min_wall_samples": 30,
-      "min_wall_p50": 1285344,
-      "min_wall_p95": 1324054,
-      "min_wall_p99": 1330354,
+      "min_wall_p50": 922036,
+      "min_wall_p95": 949816,
+      "min_wall_p99": 950202,
       "min_baseline_wall_samples": 30,
-      "min_baseline_wall_p50": 1278028,
-      "min_baseline_wall_p95": 1331567,
-      "min_baseline_wall_p99": 1360408,
-      "min_wall_speedup_x1000": null,
+      "min_baseline_wall_p50": 939964,
+      "min_baseline_wall_p95": 970134,
+      "min_baseline_wall_p99": 970748,
+      "min_wall_speedup_x1000": 1019,
       "missing_custom_metrics": [],
       "non_positive_required_metrics": [],
       "non_winning_cases": [],
