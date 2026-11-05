@@ -7704,6 +7704,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   either, because it asserts that a command STRING appears in a workflow file,
   which is as true of a command naming a deleted target as of one naming a live
   target.
+- `xtask cli-docs` moves its own running executable off the build path before
+  rebuilding the workspace binaries, so the gate runs on Windows when that
+  executable was built with other features.
 - `workspace-clippy` passed `--message-format=json` after the `--` that hands
   the rest of the line to the lint driver, so clippy-driver answered
   `Unrecognized option: 'message-format'` for every crate and the only gate

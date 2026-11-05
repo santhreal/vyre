@@ -69,6 +69,55 @@ pub fn command(root: &Path) -> Command {
     command
 }
 
+/// Infix of a running executable renamed off its build path.
+const RELEASED: &str = ".released-";
+
+/// Move `running` off its path in `profile` and leave a copy at that path.
+///
+/// A build relinks `<profile>/<bin>` for every binary whose unit changed, and
+/// the process running a gate is one of those binaries whenever it was built
+/// with another feature set: `--features public-api-tool` and a test harness
+/// both build it that way. Windows rejects removing a running image and
+/// accepts renaming one, so the running image is renamed aside and a copy takes
+/// its path. The build then removes a file no process runs, and the path is
+/// never missing for a concurrent caller. A Unix image is removed at once; a
+/// Windows image stays until a later call removes it.
+///
+/// Returns whether `running` was a file directly inside `profile`. A
+/// `profile` that does not exist yet holds nothing the build could relink.
+pub fn release_running_image(running: &Path, profile: &Path) -> IoResult<bool> {
+    let (Ok(running), Ok(profile)) = (running.canonicalize(), profile.canonicalize()) else {
+        return Ok(false);
+    };
+    let Some(name) = running
+        .file_name()
+        .filter(|_| running.parent() == Some(profile.as_path()))
+        .map(|name| name.to_string_lossy().into_owned())
+    else {
+        return Ok(false);
+    };
+    let prefix = format!("{name}{RELEASED}");
+    for entry in std::fs::read_dir(&profile)? {
+        let path = entry?.path();
+        if path
+            .file_name()
+            .is_some_and(|file| file.to_string_lossy().starts_with(&prefix))
+        {
+            // An image another process still runs stays until that process exits.
+            let _ = std::fs::remove_file(&path);
+        }
+    }
+    let id = std::process::id();
+    let staged = profile.join(format!("{name}.staged-{id}"));
+    let released = profile.join(format!("{prefix}{id}"));
+    std::fs::copy(&running, &staged)?;
+    std::fs::rename(&running, &released)?;
+    std::fs::rename(&staged, &running)?;
+    // Windows keeps this image until the process exits; the next call removes it.
+    let _ = std::fs::remove_file(&released);
+    Ok(true)
+}
+
 /// Run a long command, streaming its output and keeping its diagnostics.
 ///
 /// A sweep or a workspace build is watched while it runs, so its output goes to
@@ -711,5 +760,78 @@ mod tests {
             spanless.place(root, "message", "fix").is_none(),
             "a diagnostic with no file leaves the placement to the caller"
         );
+    }
+
+    /// File names in `directory`, sorted.
+    fn names(directory: &Path) -> Vec<String> {
+        let mut names: Vec<String> = std::fs::read_dir(directory)
+            .expect("the directory is readable")
+            .map(|entry| {
+                entry
+                    .expect("the entry is readable")
+                    .file_name()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect();
+        names.sort();
+        names
+    }
+
+    /// WHY: `cli-docs` rebuilds every workspace binary, the executable running
+    /// it among them, and Windows fails to relink a running image. Releasing it
+    /// must leave the same bytes at the build path in a file other than the
+    /// running one, remove the image a prior run left aside, and leave no
+    /// staging file. A running image cannot be held off Windows, so the Windows
+    /// CI leg running `cli-docs` from the test harness is the end-to-end proof;
+    /// this case pins the file moves every host performs.
+    #[test]
+    fn a_running_image_in_the_profile_is_replaced_by_a_copy() {
+        let root = tempfile::tempdir().expect("temporary directory");
+        let profile = root.path().join("debug");
+        std::fs::create_dir(&profile).expect("profile directory");
+        let running = profile.join("tool");
+        std::fs::write(&running, b"image").expect("running image");
+        std::fs::write(profile.join(format!("tool{RELEASED}1")), b"old").expect("prior image");
+        std::fs::write(profile.join("other"), b"other").expect("sibling binary");
+        let before = std::fs::File::open(&running).expect("the running image opens");
+
+        assert!(release_running_image(&running, &profile).expect("release succeeds"));
+
+        assert_eq!(
+            std::fs::read(&running).expect("the build path is filled"),
+            b"image"
+        );
+        assert_eq!(names(&profile), ["other", "tool"]);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            assert_ne!(
+                before.metadata().expect("running metadata").ino(),
+                std::fs::metadata(&running).expect("copy metadata").ino(),
+                "the build path must hold a file no process runs"
+            );
+        }
+        drop(before);
+    }
+
+    /// WHY: only the running image may move. An executable outside the
+    /// profile, or a profile the build has not created, leaves every file in
+    /// place.
+    #[test]
+    fn an_image_outside_the_profile_is_left_in_place() {
+        let root = tempfile::tempdir().expect("temporary directory");
+        let profile = root.path().join("debug");
+        std::fs::create_dir(&profile).expect("profile directory");
+        let elsewhere = root.path().join("tool");
+        std::fs::write(&elsewhere, b"image").expect("installed image");
+
+        assert!(!release_running_image(&elsewhere, &profile).expect("release succeeds"));
+        assert!(
+            !release_running_image(&elsewhere, &root.path().join("missing"))
+                .expect("release succeeds")
+        );
+        assert_eq!(names(root.path()), ["debug", "tool"]);
+        assert!(names(&profile).is_empty());
     }
 }

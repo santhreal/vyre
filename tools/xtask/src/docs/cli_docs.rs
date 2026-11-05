@@ -141,7 +141,7 @@ impl crate::gate::GateBehavior for CliDocs {
         report
             .findings
             .extend(inventory_findings(&root, &runner, &rows)?);
-        build_binaries(&root, &runner)?;
+        build_binaries(&root, &runner, &target.join("debug"))?;
 
         let mut commands: BTreeMap<String, Vec<String>> = BTreeMap::new();
         for row in &rows {
@@ -452,7 +452,27 @@ fn metadata(root: &Path, runner: &Path) -> Result<serde_json::Value, GateError> 
 }
 
 /// Build every workspace binary, so the help routes run the current code.
-fn build_binaries(root: &Path, runner: &Path) -> Result<(), GateError> {
+///
+/// The executable running this gate is moved off its build path first, because
+/// the build relinks it whenever it was built with other features and Windows
+/// fails to remove a running image.
+fn build_binaries(root: &Path, runner: &Path, profile: &Path) -> Result<(), GateError> {
+    let running = std::env::current_exe().map_err(|error| {
+        GateError::new(
+            format!("the running executable could not be located: {error}"),
+            "run the gate from an executable file the process can resolve",
+        )
+    })?;
+    crate::cargo_runner::release_running_image(&running, profile).map_err(|error| {
+        GateError::new(
+            format!(
+                "{} could not be moved off its build path in {}: {error}",
+                running.display(),
+                profile.display()
+            ),
+            "make the target directory writable",
+        )
+    })?;
     let output = Command::new(runner)
         .args(["build", "--workspace", "--bins"])
         .current_dir(root)
