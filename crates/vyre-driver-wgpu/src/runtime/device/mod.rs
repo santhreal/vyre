@@ -16,6 +16,7 @@ pub(crate) use validation_scope::ValidationScope;
 mod acquire;
 mod features;
 mod selector;
+mod timestamp_probe;
 mod validation_scope;
 
 /// Reserve capacity for an adapter-probe vector, reporting the failure as a
