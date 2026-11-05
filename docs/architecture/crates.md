@@ -281,6 +281,13 @@ A narrow exception is `#[expect(lint, reason = "...")]` at the smallest item,
 which fails once the lint stops firing there. A crate-wide or file-wide `allow`
 is not an exception, it is a crate opting out of the policy.
 
+## Build profiles
+
+The root manifest sets one `dev` profile, which test builds inherit.
+Incremental compilation is off and debug information is line tables only.
+`vyre-reference` and `vyre-foundation` build at `opt-level = 3`, with debug
+assertions and overflow checks on.
+
 ## Outside the workspace
 
 The root manifest excludes four directories. Each resolves against its own

@@ -442,3 +442,14 @@ incremental = false
 # Backtraces need line tables, not full DWARF. Cuts rlib bytes and link time.
 debug = "line-tables-only"
 split-debuginfo = "unpacked"
+
+# Every CPU-oracle sweep in the test suite runs through the reference
+# interpreter and the IR it walks. Unoptimized, a 300-case literal-set presence
+# sweep took 318 s; with these two packages at opt-level 3 it took 22 s, and
+# with only `vyre-reference` optimized, 51 s. Debug assertions and overflow
+# checks are separate profile settings and stay on.
+[profile.dev.package.vyre-reference]
+opt-level = 3
+
+[profile.dev.package.vyre-foundation]
+opt-level = 3
