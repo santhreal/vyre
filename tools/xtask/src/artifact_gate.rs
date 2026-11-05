@@ -409,7 +409,18 @@ enum SnapshotEntry {
 #[derive(Clone, Debug, Default)]
 pub struct WorkspaceSnapshot {
     files: std::collections::BTreeMap<PathBuf, SnapshotEntry>,
-    errors: Vec<String>,
+    errors: Vec<SnapshotError>,
+}
+
+/// A path the capture could not read, and why.
+///
+/// The path is kept so an unreadable path git ignores is dropped the same way
+/// an ignored difference is: a concurrent process deleting its own scratch
+/// file between the walk and the read is not this gate's mutation.
+#[derive(Clone, Debug)]
+struct SnapshotError {
+    path: Option<PathBuf>,
+    message: String,
 }
 
 impl WorkspaceSnapshot {
@@ -434,7 +445,12 @@ impl WorkspaceSnapshot {
             let entry = match result {
                 Ok(entry) => entry,
                 Err(error) => {
-                    errors.push(format!("workspace snapshot walk failed: {error}"));
+                    errors.push(SnapshotError {
+                        path: error
+                            .path()
+                            .map(|path| path.strip_prefix(root).unwrap_or(path).to_path_buf()),
+                        message: format!("workspace snapshot walk failed: {error}"),
+                    });
                     continue;
                 }
             };
@@ -454,10 +470,13 @@ impl WorkspaceSnapshot {
                     Ok(target) => {
                         files.insert(relative, SnapshotEntry::Symlink(target));
                     }
-                    Err(error) => errors.push(format!(
-                        "workspace snapshot could not read symlink `{}`: {error}",
-                        relative.display()
-                    )),
+                    Err(error) => errors.push(SnapshotError {
+                        message: format!(
+                            "workspace snapshot could not read symlink `{}`: {error}",
+                            relative.display()
+                        ),
+                        path: Some(relative),
+                    }),
                 }
                 continue;
             }
@@ -496,18 +515,28 @@ impl WorkspaceSnapshot {
         let post = Self::capture(root);
         let declared_set: std::collections::BTreeSet<PathBuf> =
             declared_artifacts.iter().map(PathBuf::from).collect();
-        let mut violations: Vec<String> = self
-            .errors
-            .iter()
-            .map(|error| format!("gate `{gate_name}` pre-execution {error}"))
-            .chain(
-                post.errors
-                    .iter()
-                    .map(|error| format!("gate `{gate_name}` post-execution {error}")),
-            )
-            .collect();
-        let differing = self.differing_paths(&post);
+        let mut differing = self.differing_paths(&post);
+        differing.extend(
+            self.errors
+                .iter()
+                .chain(&post.errors)
+                .filter_map(|error| error.path.clone()),
+        );
         let ignored = ignored_paths(root, &differing);
+        let unread = |phase: &'static str, errors: &[SnapshotError]| {
+            errors
+                .iter()
+                .filter(|error| {
+                    !error
+                        .path
+                        .as_ref()
+                        .is_some_and(|path| ignored.contains(path))
+                })
+                .map(move |error| format!("gate `{gate_name}` {phase} {}", error.message))
+                .collect::<Vec<_>>()
+        };
+        let mut violations = unread("pre-execution", &self.errors);
+        violations.extend(unread("post-execution", &post.errors));
 
         // 1. Created files
         for rel in post.files.keys() {
@@ -646,7 +675,9 @@ fn ignored_paths(
 /// Resumes the panic of a digest lane that failed. A lane turns a failed read
 /// into an error line, so a panic is a defect here; a partial digest set would
 /// report an artifact as unchanged because its lane never reported.
-fn digest_files(contents: &[(PathBuf, PathBuf)]) -> (Vec<(PathBuf, SnapshotEntry)>, Vec<String>) {
+fn digest_files(
+    contents: &[(PathBuf, PathBuf)],
+) -> (Vec<(PathBuf, SnapshotEntry)>, Vec<SnapshotError>) {
     if contents.is_empty() {
         return (Vec::new(), Vec::new());
     }
@@ -672,7 +703,9 @@ fn digest_files(contents: &[(PathBuf, PathBuf)]) -> (Vec<(PathBuf, SnapshotEntry
 }
 
 /// Read and digest one lane's files.
-fn digest_chunk(contents: &[(PathBuf, PathBuf)]) -> (Vec<(PathBuf, SnapshotEntry)>, Vec<String>) {
+fn digest_chunk(
+    contents: &[(PathBuf, PathBuf)],
+) -> (Vec<(PathBuf, SnapshotEntry)>, Vec<SnapshotError>) {
     let mut entries = Vec::with_capacity(contents.len());
     let mut errors = Vec::new();
     for (relative, path) in contents {
@@ -684,10 +717,13 @@ fn digest_chunk(contents: &[(PathBuf, PathBuf)]) -> (Vec<(PathBuf, SnapshotEntry
                     digest: *blake3::hash(&bytes).as_bytes(),
                 },
             )),
-            Err(error) => errors.push(format!(
-                "workspace snapshot could not read `{}`: {error}",
-                relative.display()
-            )),
+            Err(error) => errors.push(SnapshotError {
+                path: Some(relative.clone()),
+                message: format!(
+                    "workspace snapshot could not read `{}`: {error}",
+                    relative.display()
+                ),
+            }),
         }
     }
     (entries, errors)
@@ -1579,6 +1615,51 @@ mod tests {
         assert!(
             violations[0].contains("tracked.txt"),
             "Fix: the tracked write must still be reported; violation={}",
+            violations[0]
+        );
+    }
+
+    /// WHY: a concurrent process on the checkout deletes its own ignored scratch
+    /// file between the capture's walk and its read. That read error belongs to
+    /// the other process exactly as an ignored write does, and it failed a gate
+    /// that had touched nothing. A read error on a path git does not ignore is
+    /// still a violation. The errors come from the real reader, fed a path that
+    /// no longer exists, which is the state the race leaves behind.
+    #[test]
+    fn an_unreadable_path_is_a_violation_only_when_git_does_not_ignore_it() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+        crate::fixture_checkout::seeded(root);
+        fs::write(root.join(".gitignore"), "scratch/\n").expect("Fix: write the ignore rule.");
+        fs::create_dir_all(root.join("scratch")).expect("Fix: create the scratch directory.");
+
+        let mut snap = WorkspaceSnapshot::capture(root);
+        let (read, unread) = digest_files(&[
+            (
+                PathBuf::from("scratch/vanished.log"),
+                root.join("scratch/vanished.log"),
+            ),
+            (PathBuf::from("vanished.txt"), root.join("vanished.txt")),
+        ]);
+        assert!(
+            read.is_empty(),
+            "Fix: neither fixture path exists; read={read:?}"
+        );
+        snap.errors.extend(unread);
+
+        let violations = snap.detect_mutations(root, "test-gate", &[], false);
+
+        assert_eq!(
+            violations.len(),
+            1,
+            "Fix: only the unreadable path git does not ignore is a violation; \
+             violations={violations:?}"
+        );
+        assert!(
+            violations[0].starts_with(
+                "gate `test-gate` pre-execution workspace snapshot could not read `vanished.txt`: "
+            ),
+            "Fix: the violation must name the unreadable path; violation={}",
             violations[0]
         );
     }

@@ -5867,6 +5867,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   it, and the workspace mutation guard reads that invocation as a write.
   dup-scan --lower-pin wrote the pinned row and then exited 1 reporting itself
   as a comparison run that mutated the tree.
+- A gate no longer fails when another process deletes a git-ignored file in the
+  checkout while the gate runs.
 - The lego-quick gate answers from source text and no longer links the
   operation registry: it moved to xtask, which is where both crates already say
   a source-text gate belongs, so a pre-commit run stops building the registry
