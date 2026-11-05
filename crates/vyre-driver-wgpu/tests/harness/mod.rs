@@ -120,6 +120,12 @@ pub(crate) fn assert_dispatch_async_returns_before_gpu_completion() {
     let program = add_one_program(512 * 1024);
     let input = add_one_input(512 * 1024);
 
+    // The first dispatch of a program lowers and compiles its pipeline on the
+    // host. That cost is not GPU blocking, so it stays outside the timed call.
+    let _ = backend
+        .dispatch(&program, &[input.clone()], &DispatchConfig::default())
+        .expect("Fix: warm-up dispatch must succeed");
+
     let start = Instant::now();
     let pending = backend
         .dispatch_async(&program, &[input], &DispatchConfig::default())

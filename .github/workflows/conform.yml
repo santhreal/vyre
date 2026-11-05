@@ -28,7 +28,7 @@ jobs:
     # A public repository never executes fork code on the persistent GPU host.
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     needs: operation-registry
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     env:
       RUST_TEST_THREADS: "1"
     steps:
@@ -60,12 +60,13 @@ jobs:
           ./cargo_full test -p vyre-libs-graph --features graph-dispatch --test all_tests
           ./cargo_full test -p vyre-libs --features fixpoint,graph,math-kernels --test all_tests_fixpoint_graph_math_kernels
 
-      - name: Generate conformance matrix evidence
-        run: >-
-          ./cargo_full run --bin xtask -- conformance-matrix --write
-
+      # Without --write the gate regenerates
+      # release/evidence/conformance/conformance-matrix.json on this device and
+      # reports each line the committed artifact disagrees on. The provenance
+      # header records the commit and host of the recording run, so a byte
+      # comparison of the file fails on every commit but the recorded one.
       - name: Verify conformance matrix evidence is current
-        run: git diff --exit-code -- release/evidence/conformance/conformance-matrix.json
+        run: ./cargo_full run --bin xtask -- conformance-matrix
 
   conform-release-gate:
     name: Conform release gate

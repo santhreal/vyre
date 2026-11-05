@@ -88,7 +88,8 @@ fn main() {
     );
     let submission = queue.submit(std::iter::once(encoder.finish()));
 
-    let _ = super::poll_device_wait_for(device, submission).map_err(|error| error.to_string())?;
+    let _ = super::poll_device_wait_for(device, submission.clone())
+        .map_err(|error| error.to_string())?;
     // After the submission wait, so encoder-recording validation has surfaced
     // and the scope resolves without a second blocking poll.
     match scope.pop_now() {
@@ -110,8 +111,9 @@ fn main() {
         .map_async(wgpu::MapMode::Read, move |result| {
             drop(sender.send(result));
         });
-    let _ = device
-        .poll(wgpu::PollType::Wait)
+    // The submission is complete, so this wait returns at once and delivers the
+    // mapping callback requested after it.
+    let _ = super::poll_device_wait_for(device, submission)
         .map_err(|error| format!("device poll before timestamp probe readback failed: {error}"))?;
     match receiver.recv_timeout(TIMESTAMP_PROBE_READBACK_TIMEOUT) {
         Ok(Ok(())) => {}
