@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Megakernel admission contracts cover both whole-grid fence outcomes: a fence the planner cuts compiles into fence-free segments, and a fence that survives the cut is refused on a device that cannot launch a cooperative grid."

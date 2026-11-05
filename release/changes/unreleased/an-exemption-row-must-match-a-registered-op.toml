@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The composition audit reports an exemption row that matches nothing. The phase-marker list and the declared Tier-3 leaf list are named once each and every row is checked against the live registry, so a row naming a renamed or deleted op is a finding instead of reading as coverage. Two rows were already in that state and are gone."

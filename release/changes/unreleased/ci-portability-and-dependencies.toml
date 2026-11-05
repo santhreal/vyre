@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "CI now uses compatible benchmark, nightly tool, and vendored OpenSSL configuration across supported hosts. Unused crate dependencies were deleted and indirect test dependencies are declared for the dependency audit."

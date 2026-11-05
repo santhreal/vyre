@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`graph::vast_tree_walk` and `solvers::persistent_homology_loop_signature` increment their composition-call counters at the entry point every public wrapper funnels through, so `total_calls` no longer reports zero for two shipped compositions."

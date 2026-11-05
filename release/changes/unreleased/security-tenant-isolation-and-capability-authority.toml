@@ -1,0 +1,2 @@
+category = "Added"
+text = "The foundation and runtime layers now provide explicit tenant, authority, confidentiality, and retention labels with unforgeable generation-bound capability handles, automatic zeroization, and hostile compilation quotas."

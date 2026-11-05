@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "release/evidence/dedup/lego-audit-duplicates.json recorded a lego-audit --report-only --duplicate-report-json command that no longer parsed, so the committed evidence named a regeneration nothing implemented and nothing compared it against the registry. The new lego-duplicate-report gate owns the artifact, compares it on every run, and regenerates it with --write."

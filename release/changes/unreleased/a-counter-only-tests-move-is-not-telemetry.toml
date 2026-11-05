@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`vyre_libs::graph::alias_registry` and its `alias_registry_calls` telemetry counter are gone. The module was gated on `cfg(test)` with no non-test consumer, so the counter only ever incremented from the test suite and measured the tests rather than the compiler."

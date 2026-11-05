@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Operation registration scans now parse consolidated intrinsic macros and ignore delimiters, registration names, and constants inside Rust strings, raw strings, characters, attributes, nested comments, and Unicode identifiers containing canonical token text. Moved test-oracle waivers name their current paths, and body walkers use the exhaustive shared child-body owner."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Blanket `dead_code`, `unreachable_pub`, and `unused_imports` allowances across ten production files are replaced by the narrower fact each one was standing in for: a `cfg` matching the feature its only caller needs, an `expect` with a stated reason that fails once the suppression stops applying, or deletion of the item; the CUDA capture-mode constant that a discarded `let _ =` read kept alive is gone, since the capture call uses the typed driver enum variant."

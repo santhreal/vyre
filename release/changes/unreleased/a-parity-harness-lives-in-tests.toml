@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The vector-to-neighbor-graph fusion contract moved from `vyre-libs/src/graph/` to `vyre-libs/tests/`. It is built entirely from `vyre-reference` composition witnesses, a dev-only dependency, so it could never be part of a shipped build and only compiled under `cfg(test)` where it sat."

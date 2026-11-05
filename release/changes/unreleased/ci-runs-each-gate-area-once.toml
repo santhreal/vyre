@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`xtask oracle-sweeps --run` builds every sweep harness of a partition in one `cargo test --no-run` and runs each sweep as its harness binary, `xtask cuda-parity --device` runs the vyre-driver-cuda targets with the `device-tests` and `cuda` features, and the gate workflows run each gate area once, split between the GPU host and a hosted runner, with build parallelism left to the host."

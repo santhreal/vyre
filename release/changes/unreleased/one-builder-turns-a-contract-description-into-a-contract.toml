@@ -1,0 +1,2 @@
+category = "Changed"
+text = "One builder turns a benchmark contract description into a contract. The two case shapes each held an identical copy of the construction, so threading the baseline class through both pushed `vyre-bench` past its duplication pin, and a third case shape would have copied it again. Descriptions are now built by naming the comparison, `cpu_sota` or `self_unoptimized`, and both shapes reach the contract through the description itself."

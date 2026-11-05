@@ -1,0 +1,2 @@
+category = "Changed"
+text = "External resource import is one generic owner in vyre-driver, and every concrete driver contributes only its handle mapping and its refusal rule."

@@ -1,0 +1,162 @@
+//! Backend-neutral cache eviction policy.
+//!
+//! Concrete drivers use this for pipeline/module caches without depending
+//! on domain or composition crates. Inputs are caller-owned marginal
+//! gains; output is a 0/1 retention vector where `1` means keep.
+
+/// Compute the retention set: `k` entries to keep from `n` gains.
+///
+/// The algorithm is greedy argmax over caller-provided marginal gains.
+/// The selected entry's gain is zeroed after each pick so it cannot be
+/// selected twice. Callers that model correlated entries should update
+/// `gains` between calls before invoking this helper.
+#[must_use]
+pub fn select_retention_set(gains: &mut [u32], n: u32, k: u32) -> Vec<u32> {
+    match try_select_retention_set(gains, n, k) {
+        Ok(picked) => picked,
+        Err(error) => {
+            tracing::error!("{error}");
+            Vec::new()
+        }
+    }
+}
+
+/// Compute the retention set with fallible result storage allocation.
+pub fn try_select_retention_set(
+    gains: &mut [u32],
+    n: u32,
+    k: u32,
+) -> Result<Vec<u32>, CacheEvictionAllocationError> {
+    let effective_n = effective_len(gains, n);
+    let mut picked = Vec::new();
+    reserve_picked(&mut picked, effective_n)?;
+    select_retention_set_into(gains, n, k, &mut picked);
+    Ok(picked)
+}
+
+/// Compute the retention set into caller-owned storage.
+pub fn select_retention_set_into(gains: &mut [u32], n: u32, k: u32, picked: &mut Vec<u32>) {
+    let effective_n = effective_len(gains, n);
+    let keep_limit = (k as usize).min(effective_n);
+    picked.clear();
+    picked.resize(effective_n, 0);
+    let mut keep_count = 0usize;
+    while keep_count < keep_limit {
+        let Some(winner) = argmax_unpicked(&gains[..effective_n], picked) else {
+            break;
+        };
+        picked[winner] = 1;
+        gains[winner] = 0;
+        keep_count += 1;
+    }
+}
+
+/// Compute the retention set into caller-owned fallible storage.
+pub fn try_select_retention_set_into(
+    gains: &mut [u32],
+    n: u32,
+    k: u32,
+    picked: &mut Vec<u32>,
+) -> Result<(), CacheEvictionAllocationError> {
+    let effective_n = effective_len(gains, n);
+    reserve_picked(picked, effective_n)?;
+    select_retention_set_into(gains, n, k, picked);
+    Ok(())
+}
+
+/// Retention-vector storage allocation failure.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CacheEvictionAllocationError {
+    /// Requested retention-vector entries.
+    pub requested: usize,
+    /// Allocator failure details.
+    pub message: String,
+}
+
+impl std::fmt::Display for CacheEvictionAllocationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "cache eviction failed to reserve {} retention entries: {}. Fix: shard cache eviction or lower cache soft caps before eviction planning.",
+            self.requested, self.message
+        )
+    }
+}
+
+impl std::error::Error for CacheEvictionAllocationError {}
+
+/// Record one eviction decision in the driver metrics/log stream.
+pub fn record_eviction(dropped_fraction: f64) {
+    let dropped_fraction = if dropped_fraction.is_finite() {
+        dropped_fraction.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    tracing::trace!(
+        target: "vyre.driver.eviction",
+        dropped_fraction,
+        "cache eviction decision",
+    );
+}
+
+/// Record one eviction decision from exact entry counts.
+pub fn record_eviction_counts(dropped_entries: usize, total_entries: usize) {
+    let dropped_basis_points = eviction_basis_points(dropped_entries, total_entries);
+    tracing::trace!(
+        target: "vyre.driver.eviction",
+        dropped_entries,
+        total_entries,
+        dropped_basis_points,
+        dropped_fraction = f64::from(dropped_basis_points) / 10_000.0,
+        "cache eviction decision",
+    );
+}
+
+/// Compute exact floor basis points for an eviction decision.
+#[must_use]
+pub fn eviction_basis_points(dropped_entries: usize, total_entries: usize) -> u32 {
+    if total_entries == 0 {
+        return 0;
+    }
+    let bounded_dropped = dropped_entries.min(total_entries);
+    let dropped = u64::try_from(bounded_dropped).unwrap_or(u64::MAX);
+    let total = u64::try_from(total_entries).unwrap_or(u64::MAX);
+    crate::numeric::ratio_basis_points_u64(
+        dropped,
+        total,
+        0,
+        "cache eviction dropped entries",
+        "driver",
+    )
+    .min(10_000)
+}
+
+fn effective_len(gains: &[u32], n: u32) -> usize {
+    gains.len().min(n as usize)
+}
+
+fn reserve_picked(
+    picked: &mut Vec<u32>,
+    effective_n: usize,
+) -> Result<(), CacheEvictionAllocationError> {
+    crate::allocation::try_reserve_vec_to_capacity(picked, effective_n).map_err(|error| {
+        CacheEvictionAllocationError {
+            requested: effective_n,
+            message: error.to_string(),
+        }
+    })
+}
+
+fn argmax_unpicked(gains: &[u32], picked: &[u32]) -> Option<usize> {
+    let mut best: Option<(usize, u32)> = None;
+    for (idx, gain) in gains.iter().copied().enumerate() {
+        if picked.get(idx).copied().unwrap_or(0) != 0 || gain == 0 {
+            continue;
+        }
+        match best {
+            Some((_, current)) if gain <= current => {}
+            _ => best = Some((idx, gain)),
+        }
+    }
+    best.map(|(idx, _)| idx)
+}

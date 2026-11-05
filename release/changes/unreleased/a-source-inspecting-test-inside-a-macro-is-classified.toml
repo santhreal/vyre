@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The hygiene scan reads assertion macro bodies, so a test that states its whole source inspection inside `assert_eq!` is classified as a source-inspecting test instead of passing unseen."

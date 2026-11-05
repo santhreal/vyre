@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The self-hosted optimizer pipeline runs the canonical-id analysis, the identity rules that need structural equality, both CSE rewrites, the host rewrite table and dead-code elimination on either side of it, so constant propagation, dead-branch collapse, loop-invariant hoisting and cross-scope hoisting reach the program instead of stopping at constant folding."

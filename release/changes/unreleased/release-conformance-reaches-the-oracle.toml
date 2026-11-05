@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Release conformance selects the reference oracle with `--oracle` instead of spelling it as a backend id. The conformance runner registers device backends, and the oracle is not one of them, so `--backend reference-oracle` was refused as an id no linked driver registers and the recorded reference artifact held zero op pairs against a release floor of 49."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Node::Region cites its parent composition through ir::Ident. The GeneratorRef wrapper around String is deleted, so the IR carries one name type and a pass that rebuilds a region shares the interned name instead of allocating a copy of it."

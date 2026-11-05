@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Windows checkouts now provide `cargo_full.cmd` with the same compiler and nested-Cargo runner contract as the Unix workspace wrapper, while nested gate commands resolve a directly executable Cargo binary instead of attempting to launch a batch file through `CreateProcess`."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Every WGPU timed dispatch entry runs on an adapter that carries no timestamp query and reports `device_ns` as `None`, instead of refusing the dispatch. The refusal made a retained execution through `launch_resident` and a plain materialized-instance dispatch both fail on such an adapter."

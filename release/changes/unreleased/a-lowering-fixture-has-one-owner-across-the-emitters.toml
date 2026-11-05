@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre_lower::descriptor_builder` gains `column_walk_tile`, `folded_literal_vector_store`, and `local_invocation_id` behind the `test-fixtures` feature. The bank-conflict and vector-store descriptors were built twice, once in the lowering suite and once in the PTX emitter suite, so a change to one shape left the other asserting the old one."

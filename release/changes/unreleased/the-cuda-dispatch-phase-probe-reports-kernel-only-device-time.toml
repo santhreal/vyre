@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The CUDA dispatch phase probe brackets the resident fixpoint launch loop with its own timing event pair, so the emitted line carries a kernel-only `kernel_ns` alongside the full device window instead of leaving that field at zero."

@@ -1,0 +1,467 @@
+//! Cat-A GPU differential harness.
+//!
+//! Every vyre-libs Cat-A op is executed twice for the same input set:
+//!
+//!   1. Through `vyre_reference::reference_eval`  -  the pure-Rust reference interpreter
+//!      that defines what the op *claims* to compute.
+//!   2. Through `vyre_driver_wgpu::WgpuBackend::dispatch`  -  the real
+//!      GPU path downstream consumers will actually hit.
+//!
+//! The test asserts byte identity between the two unless the canonical
+//! `OperationRegistration` permits backend-defined transcendental drift in
+//! ULPs. Any divergence beyond that contract is a P0 finding: a
+//! Cat-A op that passes CPU conform but diverges on the GPU would
+//! silently corrupt every downstream consumer that dispatches the op
+//! on GPU.
+//!
+//! This file is the single load-bearing gate between vyre-libs and
+//! GPU-backed consumers. It ships with 0.6 so "release" is measurable.
+//!
+//! **Status on live GPU:**
+//!
+//! Byte-identity CPU ↔ GPU differential sweep.
+//!
+//! The earlier per-operation `diff_*` functions were consolidated into one
+//! `diff_universal_registry` test that iterates every canonical semantic
+//! operation. The test runs every operation whose builder and fixtures yield a
+//! `Program`, and fails when fixtures or backend capabilities are missing.
+//!
+//! Per-op failure reproducers  -  when a specific GPU-side bug shows
+//! up  -  live under findings.toml with a blocker + fix_plan. See
+//! FINDING-GPU-5 / GPU-6 / GPU-7 / GPU-8 for the currently open
+//! divergences (atomic lowering, matmul accumulator, wgpu validator
+//! crash on substring, blake3 unsupported node).
+
+#![cfg(feature = "device-tests")]
+#![allow(deprecated)]
+use crate::harness;
+use harness::{cat_a_dispatch_config, f32_to_ordered, u32_bytes};
+use proptest::prelude::*;
+use std::sync::LazyLock;
+
+use vyre_driver::VyreBackend;
+use vyre_driver_wgpu::WgpuBackend;
+use vyre_foundation::fp_parity::effective_tolerance;
+use vyre_foundation::ir::Program;
+use vyre_reference::value::Value;
+
+fn backend() -> &'static WgpuBackend {
+    static BACKEND: LazyLock<WgpuBackend> = LazyLock::new(|| {
+        WgpuBackend::acquire()
+            .expect("Fix: GPU adapter required for cat_a_gpu_differential. Run on a host with a working wgpu adapter.")
+    });
+    LazyLock::force(&BACKEND)
+}
+
+fn run_cpu(program: &Program, inputs: Vec<Value>) -> Vec<Vec<u8>> {
+    let outputs = vyre_reference::ReferenceRequest::standard(program, &inputs)
+        .outputs()
+        .expect("reference backend must execute Cat-A op");
+    outputs.into_iter().map(|v| v.to_bytes()).collect()
+}
+
+/// Run the standard optimizer pipeline (canonicalize + region_inline +
+/// CSE + DCE) and schedule legalization before handing off to the backend.
+/// Cat-A compositions wrap their body in [`vyre::ir::Node::Region`] for
+/// debuggability; the `region_inline` pass is what unrolls those wrappers into
+/// the primitive nodes the wgpu backend lowers, and `harness::device_program`
+/// owns both steps for every device sweep in this crate.
+fn lower_for_gpu(program: &Program) -> Program {
+    harness::device_program(program)
+}
+
+/// Maps canonical logical inputs from the original program to the lowered program ABI by exact binding slot.
+///
+/// WHY: Every caller supplies canonical logical inputs (non-workgroup, non-backend-allocated buffers).
+/// When `lower_for_gpu` eliminates dead buffers and intermediate pipeline-live-out buffers, surviving
+/// input buffers retain their original binding slots (in group 0). We index original inputs by the
+/// original program's logical input binding slots, validate exact counts, ensure every required lowered
+/// input binding is present, and fail closed on any mismatch.
+fn map_inputs_for_lowered(
+    original_program: &Program,
+    original_inputs: &[Vec<u8>],
+    lowered: &Program,
+) -> Vec<Vec<u8>> {
+    let logical_buffers: Vec<_> = original_program
+        .buffers()
+        .iter()
+        .filter(|buf| vyre_reference::is_reference_input(buf))
+        .collect();
+
+    assert_eq!(
+        original_inputs.len(),
+        logical_buffers.len(),
+        "input count ({}) must match canonical logical buffer count ({}) for program `{}`",
+        original_inputs.len(),
+        logical_buffers.len(),
+        original_program.entry_op_id().unwrap_or("unknown")
+    );
+
+    let original_input_buffers = logical_buffers;
+    let mut binding_to_input: std::collections::HashMap<u32, &Vec<u8>> =
+        std::collections::HashMap::new();
+
+    for (buf, bytes) in original_input_buffers.iter().zip(original_inputs.iter()) {
+        let binding = buf.binding();
+        assert!(
+            binding_to_input.insert(binding, bytes).is_none(),
+            "duplicate binding slot {binding} in original program `{}`",
+            original_program.entry_op_id().unwrap_or("unknown")
+        );
+    }
+
+    let lowered_input_buffers: Vec<_> = lowered
+        .buffers()
+        .iter()
+        .filter(|buf| vyre_reference::is_reference_input(buf))
+        .collect();
+
+    let mut lowered_inputs = Vec::with_capacity(lowered_input_buffers.len());
+    for buf in &lowered_input_buffers {
+        let binding = buf.binding();
+        let bytes = binding_to_input.get(&binding).unwrap_or_else(|| {
+            panic!(
+                "missing input for lowered buffer `{}` at binding slot {binding} in program `{}`",
+                buf.name(),
+                lowered.entry_op_id().unwrap_or("unknown")
+            );
+        });
+        lowered_inputs.push((*bytes).clone());
+    }
+
+    assert_eq!(
+        lowered_inputs.len(),
+        lowered_input_buffers.len(),
+        "lowered input count ({}) must match lowered input buffer count ({}) for program `{}`",
+        lowered_inputs.len(),
+        lowered_input_buffers.len(),
+        lowered.entry_op_id().unwrap_or("unknown")
+    );
+
+    lowered_inputs
+}
+fn run_gpu(lowered: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+    let config = cat_a_dispatch_config(lowered);
+    backend()
+        .dispatch(lowered, &inputs, &config)
+        .expect("GPU must execute Cat-A op")
+}
+
+/// Assert CPU and GPU paths agree byte-for-byte on `program` given the
+/// same input buffer set. `inputs_cpu` mirrors `inputs_gpu` (both are
+/// the same bytes in the same declaration order)  -  they're separated
+/// only because CPU wants `Value` and GPU wants `Vec<u8>`.
+
+fn assert_buffer_within_tolerance(
+    op: &str,
+    buffer_index: usize,
+    cpu: &[u8],
+    gpu: &[u8],
+    tolerance: u32,
+) {
+    assert_eq!(
+        cpu.len(),
+        gpu.len(),
+        "{op}: CPU vs GPU buffer #{buffer_index} length diverged under tolerance {tolerance}. CPU={} GPU={}",
+        cpu.len(),
+        gpu.len()
+    );
+    if tolerance == 0 {
+        assert_eq!(
+            cpu, gpu,
+            "{op}: CPU vs GPU diverged on RW buffer #{buffer_index}.\n  CPU: {:x?}\n  GPU: {:x?}",
+            cpu, gpu
+        );
+        return;
+    }
+    assert_eq!(
+        cpu.len() % 4,
+        0,
+        "{op}: tolerance-based compare requires f32-aligned output bytes. Fix: keep non-byte-identity ops on f32 outputs only."
+    );
+    for (lane, (cpu_word, gpu_word)) in cpu.chunks_exact(4).zip(gpu.chunks_exact(4)).enumerate() {
+        let cpu_bits = u32::from_le_bytes(cpu_word.try_into().expect("4-byte chunk"));
+        let gpu_bits = u32::from_le_bytes(gpu_word.try_into().expect("4-byte chunk"));
+        let diff = f32_to_ordered(cpu_bits).abs_diff(f32_to_ordered(gpu_bits));
+        assert!(
+            diff <= tolerance,
+            "{op}: CPU vs GPU diverged above {} ULP on RW buffer #{} lane {}.\n  CPU bits: 0x{:08x}\n  GPU bits: 0x{:08x}\n  CPU: {:x?}\n  GPU: {:x?}",
+            tolerance,
+            buffer_index,
+            lane,
+            cpu_bits,
+            gpu_bits,
+            cpu,
+            gpu
+        );
+    }
+}
+
+fn assert_diff(op: &'static str, tolerance: u32, program: &Program, inputs: Vec<Vec<u8>>) {
+    let cpu_inputs: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
+    let cpu = run_cpu(program, cpu_inputs);
+    let lowered = lower_for_gpu(program);
+    let lowered_inputs = map_inputs_for_lowered(program, &inputs, &lowered);
+    let gpu = run_gpu(&lowered, lowered_inputs);
+    assert_eq!(
+        cpu.len(),
+        gpu.len(),
+        "{op}: CPU produced {} RW buffers, GPU produced {}",
+        cpu.len(),
+        gpu.len()
+    );
+    for (i, (c, g)) in cpu.iter().zip(gpu.iter()).enumerate() {
+        assert_buffer_within_tolerance(op, i, c, g, tolerance);
+    }
+}
+
+fn entry_by_id(op_id: &str) -> vyre_foundation::operation::SemanticOperation {
+    vyre_libs::operation_catalog::library_entries()
+        .find(|entry| entry.id == op_id)
+        .expect("Fix: expected canonical operation registration")
+}
+
+fn run_entry_diff(entry: &vyre_foundation::operation::SemanticOperation) {
+    let program = entry.program().unwrap_or_else(|| {
+        panic!(
+            "Fix: executable operation `{}` must provide a program",
+            entry.id
+        )
+    });
+    let input_cases = entry
+        .test_inputs
+        .expect("Fix: regression entry must provide test_inputs")();
+    for inputs in input_cases {
+        assert_diff(
+            entry.id,
+            effective_tolerance(entry.id, &program),
+            &program,
+            inputs,
+        );
+    }
+}
+
+fn missing_capability_reason(program: &vyre::ir::Program) -> Option<String> {
+    harness::every_op_random_inputs::missing_capability_reason(backend(), program)
+}
+
+#[test]
+fn diff_softmax_regression() {
+    run_entry_diff(&entry_by_id("vyre-libs::nn::softmax"));
+}
+
+#[test]
+fn diff_attention_regression() {
+    run_entry_diff(&entry_by_id("vyre-libs::nn::attention"));
+}
+
+#[test]
+fn diff_flash_attention_regression() {
+    run_entry_diff(&entry_by_id("vyre-libs::nn::flash_attention"));
+}
+
+#[test]
+fn diff_ast_cse_structural_hash_primitive_regression() {
+    run_entry_diff(&entry_by_id("vyre-libs::parsing::ast_cse_structural_hash"));
+}
+
+#[test]
+fn diff_fnv1a64_primitive_regression() {
+    run_entry_diff(&entry_by_id("vyre-libs::hash::fnv1a64"));
+}
+
+/// FINDING-GPU-7 regression. `substring_search` (binding 0 haystack, 1 needle,
+/// 2 matches; body = nested `If`(overflow-safe guard) -> `Loop`(per-needle-byte
+/// equality fold) -> `Store`) once tripped the wgpu validator at
+/// `wgpu_core.rs:1187` on that nested control-flow emission. The naga-emit
+/// control-flow lowering work since 0.6.3 resolved it; this pins the
+/// GPU-vs-CPU byte-identity of the matches buffer so the validator crash
+/// cannot silently return. Asserts real bytes (matches buffer equality) via
+/// `run_entry_diff` -> `assert_diff`, not a shape check.
+#[test]
+fn diff_substring_search_gpu_regression() {
+    run_entry_diff(&entry_by_id("vyre-libs::pattern::substring_search"));
+}
+
+#[test]
+fn diff_universal_registry() {
+    let mut failures = Vec::new();
+    for entry in vyre_libs::operation_catalog::fixture_entries() {
+        let Some(inputs_fn) = entry.test_inputs else {
+            panic!(
+                "{} has no test_inputs. Fix: every registry entry must provide GPU differential inputs.",
+                entry.id
+            );
+        };
+        assert!(
+            entry.expected_output.is_some(),
+            "{} has no expected_output. Fix: every registry entry must provide an oracle fixture before GPU differential coverage can pass.",
+            entry.id
+        );
+        let program = entry.program().unwrap_or_else(|| {
+            panic!(
+                "Fix: executable operation `{}` must provide a program",
+                entry.id
+            )
+        });
+        if let Some(reason) = missing_capability_reason(&program) {
+            panic!(
+                "{} missing backend capability: {reason}. Fix: wire the op or capability before running the differential sweep.",
+                entry.id
+            );
+        }
+        let input_cases = inputs_fn();
+        assert!(
+            !input_cases.is_empty(),
+            "{} has empty test_inputs. Fix: empty GPU differential fixtures are zero coverage.",
+            entry.id
+        );
+
+        println!("Checking universal registry entry: {}", entry.id);
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            for inputs in input_cases {
+                assert_diff(
+                    entry.id,
+                    effective_tolerance(entry.id, &program),
+                    &program,
+                    inputs,
+                );
+            }
+        }));
+        if result.is_err() {
+            failures.push(entry.id);
+        }
+    }
+    if !failures.is_empty() {
+        panic!(
+            "The following GPU-CPU differential checks failed: {:?}",
+            failures
+        );
+    }
+}
+
+/// One input per buffer `vyre_reference::is_reference_input` admits, in
+/// `Program::buffers` order, taken by name from `named`.
+///
+/// A name `named` supplies that the program does not admit is refused: passing
+/// a value for a backend-allocated output is the drift that made the oracle
+/// reject every differential case before any device ran.
+fn reference_inputs(program: &Program, named: &[(&str, Vec<u8>)]) -> Vec<Vec<u8>> {
+    let op = program.entry_op_id().unwrap_or("unknown");
+    let admitted: Vec<_> = program
+        .buffers()
+        .iter()
+        .filter(|buffer| vyre_reference::is_reference_input(buffer))
+        .collect();
+    for (name, _) in named {
+        assert!(
+            admitted.iter().any(|buffer| buffer.name() == *name),
+            "Fix: `{name}` is not a reference input of `{op}`. Supply bytes only for buffers `is_reference_input` admits."
+        );
+    }
+    admitted
+        .iter()
+        .map(|buffer| {
+            named
+                .iter()
+                .find(|(name, _)| *name == buffer.name())
+                .map(|(_, bytes)| bytes.clone())
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Fix: the differential case supplies no bytes for input `{}` of `{op}`.",
+                        buffer.name()
+                    )
+                })
+        })
+        .collect()
+}
+
+/// Bytes of `text`, one `u32` per byte, the layout the pattern builders read.
+fn byte_words(text: &str) -> Vec<u8> {
+    u32_bytes(&text.bytes().map(u32::from).collect::<Vec<_>>())
+}
+
+// WHY: the registry sweep above runs each registered operation on its fixed
+// fixture inputs. These run four builders on generated inputs, CPU reference
+// against the wgpu backend byte for byte, so a divergence that only some input
+// shape reaches fails here and shrinks to its smallest case. A failing case
+// persists its seed beside this file, in
+// `cat_a_gpu_differential.proptest-regressions`, and replays first on every
+// later run. Sizes stay small: each distinct length is a distinct program and so
+// a distinct pipeline compile.
+proptest! {
+    #![proptest_config(ProptestConfig {
+        failure_persistence: Some(Box::new(
+            proptest::test_runner::FileFailurePersistence::WithSource("proptest-regressions"),
+        )),
+        ..ProptestConfig::with_cases(24)
+    })]
+
+    #[test]
+    fn fuzz_dot_matches_the_reference_on_the_device(
+        lhs in prop::collection::vec(any::<u32>(), 1..32),
+        rhs_seed in any::<u64>(),
+    ) {
+        let rhs: Vec<u32> = (0..lhs.len() as u64)
+            .map(|lane| (rhs_seed.wrapping_mul(lane + 1) ^ 0xdead_beef) as u32)
+            .collect();
+        let program = vyre_libs::math::linalg::dot("a", "b", "c", lhs.len() as u32)
+            .expect("Fix: dot must build for a non-empty length");
+        let inputs = reference_inputs(&program, &[("a", u32_bytes(&lhs)), ("b", u32_bytes(&rhs))]);
+        assert_diff("vyre-libs::math::linalg::dot", 0, &program, inputs);
+    }
+
+    #[test]
+    fn fuzz_scan_prefix_sum_matches_the_reference_on_the_device(
+        input in prop::collection::vec(any::<u32>(), 1..64),
+    ) {
+        let program = vyre_libs::math::scan::scan_prefix_sum("input", "output", input.len() as u32);
+        let inputs = reference_inputs(&program, &[("input", u32_bytes(&input))]);
+        assert_diff("vyre-libs::math::scan::scan_prefix_sum", 0, &program, inputs);
+    }
+
+    #[test]
+    fn fuzz_substring_search_matches_the_reference_on_the_device(
+        haystack in "[a-e]{1,24}",
+        needle in "[a-e]{1,4}",
+    ) {
+        let program = vyre_libs::pattern::substring_search(
+            "haystack",
+            "needle",
+            "matches",
+            haystack.len() as u32,
+            needle.len() as u32,
+        );
+        let inputs = reference_inputs(
+            &program,
+            &[("haystack", byte_words(&haystack)), ("needle", byte_words(&needle))],
+        );
+        assert_diff("vyre-libs::pattern::substring_search", 0, &program, inputs);
+    }
+
+    #[test]
+    fn fuzz_aho_corasick_matches_the_reference_on_the_device(
+        patterns in prop::collection::vec("[a-c]{1,4}", 1..6),
+        haystack in "[a-c]{1,32}",
+    ) {
+        let pattern_bytes: Vec<&[u8]> = patterns.iter().map(String::as_bytes).collect();
+        let compiled = vyre_libs::pattern::dfa_compile(&pattern_bytes);
+        let program = vyre_libs::pattern::aho_corasick(
+            "haystack",
+            "transitions",
+            "accept",
+            "matches",
+            haystack.len() as u32,
+            compiled.accept.len() as u32,
+        );
+        let inputs = reference_inputs(
+            &program,
+            &[
+                ("haystack", byte_words(&haystack)),
+                ("transitions", u32_bytes(&compiled.transitions)),
+                ("accept", u32_bytes(&compiled.accept)),
+            ],
+        );
+        assert_diff("vyre-libs::pattern::aho_corasick", 0, &program, inputs);
+    }
+}

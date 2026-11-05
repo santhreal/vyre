@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Package readiness now validates unpublished, version-matched release dependencies through local registry patches after Cargo normalizes path dependencies for packaging. Cross-repository `weirflow` archive evidence now records its real files, examples, Rust sources, and file-list digest."

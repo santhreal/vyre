@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The masked forward-closure reference oracle used by the persistent-BFS sweeps has one owner instead of a verbatim copy in each of the two crates that claimed to check each other with independent references."

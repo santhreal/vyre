@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`Program::content_hash` and its structural fallback encode every value at fixed width in little-endian order, so a 32-bit or big-endian host files a program under the same cache identity as a 64-bit little-endian one."

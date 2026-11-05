@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`BufferDecl::with_full_output_byte_range` derives the readback range from the declaration's own count and element size. The elementwise builder computed it by hand, which put the layout rule in two places and made the builder read as host data processing."

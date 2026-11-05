@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Validation rejects a program whose async copy may still be in flight where the invocation ends (V133), so a transfer nothing waited for is caught before a backend reads a destination no wait ordered."

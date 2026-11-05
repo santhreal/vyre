@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The device cost projection that chose a vector pack width and an unroll depth from adapter facts is gone, together with the `SchedulingPolicy` selectors behind it; no executor consumed the projection and both dimensions belong to the selected schedule."

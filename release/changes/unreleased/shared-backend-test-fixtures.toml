@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The connected-graph fixture, the host input ABI contract, the target payload format and profile, the single-input copy program and the target facet node walk each have one owner in vyre-test-support."

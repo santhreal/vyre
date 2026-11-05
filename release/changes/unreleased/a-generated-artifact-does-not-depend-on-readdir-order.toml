@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A generated evidence artifact is a function of the source, not of the filesystem that holds it. The shared tree walk yielded readdir order, so `hygiene-matrix.json` rendered its 329 finding rows in whatever sequence a directory listed, and regenerating the artifact on another machine reported it stale for a tree nobody had changed. The walk now yields names in order, which is where the answer belongs because every gate that judges the tree reads it through that one walk, and the backend matrix drops its own recursive scan for it."

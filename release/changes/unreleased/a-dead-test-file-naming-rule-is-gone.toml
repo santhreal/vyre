@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The use-path classifier no longer special-cases a test_helpers file stem. No file in the tree carries that name, and the shape it described is one the tree rejects."

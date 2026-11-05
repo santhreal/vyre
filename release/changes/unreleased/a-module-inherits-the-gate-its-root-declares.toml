@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A certificate regression test that verified a bundle through a live GPU backend now compiles only where the device is, so the CPU-only host matrix reaches every package after `vyre-conform` instead of aborting inside the CUDA dependency."

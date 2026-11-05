@@ -1,0 +1,17 @@
+# The triple that proves each target_os a cfg arm may name: one
+# "<target_os> <triple>" pair per line.
+#
+# The cross-target gate compiles the product crates for these triples, and
+# every workflow that runs the gate installs them from this file.
+#
+# One triple per platform, not every triple that platform has: the failure the
+# gate catches is a build script branching on the target, and one triple per
+# target_os plus one per architecture family distinguishes those branches.
+# macos is pinned to the x86_64 triple because the aarch64 arm was the one
+# that got silenced, so the x86_64 arm is the one that was unchecked.
+android aarch64-linux-android
+freebsd x86_64-unknown-freebsd
+ios aarch64-apple-ios
+linux x86_64-unknown-linux-gnu
+macos x86_64-apple-darwin
+windows x86_64-pc-windows-msvc

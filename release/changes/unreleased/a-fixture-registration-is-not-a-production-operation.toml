@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The operation-ownership rules read every source file of a member, so the fixture operations an integration test registers to drive the registry were judged as production operations. Seven crates were convicted of owning operations they do not ship, and each was told to move its fixture into a category crate, where the fixture would then ship. The registration scan now skips a source the tree reaches only as test support, which is the half of the question a `#[cfg(test)]` attribute cannot answer because the gate sits in the parent directory."

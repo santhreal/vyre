@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The conformance matrix dates each recorded device run against the commit carrying it before judging a single OP_MATRIX cell against it, and reports a record whose source fingerprint the carrier does not reproduce as unusable rather than reading its pairs. A wgpu record captured before an emitter change was read as current, so an operation that passes on the device was reported as failing and the corrective action a reader was handed was to fix a lowering that is already correct."

@@ -1,0 +1,156 @@
+#[non_exhaustive] pub enum vyre_libs_rule::rule::RuleCondition
+#[non_exhaustive] pub enum vyre_libs_rule::rule::RuleFormula
+impl core::cmp::Eq for vyre_libs_rule::rule::RuleCondition
+impl core::cmp::PartialEq for vyre_libs_rule::rule::RuleCondition
+impl vyre_libs_rule::rule::RuleFormula
+impl vyre_libs_rule::rule::file_size_eq::FileSizeEq
+impl vyre_libs_rule::rule::file_size_gt::FileSizeGt
+impl vyre_libs_rule::rule::file_size_gte::FileSizeGte
+impl vyre_libs_rule::rule::file_size_lt::FileSizeLt
+impl vyre_libs_rule::rule::file_size_lte::FileSizeLte
+impl vyre_libs_rule::rule::file_size_ne::FileSizeNe
+impl vyre_libs_rule::rule::literal_false::LiteralFalse
+impl vyre_libs_rule::rule::literal_true::LiteralTrue
+impl vyre_libs_rule::rule::pattern_count_gt::PatternCountGt
+impl vyre_libs_rule::rule::pattern_count_gte::PatternCountGte
+impl vyre_libs_rule::rule::pattern_exists::PatternExists
+pub const vyre_libs_rule::rule::RULE_SET_OP_ID: &str
+pub const vyre_libs_rule::rule::WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_rule::rule::condition_op::INPUTS: &[vyre_spec::data_type::DataType]
+pub const vyre_libs_rule::rule::condition_op::LAWS: &[vyre_spec::algebraic_law::AlgebraicLaw]
+pub const vyre_libs_rule::rule::condition_op::OUTPUTS: &[vyre_spec::data_type::DataType]
+pub const vyre_libs_rule::rule::condition_op::WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_rule::rule::file_size_eq::CONTRACT: vyre_spec::op_contract::OperationContract
+pub const vyre_libs_rule::rule::file_size_eq::OP_ID: &str
+pub const vyre_libs_rule::rule::file_size_gt::CONTRACT: vyre_spec::op_contract::OperationContract
+pub const vyre_libs_rule::rule::file_size_gt::OP_ID: &str
+pub const vyre_libs_rule::rule::file_size_gte::CONTRACT: vyre_spec::op_contract::OperationContract
+pub const vyre_libs_rule::rule::file_size_gte::OP_ID: &str
+pub const vyre_libs_rule::rule::file_size_lt::CONTRACT: vyre_spec::op_contract::OperationContract
+pub const vyre_libs_rule::rule::file_size_lt::OP_ID: &str
+pub const vyre_libs_rule::rule::file_size_lte::CONTRACT: vyre_spec::op_contract::OperationContract
+pub const vyre_libs_rule::rule::file_size_lte::OP_ID: &str
+pub const vyre_libs_rule::rule::file_size_ne::CONTRACT: vyre_spec::op_contract::OperationContract
+pub const vyre_libs_rule::rule::file_size_ne::OP_ID: &str
+pub const vyre_libs_rule::rule::literal_false::OP_ID: &str
+pub const vyre_libs_rule::rule::literal_true::CONTRACT: vyre_spec::op_contract::OperationContract
+pub const vyre_libs_rule::rule::literal_true::OP_ID: &str
+pub const vyre_libs_rule::rule::pattern_count_gt::CONTRACT: vyre_spec::op_contract::OperationContract
+pub const vyre_libs_rule::rule::pattern_count_gt::OP_ID: &str
+pub const vyre_libs_rule::rule::pattern_count_gte::CONTRACT: vyre_spec::op_contract::OperationContract
+pub const vyre_libs_rule::rule::pattern_count_gte::OP_ID: &str
+pub const vyre_libs_rule::rule::pattern_exists::CONTRACT: vyre_spec::op_contract::OperationContract
+pub const vyre_libs_rule::rule::pattern_exists::OP_ID: &str
+pub enum vyre_libs_rule::rule::RuleBuildError
+pub fn vyre_libs_rule::link_anchor()
+pub fn vyre_libs_rule::rule::RuleCondition::eq(&self, other: &Self) -> bool
+pub fn vyre_libs_rule::rule::RuleFormula::and(left: Self, right: Self) -> Self
+pub fn vyre_libs_rule::rule::RuleFormula::condition(condition: vyre_libs_rule::rule::RuleCondition) -> Self
+pub fn vyre_libs_rule::rule::RuleFormula::not(formula: Self) -> Self
+pub fn vyre_libs_rule::rule::RuleFormula::not_formula(formula: Self) -> Self
+pub fn vyre_libs_rule::rule::RuleFormula::or(left: Self, right: Self) -> Self
+pub fn vyre_libs_rule::rule::RuleFormula::to_program(&self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_rule::rule::RuleBuildError>
+pub fn vyre_libs_rule::rule::RuleFormula::try_to_program(&self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_rule::rule::RuleBuildError>
+pub fn vyre_libs_rule::rule::build_rule_program(rules: &[(vyre_libs_rule::rule::RuleFormula, u32)]) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_rule::rule::RuleBuildError>
+pub fn vyre_libs_rule::rule::condition_expr(condition: &vyre_libs_rule::rule::RuleCondition, rule_id: u32) -> core::result::Result<vyre_foundation::ir_inner::model::generated::Expr, vyre_libs_rule::rule::RuleBuildError>
+pub fn vyre_libs_rule::rule::condition_op::condition_program(op_id: &'static str, compute: fn() -> vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_rule::rule::condition_op::file_size() -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_rule::rule::condition_op::pattern_count() -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_rule::rule::condition_op::pattern_state() -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_rule::rule::condition_op::threshold() -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_rule::rule::file_size_cmp<F>(cmp_fn: F, threshold: u64, overflow_is_true: bool) -> vyre_foundation::ir_inner::model::generated::Expr where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_rule::rule::file_size_eq::FileSizeEq::program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_rule::rule::file_size_gt::FileSizeGt::program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_rule::rule::file_size_gte::FileSizeGte::program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_rule::rule::file_size_lt::FileSizeLt::program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_rule::rule::file_size_lte::FileSizeLte::program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_rule::rule::file_size_ne::FileSizeNe::program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_rule::rule::formula_expr(formula: &vyre_libs_rule::rule::RuleFormula, rule_id: u32) -> core::result::Result<vyre_foundation::ir_inner::model::generated::Expr, vyre_libs_rule::rule::RuleBuildError>
+pub fn vyre_libs_rule::rule::literal_false::LiteralFalse::program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_rule::rule::literal_true::LiteralTrue::program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_rule::rule::pattern_count(pattern_id: u32) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_rule::rule::pattern_count_gt::PatternCountGt::program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_rule::rule::pattern_count_gte::PatternCountGte::program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_rule::rule::pattern_exists::PatternExists::program() -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_rule::rule::pattern_state(pattern_id: u32) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_rule::rule::rule_buffers() -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>
+pub fn vyre_libs_rule::rule::rule_nodes(rules: &[(vyre_libs_rule::rule::RuleFormula, u32)]) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, vyre_libs_rule::rule::RuleBuildError>
+pub fn vyre_libs_rule::rule::try_build_rule_program(rules: &[(vyre_libs_rule::rule::RuleFormula, u32)]) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_rule::rule::RuleBuildError>
+pub fn vyre_libs_rule::rule::try_condition_expr(condition: &vyre_libs_rule::rule::RuleCondition, rule_id: u32) -> core::result::Result<vyre_foundation::ir_inner::model::generated::Expr, vyre_libs_rule::rule::RuleBuildError>
+pub fn vyre_libs_rule::rule::try_formula_expr(formula: &vyre_libs_rule::rule::RuleFormula, rule_id: u32) -> core::result::Result<vyre_foundation::ir_inner::model::generated::Expr, vyre_libs_rule::rule::RuleBuildError>
+pub fn vyre_libs_rule::rule::try_rule_nodes(rules: &[(vyre_libs_rule::rule::RuleFormula, u32)]) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, vyre_libs_rule::rule::RuleBuildError>
+pub mod vyre_libs_rule
+pub mod vyre_libs_rule::rule
+pub mod vyre_libs_rule::rule::condition_op
+pub mod vyre_libs_rule::rule::file_size_eq
+pub mod vyre_libs_rule::rule::file_size_gt
+pub mod vyre_libs_rule::rule::file_size_gte
+pub mod vyre_libs_rule::rule::file_size_lt
+pub mod vyre_libs_rule::rule::file_size_lte
+pub mod vyre_libs_rule::rule::file_size_ne
+pub mod vyre_libs_rule::rule::literal_false
+pub mod vyre_libs_rule::rule::literal_true
+pub mod vyre_libs_rule::rule::pattern_count_gt
+pub mod vyre_libs_rule::rule::pattern_count_gte
+pub mod vyre_libs_rule::rule::pattern_exists
+pub struct vyre_libs_rule::rule::file_size_eq::FileSizeEq
+pub struct vyre_libs_rule::rule::file_size_gt::FileSizeGt
+pub struct vyre_libs_rule::rule::file_size_gte::FileSizeGte
+pub struct vyre_libs_rule::rule::file_size_lt::FileSizeLt
+pub struct vyre_libs_rule::rule::file_size_lte::FileSizeLte
+pub struct vyre_libs_rule::rule::file_size_ne::FileSizeNe
+pub struct vyre_libs_rule::rule::literal_false::LiteralFalse
+pub struct vyre_libs_rule::rule::literal_true::LiteralTrue
+pub struct vyre_libs_rule::rule::pattern_count_gt::PatternCountGt
+pub struct vyre_libs_rule::rule::pattern_count_gte::PatternCountGte
+pub struct vyre_libs_rule::rule::pattern_exists::PatternExists
+pub vyre_libs_rule::rule::RuleBuildError::OpaqueCondition
+pub vyre_libs_rule::rule::RuleBuildError::OpaqueCondition::extension_id: u32
+pub vyre_libs_rule::rule::RuleBuildError::OpaqueCondition::rule_id: u32
+pub vyre_libs_rule::rule::RuleBuildError::UnsupportedCondition
+pub vyre_libs_rule::rule::RuleBuildError::UnsupportedCondition::condition: &'static str
+pub vyre_libs_rule::rule::RuleBuildError::UnsupportedCondition::fix: &'static str
+pub vyre_libs_rule::rule::RuleBuildError::UnsupportedCondition::rule_id: u32
+pub vyre_libs_rule::rule::RuleCondition::FieldInSet
+pub vyre_libs_rule::rule::RuleCondition::FieldInSet::field: alloc::sync::Arc<str>
+pub vyre_libs_rule::rule::RuleCondition::FieldInSet::set: smallvec::SmallVec<[alloc::sync::Arc<str>; 4]>
+pub vyre_libs_rule::rule::RuleCondition::FileSizeEq(u64)
+pub vyre_libs_rule::rule::RuleCondition::FileSizeGt(u64)
+pub vyre_libs_rule::rule::RuleCondition::FileSizeGte(u64)
+pub vyre_libs_rule::rule::RuleCondition::FileSizeLt(u64)
+pub vyre_libs_rule::rule::RuleCondition::FileSizeLte(u64)
+pub vyre_libs_rule::rule::RuleCondition::FileSizeNe(u64)
+pub vyre_libs_rule::rule::RuleCondition::LiteralFalse
+pub vyre_libs_rule::rule::RuleCondition::LiteralTrue
+pub vyre_libs_rule::rule::RuleCondition::Opaque(alloc::sync::Arc<dyn vyre_foundation::extension::RuleConditionExt>)
+pub vyre_libs_rule::rule::RuleCondition::PatternCountGt
+pub vyre_libs_rule::rule::RuleCondition::PatternCountGt::pattern_id: u32
+pub vyre_libs_rule::rule::RuleCondition::PatternCountGt::threshold: u32
+pub vyre_libs_rule::rule::RuleCondition::PatternCountGte
+pub vyre_libs_rule::rule::RuleCondition::PatternCountGte::pattern_id: u32
+pub vyre_libs_rule::rule::RuleCondition::PatternCountGte::threshold: u32
+pub vyre_libs_rule::rule::RuleCondition::PatternExists
+pub vyre_libs_rule::rule::RuleCondition::PatternExists::pattern_id: u32
+pub vyre_libs_rule::rule::RuleCondition::PrefixMatch
+pub vyre_libs_rule::rule::RuleCondition::PrefixMatch::prefix: alloc::sync::Arc<str>
+pub vyre_libs_rule::rule::RuleCondition::PrefixMatch::value: alloc::sync::Arc<str>
+pub vyre_libs_rule::rule::RuleCondition::RangeMatch
+pub vyre_libs_rule::rule::RuleCondition::RangeMatch::max: u64
+pub vyre_libs_rule::rule::RuleCondition::RangeMatch::min: u64
+pub vyre_libs_rule::rule::RuleCondition::RangeMatch::value: u64
+pub vyre_libs_rule::rule::RuleCondition::RegexMatch
+pub vyre_libs_rule::rule::RuleCondition::RegexMatch::field: alloc::sync::Arc<str>
+pub vyre_libs_rule::rule::RuleCondition::RegexMatch::pattern: alloc::sync::Arc<str>
+pub vyre_libs_rule::rule::RuleCondition::SetMembership
+pub vyre_libs_rule::rule::RuleCondition::SetMembership::set: smallvec::SmallVec<[alloc::sync::Arc<str>; 4]>
+pub vyre_libs_rule::rule::RuleCondition::SetMembership::value: alloc::sync::Arc<str>
+pub vyre_libs_rule::rule::RuleCondition::SubstringMatch
+pub vyre_libs_rule::rule::RuleCondition::SubstringMatch::haystack: alloc::sync::Arc<str>
+pub vyre_libs_rule::rule::RuleCondition::SubstringMatch::needle: alloc::sync::Arc<str>
+pub vyre_libs_rule::rule::RuleCondition::SuffixMatch
+pub vyre_libs_rule::rule::RuleCondition::SuffixMatch::suffix: alloc::sync::Arc<str>
+pub vyre_libs_rule::rule::RuleCondition::SuffixMatch::value: alloc::sync::Arc<str>
+pub vyre_libs_rule::rule::RuleFormula::And(alloc::boxed::Box<vyre_libs_rule::rule::RuleFormula>, alloc::boxed::Box<vyre_libs_rule::rule::RuleFormula>)
+pub vyre_libs_rule::rule::RuleFormula::Condition(vyre_libs_rule::rule::RuleCondition)
+pub vyre_libs_rule::rule::RuleFormula::Not(alloc::boxed::Box<vyre_libs_rule::rule::RuleFormula>)
+pub vyre_libs_rule::rule::RuleFormula::Or(alloc::boxed::Box<vyre_libs_rule::rule::RuleFormula>, alloc::boxed::Box<vyre_libs_rule::rule::RuleFormula>)

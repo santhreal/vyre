@@ -1,0 +1,34 @@
+//! GPU device abstraction and initialization.
+
+#[cfg(all(test, feature = "device-tests"))]
+pub(crate) use acquire::init_device_without_timestamps;
+pub use acquire::{acquire_gpu, cached_adapter_info, cached_device, init_device};
+pub(crate) use acquire::{poll_device_once, poll_device_wait_for};
+pub use features::EnabledFeatures;
+pub use selector::{
+    acquire_gpu_for_adapter, adapter_for_info, adapter_index_from_env, adapter_probe_report,
+    enumerate_adapters, has_real_gpu_adapter, init_device_for_adapter, select_adapter,
+    AdapterCriteria, AdapterProbeReport,
+};
+pub(crate) use selector::{init_device_for_adapter_identity, AdapterIdentity};
+pub(crate) use validation_scope::ValidationScope;
+
+mod acquire;
+mod features;
+mod selector;
+mod timestamp_probe;
+mod validation_scope;
+
+/// Reserve capacity for an adapter-probe vector, reporting the failure as a
+/// backend error.
+///
+/// Both submodules probe adapters and both need the same fallible reserve, so
+/// the helper lives here rather than once per submodule.
+fn reserve_probe_vec<T>(
+    vec: &mut Vec<T>,
+    additional: usize,
+    context: &'static str,
+) -> Result<(), vyre_driver::BackendError> {
+    crate::staging_reserve::reserve_backend_vec(vec, additional, context)
+        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))
+}

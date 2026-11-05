@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Restored public visibility on vyre-spec specification submodules to maintain SemVer compatibility with published releases."

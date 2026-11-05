@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The vyre-libs crate contract advertises examples/prefix_sum_megakernel.rs, which builds scan_prefix_sum and compiles it through vyre-megakernel. The previous example called a vyre-primitives builder and executed it on the reference interpreter, so it demonstrated neither a libs composition nor the compiler."

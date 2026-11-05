@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Megakernel builder and scheduler body inspection now walks nested node bodies through one shared preorder helper built on the foundation-owned child-body enumeration, instead of two hand-written recursive matches that each had to list the nesting variants."

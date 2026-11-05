@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The operation placement reader parses the workspace manifest as a TOML document rather than as a single TOML value, and reports an unreadable, unparseable or crate-rootless manifest by name, so one broken file is no longer answered as every registered operation having no definition site."

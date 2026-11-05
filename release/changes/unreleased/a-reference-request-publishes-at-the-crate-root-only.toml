@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`vyre_reference::request` and `vyre_reference::interleaving` are no longer public module paths. `ReferenceRequest`, `ReferenceBudget`, `WorkloadEnvelope`, `ExactResourceAbi`, `InterleavingConfig`, `ShadowMemory` and the rest of both modules publish only at the crate root."

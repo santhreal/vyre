@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`PassScheduler::with_passes` ends the compile when constructor scratch cannot be reserved. It previously logged and returned an empty scheduler, so the program came back unoptimized under an `Ok` and read exactly like a program the pipeline chose not to change."

@@ -1,0 +1,25 @@
+# mdBook configuration for the one book this tree carries.
+#
+# `src` is this directory, so `SUMMARY.md` is the navigation `xtask
+# docs-check` renders from `DOCS.toml`. Adding a chapter means adding a
+# `[[page]]` row with `nav = true` and regenerating; editing `SUMMARY.md`
+# by hand is overwritten by the next run.
+#
+# `create-missing = false` makes a chapter named in the navigation and
+# absent from the tree a build failure instead of an empty page mdBook
+# writes on the author's behalf.
+
+[book]
+title = "Vyre"
+description = "Whole-program compiler and authenticated artifact lifecycle"
+authors = ["Santh"]
+src = "."
+language = "en"
+
+[build]
+build-dir = "../target/book"
+create-missing = false
+
+[output.html]
+default-theme = "rust"
+git-repository-url = "https://github.com/santhreal/vyre"

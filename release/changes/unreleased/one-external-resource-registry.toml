@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every backend importer and the runtime admission manager now share one bounded external resource registry, so an admitted record, its dependent views and its dependent artifacts have a single owner."

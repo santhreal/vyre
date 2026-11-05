@@ -1,0 +1,698 @@
+//! Substrate-neutral execution planning for performance and accuracy.
+
+use std::ops::Range;
+
+use crate::ir::{BufferAccess, DataType, MemoryKind, Program};
+use crate::optimizer::AdapterCaps;
+use crate::program_caps::{self, RequiredCapabilities};
+use crate::validate::{validate_with_options, ValidationOptions};
+
+pub mod fusion;
+pub(crate) mod memory_budget;
+mod policy;
+pub use memory_budget::{DeviceMemoryBudget, MemoryBudgetReport};
+pub use policy::SchedulingPolicy;
+
+/// Concerns that vyre treats as first-class planning concerns.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[non_exhaustive]
+pub enum InnovationTrack {
+    /// Fuse compatible top-level regions into one dispatch.
+    WholeProgramFusion,
+    /// Keep execution state GPU-resident across repeated dispatches.
+    PersistentExecution,
+    /// Run a shadow reference path when precision risk is high.
+    DifferentialAccuracy,
+    /// Measure shape variants before choosing a dispatch shape.
+    ConformanceGuidedAutotune,
+    /// Preserve provenance data on the GPU until the caller asks for it.
+    GpuResidentProvenance,
+    /// Compile buffer layout choices from Program metadata.
+    DataLayoutCompiler,
+    /// Avoid host readback for buffers the caller cannot observe.
+    ReadbackMinimization,
+}
+
+/// One track's current recommendation for a program.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TrackDecision {
+    /// Planning concern being evaluated.
+    pub track: InnovationTrack,
+    /// Whether the track should be enabled for this Program.
+    pub active: bool,
+    /// Short stable explanation for the decision.
+    pub reason: &'static str,
+}
+
+/// Complete execution plan extracted from a Program.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ExecutionPlan {
+    /// BLAKE3 hash of the canonical VIR wire encoding.
+    pub program_fingerprint: [u8; 32],
+    /// Capabilities required by this Program's nodes and expressions.
+    pub required_capabilities: RequiredCapabilities,
+    /// Fusion-related planning facts.
+    pub fusion: FusionPlan,
+    /// Buffer and readback planning facts.
+    pub memory: MemoryPlan,
+    /// Region/provenance planning facts.
+    pub provenance: ProvenancePlan,
+    /// Accuracy and shadow-reference planning facts.
+    pub accuracy: AccuracyPlan,
+    /// Autotuning planning facts.
+    pub autotune: AutotunePlan,
+    /// Per-track decisions used by dashboards and diagnostics.
+    pub tracks: Vec<TrackDecision>,
+}
+
+impl ExecutionPlan {
+    /// Return whether `track` is active in this plan.
+    #[must_use]
+    pub fn track_active(&self, track: InnovationTrack) -> bool {
+        self.tracks
+            .iter()
+            .any(|decision| decision.track == track && decision.active)
+    }
+}
+
+/// Errors that prevent building a trustworthy execution plan.
+#[derive(Debug, thiserror::Error)]
+pub enum PlanError {
+    /// Program validation failed with structured issues.
+    #[error("non-canonical program: {issues:?}")]
+    Validation {
+        /// Foundation-owned structured validation issues.
+        issues: Vec<crate::validate::ValidationError>,
+    },
+    /// Canonical wire encoding or static planning failed.
+    #[error("non-canonical program: {source}")]
+    NonCanonicalProgram {
+        /// Original serialization or planning error.
+        source: crate::error::IrError,
+    },
+    /// An output buffer advertises a byte range outside its full allocation.
+    #[error(
+        "invalid output range for buffer {name}: {start}..{end} exceeds full size {full_size}. Fix: keep output byte ranges ordered and inside the declared buffer size."
+    )]
+    InvalidOutputRange {
+        /// Buffer name.
+        name: String,
+        /// Inclusive start byte offset.
+        start: u64,
+        /// Exclusive end byte offset.
+        end: u64,
+        /// Full buffer size in bytes.
+        full_size: u64,
+    },
+    /// A buffer uses a runtime-sized element type that cannot be represented in
+    /// static byte planning.
+    #[error(
+        "runtime-sized buffer {name} with element type {element:?} cannot be statically planned. Fix: lower the buffer to a concrete fixed-width ABI type before execution planning."
+    )]
+    RuntimeSizedBuffer {
+        /// Buffer name.
+        name: String,
+        /// Runtime-sized data type.
+        element: DataType,
+    },
+    /// One declared buffer exceeds the selected adapter's per-buffer limit.
+    #[error(
+        "device memory budget exceeded for buffer {name}: {size_bytes} bytes exceeds per-buffer budget {budget_bytes} on backend {backend}. Fix: shard the buffer, compact the layout, or select a backend with a larger storage-buffer limit."
+    )]
+    BufferBudgetExceeded {
+        /// Backend identifier.
+        backend: &'static str,
+        /// Buffer name.
+        name: String,
+        /// Planned static byte size.
+        size_bytes: u64,
+        /// Per-buffer byte budget.
+        budget_bytes: u64,
+    },
+    /// The buffers one Program declares exceed the selected adapter's total
+    /// static memory budget.
+    #[error(
+        "device static memory budget exceeded: the declared {declared_bytes} static bytes exceed budget {budget_bytes} on backend {backend}. Fix: split the Program, enable resident reuse, or lower the graph in shards before dispatch."
+    )]
+    DeclaredBudgetExceeded {
+        /// Backend identifier.
+        backend: &'static str,
+        /// Static bytes the Program declares.
+        declared_bytes: u64,
+        /// Total declared static byte budget.
+        budget_bytes: u64,
+    },
+}
+
+/// Build a backend-neutral execution plan with default validation options.
+///
+/// # Errors
+///
+/// Returns [`PlanError`] when validation, static memory planning, output-range
+/// planning, or canonical fingerprint construction fails for `program`.
+pub fn plan(program: &Program) -> Result<ExecutionPlan, PlanError> {
+    plan_for_adapter(program, &AdapterCaps::conservative())
+}
+
+/// Build a backend-neutral execution plan parameterized by adapter facts.
+///
+/// # Errors
+///
+/// Returns [`PlanError`] when `program` cannot be validated or planned for the
+/// supplied `adapter_caps`.
+pub fn plan_for_adapter(
+    program: &Program,
+    adapter_caps: &AdapterCaps,
+) -> Result<ExecutionPlan, PlanError> {
+    plan_with_options_for_adapter(program, ValidationOptions::default(), adapter_caps)
+}
+
+/// Build a backend-neutral execution plan after validating with `options`.
+///
+/// # Errors
+///
+/// Returns [`PlanError`] when `program` violates `options` or cannot be lowered
+/// into a backend-neutral execution plan.
+pub fn plan_with_options(
+    program: &Program,
+    options: ValidationOptions<'_>,
+) -> Result<ExecutionPlan, PlanError> {
+    plan_with_options_for_adapter(program, options, &AdapterCaps::conservative())
+}
+
+/// Build a backend-neutral execution plan after validating with `options` and
+/// adapter facts.
+///
+/// # Errors
+///
+/// Returns [`PlanError`] when validation, capability scanning, memory planning,
+/// provenance planning, or fingerprint construction fails.
+pub fn plan_with_options_for_adapter(
+    program: &Program,
+    options: ValidationOptions<'_>,
+    adapter_caps: &AdapterCaps,
+) -> Result<ExecutionPlan, PlanError> {
+    validate_program_for_plan(program, options)?;
+    let required_capabilities = program_caps::scan(program);
+    let fusion = fusion_plan(program);
+    let memory = memory_plan(program, adapter_caps)?;
+    let program_fingerprint = canonical_program_fingerprint(program)?;
+    let provenance = provenance_plan(program, &fusion);
+    let accuracy = accuracy_plan(&required_capabilities, &provenance);
+    let autotune = autotune_plan(program, adapter_caps);
+
+    let tracks = track_decisions(&fusion, &memory, &provenance, &accuracy, &autotune);
+
+    Ok(ExecutionPlan {
+        program_fingerprint,
+        required_capabilities,
+        fusion,
+        memory,
+        provenance,
+        accuracy,
+        autotune,
+        tracks,
+    })
+}
+
+fn validate_program_for_plan(
+    program: &Program,
+    options: ValidationOptions<'_>,
+) -> Result<(), PlanError> {
+    if options.backend.is_none()
+        && options.backend_capabilities.is_none()
+        && program.is_structurally_validated()
+    {
+        return Ok(());
+    }
+    let report = validate_with_options(program, options);
+    if report.errors.is_empty() {
+        return Ok(());
+    }
+    Err(PlanError::Validation {
+        issues: report.errors,
+    })
+}
+
+fn fusion_plan(program: &Program) -> FusionPlan {
+    let stats = program.stats();
+    FusionPlan {
+        entry_op_id: program.entry_op_id().map(ToOwned::to_owned),
+        top_level_regions: stats.top_level_regions as usize,
+        node_count: stats.node_count,
+        batch_fusion_candidate: !program.is_non_composable_with_self()
+            && program.is_top_level_region_wrapped(),
+    }
+}
+
+fn canonical_program_fingerprint(program: &Program) -> Result<[u8; 32], PlanError> {
+    let mut wire = Vec::with_capacity(4096);
+    program
+        .to_wire_into(&mut wire)
+        .map_err(|source| PlanError::NonCanonicalProgram { source })?;
+    Ok(*blake3::hash(&wire).as_bytes())
+}
+
+fn memory_plan(program: &Program, adapter_caps: &AdapterCaps) -> Result<MemoryPlan, PlanError> {
+    let mut static_bytes = 0u64;
+    let mut visible_readback_bytes = 0u64;
+    let mut avoided_readback_bytes = 0u64;
+    // Pre-size to the exact buffer count  -  every buffer becomes one
+    // BufferPlan entry  -  so the inner push loop never reallocates the
+    // backing storage. memory_plan is called once per
+    // execution_plan::plan(), which itself is on every backend's
+    // pre-dispatch path.
+    let mut buffers = Vec::with_capacity(program.buffers().len());
+    let mut dynamic_buffers = 0usize;
+    for buffer in program.buffers() {
+        let count = buffer.count();
+        let elem_size =
+            buffer
+                .element()
+                .size_bytes()
+                .ok_or_else(|| PlanError::RuntimeSizedBuffer {
+                    name: buffer.name().to_string(),
+                    element: buffer.element(),
+                })? as u64;
+        let size = if count > 0 {
+            Some(u64::from(count).checked_mul(elem_size).ok_or_else(|| {
+                PlanError::NonCanonicalProgram {
+                    source: crate::error::IrError::WireFormatValidation {
+                        message: format!(
+                            "canonical execution plan buffer `{}` byte size overflows u64. Fix: split the buffer before planning.",
+                            buffer.name()
+                        ),
+                    },
+                }
+            })?)
+        } else {
+            None
+        };
+        if let Some(s) = size {
+            static_bytes = static_bytes.checked_add(s).ok_or_else(|| {
+                PlanError::NonCanonicalProgram {
+                    source: crate::error::IrError::WireFormatValidation {
+                        message: format!(
+                            "canonical execution plan static memory total overflows u64 while adding `{}`. Fix: split the Program before planning.",
+                            buffer.name()
+                        ),
+                    },
+                }
+            })?;
+        }
+        let output_range = buffer.output_byte_range();
+        // A backend-allocated output is one the executor WRITES and hands back
+        // without ever receiving host bytes for it, so a missing static count
+        // leaves nothing to size the allocation or the readback from.
+        //
+        // The rule lives on `BufferDecl` so this planner, the CPU reference, and
+        // the device drivers all refuse the same set with the same message.
+        // Checking the narrower `is_output` here was the drift that let a
+        // countless `WriteOnly` read back zero bytes under an `Ok`, while the
+        // identical omission on `BufferDecl::output` was refused.
+        buffer.require_static_readback_size().map_err(|message| {
+            PlanError::NonCanonicalProgram {
+                source: crate::error::IrError::WireFormatValidation {
+                    message: format!(
+                        "canonical execution plan rejected buffer `{}`: {message}",
+                        buffer.name()
+                    ),
+                },
+            }
+        })?;
+        if buffer.is_output() {
+            let full_size = size.unwrap_or(0);
+            let visible = if let Some(range) = output_range.clone() {
+                if range.start > range.end || range.end > full_size {
+                    return Err(PlanError::InvalidOutputRange {
+                        name: buffer.name().to_string(),
+                        start: range.start,
+                        end: range.end,
+                        full_size,
+                    });
+                }
+                range.end - range.start
+            } else {
+                full_size
+            };
+            visible_readback_bytes += visible;
+            avoided_readback_bytes += full_size.saturating_sub(visible);
+        }
+        if buffer.count() == 0 {
+            dynamic_buffers += 1;
+        }
+        buffers.push(BufferPlan {
+            name: buffer.name().to_string(),
+            binding: buffer.binding(),
+            access: buffer.access(),
+            kind: buffer.kind(),
+            element: buffer.element(),
+            count: buffer.count(),
+            static_size_bytes: size,
+            output_range,
+        });
+    }
+    let plan = MemoryPlan {
+        buffers,
+        static_bytes,
+        dynamic_buffers,
+        visible_readback_bytes,
+        avoided_readback_bytes,
+    };
+    DeviceMemoryBudget::from_adapter(adapter_caps).validate(&plan)?;
+    Ok(plan)
+}
+
+fn provenance_plan(program: &Program, _fusion: &FusionPlan) -> ProvenancePlan {
+    ProvenancePlan {
+        top_level_region_wrapped: program.is_top_level_region_wrapped(),
+        region_count: program.stats().region_count as usize,
+        emit_region_trace: program.is_top_level_region_wrapped(),
+    }
+}
+
+fn accuracy_plan(caps: &RequiredCapabilities, _provenance: &ProvenancePlan) -> AccuracyPlan {
+    AccuracyPlan {
+        exhaustive_conformance_required: caps.subgroup_ops,
+        reason: if caps.subgroup_ops {
+            "subgroup semantics"
+        } else {
+            "baseline"
+        },
+    }
+}
+
+/// Report whether the target declares shapes worth measuring.
+///
+/// The plan states a fact and never a shape. It used to publish a recommended
+/// workgroup, tile, vector width and unroll depth, ranked here against the
+/// adapter, which was a second answer to a question `vyre-megakernel` already
+/// owns and which nothing on the compile path realized.
+fn autotune_plan(program: &Program, adapter_caps: &AdapterCaps) -> AutotunePlan {
+    let profile_declares_shapes = adapter_caps.ideal_unroll_depth > 0
+        || adapter_caps.ideal_vector_pack_bits > 0
+        || !adapter_caps.ideal_workgroup_tile.contains(&0);
+    AutotunePlan {
+        recommended: profile_declares_shapes,
+        parallel_region_size: program.parallel_region_size(),
+        reason: if profile_declares_shapes {
+            "device profile"
+        } else {
+            "none"
+        },
+    }
+}
+
+fn track_decisions(
+    fusion: &FusionPlan,
+    memory: &MemoryPlan,
+    _provenance: &ProvenancePlan,
+    accuracy: &AccuracyPlan,
+    autotune: &AutotunePlan,
+) -> Vec<TrackDecision> {
+    vec![
+        track_decision(
+            InnovationTrack::WholeProgramFusion,
+            fusion.batch_fusion_candidate,
+            "fusion",
+        ),
+        track_decision(
+            InnovationTrack::PersistentExecution,
+            true,
+            "every production compile emits a megakernel artifact",
+        ),
+        track_decision(
+            InnovationTrack::DifferentialAccuracy,
+            accuracy.exhaustive_conformance_required,
+            accuracy.reason,
+        ),
+        track_decision(
+            InnovationTrack::ConformanceGuidedAutotune,
+            autotune.recommended,
+            autotune.reason,
+        ),
+        track_decision(InnovationTrack::GpuResidentProvenance, false, "none"),
+        track_decision(
+            InnovationTrack::DataLayoutCompiler,
+            memory.static_bytes > 0,
+            "layout",
+        ),
+        track_decision(
+            InnovationTrack::ReadbackMinimization,
+            memory.avoided_readback_bytes > 0,
+            "trimmed readback",
+        ),
+    ]
+}
+
+fn track_decision(track: InnovationTrack, active: bool, reason: &'static str) -> TrackDecision {
+    TrackDecision {
+        track,
+        active,
+        reason,
+    }
+}
+
+/// Region-fusion facts extracted from the Program.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FusionPlan {
+    /// Optional stable op id for the entry region.
+    pub entry_op_id: Option<String>,
+    /// Number of top-level regions.
+    pub top_level_regions: usize,
+    /// Total statement-node count.
+    pub node_count: usize,
+    /// Whether the Program is eligible for batch fusion.
+    pub batch_fusion_candidate: bool,
+}
+
+/// Memory allocation and readback facts extracted from buffers.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemoryPlan {
+    /// Per-buffer planning facts.
+    pub buffers: Vec<BufferPlan>,
+    /// Sum of statically declared buffer bytes.
+    pub static_bytes: u64,
+    /// Number of buffers whose size is known only from runtime inputs.
+    pub dynamic_buffers: usize,
+    /// Bytes that must be visible to the host after dispatch.
+    pub visible_readback_bytes: u64,
+    /// Bytes avoided by trimming readback ranges.
+    pub avoided_readback_bytes: u64,
+}
+
+/// Planning facts for one declared buffer.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BufferPlan {
+    /// Buffer name.
+    pub name: String,
+    /// Binding number.
+    pub binding: u32,
+    /// Declared access mode.
+    pub access: BufferAccess,
+    /// Memory address space.
+    pub kind: MemoryKind,
+    /// Element type.
+    pub element: DataType,
+    /// Declared element count, or zero for runtime-sized buffers.
+    pub count: u32,
+    /// Static byte size when `count` is nonzero.
+    pub static_size_bytes: Option<u64>,
+    /// Caller-visible output byte range, when trimmed.
+    pub output_range: Option<Range<u64>>,
+}
+
+/// Region/provenance facts used to decide trace strategy.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProvenancePlan {
+    /// Whether the entry is wrapped in canonical top-level regions.
+    pub top_level_region_wrapped: bool,
+    /// Total region count in the Program.
+    pub region_count: usize,
+    /// Whether the backend should emit a GPU-resident region trace.
+    pub emit_region_trace: bool,
+}
+
+/// Numerical risk facts used to decide required conformance strength.
+///
+/// These are facts about the program, not a second way to compute its
+/// result. Nothing derived from them may run the program on the host.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AccuracyPlan {
+    /// Whether the program's numerics need exhaustive conformance coverage.
+    pub exhaustive_conformance_required: bool,
+    /// Stable reason for the recommendation.
+    pub reason: &'static str,
+}
+
+/// Autotuning facts used for dispatch shape selection.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AutotunePlan {
+    /// Whether the backend should measure variants.
+    pub recommended: bool,
+    /// Declared parallel region size.
+    pub parallel_region_size: [u32; 3],
+    /// Stable reason for the recommendation.
+    pub reason: &'static str,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ir::{BufferDecl, DataType, Expr, Node, Program};
+
+    fn trivial_program() -> Program {
+        Program::wrapped(
+            vec![
+                BufferDecl::read("input", 0, DataType::U32).with_count(4),
+                BufferDecl::output("out", 1, DataType::U32).with_count(1),
+            ],
+            [1, 1, 1],
+            vec![Node::store(
+                "out",
+                Expr::u32(0),
+                Expr::load("input", Expr::u32(0)),
+            )],
+        )
+    }
+
+    #[test]
+    fn plan_succeeds_on_trivial_program() {
+        let p = trivial_program();
+        let exec_plan = plan(&p).expect("Fix: plan should succeed on trivial program; restore this invariant before continuing.");
+        assert!(exec_plan.memory.static_bytes > 0);
+        assert_eq!(exec_plan.memory.dynamic_buffers, 0);
+    }
+
+    /// Two separately built copies of one program plan to the same fingerprint.
+    ///
+    /// Planning one `Program` twice proves nothing: the fingerprint memoizes
+    /// into a `OnceLock` on the program, so the second plan reads the first
+    /// plan's answer. Two values each compute once.
+    #[test]
+    fn plan_fingerprint_is_deterministic() {
+        let plan1 = plan(&trivial_program()).unwrap();
+        let plan2 = plan(&trivial_program()).unwrap();
+        assert_eq!(plan1.program_fingerprint, plan2.program_fingerprint);
+    }
+
+    #[test]
+    fn track_active_returns_false_for_inactive() {
+        let p = trivial_program();
+        let exec_plan = plan(&p).unwrap();
+        // GpuResidentProvenance is always inactive in current implementation
+        assert!(!exec_plan.track_active(InnovationTrack::GpuResidentProvenance));
+    }
+
+    #[test]
+    fn plan_rejects_buffer_over_adapter_budget_before_dispatch() {
+        let p = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(8)],
+            [1, 1, 1],
+            vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
+        );
+        let caps = AdapterCaps {
+            backend: "tiny-test-gpu",
+            max_storage_buffer_binding_size: 16,
+            ..AdapterCaps::conservative()
+        };
+        let error = plan_for_adapter(&p, &caps)
+            .expect_err("oversized buffers must fail during planning, before backend allocation");
+        assert!(matches!(
+            error,
+            PlanError::BufferBudgetExceeded {
+                backend: "tiny-test-gpu",
+                name,
+                size_bytes: 32,
+                budget_bytes: 16,
+            } if name == "out"
+        ));
+    }
+
+    #[test]
+    fn plan_rejects_peak_static_memory_over_adapter_budget() {
+        let names = [
+            "b00", "b01", "b02", "b03", "b04", "b05", "b06", "b07", "b08", "b09", "b10", "b11",
+            "b12", "b13", "b14", "b15", "b16",
+        ];
+        let buffers = names
+            .iter()
+            .enumerate()
+            .map(|(index, name)| {
+                BufferDecl::read_write(name, index as u32, DataType::U32).with_count(4)
+            })
+            .collect::<Vec<_>>();
+        let p = Program::wrapped(buffers, [1, 1, 1], vec![Node::Return]);
+        let caps = AdapterCaps {
+            backend: "tiny-test-gpu",
+            max_storage_buffer_binding_size: 16,
+            ..AdapterCaps::conservative()
+        };
+        let error = plan_for_adapter(&p, &caps)
+            .expect_err("aggregate static memory must fail during planning");
+        assert!(matches!(
+            error,
+            PlanError::DeclaredBudgetExceeded {
+                backend: "tiny-test-gpu",
+                declared_bytes: 272,
+                budget_bytes: 256,
+            }
+        ));
+    }
+
+    /// WHY: the plan reports whether the target declares shapes worth
+    /// measuring and states no shape of its own. Before this, it also published
+    /// a recommended workgroup and tile ranked against the adapter here, and
+    /// flagged any program above a node-count threshold as worth measuring on a
+    /// target that declares nothing. A shape ranked outside
+    /// `vyre-megakernel` is a second cost model, and a threshold nobody
+    /// measured is not a fact.
+    #[test]
+    fn the_plan_reports_the_measurement_fact_and_no_shape() {
+        let small = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(4096)],
+            [64, 1, 1],
+            vec![Node::store("out", Expr::gid_x(), Expr::u32(1))],
+        );
+        let mut wide_entry = Vec::new();
+        for _ in 0..256 {
+            wide_entry.push(Node::store("out", Expr::gid_x(), Expr::u32(1)));
+        }
+        let large = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(4096)],
+            [64, 1, 1],
+            wide_entry,
+        );
+        let bare = AdapterCaps {
+            max_workgroup_size: [256, 256, 64],
+            max_invocations_per_workgroup: 256,
+            subgroup_size: 32,
+            ..AdapterCaps::conservative()
+        };
+        let declaring = AdapterCaps {
+            ideal_unroll_depth: 8,
+            ideal_vector_pack_bits: 128,
+            ideal_workgroup_tile: [16, 16, 1],
+            ..bare
+        };
+
+        for program in [&small, &large] {
+            let plan = plan_for_adapter(program, &bare).unwrap();
+            assert!(
+                !plan.autotune.recommended,
+                "a target that declares no shape gives nothing to measure, whatever the \
+                 program's node count"
+            );
+            assert_eq!(plan.autotune.reason, "none");
+            assert_eq!(
+                plan.autotune.parallel_region_size,
+                program.parallel_region_size(),
+                "the plan carries the declared region and never restates it"
+            );
+        }
+
+        let declared_plan = plan_for_adapter(&small, &declaring).unwrap();
+        assert!(declared_plan.autotune.recommended);
+        assert_eq!(declared_plan.autotune.reason, "device profile");
+    }
+}

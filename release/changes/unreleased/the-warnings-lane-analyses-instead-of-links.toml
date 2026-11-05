@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The lane that holds the tree to -D warnings linked every target of every crate, which writes over 100 GiB of test executables and kills a hosted runner mid-compile. Warnings are produced by rustc's analysis phase, so the lane now runs check across the same crate and target set and reaches the end."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A workflow step that runs the gate sweep with --subset credits the gates in that subset and no others. Recording the bare sweep for it gave every registered gate a workflow, so a gate no workflow selects could not be reported and the rows that were reported named the wrong file."

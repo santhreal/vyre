@@ -1,0 +1,57 @@
+[package]
+name = "vyre-aot"
+version = "0.8.0"
+publish = false
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/vyre-aot"
+description = "Ahead-of-time compilation for vyre Programs: emits target-native bytes plus a self-contained launcher bundle suitable for embedded and competition-style code-budget-constrained submissions."
+readme = "README.md"
+keywords = ["vyre", "gpu", "aot", "compiler"]
+categories = ["compilers", "hardware-support"]
+
+[package.metadata.vyre]
+publication_class = "internal-engine"
+
+[lints]
+workspace = true
+
+[dependencies]
+vyre-foundation.workspace = true
+vyre-driver.workspace = true
+vyre-megakernel.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+blake3.workspace = true
+brotli.workspace = true
+lzma-rs.workspace = true
+
+[features]
+default = []
+ptx = []
+
+[dev-dependencies]
+vyre-lower.workspace = true
+tempfile.workspace = true
+inventory.workspace = true
+# `product_workflow` drives the checkpoint-to-package-to-inspection path, which
+# is the only place vyre-safetensors, vyre-aot and vyre-debug meet.
+vyre-safetensors.workspace = true
+vyre-debug.workspace = true
+# Used through the shared `vyre_test_support::artifact_fixtures` module, which
+# the unused-dependency audit cannot follow into a dev-dependency's modules.
+vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests", "driver-artifact-contracts"] }
+
+[package.metadata.cargo-machete]
+ignored = ["vyre-test-support"]
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

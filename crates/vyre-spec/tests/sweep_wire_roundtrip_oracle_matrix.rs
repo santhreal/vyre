@@ -1,0 +1,272 @@
+//! Sweep oracle matrix for VIR0 wire encode/decode round-trips.
+//!
+//! Builds hostile `Program` shapes whose literals and casts exercise the
+//! frozen `vyre_spec` wire tag surface. What a round trip has to preserve is
+//! owned by `vyre_test_support::wire_round_trip`; the shapes below are this
+//! suite's contribution.
+
+#![forbid(unsafe_code)]
+
+use smallvec::smallvec;
+use vyre_foundation::ir::{BufferDecl, Expr, Node, Program};
+use vyre_spec::{
+    AtomicOp, BinOp, DataType, QuantizationScale, QuantizationZeroPoint, TypeId, UnOp,
+};
+use vyre_spec::{ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionUnOpId};
+use vyre_test_support::data_type_elements::flat_buffer_element_types;
+use vyre_test_support::spec_variant_tables::{builtin_atomic_ops, builtin_bin_ops, builtin_un_ops};
+use vyre_test_support::sweep_rng::Rng;
+use vyre_test_support::wire_round_trip::assert_canonical_wire_round_trip;
+
+const CASES: usize = 1024;
+
+#[test]
+fn sweep_wire_roundtrip_oracle_matrix_preserves_canonical_bytes() {
+    let mut verified = 0usize;
+    for case in 0..CASES {
+        assert_canonical_wire_round_trip(&hostile_program(case as u64), &format!("hostile {case}"));
+        verified += 1;
+    }
+    assert_eq!(
+        verified, CASES,
+        "Fix: the hostile sweep skipped a case, so the oracle above ran on fewer programs \
+         than the matrix declares"
+    );
+}
+
+fn hostile_program(case: u64) -> Program {
+    let mut rng = Rng::new(0xC0DE_CAFE_0000_0001 ^ case.wrapping_mul(0x9E37_79B9_7F4A_7C15));
+    let dtype_a = hostile_buffer_datatype(&mut rng);
+    let dtype_b = hostile_buffer_datatype(&mut rng);
+    let entry = hostile_entry(&mut rng);
+    let non_composable = rng.next_u32() & 7 == 0;
+    Program::wrapped(
+        hostile_program_buffers(dtype_a, dtype_b),
+        [1 + rng.range(3), 1, 1],
+        entry,
+    )
+    .with_non_composable_with_self(non_composable)
+}
+
+fn hostile_program_buffers(extra_a: DataType, extra_b: DataType) -> Vec<BufferDecl> {
+    let mut bufs = vec![
+        BufferDecl::output("out", 0, DataType::U32)
+            .with_count(8)
+            .with_output_byte_range(0u64..16),
+        BufferDecl::read("input", 1, DataType::U32).with_count(8),
+        BufferDecl::read_write("rw", 2, DataType::U32).with_count(8),
+        BufferDecl::read("bytes_in", 3, DataType::Bytes).with_count(16),
+        BufferDecl::read_write("bytes_out", 4, DataType::Bytes).with_count(16),
+        BufferDecl::read("counts", 5, DataType::U32).with_count(8),
+        BufferDecl::workgroup("scratch", 4, DataType::U32),
+    ];
+    bufs.push(BufferDecl::read("extra_a", 6, extra_a).with_count(1));
+    bufs.push(BufferDecl::read("extra_b", 7, extra_b).with_count(1));
+    bufs
+}
+
+fn hostile_entry(rng: &mut Rng) -> Vec<Node> {
+    let names = ["", "x", "alpha", "snow_雪", "nul\0name"];
+    let buffers = ["out", "input", "rw", "bytes_out"];
+    let mut nodes = Vec::new();
+    let node_count = 1 + rng.range(6) as usize;
+    for index in 0..node_count {
+        let name = rng.pick_str(&names);
+        let value = hostile_value_expr(rng, index);
+        match index % 5 {
+            0 => nodes.push(Node::let_bind(name, value)),
+            1 => nodes.push(Node::Assign {
+                name: name.into(),
+                value,
+            }),
+            2 => {
+                let buffer = rng.pick_str(&buffers);
+                nodes.push(Node::Store {
+                    buffer: buffer.into(),
+                    index: hostile_value_expr(rng, index + 3),
+                    value: hostile_value_expr(rng, index + 5),
+                });
+            }
+            3 if index + 1 < node_count => {
+                nodes.push(Node::If {
+                    cond: hostile_value_expr(rng, index + 7),
+                    then: vec![Node::let_bind("t", hostile_value_expr(rng, index + 11))],
+                    otherwise: vec![Node::let_bind("f", hostile_value_expr(rng, index + 13))],
+                });
+            }
+            _ => nodes.push(Node::let_bind(name, value)),
+        }
+    }
+    nodes.push(Node::Return);
+    nodes
+}
+
+fn hostile_value_expr(rng: &mut Rng, salt: usize) -> Expr {
+    match (rng.next_u32() as usize + salt) % 12 {
+        0 => Expr::LitU32(rng.next_u32()),
+        1 => Expr::LitI32(rng.next_u32() as i32),
+        2 => Expr::LitBool(rng.next_u32() & 1 == 0),
+        3 => Expr::LitF32(hostile_f32_bits(rng)),
+        4 => Expr::var(rng.pick_str(&["", "x", "alpha", "snow_雪", "nul\0name"])),
+        5 => Expr::buf_len("input"),
+        6 => Expr::gid_x(),
+        7 => Expr::Cast {
+            target: hostile_datatype(rng),
+            value: Box::new(Expr::LitU32(rng.next_u32())),
+        },
+        8 => {
+            let op = hostile_bin_op(rng);
+            Expr::BinOp {
+                op,
+                left: Box::new(Expr::LitU32(rng.next_u32())),
+                right: Box::new(Expr::LitU32(rng.next_u32())),
+            }
+        }
+        9 => {
+            let op = hostile_un_op(rng);
+            Expr::UnOp {
+                op,
+                operand: Box::new(Expr::LitU32(rng.next_u32())),
+            }
+        }
+        10 => Expr::Select {
+            cond: Box::new(Expr::LitBool(rng.next_u32() & 1 == 0)),
+            true_val: Box::new(Expr::LitU32(rng.next_u32())),
+            false_val: Box::new(Expr::LitU32(rng.next_u32())),
+        },
+        _ => Expr::Fma {
+            a: Box::new(Expr::LitF32(hostile_f32_bits(rng))),
+            b: Box::new(Expr::LitF32(hostile_f32_bits(rng))),
+            c: Box::new(Expr::LitF32(hostile_f32_bits(rng))),
+        },
+    }
+}
+
+fn hostile_f32_bits(rng: &mut Rng) -> f32 {
+    let bits = match rng.range(7) {
+        0 => 0x0000_0000,
+        1 => f32::MIN_POSITIVE.to_bits(),
+        2 => f32::MIN.to_bits(),
+        3 => f32::MAX.to_bits(),
+        4 => 0.0f32.to_bits(),
+        5 => 1.0f32.to_bits(),
+        _ => {
+            let raw = rng.next_u32();
+            let val = f32::from_bits(raw);
+            if val.is_nan() || raw == (-0.0f32).to_bits() || val.is_subnormal() {
+                2.0f32.to_bits()
+            } else {
+                raw
+            }
+        }
+    };
+    f32::from_bits(bits)
+}
+
+fn hostile_bin_op(rng: &mut Rng) -> BinOp {
+    let mut ops = builtin_bin_ops();
+    ops.push(BinOp::Opaque(ExtensionBinOpId(
+        rng.next_u32() | 0x8000_0000,
+    )));
+    rng.pick(&ops)
+}
+
+fn hostile_un_op(rng: &mut Rng) -> UnOp {
+    let mut ops = builtin_un_ops();
+    ops.push(UnOp::Opaque(ExtensionUnOpId(rng.next_u32() | 0x8000_0000)));
+    rng.pick_cloned(&ops)
+}
+
+fn hostile_buffer_datatype(rng: &mut Rng) -> DataType {
+    let element_size = 1 + rng.range(64) as usize;
+    rng.pick_cloned(&flat_buffer_element_types(element_size))
+}
+
+fn hostile_datatype(rng: &mut Rng) -> DataType {
+    let leaf = match rng.range(16) {
+        0 => DataType::U8,
+        1 => DataType::U16,
+        2 => DataType::U32,
+        3 => DataType::I8,
+        4 => DataType::I16,
+        5 => DataType::I32,
+        6 => DataType::I64,
+        7 => DataType::U64,
+        8 => DataType::Vec2U32,
+        9 => DataType::Vec4U32,
+        10 => DataType::Bool,
+        11 => DataType::Bytes,
+        12 => DataType::Array {
+            element_size: 1 + rng.range(64),
+        },
+        13 => DataType::F16,
+        14 => DataType::BF16,
+        _ => DataType::F32,
+    };
+    match rng.range(8) {
+        0 => leaf,
+        1 => DataType::F64,
+        2 => DataType::Tensor,
+        3 => DataType::Handle(TypeId(rng.next_u32())),
+        4 => DataType::Vec {
+            element: Box::new(leaf),
+            count: rng.range(5) as u8,
+        },
+        5 => DataType::TensorShaped {
+            element: Box::new(leaf),
+            shape: smallvec![1 + rng.range(8), 1 + rng.range(8)],
+        },
+        6 => DataType::SparseBsr {
+            element: Box::new(DataType::I4),
+            block_rows: 1 + rng.range(16),
+            block_cols: 1 + rng.range(16),
+        },
+        7 => DataType::Quantized {
+            storage: Box::new(DataType::I8),
+            scale: QuantizationScale::PerGroup {
+                group_size: 32 + rng.range(96),
+            },
+            zero_point: QuantizationZeroPoint::PerChannel { axis: rng.range(4) },
+        },
+        _ => DataType::Opaque(ExtensionDataTypeId(rng.next_u32() | 0x8000_0000)),
+    }
+}
+
+#[test]
+fn sweep_wire_roundtrip_exercises_spec_atomic_tags_in_programs() {
+    const ATOMIC_CASES: usize = 128;
+    let mut verified = 0usize;
+    for case in 0..ATOMIC_CASES {
+        let mut rng = Rng::new(0xA71C_0000 ^ case as u64);
+        let mut ops = builtin_atomic_ops();
+        ops.push(AtomicOp::Opaque(ExtensionAtomicOpId(
+            rng.next_u32() | 0x8000_0000,
+        )));
+        let op = rng.pick(&ops);
+        let program = Program::wrapped(
+            vec![BufferDecl::read_write("rw", 0, DataType::U32).with_count(4)],
+            [1, 1, 1],
+            vec![
+                Node::let_bind(
+                    "atomic",
+                    Expr::Atomic {
+                        op,
+                        buffer: "rw".into(),
+                        index: Box::new(Expr::LitU32(rng.next_u32())),
+                        expected: (case & 1 == 0).then(|| Box::new(Expr::LitU32(rng.next_u32()))),
+                        value: Box::new(Expr::LitU32(rng.next_u32())),
+                        ordering: vyre_foundation::ir::MemoryOrdering::SeqCst,
+                    },
+                ),
+                Node::Return,
+            ],
+        );
+        assert_canonical_wire_round_trip(&program, &format!("atomic {case}"));
+        verified += 1;
+    }
+    assert_eq!(
+        verified, ATOMIC_CASES,
+        "Fix: the atomic tag sweep skipped a case, so the oracle above ran on fewer programs \
+         than the loop declares"
+    );
+}

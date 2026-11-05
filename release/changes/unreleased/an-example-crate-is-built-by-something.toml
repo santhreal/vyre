@@ -1,0 +1,2 @@
+category = "Removed"
+text = "Two demonstrators under `examples/` are gone. `three_substrate_parity` held a README and a manifest with no code, naming published reports under a `docs/parity/` tree that no longer exists. `wgpu_readwrite_count_repro` is superseded by `conform/vyre-conform/tests/countless_readwrite_output_parity.rs`, which the conformance suite runs. `external_ir_extension`, `external_backend_extension` and `libs-template` stay, and each is now built and run by the `example-capability` gate."

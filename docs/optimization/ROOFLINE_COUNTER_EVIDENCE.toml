@@ -2,7 +2,6 @@
 # Compute, memory, arithmetic intensity, and backend counters share one route explanation.
 
 schema = "vyre.performance.roofline_counter_evidence.v1"
-owner = "bench_harness"
 evidence_tokens = ["ROOFLINE_MODEL", "NSIGHT_COMPUTE_ROOFLINE", "NSIGHT_COMPUTE"]
 
 required_fields = [

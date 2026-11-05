@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`docs-check` and `feature-matrix` pass. The generated testing guide for `vyre-registry-link` had no row in the documentation manifest, and `vyre-test-support` declared features with no explicit default policy. A tree contract now derives the workspace member list at run time and fails when a member has no classified testing guide row, or when a row names a crate the workspace no longer has."

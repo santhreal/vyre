@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A CUDA graph replay records the kernel launches it executes, so `cuda_kernel_launches` counts the kernels a graph-dispatched program runs on the device instead of only those issued through `cuLaunchKernel`. The resident optimizer pipeline dispatches entirely through captured graphs, so it reported seven graph launches and zero kernel launches per run, and every consumer of that counter read zero device work for a pipeline that was executing."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-foundation` publishes each item at one path: configuration and recovery items are addressed through `config_schema` and `failure_domain` instead of the crate root, `ShapeExprId` through `types` instead of `ir`, and the file-split submodules of `execution_plan::fusion` and `schedule` are private behind the module that re-exports them."

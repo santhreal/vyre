@@ -1,0 +1,2 @@
+category = "Added"
+text = "A performance contract can assert a device bound, either a floor on the fraction of device memory bandwidth the kernel uses or a ceiling on device active time per sample, each carrying the derivation it was set from."

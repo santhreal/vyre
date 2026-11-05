@@ -1,0 +1,2 @@
+category = "Removed"
+text = "Twenty-seven files under `scripts/` are gone. Each was a check whose rule a registered gate already owns, a helper only such a check called, or a baseline nothing read. Nothing in the tree invoked any of them, so they were a second statement of a rule that could drift from the gate that enforces it, and two pinned baselines that no reader compared against. The script assertion ledger now records only scripts that are still on disk, and states that a row leaves it by the script being deleted."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The standalone `vyre-harness` package is gone. Semantic operation identity, tier classification, and registration now live in `vyre-foundation`; library fixture views live in `vyre-libs`; conformance execution and parity policy live in `vyre-conform`; self-substrate behavior tests live with their owner."

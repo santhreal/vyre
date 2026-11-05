@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The geometry-constant and inventory-walk gates judge every vyre-libs domain crate instead of the one-file vyre-libs facade, and the lego-quick and lego-cross-dialect gates, which scanned only the pre-split vyre-libs/src dialect directories, are deleted."

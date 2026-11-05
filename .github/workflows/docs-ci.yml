@@ -2,9 +2,12 @@ name: Doc CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main]
   pull_request:
-    branches: [ main, master ]
+
+concurrency:
+  group: docs-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   docs:
@@ -18,6 +21,6 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Build Docs
-        run: ./scripts/docs.sh --changed-only
+        run: ./cargo_full run -q -p xtask --bin xtask -- workspace-docs
       - name: Validate CLI documentation
-        run: python3 scripts/cli_docs.py --check
+        run: ./cargo_full run -p xtask --bin xtask -- cli-docs

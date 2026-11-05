@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Semiring GEMM dispatch now passes only its two read-only matrices because the result buffer is backend allocated."

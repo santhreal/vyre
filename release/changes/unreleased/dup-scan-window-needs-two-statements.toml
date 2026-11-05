@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`dup-scan` counts a shingle only when at least two of its lines state something. One statement between a closing brace run and `#[cfg(test)] mod tests { use super::*;` filled a whole window, so `Ok(report)` matched every gate in the registry and charged each of them for having a test module."

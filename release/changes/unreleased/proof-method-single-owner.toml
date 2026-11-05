@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`vyre_spec::Verification` is removed; `ProofMethod` covers every method it declared and now reports `witness_count`."

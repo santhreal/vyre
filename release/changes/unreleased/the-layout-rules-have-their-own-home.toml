@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Module layout and file naming rules moved out of the structure gate crate root into their own module, bringing the root back under the per-file line cap the workspace holds every file to."

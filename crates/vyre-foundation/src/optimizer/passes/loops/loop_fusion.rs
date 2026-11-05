@@ -1,0 +1,753 @@
+//! fuse adjacent `Node::Loop` siblings whose bounds
+//! match and whose bodies touch disjoint buffer sets.
+//!
+//! Op id: `vyre-foundation::optimizer::passes::loop_fusion`.
+//! Soundness: `Exact` under the conservative buffer-disjointness
+//! check. Two loops with identical literal `from..to` ranges, distinct
+//! loop variables, and disjoint touched-buffer sets cannot have any
+//! cross-loop dependency through memory; fusing them lets the runtime
+//! amortise the loop overhead and may unlock further fusion / scratch
+//! reuse downstream. Cost direction: monotone-down on `node_count`
+//! (one fewer Loop wrapper) and on per-iteration loop overhead.
+//! Preserves: every analysis. Invalidates: nothing.
+//!
+//! ## Rule
+//!
+//! ```text
+//! Node::Loop { var: i, from: LitU32(a), to: LitU32(b), body: [body_a] }
+//! Node::Loop { var: j, from: LitU32(a), to: LitU32(b), body: [body_b] }
+//!     where buffers_touched(body_a) ∩ buffers_touched(body_b) == ∅
+//!     AND body_b uses no name bound inside body_a (other than j itself)
+//! →
+//! Node::Loop {
+//!     var: i,
+//!     from: LitU32(a),
+//!     to: LitU32(b),
+//!     body: [
+//!         body_a...,
+//!         body_b... (with `j` rewritten to `i`),
+//!     ],
+//! }
+//! ```
+//!
+//! ## Conservatism
+//!
+//! - Bounds must be `Expr::LitU32` and structurally equal.
+//! - Only adjacent siblings inside the same container body.
+//! - Buffer sets must be disjoint  -  any shared buffer would need an
+//!   alias / cross-iteration-dependency proof we do not have without
+//!   the downstream dataflow analysis.
+//! - The second loop's body is rewritten so every `Expr::Var(j)`
+//!   becomes `Expr::Var(i)`. A Let in body_a whose name shadows `j`
+//!   (or vice versa) blocks the fusion to keep the rewrite local.
+//! - The two bodies must not bind a common local name, and body_b must not
+//!   bind the fused loop variable `i`: fusion merges both bodies into ONE
+//!   scope, so a shared `let` name becomes a duplicate sibling binding (V032)
+//!   and a body_b binding of `i` shadows the loop var (V008). The block-scoped
+//!   IR pops each loop body's bindings at loop exit, so two sibling loops
+//!   binding the same local are legal pre-fusion but collide once merged.
+//! - Neither body may `Assign` a scalar the other body reads or assigns: fusion
+//!   interleaves the bodies (`A(0); B(0); A(1); B(1); ...`), so a scalar one
+//!   loop writes and the other touches is a cross-loop dependency the original
+//!   ordering (all of loop_a, then all of loop_b) does not have, and the
+//!   interleaving silently changes the observed values. Assign-free bodies (the
+//!   common map/transform loops) take the fast path and are unaffected.
+
+use super::{collect_touched_buffers, collect_var_reads, legality};
+use crate::ir::{Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
+use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::visit::for_each_node;
+use rustc_hash::FxHashSet;
+
+/// Fuse adjacent `Node::Loop` siblings under the buffer-disjoint
+/// conservatism rule.
+#[derive(Debug, Default)]
+#[vyre_pass(
+    name = "loop_fusion",
+    requires = [],
+    invalidates = [],
+    phase = "loop",
+    boundary_class = "abi_preserving",
+    cost_model_family = "loop"
+)]
+/// ABI-preserving loop fusion pass for adjacent loops with compatible iteration spaces.
+pub struct LoopFusion;
+
+impl LoopFusion {
+    /// Skip when no body has a fusable pair.
+    ///
+    /// The candidate is a relation between two adjacent siblings, so the scan
+    /// has to see each enclosing body rather than each node.
+    #[must_use]
+    fn analyze_impl(program: &Program) -> PassAnalysis {
+        driver::analyze_candidate_bodies(
+            program,
+            &[crate::ir::stats::NODE_KIND_LOOP],
+            &mut body_has_fusable_pair,
+        )
+    }
+
+    /// Walk the program; fuse every fusable adjacent Loop pair found.
+    #[must_use]
+    pub fn transform(program: Program) -> PassResult {
+        driver::rewrite_entry_bodies(program, &mut fuse_in_body)
+    }
+}
+
+/// `body` with every fusable adjacent `Loop` pair merged, or `None` when no
+/// pair fuses.
+fn fuse_in_body(body: &[Node]) -> Option<Vec<Node>> {
+    // Proving a pair exists before allocating is what keeps the common case
+    // free. The walk below deep-clones every node it passes, and a body with
+    // nothing to fuse used to build that whole vector and throw it away on the
+    // `None` return, once per body per scheduler iteration.
+    if !body_has_fusable_pair(body) {
+        return None;
+    }
+    let mut out: Vec<Node> = Vec::with_capacity(body.len());
+    let mut index = 0usize;
+    while index < body.len() {
+        // A pair that does not fuse advances by ONE, so the second loop is
+        // still offered to its own successor. Advancing by two skipped that
+        // offer permanently: the body it left behind is byte-identical, so the
+        // scheduler's next iteration reaches the same decision and the pair is
+        // never reconsidered.
+        match fuse_pair_at(body, index) {
+            Some(fused) => {
+                out.push(fused);
+                index += 2;
+            }
+            None => {
+                out.push(body[index].clone());
+                index += 1;
+            }
+        }
+    }
+    Some(out)
+}
+
+/// The single `Loop` that replaces `body[index]` and `body[index + 1]`, when
+/// those two are adjacent loops that fuse.
+fn fuse_pair_at(body: &[Node], index: usize) -> Option<Node> {
+    let Some(Node::Loop {
+        var: var_a,
+        from: from_a,
+        to: to_a,
+        body: body_a,
+    }) = body.get(index)
+    else {
+        return None;
+    };
+    let Some(Node::Loop {
+        var: var_b,
+        from: from_b,
+        to: to_b,
+        body: body_b,
+    }) = body.get(index + 1)
+    else {
+        return None;
+    };
+    let a = LoopRef {
+        var: var_a,
+        from: from_a,
+        to: to_a,
+        body: body_a,
+    };
+    let b = LoopRef {
+        var: var_b,
+        from: from_b,
+        to: to_b,
+        body: body_b,
+    };
+    if !pair_is_fusable(&a, &b) {
+        return None;
+    }
+    let mut fused = body_a.clone();
+    fused.extend(
+        body_b
+            .iter()
+            .map(|node| legality::rename_var_in_node(node.clone(), var_b, var_a)),
+    );
+    Some(Node::Loop {
+        var: var_a.clone(),
+        from: from_a.clone(),
+        to: to_a.clone(),
+        body: fused,
+    })
+}
+
+fn bounds_match(from_a: &Expr, to_a: &Expr, from_b: &Expr, to_b: &Expr) -> bool {
+    matches!(
+        (from_a, to_a, from_b, to_b),
+        (
+            Expr::LitU32(_),
+            Expr::LitU32(_),
+            Expr::LitU32(_),
+            Expr::LitU32(_)
+        )
+    ) && from_a == from_b
+        && to_a == to_b
+}
+
+/// One side of a candidate fusion, borrowed from the `Node::Loop` it came
+/// from so the transform and the analysis gate ask the same question without
+/// cloning either body.
+struct LoopRef<'a> {
+    var: &'a Ident,
+    from: &'a Expr,
+    to: &'a Expr,
+    body: &'a [Node],
+}
+
+/// The complete fusion legality gate. `a` runs entirely before `b` in the
+/// original program and fusing interleaves their iterations, so every
+/// dependency between the two bodies has to be ruled out first.
+///
+/// Memory dependence, unsummarisable effects, and the binding-capture hazard
+/// come from the shared [`legality`] core. The binding-collision and
+/// scalar-dependence checks are fusion-specific: they describe what happens
+/// when two scopes merge into one, which fission never does.
+///
+/// Async, collective, and indirect-dispatch nodes are deliberately allowed.
+/// Their buffer operands ARE captured by [`collect_touched_buffers`], so the
+/// disjointness test already covers them, and refusing them would needlessly
+/// forbid legal fusions of loops whose async or collective ops touch disjoint
+/// buffers. Fission refuses them through its own barrier gate because
+/// splitting a loop reorders them against the surrounding work; fusion has no
+/// such reordering, so the asymmetry is intentional.
+fn pair_is_fusable(a: &LoopRef<'_>, b: &LoopRef<'_>) -> bool {
+    bounds_match(a.from, a.to, b.from, b.to)
+        && a.var != b.var
+        && super::buffers_disjoint_with(a.body, b.body, collect_touched_buffers)
+        && !legality::unsummarisable_effect(a.body)
+        && !legality::unsummarisable_effect(b.body)
+        && !legality::bindings_flow_across(a.body, b.body, b.var)
+        && !fusion_collides_bindings(a.body, b.body, a.var, b.var)
+        && !fusion_has_scalar_dependency(a.body, b.body)
+}
+
+/// True iff fusing the two bodies would introduce a duplicate or shadowing
+/// binding the validator rejects. Fusion concatenates the bodies into ONE loop
+/// scope (`fused = body_a ++ rename(body_b, var_b -> var_a)`), so a name bound
+/// by BOTH bodies becomes a duplicate sibling binding (V032), and a body_b
+/// binding of the fused loop variable `var_a` shadows it (V008). The block-scoped
+/// IR pops each loop body's bindings at loop exit, so two sibling loops binding
+/// the same local are legal pre-fusion but collide once merged.
+///
+/// [`legality::collect_bound_names`] recurses into nested scopes (and counts
+/// `Assign` targets and nested loop variables), so this is conservative: it may
+/// refuse a fusion whose shared name actually sits in disjoint nested scopes,
+/// but it never permits a real collision. This is disjoint from the *capture*
+/// hazard guarded by [`legality::bindings_flow_across`] (body_b READING a
+/// body_a binding); this is the duplicate-BINDING hazard.
+fn fusion_collides_bindings(
+    body_a: &[Node],
+    body_b: &[Node],
+    var_a: &Ident,
+    var_b: &Ident,
+) -> bool {
+    let mut a_lets: FxHashSet<Ident> = FxHashSet::default();
+    legality::collect_bound_names(body_a, &mut a_lets);
+    let mut b_lets: FxHashSet<Ident> = FxHashSet::default();
+    legality::collect_bound_names(body_b, &mut b_lets);
+    b_lets.iter().any(|name| {
+        // body_b is rewritten var_b -> var_a before splicing, so a body_b
+        // binding of var_b lands as var_a in the fused scope.
+        let fused_name = if name == var_b { var_a } else { name };
+        // Collides with the fused loop variable (shadow, V008) or with a name
+        // body_a already binds (duplicate sibling, V032).
+        fused_name == var_a || a_lets.contains(fused_name)
+    })
+}
+
+/// Collect every `Node::Assign` target name in `nodes`, at any nesting depth.
+/// These are the scalars a body MUTATES (as opposed to merely binds via `Let`
+/// or reads).
+///
+/// Descent comes from [`for_each_node`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => {}`, so an `Assign`
+/// inside a fifth body-bearing variant read as absent and the legality check
+/// fused two loops across a mutation it could not see.
+fn collect_assign_targets(nodes: &[Node], out: &mut FxHashSet<Ident>) {
+    for_each_node(nodes, |node| {
+        if let Node::Assign { name, .. } = node {
+            out.insert(name.clone());
+        }
+    });
+}
+
+/// True iff fusing the two bodies would reorder a cross-loop dependency through
+/// a shared mutable scalar. `buffers_disjoint` rules out memory dependencies and
+/// [`legality::bindings_flow_across`] rules out body_b capturing a body_a
+/// binding, but NEITHER covers a scalar that one body WRITES (via `Node::Assign`)
+/// and the other body reads or writes. The original program runs loop_a entirely
+/// before loop_b; fusing interleaves them, so any such scalar dependency changes
+/// the observed values (a silent value miscompile, e.g. body_a reading an outer
+/// `s` that body_b overwrites). Conservative and name-based (recurses into
+/// nested scopes): if either body assigns a name the other body references,
+/// refuse. The early return keeps the common assign-free map/transform loops on
+/// the fast path.
+fn fusion_has_scalar_dependency(body_a: &[Node], body_b: &[Node]) -> bool {
+    let mut writes_a: FxHashSet<Ident> = FxHashSet::default();
+    collect_assign_targets(body_a, &mut writes_a);
+    let mut writes_b: FxHashSet<Ident> = FxHashSet::default();
+    collect_assign_targets(body_b, &mut writes_b);
+    if writes_a.is_empty() && writes_b.is_empty() {
+        return false; // neither body mutates a scalar -> no scalar dependency
+    }
+    // refs_x = every name body_x reads OR writes.
+    let mut refs_a: FxHashSet<Ident> = FxHashSet::default();
+    collect_var_reads(body_a, &mut refs_a);
+    refs_a.extend(writes_a.iter().cloned());
+    let mut refs_b: FxHashSet<Ident> = FxHashSet::default();
+    collect_var_reads(body_b, &mut refs_b);
+    refs_b.extend(writes_b.iter().cloned());
+    // A scalar written by one body and touched by the other is a cross-loop
+    // dependency the interleaving would violate.
+    !writes_a.is_disjoint(&refs_b) || !writes_b.is_disjoint(&refs_a)
+}
+
+fn body_has_fusable_pair(body: &[Node]) -> bool {
+    body.windows(2).any(|window| {
+        let (
+            Node::Loop {
+                var: var_a,
+                from: from_a,
+                to: to_a,
+                body: body_a,
+            },
+            Node::Loop {
+                var: var_b,
+                from: from_b,
+                to: to_b,
+                body: body_b,
+            },
+        ) = (&window[0], &window[1])
+        else {
+            return false;
+        };
+        pair_is_fusable(
+            &LoopRef {
+                var: var_a,
+                from: from_a,
+                to: to_a,
+                body: body_a,
+            },
+            &LoopRef {
+                var: var_b,
+                from: from_b,
+                to: to_b,
+                body: body_b,
+            },
+        )
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::test_fixtures::{count_loops, loop_over, loops_of, program, store_loop};
+    use super::*;
+    use crate::ir::{DataType, Expr, ExprNode, Node, NodeExtension};
+
+    // An opaque expression whose real buffer effect (it may read or write ANY
+    // buffer) is invisible to `collect_buffers_in_expr`, which summarises
+    // `Expr::Opaque(_)` as touching no buffers.
+    vyre_test_support::test_expr_extension! {
+        OpaqueReader,
+        kind: "test.fusion.opaque_buffer_reader",
+        identity: "opaque_reader",
+        result_type: Some(DataType::U32),
+        cse_safe: false,
+        fingerprint: 13,
+    }
+
+    // An opaque statement node whose real buffer effect is invisible to
+    // `collect_touched_buffers`, which summarises `Node::Opaque(_)` as
+    // touching no buffers.
+    vyre_test_support::test_node_extension! {
+        OpaqueWriter,
+        kind: "test.fusion.opaque_buffer_writer",
+        identity: "opaque_writer",
+        fingerprint: 14,
+    }
+
+    #[test]
+    fn does_not_fuse_when_a_body_holds_an_opaque_expr() {
+        // body_a's only explicit buffer is `a`, body_b's is `b`, so
+        // `buffers_disjoint` reports them disjoint  -  but body_a's stored
+        // value is an opaque expression that may read or write `b`. Fusing
+        // would interleave that unknowable access with body_b's writes to
+        // `b`, breaking a cross-loop dependency the disjointness proof cannot
+        // see. The pass must keep the two loops separate.
+        let entry = vec![
+            loop_over(
+                "i",
+                8,
+                vec![Node::store("a", Expr::var("i"), Expr::opaque(OpaqueReader))],
+            ),
+            store_loop("j", 8, "b", 2),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            !result.changed,
+            "an opaque expression's unknowable buffer effect must block fusion"
+        );
+        assert_eq!(
+            count_loops(result.program.entry()),
+            2,
+            "loops bracketing an opaque-valued store must not fuse"
+        );
+    }
+
+    #[test]
+    fn does_not_fuse_when_a_body_holds_an_opaque_node() {
+        // body_a is a single opaque node touching no buffer that
+        // `collect_touched_buffers` can see, so it reports `{}`  -  trivially
+        // disjoint from body_b's `{b}`. But the opaque node may write `b`;
+        // fusing would interleave that hidden write with body_b's stores.
+        let entry = vec![
+            loop_over("i", 8, vec![Node::opaque(OpaqueWriter)]),
+            store_loop("j", 8, "b", 2),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            !result.changed,
+            "an opaque node's unknowable buffer effect must block fusion"
+        );
+        assert_eq!(
+            count_loops(result.program.entry()),
+            2,
+            "a loop whose body is an opaque node must not fuse with its sibling"
+        );
+    }
+
+    #[test]
+    fn does_not_fuse_when_a_shuffle_lane_loads_the_siblings_buffer() {
+        // body_a stores to `a`, but the stored value is a subgroup shuffle
+        // whose LANE index is loaded from `b`. `collect_buffers_in_expr`
+        // elided `SubgroupShuffle.lane`, so it reported body_a touching only
+        // `{a}`  -  disjoint from body_b's `{b}`  -  and the loops fused. But the
+        // lane load reads `b`, which body_b writes; interleaving the two loops
+        // reorders that read across the writes. The collector must descend into
+        // the lane operand so the shared buffer blocks fusion.
+        let entry = vec![
+            loop_over(
+                "i",
+                8,
+                vec![Node::store(
+                    "a",
+                    Expr::var("i"),
+                    Expr::subgroup_shuffle(Expr::u32(5), Expr::load("b", Expr::var("i"))),
+                )],
+            ),
+            store_loop("j", 8, "b", 2),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            !result.changed,
+            "a buffer load hidden in a shuffle lane must block fusion"
+        );
+        assert_eq!(
+            count_loops(result.program.entry()),
+            2,
+            "loops sharing buffer `b` through a shuffle lane load must not fuse"
+        );
+    }
+
+    #[test]
+    fn does_not_fuse_when_a_shuffle_lane_reads_a_cross_loop_scalar() {
+        // The scalar `s` is written every iteration of loop_a and read by
+        // loop_b ONLY through a shuffle lane. `fusion_has_scalar_dependency`
+        // collects body_b's reads via collect_var_reads -> collect_vars_in_expr,
+        // which dropped `SubgroupShuffle.lane`; the read of `s` was therefore
+        // invisible and the loops fused. After fusing, body_b observes `s == j`
+        // each iteration instead of the value loop_a left behind  -  a silent
+        // value miscompile. The lane read must register as a cross-loop scalar
+        // dependency that blocks fusion.
+        let entry = vec![
+            Node::let_bind("s", Expr::u32(0)),
+            loop_over(
+                "i",
+                8,
+                vec![
+                    Node::assign("s", Expr::var("i")),
+                    Node::store("a", Expr::var("i"), Expr::var("s")),
+                ],
+            ),
+            loop_over(
+                "j",
+                8,
+                vec![Node::store(
+                    "b",
+                    Expr::var("j"),
+                    Expr::subgroup_shuffle(Expr::u32(5), Expr::var("s")),
+                )],
+            ),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            !result.changed,
+            "a scalar read hidden in a shuffle lane is a cross-loop dependency; the loops must not fuse"
+        );
+        assert_eq!(
+            count_loops(result.program.entry()),
+            2,
+            "loops with a shuffle-lane scalar dependency must stay separate"
+        );
+    }
+
+    #[test]
+    fn fuses_two_disjoint_buffer_loops_with_matching_bounds() {
+        let entry = vec![store_loop("i", 8, "a", 1), store_loop("j", 8, "b", 2)];
+        let result = LoopFusion::transform(program(entry));
+        assert!(result.changed);
+        assert_eq!(
+            count_loops(result.program.entry()),
+            1,
+            "two loops fused into one"
+        );
+    }
+
+    #[test]
+    fn does_not_fuse_when_bounds_differ() {
+        let entry = vec![store_loop("i", 8, "a", 1), store_loop("j", 16, "b", 2)];
+        let result = LoopFusion::transform(program(entry));
+        assert!(!result.changed);
+    }
+
+    #[test]
+    fn does_not_fuse_when_buffers_overlap() {
+        let entry = vec![store_loop("i", 8, "a", 1), store_loop("j", 8, "a", 2)];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            !result.changed,
+            "shared buffer blocks fusion under disjoint-only conservatism"
+        );
+    }
+
+    #[test]
+    fn does_not_fuse_when_loop_vars_match() {
+        // Two loops with the same var name would shadow each other in
+        // the fused body; the rename rule rewrites by var name, and a
+        // collision could change resolution. Refuse.
+        let entry = vec![store_loop("i", 8, "a", 1), store_loop("i", 8, "b", 2)];
+        let result = LoopFusion::transform(program(entry));
+        assert!(!result.changed, "same loop var name blocks fusion");
+    }
+
+    #[test]
+    fn renames_second_loop_var_in_fused_body() {
+        // Fused body: `Store("a", i, 1); Store("b", i_renamed_from_j, 2)`.
+        // The j-Var inside body_b becomes i.
+        let entry = vec![store_loop("i", 8, "a", 1), store_loop("j", 8, "b", 2)];
+        let result = LoopFusion::transform(program(entry));
+        assert!(result.changed);
+        // `loops_of` is the shared recursive `Node::Loop` finder, so this reads
+        // the fused loop wherever the pass placed it in the region.
+        let loops = loops_of(result.program.entry());
+        assert_eq!(
+            loops.len(),
+            1,
+            "the adjacent pair must have fused into one loop"
+        );
+        let Node::Loop { body: fused, .. } = loops[0] else {
+            panic!("Fix: loops_of yields only Node::Loop");
+        };
+        assert_eq!(fused.len(), 2);
+        if let Node::Store { index, .. } = &fused[1] {
+            assert_eq!(
+                index,
+                &Expr::var("i"),
+                "second store's index must be renamed to outer var"
+            );
+        } else {
+            // Invariant: fusion concatenates body_a then body_b verbatim
+            // (`fuse_in_body` extends the rebuilt body with both slices), so
+            // index 1 is body_b's only node, the `Store("b", j, 2)` built at
+            // the top of this test with `j` rewritten to the surviving loop
+            // var. Established by the pass, not by any type.
+            panic!("Fix: fusion concatenates body_b verbatim, so fused[1] must be body_b's Store");
+        }
+    }
+
+    #[test]
+    fn does_not_fuse_when_body_b_reads_a_let_bound_in_body_a() {
+        // body_a binds "tmp"; body_b reads "tmp"  -  fusing would
+        // change resolution because body_b has no access to body_a's
+        // scope across iterations.
+        let entry = vec![
+            loop_over(
+                "i",
+                8,
+                vec![
+                    Node::let_bind("tmp", Expr::u32(7)),
+                    Node::store("a", Expr::var("i"), Expr::var("tmp")),
+                ],
+            ),
+            loop_over(
+                "j",
+                8,
+                vec![Node::store("b", Expr::var("j"), Expr::var("tmp"))],
+            ),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(!result.changed, "shared name `tmp` blocks fusion");
+    }
+
+    #[test]
+    fn does_not_fuse_when_both_bodies_bind_same_local() {
+        // Both bodies bind `x` in their own loop scopes (valid pre-fusion).
+        // body_b does NOT read `x`, so the capture guard
+        // (body_a_let_names_collide_with_b) passes -- but fusing concatenates
+        // the two `let x` into one loop scope, a duplicate sibling binding the
+        // validator rejects (V032). Refuse. (Oracle-differential proof:
+        // tests/loop_fusion_binding_collision.rs.)
+        let entry = vec![
+            loop_over(
+                "i",
+                8,
+                vec![
+                    Node::let_bind("x", Expr::u32(1)),
+                    Node::store("a", Expr::var("i"), Expr::var("x")),
+                ],
+            ),
+            loop_over(
+                "j",
+                8,
+                // binds `x` but never reads it -> capture guard does not fire
+                vec![
+                    Node::let_bind("x", Expr::u32(2)),
+                    Node::store("b", Expr::var("j"), Expr::u32(9)),
+                ],
+            ),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            !result.changed,
+            "a local name bound by both bodies blocks fusion (duplicate sibling)"
+        );
+        assert_eq!(
+            count_loops(result.program.entry()),
+            2,
+            "both loops must survive unfused"
+        );
+    }
+
+    #[test]
+    fn fuses_when_bodies_bind_distinct_locals() {
+        // Distinct local names (`x` vs `y`) cannot collide, so the
+        // duplicate-binding guard must NOT block this fusion.
+        let entry = vec![
+            loop_over(
+                "i",
+                8,
+                vec![
+                    Node::let_bind("x", Expr::u32(1)),
+                    Node::store("a", Expr::var("i"), Expr::var("x")),
+                ],
+            ),
+            loop_over(
+                "j",
+                8,
+                vec![
+                    Node::let_bind("y", Expr::u32(2)),
+                    Node::store("b", Expr::var("j"), Expr::var("y")),
+                ],
+            ),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            result.changed,
+            "distinct local names must still allow fusion"
+        );
+        assert_eq!(
+            count_loops(result.program.entry()),
+            1,
+            "the two loops fuse into one"
+        );
+    }
+
+    #[test]
+    fn does_not_fuse_when_body_b_writes_a_scalar_body_a_reads() {
+        // body_a reads outer scalar `s`; body_b writes it via Assign. The
+        // original runs loop_a fully (observing s's pre-loop value) before
+        // loop_b; fusing interleaves the read and write, changing observed
+        // values -- a silent value miscompile. Refuse. (Oracle-differential
+        // proof: tests/loop_fusion_scalar_dependency.rs.)
+        let entry = vec![
+            Node::let_bind("s", Expr::u32(0)),
+            loop_over(
+                "i",
+                8,
+                vec![Node::store("a", Expr::var("i"), Expr::var("s"))],
+            ),
+            loop_over("j", 8, vec![Node::assign("s", Expr::var("j"))]),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            !result.changed,
+            "a cross-loop scalar read/write dependency blocks fusion"
+        );
+        assert_eq!(
+            count_loops(result.program.entry()),
+            2,
+            "both loops survive unfused"
+        );
+    }
+
+    #[test]
+    fn fuses_when_bodies_mutate_independent_scalars() {
+        // Each body mutates its OWN distinct outer scalar (acc1 vs acc2); there
+        // is no cross-loop dependency, so the scalar-dependency guard must NOT
+        // block this fusion.
+        let entry = vec![
+            Node::let_bind("acc1", Expr::u32(0)),
+            Node::let_bind("acc2", Expr::u32(0)),
+            loop_over(
+                "i",
+                8,
+                vec![
+                    Node::assign("acc1", Expr::add(Expr::var("acc1"), Expr::var("i"))),
+                    Node::store("a", Expr::var("i"), Expr::var("acc1")),
+                ],
+            ),
+            loop_over(
+                "j",
+                8,
+                vec![
+                    Node::assign("acc2", Expr::add(Expr::var("acc2"), Expr::var("j"))),
+                    Node::store("b", Expr::var("j"), Expr::var("acc2")),
+                ],
+            ),
+        ];
+        let result = LoopFusion::transform(program(entry));
+        assert!(
+            result.changed,
+            "independent scalar accumulators must still allow fusion"
+        );
+        assert_eq!(
+            count_loops(result.program.entry()),
+            1,
+            "the two loops fuse into one"
+        );
+    }
+
+    #[test]
+    fn analyze_skips_when_no_fusable_pair() {
+        let entry = vec![store_loop("i", 8, "a", 1)];
+        assert_eq!(
+            crate::optimizer::ProgramPass::analyze(&LoopFusion, &program(entry)),
+            PassAnalysis::SKIP
+        );
+    }
+
+    #[test]
+    fn analyze_runs_when_fusable_pair_exists() {
+        let entry = vec![store_loop("i", 8, "a", 1), store_loop("j", 8, "b", 2)];
+        assert_eq!(
+            crate::optimizer::ProgramPass::analyze(&LoopFusion, &program(entry)),
+            PassAnalysis::RUN
+        );
+    }
+}

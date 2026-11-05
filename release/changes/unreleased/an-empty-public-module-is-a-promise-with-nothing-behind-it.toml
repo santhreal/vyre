@@ -1,0 +1,2 @@
+category = "Removed"
+text = "Thirty-four public module paths that exported nothing left the stable surface. `vyre_reference::dual_impls` carried impl-only and literally empty `reference` modules, `vyre_driver_cuda::allocations` re-exported a module whose every member is crate-private, and `vyre_driver_wgpu::ext`, `vyre_foundation::optimizer::dsl` and two `vyre_libs::graph::dispatch` pipelines published no path of their own. The `public-api-snapshot` gate now reports a `pub mod` no listed item lives under."

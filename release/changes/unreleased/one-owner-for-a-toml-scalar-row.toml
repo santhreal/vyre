@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A gate that reads a string field out of a TOML row now calls xtask::toml_text::string_field. The CLI documentation generator and the documentation checker had the same row-to-scalar closure."

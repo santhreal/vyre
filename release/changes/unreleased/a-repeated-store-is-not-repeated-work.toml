@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The string bitmap scatter release workload declared sixteen output sets and stored the same ballot word into each of them, then divided the launch by sixteen. Repeating a store does not repeat the loads or the ballot, so the divisor credited work the launch never performed. The program now writes one record set and the batch depth comes from the resident pool, where every row re-runs the whole program over its own resident inputs."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "An external schema field is `ExternalField`, declaring the generic schema member kind alongside its raw value, and the schema traversal hands a visitor the decoded `FieldValue` as well as the declaration."

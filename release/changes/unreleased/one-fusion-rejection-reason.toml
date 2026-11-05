@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre_foundation::execution_plan::fusion::FusionRejectionReason` is the one definition of why a fusion is refused, and it is matchable exhaustively across crates. The megakernel carried a second copy of the same eleven variants and the same `MKL` diagnostic codes, and a classifier outside the declaring crate now fails to compile until a new reason is filed rather than falling into a wildcard arm."

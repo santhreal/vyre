@@ -1,0 +1,2 @@
+category = "Added"
+text = "vyre-libs-graph publishes encode_node, decode_node, dense_to_encoded, and encoded_to_dense from graph::exploded. The pair converts between the packed (proc, block, fact) node id and the dense IR index, and consumers outside the crate read both spaces."

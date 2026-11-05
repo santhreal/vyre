@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The wgpu backend builds one Vulkan instance for the process instead of one per acquisition, so repeated backend acquisition no longer exhausts the static TLS surplus the GPU driver ICD needs and loses the discrete adapter partway through a run."

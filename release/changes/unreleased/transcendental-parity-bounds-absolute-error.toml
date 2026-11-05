@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The wgpu transcendental parity contract accepts a device result that is within either the ulp budget or the absolute error the device API states near a zero crossing. Ulp width collapses toward a root, so a conforming `cos` landed 218 ulp from the oracle at an absolute error of 8.1e-7 and failed a bound no implementation could meet."

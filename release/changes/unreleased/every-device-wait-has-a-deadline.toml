@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Device waits are bounded. Stream and event synchronization poll the CUDA driver with a spin window and capped sleep instead of blocking without a deadline, and a conformance compile, dispatch or session drop that outlives its step deadline returns an error naming the operation, the backend and the ceiling. VYRE_CUDA_DEVICE_WAIT_TIMEOUT_SECS sets the driver-level ceiling, which defaults to 300 seconds."

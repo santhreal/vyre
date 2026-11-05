@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Strength reduction folds a chained shift whose counts reach the register width to zero again. It had been changed to leave both shifts standing, on the reasoning that a right shift on a signed operand replicates the sign bit, but V094 rejects a shift whose operands are not `u32`, so that operand cannot reach the pass. The fused shift is not an alternative: the target text masks a shift count with `& 31`, so emitting `x << 32` would emit `x`."

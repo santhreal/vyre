@@ -1,0 +1,2 @@
+category = "Added"
+text = "The neural library now provides gated RMSNorm with float32 accumulation, source-dtype rounding, learned scaling, float32 SiLU gating, and exact last-dimension row isolation. The reference interpreter now executes canonical F16 and BF16 loads, stores, and F32 conversions with round-to-nearest-even semantics while preserving raw element-byte APIs."

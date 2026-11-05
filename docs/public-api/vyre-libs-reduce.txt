@@ -1,0 +1,154 @@
+impl vyre_libs_reduce::reduce::workgroup_scan::BlockScanPass<'_>
+impl vyre_libs_reduce::reduce::workgroup_tree::WorkgroupFold
+impl<'a> vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionBuilder<'a>
+pub const fn vyre_libs_reduce::reduce::multi_block_prefix_scan::multi_block_prefix_scan_requirements() -> vyre_foundation::geometry::GeometryRequirements
+pub const fn vyre_libs_reduce::reduce::workgroup_tree::WorkgroupFold::laws(self) -> &'static [&'static str]
+pub const fn vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionBuilder<'a>::new(op_id: &'static str, values: &'a str, out: &'a str, count: u32, tile: u32, dtype: vyre_spec::data_type::DataType, fold: vyre_libs_reduce::reduce::workgroup_tree::WorkgroupFold) -> Self
+pub const vyre_libs_reduce::reduce::all::OP_ID: &str
+pub const vyre_libs_reduce::reduce::any::OP_ID: &str
+pub const vyre_libs_reduce::reduce::count::OP_ID: &str
+pub const vyre_libs_reduce::reduce::count_non_zero::OP_ID: &str
+pub const vyre_libs_reduce::reduce::gather::OP_ID: &str
+pub const vyre_libs_reduce::reduce::grid_stride_tree::SUM_U32_OP_ID: &str
+pub const vyre_libs_reduce::reduce::histogram::OP_ID: &str
+pub const vyre_libs_reduce::reduce::max::OP_ID: &str
+pub const vyre_libs_reduce::reduce::min::OP_ID: &str
+pub const vyre_libs_reduce::reduce::multi_block_prefix_scan::OP_ID_EXCLUSIVE_SUM: &str
+pub const vyre_libs_reduce::reduce::multi_block_prefix_scan::OP_ID_INCLUSIVE_SUM: &str
+pub const vyre_libs_reduce::reduce::multi_block_prefix_scan::SOFT_MAX_N: u32
+pub const vyre_libs_reduce::reduce::radix_sort::OP_ID: &str
+pub const vyre_libs_reduce::reduce::range_counts::RANGE_COUNTS_U32_OP_ID: &str
+pub const vyre_libs_reduce::reduce::scatter::OP_ID: &str
+pub const vyre_libs_reduce::reduce::segment_reduce::OP_ID: &str
+pub const vyre_libs_reduce::reduce::sum::OP_ID: &str
+pub const vyre_libs_reduce::reduce::workgroup_any::WORKGROUP_ANY_U32_OP_ID: &str
+pub const vyre_libs_reduce::reduce::workgroup_tree::MAX_F32_OP_ID: &str
+pub const vyre_libs_reduce::reduce::workgroup_tree::MAX_U32_OP_ID: &str
+pub const vyre_libs_reduce::reduce::workgroup_tree::MIN_F32_OP_ID: &str
+pub const vyre_libs_reduce::reduce::workgroup_tree::MIN_U32_OP_ID: &str
+pub const vyre_libs_reduce::reduce::workgroup_tree::SUM_F32_OP_ID: &str
+pub const vyre_libs_reduce::reduce::workgroup_tree::SUM_U32_OP_ID: &str
+pub enum vyre_libs_reduce::reduce::reduction_metrics::ReductionMetric
+pub enum vyre_libs_reduce::reduce::workgroup_tree::WorkgroupFold
+pub enum vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionScope
+pub fn vyre_libs_reduce::link_anchor()
+pub fn vyre_libs_reduce::reduce::all::reduce_all(values: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::any::reduce_any(values: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::atomic_scalar::atomic_grid_stride_u32<V, A>(inputs: &[&str], out: &str, count: u32, identity: u32, value: V, atomic: A, op_id: &'static str) -> vyre_foundation::ir_inner::model::program::definition::Program where V: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr, A: core::ops::function::Fn(&str, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_reduce::reduce::count::reduce_count(bitset: &str, out: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::count_non_zero::reduce_count_non_zero(values: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::gather::gather(src: &str, indices: &str, dst: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::grid_stride_tree::grid_stride_tree_sum_u32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::grid_stride_tree::grid_stride_tree_sum_u32_blocks(count: u32, tile: u32) -> u32
+pub fn vyre_libs_reduce::reduce::histogram::histogram(input: &str, output: &str, count: u32, num_bins: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::histogram::histogram_atomic_scatter(input: &str, output: &str, count: u32, num_bins: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::max::reduce_max(values: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::min::reduce_min(values: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32_with_block_lanes(input: &str, output: &str, n: u32, block_lanes: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_exclusive_u32_with_geometry(input: &str, output: &str, n: u32, geometry: &vyre_foundation::geometry::LaunchGeometry) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32(input: &str, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_block_lanes(input: &str, output: &str, n: u32, block_lanes: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32_with_geometry(input: &str, output: &str, n: u32, geometry: &vyre_foundation::geometry::LaunchGeometry) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::multi_block_prefix_scan::pass_a_local_scan(input: &str, partials: &str, block_totals: &str, n: u32, num_blocks: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::multi_block_prefix_scan::pass_a_local_scan_with_block_lanes(input: &str, partials: &str, block_totals: &str, n: u32, num_blocks: u32, block_lanes: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::multi_block_prefix_scan::pass_c_broadcast_offsets(partials: &str, block_totals_scanned: &str, output: &str, n: u32, num_blocks: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::multi_block_prefix_scan::pass_c_broadcast_offsets_with_block_lanes(partials: &str, block_totals_scanned: &str, output: &str, n: u32, num_blocks: u32, block_lanes: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::radix_sort::radix_sort(input: &str, output: &str, count: u32, bits: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::range_counts::range_counts_u32(histogram: &str, out: &str, start: u32, end: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::range_counts::range_counts_u32_body(histogram: &str, out_var: &str, start: u32, end: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_reduce::reduce::range_counts::range_counts_u32_child(parent_op_id: &str, histogram: &str, out_var: &str, start: u32, end: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_reduce::reduce::reduction_metrics::histogram_atomic_scatter_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, input: &[u32], num_bins: u32) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_reduce::reduce::reduction_metrics::reduce_all_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, values: &[u32]) -> core::result::Result<bool, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_reduce::reduce::reduction_metrics::reduce_any_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, values: &[u32]) -> core::result::Result<bool, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_reduce::reduce::reduction_metrics::reduce_count_non_zero_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, values: &[u32]) -> core::result::Result<u32, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_reduce::reduce::reduction_metrics::reduce_max_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, values: &[u32]) -> core::result::Result<u32, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_reduce::reduce::reduction_metrics::reduce_metric_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, metric: vyre_libs_reduce::reduce::reduction_metrics::ReductionMetric, values: &[u32]) -> core::result::Result<u32, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_reduce::reduce::reduction_metrics::reduce_metric_via_with_scratch(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, metric: vyre_libs_reduce::reduce::reduction_metrics::ReductionMetric, values: &[u32], scratch: &mut vyre_libs_reduce::reduce::reduction_metrics::ReductionMetricsGpuScratch) -> core::result::Result<u32, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_reduce::reduce::reduction_metrics::reduce_min_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, values: &[u32]) -> core::result::Result<u32, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_reduce::reduce::reduction_metrics::reduce_sum_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, values: &[u32]) -> core::result::Result<u32, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_reduce::reduce::reduction_metrics::segment_reduce_sum_via(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, input: &[u32], segment_offsets: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_reduce::reduce::reduction_metrics::segment_reduce_sum_via_with_scratch_into(executor: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, input: &[u32], segment_offsets: &[u32], scratch: &mut vyre_libs_reduce::reduce::reduction_metrics::ReductionMetricsGpuScratch, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_reduce::reduce::reduction_tree::tiled_dot(generator: &'static str, lhs: &str, rhs: &str, output: &str, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::reduction_tree::tiled_mean(generator: &'static str, input: &str, output: &str, n: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::reduction_tree::tiled_softmax(generator: &'static str, input: &str, output: &str, n: u32, workgroup_size: [u32; 3]) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::scatter::scatter(src: &str, indices: &str, dst: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::segment_reduce::segment_reduce_sum(input: &str, segment_offsets: &str, output: &str, input_count: u32, num_segments: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::sum::reduce_sum(values: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::workgroup_any::workgroup_any_u32(values: &str, out: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::workgroup_any::workgroup_any_u32_body(values: &str, out_var: &str, count: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_reduce::reduce::workgroup_any::workgroup_any_u32_body_prefixed(values: &str, out_var: &str, count: u32, iter_var: &str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_reduce::reduce::workgroup_any::workgroup_any_u32_child(parent_op_id: &str, values: &str, out_var: &str, count: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_reduce::reduce::workgroup_any::workgroup_any_u32_child_prefixed(parent_op_id: &str, values: &str, out_var: &str, count: u32, iter_var: &str) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_reduce::reduce::workgroup_scan::BlockScanPass<'_>::nodes(&self, stage: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_reduce::reduce::workgroup_scan::blelloch_inclusive_sum_nodes(scratch_a: &str, scratch_b: &str, lane: &vyre_foundation::ir_inner::model::generated::Expr, lanes: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_reduce::reduce::workgroup_tree::WorkgroupFold::combine(self, left: vyre_foundation::ir_inner::model::generated::Expr, right: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_reduce::reduce::workgroup_tree::WorkgroupFold::identity(self, dtype: &vyre_spec::data_type::DataType) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_reduce::reduce::workgroup_tree::WorkgroupFold::tree(self, tile: u32, scratch: &'static str) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionBuilder<'a>::build(self) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::workgroup_tree::max_f32_child(parent_op_id: &str, tile: u32, scratch: &'static str, scope: vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionScope) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_reduce::reduce::workgroup_tree::max_u32_child(parent_op_id: &str, tile: u32, scratch: &'static str, scope: vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionScope) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_reduce::reduce::workgroup_tree::min_f32_child(parent_op_id: &str, tile: u32, scratch: &'static str, scope: vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionScope) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_reduce::reduce::workgroup_tree::min_u32_child(parent_op_id: &str, tile: u32, scratch: &'static str, scope: vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionScope) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_reduce::reduce::workgroup_tree::sum_f32_child(parent_op_id: &str, tile: u32, scratch: &'static str, scope: vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionScope) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_reduce::reduce::workgroup_tree::sum_u32_child(parent_op_id: &str, tile: u32, scratch: &'static str, scope: vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionScope) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_reduce::reduce::workgroup_tree::workgroup_max_f32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::workgroup_tree::workgroup_max_u32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::workgroup_tree::workgroup_min_f32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::workgroup_tree::workgroup_min_u32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::workgroup_tree::workgroup_reduction_child<F>(op_id: &'static str, parent_op_id: &str, tile: u32, scratch: &'static str, scope: vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionScope, combine: F) -> vyre_foundation::ir_inner::model::generated::Node where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_reduce::reduce::workgroup_tree::workgroup_sum_f32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_reduce::reduce::workgroup_tree::workgroup_sum_u32(values: &str, out: &str, count: u32, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub mod vyre_libs_reduce
+pub mod vyre_libs_reduce::reduce
+pub mod vyre_libs_reduce::reduce::all
+pub mod vyre_libs_reduce::reduce::any
+pub mod vyre_libs_reduce::reduce::atomic_scalar
+pub mod vyre_libs_reduce::reduce::count
+pub mod vyre_libs_reduce::reduce::count_non_zero
+pub mod vyre_libs_reduce::reduce::gather
+pub mod vyre_libs_reduce::reduce::grid_stride_tree
+pub mod vyre_libs_reduce::reduce::histogram
+pub mod vyre_libs_reduce::reduce::max
+pub mod vyre_libs_reduce::reduce::min
+pub mod vyre_libs_reduce::reduce::multi_block_prefix_scan
+pub mod vyre_libs_reduce::reduce::radix_sort
+pub mod vyre_libs_reduce::reduce::range_counts
+pub mod vyre_libs_reduce::reduce::reduction_metrics
+pub mod vyre_libs_reduce::reduce::reduction_tree
+pub mod vyre_libs_reduce::reduce::scatter
+pub mod vyre_libs_reduce::reduce::segment_reduce
+pub mod vyre_libs_reduce::reduce::sum
+pub mod vyre_libs_reduce::reduce::workgroup_any
+pub mod vyre_libs_reduce::reduce::workgroup_scan
+pub mod vyre_libs_reduce::reduce::workgroup_tree
+pub struct vyre_libs_reduce::reduce::reduction_metrics::ReductionMetricsGpuScratch
+pub struct vyre_libs_reduce::reduce::workgroup_scan::BlockScanPass<'a>
+pub struct vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionBuilder<'a>
+pub vyre_libs_reduce::reduce::reduction_metrics::ReductionMetric::All
+pub vyre_libs_reduce::reduce::reduction_metrics::ReductionMetric::Any
+pub vyre_libs_reduce::reduce::reduction_metrics::ReductionMetric::CountNonZero
+pub vyre_libs_reduce::reduce::reduction_metrics::ReductionMetric::Max
+pub vyre_libs_reduce::reduce::reduction_metrics::ReductionMetric::Min
+pub vyre_libs_reduce::reduce::reduction_metrics::ReductionMetric::Sum
+pub vyre_libs_reduce::reduce::workgroup_scan::BlockScanPass::block: &'a str
+pub vyre_libs_reduce::reduce::workgroup_scan::BlockScanPass::block_lanes: u32
+pub vyre_libs_reduce::reduce::workgroup_scan::BlockScanPass::block_totals: &'a str
+pub vyre_libs_reduce::reduce::workgroup_scan::BlockScanPass::global: &'a str
+pub vyre_libs_reduce::reduce::workgroup_scan::BlockScanPass::in_range: u32
+pub vyre_libs_reduce::reduce::workgroup_scan::BlockScanPass::lane: &'a str
+pub vyre_libs_reduce::reduce::workgroup_scan::BlockScanPass::partials: &'a str
+pub vyre_libs_reduce::reduce::workgroup_scan::BlockScanPass::scratch_a: &'a str
+pub vyre_libs_reduce::reduce::workgroup_scan::BlockScanPass::scratch_b: &'a str
+pub vyre_libs_reduce::reduce::workgroup_tree::WorkgroupFold::Max
+pub vyre_libs_reduce::reduce::workgroup_tree::WorkgroupFold::Min
+pub vyre_libs_reduce::reduce::workgroup_tree::WorkgroupFold::Sum
+pub vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionBuilder::count: u32
+pub vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionBuilder::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionBuilder::fold: vyre_libs_reduce::reduce::workgroup_tree::WorkgroupFold
+pub vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionBuilder::op_id: &'static str
+pub vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionBuilder::out: &'a str
+pub vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionBuilder::tile: u32
+pub vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionBuilder::values: &'a str
+pub vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionScope::EveryWorkgroup
+pub vyre_libs_reduce::reduce::workgroup_tree::WorkgroupReductionScope::FirstWorkgroup

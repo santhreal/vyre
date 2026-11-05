@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The cpu-ref backend reports whole-grid synchronization. The interpreter already runs the whole grid through one inter-fence segment before the next, and reporting otherwise cut every fenced program into segments a one-shot host submission cannot join."

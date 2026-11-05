@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A CUDA dispatch's timing events now bracket only the stream work: the kernel function resolve, the module-globals lease and the grid-barrier counter reset are enqueued outside the pair, so `device_ns` no longer reports host driver time as device time. The one-million-element grid-stride tree reduction reported 43744 ns of device time for a 7.2 us kernel and now reports 9216 to 17408 ns."

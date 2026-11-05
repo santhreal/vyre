@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The workgroup Blelloch sweep now ends on a barrier, and its final store is bounded by the lane count. Callers read a slot the sweep wrote from another lane: `frontier_word_block_offsets_single_workgroup` reads `scratch_a[lane - 1]` on the statement after the sweep returns, so a lane could observe its predecessor's slot before that lane's inclusive add landed and take a block offset short by the previous block's own count. Publication is now the sweep's contract rather than something each of its five call sites has to remember."

@@ -1,0 +1,41 @@
+pub const vyre_libs_fixpoint::fixpoint::bitset_fixpoint::NAME_CHANGED_FLAG: &str
+pub const vyre_libs_fixpoint::fixpoint::bitset_fixpoint::NAME_WARM_SEED: &str
+pub const vyre_libs_fixpoint::fixpoint::bitset_fixpoint::OP_ID: &str
+pub const vyre_libs_fixpoint::fixpoint::bitset_fixpoint::OP_ID_WARM_START: &str
+pub const vyre_libs_fixpoint::fixpoint::persistent_fixpoint::OP_ID: &str
+pub const vyre_libs_fixpoint::fixpoint::persistent_fixpoint::OP_ID_GRID: &str
+pub const vyre_libs_fixpoint::fixpoint::persistent_fixpoint::PERSISTENT_FIXPOINT_WORKGROUP_SIZE: [u32; 3]
+pub fn vyre_libs_fixpoint::fixpoint::bitset_fixpoint::bitset_fixpoint(current: &str, next: &str, changed: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_fixpoint::fixpoint::bitset_fixpoint::bitset_fixpoint_warm_start(current: &str, next: &str, changed: &str, seed: &str, words: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_fixpoint::fixpoint::persistent_fixpoint::count_grid_sync(nodes: &[vyre_foundation::ir_inner::model::generated::Node]) -> usize
+pub fn vyre_libs_fixpoint::fixpoint::persistent_fixpoint::declared_dispatch_span(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> u32
+pub fn vyre_libs_fixpoint::fixpoint::persistent_fixpoint::declared_words(program: &vyre_foundation::ir_inner::model::program::definition::Program, buffer: &str) -> u32
+pub fn vyre_libs_fixpoint::fixpoint::persistent_fixpoint::fixpoint_route(dispatch_span: u32, max_iterations: u32) -> vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointRoute
+pub fn vyre_libs_fixpoint::fixpoint::persistent_fixpoint::grid_sync_barrier() -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_fixpoint::fixpoint::persistent_fixpoint::persistent_fixpoint(transfer_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, current: &str, next: &str, changed: &str, words: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_fixpoint::fixpoint::persistent_fixpoint::persistent_fixpoint_grid(transfer_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, current: &str, next: &str, changed: &str, words: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_fixpoint::fixpoint::persistent_fixpoint::required_workgroups(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> u32
+pub fn vyre_libs_fixpoint::fixpoint::persistent_fixpoint::routed_persistent_fixpoint(transfer_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, state: vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointState<'_>, dispatch_span: u32) -> (vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointRoute)
+pub fn vyre_libs_fixpoint::fixpoint::routing_contract::assert_routes_on_dispatch_span(op: &vyre_libs_fixpoint::fixpoint::routing_contract::RoutedFixpointOp<'_>)
+pub fn vyre_libs_fixpoint::fixpoint::routing_contract::bare_grid_harness(current: &str, next: &str, changed: &str, words: u32, max_iterations: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_fixpoint::link_anchor()
+pub mod vyre_libs_fixpoint
+pub mod vyre_libs_fixpoint::fixpoint
+pub mod vyre_libs_fixpoint::fixpoint::bitset_fixpoint
+pub mod vyre_libs_fixpoint::fixpoint::persistent_fixpoint
+pub mod vyre_libs_fixpoint::fixpoint::routing_contract
+pub struct vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointRoute
+pub struct vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointState<'a>
+pub struct vyre_libs_fixpoint::fixpoint::routing_contract::RoutedFixpointOp<'a>
+pub vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointRoute::changed_words: u32
+pub vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointRoute::needs_grid_sync: bool
+pub vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointState::changed: &'a str
+pub vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointState::current: &'a str
+pub vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointState::max_iterations: u32
+pub vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointState::next: &'a str
+pub vyre_libs_fixpoint::fixpoint::persistent_fixpoint::FixpointState::words: u32
+pub vyre_libs_fixpoint::fixpoint::routing_contract::RoutedFixpointOp::at_one_workgroup: &'a dyn core::ops::function::Fn(u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_libs_fixpoint::fixpoint::routing_contract::RoutedFixpointOp::changed: &'a str
+pub vyre_libs_fixpoint::fixpoint::routing_contract::RoutedFixpointOp::grid_harness: &'a dyn core::ops::function::Fn(u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_libs_fixpoint::fixpoint::routing_contract::RoutedFixpointOp::name: &'a str
+pub vyre_libs_fixpoint::fixpoint::routing_contract::RoutedFixpointOp::past_one_workgroup: &'a dyn core::ops::function::Fn(u32) -> vyre_foundation::ir_inner::model::program::definition::Program

@@ -1,0 +1,2 @@
+category = "Removed"
+text = "One NFA transition-table layout remains. `vyre-libs::scan::nfa::build_transition_table` and `subgroup_nfa::nfa_step` both use the state-major `[num_states x 256 x LANES]` shape indexed `src * 256 * LANES + byte * LANES + dst_lane`. The transposed `build_transition_table_lane_major` packer, its fallible counterpart, the `bench` feature and the `scan::nfa::bench` module that was its only non-test consumer are gone."

@@ -1,0 +1,12 @@
+category = "Fixed"
+text = """
+`label::resolve_family` asserted `entry_op_id == Some(OP_ID)`, which no program \
+this builder produces can satisfy: `Program::wrapped` clears that field, and \
+only the builders that call `with_entry_op_id` carry one. The test now asserts \
+the contract that is actually observable, the region tree, so it goes red if \
+the op stops composing the shared `nodeset_filter` skeleton under its own \
+generator. Five dead `#[cfg(test)]` re-exports went with it: `toposort_csr`, \
+`toposort_csr_into`, `reference_all_reachable`, `reference_reachable_set` and \
+`reference_topo_order` named items no reader imported, because the contract \
+suite defines its own.
+"""

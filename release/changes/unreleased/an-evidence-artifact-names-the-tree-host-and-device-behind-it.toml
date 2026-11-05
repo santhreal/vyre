@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every artifact under release/evidence carries one provenance record naming the source tree, the host and the devices that took part in it. The record is produced in one place: the generator supplies only what took part in the measurement, and the tree and host facts are read from the run, so a generator cannot state them wrongly or leave them out. The six benchmark writers that put evidence on disk through the plain document writer now go through the recording writer, and the document writer refuses an evidence path."

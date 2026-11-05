@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`structure_gate::workspace_root` resolves the checkout from the directory the process stands in rather than answering with the first checkout that asked. The result is memoized per working directory, which keeps the ancestor scan to one walk per directory over a network mount without freezing the answer for the process."

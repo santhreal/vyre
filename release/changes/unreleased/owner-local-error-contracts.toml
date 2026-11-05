@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Foundation now exposes IR-specific `IrError` and `IrResult` contracts instead of a cross-domain error sink. Reference interpretation, backend execution, WGPU device selection, and runtime framing return owner-local typed failures."

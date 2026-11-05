@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Cooperative matrix tiling, contraction buffer rosters and tensor element counts each resolve to a single builder owner, and `MatrixShape` is exported from `vyre-libs-builder` instead of `vyre-libs-math`."

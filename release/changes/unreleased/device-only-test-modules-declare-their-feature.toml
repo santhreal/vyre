@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Test modules and imports that only exist for device tests carry the device-tests gate, so a default-feature build emits no unused-import warning."

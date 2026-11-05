@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`xtask <gate> --help` states what each gate checks for the 89 gates whose help line read `Enforce <gate> contracts`, `cuda-parity`, `spirv-parity` and `metal-parity` document `--device`, `--validate`, `--host` and `--remote-root`, and a descriptor with the placeholder help line fails registry validation."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A failed benchmark's captured output has its host root stripped before it is trimmed to the blocker's byte bound, not after. Trimming first could land inside an absolute path a child had echoed, leaving a fragment that no longer matched the root's own spelling, and that fragment was written verbatim into released benchmark evidence."

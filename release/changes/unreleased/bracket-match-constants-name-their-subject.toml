@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The bracket matching kind constants published by vyre-primitives::matching are BRACKET_KIND_OPEN, BRACKET_KIND_CLOSE, BRACKET_KIND_OTHER and BRACKET_MATCH_NONE, and the CPU oracle is bracket_match_cpu_ref / bracket_match_cpu_ref_into under its own name rather than an aliased cpu_ref."

@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`vyre_driver::extraction_cost` and `vyre_driver::{extract_best_for_device, extract_best_for_devices, DeviceExtraction, ExtractionDevice}` are deleted. They scaled e-graph extraction costs by device capability bits inside a driver, which is a second cost model, and no production path reached them."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`MapResult` has one definition. `vyre-driver-wgpu` spelled `Result<(), wgpu::BufferAsyncError>` three times: the public alias in the readback ring plus a private copy in the readback and timestamp recorders, one of which imported the public alias in the same file it redefined. Both recorders use the published alias."

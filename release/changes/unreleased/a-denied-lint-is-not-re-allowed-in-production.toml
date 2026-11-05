@@ -1,0 +1,2 @@
+category = "Added"
+text = "Gate `lint-denied-override` reads the denied levels out of `[workspace.lints.rust]` at run time and reports any production `allow` or `warn` of one, and any `expect` of one without a reason, at any depth below a crate root."

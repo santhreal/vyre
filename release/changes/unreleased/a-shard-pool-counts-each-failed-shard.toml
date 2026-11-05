@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The sharded release conformance run waits for one worker at a time, so a clean run exits zero and a failed shard is counted once."

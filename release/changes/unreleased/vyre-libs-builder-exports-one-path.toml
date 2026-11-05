@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-libs` exports its builders under one path each. The crate root glob re-exported everything `vyre-libs-builder`'s `builder` and registration signature modules publish, giving every item two public paths."

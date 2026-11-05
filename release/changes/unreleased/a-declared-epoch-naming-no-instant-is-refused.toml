@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A `SOURCE_DATE_EPOCH` that names no representable instant is refused instead of rendering a timestamp the format has no room for."

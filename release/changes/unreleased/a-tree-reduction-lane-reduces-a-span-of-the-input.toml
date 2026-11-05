@@ -1,0 +1,2 @@
+category = "Changed"
+text = "One lane of `grid_stride_tree_sum_u32` pass 1 now reduces 32 elements instead of one, so the workgroup tree runs once per span of the input rather than once per tile: the reduction measures 27296 ns at one element per lane and 7776 ns at thirty-two over one million u32 at a 1024-wide tile on an RTX 3080 Ti."

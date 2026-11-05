@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The `intern` feature of `vyre-libs` now ships the CHD perfect hash it documents. The module was gated on `cfg(test)`, so enabling the feature compiled an empty module and the public API snapshot recorded `pub mod vyre_libs::intern` with no members."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Two coverage gates that derive their member set from source are declared in `docs/testing/STRUCTURAL_GATES.toml`: the resident queue materializer variant scan and the published quantized entry-point scan. Each asserts the absence of a case or a row, which no execution of the covered code can witness."

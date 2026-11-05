@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The graph single-source contracts resolve the graph domain in vyre-libs-graph, the crate that owns it."

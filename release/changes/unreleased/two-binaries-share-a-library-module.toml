@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`rule_tree` is a module of the xtask library. Two binaries each declared it with a `path` attribute pointing into `src/bin/`, which compiled the same layout rules twice and put a shared module in the directory reserved for binary roots. Both binaries now use `xtask::rule_tree`."

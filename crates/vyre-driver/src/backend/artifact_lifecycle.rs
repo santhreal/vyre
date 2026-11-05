@@ -1,0 +1,234 @@
+use std::collections::BTreeMap;
+
+use vyre_megakernel::measure::DeviceState;
+use vyre_megakernel::{
+    Artifact, ArtifactValueId, Digest, EmittedResources, TargetPayload, TargetPayloadFormat,
+    TargetProfile,
+};
+
+use super::BackendError;
+
+/// Immutable identity of one acquired execution device generation.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct DeviceIdentity {
+    /// Stable registered backend identifier.
+    pub backend: &'static str,
+    /// Backend-local physical or logical device identifier.
+    pub device: String,
+    /// Monotonic generation that changes after device loss or reacquisition.
+    pub generation: u64,
+}
+
+/// Acquired device identity, target compatibility, and health.
+pub trait Device: Send + Sync {
+    /// Immutable identity for this acquired generation.
+    fn identity(&self) -> &DeviceIdentity;
+    /// Exact target payload representation admitted by this device.
+    fn target_format(&self) -> &TargetPayloadFormat;
+    /// Exact immutable compilation profile admitted by this device.
+    fn target_profile(&self) -> &TargetProfile;
+    /// Whether new materialization and submission are currently allowed.
+    fn is_healthy(&self) -> bool;
+}
+
+/// Host or resident bytes bound to one canonical artifact value.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BoundResource {
+    /// Caller-owned bytes uploaded for this submission.
+    Host(Vec<u8>),
+    /// Backend-resident resource handle.
+    Resident(super::Resource),
+}
+
+/// Complete typed bindings for one immutable artifact instance.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BindingSet {
+    artifact: Digest,
+    resources: BTreeMap<ArtifactValueId, BoundResource>,
+}
+
+impl BindingSet {
+    /// Construct an empty binding set tied to one artifact identity.
+    #[must_use]
+    pub const fn new(artifact: Digest) -> Self {
+        Self {
+            artifact,
+            resources: BTreeMap::new(),
+        }
+    }
+
+    /// Artifact identity these bindings are valid for.
+    #[must_use]
+    pub const fn artifact(&self) -> Digest {
+        self.artifact
+    }
+
+    /// Bind or replace one canonical value.
+    pub fn insert(&mut self, value: ArtifactValueId, resource: BoundResource) {
+        self.resources.insert(value, resource);
+    }
+
+    /// Exact canonical value bindings.
+    #[must_use]
+    pub const fn resources(&self) -> &BTreeMap<ArtifactValueId, BoundResource> {
+        &self.resources
+    }
+}
+
+/// Completed typed submission result.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Completion {
+    /// Artifact identity executed by this submission.
+    pub artifact: Digest,
+    /// Canonical output values keyed by artifact ABI identity.
+    pub outputs: BTreeMap<ArtifactValueId, Vec<u8>>,
+    /// Updated retained values keyed by artifact ABI identity.
+    pub retained: BTreeMap<ArtifactValueId, Vec<u8>>,
+    /// Backend-measured device duration when available.
+    pub device_ns: Option<u64>,
+}
+
+/// One in-flight submission against an immutable artifact instance.
+pub trait Submission: Send + Sync {
+    /// Non-blocking completion probe.
+    fn is_ready(&self) -> bool;
+    /// Wait for completion and typed readback.
+    fn wait(self: Box<Self>) -> Result<Completion, BackendError>;
+}
+
+/// Device-native immutable executable and resource layout.
+pub trait ArtifactInstance: Send + Sync {
+    /// Neutral artifact identity implemented by this instance.
+    fn artifact(&self) -> Digest;
+    /// Exact payload identity materialized into this instance.
+    fn payload(&self) -> Digest;
+    /// Device generation that owns every native handle.
+    fn device(&self) -> &DeviceIdentity;
+    /// Validate bindings and submit one invocation.
+    fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError>;
+    /// Validate every binding set of a resident batch and submit them as one
+    /// batch.
+    ///
+    /// A backend whose resident path can enqueue the whole batch before
+    /// awaiting any of it overrides this. Every item is then already submitted
+    /// when the item before it finishes, so the batch runs back to back on the
+    /// device instead of paying one host round trip per item. The default is
+    /// [`Self::submit`] and [`Submission::wait`] per item, which is the
+    /// behaviour the batch exists to replace.
+    ///
+    /// # Errors
+    ///
+    /// Returns whatever validation and dispatch of any item report.
+    fn submit_resident_batch(
+        &self,
+        batches: Vec<BindingSet>,
+    ) -> Result<Vec<Completion>, BackendError> {
+        let mut completions = Vec::new();
+        completions
+            .try_reserve_exact(batches.len())
+            .map_err(|error| BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: failed to reserve {} resident batch completion slot(s): {error}. Submit a smaller resident batch.",
+                    batches.len()
+                ),
+            })?;
+        for bindings in batches {
+            completions.push(self.submit(bindings)?.wait()?);
+        }
+        Ok(completions)
+    }
+    /// What the loaded module allocates, one record per payload entry point in
+    /// payload entry order.
+    ///
+    /// Registers and spill are decided by the target compiler, not by the
+    /// neutral artifact, so only the loaded module holds them. Compile-time
+    /// finalist ranking reads these figures in place of its own estimate. A
+    /// backend whose API reports none of them returns one default record per
+    /// entry, which leaves the estimate in force.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the device rejects the query.
+    fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError>;
+    /// Device bytes this instance's allocators hold while it is alive, or
+    /// `None` when the backend has no memory query.
+    ///
+    /// The selected allocation plan states the bytes the artifact requires to
+    /// be resident at once, and those bytes are on the device while this
+    /// instance holds its storage. Asking a materializer for a fresh instance
+    /// and querying that instead reports whatever the allocator happened to
+    /// hold, which refused 278 of 349 operations for bytes no launch had
+    /// requested. The figure has to come from the instance that ran.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the device rejects the query.
+    fn resident_device_bytes(&self) -> Result<Option<u64>, BackendError>;
+}
+
+/// Device-specific admission and native-handle construction.
+pub trait ArtifactMaterializer: Send + Sync {
+    /// Acquired target device.
+    fn device(&self) -> &dyn Device;
+
+    /// Allocate one resource owned by this materializer's device generation.
+    fn allocate_resident(&self, _byte_len: usize) -> Result<super::Resource, BackendError> {
+        Err(BackendError::UnsupportedFeature {
+            name: "artifact resident buffer allocation".to_string(),
+            backend: self.device().identity().backend.to_string(),
+        })
+    }
+
+    /// Upload bytes into one resource owned by this materializer.
+    fn upload_resident(
+        &self,
+        _resource: &super::Resource,
+        _bytes: &[u8],
+    ) -> Result<(), BackendError> {
+        Err(BackendError::UnsupportedFeature {
+            name: "artifact resident buffer upload".to_string(),
+            backend: self.device().identity().backend.to_string(),
+        })
+    }
+
+    /// Upload bytes at one aligned offset into a resident resource.
+    fn upload_resident_at(
+        &self,
+        resource: &super::Resource,
+        offset_bytes: usize,
+        bytes: &[u8],
+    ) -> Result<(), BackendError> {
+        if offset_bytes == 0 {
+            return self.upload_resident(resource, bytes);
+        }
+        Err(BackendError::UnsupportedFeature {
+            name: "artifact resident ranged upload".to_string(),
+            backend: self.device().identity().backend.to_string(),
+        })
+    }
+
+    /// Release one resource owned by this materializer.
+    fn free_resident(&self, _resource: super::Resource) -> Result<(), BackendError> {
+        Err(BackendError::UnsupportedFeature {
+            name: "artifact resident buffer free".to_string(),
+            backend: self.device().identity().backend.to_string(),
+        })
+    }
+
+    /// Clock, thermal and power state the backend reads for this device.
+    ///
+    /// Compile-time measurement retains this beside its samples, so a reader can
+    /// tell a slow candidate from a throttled device. A backend whose API exposes
+    /// none of it returns [`DeviceState::unreported`], and the measurement
+    /// session still records the drift it observes across its own rounds.
+    fn device_state(&self) -> DeviceState {
+        DeviceState::unreported()
+    }
+
+    /// Materialize authenticated immutable target bytes.
+    fn materialize(
+        &self,
+        artifact: &Artifact,
+        payload: &TargetPayload,
+    ) -> Result<Box<dyn ArtifactInstance>, BackendError>;
+}

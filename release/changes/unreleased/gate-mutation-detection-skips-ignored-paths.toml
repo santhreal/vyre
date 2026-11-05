@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Gate mutation detection reports only paths git tracks, so a scratch file another process writes into an ignored directory during a run no longer fails a gate that mutated nothing."

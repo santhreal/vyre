@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Tenant registration requires finite resource quotas through TenantQuota::standard or explicit bounded limits; TenantQuota::unbounded is removed, and RetainedArtifactSession manages mutable generations through typed state machine transitions."

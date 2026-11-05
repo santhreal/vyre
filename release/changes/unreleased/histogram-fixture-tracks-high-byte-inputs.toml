@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The registered byte-histogram operation now places its non-ASCII counts in the exact 0xA9 and 0xC3 bins supplied by the canonical fixture."

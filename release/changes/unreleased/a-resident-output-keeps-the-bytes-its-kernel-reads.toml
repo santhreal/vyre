@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A CUDA resident dispatch no longer zero-fills a bound read-write output before launch, so a value one dispatch leaves on the device is readable by the next."

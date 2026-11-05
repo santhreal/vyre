@@ -1,0 +1,2 @@
+category = "Added"
+text = "`compile_portfolio` and `compile_portfolio_measured` jointly select the artifact set an objective's coverage policy retains, enumerating every legal partition of the stated workload classes under the variant and aggregate byte bounds, while the single-artifact paths refuse a coverage policy one artifact cannot satisfy with `MKC032_PORTFOLIO_COVERAGE_UNSATISFIED`."

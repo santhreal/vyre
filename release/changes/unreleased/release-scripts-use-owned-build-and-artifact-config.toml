@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The guarded release scripts now inherit Cargo parallelism from workspace configuration and regenerate launch-state and package-readiness evidence through each gate's canonical --write path."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Scalar corpora, word generators and element-wise dispatch programs are single modules in vyre-test-support instead of copies textually included across test targets, and vyre-test-support no longer pulls the reference oracle or the primitive crate into a dependency graph that asks only for IR fixtures."

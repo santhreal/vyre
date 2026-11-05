@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The reference interpreter holds every lane of a workgroup at a subgroup shuffle, ballot or reduce until all of them arrive, so a collective after a branch whose condition is not lane-uniform reads its peers at the same program point instead of reading a value from another iteration or refusing a local the program binds."

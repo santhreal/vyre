@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Candidate resource verification reports a register allocation above the occupancy budget as spill traffic and rejects only an allocation above the target's architectural register ceiling."

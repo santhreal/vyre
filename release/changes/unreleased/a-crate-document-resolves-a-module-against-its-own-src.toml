@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A crate document resolves a module path against the crate src directory, so an architecture heading naming a module is read as the module it names."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Gate execution now derives names, owners, areas, artifact paths, prerequisites, and mutation proofs from one authoritative descriptor registry. Every gate reports non-empty subject coverage, generators declare and report exact workspace-relative outputs, only artifact owners receive `--write` authority, and the complete sweep rejects unowned workspace mutations. README generation has one owner: `crate-readmes` refreshes both crate-contract and CLI-contract sections."

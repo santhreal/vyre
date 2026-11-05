@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The panic-budget scan finds a `# Panics` section separated from its signature by a multi-line attribute, so a documented contract under `#[cfg(all(...))]` no longer counts against its crate's ceiling."

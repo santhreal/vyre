@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The device-test gate asks per test target whether a workflow step compiles it, so a target admitted by `device-tests` in a package other steps already build with that feature is reported instead of silently running nowhere; the SPIR-V Vulkan lane now runs every device-admitted target in `vyre-driver-spirv` rather than one named target, which is what put `hostile_input_closure_contract` back on a real device."

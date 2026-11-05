@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The strict-float witness programs and the atomic-reduction fixture have one owner in `vyre-test-support`, so the strict-lowering and geometry suites in four crates run the same shapes instead of separate copies."

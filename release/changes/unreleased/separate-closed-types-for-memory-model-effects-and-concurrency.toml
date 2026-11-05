@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Memory ordering and concurrency are modeled with separate closed orthogonal types for atomic ordering, memory scope, execution scope, storage domain, fence semantics, barrier participation, async transaction lifecycle, collective group, and failure cancellation behavior, removing implicit defaults and verifying race freedom through bounded reference interleavings."

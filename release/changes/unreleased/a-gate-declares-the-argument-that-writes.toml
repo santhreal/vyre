@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A gate that writes one owned artifact through an argument of its own declares it, and the workspace mutation guard reads that invocation as a write. dup-scan --lower-pin wrote the pinned row and then exited 1 reporting itself as a comparison run that mutated the tree."

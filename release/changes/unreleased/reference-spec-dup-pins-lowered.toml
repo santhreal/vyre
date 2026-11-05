@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The duplication baseline pins for vyre-reference and vyre-spec now record the measured tree: 971 to 743 and 446 to 244 duplicated lines. Both total line counts are corrected to the measured values."

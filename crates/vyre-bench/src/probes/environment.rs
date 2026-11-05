@@ -1,0 +1,327 @@
+use serde::{Deserialize, Serialize};
+use std::process::Command;
+
+const MAX_CPUINFO_BYTES: u64 = 1024 * 1024;
+
+type NvidiaSmiDeviceFields = (String, String, Option<u64>, Option<(u32, u32)>);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnvironmentData {
+    pub os: String,
+    pub architecture: String,
+    #[serde(default)]
+    pub cpu_model: Option<String>,
+    pub cpu_cores: usize,
+    pub has_gpu: bool,
+    #[serde(default)]
+    pub gpu_devices: Vec<GpuDeviceInfo>,
+    #[serde(default)]
+    pub nvidia_driver_version: Option<String>,
+    #[serde(default)]
+    pub nvidia_cuda_version: Option<String>,
+    pub features: Vec<String>,
+    /// `release` or `debug`, naming the build that took the measurements.
+    #[serde(default)]
+    pub build_profile: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GpuDeviceInfo {
+    pub name: String,
+    pub driver_version: String,
+    pub memory_total_mib: Option<u64>,
+    #[serde(default)]
+    pub compute_capability_major: Option<u32>,
+    #[serde(default)]
+    pub compute_capability_minor: Option<u32>,
+}
+
+/// The optimization level cargo compiled this harness with.
+const OPT_LEVEL: &str = env!("VYRE_BENCH_OPT_LEVEL");
+
+/// The build profile this harness was compiled with.
+///
+/// A debug build measures the CPU baseline of a release case tens of times
+/// slower than a release build while device time barely moves, so a report that
+/// does not name its profile cannot be told apart from evidence. Measured
+/// 2026-08-15 for `release.condition_eval.1m` on one CUDA host: 215874264 ns of
+/// CPU baseline under debug against 4422427 ns under release.
+///
+/// The profile is read from the optimization level the build script exports and
+/// the assertion cfg of this compilation, not from the assertion cfg alone. A
+/// profile that turns assertions off without optimizing produces the numbers of
+/// a debug build and reported itself as release.
+#[must_use]
+pub fn build_profile() -> &'static str {
+    if matches!(OPT_LEVEL, "2" | "3" | "s" | "z") && !cfg!(debug_assertions) {
+        "release"
+    } else {
+        "debug"
+    }
+}
+
+pub fn capture_environment() -> std::io::Result<EnvironmentData> {
+    // Collect host information
+    let os = std::env::consts::OS.to_string();
+    let architecture = std::env::consts::ARCH.to_string();
+
+    // Attempt to query CPU cores
+    let cpu_cores = std::thread::available_parallelism()
+        .map(|p| p.get())
+        .unwrap_or(1);
+
+    let mut features = vec![
+        "vyre-bench".to_string(),
+        format!("build.opt_level:{OPT_LEVEL}"),
+    ];
+    let gpu_devices = match nvidia_smi_gpu_devices() {
+        Ok(devices) => devices,
+        Err(error) => {
+            features.push(format!(
+                "gpu.nvidia_smi.devices_unavailable:{:?}",
+                error.kind()
+            ));
+            Vec::new()
+        }
+    };
+    let nvidia_versions = match nvidia_smi_versions() {
+        Ok(versions) => versions,
+        Err(error) => {
+            features.push(format!(
+                "gpu.nvidia_smi.versions_unavailable:{:?}",
+                error.kind()
+            ));
+            NvidiaSmiVersions {
+                driver_version: None,
+                cuda_version: None,
+            }
+        }
+    };
+    let nvidia_gpu = !gpu_devices.is_empty();
+    if nvidia_gpu {
+        features.push("gpu.nvidia_smi".to_string());
+    }
+    if nvidia_versions.cuda_version.is_some() {
+        features.push("gpu.nvidia_smi.cuda_version".to_string());
+    }
+    if gpu_devices
+        .iter()
+        .any(|device| device.compute_capability_major.is_some())
+    {
+        features.push("gpu.nvidia_smi.compute_capability".to_string());
+    }
+    let registered_backends = vyre_registry_link::backend::live_backend_registry_by_precedence()
+        .map_err(|error| {
+            std::io::Error::other(format!("backend registry startup failed: {error}"))
+        })?;
+    let mut linked_dispatch_backends = Vec::new();
+    for backend in registered_backends {
+        if vyre_driver::backend_dispatches(backend.id).map_err(|error| {
+            std::io::Error::other(format!("backend registry startup failed: {error}"))
+        })? {
+            linked_dispatch_backends.push(backend.id);
+        }
+    }
+    for backend in &linked_dispatch_backends {
+        features.push(format!("backend.linked.{backend}"));
+    }
+    let mut usable_gpu_backend = false;
+    // Every registration in the backend registry dispatches to a device: the
+    // interpreter is an oracle reached by a named API and submits no
+    // registration, which
+    // `crates/vyre-driver-reference/tests/production_registry_execution_domain.rs`
+    // closes. So an acquired backend is a usable device, and the arm that used
+    // to exclude `cpu-ref` from that conclusion had nothing left to exclude.
+    for backend in linked_dispatch_backends {
+        match vyre_driver::acquire(backend) {
+            Ok(_) => {
+                usable_gpu_backend = true;
+                features.push(format!("backend.usable.{backend}"));
+            }
+            Err(error) => features.push(format!("backend.unusable.{backend}:{error}")),
+        }
+    }
+    let has_gpu = nvidia_gpu || usable_gpu_backend;
+
+    Ok(EnvironmentData {
+        os,
+        architecture,
+        cpu_model: cpu_model(),
+        cpu_cores,
+        has_gpu,
+        nvidia_driver_version: nvidia_versions.driver_version.or_else(|| {
+            gpu_devices
+                .first()
+                .map(|device| device.driver_version.clone())
+        }),
+        nvidia_cuda_version: nvidia_versions.cuda_version,
+        gpu_devices,
+        features,
+        build_profile: build_profile().to_string(),
+    })
+}
+
+fn cpu_model() -> Option<String> {
+    if let Ok(cpuinfo) = read_cpuinfo_bounded() {
+        for line in cpuinfo.lines() {
+            let Some((key, value)) = line.split_once(':') else {
+                continue;
+            };
+            if key.trim() == "model name" {
+                let model = value.trim();
+                if !model.is_empty() {
+                    return Some(model.to_string());
+                }
+            }
+        }
+    }
+    let output = Command::new("sysctl")
+        .args(["-n", "machdep.cpu.brand_string"])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let model = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if model.is_empty() {
+        None
+    } else {
+        Some(model)
+    }
+}
+
+fn read_cpuinfo_bounded() -> std::io::Result<String> {
+    use std::io::Read as _;
+
+    let mut file = std::fs::File::open("/proc/cpuinfo")?;
+    let mut text = String::new();
+    file.by_ref()
+        .take(MAX_CPUINFO_BYTES + 1)
+        .read_to_string(&mut text)?;
+    if text.len() as u64 > MAX_CPUINFO_BYTES {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "/proc/cpuinfo exceeded bounded read limit",
+        ));
+    }
+    Ok(text)
+}
+
+fn nvidia_smi_gpu_devices() -> std::io::Result<Vec<GpuDeviceInfo>> {
+    let output = Command::new("nvidia-smi")
+        .args([
+            "--query-gpu=name,driver_version,memory.total,compute_cap",
+            "--format=csv,noheader,nounits",
+        ])
+        .output()
+        .map_err(|error| {
+            std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!(
+                    "nvidia-smi GPU provenance probe failed: {error}. Fix: repair NVIDIA driver visibility before collecting benchmark evidence."
+                ),
+            )
+        })?;
+    if !output.status.success() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!(
+                "nvidia-smi GPU provenance query exited with status {}: {}. Fix: repair NVIDIA driver visibility before collecting benchmark evidence.",
+                output.status,
+                String::from_utf8_lossy(&output.stderr).trim()
+            ),
+        ));
+    }
+    let devices: Vec<_> = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter_map(parse_nvidia_smi_device)
+        .collect();
+    if devices.is_empty() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "nvidia-smi GPU provenance query returned no parseable devices. Fix: verify `nvidia-smi --query-gpu=name,driver_version,memory.total,compute_cap --format=csv,noheader,nounits` reports at least one GPU.",
+        ));
+    }
+    Ok(devices)
+}
+
+struct NvidiaSmiVersions {
+    driver_version: Option<String>,
+    cuda_version: Option<String>,
+}
+
+fn nvidia_smi_versions() -> std::io::Result<NvidiaSmiVersions> {
+    let output = Command::new("nvidia-smi").output().map_err(|error| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!(
+                "nvidia-smi version provenance probe failed: {error}. Fix: repair NVIDIA driver visibility before collecting benchmark evidence."
+            ),
+        )
+    })?;
+    if !output.status.success() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!(
+                "nvidia-smi version provenance query exited with status {}: {}. Fix: repair NVIDIA driver visibility before collecting benchmark evidence.",
+                output.status,
+                String::from_utf8_lossy(&output.stderr).trim()
+            ),
+        ));
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    let versions = NvidiaSmiVersions {
+        driver_version: parse_nvidia_smi_header_value(&text, "Driver Version"),
+        cuda_version: parse_nvidia_smi_header_value(&text, "CUDA Version"),
+    };
+    if versions.driver_version.is_none() || versions.cuda_version.is_none() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "nvidia-smi version provenance query did not expose both Driver Version and CUDA Version. Fix: repair NVIDIA driver/runtime reporting before collecting benchmark evidence.",
+        ));
+    }
+    Ok(versions)
+}
+
+fn parse_nvidia_smi_header_value(text: &str, label: &str) -> Option<String> {
+    let (_, tail) = text.split_once(&format!("{label}:"))?;
+    let value = tail.split_whitespace().next()?.trim();
+    if value.is_empty() {
+        None
+    } else {
+        Some(value.to_string())
+    }
+}
+
+fn parse_nvidia_smi_device(line: &str) -> Option<GpuDeviceInfo> {
+    let (name, driver_version, memory_total_mib, compute_capability) =
+        parse_nvidia_smi_device_fields(line)?;
+    Some(GpuDeviceInfo {
+        name,
+        driver_version,
+        memory_total_mib,
+        compute_capability_major: compute_capability.map(|(major, _minor)| major),
+        compute_capability_minor: compute_capability.map(|(_major, minor)| minor),
+    })
+}
+/// Parse one CSV row from the canonical `nvidia-smi` device query.
+pub fn parse_nvidia_smi_device_fields(line: &str) -> Option<NvidiaSmiDeviceFields> {
+    let mut fields = line.split(',').map(str::trim);
+    let name = fields.next()?.to_string();
+    let driver_version = fields.next()?.to_string();
+    let memory_total_mib = fields.next().and_then(|value| value.parse::<u64>().ok());
+    let compute_capability = fields.next().and_then(parse_compute_capability);
+    (!name.is_empty()).then_some((name, driver_version, memory_total_mib, compute_capability))
+}
+
+pub fn parse_compute_capability(value: &str) -> Option<(u32, u32)> {
+    let value = value.trim();
+    if value.is_empty() {
+        return None;
+    }
+    if let Some((major, minor)) = value.split_once('.') {
+        Some((major.trim().parse().ok()?, minor.trim().parse().ok()?))
+    } else {
+        Some((value.parse().ok()?, 0))
+    }
+}

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The `graph-dispatch` feature now enables the `encoding` domain that owns its GPU reduction-metric dispatchers. A production `vyre-driver-cuda` build no longer fails when motif existence and participation adapters import reduction metrics without the owning module."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Resident throughput batches preserve complete device-timestamp totals and normalize them per logical item. String bitmap scatter uses subgroup ballots to materialize 16 independent output rows in one resident dispatch, with exact CPU-oracle parity."

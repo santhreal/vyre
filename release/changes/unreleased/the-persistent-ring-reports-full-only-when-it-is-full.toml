@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The persistent-engine ring resolves a slot through one masked index instead of four fallible array lookups that disagreed about a missing element: two reported a full queue, one reported an empty one, and none had observed either condition."

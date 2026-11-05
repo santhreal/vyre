@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`ExprArena` reports exhaustion once it holds `u32::MAX` nodes. The index conversion saturated, so every node past the ceiling received the same id, and `get` answered one expression with another."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The duplication pins for the four emitter crates now sit at what the tree measures: vyre-emit-metal 29 to 22, vyre-emit-naga 404 to 221, vyre-emit-ptx 295 to 105, vyre-emit-spirv 49 to 43. A pin that passes with room under it hides the next copy, so each is lowered to the measurement rather than left as headroom. vyre-megakernel stays at 60: both of its duplicated files partner only with crates outside the emitter boundary, so nothing there could be collapsed from this side."

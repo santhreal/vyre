@@ -1,0 +1,2 @@
+category = "Changed"
+text = "An artifact-inspection gate is declared, not hand-written. Eleven gates across xtask, xtask-registry and xtask-evidence each spelled the same struct, the same four trait methods and the same call into `settle_inspection`, differing only in a name, a help string and one inspection expression. `xtask::artifact_gate!` now owns that shape and the eleven declarations state only what differs. Gates whose `run` does real work, such as release-conformance argument parsing, keep their own implementation."

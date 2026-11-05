@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Twenty-two production panic messages in `vyre-test-support` and `xtask` state the corrective action alongside the failed expectation. A joined worker lane now says the panic is in the spawned read and not in the join, and a fixture that fails to build names the declaration to correct rather than restating that it must be valid."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "CPU-parity integration tests now declare their required Cargo features. Default-feature `vyre-libs` test builds no longer import reference-only symbols that are intentionally absent from production builds."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`platform-support-matrix` reads a match arm whose body is braced, so the widest arm in `PlatformSupportMatrix::tier` is no longer reported as six host cells with no tier."

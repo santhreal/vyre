@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The device-test-gating roster read only `pub struct *Backend`, and matched the constructor names `acquire` and `new` exactly. SpirvBackendRegistration::acquire and CudaDeviceHandle::acquire_ordinal are both hardware acquisitions and both slipped through. The roster now covers BackendRegistration and DeviceHandle owners, and constructor stems match acquire_ordinal without matching a helper that merely names the type."

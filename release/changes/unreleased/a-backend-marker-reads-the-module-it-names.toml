@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A backend feature marker that cites a module root is checked against the whole module, so splitting an oversized module into submodules no longer reports its implementation tokens as deleted. The CUDA resident readback path is a marker of its own, citing the file that implements it."

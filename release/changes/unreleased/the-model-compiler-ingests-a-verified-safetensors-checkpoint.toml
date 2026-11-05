@@ -1,0 +1,2 @@
+category = "Added"
+text = "The model compiler builds a checkpoint manifest from a sharded safetensors checkpoint through `CheckpointManifest::ingest_verified_checkpoint`, which opens the shard index, verifies every shard against a trusted BLAKE3 digest, and returns the manifest alongside the verified checkpoint holding the pinned shard descriptors. A safetensors element type with no counterpart in the IR data contract reports `ManifestError::UnsupportedCheckpointDtype` instead of resolving to a substitute type."

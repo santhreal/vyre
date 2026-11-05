@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Every instruction that names the build wrapper names it as ./cargo_full. A bare cargo_full is not on the search path, so a fix line quoting it told the reader to run a command that does not resolve. The generators that embed those lines emit the same spelling, so the artifact and its generator agree."

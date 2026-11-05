@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Parity suites, backend materializers and gate tooling share canonical routines, and dispatcher-based solvers select named results without rejecting writable scratch outputs."

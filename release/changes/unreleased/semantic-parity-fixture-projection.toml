@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Floating-point parity now uses one foundation-owned comparison contract for semantic operation witnesses, including each operation's declared tolerance. The library operation catalog distinguishes the complete semantic inventory from its deterministic executable-fixture projection."

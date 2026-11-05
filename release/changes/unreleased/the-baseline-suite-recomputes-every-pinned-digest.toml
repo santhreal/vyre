@@ -1,0 +1,4 @@
+category = "Added"
+text = """
+The baseline suite recomputes every pinned native baseline digest from the harness source the registry entry names, and rejects a workload pinning a baseline id no entry defines, a compiled architecture that contradicts the declared target, and a toolchain that disagrees with the cell it is keyed to.
+"""

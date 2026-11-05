@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The `vyre-spec` schema registry surface publishes only at `vyre_spec::schema_registry`; the crate-root re-exports of `SchemaId`, `SchemaRegistry`, `SchemaDefinition`, `SchemaBounds`, `CanonicalField`, `DefaultsPolicy`, `FieldType`, and `CANONICAL_SCHEMA_REGISTRY` are gone. `vyre_foundation` re-exports all eight at its own root as before."

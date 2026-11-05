@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Shared test fixtures, generators, and backend-neutral contract suites are library modules in `vyre-test-support` rather than relative `#[path]` textual includes, so zero `#[path]` attributes resolve outside their declaring Cargo package and no contract body is textually compiled across package boundaries."

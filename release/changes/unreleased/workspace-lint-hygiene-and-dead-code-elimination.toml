@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Workspace lints deny dead code, unused variables, and unreachable public items across all feature lanes, eliminating unowned helpers in conform, metal, math, and megakernel crates."

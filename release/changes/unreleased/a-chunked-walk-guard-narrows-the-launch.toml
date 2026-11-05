@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The launch-domain analysis reads a guard written against a sum carrying the axis-0 logical index, so a chunked walk dispatches one lane per cell instead of one lane per declared element."

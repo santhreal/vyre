@@ -1,0 +1,2 @@
+category = "Added"
+text = "Artifact admission performs bounded transactional typed external-resource ingestion against artifact ABI schemas with rollback on failure."

@@ -1,0 +1,210 @@
+use super::*;
+
+#[test]
+fn cuda_large_storage_atomic_sum_crosses_workgroup_boundary() {
+    let count = 4096u32;
+    let program = make_atomic_sum_program(count, false);
+    let backend = acquire_cuda_backend();
+    let outputs = backend
+        .dispatch(
+            &program,
+            &[u32_bytes(&[0]), u32_bytes(&vec![1; count as usize])],
+            &DispatchConfig::default(),
+        )
+        .expect("Fix: CUDA storage atomic reduction must launch every inferred workgroup.");
+
+    assert_eq!(
+        bytes_u32(&outputs[0]),
+        vec![count],
+        "Fix: CUDA storage atomics must produce a full multi-workgroup sum, not only the first block."
+    );
+}
+
+/// The artifact route launches the geometry the compiler admitted, and a caller
+/// grid cannot reach it.
+///
+/// `submit` takes a binding set and nothing else, so a hostile grid has no
+/// channel into the artifact route. It is applied here through the direct
+/// dispatch route on the same program to pin what that grid actually computes:
+/// one workgroup, a sum strictly short of `count`. An artifact route that
+/// adopted a caller grid would return that partial sum instead of the full one.
+///
+/// A grid override beside a frozen launch is refused rather than ranked, and
+/// that rule is owned by `crates/vyre-driver/tests/backend_launch_validation.rs`. This
+/// config carries no frozen launch, so it is a legal dispatch.
+#[test]
+fn cuda_artifact_dispatch_launches_admitted_geometry_not_a_caller_grid() {
+    let count = 4096u32;
+    let program = make_atomic_sum_program(count, false);
+    let backend = acquire_cuda_backend();
+    let values = u32_bytes(&vec![1; count as usize]);
+    let initial_sum = u32_bytes(&[0]);
+
+    let mut hostile_config = DispatchConfig::default();
+    hostile_config.grid_override = Some([1, 1, 1]);
+    let hostile_outputs = backend
+        .dispatch(
+            &program,
+            &[initial_sum.clone(), values.clone()],
+            &hostile_config,
+        )
+        .expect("Fix: a grid override with no frozen launch must be a legal dispatch.");
+    let hostile_sum = bytes_u32(&hostile_outputs[0]);
+    assert!(
+        hostile_sum[0] < count,
+        "Fix: grid override [1,1,1] must launch one workgroup, so its sum is short of {count}; got {}.",
+        hostile_sum[0]
+    );
+
+    let outputs = compiled_cuda_outputs(
+        &backend,
+        &program,
+        &[initial_sum, values],
+        "CUDA artifact admitted geometry",
+    );
+    assert_eq!(
+        bytes_u32(&outputs[0]),
+        vec![count],
+        "Fix: the artifact route must launch its admitted geometry; {} is the caller grid's own answer.",
+        hostile_sum[0]
+    );
+}
+
+#[test]
+fn cuda_subgroup_add_reports_full_warp_sum() {
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(32)],
+        [32, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::gid_x(),
+            Expr::subgroup_add(Expr::u32(1)),
+        )],
+    );
+    let backend =
+        CudaBackend::acquire().expect("Fix: CUDA backend must acquire on the GPU-required host.");
+    let outputs = backend
+        .dispatch(&program, &[], &DispatchConfig::default())
+        .expect("Fix: CUDA subgroup add must execute through warp-sync PTX.");
+
+    assert_eq!(
+        bytes_u32(&outputs[0]),
+        vec![32; 32],
+        "Fix: CUDA subgroup add must reduce across every lane in the warp."
+    );
+}
+
+#[test]
+fn cuda_shared_memory_round_trips_with_barrier() {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(32),
+            BufferDecl::workgroup("scratch", 32, DataType::U32),
+            BufferDecl::output("out", 1, DataType::U32).with_count(32),
+        ],
+        [32, 1, 1],
+        vec![
+            Node::let_bind("idx", Expr::gid_x()),
+            Node::let_bind("lane", Expr::local_x()),
+            Node::store(
+                "scratch",
+                Expr::var("lane"),
+                Expr::load("input", Expr::var("idx")),
+            ),
+            Node::barrier(),
+            Node::store(
+                "out",
+                Expr::var("idx"),
+                Expr::add(Expr::load("scratch", Expr::var("lane")), Expr::u32(7)),
+            ),
+        ],
+    );
+    let input = (0..32).collect::<Vec<u32>>();
+    let expected = input.iter().map(|value| value + 7).collect::<Vec<_>>();
+    let backend =
+        CudaBackend::acquire().expect("Fix: CUDA backend must acquire on the GPU-required host.");
+    let outputs = backend
+        .dispatch(&program, &[u32_bytes(&input)], &DispatchConfig::default())
+        .expect("Fix: CUDA shared-memory program must lower and execute.");
+
+    assert_eq!(
+        bytes_u32(&outputs[0]),
+        expected,
+        "Fix: CUDA shared memory must use shared address space and respect workgroup barriers."
+    );
+}
+
+#[test]
+fn cuda_dispatch_rejects_per_axis_block_overflow_before_launch() {
+    let backend =
+        CudaBackend::acquire().expect("Fix: CUDA backend must acquire on the GPU-required host.");
+    let max_block_dim = backend.max_block_dim();
+    let program = Program::wrapped(
+        vec![BufferDecl::output("dst", 0, DataType::U32).with_count(1)],
+        [1, 1, max_block_dim[2].saturating_add(1)],
+        vec![Node::store("dst", Expr::u32(0), Expr::u32(1))],
+    );
+
+    let err = backend
+        .dispatch(&program, &[], &DispatchConfig::default())
+        .expect_err("Fix: CUDA must reject per-axis block overflow before cuLaunchKernel.");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("axis 2") && msg.contains("Fix:"),
+        "Fix: CUDA block-axis validation must produce an actionable axis-specific error; got: {msg}"
+    );
+}
+
+#[test]
+fn cuda_tanh_matches_reference_softcap_fixture() {
+    let i = Expr::var("i");
+    let value = Expr::mul(
+        Expr::UnOp {
+            op: UnOp::Tanh,
+            operand: Box::new(Expr::div(Expr::load("input", i.clone()), Expr::f32(30.0))),
+        },
+        Expr::f32(30.0),
+    );
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::F32).with_count(4),
+            BufferDecl::output("output", 1, DataType::F32).with_count(4),
+        ],
+        [64, 1, 1],
+        vec![
+            Node::let_bind("i", Expr::gid_x()),
+            Node::if_then(
+                Expr::lt(i.clone(), Expr::buf_len("input")),
+                vec![Node::store("output", i, value)],
+            ),
+        ],
+    );
+    let input = [0.0_f32, 15.0, -60.0, 100.0];
+    let expected = input
+        .iter()
+        .map(|x| (x / 30.0).tanh() * 30.0)
+        .collect::<Vec<_>>();
+    let backend =
+        CudaBackend::acquire().expect("Fix: CUDA backend must acquire on the GPU-required host.");
+    let mut config = DispatchConfig::default();
+    config.ulp_budget = Some(128);
+    let outputs = backend
+        .dispatch(
+            &program,
+            &[input.iter().flat_map(|x| x.to_le_bytes()).collect()],
+            &config,
+        )
+        .expect("Fix: CUDA tanh dispatch must complete.");
+
+    let got = outputs[0]
+        .chunks_exact(4)
+        .map(|bytes| f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
+        .collect::<Vec<_>>();
+    for (lane, (actual, expected)) in got.iter().zip(expected.iter()).enumerate() {
+        let diff = ordered_f32_bits(*actual).abs_diff(ordered_f32_bits(*expected));
+        assert!(
+            diff <= 128,
+            "Fix: CUDA tanh lane {lane} exceeded the 128-ULP native transcendental budget: actual={actual:e} expected={expected:e} diff={diff}."
+        );
+    }
+}

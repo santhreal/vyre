@@ -1,0 +1,2 @@
+category = "Added"
+text = "The reference and SPIR-V backends carry a tracked hostile-input closure target, `vyre-driver-reference/tests/hostile_input_closure_contract.rs` and `vyre-driver-spirv/tests/hostile_input_closure_contract.rs`. Both backends previously held their adversarial case in a file name the repository ignores, so the assertion ran only where someone had generated it and no branch could review it. The obligations come from `vyre_driver::hostile_input_closure`, and the ignore rule that asked for a crate-owned name is now satisfied for these two crates."

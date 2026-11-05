@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`vyre_spec::expr_variants()` lists `LogicalIndex`, `LogicalTileId`, and `LogicalWithinTileId`, and is checked against the `Expr` variant names the AST registry emits, so a variant added to the enum can no longer stay out of the catalog."

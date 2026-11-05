@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`diff_programs` counts the whole node tree and decides identity by content hash, so a change inside a program's root region is reported instead of being read as identical."

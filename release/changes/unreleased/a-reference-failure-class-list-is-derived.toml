@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`ReferenceErrorClass::ALL` is derived from an exhaustive successor chain instead of a hand-written array. A new failure class no longer compiles until it is placed in the chain, so a class cannot be added and left out of the list in silence."

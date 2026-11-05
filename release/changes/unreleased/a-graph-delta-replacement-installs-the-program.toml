@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A `GraphDeltaOp::ReplaceNode` operation now installs the replacement program and rewires the values the node reads. It previously bounds-checked the node id, marked the closure dirty, and returned a graph identical to the one it was applied to."

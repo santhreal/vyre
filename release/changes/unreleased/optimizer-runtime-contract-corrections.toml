@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Optimizer type facts now bind and restore loop induction variables, discard stale assignment types, and traverse tile elementwise bodies. Constant-division duplication budgets count every dividend copy. Batched dispatch output reservations reserve requested increments from the current length. Portable `vyre-conform --no-default-features` builds no longer link default GPU drivers."

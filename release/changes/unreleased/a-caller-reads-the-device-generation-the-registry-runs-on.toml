@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre_driver_cuda::registered_device` returns the device generation every registered CUDA facet runs on, so telemetry for work submitted through the registry is read from the handle that records it rather than from a privately acquired backend that reports zero."

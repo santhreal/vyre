@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A retired release claim is any dotted number that starts with the retired train, so a four component version is reported, and the same digits inside another train version or inside a hash are not."

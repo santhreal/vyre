@@ -1,0 +1,2 @@
+category = "Changed"
+text = "TypedDispatchExt no longer declares dispatch_u32 and dispatch_u32_into; both forwarded to dispatch_pod and dispatch_pod_into, which infer the element type from the input slices, so a caller writes the same call without them."

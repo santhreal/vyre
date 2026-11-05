@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`scripts/check_platform_consumer_docs.sh`, `scripts/check_parity_testing_not_leaked.sh` and `scripts/check_primitive_contract.sh` are gone, along with `vyre-pass-engine/tests/platform_doc_consumer_boundary.rs`, which existed to give the first one a cargo entry point. The `platform-consumer-docs` and `parity-testing-isolated` gates own the first two rules; the third was a shell adapter in front of the registered `primitive-admission-gate` and its only assertion was that it refused path arguments."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Auxiliary product crates `vyre-aot`, `vyre-safetensors`, `vyre-debug`, and the `vyre` facade unify into one workflow consuming validated compile requests, transactional immutable tensor handles, and five-level compiler inspection."

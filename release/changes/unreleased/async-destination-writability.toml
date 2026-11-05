@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Validation refuses an async transfer whose destination resolves to a buffer the program declared unwritable (V134), which the target compilers would have lowered to stores through a read-only binding and which loop-invariant hoisting was already assuming could not happen."

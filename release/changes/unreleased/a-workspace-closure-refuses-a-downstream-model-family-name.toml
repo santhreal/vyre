@@ -1,0 +1,2 @@
+category = "Added"
+text = "A workspace closure parses the downstream model family declaration at run time and refuses any workspace member that spells one of those names in a type, a fixture, a diagnostic, or a file name."

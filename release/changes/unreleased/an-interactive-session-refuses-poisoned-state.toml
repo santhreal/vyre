@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`InteractiveSessionStateMachine` uses `std::sync::Mutex` and reports lock poisoning through `BackendError::PoisonedLock` or a typed `Poisoned` variant. `fault_all`, `state_of`, and `effective_priority_of` return a `Result` so a torn queue and record map is refused instead of read, and `fault_reason` exposes the recorded loss."

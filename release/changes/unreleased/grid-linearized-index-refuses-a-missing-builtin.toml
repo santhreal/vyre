@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Naga emission refuses a grid-linearized index space whose descriptor did not push the `num_workgroups` builtin, instead of panicking."

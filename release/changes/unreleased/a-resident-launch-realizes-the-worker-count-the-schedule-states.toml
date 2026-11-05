@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A resident worker-grid request that states no worker count is refused instead of answered with a count derived from adapter occupancy, and a stated count is only clamped to what the adapter admits."

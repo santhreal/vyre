@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The `vyre-spec` expression-variant catalog test no longer retypes the 22 variant names it is checking. It now pins a floor on the catalog size, requires the names to be unique, and requires each to be a well-formed UpperCamelCase identifier, so a new variant does not have to be spelled twice to pass."

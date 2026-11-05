@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The launch-domain analysis proves the predicated-tail form, so a program that binds its bounds test to a local and branches on a value selected to zero outside it launches over the domain its guards admit rather than the widest declared buffer."

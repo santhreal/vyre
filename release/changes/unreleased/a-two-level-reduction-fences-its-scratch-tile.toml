@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A workgroup reduction wider than one subgroup fences the tile-wide read of its scratch against the store that writes each subgroup's partial back into the low slots of that same tile, so the workgroup total is exact instead of inflated by a partial that one subgroup read in place of a lane value."

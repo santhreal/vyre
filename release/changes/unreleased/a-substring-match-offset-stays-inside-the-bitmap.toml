@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The substring search admits a start offset only when it indexes the match bitmap. An empty needle matched at the offset one past the last byte, and the store went out of bounds."

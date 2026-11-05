@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "vyre-libs-nn compiles under its default features. The llm module was declared unconditionally while the paged cache index map and the top-k sampler it calls sit behind the llm and nn-moe features, so a default build failed to resolve them."

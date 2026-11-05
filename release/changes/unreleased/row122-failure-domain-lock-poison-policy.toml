@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Govern mutable state owner locks under explicit failure domains and recovery classes with zero unhandled lock poisoning across production crates."

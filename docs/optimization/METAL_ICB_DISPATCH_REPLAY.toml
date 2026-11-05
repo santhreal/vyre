@@ -2,7 +2,6 @@
 # Stable dispatches compare direct command encoding and ICB reuse.
 
 schema = "vyre.metal.icb_dispatch_replay.v1"
-owner = "driver_metal"
 evidence_tokens = ["METAL_ICB", "METAL_COMPUTE"]
 
 routes = [

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The wgpu backend derives its host input slot set at one site, `pipeline::host_input_slots`, which reads `BufferDecl::consumes_host_input` or the authenticated resource bindings. The set was built inline in the compile path, which put it out of reach of any proof that did not open a device, and the backend's own re-derivations disagreed with the reference oracle on a `Persistent`-kind buffer and on a pipeline live-out whose access is not `ReadWrite`."

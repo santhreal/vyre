@@ -1,0 +1,107 @@
+# tests/SKILL.md  -  vyre-libs
+
+## Purpose
+
+`vyre-libs` is Category-A library composition over vyre-ops
+hardware-intrinsic primitives. Tests prove every public function
+produces a valid Program that (a) validates, (b) round-trips through
+wire format, (c) dispatches successfully on every linked dispatch-capable
+backend, and (d) matches the CPU reference output byte-for-byte.
+
+## Critical invariants
+
+- Every public function returns a `Program` that passes `validate`.
+- Every Program wraps its body in exactly one `Node::Region` with a
+  generator name matching the fully-qualified module path.
+- Round-trip through wire format: `from_wire(to_wire(program)) == program`.
+- CPU reference output == every dispatch-capable backend output for
+  every deterministic op.
+
+## Adversarial surface
+
+- **`tests/f32_adversarial.rs`**, **`tests/adversarial_fixpoint.rs`** and
+  **`tests/adversarial_label.rs`**  -  the adversarial suites in this crate.
+- Zero-sized buffers  -  validator must reject or produce zero-work
+  `Program`, not panic.
+- Extreme dimensions (matmul with `m = u32::MAX`)  -  structured error.
+- Empty needle in `substring_search`  -  every position can match; output
+  length = `haystack_len` (guarded; see `substring_search` source).
+
+## Cross-crate contracts
+
+- Consumes `vyre::ir::*` (Program, Node, Expr, BufferDecl, DataType)
+- Consumes `vyre_foundation::ir::Ident` as the parent name a composed region cites
+- Backend execution tests use `vyre-driver` registry capabilities only;
+  concrete driver parity belongs to the owning driver crate.
+
+## Bench targets
+
+- `vyre_libs::math::matmul` throughput across 64/256/1024-dim
+- `vyre_libs::crypto::fnv1a32` bytes/sec across 1 KB / 64 KB / 1 MB
+- `vyre_libs::pattern::substring_search` GB/s across needle lengths
+
+## Fuzz targets
+
+- Program generators for every public function  -  arbitrary valid
+  inputs must produce a Program that validates + dispatches.
+
+## Running
+
+```bash
+./cargo_full test -p vyre-libs
+./cargo_full test -p vyre-libs --test integration
+./cargo_full test -p vyre-libs --test property
+./cargo_full test -p vyre-libs --test gap
+./cargo_full test -p vyre-libs --test adversarial
+./cargo_full test -p vyre-libs --test f32_adversarial --test op_boundaries --test overflow_guards
+```
+
+## Decision tables  -  picking a matching primitive
+
+This is the lego-block reuse map for `vyre_libs::pattern`. Pick the
+top-most row whose constraints fit the workload  -  every later row is
+strictly more capable but carries dispatch overhead the earlier
+options avoid.
+
+### Matching engine
+
+| Engine                        | Pattern shape                | Behind feature flag | When to pick                                                |
+|-------------------------------|------------------------------|---------------------|-------------------------------------------------------------|
+| `substring_search`            | one literal needle           | `pattern-substring` | <1 KB inputs or single-pattern hot path; no DFA build cost. |
+| `aho_corasick`                | many literals (no regex)     | `pattern-dfa`       | Many literals, simple shared-prefix DFA, classic AC walk.   |
+| `cooperative_dfa_scan`        | many literals (subgroup-coop)| `pattern-dfa`       | GPU dispatch where each subgroup advances one byte stream.  |
+| `GpuLiteralSet`               | many literals + GPU + cache  | always-on           | The default secret-scanning path: precompiled DFA, wire-format cache.|
+| `ScanProgram`                 | literal NFA composition      | `pattern-nfa`       | Build a neutral NFA program and its immutable tables.        |
+| `compile_regex_set`           | regex set → typed scan plan  | `pattern-regex`     | Compile regex source strings into a bounded NFA plan.        |
+
+### Dispatch helpers
+
+| Helper                          | Returns                  | Use when                                                    |
+|---------------------------------|--------------------------|-------------------------------------------------------------|
+| `pack_haystack_u32`             | `Vec<u8>`                | Packing a `&[u8]` haystack for any matcher's input buffer.  |
+| `pack_u32_slice`                | `Vec<u8>`                | Packing an arbitrary `&[u32]` for storage upload.           |
+| `haystack_len_u32`              | `Result<u32, _>`         | Plain `u32` cap check (max IR limit).                       |
+| `scan_guard`                    | `Result<u32, _>`         | Both the `u32` cap **and** a configurable byte ceiling.     |
+| `byte_scan_dispatch_config`     | `DispatchConfig`         | One workgroup per `workgroup_size[0]` haystack bytes.       |
+| `candidate_start_dispatch_config` | `DispatchConfig`       | One workgroup per candidate start offset (NFA scans).       |
+| `unpack_match_triples`          | `Vec<Match>`             | Decode the `(pid, start, end)` triple buffer back to typed. |
+
+### Cache + persistence
+
+| Helper                          | Use when                                                                |
+|---------------------------------|-------------------------------------------------------------------------|
+| `cached_load_or_compile`        | Persisting any `MatchEngineCache` to disk; one-line cache wiring.       |
+| `engine_cache_path`             | Compute the on-disk path for a given engine + cache key.                |
+| `MatchEngineCache::WIRE_MAGIC`  | Magic bytes per engine; defines the wire-format envelope.               |
+| `Program::content_hash()`       | Deterministic 32-byte BLAKE3 of canonical wire bytes for cache keying.  |
+
+### Region / span dedup
+
+| Helper                          | Use when                                                                |
+|---------------------------------|-------------------------------------------------------------------------|
+| `dedup_regions_cpu`             | Owned `Vec<RegionTriple>`; you want a fresh deduped vector returned.    |
+| `dedup_regions_inplace`         | You already own the `&mut Vec` and want zero-alloc compaction.          |
+| `RegionTriple::new(pid,s,e)`    | Constructing the canonical span tuple from raw u32s.                    |
+
+Public exports are pinned by `tests/surface_contracts.rs`, which names
+each migrated item and fails at compile time if one disappears.

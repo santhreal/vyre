@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The multi-input async allocation budget is measured after the bind-group cache, pipeline cache and dispatch scratch reach steady state, matching the wide dispatch contract."

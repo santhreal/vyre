@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Restored public Target export in vyre-driver, scan database wire header and budget types in vyre-foundation, lower and WORKGROUP_SLOT_BASE in vyre-lower, and public submodule paths in vyre-spec to maintain SemVer compatibility with published releases."

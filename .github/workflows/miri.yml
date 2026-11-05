@@ -13,9 +13,16 @@ concurrency:
 jobs:
   miri:
     runs-on: ubuntu-latest
+    # 287 interpreted tests take 5m20s on a 16-core workstation; a hosted
+    # two-core runner is several times slower, and `miri setup` builds a
+    # sysroot before any of it runs. The previous 30 minutes expired mid-run
+    # and every run of this workflow was recorded as cancelled.
+    timeout-minutes: 60
     env:
-      # Miri cannot run wgpu (host GPU unavailable, native calls). Scope to
-      # pure-Rust crates with no FFI.
+      # `unsafe_code` is denied workspace-wide except in vyre-runtime, so every
+      # raw-pointer, aliasing, and Send/Sync claim Miri can falsify is in that
+      # crate. Miri cannot execute wgpu or CUDA calls, and vyre-runtime enables
+      # no default features, so its unit tests stay host-only.
       MIRIFLAGS: -Zmiri-disable-isolation
     steps:
       - uses: actions/checkout@v4
@@ -23,8 +30,8 @@ jobs:
         with:
           components: miri
       - name: Run miri
+        # rust-toolchain.toml pins the workspace to 1.86, which has no miri
+        # component, so every invocation names the nightly the action installed.
         run: |
-          cargo miri setup
-          cargo miri test -p vyre-spec --lib
-          cargo miri test -p vyre-foundation --lib
-          cargo miri test -p vyre -p vyre-reference --lib --no-default-features
+          ./cargo_full +nightly miri setup
+          ./cargo_full +nightly miri test -p vyre-runtime --lib

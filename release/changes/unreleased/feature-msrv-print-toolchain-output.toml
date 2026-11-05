@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The feature-msrv gate writes only the advertised toolchain version on stdout when invoked with --print-toolchain, returning cleanly without printing notes or finding counts."

@@ -1,0 +1,61 @@
+{
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"908172a2b7c535d690f0c4dc2a234a43b0e39699","commit_timestamp":"1789370872","parent_commit":"780f9ed27f41773b7128f3ea8ad552324771803f","dirty":false,"source_fingerprint":"git:908172a2b7c535d690f0c4dc2a234a43b0e39699:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":32},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.173.02"}]}},
+  "schema_version": "vyre.whole-application-record.v2",
+  "workload_id": "workload.whole_app.interactive_event_pipeline",
+  "workload_name": "Latency-Sensitive Interactive UI Layout & Multi-Layer Composite Raster",
+  "domain": "LatencySensitiveInteractive",
+  "graph_node_count": 3,
+  "graph_edge_count": 2,
+  "compile_request_validated": true,
+  "production_route": {
+    "backend_id": "cuda",
+    "device_id": "NVIDIA GeForce RTX 4090",
+    "device_generation": 2,
+    "artifact_digest": "29cd97ae568cbbda241c489094b6d3d09993932d7bc08abdb0e5476c38fe7512",
+    "target_payload_digest": "9327a8a4353a9f9a1e7b8920e933ba99e8cecf4c3f3706ffac32b8b2237892c1",
+    "bound_resource_count": 6,
+    "completed_submissions": 31
+  },
+  "parity_result": {
+    "compared_values": 1,
+    "is_exact_match": true,
+    "max_ulp_distance": 0,
+    "reference_digest": "dfb67354d133ebe5364a19155c163243b07e3756187e45bb822fd315f14aaab4",
+    "candidate_digest": "dfb67354d133ebe5364a19155c163243b07e3756187e45bb822fd315f14aaab4",
+    "parity_status": "matched_exact_bytes"
+  },
+  "compile_time_ns": 13337694,
+  "load_time_ns": 7521037,
+  "measured_samples": 30,
+  "p50_latency_ns": 164022,
+  "p99_latency_ns": 184643,
+  "device_p50_latency_ns": 10144,
+  "throughput": {
+    "gflops": null,
+    "gb_per_sec": 0.07491677945641438,
+    "items_per_sec": 3121532.4773505996
+  },
+  "peak_bytes": 10240,
+  "resident_bytes": 4096,
+  "cold_state": {
+    "latency_ns": 261021,
+    "memory_bytes": null,
+    "is_cold_start": true,
+    "warmup_ratio": 1.5913779858799428
+  },
+  "warm_state": {
+    "latency_ns": 164022,
+    "memory_bytes": null,
+    "is_cold_start": false,
+    "warmup_ratio": 1.5913779858799428
+  },
+  "selected_schedule_id": "schedule.c5463fc4bc40350a351858482c7b3812d171b0c4692565b2ca8fb8c7f4a3f19c",
+  "input_digest": "8376a12b2fb33d0dbfc8c4ba0838f2b7d8bb6f29ed2d2dcd254c9da0d245d765",
+  "native_baseline_unmeasured": {
+    "baseline_id": "native.skia.composite_raster_blend_v1_2_0",
+    "baseline_name": "Skia / DirectWrite-Style GPU Compositor Pipeline",
+    "reason": "no version-pinned native baseline `native.skia.composite_raster_blend_v1_2_0` is vendored. Fix: vendor the pinned native kernel and register it before claiming a comparison against it."
+  },
+  "host_environment": "x86_64-linux / cuda / NVIDIA GeForce RTX 4090",
+  "recorded_at_utc": "2026-09-14T07:57:03Z"
+}

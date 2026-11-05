@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-release-gate` judges prepublication evidence by default and takes `--launch-complete` for the post-ship mode. The default was launch-complete, which demands `public_launch_complete`, all three approval-gated external actions complete and zero blockers, so the gate every sweep runs with no arguments could not pass before the version it guards had shipped. The removed `--prepublish` flag is rejected rather than ignored."

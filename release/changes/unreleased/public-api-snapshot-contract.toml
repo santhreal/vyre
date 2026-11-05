@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Public API checks now discover every committed crate snapshot, parse exact package names, use dependency-noise-free output, and reject ordinary snapshot updates that remove or change an existing item."

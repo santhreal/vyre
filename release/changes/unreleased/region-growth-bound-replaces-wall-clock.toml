@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The region dedup scale tests assert that the shipped dedup grows sub-quadratically between two input sizes measured back to back, instead of asserting a 100 ms wall-clock ceiling. The ceiling measured how busy the host was, so it went red under the workspace test sweep that runs it and stayed green for a quadratic rewrite on an idle host. A stand-in dedup that merges identically and sorts quadratically proves the new bound goes red."

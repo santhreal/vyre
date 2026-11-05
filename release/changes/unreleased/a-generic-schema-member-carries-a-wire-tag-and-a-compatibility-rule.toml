@@ -1,0 +1,2 @@
+category = "Added"
+text = "A generic schema member carries a stable wire tag through `FieldType::wire_tag` and `FieldType::from_wire_tag`, and `validate_member_compatibility` rejects an external field whose declared member the dialect field contract does not admit."

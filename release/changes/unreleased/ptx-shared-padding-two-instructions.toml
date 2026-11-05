@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A padded shared tile rewrites its element index in two PTX instructions instead of four. The row-padding permutation split the index into a row count and a within-row offset and rebuilt the padded address from both, which cost a shift, a mask, a multiply and an add at every shared access. `index + (index >> row_log2) * pad` is the same address for every index inside the extent and lowers to a shift and a multiply-add. `SharedPermutation::apply` computes that expression as well, so the host model and the emitted kernel state one rule."

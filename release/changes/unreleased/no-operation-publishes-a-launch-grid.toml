@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Operations in vyre-libs no longer publish dispatch-grid functions, fields, or constants; a caller below admission lets vyre_driver::infer_dispatch_grid derive the launch."

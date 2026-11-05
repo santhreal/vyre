@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The model compiler derives a constant's content identity from statically known extents and covers the unresolved, symbol, and interned-expression dimension forms explicitly."

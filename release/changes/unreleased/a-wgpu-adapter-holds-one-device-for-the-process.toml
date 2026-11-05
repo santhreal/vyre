@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A multi-threaded consumer of `vyre-driver-wgpu` no longer deadlocks in the GPU driver when one thread releases a device while another creates or releases one: the driver holds one device per adapter for the process lifetime and hands it to every caller of that adapter, so no release is the last reference and `vkDestroyDevice` is never reached, and device-loss recovery replaces the held device and keeps the lost handle. On an RTX 3080 Ti with driver 580.173.02 the previous code hung 6 of 8 runs of a four-thread create-and-release loop."

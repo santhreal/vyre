@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Device acquisition resolves the timed-dispatch query layout once on the created device and reports no timestamp capability when the resolve produces no monotonic pair, so an adapter that advertises timestamp queries and resolves a zero end-of-pass tick is reported as untimeable instead of failing a first timed dispatch with a delta underflow."

@@ -1,0 +1,222 @@
+//! ByteRange post-processing: dedup, entropy, and confidence in one pass.
+//!
+//! The module is the canonical host reference for matcher output shaping.
+//! Consumers that need device-resident post-processing use the same field
+//! contract: sorted non-overlapping `(pattern_id, start, end)` spans plus
+//! deterministic entropy and confidence signals.
+
+// Every item that names these is a host oracle, gated the same way, so the
+// imports carry the gate too rather than making a default build of this module
+// reach a CPU reference.
+#[cfg(test)]
+use crate::pattern::RegionTriple;
+#[cfg(test)]
+use vyre_foundation::match_result::ByteRange;
+#[cfg(test)]
+fn convert_match(
+    m: vyre_reference::composition_witness::WitnessPostProcessedMatch,
+) -> PostProcessedMatch {
+    PostProcessedMatch {
+        pattern_id: m.pattern_id,
+        start: m.start,
+        end: m.end,
+        entropy_bits_per_byte: m.entropy_bits_per_byte,
+        confidence: m.confidence,
+    }
+}
+
+#[cfg(test)]
+fn convert_err(
+    e: vyre_reference::composition_witness::WitnessPostProcessError,
+) -> PostProcessError {
+    match e {
+        vyre_reference::composition_witness::WitnessPostProcessError::InvalidRange {
+            pattern_id,
+            start,
+            end,
+            haystack_len,
+        } => PostProcessError::InvalidRange {
+            pattern_id,
+            start,
+            end,
+            haystack_len,
+        },
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn try_reference_post_process(
+    matches: &[ByteRange],
+    haystack: &[u8],
+) -> Result<Vec<PostProcessedMatch>, PostProcessError> {
+    vyre_reference::composition_witness::try_match_post_process_witness(matches, haystack)
+        .map(|vec| vec.into_iter().map(convert_match).collect())
+        .map_err(convert_err)
+}
+
+#[cfg(test)]
+pub(crate) fn try_reference_post_process_into(
+    matches: &[ByteRange],
+    haystack: &[u8],
+    triples: &mut Vec<RegionTriple>,
+    output: &mut Vec<PostProcessedMatch>,
+) -> Result<(), PostProcessError> {
+    triples.clear();
+    output.clear();
+    vyre_reference::composition_witness::try_match_post_process_records_into(
+        matches,
+        haystack,
+        |pattern_id, start, end, entropy_bits_per_byte, confidence| {
+            triples.push(RegionTriple::new(pattern_id, start, end));
+            output.push(PostProcessedMatch {
+                pattern_id,
+                start,
+                end,
+                entropy_bits_per_byte,
+                confidence,
+            });
+        },
+    )
+    .map_err(convert_err)?;
+    Ok(())
+}
+
+#[cfg(test)]
+#[must_use]
+pub(crate) fn reference_post_process(
+    matches: &[ByteRange],
+    haystack: &[u8],
+) -> Vec<PostProcessedMatch> {
+    try_reference_post_process(matches, haystack)
+        .unwrap_or_else(|err| panic!("post-process contract failed: {err}"))
+}
+
+/// Post-processing contract violation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PostProcessError {
+    /// A match range does not fit inside the haystack that was scanned.
+    InvalidRange {
+        /// Pattern id attached to the invalid match.
+        pattern_id: u32,
+        /// Inclusive start byte offset.
+        start: u32,
+        /// Exclusive end byte offset.
+        end: u32,
+        /// Haystack length in bytes.
+        haystack_len: usize,
+    },
+}
+
+impl std::fmt::Display for PostProcessError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Self::InvalidRange {
+                pattern_id,
+                start,
+                end,
+                haystack_len,
+            } => write!(
+                f,
+                "match range is outside the scanned haystack: pattern_id={pattern_id}, start={start}, end={end}, haystack_len={haystack_len}. Fix: preserve matcher readback bounds and reject corrupt hit triples before scoring."
+            ),
+        }
+    }
+}
+
+impl std::error::Error for PostProcessError {}
+
+/// Output of `try_reference_post_process`. Carries the deduped match and the
+/// two derived signals every downstream consumer reads.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PostProcessedMatch {
+    /// Pattern id from the original `ByteRange`.
+    pub pattern_id: u32,
+    /// Inclusive start byte offset.
+    pub start: u32,
+    /// Exclusive end byte offset.
+    pub end: u32,
+    /// Shannon entropy in bits/byte over `haystack[start..end]`. `0.0`
+    /// for zero-width matches.
+    pub entropy_bits_per_byte: f32,
+    /// `[0.0, 1.0]` confidence score combining length + entropy.
+    /// Specifically `min(1, len/16) * (entropy / 8)`  -  the same
+    /// heuristic a scan consumer's per-match scorer applies. The factor of 16
+    /// matches the typical AKIA / ghp_ token width; entropy is
+    /// normalised against the 8 bits/byte ceiling for binary-uniform
+    /// data.
+    pub confidence: f32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn into_reuses_scratch_and_matches_allocating_api() {
+        let haystack = b"AKIA1234567890ZZ";
+        let matches = [
+            ByteRange::new(7, 0, 8),
+            ByteRange::new(7, 0, 8),
+            ByteRange::new(8, 4, 12),
+        ];
+
+        let expected = try_reference_post_process(&matches, haystack).unwrap();
+        let mut triples = Vec::with_capacity(16);
+        let triples_ptr = triples.as_ptr();
+        let mut out = Vec::with_capacity(16);
+        let out_ptr = out.as_ptr();
+
+        try_reference_post_process_into(&matches, haystack, &mut triples, &mut out).unwrap();
+
+        assert_eq!(out, expected);
+        assert_eq!(triples.as_ptr(), triples_ptr);
+        assert_eq!(out.as_ptr(), out_ptr);
+    }
+
+    #[test]
+    fn into_clears_outputs_on_empty_input() {
+        let mut triples = vec![RegionTriple::new(1, 0, 1)];
+        let mut out = vec![PostProcessedMatch {
+            pattern_id: 1,
+            start: 0,
+            end: 1,
+            entropy_bits_per_byte: 0.0,
+            confidence: 0.0,
+        }];
+
+        try_reference_post_process_into(&[], b"", &mut triples, &mut out).unwrap();
+
+        assert!(triples.is_empty());
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn into_reports_invalid_ranges_without_partial_output() {
+        let mut triples = Vec::new();
+        let mut out = Vec::new();
+        let err = try_reference_post_process_into(
+            &[ByteRange::new(1, 10, 12)],
+            b"short",
+            &mut triples,
+            &mut out,
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            err,
+            PostProcessError::InvalidRange {
+                pattern_id: 1,
+                start: 10,
+                end: 12,
+                haystack_len: 5,
+            }
+        );
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    #[should_panic(expected = "post-process contract failed")]
+    fn infallible_wrapper_panics_on_corrupt_ranges() {
+        let _ = reference_post_process(&[ByteRange::new(1, 10, 12)], b"short");
+    }
+}

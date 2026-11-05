@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Dialect items are published at one path each: `vyre-foundation` exposes them under `dialect` rather than also under `dialect::descriptor`, `dialect::schema`, `dialect::traits`, and `dialect::version`, and `vyre-libs` exposes the logical dialect under `logical::dialect` only."

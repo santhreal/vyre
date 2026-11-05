@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre_libs_builder::builder::strided_loop_from` runs the shared strided chunk loop over a lane whose first index the caller states, which `strided_loop` now delegates to with the `local` binding as that base."

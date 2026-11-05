@@ -1,0 +1,163 @@
+//! Shared binding validation and output-clear helpers for wgpu pipelines.
+
+use vyre_driver::BackendError;
+
+use crate::buffer::GpuBufferHandle;
+use crate::numeric::WGPU_NUMERIC;
+use crate::pipeline::{element_size_bytes, BufferBindingInfo, OutputBindingLayout};
+
+/// Return true when a binding consumes one caller-provided borrowed input slot.
+///
+/// Reads the answer recorded from `BufferDecl::consumes_host_input` at pipeline
+/// build time, so this walk and the persistent one cannot disagree about which
+/// binding a caller input fills. Deriving it here from flattened fields could
+/// not reproduce the canonical answer, because `BufferBindingInfo` carries no
+/// `pipeline_live_out`.
+pub(crate) fn consumes_host_input(info: &BufferBindingInfo) -> bool {
+    info.consumes_host_input && !info.internal_trap
+}
+
+/// Return true when a binding is the slot a single dispatch-parameter handle
+/// fills.
+///
+/// Only uniform and push-constant memory carries dispatch parameters, and only
+/// the first such binding takes the caller's params handle; later ones consume
+/// ordinary input handles. Both the persistent and the pre-recorded binding
+/// walks used to spell this kind test out, so the two could disagree about
+/// which binding a params handle lands on.
+pub(crate) fn accepts_params_handle(info: &BufferBindingInfo) -> bool {
+    matches!(
+        info.kind,
+        vyre_foundation::ir::MemoryKind::Uniform | vyre_foundation::ir::MemoryKind::Push
+    )
+}
+
+/// Bytes a binding declares through its element count, or 0 when it declares none.
+///
+/// The one place that turns `BufferDecl::count` into a host byte length. Three
+/// call paths used to each carry their own overflow guards, so a change to the
+/// element-size rule reached only the paths whoever edited remembered.
+pub(crate) fn declared_byte_size(info: &BufferBindingInfo) -> Result<usize, BackendError> {
+    if info.count == 0 {
+        return Ok(0);
+    }
+    usize::try_from(info.count)
+        .map_err(|_| {
+            BackendError::new(format!(
+                "buffer `{}` element count cannot fit host usize. Fix: reduce buffer count or shard the binding.",
+                info.name
+            ))
+        })?
+        .checked_mul(element_size_bytes(&info.element)?)
+        .ok_or_else(|| {
+            BackendError::new(format!(
+                "buffer `{}` declared size overflows usize. Fix: reduce buffer count.",
+                info.name
+            ))
+        })
+}
+
+/// Required wgpu usage flags for a compiled binding.
+pub(crate) fn usage_for_binding(
+    info: &BufferBindingInfo,
+) -> Result<wgpu::BufferUsages, BackendError> {
+    let _binding_contract = (&info.access, &info.hints);
+    if info.internal_trap {
+        return Ok(wgpu::BufferUsages::STORAGE
+            | wgpu::BufferUsages::COPY_SRC
+            | wgpu::BufferUsages::COPY_DST);
+    }
+    if info.is_output {
+        return Ok(wgpu::BufferUsages::STORAGE
+            | wgpu::BufferUsages::COPY_SRC
+            | wgpu::BufferUsages::COPY_DST
+            | wgpu::BufferUsages::INDIRECT);
+    }
+    match info.kind {
+        vyre_foundation::ir::MemoryKind::Readonly | vyre_foundation::ir::MemoryKind::Global => {
+            Ok(wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::INDIRECT)
+        }
+        vyre_foundation::ir::MemoryKind::Uniform | vyre_foundation::ir::MemoryKind::Push => {
+            Ok(wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST)
+        }
+        vyre_foundation::ir::MemoryKind::Shared => Err(BackendError::new(
+            "shared memory reached wgpu binding validation. Fix: lower Shared memory into workgroup variables before dispatch.",
+        )),
+        vyre_foundation::ir::MemoryKind::Local => Err(BackendError::new(format!(
+            "buffer `{}` reached wgpu allocation with MemoryKind::Local. Fix: lower Local regions into shader function variables before dispatch.",
+            info.name
+        ))),
+        _ => Err(BackendError::new(format!(
+            "buffer `{}` uses an unknown future MemoryKind in wgpu allocation. Fix: update vyre-wgpu before dispatching this Program.",
+            info.name
+        ))),
+    }
+}
+
+/// Validate that a resident handle satisfies a binding's usage and size.
+pub(crate) fn validate_handle(
+    mode: &str,
+    info: &BufferBindingInfo,
+    handle: &GpuBufferHandle,
+) -> Result<(), BackendError> {
+    let required = usage_for_binding(info)?;
+    if !handle.usage().contains(required) {
+        return Err(BackendError::new(format!(
+            "{mode} handle for binding {} (`{}`) has usage {:?} but requires {:?}. Fix: allocate the handle with the binding's required usage bits.",
+            info.binding,
+            info.name,
+            handle.usage(),
+            required
+        )));
+    }
+    if info.count > 0 {
+        let required_bytes = declared_byte_size(info)?;
+        let required_bytes_u64 =
+            WGPU_NUMERIC.usize_to_u64(required_bytes, "required binding bytes")?;
+        if handle.allocation_len() < required_bytes_u64 {
+            return Err(BackendError::new(format!(
+                "{mode} handle for binding {} (`{}`) has {} bytes but requires {required_bytes}. Fix: allocate a larger GPU buffer.",
+                info.binding,
+                info.name,
+                handle.allocation_len()
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// Clear output buffers that do not preserve caller-provided input bytes.
+pub(crate) fn clear_outputs_for_bound<F>(
+    mode: &str,
+    encoder: &mut wgpu::CommandEncoder,
+    bound: &[(&BufferBindingInfo, &GpuBufferHandle)],
+    mut output_binding: F,
+) -> Result<(), BackendError>
+where
+    F: FnMut(u32) -> Result<OutputBindingLayout, BackendError>,
+{
+    for (info, handle) in bound {
+        if !info.is_output || info.preserve_input_contents {
+            continue;
+        }
+        let output = output_binding(info.binding)?;
+        let clear_size = output.word_count.checked_mul(4).ok_or_else(|| {
+            BackendError::new(format!(
+                "{mode} output clear size overflows usize for `{}`. Fix: reduce its element count.",
+                output.name
+            ))
+        })?;
+        let clear_size_u64 = WGPU_NUMERIC.usize_to_u64(clear_size, "output clear bytes")?;
+        if handle.allocation_len() < clear_size_u64 {
+            return Err(BackendError::new(format!(
+                "{mode} output buffer `{}` has {} bytes but dispatch requires {clear_size}. Fix: allocate the output handle with at least the compiled output size.",
+                info.name,
+                handle.allocation_len()
+            )));
+        }
+        encoder.clear_buffer(handle.buffer(), 0, Some(clear_size_u64));
+    }
+    Ok(())
+}

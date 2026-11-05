@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "GPU parity steps that filter a harness binary by module quote the command, so the workflow parses. A plain YAML scalar may not contain `: `, and the module filter `all_tests op_pairwise::` carries one, which made every job in `gpu-parity.yml` fail to start. A new workspace contract rejects an unquoted workflow value containing `: ` or ending in `:`."

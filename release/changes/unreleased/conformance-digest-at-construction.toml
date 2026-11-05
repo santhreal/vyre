@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A conformance case's wall budget no longer includes the read of the running binary's digest, which the coordinator now takes when it is constructed."

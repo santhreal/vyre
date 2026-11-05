@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The reference interpreter holds an invocation's locals in a flat hash map instead of a persistent one, so a binding inside a loop body no longer allocates trie nodes on every iteration and an assignment hashes the name once instead of twice."

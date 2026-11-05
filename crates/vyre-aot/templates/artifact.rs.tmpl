@@ -1,0 +1,408 @@
+//! Canonical deployment-bundle loader.
+//!
+//! The serialized manifest carries package metadata only. Dispatch, resources,
+//! entry points, and target bytes are projected from the authenticated compiler
+//! envelope at load time.
+
+use std::fs;
+use std::io::Read;
+use std::path::{Component, Path, PathBuf};
+
+use serde::Deserialize;
+use sha2::{Digest, Sha256};
+use vyre_megakernel::{
+    ArtifactEnvelope, TargetModuleBundle, TargetResourceAccess, TargetResourceMemory,
+};
+
+const MANIFEST_SCHEMA_VERSION: &str = "vyre-aot-manifest-v4";
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PackageManifest {
+    schema: String,
+    aot_version: String,
+    artifact_name: String,
+    target: String,
+    target_payload_format: String,
+    envelope_file: String,
+    envelope_compression: String,
+    envelope_sha256_hex: String,
+    neutral_artifact_digest_hex: String,
+    target_payload_digest_hex: String,
+    weights_file: String,
+    weights_compression: String,
+    weights_sha256_hex: String,
+    #[serde(default)]
+    notes: String,
+}
+
+/// Where a buffer is placed on the device.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BufferMemoryKind {
+    /// Device-global memory, visible to every workgroup.
+    Global,
+    /// Workgroup-local memory, visible only within one workgroup.
+    Shared,
+    /// Read-only memory the device may cache aggressively.
+    Constant,
+}
+
+/// How the entry point reaches a buffer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BufferAccessKind {
+    /// The entry point reads the buffer and never writes it.
+    ReadOnly,
+    /// The entry point writes the buffer and never reads it.
+    WriteOnly,
+    /// The entry point both reads and writes the buffer.
+    ReadWrite,
+}
+
+/// One buffer the entry point binds, projected from the compiler envelope.
+#[derive(Debug, Clone)]
+pub struct BufferEntry {
+    /// Canonical resource name.
+    pub name: String,
+    /// Binding slot the entry point reads this buffer from.
+    pub binding: u32,
+    /// Number of elements the resource declares.
+    pub element_count: u64,
+    /// Bytes in one element.
+    pub element_size_bytes: u64,
+    /// Memory space the buffer is placed in.
+    pub memory_kind: BufferMemoryKind,
+    /// Access the entry point takes on the buffer.
+    pub access: BufferAccessKind,
+}
+
+/// Launch geometry the compiler recorded for the entry point.
+#[derive(Debug, Clone, Copy)]
+pub struct DispatchConfig {
+    /// Workgroup extents along x, y and z.
+    pub workgroup_size: [u32; 3],
+    /// Grid extents along x, y and z, in workgroups.
+    pub grid_size: [u32; 3],
+    /// Dynamic shared memory the launch requests, in bytes.
+    pub dynamic_shared_bytes: u32,
+}
+
+/// Everything a launcher needs to dispatch the packaged artifact.
+///
+/// Only the packaging fields come from the serialized manifest. Dispatch,
+/// buffers and the entry point are projected from the authenticated envelope.
+#[derive(Debug, Clone)]
+pub struct Manifest {
+    /// Version of the packaging crate that wrote the bundle.
+    pub aot_version: String,
+    /// Name the bundle was packaged under.
+    pub artifact_name: String,
+    /// Target identity the payload was compiled for.
+    pub target: String,
+    /// Format identity of the attached target payload.
+    pub target_payload_format: String,
+    /// Entry point the target module exports.
+    pub entry_point: String,
+    /// Launch geometry for the entry point.
+    pub dispatch: DispatchConfig,
+    /// Buffers the entry point binds, in slot order.
+    pub buffers: Vec<BufferEntry>,
+    /// Free-form packaging notes.
+    pub notes: String,
+}
+
+/// An authenticated bundle read from disk.
+#[derive(Debug)]
+pub struct LoadedBundle {
+    /// Projected manifest.
+    pub manifest: Manifest,
+    /// Authenticated compiler envelope.
+    pub envelope: ArtifactEnvelope,
+    /// Target module bytes for the packaged target.
+    pub kernel_bytes: Vec<u8>,
+    /// Weight bytes packaged beside the artifact.
+    pub weight_bytes: Vec<u8>,
+}
+
+/// Read and authenticate the bundle in `dir`.
+///
+/// # Errors
+///
+/// Returns an error when the manifest is unreadable, its schema or compression
+/// is unsupported, a digest does not match the bytes it names, or the envelope
+/// carries no payload for the packaged target.
+pub fn load_bundle(dir: &Path) -> Result<LoadedBundle, Box<dyn std::error::Error>> {
+    let manifest_path = dir.join("manifest.json");
+    let manifest_str = fs::read_to_string(&manifest_path)
+        .map_err(|error| format!("read manifest {}: {error}", manifest_path.display()))?;
+    let package: PackageManifest = serde_json::from_str(&manifest_str)?;
+    validate_package_manifest(&package)?;
+
+    let envelope_compressed = read_bundle_file(dir, &package.envelope_file)?;
+    let envelope_bytes = match package.envelope_compression.as_str() {
+        "lzma" => decompress_lzma(&envelope_compressed)?,
+        other => {
+            return Err(
+                format!("unsupported envelope_compression {other:?}; expected \"lzma\"").into(),
+            );
+        }
+    };
+    verify_sha256_hex("envelope", &envelope_bytes, &package.envelope_sha256_hex)?;
+    let envelope = ArtifactEnvelope::from_bytes(&envelope_bytes)?;
+    verify_digest_hex(
+        "neutral artifact",
+        envelope.neutral().digest().as_bytes(),
+        &package.neutral_artifact_digest_hex,
+    )?;
+
+    let mut matching = envelope
+        .target_payloads()
+        .iter()
+        .filter(|payload| payload.format().identity() == package.target_payload_format);
+    let payload = matching.next().ok_or_else(|| {
+        format!(
+            "artifact envelope has no {:?} target payload for target {:?}. Fix: package the selected compiler payload.",
+            package.target_payload_format, package.target
+        )
+    })?;
+    if matching.next().is_some() {
+        return Err(format!(
+            "artifact envelope has multiple {:?} target payload versions for target {:?}. Fix: package one exact target format.",
+            package.target_payload_format, package.target
+        )
+        .into());
+    }
+    verify_digest_hex(
+        "target payload",
+        payload.digest().as_bytes(),
+        &package.target_payload_digest_hex,
+    )?;
+
+    if payload.entries().len() != 1 {
+        return Err(format!(
+            "launcher requires one target entry, found {}. Fix: use a multi-stage runtime materializer for whole-program artifacts.",
+            payload.entries().len()
+        )
+        .into());
+    }
+    let modules = TargetModuleBundle::from_bytes(payload.bytes())?;
+    if modules.modules.len() != 1 {
+        return Err(format!(
+            "launcher requires one target module, found {}. Fix: use a multi-stage runtime materializer for whole-program artifacts.",
+            modules.modules.len()
+        )
+        .into());
+    }
+    let entry = &payload.entries()[0];
+    let module = &modules.modules[0];
+    if module.entry_point != entry.name {
+        return Err(format!(
+            "target module entry {:?} does not match payload entry {:?}. Fix: regenerate the authenticated target payload.",
+            module.entry_point, entry.name
+        )
+        .into());
+    }
+    let geometry = envelope
+        .neutral()
+        .geometry()
+        .iter()
+        .find(|geometry| geometry.node == entry.node)
+        .ok_or("target entry has no canonical neutral geometry")?;
+
+    let mut buffers = Vec::with_capacity(entry.resource_bindings.len());
+    for binding in &entry.resource_bindings {
+        let resource = envelope
+            .neutral()
+            .resources()
+            .iter()
+            .find(|resource| resource.value == binding.resource)
+            .ok_or_else(|| {
+                format!(
+                    "target binding {} names missing canonical resource {}",
+                    binding.slot, binding.resource.0
+                )
+            })?;
+        let element_size_bytes = if resource.element_count == 0 {
+            0
+        } else {
+            resource.byte_count / resource.element_count
+        };
+        buffers.push(BufferEntry {
+            name: resource.name.clone(),
+            binding: binding.slot,
+            element_count: resource.element_count,
+            element_size_bytes,
+            memory_kind: match binding.memory {
+                TargetResourceMemory::Global => BufferMemoryKind::Global,
+                TargetResourceMemory::Shared => BufferMemoryKind::Shared,
+                TargetResourceMemory::Constant => BufferMemoryKind::Constant,
+            },
+            access: match binding.access {
+                TargetResourceAccess::ReadOnly => BufferAccessKind::ReadOnly,
+                TargetResourceAccess::WriteOnly => BufferAccessKind::WriteOnly,
+                TargetResourceAccess::ReadWrite => BufferAccessKind::ReadWrite,
+            },
+        });
+    }
+    buffers.sort_by_key(|buffer| buffer.binding);
+
+    let weights_compressed = read_bundle_file(dir, &package.weights_file)?;
+    let weight_bytes = match package.weights_compression.as_str() {
+        value if value.starts_with("brotli") => decompress_brotli(&weights_compressed)?,
+        other => {
+            return Err(format!(
+                "unsupported weights_compression {other:?}; expected a brotli format"
+            )
+            .into());
+        }
+    };
+    verify_sha256_hex("weights", &weight_bytes, &package.weights_sha256_hex)?;
+
+    Ok(LoadedBundle {
+        manifest: Manifest {
+            aot_version: package.aot_version,
+            artifact_name: package.artifact_name,
+            target: package.target,
+            target_payload_format: package.target_payload_format,
+            entry_point: entry.name.clone(),
+            dispatch: DispatchConfig {
+                workgroup_size: geometry.workgroup_size,
+                grid_size: geometry.grid,
+                dynamic_shared_bytes: geometry.dynamic_shared_bytes,
+            },
+            buffers,
+            notes: package.notes,
+        },
+        envelope,
+        kernel_bytes: module.bytes.clone(),
+        weight_bytes,
+    })
+}
+
+fn validate_package_manifest(manifest: &PackageManifest) -> Result<(), Box<dyn std::error::Error>> {
+    if manifest.schema != MANIFEST_SCHEMA_VERSION {
+        return Err(format!(
+            "unsupported manifest schema {:?}; expected {MANIFEST_SCHEMA_VERSION:?}. Fix: regenerate the deployment bundle.",
+            manifest.schema
+        )
+        .into());
+    }
+    if manifest.aot_version.is_empty()
+        || manifest.artifact_name.is_empty()
+        || manifest.target.is_empty()
+        || manifest.target_payload_format.is_empty()
+    {
+        return Err(
+            "manifest identity fields are empty. Fix: regenerate the deployment bundle.".into(),
+        );
+    }
+    let _ = validate_bundle_relative_path(&manifest.envelope_file)?;
+    let _ = validate_bundle_relative_path(&manifest.weights_file)?;
+    validate_sha256_manifest_field("envelope", &manifest.envelope_sha256_hex)?;
+    validate_sha256_manifest_field("neutral artifact", &manifest.neutral_artifact_digest_hex)?;
+    validate_sha256_manifest_field("target payload", &manifest.target_payload_digest_hex)?;
+    validate_sha256_manifest_field("weights", &manifest.weights_sha256_hex)?;
+    Ok(())
+}
+
+fn read_bundle_file(
+    dir: &Path,
+    manifest_path: &str,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let relative = validate_bundle_relative_path(manifest_path)?;
+    fs::read(dir.join(relative)).map_err(|error| {
+        format!(
+            "read bundle file {manifest_path:?}: {error}. Fix: ensure manifest paths name files inside the bundle directory."
+        )
+        .into()
+    })
+}
+
+fn validate_bundle_relative_path(path: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    if path.is_empty() {
+        return Err("bundle manifest file path is empty".into());
+    }
+    let candidate = Path::new(path);
+    if candidate.is_absolute() {
+        return Err(format!("bundle manifest file path {path:?} is absolute").into());
+    }
+    let mut clean = PathBuf::new();
+    for component in candidate.components() {
+        match component {
+            Component::Normal(part) => clean.push(part),
+            Component::CurDir => {}
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                return Err(
+                    format!("bundle manifest file path {path:?} escapes the bundle root").into(),
+                );
+            }
+        }
+    }
+    if clean.as_os_str().is_empty() {
+        return Err(
+            format!("bundle manifest file path {path:?} resolves to the bundle root").into(),
+        );
+    }
+    Ok(clean)
+}
+
+fn validate_sha256_manifest_field(
+    label: &str,
+    expected_hex: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if expected_hex.len() != 64
+        || !expected_hex
+            .as_bytes()
+            .iter()
+            .all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err(
+            format!("manifest {label} digest must be exactly 64 hexadecimal characters").into(),
+        );
+    }
+    Ok(())
+}
+
+fn verify_sha256_hex(
+    label: &str,
+    bytes: &[u8],
+    expected_hex: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    validate_sha256_manifest_field(label, expected_hex)?;
+    let actual = Sha256::digest(bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    if actual != expected_hex.to_ascii_lowercase() {
+        return Err(format!("{label} SHA-256 mismatch").into());
+    }
+    Ok(())
+}
+
+fn verify_digest_hex(
+    label: &str,
+    bytes: &[u8; 32],
+    expected_hex: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    validate_sha256_manifest_field(label, expected_hex)?;
+    let actual = bytes
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    if actual != expected_hex.to_ascii_lowercase() {
+        return Err(format!("{label} digest mismatch").into());
+    }
+    Ok(())
+}
+
+fn decompress_lzma(input: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let mut output = Vec::new();
+    lzma_rs::lzma_decompress(&mut std::io::Cursor::new(input), &mut output)
+        .map_err(|error| format!("lzma decompress failed: {error:?}"))?;
+    Ok(output)
+}
+
+fn decompress_brotli(input: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let mut output = Vec::new();
+    brotli::Decompressor::new(input, 4096).read_to_end(&mut output)?;
+    Ok(output)
+}

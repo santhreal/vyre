@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The bounded semantic wrapper policy, the CRC-32 and FNV-1a reference oracles, and the u32 anchor corpus each have one definition instead of a copy per crate."

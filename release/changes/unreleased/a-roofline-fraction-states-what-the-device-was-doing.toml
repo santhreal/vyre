@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A benchmark's roofline percentage is computed from device bytes moved over device active time, and the conditional rule-condition cases state the bytes their kernel reads, so a resident bandwidth-bound case reports 44% of a 1792 GB/s device instead of 0.45%."

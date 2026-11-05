@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The release hygiene scan named `release_gate`, a module deleted when the composite became the `prepublish` subset, so one entry in its list scanned nothing while reading as coverage. It reads `lockfile`, the gate that inherited the lockfile step."

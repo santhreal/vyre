@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The evidence attribution gate declares every gate that writes release evidence as a prerequisite, so it judges the artifacts a sweep finished rather than the ones it is about to replace."

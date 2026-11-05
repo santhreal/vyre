@@ -1,0 +1,2 @@
+category = "Added"
+text = "The device-test-compilation gate discovers every workspace test target admitted by the device-tests cargo feature and proves it compiles in hosted environments without physical GPU execution."

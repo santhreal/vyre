@@ -1,0 +1,2 @@
+category = "Changed"
+text = "V139 told a caller to compute an async transfer offset and size from workgroup-uniform expressions and named only literals, buffer lengths and the workgroup ID, so the reader could not tell that a load from a read-only or uniform buffer at a uniform index is also accepted, nor that the proof attaches to the operand and is lost when the load is hoisted into a `let`. The rule and both node-level messages now name every legal source and the spelling that keeps it."

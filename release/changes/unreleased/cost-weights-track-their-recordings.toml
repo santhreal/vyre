@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The megakernel launch floor and traffic rate are derived from the recorded benchmark files at run time, so a weight that drifts from the recording it cites fails the suite."

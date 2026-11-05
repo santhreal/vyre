@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A `vyre-libs-*` domain crate's `link_anchor` returns nothing. Every anchor reported the whole process-wide library operation catalog, so `vyre_libs::link_anchor` summing them returned the catalog size multiplied by the number of enabled domains. `vyre_libs::link_anchor` still returns `usize` and now reads the registry once."

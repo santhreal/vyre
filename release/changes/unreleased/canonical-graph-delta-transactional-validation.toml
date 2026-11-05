@@ -1,0 +1,2 @@
+category = "Added"
+text = "The canonical graph delta subsystem defines bounded transactional graph modifications over stable semantic identities, providing dirty closure derivation, exact query invalidation, positive retention verification, and monotonic generation tracking."

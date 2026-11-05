@@ -1,0 +1,395 @@
+use super::queue::{
+    ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX, ACTIVE_QUEUE_EDGE_KIND_INDEX, ACTIVE_QUEUE_EDGE_OFFSETS_INDEX,
+    ACTIVE_QUEUE_EDGE_TARGETS_INDEX, ACTIVE_QUEUE_FRONTIER_OUT_INDEX, ACTIVE_QUEUE_INPUT_COUNT,
+    ACTIVE_QUEUE_LEN_INDEX,
+};
+use crate::api::case::BenchError;
+use crate::cases::mix32;
+use crate::cases::queue_closure_oracle::{
+    queue_closure_oracle, QueueClosureGraph, QueueClosureOracle,
+};
+use crate::cases::skewed_graph::{
+    active_high_degree_sources, build_skewed_csr_arrays, SkewedCsrShape,
+};
+use vyre_libs::predicate::edge_kind;
+
+pub(super) const NODE_COUNT: u32 = 1_048_576;
+#[cfg(test)]
+pub(super) const FRONTIER_WORDS: usize = NODE_COUNT.div_ceil(32) as usize;
+pub(super) const IFDS_REACH_MASK: u32 = edge_kind::ASSIGNMENT
+    | edge_kind::CALL_ARG
+    | edge_kind::RETURN
+    | edge_kind::PHI
+    | edge_kind::ALIAS
+    | edge_kind::MEM_STORE
+    | edge_kind::MEM_LOAD
+    | edge_kind::MUT_REF;
+
+const HIGH_DEGREE_THRESHOLD: u32 = 24;
+pub(super) const UGLY_HUB_DEGREE: u32 = 2_048;
+
+#[derive(Clone, Copy, Debug, Default)]
+pub(super) struct IfdsSkewedStats {
+    pub(super) nodes: u32,
+    pub(super) edges: u32,
+    pub(super) frontier_words: u32,
+    pub(super) active_sources: u64,
+    pub(super) allowed_edges_from_active: u64,
+    pub(super) filtered_edges_from_active: u64,
+    pub(super) output_words_set: u64,
+    pub(super) max_degree: u32,
+    pub(super) high_degree_sources: u64,
+}
+
+impl crate::cases::queue_materialize::FrontierWords for IfdsSkewedStats {
+    fn frontier_words(&self) -> u32 {
+        self.frontier_words
+    }
+}
+
+pub(super) struct IfdsSkewedFixture {
+    pub(super) nodes: Vec<u32>,
+    pub(super) edge_offsets: Vec<u32>,
+    pub(super) edge_targets: Vec<u32>,
+    pub(super) edge_kind_mask: Vec<u32>,
+    pub(super) node_tags: Vec<u32>,
+    pub(super) frontier_in: Vec<u32>,
+    pub(super) frontier_out_seed: Vec<u32>,
+    pub(super) stats: IfdsSkewedStats,
+}
+
+pub(super) struct IfdsSkewedOracle {
+    pub(super) output: Vec<u32>,
+    pub(super) allowed_edges_from_active: u64,
+    pub(super) filtered_edges_from_active: u64,
+    pub(super) output_words_set: u64,
+}
+
+pub(super) struct IfdsSkewedClosureOracle {
+    pub(super) output: Vec<u32>,
+    pub(super) changed: u32,
+    pub(super) iterations: u32,
+    pub(super) output_words_set: u64,
+}
+
+pub(super) fn build_ifds_skewed_fixture(node_count: u32) -> Result<IfdsSkewedFixture, BenchError> {
+    let arrays = build_skewed_csr_arrays(&SkewedCsrShape {
+        node_count,
+        hub_degree: UGLY_HUB_DEGREE,
+        high_degree_threshold: HIGH_DEGREE_THRESHOLD,
+        fixture: "IFDS skewed fixture",
+        power_of_two_fix: "Fix: choose a power-of-two exploded-supergraph size.",
+        node_kind: ifds_node_kind,
+        node_tag: ifds_node_tag,
+        edge_kind: ifds_edge_kind,
+        source_is_active,
+    })?;
+
+    Ok(IfdsSkewedFixture {
+        nodes: arrays.nodes,
+        edge_offsets: arrays.edge_offsets,
+        edge_targets: arrays.edge_targets,
+        edge_kind_mask: arrays.edge_kind_mask,
+        node_tags: arrays.node_tags,
+        frontier_in: arrays.frontier_in,
+        frontier_out_seed: vec![0_u32; arrays.frontier_words as usize],
+        stats: IfdsSkewedStats {
+            nodes: node_count,
+            edges: arrays.edge_count,
+            frontier_words: arrays.frontier_words,
+            active_sources: arrays.active_sources,
+            max_degree: arrays.max_degree,
+            high_degree_sources: arrays.high_degree_sources,
+            ..Default::default()
+        },
+    })
+}
+
+pub(super) fn ifds_skewed_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {
+    let mut inputs = ifds_graph_inputs(fixture);
+    inputs.push(vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in));
+    inputs.push(vyre_primitives::wire::pack_u32_slice(
+        &fixture.frontier_out_seed,
+    ));
+    inputs
+}
+
+crate::cases::queue_stage::define_queue_input_builder!(
+    pub(super) ifds_queue_inputs,
+    IfdsSkewedFixture,
+    "IFDS queue fixture"
+);
+
+pub(super) fn ifds_active_high_degree_sources(
+    fixture: &IfdsSkewedFixture,
+    min_degree: u32,
+) -> Result<u32, BenchError> {
+    active_high_degree_sources(
+        &fixture.frontier_in,
+        &fixture.edge_offsets,
+        fixture.stats.nodes,
+        min_degree,
+        "IFDS split queue",
+    )
+}
+
+pub(super) fn ifds_active_queue_inputs(
+    fixture: &IfdsSkewedFixture,
+    queue_capacity: u32,
+) -> Result<Vec<Vec<u8>>, BenchError> {
+    if u64::from(queue_capacity) < fixture.stats.active_sources {
+        return Err(BenchError::EnvironmentInvalid(format!(
+            "IFDS active-queue fixture requires queue_capacity >= active_sources, got capacity={queue_capacity} active_sources={}. Fix: size the sparse frontier queue from fixture stats.",
+            fixture.stats.active_sources
+        )));
+    }
+    let capacity = queue_capacity as usize;
+    let mut active_queue =
+        materialize_ifds_active_queue(fixture, capacity, "IFDS active-queue fixture")?;
+    active_queue.resize(capacity, 0);
+
+    let mut inputs = vec![Vec::new(); ACTIVE_QUEUE_INPUT_COUNT];
+    inputs[ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX] = vyre_primitives::wire::pack_u32_slice(&active_queue);
+    inputs[ACTIVE_QUEUE_LEN_INDEX] =
+        vyre_primitives::wire::pack_u32_slice(&[fixture.stats.active_sources as u32]);
+    inputs[ACTIVE_QUEUE_EDGE_OFFSETS_INDEX] =
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_offsets);
+    inputs[ACTIVE_QUEUE_EDGE_TARGETS_INDEX] =
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_targets);
+    inputs[ACTIVE_QUEUE_EDGE_KIND_INDEX] =
+        vyre_primitives::wire::pack_u32_slice(&fixture.edge_kind_mask);
+    inputs[ACTIVE_QUEUE_FRONTIER_OUT_INDEX] =
+        vyre_primitives::wire::pack_u32_slice(&fixture.frontier_out_seed);
+    Ok(inputs)
+}
+
+pub(in crate::cases::dataflow_irregular) fn materialize_ifds_active_queue(
+    fixture: &IfdsSkewedFixture,
+    queue_capacity: usize,
+    context: &str,
+) -> Result<Vec<u32>, BenchError> {
+    crate::cases::skewed_graph::materialize_active_frontier_queue(
+        &fixture.frontier_in,
+        fixture.stats.nodes,
+        fixture.stats.active_sources,
+        queue_capacity,
+        context,
+    )
+}
+
+pub(super) fn ifds_queue_closure_inputs(
+    fixture: &IfdsSkewedFixture,
+    queue_capacity: u32,
+) -> Result<Vec<Vec<u8>>, BenchError> {
+    crate::cases::queue_stage::build_queue_closure_inputs(
+        &fixture.frontier_in,
+        &fixture.edge_offsets,
+        &fixture.edge_targets,
+        &fixture.edge_kind_mask,
+        fixture.stats.active_sources,
+        queue_capacity,
+        "IFDS",
+        |capacity| materialize_ifds_active_queue(fixture, capacity, "IFDS queue closure seed"),
+    )
+}
+
+pub(super) fn ifds_skewed_queue_closure_oracle(
+    fixture: &IfdsSkewedFixture,
+    max_iters: u32,
+    queue_capacity: u32,
+) -> Result<QueueClosureOracle, BenchError> {
+    let seed_queue = materialize_ifds_active_queue(
+        fixture,
+        queue_capacity as usize,
+        "IFDS queue closure oracle seed",
+    )?;
+    queue_closure_oracle(
+        QueueClosureGraph {
+            node_count: fixture.stats.nodes,
+            edge_offsets: &fixture.edge_offsets,
+            edge_targets: &fixture.edge_targets,
+            edge_kind_mask: &fixture.edge_kind_mask,
+            frontier_in: &fixture.frontier_in,
+            seed_queue,
+            allow_mask: IFDS_REACH_MASK,
+        },
+        max_iters,
+        queue_capacity,
+        "IFDS",
+        "raise CLOSURE_MAX_ITERS",
+    )
+}
+
+pub(super) fn ifds_closure_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {
+    let mut inputs = ifds_graph_inputs(fixture);
+    inputs.push(vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in));
+    inputs.push(vyre_primitives::wire::pack_u32_slice(&[0]));
+    inputs
+}
+
+pub(super) fn ifds_closure_resident_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {
+    let mut inputs = ifds_graph_inputs(fixture);
+    let seed = vyre_primitives::wire::pack_u32_slice(&fixture.frontier_in);
+    inputs.push(seed.clone());
+    inputs.push(seed);
+    inputs.push(vyre_primitives::wire::pack_u32_slice(&[0]));
+    inputs
+}
+
+pub(super) fn ifds_skewed_cpu_oracle(fixture: &IfdsSkewedFixture) -> IfdsSkewedOracle {
+    let mut output = fixture.frontier_out_seed.clone();
+    let mut allowed_edges_from_active = 0_u64;
+    let mut filtered_edges_from_active = 0_u64;
+
+    for src in 0..fixture.stats.nodes {
+        let src_word = (src / 32) as usize;
+        let src_bit = 1_u32 << (src % 32);
+        if (fixture.frontier_in[src_word] & src_bit) == 0 {
+            continue;
+        }
+        let start = fixture.edge_offsets[src as usize] as usize;
+        let end = fixture.edge_offsets[src as usize + 1] as usize;
+        for edge in start..end {
+            if (fixture.edge_kind_mask[edge] & IFDS_REACH_MASK) == 0 {
+                filtered_edges_from_active += 1;
+                continue;
+            }
+            allowed_edges_from_active += 1;
+            let dst = fixture.edge_targets[edge];
+            if dst < fixture.stats.nodes {
+                output[(dst / 32) as usize] |= 1_u32 << (dst % 32);
+            }
+        }
+    }
+
+    IfdsSkewedOracle {
+        output_words_set: output.iter().filter(|word| **word != 0).count() as u64,
+        output,
+        allowed_edges_from_active,
+        filtered_edges_from_active,
+    }
+}
+
+pub(super) fn ifds_skewed_closure_oracle(
+    fixture: &IfdsSkewedFixture,
+    max_iters: u32,
+) -> IfdsSkewedClosureOracle {
+    let mut iterations = 0_u32;
+    let current = vyre_reference::composition_witness::csr_closure_with_step_hook_witness(
+        fixture.stats.nodes,
+        &fixture.edge_offsets,
+        &fixture.edge_targets,
+        &fixture.edge_kind_mask,
+        IFDS_REACH_MASK,
+        max_iters,
+        &fixture.frontier_in,
+        |_| {
+            iterations = iterations.saturating_add(1);
+        },
+    );
+    let changed = u32::from(current != fixture.frontier_in);
+    IfdsSkewedClosureOracle {
+        output_words_set: current.iter().filter(|word| **word != 0).count() as u64,
+        output: current,
+        changed,
+        iterations,
+    }
+}
+
+pub(super) fn ifds_skewed_launch_wave_iterations(
+    fixture: &IfdsSkewedFixture,
+    max_iters: u32,
+) -> u32 {
+    let mut current = fixture.frontier_in.clone();
+    let mut next = current.clone();
+    let mut changed_passes = 0_u32;
+    for iteration in 1..=max_iters {
+        next.clear();
+        next.extend_from_slice(&current);
+        if expand_one_launch_wave(fixture, &current, &mut next) == 0 {
+            return changed_passes.max(1);
+        }
+        changed_passes = iteration;
+        std::mem::swap(&mut current, &mut next);
+    }
+    max_iters
+}
+
+fn ifds_graph_inputs(fixture: &IfdsSkewedFixture) -> Vec<Vec<u8>> {
+    crate::cases::byte_pack::u32_input_bytes([
+        &fixture.nodes,
+        &fixture.edge_offsets,
+        &fixture.edge_targets,
+        &fixture.edge_kind_mask,
+        &fixture.node_tags,
+    ])
+}
+
+fn expand_one_launch_wave(
+    fixture: &IfdsSkewedFixture,
+    snapshot: &[u32],
+    output: &mut [u32],
+) -> u32 {
+    let mut changed = 0_u32;
+    for src in 0..fixture.stats.nodes {
+        let src_word = (src / 32) as usize;
+        let src_bit = 1_u32 << (src % 32);
+        if (snapshot[src_word] & src_bit) == 0 {
+            continue;
+        }
+        let start = fixture.edge_offsets[src as usize] as usize;
+        let end = fixture.edge_offsets[src as usize + 1] as usize;
+        for edge in start..end {
+            if (fixture.edge_kind_mask[edge] & IFDS_REACH_MASK) == 0 {
+                continue;
+            }
+            let dst = fixture.edge_targets[edge];
+            if dst >= fixture.stats.nodes {
+                continue;
+            }
+            let dst_word = (dst / 32) as usize;
+            let dst_bit = 1_u32 << (dst % 32);
+            let old = output[dst_word];
+            output[dst_word] = old | dst_bit;
+            if output[dst_word] != old {
+                changed = 1;
+            }
+        }
+    }
+    changed
+}
+
+fn ifds_edge_kind(src: u32, edge: u32) -> u32 {
+    const ALLOWED: [u32; 8] = [
+        edge_kind::ASSIGNMENT,
+        edge_kind::CALL_ARG,
+        edge_kind::RETURN,
+        edge_kind::PHI,
+        edge_kind::ALIAS,
+        edge_kind::MEM_STORE,
+        edge_kind::MEM_LOAD,
+        edge_kind::MUT_REF,
+    ];
+    match mix32(src ^ edge.wrapping_mul(0xA5A5_9651)) & 15 {
+        0 => edge_kind::DOMINANCE,
+        1 => edge_kind::CONTROL,
+        value => ALLOWED[(value as usize - 2) % ALLOWED.len()],
+    }
+}
+
+fn ifds_node_kind(src: u32) -> u32 {
+    mix32(src ^ 0x1FD5_0001) & 0x1F
+}
+
+fn ifds_node_tag(src: u32) -> u32 {
+    let base = 1_u32 << (mix32(src ^ 0x51CE_7A6D) & 7);
+    if src % 257 == 0 {
+        base | 0x100
+    } else {
+        base
+    }
+}
+
+fn source_is_active(src: u32) -> bool {
+    src % 97 == 0 || src % 4096 == 0 || (mix32(src ^ 0xD1B5_4A32) & 0x3FF) == 0
+}

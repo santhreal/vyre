@@ -1,0 +1,236 @@
+//! per-op kernel-time table emitter.
+//!
+//! Lane: `bench_harness`. Op id: `vyre-bench::report::kernel_time_table`.
+//!
+//! ## What
+//!
+//! Iterates every `CaseReport` in a `ReportSchema`, emits one
+//! pipe-delimited table row per case with columns:
+//!
+//! - `case_id`
+//! - `kernel_execute_ns_p50`
+//! - `kernel_execute_ns_p99`
+//! - `bytes_touched_p50`
+//! - `wall_throughput_gb_s_p50`
+//!
+//! Cases missing `kernel_execute_ns` in their metrics map are emitted
+//! with `MISSING` timing fields so release evidence exposes coverage
+//! holes instead of dropping rows.
+//! Output is plain text suitable for `column -t -s '|'`.
+
+use crate::report::ReportSchema;
+use std::fmt::Write;
+
+const HEADER: &str = "case_id|kernel_execute_ns_p50|kernel_execute_ns_p99|bytes_touched_p50|wall_throughput_gb_s_p50";
+
+/// Emit a pipe-delimited kernel-time table from a `ReportSchema`.
+///
+/// Returns the full table string including a header line. Cases without
+/// `kernel_execute_ns` in their metrics are emitted with explicit
+/// `MISSING` timing fields.
+#[must_use]
+pub fn kernel_time_table(report: &ReportSchema) -> String {
+    let mut out = String::with_capacity(128 * (report.cases.len() + 1));
+    out.push_str(HEADER);
+    out.push('\n');
+
+    for case in &report.cases {
+        if let Some(kernel) = case.metrics.get("kernel_execute_ns") {
+            write!(out, "{}|{}|{}|", case.id, kernel.p50, kernel.p99).unwrap_or(());
+        } else {
+            write!(out, "{}|MISSING|MISSING|", case.id).unwrap_or(());
+        }
+        if let Some(bytes_touched) = case.metrics.get("bytes_touched") {
+            write!(out, "{}", bytes_touched.p50).unwrap_or(());
+        } else {
+            out.push('-');
+        }
+        out.push('|');
+        if let Some(wall_tp) = case.metrics.get("wall_throughput_gb_s") {
+            // wall_throughput_gb_s is stored as a u64 in MetricStats but
+            // semantically represents f64. We emit the p50 raw value.
+            write!(out, "{}", wall_tp.p50).unwrap_or(());
+        } else {
+            out.push('-');
+        }
+        out.push('\n');
+    }
+
+    out
+}
+
+/// Emit a JSON array of objects representing the kernel-time table.
+///
+/// Returns a JSON array string. Cases without `kernel_execute_ns` in
+/// their metrics are emitted with null timing fields.
+#[must_use]
+pub fn kernel_time_table_json(report: &ReportSchema) -> String {
+    let mut entries = Vec::new();
+    for case in &report.cases {
+        let mut entry = serde_json::json!({
+            "case_id": case.id,
+            "kernel_execute_ns_p50": case.metrics.get("kernel_execute_ns").map(|kernel| kernel.p50),
+            "kernel_execute_ns_p99": case.metrics.get("kernel_execute_ns").map(|kernel| kernel.p99),
+        });
+
+        let Some(map) = entry.as_object_mut() else {
+            continue;
+        };
+
+        if let Some(bytes_touched) = case.metrics.get("bytes_touched") {
+            map.insert(
+                "bytes_touched_p50".to_string(),
+                serde_json::json!(bytes_touched.p50),
+            );
+        } else {
+            map.insert("bytes_touched_p50".to_string(), serde_json::Value::Null);
+        }
+
+        if let Some(wall_tp) = case.metrics.get("wall_throughput_gb_s") {
+            map.insert(
+                "wall_throughput_gb_s_p50".to_string(),
+                serde_json::json!(wall_tp.p50),
+            );
+        } else {
+            map.insert(
+                "wall_throughput_gb_s_p50".to_string(),
+                serde_json::Value::Null,
+            );
+        }
+
+        entries.push(entry);
+    }
+    serde_json::Value::Array(entries).to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::report::fixture::{case, schema};
+
+    #[test]
+    fn multi_case_table() {
+        let report = schema(
+            "kernel_time_test",
+            vec![
+                case(
+                    "op_a",
+                    &[
+                        ("kernel_execute_ns", 1000, 2000),
+                        ("bytes_touched", 4096, 4096),
+                        ("wall_throughput_gb_s", 10, 10),
+                    ],
+                ),
+                case("op_b", &[("kernel_execute_ns", 500, 800)]),
+            ],
+        );
+        let table = kernel_time_table(&report);
+        let lines: Vec<&str> = table.lines().collect();
+        assert_eq!(lines.len(), 3, "header + 2 data rows");
+        assert!(lines[0].starts_with("case_id|"));
+        assert!(lines[1].starts_with("op_a|1000|2000|4096|10"));
+        assert!(lines[2].starts_with("op_b|500|800|-|-"));
+    }
+
+    #[test]
+    fn single_case_table() {
+        let report = schema(
+            "kernel_time_test",
+            vec![case("single", &[("kernel_execute_ns", 999, 1500)])],
+        );
+        let table = kernel_time_table(&report);
+        let lines: Vec<&str> = table.lines().collect();
+        assert_eq!(lines.len(), 2);
+        assert!(lines[1].starts_with("single|999|1500"));
+    }
+
+    #[test]
+    fn missing_kernel_execute_emits_explicit_missing_fields() {
+        let report = schema(
+            "kernel_time_test",
+            vec![case("no_kernel", &[("optimize_ns", 100, 200)])],
+        );
+        let table = kernel_time_table(&report);
+        let lines: Vec<&str> = table.lines().collect();
+        assert_eq!(
+            lines.len(),
+            2,
+            "case without kernel_execute_ns must remain visible"
+        );
+        assert!(lines[1].starts_with("no_kernel|MISSING|MISSING|-|-"));
+    }
+
+    #[test]
+    fn empty_report_only_header() {
+        let report = schema("kernel_time_test", vec![]);
+        let table = kernel_time_table(&report);
+        let lines: Vec<&str> = table.lines().collect();
+        assert_eq!(lines.len(), 1, "only header for empty report");
+    }
+
+    #[test]
+    fn kernel_time_table_json_multi_case() {
+        let report = schema(
+            "kernel_time_test",
+            vec![
+                case(
+                    "op_a",
+                    &[
+                        ("kernel_execute_ns", 1000, 2000),
+                        ("bytes_touched", 4096, 4096),
+                        ("wall_throughput_gb_s", 10, 10),
+                    ],
+                ),
+                case("op_b", &[("kernel_execute_ns", 500, 800)]),
+            ],
+        );
+        let out = kernel_time_table_json(&report);
+        let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
+        let arr = parsed.as_array().unwrap();
+        assert_eq!(arr.len(), 2);
+        assert_eq!(arr[0]["case_id"], "op_a");
+        assert_eq!(arr[0]["kernel_execute_ns_p50"], 1000);
+        assert_eq!(arr[0]["kernel_execute_ns_p99"], 2000);
+        assert_eq!(arr[0]["bytes_touched_p50"], 4096);
+        assert_eq!(arr[0]["wall_throughput_gb_s_p50"], 10);
+
+        assert_eq!(arr[1]["case_id"], "op_b");
+        assert_eq!(arr[1]["kernel_execute_ns_p50"], 500);
+        assert!(arr[1]["bytes_touched_p50"].is_null());
+    }
+
+    #[test]
+    fn kernel_time_table_json_single_case() {
+        let report = schema(
+            "kernel_time_test",
+            vec![case("single", &[("kernel_execute_ns", 999, 1500)])],
+        );
+        let out = kernel_time_table_json(&report);
+        let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
+        let arr = parsed.as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0]["case_id"], "single");
+    }
+
+    #[test]
+    fn kernel_time_table_json_missing_kernel_execute_emits_nulls() {
+        let report = schema(
+            "kernel_time_test",
+            vec![case("no_kernel", &[("optimize_ns", 100, 200)])],
+        );
+        let out = kernel_time_table_json(&report);
+        let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
+        let arr = parsed.as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0]["case_id"], "no_kernel");
+        assert!(arr[0]["kernel_execute_ns_p50"].is_null());
+        assert!(arr[0]["kernel_execute_ns_p99"].is_null());
+    }
+
+    #[test]
+    fn kernel_time_table_json_empty_report() {
+        let report = schema("kernel_time_test", vec![]);
+        let out = kernel_time_table_json(&report);
+        assert_eq!(out, "[]");
+    }
+}

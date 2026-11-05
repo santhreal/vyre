@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The testing guide orphan scan is suppressed only when a row never reached the render set, so a finding about one member no longer hides every leftover guide in the directory."

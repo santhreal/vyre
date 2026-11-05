@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Replay logs and module globals state validation fail closed on corrupted format versions and poisoned mutexes. `RingLog::open` explicitly verifies header format versions and rejects version drift before allocating replay records, while CUDA module globals gate acquisition reports actionable diagnostics when a previous launch panics holding the gate mutex."

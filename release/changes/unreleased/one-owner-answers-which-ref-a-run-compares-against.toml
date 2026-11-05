@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Both history-reading gates resolve their base ref through one owner, so a base revision the checkout already holds is compared against directly instead of demanded from a remote."

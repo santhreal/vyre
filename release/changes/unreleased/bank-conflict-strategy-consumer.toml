@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The bank conflict analysis records per-site strides and derives per-binding access phase profiles from kernel descriptors, and the PTX emitter applies the selected padding or XOR-swizzle mitigation strategy to shared memory declarations and address computations."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Differential verification preserves output-buffer boundaries and rejects integer drift and finite-to-infinite substitutions."

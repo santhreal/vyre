@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-runtime` builds pipeline-cache test artifacts from one fixture module, `src/pipeline_cache/test_artifact_fixtures.rs`, which the fingerprint suites include by path. The two suites previously built the same artifact independently and `artifact_for_program` looked only at the first buffer, so a program whose second buffer had a different access produced a fingerprint the fixture could not distinguish. It now walks every buffer with that buffer's own access."

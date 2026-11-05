@@ -1,0 +1,2 @@
+category = "Added"
+text = "The runtime now owns immutable resources, reusable artifact instances, and mutable leased state through one budgeted residency boundary. Cold and warm admission, rollback, cancellation, generation-checked reset, completion, eviction, and manager destruction release resources without exposing stale state."

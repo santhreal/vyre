@@ -1,0 +1,61 @@
+[package]
+name = "vyre-reference"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Pure-Rust CPU reference interpreter for vyre IR; byte-identical oracle for backend conformance"
+readme = "README.md"
+keywords = ["gpu", "ir", "reference", "interpreter", "vyre"]
+categories = ["algorithms", "api-bindings"]
+documentation = "https://docs.rs/vyre-reference"
+exclude = ["**/proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[dependencies]
+inventory.workspace = true
+vyre-foundation.workspace = true
+vyre-primitives.workspace = true
+
+vyre-spec.workspace = true
+blake3.workspace = true
+rustc-hash.workspace = true
+smallvec.workspace = true
+libm.workspace = true
+regex.workspace = true
+
+[dev-dependencies]
+# `ir-fixtures` carries the shared tile-program builder the tile contracts
+# construct their `C = A x B` shape from.
+vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
+# Byte-stability golden harness (`artifact_golden`) shared with the emitter
+# crates, so the reference-output corpus is pinned the same way emitted
+# artifacts are instead of growing a second comparison spelling.
+vyre-lower = { workspace = true, features = ["test-fixtures"] }
+proptest.workspace = true
+# Per-thread heap counters behind a `GlobalAlloc` wrapper, so the oracle's
+# per-node allocation is measured on the measuring thread rather than across
+# whatever else the test binary runs beside it.
+vyre-alloc-probe = { workspace = true }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[features]
+default = ["subgroup-ops"]
+subgroup-ops = []
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "extension-point:external_backend_extension"
+
+[lints]
+workspace = true
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

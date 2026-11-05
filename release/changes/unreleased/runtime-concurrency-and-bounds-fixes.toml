@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Retained artifact session submissions now hold the retained state mutex across submission to ensure serialized atomic transitions, tenant quiesce validates drain conditions before declaring a timeout and prevents subtraction underflow on concurrent drain observation, and resident IO loop automatically stops detached polling threads on drop."

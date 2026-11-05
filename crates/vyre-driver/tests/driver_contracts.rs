@@ -1,0 +1,195 @@
+//! Driver error, capability, validation, and fixture contracts.
+
+use std::collections::HashSet;
+
+use vyre_driver::{validate_program, BackendError, VyreBackend};
+use vyre_foundation::ir::{Node, OpId, Program};
+use vyre_foundation::program_caps::{
+    check_backend_capabilities, BackendSupport, RequiredCapabilities,
+};
+
+// ---------------------------------------------------------------------------
+// Public validation errors remain actionable with Fix guidance
+// ---------------------------------------------------------------------------
+
+/// Every public error type that vyre-driver surfaces must contain a Fix: hint.
+#[test]
+fn backend_errors_contain_fix_guidance() {
+    let errors: Vec<BackendError> = vec![
+        BackendError::DeviceOutOfMemory {
+            requested: 1,
+            available: 0,
+        },
+        BackendError::UnsupportedFeature {
+            name: "x".into(),
+            backend: "y".into(),
+        },
+        BackendError::PoisonedLock {
+            lock_error: "x".into(),
+        },
+        BackendError::KernelCompileFailed {
+            backend: "y".into(),
+            compiler_message: "z".into(),
+        },
+        BackendError::DispatchFailed {
+            code: None,
+            message: "m".into(),
+        },
+        BackendError::InvalidProgram {
+            fix: "Fix: do something".into(),
+        },
+    ];
+
+    for err in &errors {
+        let msg = err.to_string();
+        assert!(
+            msg.contains("Fix:"),
+            "BackendError must carry actionable Fix: guidance; got: {msg}"
+        );
+    }
+}
+
+/// BackendError::new preserves owner-authored messages without parsing prose.
+#[test]
+fn backend_error_new_preserves_complete_message() {
+    let err = BackendError::new("something broke");
+    assert_eq!(err.to_string(), "something broke");
+}
+
+// ---------------------------------------------------------------------------
+// Capability contracts are explicit
+// ---------------------------------------------------------------------------
+
+/// A backend that advertises zero supported ops must reject a program
+/// that contains any statement node. The contract must be explicit:
+/// silence is not consent.
+#[test]
+fn empty_capability_set_rejects_any_program_with_nodes() {
+    struct NoOpBackend;
+
+    impl vyre_driver::sealed::Sealed for NoOpBackend {}
+
+    impl VyreBackend for NoOpBackend {
+        fn id(&self) -> &'static str {
+            "noop"
+        }
+        fn supported_ops(&self) -> &HashSet<OpId> {
+            static EMPTY: std::sync::LazyLock<HashSet<OpId>> =
+                std::sync::LazyLock::new(HashSet::new);
+            std::sync::LazyLock::force(&EMPTY)
+        }
+        fn dispatch_borrowed(
+            &self,
+            _program: &Program,
+            _inputs: &[&[u8]],
+            _config: &vyre_driver::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, BackendError> {
+            Ok(vec![])
+        }
+    }
+
+    let program = Program::wrapped(vec![], [1, 1, 1], vec![Node::Return]);
+    let backend = NoOpBackend;
+    let err = validate_program(&program, &backend)
+        .expect_err("a backend with empty supported_ops must reject a program containing nodes");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("Fix:") || msg.contains("unsupported") || msg.contains("supported"),
+        "empty-capability rejection must be actionable: {msg}"
+    );
+}
+
+/// Capability negotiation must list every missing bit, not stop at the first.
+#[test]
+fn capability_negotiation_lists_all_missing_bits() {
+    let mut required = RequiredCapabilities::none();
+    required.subgroup_ops = true;
+    required.f16 = true;
+    required.bf16 = true;
+    required.indirect_dispatch = true;
+    required.trap = true;
+    required.grid_sync = true;
+    let advertises_nothing = BackendSupport {
+        subgroup_ops: false,
+        half_precision: false,
+        brain_float: false,
+        indirect_dispatch: false,
+        trap_propagation: false,
+        distributed_collectives: false,
+        grid_sync: false,
+        max_workgroup_size: [1, 1, 1],
+    };
+    let err = check_backend_capabilities("test", &advertises_nothing, &required).unwrap_err();
+    let missing = err.missing;
+    let expected: HashSet<&str> = [
+        "subgroup_ops",
+        "f16",
+        "bf16",
+        "indirect_dispatch",
+        "trap_propagation",
+        "grid_sync",
+    ]
+    .iter()
+    .copied()
+    .collect();
+    // `missing` is now `Vec<String>` so the entries can carry
+    // axis-specific workgroup_size diagnostics; the test only
+    // checks the simple capability names so borrow as &str.
+    let actual: HashSet<&str> = missing.iter().map(String::as_str).collect();
+    assert_eq!(
+        actual, expected,
+        "capability negotiation must report every missing capability explicitly"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Graph/program validation rejects malformed input instead of defaulting silently
+// ---------------------------------------------------------------------------
+
+/// validate_program must return an Err for a program containing an unsupported
+/// operation, never silently defaulting to Ok.
+#[test]
+fn validation_rejects_unsupported_operation() {
+    struct UnsupportedOpsBackend;
+
+    impl vyre_driver::sealed::Sealed for UnsupportedOpsBackend {}
+
+    impl VyreBackend for UnsupportedOpsBackend {
+        fn id(&self) -> &'static str {
+            "unsupported-ops-contract"
+        }
+        fn supported_ops(&self) -> &HashSet<OpId> {
+            static EMPTY: std::sync::LazyLock<HashSet<OpId>> =
+                std::sync::LazyLock::new(HashSet::new);
+            std::sync::LazyLock::force(&EMPTY)
+        }
+        fn dispatch_borrowed(
+            &self,
+            _program: &Program,
+            _inputs: &[&[u8]],
+            _config: &vyre_driver::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, BackendError> {
+            Ok(vec![])
+        }
+    }
+
+    // A raw entry, not `Program::wrapped`: wrapping puts a `Node::Region` in
+    // front of the body, and a backend that declares nothing refuses that first,
+    // so the rejection would name the wrapper rather than the node under test.
+    let program = Program::from_raw_parts(vec![], [1, 1, 1], vec![Node::Return]);
+    let err = validate_program(&program, &UnsupportedOpsBackend).unwrap_err();
+    let msg = err.to_string();
+    assert!(
+        msg.contains("vyre.node.return"),
+        "the rejection must name the operation the backend does not declare, or a caller cannot \
+         tell which node to change; got: {msg}"
+    );
+    assert!(
+        msg.contains("unsupported-ops-contract"),
+        "the rejection must name the backend that refused; got: {msg}"
+    );
+    assert!(
+        msg.contains("Fix:"),
+        "validation rejection must carry actionable Fix: guidance; got: {msg}"
+    );
+}
