@@ -23,7 +23,7 @@ jobs:
     name: Probe real GPU adapter
     # A public repository never executes fork code on the persistent GPU host.
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     env:
       RUST_TEST_THREADS: "1"
     timeout-minutes: 5
@@ -40,7 +40,7 @@ jobs:
   driver-contracts:
     name: WGPU backend contracts
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     env:
       RUST_TEST_THREADS: "1"
     timeout-minutes: 20
@@ -78,7 +78,7 @@ jobs:
   cuda-parity-suite:
     name: CUDA backend contracts and parity
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     env:
       RUST_TEST_THREADS: "1"
     timeout-minutes: 90
@@ -99,7 +99,7 @@ jobs:
   bench-device-tests:
     name: Benchmark harness device tests
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     env:
       RUST_TEST_THREADS: "1"
     timeout-minutes: 60
@@ -121,7 +121,7 @@ jobs:
   mandatory-gpu-enforcer:
     name: Mandatory GPU enforcement
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     env:
       RUST_TEST_THREADS: "1"
     timeout-minutes: 15
@@ -137,7 +137,7 @@ jobs:
   cuda-conformance-all-ops:
     name: CUDA conformance all ops
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     env:
       RUST_TEST_THREADS: "1"
     timeout-minutes: 45
@@ -150,7 +150,7 @@ jobs:
   wgpu-conformance-all-ops:
     name: WGPU conformance all ops
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     env:
       RUST_TEST_THREADS: "1"
     timeout-minutes: 45
@@ -165,7 +165,7 @@ jobs:
     needs:
       - cuda-conformance-all-ops
       - wgpu-conformance-all-ops
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     env:
       RUST_TEST_THREADS: "1"
     timeout-minutes: 60
@@ -183,7 +183,7 @@ jobs:
   cuda-release-bench-evidence:
     name: CUDA release benchmark evidence
     needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     env:
       RUST_TEST_THREADS: "1"
     timeout-minutes: 90
@@ -226,7 +226,7 @@ jobs:
         (github.event_name != 'pull_request' ||
           github.event.pull_request.head.repo.full_name == github.repository)
       }}
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     env:
       RUST_TEST_THREADS: "1"
     timeout-minutes: 5

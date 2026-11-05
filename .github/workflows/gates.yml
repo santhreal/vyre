@@ -23,7 +23,7 @@ jobs:
     #
     # Build parallelism is the host's, as `.cargo/config.toml` declares. Tests
     # stay serial because they share one device.
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     timeout-minutes: 240
     env:
       RUST_TEST_THREADS: "1"
@@ -156,7 +156,7 @@ jobs:
     # The oracle matrices dispatch their cases, and a GPU-required case fails
     # closed on a probe with no devices rather than skipping, so a hosted runner
     # reports a missing accelerator instead of a parity verdict.
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     timeout-minutes: 120
     env:
       RUST_TEST_THREADS: "1"
@@ -187,7 +187,7 @@ jobs:
     # The parity target validates the emission and then materializes it on a
     # Vulkan device, and it refuses a software implementation, so the job needs
     # a host with a real compute queue.
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     timeout-minutes: 60
     env:
       RUST_TEST_THREADS: "1"

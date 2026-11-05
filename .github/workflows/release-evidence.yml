@@ -43,7 +43,7 @@ jobs:
 
   measured-evidence:
     name: Generate measured evidence
-    runs-on: [self-hosted, gpu, santhserver]
+    runs-on: [self-hosted, gpu, axiomexec]
     env:
       RUST_TEST_THREADS: "1"
     timeout-minutes: 120

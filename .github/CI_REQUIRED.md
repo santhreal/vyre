@@ -27,7 +27,7 @@ The `ci-required` gate holds this list to the workflows that define it, and
 ## From `gpu-parity.yml` (run on self-hosted GPU runner)
 - `GPU release gate`
 
-GPU workflows require the `self-hosted`, `gpu`, and `santhserver` runner labels.
+GPU workflows require the `self-hosted`, `gpu`, and `axiomexec` runner labels.
 These jobs build with the host's parallelism and run tests on one Rust test
 thread, because the tests share one device.
 Native benchmark thread counts remain controlled by the benchmark configuration.
