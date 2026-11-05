@@ -56,7 +56,7 @@ pub fn compile_compute_pipeline_with_layout(
     } else {
         None
     };
-    device.push_error_scope(wgpu::ErrorFilter::Validation);
+    let scope = crate::runtime::device::ValidationScope::push(device);
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some(label),
         source: wgpu::ShaderSource::Wgsl(wgsl_source.into()),
@@ -70,7 +70,7 @@ pub fn compile_compute_pipeline_with_layout(
         cache: driver_cache.as_ref(),
     });
     if let Some(error) =
-        crate::runtime::device::pop_error_scope_now(device).map_err(|message| {
+        scope.pop_now().map_err(|message| {
             vyre_driver::BackendError::new(format!("WGSL compute pipeline `{label}` validation did not complete without a host wait: {message}"))
         })?
     {

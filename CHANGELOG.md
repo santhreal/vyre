@@ -7002,6 +7002,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   one request a dispatch can resolve and takes `block_words`, which sizes the
   destination and the transfer together instead of naming a fixed 4096-byte
   length that was silently clamped to whatever the destination held.
+- A multi-threaded consumer of `vyre-driver-wgpu` no longer deadlocks in the
+  GPU driver when one thread releases a device while another creates or
+  releases one: the driver holds one device per adapter for the process
+  lifetime and hands it to every caller of that adapter, so no release is the
+  last reference and `vkDestroyDevice` is never reached, and device-loss
+  recovery replaces the held device and keeps the lost handle. On an RTX 3080
+  Ti with driver 580.173.02 the previous code hung 6 of 8 runs of a four-thread
+  create-and-release loop.
 - The conformance worker bounds the request it reads from stdin, digests its
   own binary in fixed-size chunks, and reads a bounded prefix of the process
   memory record; an AOT bundle bounds both the compressed and the decompressed
@@ -8456,6 +8464,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   expressions and the enclosing branch that admit them, and the golden still
   carried the pre-fix digests, so the guard reported a drift for
   `go/packages_and_imports` and `go/declarations` on every run.
+- WGPU adapter probing, device requests, selected-adapter acquisition and
+  device-loss recovery each run under a 120 second deadline and return an error
+  naming the stage, instead of parking forever on a driver that never wakes the
+  future.
 - GPU routing, conformance, and release evidence now select hardware by
   reported capabilities rather than a product name. Benchmark reuse and release
   validation inspect every device in a multi-GPU inventory, reject missing or
@@ -10397,6 +10409,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   an adapter whose probe never dispatched produced the same message and a
   caller could not tell a hardware fact from a configuration failure. The
   verdict carries the measured outcome, and the refusal names it.
+- A WGPU validation error raised while another thread records, submits or
+  compiles on the same device is reported to the caller that caused it, and a
+  recording or submission that returns early no longer leaves an error scope on
+  the device that captures a later caller's error.
 - The registered-operation similarity gate now owns one fixed comparison-safe
   report and qualifies structural matches with canonical semantic identity.
 - Whole-application evidence records state measured device execution: the

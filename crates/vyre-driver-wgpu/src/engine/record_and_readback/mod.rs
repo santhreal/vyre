@@ -452,7 +452,7 @@ fn record_dispatch_unsubmitted_impl(
         &mut scratch.bind_group_bound_indices,
     )?;
 
-    device.push_error_scope(wgpu::ErrorFilter::Validation);
+    let scope = crate::runtime::device::ValidationScope::push(device);
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some(request.labels.encoder),
     });
@@ -552,14 +552,15 @@ fn record_dispatch_unsubmitted_impl(
     }
 
     let command_buffer = encoder.finish();
-    if let Some(error) = crate::runtime::device::pop_error_scope_now(device).map_err(|message| {
-        BackendError::DispatchFailed {
+    if let Some(error) = scope
+        .pop_now()
+        .map_err(|message| BackendError::DispatchFailed {
             code: None,
             message: format!(
                 "wgpu command-recording validation did not complete without a host wait: {message}"
             ),
-        }
-    })? {
+        })?
+    {
         return Err(BackendError::DispatchFailed {
             code: None,
             message: format!(

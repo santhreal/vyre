@@ -116,7 +116,7 @@ fn main(@builtin(subgroup_invocation_id) lane: u32, @builtin(subgroup_size) size
 }
 "#;
 
-    device.push_error_scope(wgpu::ErrorFilter::Validation);
+    let scope = super::ValidationScope::push(device);
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("vyre subgroup capability probe"),
         source: wgpu::ShaderSource::Wgsl(WGSL.into()),
@@ -129,7 +129,7 @@ fn main(@builtin(subgroup_invocation_id) lane: u32, @builtin(subgroup_size) size
         compilation_options: wgpu::PipelineCompilationOptions::default(),
         cache: None,
     });
-    match super::pop_error_scope_now(device) {
+    match scope.pop_now() {
         Ok(None) => Ok(()),
         Ok(Some(error)) => Err(format!("validation error: {error}")),
         Err(error) => Err(error.to_string()),

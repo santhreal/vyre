@@ -387,7 +387,7 @@ impl WgpuPipeline {
                 ))
             },
         )?;
-        device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let scope = crate::runtime::device::ValidationScope::push(device);
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("vyre P-6 cached shader module"),
             source: wgpu::ShaderSource::Wgsl(wgsl.into()),
@@ -401,7 +401,7 @@ impl WgpuPipeline {
             cache: pipeline_cache_handle.as_ref().map(|h| &h.cache),
         });
         if let Some(error) =
-            crate::runtime::device::pop_error_scope_now(device).map_err(|message| {
+            scope.pop_now().map_err(|message| {
                 BackendError::KernelCompileFailed {
                     backend: "wgpu".to_owned(),
                     compiler_message: format!(

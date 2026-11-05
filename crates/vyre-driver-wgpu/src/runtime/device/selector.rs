@@ -28,6 +28,7 @@ use vyre_driver::BackendError;
 
 type Result<T, E = BackendError> = std::result::Result<T, E>;
 
+use super::acquire::DeviceRequest;
 use super::reserve_probe_vec;
 
 /// Stable adapter identity used for deterministic recovery.
@@ -236,19 +237,12 @@ pub fn adapter_probe_report() -> AdapterProbeReport {
                 .missing
                 .push("TIMESTAMP_QUERY_INSIDE_ENCODERS".to_string());
         }
-        let adapter_limits = adapter.limits();
+        // The probe takes the device this process holds for the adapter,
+        // creating it only when none is held. Requesting a throwaway device
+        // here and dropping it would call `vkDestroyDevice` on a diagnostic
+        // path that runs while other threads hold devices.
         if let Err(error) =
-            super::acquire::wait_for_gpu(adapter.request_device(&wgpu::DeviceDescriptor {
-                label: Some("vyre probe"),
-                required_features: wgpu::Features::empty(),
-                required_limits: wgpu::Limits {
-                    max_storage_buffers_per_shader_stage:
-                        adapter_limits.max_storage_buffers_per_shader_stage,
-                    ..wgpu::Limits::default()
-                },
-                memory_hints: wgpu::MemoryHints::default(),
-                trace: wgpu::Trace::Off,
-            }))
+            super::acquire::request_device_for_adapter(&adapter, "vyre probe", DeviceRequest::Held)
         {
             report
                 .missing
@@ -315,7 +309,8 @@ fn adapter_name_contains(name: &str, needle: &str) -> bool {
     name.to_lowercase().contains(&needle.to_lowercase())
 }
 
-/// Initialize a device + queue bound to the adapter at `index`.
+/// Take the device + queue this process holds for the adapter at `index`,
+/// creating them on first use.
 ///
 /// Pairs with [`enumerate_adapters`] / [`select_adapter`] to give
 /// callers full control over which GPU the backend binds to.
@@ -331,7 +326,24 @@ pub fn init_device_for_adapter(
     wgpu::AdapterInfo,
     crate::runtime::device::EnabledFeatures,
 )> {
-    super::acquire::wait_for_gpu(acquire_gpu_for_adapter(index))
+    let instance = super::acquire::shared_instance();
+    let adapters = instance.enumerate_adapters(super::acquire::COMPUTE_BACKENDS);
+    let adapter = adapters.get(index).ok_or_else(|| BackendError::new(format!(
+        "adapter index {index} out of range (saw {} adapters). Fix: call enumerate_adapters() first to see valid indices.",
+        adapters.len()
+    )))?;
+    let info = adapter.get_info();
+    if !crate::capabilities::is_real_gpu(&info) {
+        return Err(BackendError::new(format!(
+            "adapter index {index} resolved to `{}` with device type {:?}, which is not a real GPU execution target. Fix: choose a discrete, integrated, or virtual GPU adapter.",
+            info.name, info.device_type
+        )));
+    }
+    super::acquire::request_device_for_adapter(
+        adapter,
+        "vyre device (selected)",
+        DeviceRequest::Held,
+    )
 }
 
 /// Recreate a device on the same adapter identity used by an existing backend.
@@ -347,10 +359,14 @@ pub(crate) fn init_device_for_adapter_identity(
     wgpu::AdapterInfo,
     crate::runtime::device::EnabledFeatures,
 )> {
-    super::acquire::wait_for_gpu(acquire_gpu_for_adapter_identity(identity))
+    acquire_gpu_for_adapter_identity(identity)
 }
 
-async fn acquire_gpu_for_adapter_identity(
+/// Replace the device held for the adapter `identity` names.
+///
+/// Recovery is the one caller that does not take the held device: the held one
+/// reported loss, so it is retired and a new device takes its place.
+fn acquire_gpu_for_adapter_identity(
     identity: &AdapterIdentity,
 ) -> Result<(
     (wgpu::Device, wgpu::Queue),
@@ -368,8 +384,11 @@ async fn acquire_gpu_for_adapter_identity(
                     info.name, info.device_type
                 )));
             }
-            return super::acquire::request_device_for_adapter(adapter, "vyre device (recovered)")
-                .await;
+            return super::acquire::request_device_for_adapter(
+                adapter,
+                "vyre device (recovered)",
+                DeviceRequest::Replace,
+            );
         }
     }
 
@@ -406,20 +425,7 @@ pub async fn acquire_gpu_for_adapter(
     wgpu::AdapterInfo,
     crate::runtime::device::EnabledFeatures,
 )> {
-    let instance = super::acquire::shared_instance();
-    let adapters = instance.enumerate_adapters(super::acquire::COMPUTE_BACKENDS);
-    let adapter = adapters.get(index).ok_or_else(|| BackendError::new(format!(
-        "adapter index {index} out of range (saw {} adapters). Fix: call enumerate_adapters() first to see valid indices.",
-        adapters.len()
-    )))?;
-    let info = adapter.get_info();
-    if !crate::capabilities::is_real_gpu(&info) {
-        return Err(BackendError::new(format!(
-            "adapter index {index} resolved to `{}` with device type {:?}, which is not a real GPU execution target. Fix: choose a discrete, integrated, or virtual GPU adapter.",
-            info.name, info.device_type
-        )));
-    }
-    super::acquire::request_device_for_adapter(adapter, "vyre device (selected)").await
+    init_device_for_adapter(index)
 }
 
 /// Read the `VYRE_ADAPTER_INDEX` env override. `None` when unset.

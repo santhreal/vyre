@@ -1,9 +1,9 @@
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
+use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError};
 use std::task::{Context, Poll, Wake, Waker};
 use std::thread::{self, Thread};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use vyre_driver::BackendError;
 
 type Result<T, E = BackendError> = std::result::Result<T, E>;
@@ -11,6 +11,7 @@ type Result<T, E = BackendError> = std::result::Result<T, E>;
 use super::features::{enabled_features_for_adapter, subgroup_smoke_compiles, EnabledFeatures};
 use super::reserve_probe_vec;
 use super::selector::gpu_candidate_score;
+use super::validation_scope::ValidationScope;
 
 /// Excludes concurrent Vulkan loader startup across the process.
 ///
@@ -20,6 +21,79 @@ use super::selector::gpu_candidate_score;
 /// `vkEnumerateInstanceExtensionProperties` at that moment calls through a null
 /// function pointer and the process dies with SIGSEGV.
 static LOADER_STARTUP: Mutex<()> = Mutex::new(());
+
+/// One device per adapter, for the process lifetime.
+///
+/// `wgpu::Device` is a reference-counted handle and dropping the last one
+/// calls `vkDestroyDevice`. On the NVIDIA driver that call joins a driver
+/// worker, and a worker thread exiting runs the `libnvidia-eglcore`
+/// thread-local destructor, which takes a lock inside `libnvidia-glsi`
+/// through a priority-inheritance futex. A second thread creating or
+/// destroying a device at that moment holds that lock, so the two wait on each
+/// other, neither wait carries a deadline, and the process hangs until it is
+/// killed. Captured under gdb on an RTX 3080 Ti with driver 580.173.02 from a
+/// four-thread create-and-release loop that reproduced it on 6 of 8 runs.
+///
+/// Handing every caller of one adapter the same device removes the call: no
+/// caller's drop is ever the last reference, so `vkDestroyDevice` is
+/// unreachable and the cycle cannot close. The bound matters as much as the
+/// exclusion. Holding one live device per created backend instead reaches the
+/// driver's limit, and the request after it fails with `Parent device is
+/// lost`, which turns a suite that hangs into a suite that cannot get a
+/// device.
+///
+/// Device loss replaces the entry rather than dropping it. The lost handle
+/// moves to [`RETIRED_DEVICES`], because destroying it is the call this
+/// excludes.
+static ADAPTER_DEVICES: Mutex<Vec<AdapterDevice>> = Mutex::new(Vec::new());
+
+/// Devices replaced by device-loss recovery, held so none is ever destroyed.
+///
+/// One entry per loss event on one adapter, so this grows only when the GPU
+/// faults.
+static RETIRED_DEVICES: Mutex<Vec<wgpu::Device>> = Mutex::new(Vec::new());
+
+/// The device this process holds for one adapter. See [`ADAPTER_DEVICES`].
+struct AdapterDevice {
+    info: wgpu::AdapterInfo,
+    device_queue: (wgpu::Device, wgpu::Queue),
+    enabled: EnabledFeatures,
+}
+
+/// Whether a caller takes the device this process already holds for an adapter.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum DeviceRequest {
+    /// Take the held device. Every caller of one adapter shares it.
+    Held,
+    /// Replace it, because the device it holds reported loss.
+    Replace,
+}
+
+/// Recover a poisoned registry lock rather than propagating it.
+///
+/// The guarded value is a list a panic cannot leave inconsistent, and refusing
+/// the lock would leave the caller to create an unshared device, which is the
+/// teardown this registry excludes.
+fn lock_registry<T>(registry: &'static Mutex<T>) -> MutexGuard<'static, T> {
+    registry.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// How many live devices this process holds for the adapter `info` describes.
+#[cfg(all(test, feature = "device-tests"))]
+pub(crate) fn held_devices_for(info: &wgpu::AdapterInfo) -> usize {
+    lock_registry(&ADAPTER_DEVICES)
+        .iter()
+        .filter(|entry| entry.info == *info)
+        .count()
+}
+
+/// Acquisition reports where it stalled rather than parking forever.
+///
+/// Adapter enumeration, `request_device`, and the capability probe all run
+/// under this bound. It is generous because a cold ICD load on a loaded host
+/// is slow, and it exists so a driver that never wakes the future surfaces as
+/// an error naming the stage instead of a run that never ends.
+const ACQUISITION_TIMEOUT: Duration = Duration::from_secs(120);
 
 /// A resolve on a created device already waited for its submission, so the
 /// mapping callback is a driver hand-off rather than device work. This bounds a
@@ -61,8 +135,10 @@ fn loader_startup() -> MutexGuard<'static, ()> {
 /// destructor, that lock is held by the thread destroying the other instance,
 /// and that thread waits on the Vulkan loader lock the first one holds. No
 /// deadline breaks it, because a thread already inside a thread-exit destructor
-/// cannot be cancelled. Not enabling GL is what removes the cycle: this driver
-/// never wanted the adapter.
+/// cannot be cancelled. Not enabling GL drops one EGL context this driver never
+/// wanted, which narrows the window without closing it: a Vulkan adapter on the
+/// NVIDIA driver loads `libnvidia-eglcore` regardless, and the same destructor
+/// appears in the device-teardown deadlock [`ADAPTER_DEVICES`] excludes.
 pub(crate) const COMPUTE_BACKENDS: wgpu::Backends = wgpu::Backends::VULKAN
     .union(wgpu::Backends::METAL)
     .union(wgpu::Backends::DX12)
@@ -80,10 +156,9 @@ pub(crate) const COMPUTE_BACKENDS: wgpu::Backends = wgpu::Backends::VULKAN
 /// operations dispatched and the remaining 340 were refused for want of a real
 /// adapter on a host holding an idle RTX 3080 Ti.
 ///
-/// One instance for the process removes the cycle. An adapter and a device are
-/// still acquired per backend, so two backends still hold two physical devices
-/// and device-loss recovery still replaces one device without disturbing the
-/// other.
+/// One instance for the process removes the cycle. Each adapter still has its
+/// own device, so backends on two physical GPUs hold two devices and
+/// device-loss recovery on one adapter leaves the other's device in place.
 static INSTANCE: LazyLock<wgpu::Instance> = LazyLock::new(|| {
     let _startup = loader_startup();
     wgpu::Instance::new(&wgpu::InstanceDescriptor {
@@ -148,22 +223,21 @@ fn cached_runtime() -> &'static Result<CachedRuntime> {
 ///
 /// ⚠ **Test / convenience helper  -  not the production path.**
 ///
-/// Production backends construct their own `wgpu::Device` via
+/// Production backends acquire their device via
 /// [`WgpuBackend::acquire`](crate::WgpuBackend::acquire), which routes
-/// through [`init_device`] and returns a fresh device per call. Using
-/// `cached_device()` from production code forces every consumer to
-/// share one process-wide GPU handle, which prevents:
+/// through [`init_device`] and takes the one device the process holds for
+/// the selected adapter. `cached_device()` pins the first adapter
+/// [`init_device`] selected for the process lifetime, which prevents:
 ///
 /// - running two backends against two different physical GPUs;
 /// - using a dedicated discrete GPU while a test fixture is holding
 ///   the integrated GPU singleton;
-/// - recovering from device loss (recovery swaps the backend's local
+/// - recovering from device loss (recovery replaces the backend's held
 ///   device; the singleton's `LazyLock` cannot be replaced in-place).
 ///
 /// The singleton survives because a handful of test fixtures want one
 /// shared GPU handle across all tests to amortize init cost. Consumers
-/// that actually need a GPU runtime should construct a `WgpuBackend`
-/// instead.
+/// that need a GPU runtime construct a `WgpuBackend` instead.
 ///
 /// # Errors
 ///
@@ -207,12 +281,30 @@ pub(crate) fn cached_enabled_features() -> Result<&'static EnabledFeatures> {
 /// a host whose adapter does advertise them, which is what lets one GPU host
 /// exercise both branches of every timed dispatch path.
 ///
+/// The device is created once and held for the process, like every device in
+/// [`ADAPTER_DEVICES`], so no test's release reaches `vkDestroyDevice`.
+///
 /// # Errors
 ///
 /// Returns an error when no real adapter is available or device creation
 /// fails.
 #[cfg(all(test, feature = "device-tests"))]
 pub(crate) fn init_device_without_timestamps() -> Result<(
+    (wgpu::Device, wgpu::Queue),
+    wgpu::AdapterInfo,
+    EnabledFeatures,
+)> {
+    type Held = Result<(
+        (wgpu::Device, wgpu::Queue),
+        wgpu::AdapterInfo,
+        EnabledFeatures,
+    )>;
+    static HELD: std::sync::OnceLock<Held> = std::sync::OnceLock::new();
+    HELD.get_or_init(create_device_without_timestamps).clone()
+}
+
+#[cfg(all(test, feature = "device-tests"))]
+fn create_device_without_timestamps() -> Result<(
     (wgpu::Device, wgpu::Queue),
     wgpu::AdapterInfo,
     EnabledFeatures,
@@ -245,14 +337,14 @@ pub(crate) fn init_device_without_timestamps() -> Result<(
     enabled.timestamp_query = false;
     enabled.timestamp_query_inside_encoders = false;
 
-    let device_queue = wait_for_gpu(request_device_with(
+    let device_queue = request_device_with(
         adapter,
         "vyre timestamp-free device",
         features,
         &enabled,
         &adapter_limits,
         &adapter_info,
-    ))?;
+    )?;
 
     let device_limits = device_queue.0.limits();
     enabled.max_workgroup_size = [
@@ -284,7 +376,8 @@ pub(crate) fn is_cached_device(device: &wgpu::Device) -> bool {
         .unwrap_or(false)
 }
 
-/// Initialize a new GPU device and queue.
+/// Take the device and queue this process holds for the best real adapter,
+/// creating them on first use.
 ///
 /// # Errors
 ///
@@ -296,24 +389,35 @@ pub fn init_device() -> Result<(
     wgpu::AdapterInfo,
     EnabledFeatures,
 )> {
-    let gpu = wait_for_gpu(acquire_gpu())?;
-    Ok(gpu)
+    acquire_gpu_blocking()
 }
 
-/// Asynchronously initialize a new GPU device and queue.
+/// Async variant of [`init_device`]. Acquisition runs synchronously.
 ///
 /// # Errors
 ///
 /// Returns an actionable GPU error if no compatible adapter is available, if
 /// the selected adapter is CPU-backed, or if device creation fails.
-#[inline]
 pub async fn acquire_gpu() -> Result<(
     (wgpu::Device, wgpu::Queue),
     wgpu::AdapterInfo,
     EnabledFeatures,
 )> {
+    acquire_gpu_blocking()
+}
+
+/// Select the best adapter and take the device this process holds for it.
+///
+/// The whole chain is synchronous. Only the `request_device` future itself
+/// needs driving, and [`wait_for_gpu`] does that at the one place it happens,
+/// so no caller nests one park loop inside another.
+fn acquire_gpu_blocking() -> Result<(
+    (wgpu::Device, wgpu::Queue),
+    wgpu::AdapterInfo,
+    EnabledFeatures,
+)> {
     if let Some(index) = super::selector::adapter_index_from_env()? {
-        return super::selector::acquire_gpu_for_adapter(index).await;
+        return super::selector::init_device_for_adapter(index);
     }
 
     let instance = shared_instance();
@@ -336,7 +440,7 @@ pub async fn acquire_gpu() -> Result<(
     let mut failures = Vec::new();
     reserve_probe_vec(&mut failures, candidates.len(), "GPU acquisition failures")?;
     for (adapter, info, _) in candidates {
-        match request_device_for_adapter(adapter, "vyre device").await {
+        match request_device_for_adapter(adapter, "vyre device", DeviceRequest::Held) {
             Ok(device) => return Ok(device),
             Err(error) => failures.push(format!("{} ({:?}): {error}", info.name, info.device_type)),
         }
@@ -358,15 +462,40 @@ pub async fn acquire_gpu() -> Result<(
     )))
 }
 
-pub(super) async fn request_device_for_adapter(
+/// Take the device this process holds for `adapter`, creating it if needed.
+///
+/// `request` decides whether the held device is taken or replaced. Every
+/// caller of one adapter receives the same device, which is what makes
+/// `vkDestroyDevice` unreachable; see [`ADAPTER_DEVICES`].
+pub(super) fn request_device_for_adapter(
     adapter: &wgpu::Adapter,
     label: &'static str,
+    request: DeviceRequest,
 ) -> Result<(
     (wgpu::Device, wgpu::Queue),
     wgpu::AdapterInfo,
     EnabledFeatures,
 )> {
+    let mut devices = lock_registry(&ADAPTER_DEVICES);
     let adapter_info = adapter.get_info();
+    let held = devices.iter().position(|entry| entry.info == adapter_info);
+    match (request, held) {
+        (DeviceRequest::Held, Some(index)) => {
+            let entry = &devices[index];
+            return Ok((
+                entry.device_queue.clone(),
+                entry.info.clone(),
+                entry.enabled,
+            ));
+        }
+        // The replaced device is never dropped to zero references, so
+        // recovery cannot race a create on another thread.
+        (DeviceRequest::Replace, Some(index)) => {
+            let replaced = devices.swap_remove(index);
+            lock_registry(&RETIRED_DEVICES).push(replaced.device_queue.0);
+        }
+        (_, None) => {}
+    }
     if !crate::capabilities::is_real_gpu(&adapter_info) {
         return Err(BackendError::new(format!(
             "wgpu adapter `{}` reports device type {:?}, which is not a real GPU execution target. Fix: select a discrete, integrated, or virtual GPU adapter; CPU/software adapters are not production dispatch backends.",
@@ -394,8 +523,7 @@ pub(super) async fn request_device_for_adapter(
         &enabled,
         &adapter_limits,
         &adapter_info,
-    )
-    .await?;
+    )?;
 
     // An adapter may advertise both timestamp features and still resolve a zero
     // end timestamp, which reaches a caller as a delta underflow on its first
@@ -420,6 +548,9 @@ pub(super) async fn request_device_for_adapter(
         );
         enabled.timestamp_query = false;
         enabled.timestamp_query_inside_encoders = false;
+        // Releases this function's handle. The device was never registered, so
+        // this is the one place the driver destroys one, and it happens under
+        // the registry lock where no other thread can be creating a device.
         drop(device_queue);
         device_queue = request_device_with(
             adapter,
@@ -428,8 +559,7 @@ pub(super) async fn request_device_for_adapter(
             &enabled,
             &adapter_limits,
             &adapter_info,
-        )
-        .await?;
+        )?;
     }
 
     let device_limits = device_queue.0.limits();
@@ -450,10 +580,15 @@ pub(super) async fn request_device_for_adapter(
         )))?;
     }
 
+    devices.push(AdapterDevice {
+        info: adapter_info.clone(),
+        device_queue: device_queue.clone(),
+        enabled,
+    });
     Ok((device_queue, adapter_info, enabled))
 }
 
-async fn request_device_with(
+fn request_device_with(
     adapter: &wgpu::Adapter,
     label: &'static str,
     features: wgpu::Features,
@@ -461,8 +596,9 @@ async fn request_device_with(
     adapter_limits: &wgpu::Limits,
     adapter_info: &wgpu::AdapterInfo,
 ) -> Result<(wgpu::Device, wgpu::Queue)> {
-    adapter
-        .request_device(
+    wait_for_gpu(
+        "device request",
+        adapter.request_device(
             &wgpu::DeviceDescriptor {
                 label: Some(label),
                 required_features: features,
@@ -507,9 +643,9 @@ async fn request_device_with(
                 memory_hints: wgpu::MemoryHints::default(),
                 trace: wgpu::Trace::Off,
             },
-        )
-        .await
-        .map_err(|error| BackendError::new(format!("failed to acquire device for adapter `{}`: {error}. Fix: check requested wgpu limits/features against the adapter and update the GPU driver if limits are unexpectedly low.", adapter_info.name)))
+        ),
+    )?
+    .map_err(|error| BackendError::new(format!("failed to acquire device for adapter `{}`: {error}. Fix: check requested wgpu limits/features against the adapter and update the GPU driver if limits are unexpectedly low.", adapter_info.name)))
 }
 
 /// Resolve the timed-dispatch query layout once on a created device and report
@@ -534,7 +670,7 @@ fn main() {
 }
 ";
 
-    device.push_error_scope(wgpu::ErrorFilter::Validation);
+    let scope = ValidationScope::push(device);
     let query_set = device.create_query_set(&wgpu::QuerySetDescriptor {
         label: Some("vyre timestamp resolve probe"),
         ty: wgpu::QueryType::Timestamp,
@@ -595,7 +731,7 @@ fn main() {
     let _ = poll_device_wait_for(device, submission).map_err(|error| error.to_string())?;
     // After the submission wait, so encoder-recording validation has surfaced
     // and the scope resolves without a second blocking poll.
-    match pop_error_scope_now(device) {
+    match scope.pop_now() {
         Ok(None) => {}
         Ok(Some(error)) => return Err(format!("validation error: {error}")),
         // The resolved ticks are the verdict. An error scope that has not
@@ -679,40 +815,32 @@ impl Wake for ThreadWaker {
     }
 }
 
-struct NoopWaker;
-
-impl Wake for NoopWaker {
-    fn wake(self: Arc<Self>) {}
-
-    fn wake_by_ref(self: &Arc<Self>) {}
-}
-
-pub(crate) fn pop_error_scope_now(
-    device: &wgpu::Device,
-) -> std::result::Result<Option<wgpu::Error>, &'static str> {
-    device
-        .poll(wgpu::PollType::Poll)
-        .map_err(|_| "wgpu device poll failed before error-scope pop")?;
-    let waker = Waker::from(Arc::new(NoopWaker));
-    let mut context = Context::from_waker(&waker);
-    let mut future = Box::pin(device.pop_error_scope());
-    match Future::poll(Pin::as_mut(&mut future), &mut context) {
-        Poll::Ready(error) => Ok(error),
-        Poll::Pending => Err(
-            "wgpu error scope did not resolve after a nonblocking device poll. Fix: inspect the backend event loop; validation must not require a hot-path host wait.",
-        ),
-    }
-}
-
-pub(super) fn wait_for_gpu<T>(future: impl Future<Output = T>) -> T {
+/// Drive `future` to completion on this thread, under [`ACQUISITION_TIMEOUT`].
+///
+/// `stage` names the step being waited on and appears in the timeout error, so
+/// a stalled acquisition states where it stopped instead of parking with no
+/// output.
+///
+/// # Errors
+///
+/// Returns `BackendError` when the future makes no progress before the
+/// deadline.
+pub(super) fn wait_for_gpu<T>(stage: &str, future: impl Future<Output = T>) -> Result<T> {
     let waker = Waker::from(Arc::new(ThreadWaker(thread::current())));
     let mut context = Context::from_waker(&waker);
     let mut future = Box::pin(future);
+    let deadline = Instant::now() + ACQUISITION_TIMEOUT;
     loop {
-        match Pin::as_mut(&mut future).poll(&mut context) {
-            Poll::Ready(value) => return value,
-            Poll::Pending => thread::park(),
+        if let Poll::Ready(value) = Pin::as_mut(&mut future).poll(&mut context) {
+            return Ok(value);
         }
+        let Some(remaining) = deadline.checked_duration_since(Instant::now()) else {
+            return Err(BackendError::new(format!(
+                "GPU acquisition stalled in {stage} for {}s without progress. Fix: check the GPU driver and the adapter it is enumerating; a device request that never resolves is a driver fault, not a vyre one.",
+                ACQUISITION_TIMEOUT.as_secs()
+            )));
+        };
+        thread::park_timeout(remaining);
     }
 }
 
@@ -794,6 +922,129 @@ mod tests {
         assert!(
             reason.contains(&format!("too few to compare query {end} against {start}")),
             "Fix: the reason must name the pair it could not read, got {reason}"
+        );
+    }
+
+    /// Creating and releasing devices from several threads at once terminates.
+    ///
+    /// This is the shape that deadlocked: threads each acquired a device and
+    /// released it, one reached `vkDestroyDevice` while another was inside an
+    /// NVIDIA thread-exit destructor, and neither wait carried a deadline. The
+    /// bound is asserted by a receive deadline on the main thread rather than
+    /// by joining the workers, because a wedged worker never returns from the
+    /// driver and a join would hang with it.
+    ///
+    /// Termination alone proves nothing, since threads that do not interleave
+    /// also terminate. Every worker must receive the same device, which is
+    /// what makes a release unable to reach `vkDestroyDevice`, and the adapter
+    /// must hold one device. The count is per adapter because other tests in
+    /// this binary acquire devices on the host's other adapters concurrently.
+    #[cfg(feature = "device-tests")]
+    #[test]
+    fn concurrent_device_creation_and_release_terminates() {
+        const THREADS: usize = 4;
+        const ROUNDS: usize = 3;
+        const BOUND: Duration = Duration::from_secs(300);
+
+        let (report, finished) = std::sync::mpsc::channel();
+        for worker in 0..THREADS {
+            let report = report.clone();
+            thread::spawn(move || {
+                let mut last = None;
+                for round in 0..ROUNDS {
+                    match init_device() {
+                        Ok(((device, queue), info, _)) => {
+                            last = Some((device, info));
+                            drop(queue);
+                        }
+                        Err(error) => {
+                            drop(report.send(Err(format!(
+                                "worker {worker} round {round} could not acquire a device: {error}"
+                            ))));
+                            return;
+                        }
+                    }
+                }
+                drop(report.send(Ok(last)));
+            });
+        }
+        drop(report);
+
+        let deadline = Instant::now() + BOUND;
+        let mut devices = Vec::new();
+        while devices.len() < THREADS {
+            let remaining = deadline
+                .checked_duration_since(Instant::now())
+                .unwrap_or_default();
+            match finished.recv_timeout(remaining) {
+                Ok(Ok(device)) => devices.push(
+                    device.expect("Fix: a worker that reported success ran at least one round"),
+                ),
+                Ok(Err(reason)) => panic!("Fix: {reason}"),
+                Err(_) => panic!(
+                    "Fix: {} of {THREADS} threads finished within {}s. Concurrent device creation and release must not deadlock; a thread stuck in vkDestroyDevice means a device reached zero references.",
+                    devices.len(),
+                    BOUND.as_secs()
+                ),
+            }
+        }
+
+        let (first, info) = &devices[0];
+        assert!(
+            devices.iter().all(|(device, _)| device == first),
+            "Fix: {THREADS} threads on one adapter received different devices. Every caller of an adapter must take the held device, or a release is the last reference and calls vkDestroyDevice."
+        );
+        let held = held_devices_for(info);
+        assert_eq!(
+            held, 1,
+            "Fix: {THREADS} threads over {ROUNDS} rounds left {held} devices held for `{}`. One adapter must hold one device; holding one per acquisition exhausts the driver.",
+            info.name
+        );
+    }
+
+    /// The adapter probe takes the held device instead of creating its own.
+    ///
+    /// The probe runs as a diagnostic while other threads hold devices, so a
+    /// probe device that is created and dropped is a `vkDestroyDevice` on the
+    /// reporting path, which is the teardown the deadlock needs. Every real
+    /// adapter the probe opened therefore holds exactly one device afterwards,
+    /// on a host with one adapter or several, and the adapter `init_device`
+    /// selected still hands out the device it held before the probe.
+    #[cfg(feature = "device-tests")]
+    #[test]
+    fn the_adapter_probe_takes_the_held_device() {
+        let ((device, _queue), selected, _) =
+            init_device().expect("Fix: a device-test host must acquire a device before probing");
+        let report = super::super::adapter_probe_report();
+        assert!(
+            !report.probed.is_empty(),
+            "Fix: a device-test host must expose at least one adapter to probe"
+        );
+        let adapters = shared_instance().enumerate_adapters(COMPUTE_BACKENDS);
+        for info in adapters.iter().map(wgpu::Adapter::get_info) {
+            let failed = report
+                .missing
+                .iter()
+                .any(|reason| reason.contains(&format!("device request failed on {}", info.name)));
+            if !crate::capabilities::is_real_gpu(&info) || failed {
+                continue;
+            }
+            assert_eq!(
+                held_devices_for(&info),
+                1,
+                "Fix: after the adapter probe `{}` holds {} devices. The probe must take the held device, creating it only when none is held. Probe report: probed {:?}, missing {:?}.",
+                info.name,
+                held_devices_for(&info),
+                report.probed,
+                report.missing
+            );
+        }
+        let ((after, _queue), ..) =
+            init_device().expect("Fix: acquisition after the probe must still succeed");
+        assert!(
+            after == device,
+            "Fix: the adapter probe replaced the device held for `{}`.",
+            selected.name
         );
     }
 

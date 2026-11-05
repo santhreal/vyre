@@ -3,7 +3,7 @@
 #[cfg(all(test, feature = "device-tests"))]
 pub(crate) use acquire::init_device_without_timestamps;
 pub use acquire::{acquire_gpu, cached_adapter_info, cached_device, init_device};
-pub(crate) use acquire::{poll_device_once, poll_device_wait_for, pop_error_scope_now};
+pub(crate) use acquire::{poll_device_once, poll_device_wait_for};
 pub use features::EnabledFeatures;
 pub use selector::{
     acquire_gpu_for_adapter, adapter_for_info, adapter_index_from_env, adapter_probe_report,
@@ -11,10 +11,12 @@ pub use selector::{
     AdapterCriteria, AdapterProbeReport,
 };
 pub(crate) use selector::{init_device_for_adapter_identity, AdapterIdentity};
+pub(crate) use validation_scope::ValidationScope;
 
 mod acquire;
 mod features;
 mod selector;
+mod validation_scope;
 
 /// Reserve capacity for an adapter-probe vector, reporting the failure as a
 /// backend error.

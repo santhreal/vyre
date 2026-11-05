@@ -9,7 +9,7 @@ pub(crate) fn submit_recorded_dispatch(
     mut recorded: RecordedDispatch,
 ) -> Result<WgpuPendingReadback, BackendError> {
     let (device, queue) = &*recorded.device_queue;
-    device.push_error_scope(wgpu::ErrorFilter::Validation);
+    let scope = crate::runtime::device::ValidationScope::push(device);
     let command_buffer = recorded.command_buffer.take().ok_or_else(|| {
         BackendError::new(
             "recorded dispatch was submitted twice. Fix: keep RecordedDispatch ownership linear.",
@@ -17,14 +17,15 @@ pub(crate) fn submit_recorded_dispatch(
     })?;
     let _submission = queue.submit(std::iter::once(command_buffer));
     crate::runtime::device::poll_device_once(device)?;
-    if let Some(error) = crate::runtime::device::pop_error_scope_now(device).map_err(|message| {
-        BackendError::DispatchFailed {
+    if let Some(error) = scope
+        .pop_now()
+        .map_err(|message| BackendError::DispatchFailed {
             code: None,
             message: format!(
                 "wgpu queue-submit validation did not complete without a host wait: {message}"
             ),
-        }
-    })? {
+        })?
+    {
         return Err(BackendError::DispatchFailed {
             code: None,
             message: format!(
@@ -50,7 +51,7 @@ pub(crate) fn submit_recorded_batch(
         }
     }
     let (device, queue) = &*device_queue;
-    device.push_error_scope(wgpu::ErrorFilter::Validation);
+    let scope = crate::runtime::device::ValidationScope::push(device);
     let mut command_buffers = SmallVec::<[wgpu::CommandBuffer; 8]>::new();
     reserve_smallvec_to_capacity(
         &mut command_buffers,
@@ -68,7 +69,7 @@ pub(crate) fn submit_recorded_batch(
     }
     let _submission = queue.submit(command_buffers);
     crate::runtime::device::poll_device_once(device)?;
-    if let Some(error) = crate::runtime::device::pop_error_scope_now(device).map_err(|message| {
+    if let Some(error) = scope.pop_now().map_err(|message| {
         BackendError::DispatchFailed {
             code: None,
             message: format!("wgpu batched queue-submit validation did not complete without a host wait: {message}"),
