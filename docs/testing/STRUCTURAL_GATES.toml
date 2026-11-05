@@ -205,6 +205,17 @@ make, which no execution observes.
 """
 
 [[gate]]
+file = "tools/xtask/tests/tree_contracts/built_binaries.rs"
+tests = ["every_contract_that_executes_a_built_binary_holds_the_lock"]
+reason = """
+Asserts that every tree contract executing a cargo-built binary takes the lock
+that excludes the cli-docs rebuild. A missing lock fails only on Windows, and
+only when the rebuild relinks a binary at the instant another contract runs it,
+so a passing run witnesses nothing. The subject is a call a contract did not
+make, which no execution observes.
+"""
+
+[[gate]]
 file = "tools/xtask/src/gates/host_oracle_elimination_tests_part1.rs"
 tests = [
   "canonical_semantic_executor_exact_path_derives_execution_methods",

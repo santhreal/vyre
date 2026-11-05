@@ -4,6 +4,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::process::{Command, Output};
 
+use super::built_binaries;
 use super::workspace_sources::workspace_root;
 
 fn run(executable: &str, args: &[&str]) -> Output {
@@ -17,6 +18,7 @@ fn run(executable: &str, args: &[&str]) -> Output {
 /// transcript to one executable contract.
 #[test]
 fn workspace_cli_documentation_is_current() {
+    let _rebuilding = built_binaries::exclusive();
     let root = workspace_root();
     let output = run(env!("CARGO_BIN_EXE_xtask"), &["cli-docs"]);
     assert!(
@@ -134,6 +136,7 @@ fn helper_binaries() -> Vec<(String, std::path::PathBuf)> {
 /// Prevents internal helper binaries from running audits or writes when a reader asks for help.
 #[test]
 fn every_xtask_binary_help_route_exits_zero() {
+    let _running = built_binaries::shared();
     for (name, executable) in helper_binaries() {
         let path = executable.to_string_lossy().into_owned();
         let output = run(&path, &["--help"]);
@@ -162,6 +165,7 @@ fn every_xtask_binary_help_route_exits_zero() {
 /// set is the table itself, so a subcommand added tomorrow is judged tomorrow.
 #[test]
 fn xtask_help_lists_every_registered_gate() {
+    let _running = built_binaries::shared();
     let output = run(env!("CARGO_BIN_EXE_xtask"), &["--help"]);
     let help = String::from_utf8_lossy(&output.stdout);
     let missing: Vec<&str> = xtask::subcommands::registry()
@@ -184,6 +188,7 @@ fn xtask_help_lists_every_registered_gate() {
 /// checkout, so a scaffold landed in whatever tree the clone happened to sit in.
 #[test]
 fn scaffold_help_is_side_effect_free() {
+    let _running = built_binaries::shared();
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
     let cwd = temp.path().join("a/b/c/d/e/f");
     fs::create_dir_all(&cwd).expect("Fix: nested fixture directory must be creatable");
@@ -207,6 +212,7 @@ fn scaffold_help_is_side_effect_free() {
 /// Preserves status 2 for invalid CLI syntax instead of running partial audits or scaffolds.
 #[test]
 fn invalid_helper_arguments_return_usage_status() {
+    let _running = built_binaries::shared();
     for (name, executable) in helper_binaries() {
         let output = run(&executable.to_string_lossy(), &["--definitely-invalid"]);
         assert_eq!(
@@ -309,6 +315,7 @@ fn run_within(executable: &str, args: &[&str], bound: std::time::Duration) -> Ou
 /// editing this test.
 #[test]
 fn every_runner_help_route_answers_without_running_the_gates() {
+    let _running = built_binaries::shared();
     let bound = std::time::Duration::from_secs(60);
     let listed = run_within(env!("CARGO_BIN_EXE_xtask"), &["gates", "--list"], bound);
     assert!(listed.status.success(), "Fix: `gates --list` must exit 0");

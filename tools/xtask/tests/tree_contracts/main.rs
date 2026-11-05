@@ -18,6 +18,7 @@
 mod workspace_sources;
 
 mod architecture_docs;
+mod built_binaries;
 mod canonical_first_workgroup_guard;
 mod cargo_invocation_resolution;
 mod ci_required_contexts;

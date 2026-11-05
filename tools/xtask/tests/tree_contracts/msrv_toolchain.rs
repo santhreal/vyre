@@ -15,10 +15,12 @@
 
 use std::process::Command;
 
+use crate::built_binaries;
 use crate::workspace_sources::workspace_root;
 
 #[test]
 fn print_toolchain_writes_the_advertised_version_and_nothing_else() {
+    let _running = built_binaries::shared();
     let root = workspace_root();
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(["feature-msrv", "--print-toolchain"])
@@ -71,6 +73,7 @@ fn print_toolchain_writes_the_advertised_version_and_nothing_else() {
 /// complete gate report with notes and finding summary.
 #[test]
 fn normal_feature_msrv_preserves_standard_gate_report() {
+    let _running = built_binaries::shared();
     let root = workspace_root();
     let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(["feature-msrv"])
