@@ -290,8 +290,11 @@ jobs:
               raise SystemExit("pass-family-benchmark-manifest.json: backend must be cuda")
           if manifest.get("blockers"):
               raise SystemExit("pass-family-benchmark-manifest.json: blockers must be empty")
-          if len(manifest.get("cases", [])) < 4:
-              raise SystemExit("pass-family-benchmark-manifest.json: expected at least 4 cases")
+          required_cases = manifest.get("required_case_count", 0)
+          if required_cases < 1 or len(manifest.get("cases", [])) != required_cases:
+              raise SystemExit("pass-family-benchmark-manifest.json: cases must match required_case_count")
+          if manifest.get("uncovered_pass_families") != []:
+              raise SystemExit("pass-family-benchmark-manifest.json: uncovered_pass_families must be empty")
           for case in manifest.get("cases", []):
               case_id = case.get("case_id", "<unknown>")
               for field in ("missing_custom_metrics", "non_positive_required_metrics", "non_winning_cases", "blockers"):
