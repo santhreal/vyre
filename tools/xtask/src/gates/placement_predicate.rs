@@ -26,7 +26,11 @@ use crate::gates::scan::{mask_literals, Tree};
 /// A production crate may ask whether a file is there for its own reasons; these
 /// are the ones whose output is a verdict about ownership or membership, so a
 /// wrong answer here is a wrong answer about the repository.
-const JUDGING_ROOTS: &[&str] = &["xtask", "xtask-registry", "structure-gate"];
+const JUDGING_ROOTS: &[&str] = &[
+    "tools/xtask",
+    "tools/xtask-registry",
+    "tools/structure-gate",
+];
 
 /// The one path question a directory cannot answer.
 ///
