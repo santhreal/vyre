@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`xtask cli-docs` releases the `deps` hard link of its own running image before rebuilding the workspace binaries, so the Windows relink no longer fails with `LNK1104`."

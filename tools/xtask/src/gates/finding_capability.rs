@@ -551,7 +551,7 @@ fn field_literal(body: &str, field: &str) -> Option<String> {
 
 /// Convert a PascalCase struct name to kebab-case gate name.
 fn type_to_kebab(type_name: &str) -> String {
-    let raw = type_name.split("::").last().unwrap_or(type_name).trim();
+    let raw = type_name.rsplit("::").next().unwrap_or(type_name).trim();
     let mut kebab = String::new();
     for (i, ch) in raw.chars().enumerate() {
         if ch.is_uppercase() {

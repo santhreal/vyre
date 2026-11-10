@@ -77,11 +77,16 @@ const RELEASED: &str = ".released-";
 /// A build relinks `<profile>/<bin>` for every binary whose unit changed, and
 /// the process running a gate is one of those binaries whenever it was built
 /// with another feature set: `--features public-api-tool` and a test harness
-/// both build it that way. Windows rejects removing a running image and
-/// accepts renaming one, so the running image is renamed aside and a copy takes
-/// its path. The build then removes a file no process runs, and the path is
-/// never missing for a concurrent caller. A Unix image is removed at once; a
-/// Windows image stays until a later call removes it.
+/// both build it that way. Windows rejects writing a running image and accepts
+/// renaming one, so the running image is renamed aside and a copy takes its
+/// path. The build then replaces a file no process runs, and the path is never
+/// missing for a concurrent caller. A Unix image is removed at once; a Windows
+/// image stays until a later call removes it.
+///
+/// Cargo places `<profile>/<bin>` as a hard link of the linker's output in
+/// `<profile>/deps/<crate>-<hash>`, and the linker writes that file in place.
+/// Every name of the running file is released, so the deps name is moved
+/// aside and replaced with a copy as well.
 ///
 /// Returns whether `running` was a file directly inside `profile`. A
 /// `profile` that does not exist yet holds nothing the build could relink.
@@ -89,33 +94,96 @@ pub fn release_running_image(running: &Path, profile: &Path) -> IoResult<bool> {
     let (Ok(running), Ok(profile)) = (running.canonicalize(), profile.canonicalize()) else {
         return Ok(false);
     };
-    let Some(name) = running
-        .file_name()
-        .filter(|_| running.parent() == Some(profile.as_path()))
-        .map(|name| name.to_string_lossy().into_owned())
-    else {
+    if running.parent() != Some(profile.as_path()) {
         return Ok(false);
+    }
+    let image = std::fs::metadata(&running)?;
+    let links = linker_outputs_of(&running, &image, &profile.join("deps"))?;
+    release(&running)?;
+    for link in &links {
+        release(link)?;
+    }
+    Ok(true)
+}
+
+/// Files in `deps` that are the file `running` names, as cargo's hard link
+/// from the binary to its linker output makes them.
+///
+/// A deps output of `<bin>` is `<crate>-<hash>` plus the binary's extension,
+/// where `<crate>` is `<bin>` with `-` spelled `_`. A `deps` that does not
+/// exist holds none.
+fn linker_outputs_of(
+    running: &Path,
+    image: &std::fs::Metadata,
+    deps: &Path,
+) -> IoResult<Vec<PathBuf>> {
+    let Some(stem) = running.file_stem() else {
+        return Ok(Vec::new());
     };
-    let prefix = format!("{name}{RELEASED}");
-    for entry in std::fs::read_dir(&profile)? {
+    let prefix = format!("{}-", stem.to_string_lossy().replace('-', "_"));
+    let entries = match std::fs::read_dir(deps) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(error) => return Err(error),
+    };
+    let mut links = Vec::new();
+    for entry in entries {
         let path = entry?.path();
-        if path
+        let is_output = path.extension() == running.extension()
+            && path
+                .file_stem()
+                .is_some_and(|file| file.to_string_lossy().starts_with(&prefix));
+        if is_output && std::fs::metadata(&path).is_ok_and(|file| same_file(image, &file)) {
+            links.push(path);
+        }
+    }
+    Ok(links)
+}
+
+/// Whether two metadata records describe one file.
+#[cfg(unix)]
+fn same_file(left: &std::fs::Metadata, right: &std::fs::Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    left.dev() == right.dev() && left.ino() == right.ino()
+}
+
+/// Whether two metadata records describe one file.
+///
+/// Hard links share one file record, so they agree on length and last write
+/// time. The stable standard library exposes no file index on this platform.
+#[cfg(not(unix))]
+fn same_file(left: &std::fs::Metadata, right: &std::fs::Metadata) -> bool {
+    left.len() == right.len()
+        && matches!((left.modified(), right.modified()), (Ok(a), Ok(b)) if a == b)
+}
+
+/// Rename `path` aside, put a copy at `path`, and remove what an earlier
+/// release left aside in the same directory.
+fn release(path: &Path) -> IoResult<()> {
+    let (Some(directory), Some(name)) = (path.parent(), path.file_name()) else {
+        return Ok(());
+    };
+    let name = name.to_string_lossy();
+    let prefix = format!("{name}{RELEASED}");
+    for entry in std::fs::read_dir(directory)? {
+        let aside = entry?.path();
+        if aside
             .file_name()
             .is_some_and(|file| file.to_string_lossy().starts_with(&prefix))
         {
             // An image another process still runs stays until that process exits.
-            let _ = std::fs::remove_file(&path);
+            let _ = std::fs::remove_file(&aside);
         }
     }
     let id = std::process::id();
-    let staged = profile.join(format!("{name}.staged-{id}"));
-    let released = profile.join(format!("{prefix}{id}"));
-    std::fs::copy(&running, &staged)?;
-    std::fs::rename(&running, &released)?;
-    std::fs::rename(&staged, &running)?;
+    let staged = directory.join(format!("{name}.staged-{id}"));
+    let released = directory.join(format!("{prefix}{id}"));
+    std::fs::copy(path, &staged)?;
+    std::fs::rename(path, &released)?;
+    std::fs::rename(&staged, path)?;
     // Windows keeps this image until the process exits; the next call removes it.
     let _ = std::fs::remove_file(&released);
-    Ok(true)
+    Ok(())
 }
 
 /// Run a long command, streaming its output and keeping its diagnostics.
@@ -813,6 +881,70 @@ mod tests {
             );
         }
         drop(before);
+    }
+
+    /// WHY: cargo hard-links `<profile>/<bin>` to the linker output in `deps`,
+    /// and the linker writes that output in place. Releasing only the profile
+    /// name leaves the running file under its deps name, and the Windows relink
+    /// fails on it with `LNK1104`. Every deps name of the running file must
+    /// hold a copy afterwards. The output of another build of the same binary,
+    /// its dependency-info file, and what an earlier release left aside are
+    /// the neighbours a looser match would move or keep wrongly.
+    #[test]
+    fn the_linker_output_hard_linked_to_a_running_image_is_released() {
+        let exe = std::env::consts::EXE_SUFFIX;
+        let root = tempfile::tempdir().expect("temporary directory");
+        let profile = root.path().join("debug");
+        let deps = profile.join("deps");
+        std::fs::create_dir_all(&deps).expect("deps directory");
+        let running = profile.join(format!("my-tool{exe}"));
+        let linked = deps.join(format!("my_tool-1111{exe}"));
+        let other_build = deps.join(format!("my_tool-2222{exe}"));
+        std::fs::write(&linked, b"image").expect("linker output");
+        std::fs::hard_link(&linked, &running).expect("cargo's uplift link");
+        std::fs::write(&other_build, b"another build").expect("another feature set");
+        std::fs::write(deps.join("my_tool-1111.d"), b"deps").expect("dependency info");
+        std::fs::write(deps.join(format!("my_tool-1111{exe}{RELEASED}1")), b"old")
+            .expect("prior image");
+        let before = std::fs::File::open(&running).expect("the running image opens");
+        let other_before = std::fs::metadata(&other_build).expect("another build metadata");
+
+        assert!(release_running_image(&running, &profile).expect("release succeeds"));
+
+        assert_eq!(
+            std::fs::read(&linked).expect("deps name is filled"),
+            b"image"
+        );
+        assert_eq!(
+            std::fs::read(&other_build).expect("another build stays"),
+            b"another build"
+        );
+        let mut expected = vec![
+            format!("my_tool-1111{exe}"),
+            "my_tool-1111.d".to_string(),
+            format!("my_tool-2222{exe}"),
+        ];
+        expected.sort();
+        assert_eq!(names(&deps), expected);
+        #[cfg(unix)]
+        {
+            let held = before.metadata().expect("running metadata");
+            for path in [&running, &linked] {
+                assert!(
+                    !same_file(&held, &std::fs::metadata(path).expect("copy metadata")),
+                    "{} must hold a file no process runs",
+                    path.display()
+                );
+            }
+            assert!(
+                same_file(
+                    &other_before,
+                    &std::fs::metadata(&other_build).expect("another build metadata")
+                ),
+                "another build of the binary is not the running file and must stay in place"
+            );
+        }
+        drop((before, other_before));
     }
 
     /// WHY: only the running image may move. An executable outside the
