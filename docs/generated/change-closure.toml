@@ -6851,7 +6851,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "DeterministicSchedulePolicy"
 variant_name = "BoundedInterleaving"
-declaration_site = "crates/vyre-reference/src/request.rs:224"
+declaration_site = "crates/vyre-reference/src/request.rs:261"
 constructors = ["DeterministicSchedulePolicy::BoundedInterleaving"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -6861,7 +6861,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "DeterministicSchedulePolicy"
 variant_name = "Forward"
-declaration_site = "crates/vyre-reference/src/request.rs:218"
+declaration_site = "crates/vyre-reference/src/request.rs:255"
 constructors = ["DeterministicSchedulePolicy::Forward"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -6871,7 +6871,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "DeterministicSchedulePolicy"
 variant_name = "LaneReversed"
-declaration_site = "crates/vyre-reference/src/request.rs:220"
+declaration_site = "crates/vyre-reference/src/request.rs:257"
 constructors = ["DeterministicSchedulePolicy::LaneReversed"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -6881,7 +6881,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "DeterministicSchedulePolicy"
 variant_name = "LaneRotated"
-declaration_site = "crates/vyre-reference/src/request.rs:222"
+declaration_site = "crates/vyre-reference/src/request.rs:259"
 constructors = ["DeterministicSchedulePolicy::LaneRotated"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Copy, Debug, Eq, PartialEq, Hash)"
@@ -34517,7 +34517,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "Value"
 variant_name = "Array"
-declaration_site = "crates/vyre-reference/src/value.rs:21"
+declaration_site = "crates/vyre-reference/src/value.rs:29"
 constructors = ["Value::Array", "Value::from_element_bytes", "Value::from", "Value::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -34537,7 +34537,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "Value"
 variant_name = "Bool"
-declaration_site = "crates/vyre-reference/src/value.rs:15"
+declaration_site = "crates/vyre-reference/src/value.rs:23"
 constructors = ["Value::Bool", "Value::from_element_bytes", "Value::from", "Value::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -34547,7 +34547,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "Value"
 variant_name = "Bytes"
-declaration_site = "crates/vyre-reference/src/value.rs:17"
+declaration_site = "crates/vyre-reference/src/value.rs:25"
 constructors = ["Value::Bytes", "Value::from_element_bytes", "Value::from", "Value::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -34567,7 +34567,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "Value"
 variant_name = "Float"
-declaration_site = "crates/vyre-reference/src/value.rs:19"
+declaration_site = "crates/vyre-reference/src/value.rs:27"
 constructors = ["Value::Float", "Value::from_element_bytes", "Value::from", "Value::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -34587,7 +34587,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "Value"
 variant_name = "I32"
-declaration_site = "crates/vyre-reference/src/value.rs:11"
+declaration_site = "crates/vyre-reference/src/value.rs:19"
 constructors = ["Value::I32", "Value::from_element_bytes", "Value::from", "Value::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -34607,7 +34607,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "Value"
 variant_name = "U32"
-declaration_site = "crates/vyre-reference/src/value.rs:9"
+declaration_site = "crates/vyre-reference/src/value.rs:17"
 constructors = ["Value::U32", "Value::from_element_bytes", "Value::from", "Value::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -34627,7 +34627,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "Value"
 variant_name = "U64"
-declaration_site = "crates/vyre-reference/src/value.rs:13"
+declaration_site = "crates/vyre-reference/src/value.rs:21"
 constructors = ["Value::U64", "Value::from_element_bytes", "Value::from", "Value::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
