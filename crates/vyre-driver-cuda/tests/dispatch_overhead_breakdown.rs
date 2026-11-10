@@ -121,25 +121,31 @@ fn dispatch_overhead_breakdown_reports_per_phase_latency() {
     );
 }
 
-/// Rows of a tile staged in workgroup memory, one row per thread.
+/// Rows of a tile staged in workgroup memory, one row per thread, in each of
+/// `workgroups` workgroups.
 ///
 /// Row length equals the bank count, so lane `t` of a warp addresses element
 /// `t * 32 + column`: every lane of the warp lands on the same bank and the
 /// classifier states a 32-way conflict. Each thread writes its whole row, the
 /// workgroup barriers, and each thread sums its row back, so the kernel is
-/// shared traffic and one output word.
+/// shared traffic and one output word per thread.
+///
+/// The grid is inferred from the output, one workgroup per `threads` words.
+/// One workgroup runs for a few microseconds, which is the size of a launch on
+/// an idle device, so its device time measured the launch and the device clock
+/// state rather than the shared traffic.
 ///
 /// `mask_the_index` wraps every shared index in `& (extent - 1)`. The mask is
 /// the identity for this launch geometry, because the largest index a thread
 /// forms is `extent - 1`, and the classifier states no stride through a bitwise
 /// and. The masked program is therefore the same kernel with the mitigation
 /// unreachable, which is what a before measurement has to be.
-fn row_tile_program(threads: u32, mask_the_index: bool) -> Program {
+fn row_tile_program(threads: u32, workgroups: u32, mask_the_index: bool) -> Program {
     let row_length = 32_u32;
     let extent = threads * row_length;
     let index = |column: u32| {
         let element = Expr::add(
-            Expr::mul(Expr::gid_x(), Expr::u32(row_length)),
+            Expr::mul(Expr::local_x(), Expr::u32(row_length)),
             Expr::u32(column),
         );
         if mask_the_index {
@@ -169,7 +175,7 @@ fn row_tile_program(threads: u32, mask_the_index: bool) -> Program {
     Program::wrapped(
         vec![
             BufferDecl::workgroup("tile", extent, DataType::U32),
-            BufferDecl::output("out", 0, DataType::U32).with_count(threads),
+            BufferDecl::output("out", 0, DataType::U32).with_count(threads * workgroups),
         ],
         [threads, 1, 1],
         nodes,
@@ -215,6 +221,7 @@ fn classified_row_tile_conflicts(row_length: u32) -> Vec<BankConflictKind> {
 #[test]
 fn a_strided_tile_kernel_records_its_conflict_count_and_time_before_and_after() {
     const THREADS: u32 = 128;
+    const WORKGROUPS: u32 = 8192;
     const ROW_LENGTH: u32 = 32;
     const RUNS: u32 = 200;
 
@@ -230,8 +237,8 @@ fn a_strided_tile_kernel_records_its_conflict_count_and_time_before_and_after() 
          every site; classified {conflicts:?}"
     );
 
-    let mitigated = row_tile_program(THREADS, false);
-    let baseline = row_tile_program(THREADS, true);
+    let mitigated = row_tile_program(THREADS, WORKGROUPS, false);
+    let baseline = row_tile_program(THREADS, WORKGROUPS, true);
     let config = DispatchConfig::default();
 
     let mitigated_text = vyre_driver_cuda::codegen::program_to_ptx(&mitigated, &config)
@@ -267,8 +274,8 @@ fn a_strided_tile_kernel_records_its_conflict_count_and_time_before_and_after() 
     // Device time, not wall clock around `dispatch`. A host round trip on this
     // kernel costs milliseconds in cache lookup, staging, launch, sync and
     // readback, and the kernel itself costs microseconds, so a wall-clock
-    // comparison of a 128-thread tile reports the overhead and reports it as
-    // the mitigation's effect.
+    // comparison of the row tile reports the overhead and reports it as the
+    // mitigation's effect.
     //
     // The two programs are sampled alternately inside one loop. This crate
     // runs its device tests in parallel, so a neighbour that saturates the GPU
@@ -300,8 +307,8 @@ fn a_strided_tile_kernel_records_its_conflict_count_and_time_before_and_after() 
     mitigated_samples.sort_unstable();
     let baseline_p50 = baseline_samples[baseline_samples.len() / 2];
     let mitigated_p50 = mitigated_samples[mitigated_samples.len() / 2];
-    // The floor, not the median. Contention inflates a 9 microsecond kernel to
-    // 27, which buries a 2 microsecond difference between two kernels under
+    // The floor, not the median. Contention inflates a kernel to several times
+    // its own cost, which buries the difference between two kernels under
     // queueing that belongs to neither. The smallest sample of a few hundred is
     // the one that waited least, so it is the closest measurement of what the
     // kernel itself costs, and both programs are sampled alternately so
@@ -319,6 +326,7 @@ fn a_strided_tile_kernel_records_its_conflict_count_and_time_before_and_after() 
     println!();
     println!("=== strided tile shared-memory mitigation ===");
     println!("threads                      {THREADS:>12}");
+    println!("workgroups                   {WORKGROUPS:>12}");
     println!("row_length                   {ROW_LENGTH:>12}  (elements, = bank count)");
     println!("classified_sites             {:>12}", conflicts.len());
     println!("classified_32_way_sites      {thirty_two_way:>12}");
@@ -335,7 +343,8 @@ fn a_strided_tile_kernel_records_its_conflict_count_and_time_before_and_after() 
         mitigated_ns <= baseline_ns,
         "Fix: the selected mitigation measured slower than the unpermuted kernel \
          ({mitigated_ns} ns vs {baseline_ns} ns least-contended device sample of \
-         {RUNS} on a {THREADS}-thread {ROW_LENGTH}-element row tile, p50 \
+         {RUNS} on {WORKGROUPS} workgroups of a {THREADS}-thread \
+         {ROW_LENGTH}-element row tile, p50 \
          {mitigated_p50} ns vs {baseline_p50} ns). Either the selector must \
          reject this candidate or the emitted permutation must stop costing more \
          than the conflict it removes."
