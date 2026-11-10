@@ -59,7 +59,7 @@ buffers = 3
 bytes_extraction = false
 features = ["bitset"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "commutative"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -2519,7 +2519,7 @@ buffers = 2
 bytes_extraction = false
 features = ["nn-activation"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["idempotent"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3371,7 +3371,7 @@ buffers = 2
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = ["bounded", "monotonic"]
+laws = ["associative", "bounded", "commutative", "monotonic"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3407,7 +3407,7 @@ buffers = 2
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "commutative"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
@@ -3515,7 +3515,7 @@ buffers = 2
 bytes_extraction = false
 features = ["reduce"]
 target_facets = ["cuda", "spirv", "wgpu"]
-laws = []
+laws = ["associative", "commutative"]
 backends = ["cuda", "reference", "wgpu"]
 
 [[operation]]
