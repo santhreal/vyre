@@ -458,16 +458,17 @@ fn metadata(root: &Path, runner: &Path) -> Result<serde_json::Value, GateError> 
 /// features and Windows fails to remove a running image.
 fn build_binaries(root: &Path, runner: &Path, profile: &Path) -> Result<(), GateError> {
     let running = crate::delegate::dispatcher();
-    crate::cargo_runner::release_running_image(running, profile).map_err(|error| {
-        GateError::new(
-            format!(
-                "{} could not be moved off its build path in {}: {error}",
-                running.display(),
-                profile.display()
-            ),
-            "make the target directory writable",
-        )
-    })?;
+    let released =
+        crate::cargo_runner::release_running_image(running, profile).map_err(|error| {
+            GateError::new(
+                format!(
+                    "{} could not be moved off its build path in {}: {error}",
+                    running.display(),
+                    profile.display()
+                ),
+                "make the target directory writable",
+            )
+        })?;
     let output = Command::new(runner)
         .args(["build", "--workspace", "--bins"])
         .current_dir(root)
@@ -481,18 +482,42 @@ fn build_binaries(root: &Path, runner: &Path, profile: &Path) -> Result<(), Gate
     if output.status.success() {
         return Ok(());
     }
+    let placement = if released {
+        format!("{} was moved off its build path", running.display())
+    } else {
+        format!(
+            "{} is not in {}, so nothing was moved off a build path",
+            running.display(),
+            profile.display()
+        )
+    };
     Err(GateError::new(
         format!(
-            "`{} build --workspace --bins` failed: {}",
+            "`{} build --workspace --bins` failed ({placement}): {}",
             runner.display(),
-            String::from_utf8_lossy(&output.stderr)
-                .lines()
-                .filter(|line| line.starts_with("error"))
-                .collect::<Vec<_>>()
-                .join("; ")
+            build_failure_lines(&String::from_utf8_lossy(&output.stderr))
         ),
         "repair the command-line build before documenting it",
     ))
+}
+
+/// The lines of a failed build's standard error that state why it failed.
+///
+/// An `error` line states that a unit failed. A linker's own diagnostic is in
+/// the `note:` block under it, as `LINK : fatal error LNK1104: cannot open
+/// file '...'` on MSVC, and only that line names the file the link could not
+/// write. With neither line present, the whole standard error is returned.
+fn build_failure_lines(stderr: &str) -> String {
+    let lines: Vec<&str> = stderr
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("error") || line.contains("fatal error LNK"))
+        .collect();
+    if lines.is_empty() {
+        stderr.trim().to_string()
+    } else {
+        lines.join("; ")
+    }
 }
 
 /// The help text of one route, or what is wrong with that route.
