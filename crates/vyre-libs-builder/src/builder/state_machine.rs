@@ -130,14 +130,18 @@ impl<'a> TableStateMachineComposer<'a> {
         )
     }
 
-    /// [`Self::advance_node`] with both table operands folded inside the table.
+    /// [`Self::advance_node`] with both table operands held inside the table.
     ///
     /// A transition table is data. Nothing checks that an entry names a state
     /// the automaton has, and nothing checks that a symbol read out of an input
     /// buffer is inside the alphabet, so `state * stride + symbol` reaches past
-    /// the table on the step after either one arrives out of range. Both are
-    /// folded here, which is identity for a table whose entries are states and
-    /// an input whose symbols are alphabet members.
+    /// the table on the step after either one arrives out of range. The state
+    /// is folded against `state_extent`. A power-of-two alphabet masks the
+    /// symbol with `& (alphabet_size - 1)`, one instruction on the innermost
+    /// loop of every table walk; any other alphabet folds it to symbol zero.
+    /// Both are identity for a table whose entries are states and an input
+    /// whose symbols are alphabet members. For the byte alphabet the symbol
+    /// operand is the one [`Self::safe_byte_transition_expr`] emits.
     ///
     /// `state_extent` is the number of states the table holds, normally
     /// `Expr::buf_len` of the accept vector.
@@ -147,9 +151,19 @@ impl<'a> TableStateMachineComposer<'a> {
             self.state_var,
             self.transition_expr(
                 bounded_index(Expr::var(self.state_var), state_extent),
-                bounded_index(symbol, Expr::u32(self.alphabet_size)),
+                self.bounded_symbol(symbol),
             ),
         )
+    }
+
+    /// Hold `symbol` inside the alphabet: mask a power-of-two alphabet, fold
+    /// any other.
+    fn bounded_symbol(&self, symbol: Expr) -> Expr {
+        if self.alphabet_size.is_power_of_two() {
+            Expr::bitand(symbol, Expr::u32(self.alphabet_size - 1))
+        } else {
+            bounded_index(symbol, Expr::u32(self.alphabet_size))
+        }
     }
 
     /// Emit a state assignment node targeting an explicitly named state variable.

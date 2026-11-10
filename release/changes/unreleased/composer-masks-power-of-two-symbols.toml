@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`TableStateMachineComposer::bounded_advance_node` masks the symbol of a power-of-two alphabet with `& (alphabet_size - 1)` in place of a fold, so `aho_corasick` and the classic Aho-Corasick walk emit one transition step with the same `& 0xFF` byte operand."

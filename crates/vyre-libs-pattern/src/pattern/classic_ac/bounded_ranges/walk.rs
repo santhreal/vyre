@@ -27,22 +27,13 @@ use crate::pattern::builders::load_packed_byte;
 /// indexes past the table on the step after an entry falls outside the state
 /// set. The state is folded against the table's own run-time length over the
 /// row stride, which is identity for a table whose entries are states and
-/// covers every caller without a signature change.
-///
-/// The byte takes the composer's `& 0xFF` mask rather than a second fold. Both
-/// keep the read inside the table; the mask is identity for the packed path,
-/// whose loader already masks, and is one instruction where the fold is a
-/// compare and a select on the innermost loop of every AC scan.
+/// covers every caller without a signature change. The byte takes the
+/// composer's `& 0xFF` mask, which is identity for the packed path, whose
+/// loader already masks.
 pub(in crate::pattern) fn ac_advance_state_node(transitions: &str, byte: Expr) -> Node {
     let composer = TableStateMachineComposer::new(transitions);
     let state_extent = Expr::div(Expr::buf_len(transitions), Expr::u32(composer.stride));
-    Node::assign(
-        composer.state_var,
-        composer.safe_byte_transition_expr(
-            bounded_index(Expr::var(composer.state_var), state_extent),
-            byte,
-        ),
-    )
+    composer.bounded_advance_node(state_extent, byte)
 }
 
 /// One byte of the walk over a PACKED haystack: unpack the byte at `idx` from
