@@ -32,11 +32,6 @@
 # was deleted rather than pinned, and `vyre_foundation::ir` is the one owner.
 
 [[crate]]
-name = "conform"
-duplicate_lines = 33
-total_lines = 18899
-
-[[crate]]
 name = "consumers"
 duplicate_lines = 92
 total_lines = 4253
@@ -70,6 +65,11 @@ total_lines = 1599
 name = "vyre-bench"
 duplicate_lines = 847
 total_lines = 46056
+
+[[crate]]
+name = "vyre-conform"
+duplicate_lines = 33
+total_lines = 17265
 
 [[crate]]
 name = "vyre-debug"
@@ -188,8 +188,8 @@ total_lines = 24805
 
 [[crate]]
 name = "vyre-libs-nn"
-duplicate_lines = 634
-total_lines = 23761
+duplicate_lines = 626
+total_lines = 23774
 
 [[crate]]
 name = "vyre-libs-parsing"

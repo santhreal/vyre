@@ -25,7 +25,9 @@
 //! tail of every gate in the registry. A window holding two statements counts,
 //! so a copied body is still caught.
 //!
-//! Per-crate counts are pinned in `tools/xtask/dup-baseline.toml`. More duplication
+//! A crate is a workspace member, named by the last segment of its directory;
+//! a file outside every member groups under its first path segment. Per-crate
+//! counts are pinned in `tools/xtask/dup-baseline.toml`. More duplication
 //! than the pin fails. Less is reported so the owning PR can lower it, which is
 //! how each dedup PR records what it actually removed.
 
@@ -207,11 +209,11 @@ fn window_is_structural(window: &[String]) -> bool {
         .is_none()
 }
 
-/// The crate a repository-relative path belongs to.
-fn crate_of(path: &Path) -> Option<String> {
-    path.components()
-        .next()
-        .map(|component| component.as_os_str().to_string_lossy().into_owned())
+/// The crate a repository-relative path belongs to, as [`scan::member_name`]
+/// groups it.
+fn crate_of(members: &[String], path: &Path) -> String {
+    let relative = path.to_string_lossy().replace('\\', "/");
+    scan::member_name(members, &relative).to_owned()
 }
 
 /// Measure duplicated lines per crate across the workspace.
@@ -226,6 +228,7 @@ fn crate_of(path: &Path) -> Option<String> {
 #[must_use]
 pub(crate) fn measure(root: &Path) -> Result<BTreeMap<String, CrateCount>, GateError> {
     let tree = scan::Tree::open(root)?;
+    let members = tree.members()?;
     let files = tree.all_rust();
     let mut normalized: Vec<(usize, String, Vec<String>)> = Vec::new();
     for (index, path) in files.iter().enumerate() {
@@ -234,10 +237,7 @@ pub(crate) fn measure(root: &Path) -> Result<BTreeMap<String, CrateCount>, GateE
         // counted, and the count only ever moves down, so the silent version
         // let an unreadable or oversized source lower a pin nobody earned.
         let text = tree.read(path)?;
-        let Some(owner) = crate_of(path) else {
-            continue;
-        };
-        normalized.push((index, owner, normalize(&text)));
+        normalized.push((index, crate_of(&members, path), normalize(&text)));
     }
 
     // Shingle -> the distinct files it appears in, capped at two because that
@@ -332,13 +332,11 @@ pub(crate) struct FileReport {
 pub(crate) fn report_for(root: &Path, only: Option<&str>) -> Result<Vec<FileReport>, GateError> {
     let mut normalized: Vec<(String, String, Vec<String>)> = Vec::new();
     let tree = scan::Tree::open(root)?;
+    let members = tree.members()?;
     for path in tree.all_rust() {
         let text = tree.read(&path)?;
-        let Some(owner) = crate_of(&path) else {
-            continue;
-        };
         let relative = path.to_string_lossy().into_owned();
-        normalized.push((owner, relative, normalize(&text)));
+        normalized.push((crate_of(&members, &path), relative, normalize(&text)));
     }
 
     let mut index: HashMap<u64, Occupants> = HashMap::new();
@@ -746,6 +744,26 @@ impl crate::gate::GateBehavior for DupScan {
 mod tests {
     use super::*;
 
+    /// An empty checkout whose root manifest declares `members`.
+    ///
+    /// The scan groups files by workspace member, so every fixture states the
+    /// member set it is measured against.
+    fn checkout_with_members(dir: &Path, members: &[&str]) {
+        crate::fixture_checkout::empty(dir);
+        let listed: Vec<String> = members.iter().map(|member| format!("{member:?}")).collect();
+        fs::write(
+            dir.join("Cargo.toml"),
+            format!("[workspace]\nmembers = [{}]\n", listed.join(", ")),
+        )
+        .expect("write the fixture workspace manifest");
+    }
+
+    /// An empty checkout with no workspace member, so every file groups under
+    /// its first path segment.
+    fn checkout(dir: &Path) {
+        checkout_with_members(dir, &[]);
+    }
+
     /// WHY: comments and indentation are exactly what a copy-paste edits first,
     /// so normalization must see through both or the scan misses real clones.
     #[test]
@@ -760,7 +778,7 @@ mod tests {
     fn a_block_repeated_inside_one_file_is_not_cross_file_duplication() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-single-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        crate::fixture_checkout::empty(&dir);
+        checkout(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         let block: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
         fs::write(dir.join("crate-a/src/lib.rs"), format!("{block}{block}")).expect("write");
@@ -779,7 +797,7 @@ mod tests {
     fn the_same_block_in_two_crates_is_counted_in_both() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-pair-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        crate::fixture_checkout::empty(&dir);
+        checkout(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let block: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
@@ -792,13 +810,42 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
     }
 
+    /// WHY: crates sit under grouping directories such as `crates/` and
+    /// `tools/`. Grouping by first path segment collapsed every crate into one
+    /// row, so a copy between two crates of one group was never measured as
+    /// cross-crate and no pin could hold a single crate. Each workspace member
+    /// is measured under its own name; a file outside every member falls back
+    /// to its first path segment.
+    #[test]
+    fn a_member_under_a_grouping_directory_is_measured_under_its_own_name() {
+        let dir =
+            std::env::temp_dir().join(format!("vyre-dup-scan-members-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        checkout_with_members(&dir, &["crates/crate-a", "tools/crate-b"]);
+        let block: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
+        for member in ["crates/crate-a", "tools/crate-b", "loose"] {
+            fs::create_dir_all(dir.join(member).join("src")).expect("temp dir");
+            fs::write(dir.join(member).join("src/lib.rs"), &block).expect("write");
+        }
+
+        let counts = measure(&dir).expect("the fixture checkout is measurable");
+        assert_eq!(
+            counts.keys().map(String::as_str).collect::<Vec<_>>(),
+            ["crate-a", "crate-b", "loose"]
+        );
+        for name in ["crate-a", "crate-b", "loose"] {
+            assert_eq!(counts[name].duplicate_lines, SHINGLE, "{name}");
+        }
+        let _ = fs::remove_dir_all(&dir);
+    }
+
     /// WHY: a shorter shared run is boilerplate, not a copied implementation.
     /// Counting it would drown the real findings.
     #[test]
     fn a_shared_run_shorter_than_the_shingle_is_not_duplication() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-short-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        crate::fixture_checkout::empty(&dir);
+        checkout(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let block: String = (0..SHINGLE - 1)
@@ -821,7 +868,7 @@ mod tests {
     fn a_shared_variant_arm_list_is_not_duplication() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-arms-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        crate::fixture_checkout::empty(&dir);
+        checkout(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let arms = "        Node::Return\n        | Node::Barrier { .. }\n        | Node::LogicalBarrier { .. }\n        | Node::AsyncWait { .. }\n        | Node::Resume { .. }\n        | Node::TileMatmul { .. }\n        | Node::TileReduce { .. }\n        | Node::TileDecl { .. }\n";
@@ -841,7 +888,7 @@ mod tests {
     fn a_copied_match_body_still_counts_beside_its_arms() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-body-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        crate::fixture_checkout::empty(&dir);
+        checkout(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let block = "        Node::Return\n        | Node::Barrier { .. }\n        | Node::TileDecl { .. } => {\n            let mut total = 0;\n            total += weigh(node);\n            total += weigh_operands(node);\n            record(total);\n            total\n        }\n";
@@ -935,7 +982,7 @@ mod tests {
     fn a_shared_closing_run_and_test_module_header_is_not_duplication() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-shape-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        crate::fixture_checkout::empty(&dir);
+        checkout(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let tail = "    }\n}\n}\n}\n#[cfg(test)]\nmod tests {\n    use super::*;\n    #[test]\n";
@@ -955,7 +1002,7 @@ mod tests {
     fn one_stating_line_amid_shape_is_not_duplication() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-one-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        crate::fixture_checkout::empty(&dir);
+        checkout(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let tail = "    ));\n    Ok(report)\n}\n}\n#[cfg(test)]\nmod tests {\n    use super::*;\n    #[test]\n";
@@ -975,7 +1022,7 @@ mod tests {
     fn two_stating_lines_amid_shape_are_duplication() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-two-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        crate::fixture_checkout::empty(&dir);
+        checkout(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let tail = "    ));\n    let total = plan.len();\n    Ok(report)\n}\n}\n#[cfg(test)]\nmod tests {\n    use super::*;\n";
@@ -994,7 +1041,7 @@ mod tests {
     fn the_report_names_the_file_a_copy_was_made_from() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-report-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        crate::fixture_checkout::empty(&dir);
+        checkout(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let block: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
@@ -1021,7 +1068,7 @@ mod tests {
     fn per_file_duplication_sums_to_the_crate_measure() {
         let dir = std::env::temp_dir().join(format!("vyre-dup-scan-agree-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        crate::fixture_checkout::empty(&dir);
+        checkout(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/src")).expect("temp dir");
         let shared: String = (0..SHINGLE).map(|n| format!("let v{n} = {n};\n")).collect();
@@ -1054,7 +1101,7 @@ mod tests {
         let dir =
             std::env::temp_dir().join(format!("vyre-dup-scan-ignored-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        crate::fixture_checkout::empty(&dir);
+        checkout(&dir);
         fs::create_dir_all(dir.join("crate-a/src")).expect("temp dir");
         fs::create_dir_all(dir.join("crate-b/tests")).expect("temp dir");
         fs::write(dir.join(".gitignore"), "**/tests/scratch.rs\n").expect("write");

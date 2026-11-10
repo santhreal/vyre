@@ -11,6 +11,7 @@ use super::records::{
 use super::rules::is_hidden_fallback_pattern;
 use super::structural_gates::is_declared_structural_gate;
 use super::threshold_policy::relative_to_vyre;
+use crate::gates::scan;
 
 pub(crate) fn finding_summary(findings: &[HygieneFinding]) -> Vec<HygieneFindingSummary> {
     let mut counts = std::collections::BTreeMap::<String, usize>::new();
@@ -118,31 +119,10 @@ pub(crate) fn hygiene_intake_summary(classes: &[HygieneFindingClass]) -> Vec<Hyg
         .collect()
 }
 
-/// The workspace member a finding sits in, named by its directory's last
-/// segment; a file outside every member groups under its first
-/// repository-relative segment.
-///
-/// `members` holds the roster's member paths. The deepest member path that
-/// contains the file wins, so a member nested under a grouping directory
-/// groups under its own name rather than under the grouping directory.
+/// The workspace member a finding sits in, as [`scan::member_name`] groups it.
 pub(crate) fn hygiene_member_for_path(vyre_root: &Path, members: &[String], path: &str) -> String {
     let relative = relative_to_vyre(vyre_root, Path::new(path));
-    let relative = relative.trim_start_matches('/');
-    let member = members
-        .iter()
-        .filter(|member| {
-            relative
-                .strip_prefix(member.as_str())
-                .is_some_and(|rest| rest.starts_with('/'))
-        })
-        .max_by_key(|member| member.len());
-    match member {
-        Some(member) => member.rsplit('/').next().unwrap_or(member).to_string(),
-        None => relative
-            .split_once('/')
-            .map_or(relative, |(segment, _)| segment)
-            .to_string(),
-    }
+    scan::member_name(members, relative.trim_start_matches('/')).to_string()
 }
 
 pub(crate) fn hygiene_surface_for_path(

@@ -62,6 +62,31 @@ pub struct Tree {
     absent: Vec<PathBuf>,
 }
 
+/// The name a repository-relative path groups under: the last segment of the
+/// deepest workspace member that contains it, or the path's first segment when
+/// no member does.
+///
+/// `members` holds member directories as [`Tree::members`] lists them. The
+/// deepest member wins, so a member nested under a grouping directory such as
+/// `crates/` groups under its own name rather than under the grouping
+/// directory.
+pub fn member_name<'a>(members: &'a [String], relative: &'a str) -> &'a str {
+    let member = members
+        .iter()
+        .filter(|member| {
+            relative
+                .strip_prefix(member.as_str())
+                .is_some_and(|rest| rest.starts_with('/'))
+        })
+        .max_by_key(|member| member.len());
+    match member {
+        Some(member) => member.rsplit('/').next().unwrap_or(member),
+        None => relative
+            .split_once('/')
+            .map_or(relative, |(segment, _)| segment),
+    }
+}
+
 impl Tree {
     /// List the tree, or fail naming what could not be listed.
     pub fn open(root: &Path) -> Result<Self, GateError> {
