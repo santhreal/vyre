@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"c08a7b937b6c0d3163f644f83e282a891121bd6a","commit_timestamp":"1794284896","parent_commit":"b5d21fa87bb88356de40dd3baa0bc0b992b7384c","dirty":false,"source_fingerprint":"git:c08a7b937b6c0d3163f644f83e282a891121bd6a:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":16},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"2e655204bdc9c7d6c28bd21ffb755164587a3d4a","commit_timestamp":"1794287927","parent_commit":"a1022fe75d66deb4eaeffa2ded15632bd9effd34","dirty":false,"source_fingerprint":"git:2e655204bdc9c7d6c28bd21ffb755164587a3d4a:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":16},"measurement":{"state":"host_only"}},
   "_type": "https://in-toto.io/Statement/v1",
   "predicate": {
     "buildDefinition": {
@@ -661,18 +661,6 @@
         },
         {
           "digest": {
-            "sha256": "2acce4a10f12dc2fb14a218589d4f1f62ef011b2d0cc4b3cb1bba8e94da14649"
-          },
-          "uri": "pkg:cargo/fallible-iterator@0.3.0"
-        },
-        {
-          "digest": {
-            "sha256": "7360491ce676a36bf9bb3c56c1aa791658183a54d2744120f27285738d90465a"
-          },
-          "uri": "pkg:cargo/fallible-streaming-iterator@0.1.9"
-        },
-        {
-          "digest": {
             "sha256": "9f1f227452a390804cdb637b74a86990f2a7d7ba4b7d5693aac9b4dd6defd8d6"
           },
           "uri": "pkg:cargo/fastrand@2.4.1"
@@ -925,21 +913,9 @@
         },
         {
           "digest": {
-            "sha256": "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
-          },
-          "uri": "pkg:cargo/hashbrown@0.16.1"
-        },
-        {
-          "digest": {
             "sha256": "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
           },
           "uri": "pkg:cargo/hashbrown@0.17.1"
-        },
-        {
-          "digest": {
-            "sha256": "ea0b22561a9c04a7cb1a302c013e0259cd3b4bb619f145b32f72b8b4bcbed230"
-          },
-          "uri": "pkg:cargo/hashlink@0.11.0"
         },
         {
           "digest": {
@@ -1120,12 +1096,6 @@
             "sha256": "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
           },
           "uri": "pkg:cargo/libm@0.2.16"
-        },
-        {
-          "digest": {
-            "sha256": "b1f111c8c41e7c61a49cd34e44c7619462967221a6443b0ec299e0ac30cfb9b1"
-          },
-          "uri": "pkg:cargo/libsqlite3-sys@0.37.0"
         },
         {
           "digest": {
@@ -1645,18 +1615,6 @@
         },
         {
           "digest": {
-            "sha256": "c51c9ae4df8a7fba42103df5c621fa3c37eccf3a3c650879e90fc48b11cc192c"
-          },
-          "uri": "pkg:cargo/rsqlite-vfs@0.1.1"
-        },
-        {
-          "digest": {
-            "sha256": "a0d2b0146dd9661bf67bb107c0bb2a55064d556eeb3fc314151b957f313bcd4e"
-          },
-          "uri": "pkg:cargo/rusqlite@0.39.0"
-        },
-        {
-          "digest": {
             "sha256": "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
           },
           "uri": "pkg:cargo/rustc-hash@1.1.0"
@@ -1846,12 +1804,6 @@
             "sha256": "d91ed6c858b01f942cd56b37a94b3e0a1798290327d1236e4d9cf4eaca44d29d"
           },
           "uri": "pkg:cargo/spki@0.7.3"
-        },
-        {
-          "digest": {
-            "sha256": "dc3efc0da82635d7e1ced0053bbbfa8c7ab9645d0bf36ceb4f7127bb85315d75"
-          },
-          "uri": "pkg:cargo/sqlite-wasm-rs@0.5.5"
         },
         {
           "digest": {
@@ -2948,7 +2900,7 @@
           "materials": true,
           "parameters": true
         },
-        "invocationId": "inv-2012e92c63303f62397d305bed9b1cdfb537f144b97b04eac29c475e2f338239",
+        "invocationId": "inv-c7a7b878318c293484b1108339a2b5971714d82f4a3bc159040997b6de11aa80",
         "reproducible": true
       }
     }
@@ -2957,7 +2909,7 @@
   "subject": [
     {
       "digest": {
-        "blake3": "7dd2cf8b259d54c43d5f52f013eaf5f5cdf45fdee6d97574e35a1a627ac4974b"
+        "blake3": "8d4725672ea68bf418b0baddbe184a678cfb41fbe32b3a4254e23253178547a4"
       },
       "name": "vyre-release-archive"
     }
