@@ -826,6 +826,11 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   invocation boundaries, the ceiling is derived from the heaviest measured
   fixture in the registered corpus with 64x headroom, and the caller-side
   timeout workaround in the stress sweep is removed.
+- `ReferenceBudget::max_program_nodes`,
+  `ReferenceBudget::DEFAULT_MAX_PROGRAM_NODES` and
+  `ReferenceBudget::with_max_program_nodes` bound the IR statement nodes the
+  reference oracle admits, and `Value::shares_payload_with` reports whether two
+  values share one reference-counted payload.
 - Recurrence, reduction, layout, and numerical laws now derive equivalent
   programs through a bounded composition of the registered rewrites that
   realize them, and a law family with no derivation fails its closure suite.
@@ -1500,6 +1505,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   from the helper that computes it. vyre-libs-text, vyre-libs-graph,
   vyre-libs-nn and the wgpu demo no longer restate a buffer's byte length
   beside its element count.
+- The bounded Aho-Corasick walk masks each input byte with `& 0xFF` in place of
+  a second fold against the table extent, which lowers
+  `scan.ac.irregular_count.4m` on wgpu from 187.3 us to 178.2 us median active
+  time on an RTX 4090 and leaves CUDA unchanged.
 - The Aho-Corasick emit paths in `vyre-libs/src/scan/` read the flat
   output-record span through one owner. Six builders each wrote their own loop
   over `out_begin..out_end` binding `pattern_id` from `output_records`, and
@@ -3816,6 +3825,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - A recorded measurement winner is retained across compilations unless a
   challenger clears the equivalence band or the protocol or calibrated device
   fact-set version advances.
+- `vyre-libs::bitset::any`, `vyre-libs::reduce::count_non_zero`,
+  `vyre-libs::reduce::histogram` and `vyre-libs::reduce::workgroup_any_u32`
+  declare the `associative` and `commutative` laws, and `vyre-libs::nn::relu`
+  declares `idempotent`, in place of an uncharacterized absence decision.
 - The async byte copy in `vyre-reference` has one owner,
   `vyre-reference/src/execution/async_transfer.rs`, and the copy itself goes
   through two new window methods on the reference buffer. Each of the two
@@ -3862,6 +3875,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   instead of a persistent one, so a binding inside a loop body no longer
   allocates trie nodes on every iteration and an assignment hashes the name
   once instead of twice.
+- `ReferenceRequest::outputs` and `outputs_and_steps` no longer fingerprint the
+  program, and the oracle reuses scope name storage across frames, which cuts
+  per-node allocation in the reference interpreter.
 - The reference interpreter now consumes foundation-owned IR, diagnostics, and
   operation metadata directly instead of depending on the public `vyre` facade.
 - The duplication baseline pins for vyre-reference and vyre-spec now record the
@@ -7702,6 +7718,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   either, because it asserts that a command STRING appears in a workflow file,
   which is as true of a command naming a deleted target as of one naming a live
   target.
+- `xtask cli-docs` releases the `deps` hard link of its own running image
+  before rebuilding the workspace binaries, so the Windows relink no longer
+  fails with `LNK1104`.
 - `xtask cli-docs` moves its own running executable off the build path before
   rebuilding the workspace binaries, so the gate runs on Windows when that
   executable was built with other features.
