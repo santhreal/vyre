@@ -148,7 +148,7 @@ inventory::submit! {
             ]]]
         }),
     )
-    .with_uncharacterized()
+    .with_laws(&["associative", "commutative"])
 }
 
 #[cfg(test)]

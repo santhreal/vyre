@@ -92,7 +92,7 @@ inventory::submit! {
         ]]),
         Some(|| vec![vec![vec![0x07, 0x00, 0x00, 0x00]]]),
     )
-    .with_uncharacterized()
+    .with_laws(&["associative", "commutative"])
 }
 
 #[cfg(test)]

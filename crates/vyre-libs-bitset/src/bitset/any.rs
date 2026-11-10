@@ -106,7 +106,7 @@ inventory::submit! {
             vec![vec![EXPECTED_BITSET_ANY_OUTPUT_BYTES.to_vec()]]
         }),
     )
-    .with_uncharacterized()
+    .with_laws(&["associative", "commutative"])
 }
 
 #[cfg(test)]

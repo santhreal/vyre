@@ -28,7 +28,6 @@ inventory::submit! {
         Some(|| vec![vec![vec![0x03, 0x00, 0x00, 0x00]]]),
     )
     .with_laws(AtomicReduceKind::CountNonZero.laws())
-    .with_uncharacterized()
 }
 
 #[cfg(test)]

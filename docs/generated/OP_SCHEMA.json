@@ -500,9 +500,12 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
-      "transform_decision": "opaque",
-      "absence_class": "uncharacterized",
+      "laws": [
+        "associative",
+        "commutative"
+      ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -22910,9 +22913,11 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
-      "transform_decision": "opaque",
-      "absence_class": "uncharacterized",
+      "laws": [
+        "idempotent"
+      ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -30737,11 +30742,13 @@
         "wgpu"
       ],
       "laws": [
+        "associative",
         "bounded",
+        "commutative",
         "monotonic"
       ],
-      "transform_decision": "opaque",
-      "absence_class": "uncharacterized",
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -31035,9 +31042,12 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
-      "transform_decision": "opaque",
-      "absence_class": "uncharacterized",
+      "laws": [
+        "associative",
+        "commutative"
+      ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,
@@ -31894,9 +31904,12 @@
         "spirv",
         "wgpu"
       ],
-      "laws": [],
-      "transform_decision": "opaque",
-      "absence_class": "uncharacterized",
+      "laws": [
+        "associative",
+        "commutative"
+      ],
+      "transform_decision": "guarded-laws",
+      "absence_class": null,
       "composition_chain": [
         {
           "depth": 0,

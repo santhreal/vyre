@@ -1,4 +1,8 @@
-//! Temporary census of derived transform dispositions across the live registry.
+//! Census of the derived law disposition of every operation in the live registry.
+//!
+//! Prints one tab-separated row per operation: id, derived disposition,
+//! recorded absence, declared laws, confirmed laws, refuted laws, source file,
+//! defect count, and the evidence for the disposition.
 
 fn main() {
     let registry = vyre_registry_link::operation::live_operation_registry();

@@ -47,7 +47,7 @@ inventory::submit! {
         ]]),
     )
     .with_category("nn")
-    .with_uncharacterized()
+    .with_laws(&["idempotent"])
 }
 
 #[cfg(test)]

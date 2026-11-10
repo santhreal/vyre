@@ -83,7 +83,7 @@ impl AtomicReduceKind {
                 "idempotent",
                 "identity",
             ],
-            Self::CountNonZero => &["bounded", "monotonic"],
+            Self::CountNonZero => &["associative", "bounded", "commutative", "monotonic"],
             Self::PopcountSum => &["associative", "bounded"],
             Self::AnyNonZero => &[
                 "absorbing",
