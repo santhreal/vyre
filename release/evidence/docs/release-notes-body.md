@@ -7730,6 +7730,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - `xtask cli-docs` releases the `deps` hard link of its own running image
   before rebuilding the workspace binaries, so the Windows relink no longer
   fails with `LNK1104`.
+- `xtask cli-docs` on an MSVC target moves the running executable's unhashed
+  `deps` linker output aside before relinking, so the build no longer fails
+  with `LNK1104`.
 - `xtask cli-docs` moves its own running executable off the build path before
   rebuilding the workspace binaries, so the gate runs on Windows when that
   executable was built with other features.
