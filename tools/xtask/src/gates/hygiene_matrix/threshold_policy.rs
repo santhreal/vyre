@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use crate::tree_walk::{self, BUILD_OUTPUT_AND_VCS};
+use crate::gates::scan::Tree;
+use crate::tree_walk::BUILD_OUTPUT_AND_VCS;
 
 use super::records::{
     ObservedThresholdConst, ThresholdPolicyArtifact, ThresholdPolicyDocument,
@@ -10,9 +11,11 @@ use super::records::{
     THRESHOLD_POLICY_ARTIFACT, THRESHOLD_POLICY_SCHEMA_VERSION, THRESHOLD_POLICY_SOURCE,
     THRESHOLD_SUFFIXES,
 };
+use super::scanner::listed;
 
-pub(crate) fn collect_threshold_policy(vyre_root: &Path) -> ThresholdPolicyArtifact {
-    let observed = scan_threshold_constants(vyre_root);
+pub(crate) fn collect_threshold_policy(tree: &Tree) -> ThresholdPolicyArtifact {
+    let vyre_root = tree.root();
+    let observed = scan_threshold_constants(tree);
     let mut findings = Vec::new();
     let mut blockers = Vec::new();
     let policy_path = vyre_root.join(THRESHOLD_POLICY_SOURCE);
@@ -205,25 +208,16 @@ pub(crate) fn validate_threshold_policy_row(
     }
 }
 
-pub(crate) fn scan_threshold_constants(vyre_root: &Path) -> Vec<ObservedThresholdConst> {
+pub(crate) fn scan_threshold_constants(tree: &Tree) -> Vec<ObservedThresholdConst> {
     let mut thresholds = Vec::new();
-    for root in threshold_scan_roots(vyre_root) {
-        if !root.exists() {
-            continue;
-        }
-        for entry in tree_walk::pruned_by(&root, |name| {
+    for root in THRESHOLD_SCAN_ROOTS {
+        for relative in listed(tree, root, &["rs"], |name| {
             !BUILD_OUTPUT_AND_VCS.contains(&name) && name != "tests"
         }) {
-            let Ok(entry) = entry else {
-                continue;
-            };
-            let path = entry.path();
-            if path.extension().and_then(|extension| extension.to_str()) != Some("rs") {
-                continue;
-            }
-            let Ok(text) = structure_gate::read_source_bounded(path) else {
+            let path = relative.to_string_lossy().replace('\\', "/");
+            let Ok(text) = structure_gate::read_source_bounded(&tree.absolute(relative)) else {
                 thresholds.push(ObservedThresholdConst {
-                    path: relative_to_vyre(vyre_root, path),
+                    path,
                     line: 1,
                     name: "unreadable-threshold-source".to_string(),
                     value: "unreadable".to_string(),
@@ -235,7 +229,7 @@ pub(crate) fn scan_threshold_constants(vyre_root: &Path) -> Vec<ObservedThreshol
                     continue;
                 };
                 thresholds.push(ObservedThresholdConst {
-                    path: relative_to_vyre(vyre_root, path),
+                    path: path.clone(),
                     line: line_index + 1,
                     name,
                     value,
@@ -246,17 +240,13 @@ pub(crate) fn scan_threshold_constants(vyre_root: &Path) -> Vec<ObservedThreshol
     thresholds
 }
 
-pub(crate) fn threshold_scan_roots(vyre_root: &Path) -> Vec<PathBuf> {
-    [
-        "crates/vyre-foundation/src/optimizer",
-        "crates/vyre-runtime/src/resident_work_queue",
-        "crates/vyre-driver-wgpu/src/runtime",
-        "crates/vyre-driver-wgpu/src/buffer",
-    ]
-    .iter()
-    .map(|relative| vyre_root.join(relative))
-    .collect()
-}
+/// Directories whose threshold constants the policy covers.
+const THRESHOLD_SCAN_ROOTS: [&str; 4] = [
+    "crates/vyre-foundation/src/optimizer",
+    "crates/vyre-runtime/src/resident_work_queue",
+    "crates/vyre-driver-wgpu/src/runtime",
+    "crates/vyre-driver-wgpu/src/buffer",
+];
 
 pub(crate) fn parse_threshold_const(line: &str) -> Option<(String, String)> {
     let code = line.split("//").next().unwrap_or(line).trim();

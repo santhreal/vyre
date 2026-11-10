@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf};
 
 use structure_gate::cfg_test::TestSources;
 
-use crate::tree_walk::{self, BUILD_OUTPUT_AND_VCS};
+use crate::gates::scan::{self, Tree};
+use crate::tree_walk::BUILD_OUTPUT_AND_VCS;
 
 use super::records::{HygieneFinding, BLOCKED_PATTERNS};
 use super::rules::{
@@ -56,67 +57,76 @@ pub(crate) const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
     ),
 ];
 
+/// Every listed file under `relative_root` with one of `extensions`, whose
+/// directories all pass `keep`, as repository-relative paths in name order.
+///
+/// The file set is [`Tree`]: what git would commit. A filesystem walk also read
+/// ignored scratch, so the scanned-file count in the committed artifact
+/// described the checkout that wrote it, and CI measured a different number
+/// from the same commit.
+pub(crate) fn listed<'t>(
+    tree: &'t Tree,
+    relative_root: &'t str,
+    extensions: &'t [&'t str],
+    keep: impl Fn(&str) -> bool + 't,
+) -> impl Iterator<Item = &'t Path> + 't {
+    tree.paths()
+        .iter()
+        .map(PathBuf::as_path)
+        .filter(move |path| {
+            scan::under(path, relative_root)
+                && path
+                    .extension()
+                    .and_then(|extension| extension.to_str())
+                    .is_some_and(|extension| extensions.contains(&extension))
+                && path.parent().is_none_or(|directory| {
+                    directory
+                        .components()
+                        .all(|component| keep(&component.as_os_str().to_string_lossy()))
+                })
+        })
+}
+
 pub(crate) fn scan_root(
-    root: &Path,
+    tree: &Tree,
     tests: &TestSources,
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
-    for entry in tree_walk::pruned_by(root, |name| {
+    for path in listed(tree, "", &["rs"], |name| {
         !BUILD_OUTPUT_AND_VCS.contains(&name) && name != "release" && !is_xtask_tree_directory(name)
     }) {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(error) => {
-                push_walk_error(root, &error, findings);
-                continue;
-            }
-        };
-        let path = entry.path();
-        if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
-            continue;
-        }
         if path.file_name().and_then(|name| name.to_str()) == Some("hygiene_matrix.rs") {
             continue;
         }
-        if tests.contains(path.strip_prefix(root).unwrap_or(path)) {
+        if tests.contains(path) {
             continue;
         }
-        scan_file(path, scanned_files, findings);
+        scan_file(&tree.absolute(path), scanned_files, findings);
     }
 }
 pub(crate) fn scan_source_inspection_test_files(
-    root: &Path,
+    tree: &Tree,
     tests: &TestSources,
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
-    for entry in tree_walk::pruned_by(root, |name| {
+    for path in listed(tree, "", &["rs"], |name| {
         !BUILD_OUTPUT_AND_VCS.contains(&name) && name != "release"
     }) {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(error) => {
-                push_walk_error(root, &error, findings);
-                continue;
-            }
-        };
-        let path = entry.path();
-        if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+        if !tests.contains(path) {
             continue;
         }
-        if !tests.contains(path.strip_prefix(root).unwrap_or(path)) {
-            continue;
-        }
-        let text = match structure_gate::read_source_bounded(path) {
+        let path = tree.absolute(path);
+        let text = match structure_gate::read_source_bounded(&path) {
             Ok(text) => text,
             Err(error) => {
-                push_read_error(path, "unreadable_source_file", error, findings);
+                push_read_error(&path, "unreadable_source_file", error, findings);
                 continue;
             }
         };
         *scanned_files += 1;
-        scan_source_inspection_tests(path, &text, findings);
+        scan_source_inspection_tests(&path, &text, findings);
     }
 }
 
@@ -146,11 +156,12 @@ pub(crate) fn xtask_source_roots(root: &Path) -> Vec<Result<PathBuf, &'static st
 /// and read as coverage while resolving to nothing. The set is the tree: every
 /// xtask crate's non-test source, which cannot fall out of date.
 pub(crate) fn scan_release_xtask(
-    root: &Path,
+    tree: &Tree,
     tests: &TestSources,
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
+    let root = tree.root();
     for source_root in xtask_source_roots(root) {
         let source_root = match source_root {
             Ok(source_root) => source_root,
@@ -165,58 +176,39 @@ pub(crate) fn scan_release_xtask(
                 continue;
             }
         };
-        for entry in tree_walk::pruned(&source_root, BUILD_OUTPUT_AND_VCS) {
-            let entry = match entry {
-                Ok(entry) => entry,
-                Err(error) => {
-                    push_walk_error(&source_root, &error, findings);
-                    continue;
-                }
-            };
-            let path = entry.path();
-            if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
-                continue;
-            }
-            if tests.contains(path.strip_prefix(root).unwrap_or(path)) {
+        let relative_root = source_root
+            .strip_prefix(root)
+            .unwrap_or(&source_root)
+            .to_string_lossy()
+            .replace('\\', "/");
+        for path in listed(tree, &relative_root, &["rs"], |name| {
+            !BUILD_OUTPUT_AND_VCS.contains(&name)
+        }) {
+            if tests.contains(path) {
                 continue;
             }
             if path.file_name().and_then(|name| name.to_str()) == Some("hygiene_matrix.rs") {
                 continue;
             }
-            scan_file(path, scanned_files, findings);
+            scan_file(&tree.absolute(path), scanned_files, findings);
         }
     }
 }
 
 pub(crate) fn scan_release_tooling(
-    root: &Path,
+    tree: &Tree,
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
     for relative_root in ["scripts", ".github/workflows", ".github/actions"] {
-        let tooling_root = root.join(relative_root);
-        if !tooling_root.exists() {
-            continue;
-        }
-        for entry in tree_walk::pruned(&tooling_root, BUILD_OUTPUT_AND_VCS) {
-            let entry = match entry {
-                Ok(entry) => entry,
-                Err(error) => {
-                    push_walk_error(&tooling_root, &error, findings);
-                    continue;
-                }
-            };
-            let path = entry.path();
-            let Some(extension) = path.extension().and_then(|ext| ext.to_str()) else {
-                continue;
-            };
-            // Python belongs here as much as shell does. A gate written as a
-            // `.py` under `scripts/` is release tooling that runs in CI, and
-            // leaving the extension out meant a rule could be evaded by moving
-            // the body from a shell heredoc into a file beside it.
-            if matches!(extension, "sh" | "yml" | "yaml" | "py") {
-                scan_tooling_file(path, scanned_files, findings);
-            }
+        // Python belongs here as much as shell does. A gate written as a
+        // `.py` under `scripts/` is release tooling that runs in CI, and
+        // leaving the extension out meant a rule could be evaded by moving
+        // the body from a shell heredoc into a file beside it.
+        for path in listed(tree, relative_root, &["sh", "yml", "yaml", "py"], |name| {
+            !BUILD_OUTPUT_AND_VCS.contains(&name)
+        }) {
+            scan_tooling_file(&tree.absolute(path), scanned_files, findings);
         }
     }
 }
@@ -265,29 +257,14 @@ pub(crate) fn scan_release_docs(
 }
 
 pub(crate) fn scan_release_workflows(
-    vyre_root: &Path,
+    tree: &Tree,
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
-    let workflows = vyre_root.join(".github/workflows");
-    if !workflows.exists() {
-        return;
-    }
-    for entry in tree_walk::pruned(&workflows, BUILD_OUTPUT_AND_VCS) {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(error) => {
-                push_walk_error(&workflows, &error, findings);
-                continue;
-            }
-        };
-        let path = entry.path();
-        let Some(extension) = path.extension().and_then(|ext| ext.to_str()) else {
-            continue;
-        };
-        if matches!(extension, "yml" | "yaml") {
-            scan_tooling_file(path, scanned_files, findings);
-        }
+    for path in listed(tree, ".github/workflows", &["yml", "yaml"], |name| {
+        !BUILD_OUTPUT_AND_VCS.contains(&name)
+    }) {
+        scan_tooling_file(&tree.absolute(path), scanned_files, findings);
     }
 }
 
@@ -534,23 +511,6 @@ pub(crate) fn scan_command_file(
             }
         }
     }
-}
-
-pub(crate) fn push_walk_error(
-    root: &Path,
-    error: &walkdir::Error,
-    findings: &mut Vec<HygieneFinding>,
-) {
-    findings.push(HygieneFinding {
-        path: error
-            .path()
-            .map(|path| path.display().to_string())
-            .unwrap_or_else(|| root.display().to_string()),
-        line: 1,
-        pattern: "unreadable_scan_entry",
-        text: format!("failed to walk release hygiene root: {error}"),
-        test: None,
-    });
 }
 
 pub(crate) fn push_read_error(

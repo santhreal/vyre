@@ -406,6 +406,7 @@ fn a_string_literal_inside_a_macro_is_not_a_call() {
 #[test]
 fn source_inspection_test_scanner_covers_integration_files_and_inline_test_modules() {
     let root = tempfile::tempdir().expect("Fix: scanner fixture root must be creatable.");
+    crate::fixture_checkout::empty(root.path());
     let inline = root.path().join("driver/src/lib.rs");
     let integration = root.path().join("driver/tests/source_contract.rs");
     std::fs::create_dir_all(
@@ -449,8 +450,9 @@ fn source_inspection_test_scanner_covers_integration_files_and_inline_test_modul
     let mut findings = Vec::new();
     let mut scanned_files = 0;
     let tests = TestSources::of(root.path());
-    scan_root(root.path(), &tests, &mut scanned_files, &mut findings);
-    scan_source_inspection_test_files(root.path(), &tests, &mut scanned_files, &mut findings);
+    let tree = crate::gates::scan::Tree::open(root.path()).expect("Fix: list the fixture tree.");
+    scan_root(&tree, &tests, &mut scanned_files, &mut findings);
+    scan_source_inspection_test_files(&tree, &tests, &mut scanned_files, &mut findings);
 
     let source_findings = findings
         .iter()

@@ -273,6 +273,7 @@ fn a_generated_release_history_is_recorded_not_instructed() {
 #[test]
 fn python_release_tooling_is_scanned_like_shell_release_tooling() {
     let tree = tempfile::TempDir::new().expect("Fix: create a fixture tree.");
+    crate::fixture_checkout::empty(tree.path());
     let scripts = tree.path().join("scripts/lib");
     fs::create_dir_all(&scripts).expect("Fix: create the fixture scripts directory.");
     for (name, body) in [
@@ -287,7 +288,8 @@ fn python_release_tooling_is_scanned_like_shell_release_tooling() {
 
     let mut scanned = 0usize;
     let mut findings = Vec::new();
-    scan_release_tooling(tree.path(), &mut scanned, &mut findings);
+    let listed = crate::gates::scan::Tree::open(tree.path()).expect("Fix: list the fixture tree.");
+    scan_release_tooling(&listed, &mut scanned, &mut findings);
 
     let scanned_extensions = findings
         .iter()
@@ -304,6 +306,47 @@ fn python_release_tooling_is_scanned_like_shell_release_tooling() {
         BTreeSet::from(["py".to_string(), "sh".to_string()]),
         "Fix: release tooling written in Python must be scanned like release tooling written in shell; findings={findings:?}"
     );
+}
+
+/// WHY: the hygiene scans walked the filesystem, so a `.rs` file git ignores
+/// was scanned and counted. The committed `scanned_files` figure then
+/// described the checkout that wrote it: two ignored scratch sources made the
+/// artifact read 4791 where CI, scanning the same commit, counted 4789. The
+/// file set is what git would commit, for every walk the matrix makes.
+#[test]
+fn a_file_the_repository_ignores_is_not_scanned() {
+    let root = tempfile::TempDir::new().expect("Fix: create a fixture tree.");
+    crate::fixture_checkout::empty(root.path());
+    fs::write(root.path().join(".gitignore"), "scratch/\n").expect("Fix: write the ignore file.");
+    for (relative, body) in [
+        ("member/src/lib.rs", "pub fn listed() {}\n"),
+        ("scratch/src/extra.rs", "pub fn ignored() {}\n"),
+        ("scripts/gate.sh", "#!/usr/bin/env bash\n"),
+        ("scratch/gate.sh", "#!/usr/bin/env bash\n"),
+        (".github/workflows/ci.yml", "name: ci\n"),
+        ("scratch/.github/workflows/ci.yml", "name: ci\n"),
+    ] {
+        let path = root.path().join(relative);
+        fs::create_dir_all(path.parent().expect("Fix: a fixture file has a directory."))
+            .expect("Fix: create the fixture directory.");
+        fs::write(path, body).expect("Fix: write the fixture file.");
+    }
+    let tree = crate::gates::scan::Tree::open(root.path()).expect("Fix: list the fixture tree.");
+    let tests = TestSources::default();
+
+    let mut findings = Vec::new();
+    let mut sources = 0usize;
+    scan_root(&tree, &tests, &mut sources, &mut findings);
+    assert_eq!(sources, 1, "Fix: only the listed source is scanned.");
+    let mut tooling = 0usize;
+    scan_release_tooling(&tree, &mut tooling, &mut findings);
+    assert_eq!(
+        tooling, 2,
+        "Fix: the listed script and workflow are the tooling set, nothing under the ignored directory."
+    );
+    let mut workflows = 0usize;
+    scan_release_workflows(&tree, &mut workflows, &mut findings);
+    assert_eq!(workflows, 1, "Fix: only the listed workflow is scanned.");
 }
 
 /// WHY: surface classification matched `/docs/` anywhere in the path, so an
@@ -373,7 +416,8 @@ fn every_xtask_command_module_is_scanned_and_no_test_source_is() {
     }
     let mut scanned = 0usize;
     let mut findings = Vec::new();
-    scan_release_xtask(&root, &tests, &mut scanned, &mut findings);
+    let tree = crate::gates::scan::Tree::open(&root).expect("Fix: list the checkout.");
+    scan_release_xtask(&tree, &tests, &mut scanned, &mut findings);
     assert!(
         expected > 0,
         "Fix: the xtask crates hold production source; the enumeration found none."
