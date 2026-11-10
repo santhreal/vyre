@@ -84,9 +84,9 @@ const RELEASED: &str = ".released-";
 /// image stays until a later call removes it.
 ///
 /// Cargo places `<profile>/<bin>` as a hard link of the linker's output in
-/// `<profile>/deps/<crate>-<hash>`, and the linker writes that file in place.
-/// Every name of the running file is released, so the deps name is moved
-/// aside and replaced with a copy as well.
+/// `<profile>/deps`, and the linker writes that file in place. Every name of
+/// the running file is released, so the deps name is moved aside and replaced
+/// with a copy as well.
 ///
 /// Returns whether `running` was a file directly inside `profile`. A
 /// `profile` that does not exist yet holds nothing the build could relink.
@@ -110,8 +110,9 @@ pub fn release_running_image(running: &Path, profile: &Path) -> IoResult<bool> {
 /// from the binary to its linker output makes them.
 ///
 /// A deps output of `<bin>` is `<crate>-<hash>` plus the binary's extension,
-/// where `<crate>` is `<bin>` with `-` spelled `_`. A `deps` that does not
-/// exist holds none.
+/// where `<crate>` is `<bin>` with `-` spelled `_`. An MSVC target omits the
+/// `-<hash>` from an executable, so `<crate>` alone is an output too. A `deps`
+/// that does not exist holds none.
 fn linker_outputs_of(
     running: &Path,
     image: &std::fs::Metadata,
@@ -120,7 +121,8 @@ fn linker_outputs_of(
     let Some(stem) = running.file_stem() else {
         return Ok(Vec::new());
     };
-    let prefix = format!("{}-", stem.to_string_lossy().replace('-', "_"));
+    let crate_name = stem.to_string_lossy().replace('-', "_");
+    let prefix = format!("{crate_name}-");
     let entries = match std::fs::read_dir(deps) {
         Ok(entries) => entries,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
@@ -130,9 +132,10 @@ fn linker_outputs_of(
     for entry in entries {
         let path = entry?.path();
         let is_output = path.extension() == running.extension()
-            && path
-                .file_stem()
-                .is_some_and(|file| file.to_string_lossy().starts_with(&prefix));
+            && path.file_stem().is_some_and(|file| {
+                let file = file.to_string_lossy();
+                file == crate_name.as_str() || file.starts_with(&prefix)
+            });
         if is_output && std::fs::metadata(&path).is_ok_and(|file| same_file(image, &file)) {
             links.push(path);
         }
@@ -945,6 +948,52 @@ mod tests {
             );
         }
         drop((before, other_before));
+    }
+
+    /// WHY: an MSVC target names an executable's linker output `<crate>` plus
+    /// the extension, with no `-<hash>`. Matching only `<crate>-<hash>` left
+    /// `deps\xtask.exe` as the running file, and the Windows relink of `xtask`
+    /// failed on it with `LNK1104`. The unhashed name must be released, and a
+    /// binary whose crate name only begins with `<crate>` must stay in place.
+    /// The file-identity assertions run off Windows, where a test can tell two
+    /// files apart; the Windows CI leg running `cli-docs` covers the relink.
+    #[test]
+    fn an_unhashed_linker_output_of_a_running_image_is_released() {
+        let exe = std::env::consts::EXE_SUFFIX;
+        let root = tempfile::tempdir().expect("temporary directory");
+        let profile = root.path().join("debug");
+        let deps = profile.join("deps");
+        std::fs::create_dir_all(&deps).expect("deps directory");
+        let running = profile.join(format!("my-tool{exe}"));
+        let linked = deps.join(format!("my_tool{exe}"));
+        let longer = deps.join(format!("my_toolbox{exe}"));
+        std::fs::write(&linked, b"image").expect("linker output");
+        std::fs::hard_link(&linked, &running).expect("cargo's uplift link");
+        std::fs::hard_link(&linked, &longer).expect("a link under a longer crate name");
+        let before = std::fs::File::open(&running).expect("the running image opens");
+
+        assert!(release_running_image(&running, &profile).expect("release succeeds"));
+
+        assert_eq!(
+            std::fs::read(&linked).expect("deps name is filled"),
+            b"image"
+        );
+        let mut expected = vec![format!("my_tool{exe}"), format!("my_toolbox{exe}")];
+        expected.sort();
+        assert_eq!(names(&deps), expected);
+        #[cfg(unix)]
+        {
+            let held = before.metadata().expect("running metadata");
+            assert!(
+                !same_file(&held, &std::fs::metadata(&linked).expect("copy metadata")),
+                "the unhashed deps name must hold a file no process runs"
+            );
+            assert!(
+                same_file(&held, &std::fs::metadata(&longer).expect("longer metadata")),
+                "a binary of another crate must stay in place"
+            );
+        }
+        drop(before);
     }
 
     /// WHY: only the running image may move. An executable outside the
