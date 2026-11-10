@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"2e655204bdc9c7d6c28bd21ffb755164587a3d4a","commit_timestamp":"1794287927","parent_commit":"a1022fe75d66deb4eaeffa2ded15632bd9effd34","dirty":false,"source_fingerprint":"git:2e655204bdc9c7d6c28bd21ffb755164587a3d4a:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":8},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.178.04"}]}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"9c9aea2c5d270aa6ae073676fc116bcce11668bc","commit_timestamp":"1794312139","parent_commit":"b91527fa08e516f51184806823fadfb39af7dffc","dirty":false,"source_fingerprint":"git:9c9aea2c5d270aa6ae073676fc116bcce11668bc:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":8},"measurement":{"state":"device","devices":[{"name":"NVIDIA GeForce RTX 4090","driver_version":"580.178.04"}]}},
   "schema": "vyre-bench.result.v1",
   "run_id": "vyre-bench.release",
   "suite": "release",
@@ -25,14 +25,14 @@
   },
   "git": {
     "branch": "lane/evidence-owners",
-    "commit": "2e655204bdc9c7d6c28bd21ffb755164587a3d4a",
-    "commit_timestamp": "1794287927",
+    "commit": "9c9aea2c5d270aa6ae073676fc116bcce11668bc",
+    "commit_timestamp": "1794312139",
     "dirty": "false",
-    "parent_commit": "a1022fe75d66deb4eaeffa2ded15632bd9effd34",
-    "source_fingerprint": "git:2e655204bdc9c7d6c28bd21ffb755164587a3d4a:dirty=false"
+    "parent_commit": "b91527fa08e516f51184806823fadfb39af7dffc",
+    "source_fingerprint": "git:9c9aea2c5d270aa6ae073676fc116bcce11668bc:dirty=false"
   },
-  "source_fingerprint": "git:2e655204bdc9c7d6c28bd21ffb755164587a3d4a:dirty=false",
-  "source_tree_fingerprint": "source-tree-v1:aa6351077d2a14efc623431d2f24fa696d7d500136f04bbae5226a325b987ccf",
+  "source_fingerprint": "git:9c9aea2c5d270aa6ae073676fc116bcce11668bc:dirty=false",
+  "source_tree_fingerprint": "source-tree-v1:843d27308361dc11c0c169a1996dbdd39d0badd8b97d46a1a7c55e0ecd9d2de2",
   "environment": {
     "os": "linux",
     "architecture": "x86_64",
@@ -95,7 +95,7 @@
         "release-workload"
       ],
       "status": "pass",
-      "wall_ns": 27581.0,
+      "wall_ns": 27514.5,
       "correctness": "Exact",
       "contract": {
         "primitive": "IFDS reachability and witness extraction",
@@ -114,24 +114,24 @@
         "device_bounds": []
       },
       "performance": {
-        "speedup_x": 544.6805690661479,
+        "speedup_x": 542.6350532945736,
         "contract_passed": true,
         "violations": []
       },
       "metrics": {
         "active_time_ns": {
           "min": 16384,
-          "p50": 16448,
+          "p50": 16512,
           "p90": 16768,
           "p95": 16768,
           "p99": 17408,
           "p999": 17408,
           "p9999": 17408,
           "max": 17408,
-          "mean": 16526.933333333334,
-          "stddev": 211.57676831091095,
+          "mean": 16542.933333333334,
+          "stddev": 209.10203782417383,
           "samples": 30,
-          "determinism_cv": 0.012801937543015297
+          "determinism_cv": 0.012639961342456828
         },
         "alloc_bytes": {
           "min": 117925,
@@ -204,7 +204,7 @@
           "determinism_cv": 0.0
         },
         "baseline_device_gb_s_x1000": {
-          "min": 1386,
+          "min": 1250,
           "p50": 1404,
           "p90": 1405,
           "p95": 1405,
@@ -212,10 +212,10 @@
           "p999": 1405,
           "p9999": 1405,
           "max": 1405,
-          "mean": 1400.4333333333334,
-          "stddev": 6.37538669851136,
+          "mean": 1394.4666666666667,
+          "stddev": 28.33341176459732,
           "samples": 30,
-          "determinism_cv": 0.004552438553670073
+          "determinism_cv": 0.02031845754500931
         },
         "baseline_input_bytes": {
           "min": 12582912,
@@ -246,7 +246,7 @@
           "determinism_cv": 0.0
         },
         "baseline_wall_gb_s_x1000": {
-          "min": 1386,
+          "min": 1250,
           "p50": 1404,
           "p90": 1405,
           "p95": 1405,
@@ -254,24 +254,24 @@
           "p999": 1405,
           "p9999": 1405,
           "max": 1405,
-          "mean": 1400.4333333333334,
-          "stddev": 6.37538669851136,
+          "mean": 1394.4666666666667,
+          "stddev": 28.33341176459732,
           "samples": 30,
-          "determinism_cv": 0.004552438553670073
+          "determinism_cv": 0.02031845754500931
         },
         "baseline_wall_ns": {
-          "min": 8952157,
-          "p50": 8958906,
-          "p90": 9075562,
-          "p95": 9075935,
-          "p99": 9076396,
-          "p999": 9076396,
-          "p9999": 9076396,
-          "max": 9076396,
-          "mean": 8981728.133333333,
-          "stddev": 41591.397357092435,
+          "min": 8951047,
+          "p50": 8959990,
+          "p90": 9147920,
+          "p95": 9188122,
+          "p99": 10063682,
+          "p999": 10063682,
+          "p9999": 10063682,
+          "max": 10063682,
+          "mean": 9024867.1,
+          "stddev": 201727.03678987437,
           "samples": 30,
-          "determinism_cv": 0.00463066758864999
+          "determinism_cv": 0.02235235539256577
         },
         "bytes_read": {
           "min": 4,
@@ -386,29 +386,29 @@
           "determinism_cv": null
         },
         "cold_dispatch_ns": {
-          "min": 16640,
-          "p50": 16640,
-          "p90": 16640,
-          "p95": 16640,
-          "p99": 16640,
-          "p999": 16640,
-          "p9999": 16640,
-          "max": 16640,
-          "mean": 16640.0,
+          "min": 16384,
+          "p50": 16384,
+          "p90": 16384,
+          "p95": 16384,
+          "p99": 16384,
+          "p999": 16384,
+          "p9999": 16384,
+          "max": 16384,
+          "mean": 16384.0,
           "stddev": 0.0,
           "samples": 1,
           "determinism_cv": null
         },
         "cold_wall_ns": {
-          "min": 9566604,
-          "p50": 9566604,
-          "p90": 9566604,
-          "p95": 9566604,
-          "p99": 9566604,
-          "p999": 9566604,
-          "p9999": 9566604,
-          "max": 9566604,
-          "mean": 9566604.0,
+          "min": 9607189,
+          "p50": 9607189,
+          "p90": 9607189,
+          "p95": 9607189,
+          "p99": 9607189,
+          "p999": 9607189,
+          "p9999": 9607189,
+          "max": 9607189,
+          "mean": 9607189.0,
           "stddev": 0.0,
           "samples": 1,
           "determinism_cv": null
@@ -835,17 +835,17 @@
         },
         "device_gb_s_x1000": {
           "min": 722823,
-          "p50": 766503,
+          "p50": 762046,
           "p90": 768000,
           "p95": 768000,
           "p99": 768000,
           "p999": 768000,
           "p9999": 768000,
           "max": 768000,
-          "mean": 761478.8333333334,
-          "stddev": 9459.967857885253,
+          "mean": 760739.4666666667,
+          "stddev": 9348.481711783767,
           "samples": 30,
-          "determinism_cv": 0.012423152744081858
+          "determinism_cv": 0.012288677164004681
         },
         "device_to_host_bytes": {
           "min": 21120,
@@ -863,17 +863,17 @@
         },
         "dispatch_ns": {
           "min": 16384,
-          "p50": 16448,
+          "p50": 16512,
           "p90": 16768,
           "p95": 16768,
           "p99": 17408,
           "p999": 17408,
           "p9999": 17408,
           "max": 17408,
-          "mean": 16526.933333333334,
-          "stddev": 211.57676831091095,
+          "mean": 16542.933333333334,
+          "stddev": 209.10203782417383,
           "samples": 30,
-          "determinism_cv": 0.012801937543015297
+          "determinism_cv": 0.012639961342456828
         },
         "gpu_digest": {
           "min": 6860622076622033157,
@@ -1016,15 +1016,15 @@
           "determinism_cv": 0.0
         },
         "power_draw_w": {
-          "min": 59,
-          "p50": 59,
-          "p90": 59,
-          "p95": 59,
-          "p99": 59,
-          "p999": 59,
-          "p9999": 59,
-          "max": 59,
-          "mean": 59.0,
+          "min": 61,
+          "p50": 61,
+          "p90": 61,
+          "p95": 61,
+          "p99": 61,
+          "p999": 61,
+          "p9999": 61,
+          "max": 61,
+          "mean": 61.0,
           "stddev": 0.0,
           "samples": 1,
           "determinism_cv": 0.0
@@ -1059,17 +1059,17 @@
         },
         "roofline_mem_pct_x1000": {
           "min": 71708,
-          "p50": 76041,
+          "p50": 75599,
           "p90": 76190,
           "p95": 76190,
           "p99": 76190,
           "p999": 76190,
           "p9999": 76190,
           "max": 76190,
-          "mean": 75542.93333333333,
-          "stddev": 938.5154565707596,
+          "mean": 75469.56666666667,
+          "stddev": 927.4936723354087,
           "samples": 30,
-          "determinism_cv": 0.012423603574268931
+          "determinism_cv": 0.012289638238310746
         },
         "synthetic_resident_batch_len": {
           "min": 16,
@@ -1086,18 +1086,18 @@
           "determinism_cv": 0.0
         },
         "synthetic_resident_batch_wall_ns": {
-          "min": 411127,
-          "p50": 443341,
-          "p90": 447303,
-          "p95": 448294,
-          "p99": 461185,
-          "p999": 461185,
-          "p9999": 461185,
-          "max": 461185,
-          "mean": 441287.5333333333,
-          "stddev": 9184.242903775767,
+          "min": 420553,
+          "p50": 441313,
+          "p90": 447644,
+          "p95": 447661,
+          "p99": 451093,
+          "p999": 451093,
+          "p9999": 451093,
+          "max": 451093,
+          "mean": 440223.23333333334,
+          "stddev": 6855.888742209544,
           "samples": 30,
-          "determinism_cv": 0.020812377894297567
+          "determinism_cv": 0.015573664048345042
         },
         "synthetic_resident_buffers": {
           "min": 1,
@@ -1128,15 +1128,15 @@
           "determinism_cv": 0.0
         },
         "temperature_c": {
-          "min": 48,
-          "p50": 48,
-          "p90": 48,
-          "p95": 48,
-          "p99": 48,
-          "p999": 48,
-          "p9999": 48,
-          "max": 48,
-          "mean": 48.0,
+          "min": 51,
+          "p50": 51,
+          "p90": 51,
+          "p95": 51,
+          "p99": 51,
+          "p999": 51,
+          "p9999": 51,
+          "max": 51,
+          "mean": 51.0,
           "stddev": 0.0,
           "samples": 1,
           "determinism_cv": 0.0
@@ -1198,32 +1198,32 @@
           "determinism_cv": 0.0
         },
         "wall_gb_s_x1000": {
-          "min": 436527,
-          "p50": 454158,
-          "p90": 478310,
-          "p95": 479550,
-          "p99": 489683,
-          "p999": 489683,
-          "p9999": 489683,
-          "max": 489683,
-          "mean": 456421.0333333333,
-          "stddev": 9839.917403052166,
+          "min": 446297,
+          "p50": 456697,
+          "p90": 468445,
+          "p95": 478346,
+          "p99": 478710,
+          "p999": 478710,
+          "p9999": 478710,
+          "max": 478710,
+          "mean": 457432.4666666667,
+          "stddev": 7294.699096985122,
           "samples": 30,
-          "determinism_cv": 0.021558860535390533
+          "determinism_cv": 0.015947051485308773
         },
         "wall_ns": {
-          "min": 25696,
-          "p50": 27709,
-          "p90": 27957,
-          "p95": 28019,
-          "p99": 28825,
-          "p999": 28825,
-          "p9999": 28825,
-          "max": 28825,
-          "mean": 27581.0,
-          "stddev": 574.0857659502338,
+          "min": 26285,
+          "p50": 27583,
+          "p90": 27978,
+          "p95": 27979,
+          "p99": 28194,
+          "p999": 28194,
+          "p9999": 28194,
+          "max": 28194,
+          "mean": 27514.5,
+          "stddev": 428.459002317219,
           "samples": 30,
-          "determinism_cv": 0.02081453775969812
+          "determinism_cv": 0.015572116604598268
         }
       },
       "optimization_passes_applied": [
@@ -1238,7 +1238,7 @@
     "total_cases": 1,
     "passed": 1,
     "failed": 0,
-    "total_time_ns": 10720392889,
+    "total_time_ns": 11081880165,
     "cache_hit_rate": null
   },
   "blockers": []

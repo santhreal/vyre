@@ -1919,6 +1919,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   README is still generated. The contract test reads the subcommand count back
   out of the generated README blocks instead of out of the deleted page, and
   the build it runs no longer forces one codegen job.
+- `xtask cli-docs` reports the linker error lines of a failed binary build and
+  whether the running image was moved off its build path.
 - Open IR extensions now require collision-resistant full digests with explicit
   collision rejection, mandatory proof fields without permissive defaults,
   canonical decode and re-encode round-trip equality, stable content interning,
@@ -1960,6 +1962,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   relaxation of `vyre_libs::math::bellman_shortest_path`: what it owes is the
   routing assertion it already carries, that its composition emits the
   primitive program unchanged.
+- `TableStateMachineComposer::bounded_advance_node` masks the symbol of a
+  power-of-two alphabet with `& (alphabet_size - 1)` in place of a fold, so
+  `aho_corasick` and the classic Aho-Corasick walk emit one transition step
+  with the same `& 0xFF` byte operand.
 - Shared composer types have one public path under `vyre-libs`: CSR types under
   `csr`, elementwise types under `elementwise`, contraction types under `gemm`,
   state-machine types under `state_machine`, and grid types under `stencil`.
@@ -8107,6 +8113,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - Parity suites, backend materializers and gate tooling share canonical
   routines, and dispatcher-based solvers select named results without rejecting
   writable scratch outputs.
+- `xtask dup-scan` measures each workspace member under the last segment of its
+  directory, so crates under `crates/` and `tools/` are pinned separately in
+  place of one row per grouping directory.
 - The duplication gate measures the repository rather than the working
   directory. It walked the tree with `walkdir` and counted every `.rs` file
   present, including files an ignore rule excludes, so a pin recorded on a
@@ -8594,6 +8603,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `abstraction-gate` from 32 to 23.
 - The hygiene matrix gate now declares all eight release-evidence artifacts
   that its canonical writer produces.
+- `xtask hygiene-matrix` scans the files git lists, so a gitignored scratch
+  file no longer changes the committed scanned-file count.
 - The hygiene scan reaches a source read hoisted into a static initializer, so
   a test that inspects Rust source through a `LazyLock` corpus is detected
   again. The scan followed calls between functions only, so such a file
@@ -9199,6 +9210,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   including read-write pipeline live-outs, as an output. Artifact submission no
   longer asks callers to provide internal fused-pipeline storage as a host
   input.
+- `xtask placement-predicates` reads the gate crates at `tools/xtask`,
+  `tools/xtask-registry` and `tools/structure-gate` in place of their former
+  top-level paths.
 - Process-owned caches, staging buffer pools, and tenant registries in
   `vyre-driver-wgpu` and `vyre-runtime` now discard and clear half-mutated
   internal state on lock poison recovery instead of reusing unvalidated
