@@ -79,11 +79,15 @@ thread_local! {
     /// are cold, and widening the per-step cell would charge every step for
     /// them.
     static ALLOCATION: Cell<Limits> = const { Cell::new(Limits::UNARMED) };
-    /// The armed program's name, read only when a refusal is built.
+    /// The armed program's declared entry operation id, empty when it declares
+    /// none. Read only when a refusal is built. A program that declares no id
+    /// is named by [`fingerprint_label`] at the refusal instead of here,
+    /// because computing a fingerprint serializes every node of the program
+    /// and a run that never crosses the ceiling never reads the name.
     static PROGRAM: RefCell<String> = const { RefCell::new(String::new()) };
 }
 
-/// Memory and frame-depth ceilings of the armed evaluation.
+/// Memory, frame-depth and program-size ceilings of the armed evaluation.
 #[derive(Clone, Copy)]
 struct Limits {
     /// Buffer bytes allocated so far by this evaluation.
@@ -92,14 +96,22 @@ struct Limits {
     max_memory_bytes: usize,
     /// Frame depth one lane may reach.
     max_recursion_depth: usize,
+    /// Statement nodes the submitted program may carry.
+    max_program_nodes: usize,
 }
 
 impl Limits {
     /// No evaluation armed: nothing is charged and nothing is refused.
+    ///
+    /// The program-size ceiling is the exception, because the evaluator reads
+    /// it before it arms anything on a nested path. It stands at the
+    /// foundation default, so a program admitted with no budget armed is the
+    /// same program the standard budget admits.
     const UNARMED: Self = Self {
         allocated_bytes: 0,
         max_memory_bytes: usize::MAX,
         max_recursion_depth: usize::MAX,
+        max_program_nodes: crate::ReferenceBudget::DEFAULT_MAX_PROGRAM_NODES,
     };
 }
 
@@ -147,8 +159,12 @@ pub(crate) fn arm_with_budget(
         return Ok(BudgetGuard { outermost: false });
     }
     check_static_frame_depth(program, budget.max_recursion_depth)?;
-    let label = program_label(program);
-    PROGRAM.with_borrow_mut(|armed| *armed = label);
+    PROGRAM.with_borrow_mut(|armed| {
+        armed.clear();
+        if let Some(id) = program.entry_op_id.as_deref() {
+            armed.push_str(id);
+        }
+    });
     BUDGET.with(|cell| {
         cell.set(Some((0, budget.work_ceiling, !budget.admit_declared_work)));
     });
@@ -157,9 +173,20 @@ pub(crate) fn arm_with_budget(
             allocated_bytes: 0,
             max_memory_bytes: budget.max_memory_bytes,
             max_recursion_depth: budget.max_recursion_depth,
+            max_program_nodes: budget.max_program_nodes,
         });
     });
     Ok(BudgetGuard { outermost: true })
+}
+
+/// Statement nodes the armed evaluation admits, or the foundation default
+/// when no evaluation is armed.
+///
+/// The evaluator reads this to build the admission pass it runs, so the
+/// program-size ceiling a request states and the ceiling the validator
+/// enforces are one value rather than two that can drift.
+pub(crate) fn armed_max_program_nodes() -> usize {
+    ALLOCATION.with(|cell| cell.get().max_program_nodes)
 }
 
 /// Refuse a program whose static body nesting already stands past `max` before
@@ -399,13 +426,13 @@ pub(crate) fn charged() -> u64 {
     BUDGET.with(|budget| budget.get().map_or(0, |(charged, _, _)| charged))
 }
 
-/// The name a program is refused under: its entry operation id when it declares
-/// one, otherwise a fingerprint prefix, because anonymous IR still has to be
-/// identifiable in a refusal.
-fn program_label(program: &Program) -> String {
-    if let Some(id) = program.entry_op_id.as_ref() {
-        return id.clone();
-    }
+/// Name `program` by a prefix of its fingerprint, because anonymous IR still
+/// has to be identifiable in a refusal.
+///
+/// A fingerprint is the hash of the program's canonical wire encoding, so
+/// producing one serializes every node. That is why arming does not call this
+/// and a refusal does.
+fn fingerprint_label(program: &Program) -> String {
     let fingerprint = program.fingerprint();
     let mut label = String::with_capacity(2 + 16);
     label.push_str("0x");
@@ -414,6 +441,26 @@ fn program_label(program: &Program) -> String {
         let _ = write!(label, "{byte:02x}");
     }
     label
+}
+
+/// Name the program in `error` when it is a step-ceiling refusal of a program
+/// that declared no entry operation id.
+///
+/// The refusal is built where the ceiling is crossed, which is inside the
+/// interpreter and past every reference to the program. What it carries there
+/// is the declared id, or nothing when the program declares none. This is the
+/// one place that holds both the refusal and the program, so it is where an
+/// unnamed program is fingerprinted.
+pub(crate) fn name_refusal(program: &Program, error: ReferenceError) -> ReferenceError {
+    match error.step_ceiling_source() {
+        Some(source) if source.program.is_empty() => {
+            ReferenceError::step_ceiling(StepCeilingExceeded {
+                program: fingerprint_label(program),
+                ceiling: source.ceiling,
+            })
+        }
+        Some(_) | None => error,
+    }
 }
 
 // Inline: `arm_with_budget`, `charge` and `charged` are crate-private, and the nesting
@@ -493,15 +540,72 @@ mod tests {
     fn an_unnamed_program_is_labelled_by_its_fingerprint_prefix() {
         let program = tiny_program();
         assert!(program.entry_op_id.is_none());
-        let label = program_label(&program);
+        let label = fingerprint_label(&program);
         assert!(
             label.starts_with("0x") && label.len() == 18,
             "Fix: an unnamed program is labelled by a fingerprint prefix, got {label}"
         );
         assert_eq!(
             label,
-            program_label(&tiny_program()),
+            fingerprint_label(&tiny_program()),
             "Fix: the label is a function of the program, so two equal programs share it"
+        );
+    }
+
+    /// WHY: arming used to name the program eagerly, and naming an unnamed
+    /// program serializes every node of it. A refusal that already carries a
+    /// declared id must keep it, and one that carries none must be named from
+    /// the program at the boundary instead. A naming step that overwrites a
+    /// declared id, or that leaves an unnamed refusal unnamed, puts the cost
+    /// back or loses the identification.
+    ///
+    /// It does not catch what arming costs, which the per-node allocation
+    /// ceiling in `oracle_bounds` bounds instead.
+    #[test]
+    fn a_refusal_is_named_at_the_boundary_only_when_the_program_declared_no_id() {
+        let unnamed = ReferenceError::step_ceiling(StepCeilingExceeded {
+            program: String::new(),
+            ceiling: 25,
+        });
+        let program = tiny_program();
+        let named = name_refusal(&program, unnamed);
+        let source = named
+            .step_ceiling_source()
+            .expect("Fix: naming a refusal must preserve its step-ceiling payload");
+        assert_eq!(
+            source.program,
+            fingerprint_label(&program),
+            "Fix: a refusal carrying no name is named by the program's fingerprint prefix"
+        );
+        assert_eq!(
+            source.ceiling, 25,
+            "Fix: naming a refusal must not change the ceiling it reports"
+        );
+        assert!(
+            named.message().contains(&fingerprint_label(&program)),
+            "Fix: the refusal message names the program, got {}",
+            named.message()
+        );
+
+        let declared = ReferenceError::step_ceiling(StepCeilingExceeded {
+            program: "vyre.test.declared".to_string(),
+            ceiling: 25,
+        });
+        assert_eq!(
+            name_refusal(&program, declared)
+                .step_ceiling_source()
+                .expect("Fix: naming must preserve the payload")
+                .program,
+            "vyre.test.declared",
+            "Fix: a program that declared an id keeps it rather than being fingerprinted"
+        );
+
+        let unrelated = ReferenceError::new("unrelated");
+        assert!(
+            name_refusal(&program, unrelated)
+                .step_ceiling_source()
+                .is_none(),
+            "Fix: naming must leave a failure that is not a step-ceiling refusal alone"
         );
     }
 

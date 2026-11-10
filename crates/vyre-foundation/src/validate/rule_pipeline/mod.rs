@@ -331,7 +331,7 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
             buffers,
             scope: FxHashMap::default(),
             scope_stack: SmallVec::new(),
-            limits: depth::LimitState::default(),
+            limits: depth::LimitState::with_max_node_count(options.node_count_ceiling()),
             self_comp_counts: hashbrown::HashMap::default(),
             errors: Vec::new(),
             current_node: 0,

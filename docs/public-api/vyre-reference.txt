@@ -57,6 +57,7 @@ pub const fn vyre_reference::ReferenceBudget::bounded(steps: u64) -> Self
 pub const fn vyre_reference::ReferenceBudget::new(work_ceiling: u64, max_memory_bytes: usize, max_recursion_depth: usize) -> Self
 pub const fn vyre_reference::ReferenceBudget::standard() -> Self
 pub const fn vyre_reference::ReferenceBudget::with_max_memory_bytes(bytes: usize) -> Self
+pub const fn vyre_reference::ReferenceBudget::with_max_program_nodes(nodes: usize) -> Self
 pub const fn vyre_reference::ReferenceBudget::with_max_recursion_depth(depth: usize) -> Self
 pub const fn vyre_reference::ReferenceBudget::with_work_ceiling(steps: u64) -> Self
 pub const fn vyre_reference::ReferenceErrorClass::cause_kind(self) -> vyre_foundation::diagnostics::cause::CauseKind
@@ -95,6 +96,7 @@ pub const vyre_reference::MAX_RACE_EXPLORATION_ORDERS: usize
 pub const vyre_reference::REFERENCE_ORACLE_VERSION: &str
 pub const vyre_reference::REFERENCE_REQUEST_SCHEMA_VERSION: u32
 pub const vyre_reference::ReferenceBudget::DEFAULT_MAX_MEMORY_BYTES: usize
+pub const vyre_reference::ReferenceBudget::DEFAULT_MAX_PROGRAM_NODES: usize
 pub const vyre_reference::ReferenceBudget::DEFAULT_MAX_RECURSION_DEPTH: usize
 pub const vyre_reference::ReferenceBudget::DEFAULT_WORK_CEILING: u64
 pub const vyre_reference::ReferenceErrorClass::ALL: [Self; 8]
@@ -744,6 +746,7 @@ pub fn vyre_reference::value::Value::extend_bytes_width(&self, declared_width: u
 pub fn vyre_reference::value::Value::from(bytes: &[u8]) -> Self
 pub fn vyre_reference::value::Value::from(bytes: alloc::vec::Vec<u8>) -> Self
 pub fn vyre_reference::value::Value::from_element_bytes(ty: vyre_spec::data_type::DataType, bytes: &[u8]) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_reference::value::Value::shares_payload_with(&self, other: &Self) -> bool
 pub fn vyre_reference::value::Value::to_bytes(&self) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::value::Value::to_bytes_width(&self, declared_width: usize) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::value::Value::truthy(&self) -> bool
@@ -891,6 +894,7 @@ pub vyre_reference::RaceFinding::UnsynchronizedAccess::second: [u32; 3]
 pub vyre_reference::RaceFinding::UnsynchronizedAccess::second_kind: vyre_reference::MemoryAccessKind
 pub vyre_reference::ReferenceBudget::admit_declared_work: bool
 pub vyre_reference::ReferenceBudget::max_memory_bytes: usize
+pub vyre_reference::ReferenceBudget::max_program_nodes: usize
 pub vyre_reference::ReferenceBudget::max_recursion_depth: usize
 pub vyre_reference::ReferenceBudget::work_ceiling: u64
 pub vyre_reference::ReferenceCertificate::oracle_version: alloc::string::String

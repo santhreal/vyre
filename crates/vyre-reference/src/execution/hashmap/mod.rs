@@ -252,16 +252,16 @@ pub(crate) fn run_hashmap_reference(
 ) -> Result<Vec<Value>, ReferenceError> {
     let validation_report = vyre_foundation::validate::validate_with_options(
         program,
-        vyre_foundation::validate::ValidationOptions::default().with_backend_capabilities(
-            vyre_foundation::validate::BackendCapabilities {
+        vyre_foundation::validate::ValidationOptions::default()
+            .with_max_node_count(crate::execution::step_budget::armed_max_program_nodes())
+            .with_backend_capabilities(vyre_foundation::validate::BackendCapabilities {
                 #[cfg(feature = "subgroup-ops")]
                 supports_subgroup_ops: true,
                 supports_tensor_cores: true,
                 supports_distributed_collectives: true,
                 has_shared_memory: true,
                 ..Default::default()
-            },
-        ),
+            }),
     );
     if let Some(source) = validation_report.errors.into_iter().next() {
         return Err(ReferenceError::validation(source));

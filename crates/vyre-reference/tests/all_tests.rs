@@ -15,6 +15,11 @@ pub mod flat_expr_eval;
 #[path = "lane_collectives/mod.rs"]
 pub mod lane_collectives;
 
+/// Shared fixture module from `tests/program_scale/mod.rs`.
+#[allow(missing_docs)]
+#[path = "program_scale/mod.rs"]
+pub mod program_scale;
+
 /// Shared fixture module from `tests/wire_words/mod.rs`.
 #[allow(missing_docs)]
 #[path = "wire_words/mod.rs"]
@@ -122,6 +127,10 @@ pub mod hashmap_invocation_size_contracts;
 /// Integration tests from `tests/logical_execution_markers.rs`.
 #[path = "logical_execution_markers.rs"]
 pub mod logical_execution_markers;
+
+/// Integration tests from `tests/million_node_execution_shares_values_without_copying.rs`.
+#[path = "million_node_execution_shares_values_without_copying.rs"]
+pub mod million_node_execution_shares_values_without_copying;
 
 /// Integration tests from `tests/oracle_foundation_dependencies.rs`.
 #[path = "oracle_foundation_dependencies.rs"]

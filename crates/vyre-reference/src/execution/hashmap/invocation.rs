@@ -18,7 +18,7 @@ use crate::{
     value::Value,
     workgroup::{Frame, InvocationIds},
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::Arc;
 use vyre_foundation::ir::{Node, Program, Tile};
 
@@ -33,16 +33,109 @@ use vyre_foundation::ir::{Node, Program, Tile};
 /// taken only by a program that uses subgroup collectives.
 ///
 /// A snapshot is now a map clone: one `Arc` copy per live local and no value
-/// payload, because every large [`Value`] is already reference-counted. Every
-/// lane is captured once per round while a collective is reachable, so the
-/// cost a subgroup program pays is live locals rather than a constant, which
-/// is a few entries for the programs that use collectives at all.
+/// payload, because every [`Value`] payload is reference-counted. Every lane
+/// is captured once per round while a collective is reachable, so the cost a
+/// subgroup program pays is live locals rather than a constant, which is a few
+/// entries for the programs that use collectives at all.
 ///
 /// Immutability travels with the value rather than in a second map. Reading it
 /// separately meant two hashes of the same name on every assignment.
 pub(crate) struct HashmapLocals {
     pub(crate) locals: FxHashMap<Arc<str>, Local>,
-    pub(crate) scopes: Vec<Vec<Arc<str>>>,
+    pub(crate) scopes: ScopeArena,
+}
+
+/// Names bound by every open scope of one lane, in one streaming region.
+///
+/// # What it reclaims
+///
+/// The slots of a scope, at the moment that scope closes. `open` records where
+/// the current scope starts in `names`; closing truncates back to that mark,
+/// and the next scope to open writes over the same slots. A lane that enters
+/// and leaves a million loop bodies therefore reaches the high-water mark of
+/// one body and stays there, rather than taking and returning a vector per
+/// entry.
+///
+/// The name storage itself, through `held`. A `Let` inside a loop body binds
+/// the same name on every iteration, and building an `Arc<str>` for it each
+/// time charged the allocator once per iteration per binding. A name a closing
+/// scope retires stays in `held`, so the next scope that binds it takes a
+/// reference count instead of an allocation. That makes name allocation a
+/// function of the distinct names a lane binds, which the program fixes,
+/// rather than of the number of times it binds them, which the trip counts do.
+///
+/// # What it does not reclaim
+///
+/// Capacity. `names` and `open` keep the largest allocation they have needed
+/// for the life of the lane, and hand it back only when the lane is dropped.
+///
+/// A name the lane will not bind again. `held` grows to the distinct names the
+/// lane has bound and stays there until the lane is dropped, so a program that
+/// binds a fresh name per iteration pays for each one. Nothing in the IR
+/// generates names that way: a binding's name is written in the program text.
+///
+/// The values. Unbinding a name removes it from the local map, and the payload
+/// behind it lives until the last value sharing it is dropped.
+pub(crate) struct ScopeArena {
+    /// Every name bound by every open scope, oldest scope first.
+    names: Vec<Arc<str>>,
+    /// Index into `names` at which each open scope's names begin.
+    open: Vec<usize>,
+    /// Every name this lane has bound, kept for the next scope that binds it.
+    held: FxHashSet<Arc<str>>,
+}
+
+impl ScopeArena {
+    /// An arena with one open scope and nothing bound in it.
+    fn new() -> Self {
+        Self {
+            names: Vec::new(),
+            open: vec![0],
+            held: FxHashSet::default(),
+        }
+    }
+
+    /// The arena's `Arc<str>` for `name`, allocating one only the first time
+    /// this lane binds it.
+    fn name(&mut self, name: &str) -> Arc<str> {
+        if let Some(held) = self.held.get(name) {
+            return Arc::clone(held);
+        }
+        let owned: Arc<str> = Arc::from(name);
+        self.held.insert(Arc::clone(&owned));
+        owned
+    }
+
+    /// Record `name` against the innermost open scope.
+    fn bind(&mut self, name: Arc<str>) {
+        self.names.push(name);
+    }
+
+    /// Open a scope whose names start after every name bound so far.
+    fn push(&mut self) {
+        self.open.push(self.names.len());
+    }
+
+    /// Close the innermost scope, yielding the names it bound.
+    ///
+    /// Yields nothing when no scope is open, which is the same outcome as
+    /// closing an empty one.
+    fn pop(&mut self) -> std::vec::Drain<'_, Arc<str>> {
+        let start = self.open.pop().unwrap_or(0);
+        self.names.drain(start..)
+    }
+
+    /// Slots the arena holds, whether or not an open scope is using them.
+    #[cfg(test)]
+    fn slot_capacity(&self) -> usize {
+        self.names.capacity()
+    }
+
+    /// Slots the open scopes are using.
+    #[cfg(test)]
+    fn slots_in_use(&self) -> usize {
+        self.names.len()
+    }
 }
 
 /// One bound local: its value, and whether an assignment may replace it.
@@ -56,7 +149,7 @@ impl HashmapLocals {
     pub(crate) fn new() -> Self {
         Self {
             locals: FxHashMap::default(),
-            scopes: vec![Vec::new()],
+            scopes: ScopeArena::new(),
         }
     }
     pub(crate) fn local(&self, name: &str) -> Option<Value> {
@@ -87,12 +180,10 @@ impl HashmapLocals {
                 "duplicate local binding `{name}`. Fix: choose a unique local name; shadowing is not allowed."
             )));
         }
-        let name: Arc<str> = Arc::from(name);
+        let name = self.scopes.name(name);
         self.locals
             .insert(Arc::clone(&name), Local { value, immutable });
-        if let Some(scope) = self.scopes.last_mut() {
-            scope.push(Arc::clone(&name));
-        }
+        self.scopes.bind(Arc::clone(&name));
         Ok(name)
     }
     pub(crate) fn assign(&mut self, name: &str, value: Value) -> Result<(), ReferenceError> {
@@ -110,13 +201,11 @@ impl HashmapLocals {
         Ok(())
     }
     pub(crate) fn push_scope(&mut self) {
-        self.scopes.push(Vec::new());
+        self.scopes.push();
     }
     pub(crate) fn pop_scope(&mut self) {
-        if let Some(names) = self.scopes.pop() {
-            for name in names {
-                self.locals.remove(&name);
-            }
+        for name in self.scopes.pop() {
+            self.locals.remove(&name);
         }
     }
     pub(crate) fn remove(&mut self, name: &str) -> Option<Value> {
@@ -372,4 +461,84 @@ pub(crate) fn run_invocations(
         }
     }
     Ok(fenced)
+}
+
+// Inline: `ScopeArena` and `HashmapLocals` are crate-private, and neither the
+// slot reuse nor the name sharing is observable through a public entry point.
+#[cfg(test)]
+mod tests {
+    use super::{HashmapLocals, ScopeArena};
+    use crate::value::Value;
+    use std::sync::Arc;
+
+    /// WHY: the arena exists so a lane that enters a scope a million times
+    /// does not charge the allocator a million times. Two properties carry
+    /// that: a closing scope's slots are reused by the next scope rather than
+    /// released, and a name a closing scope retires is handed back rather than
+    /// rebuilt. An arena that grew its slot vector per scope, or that built a
+    /// fresh `Arc<str>` per binding, would still pass every behavioural test
+    /// in the suite and cost one allocation per scope entry.
+    ///
+    /// It does not catch the allocation count of a whole evaluation, which
+    /// `entering_a_scope_reuses_the_region_the_previous_scope_retired` in the
+    /// integration suite measures against the allocator.
+    #[test]
+    fn a_closing_scope_leaves_its_slots_and_its_names_for_the_next_scope() {
+        let mut locals = HashmapLocals::new();
+        let mut first: Option<Arc<str>> = None;
+
+        for round in 0..8u32 {
+            locals.push_scope();
+            let bound = locals
+                .bind("step", Value::U32(round))
+                .expect("Fix: a name unbound by the previous scope binds again");
+            match &first {
+                None => first = Some(bound),
+                Some(first) => assert!(
+                    Arc::ptr_eq(first, &bound),
+                    "Fix: a name the previous scope retired is handed back, not rebuilt"
+                ),
+            }
+            assert_eq!(
+                locals.scopes.slots_in_use(),
+                1,
+                "Fix: one scope binding one name uses one slot, so the slots a closed scope \
+                 retired are the slots the next one writes"
+            );
+            locals.pop_scope();
+            assert!(
+                locals.local("step").is_none(),
+                "Fix: closing a scope unbinds the names it bound"
+            );
+        }
+
+        assert!(
+            locals.scopes.slot_capacity() <= 4,
+            "Fix: eight open-and-close cycles must not grow the arena, got {} slots",
+            locals.scopes.slot_capacity()
+        );
+    }
+
+    /// WHY: the arena hands back a retired name by identity, so a lookup that
+    /// matched the wrong name would bind one local under another's key. The
+    /// case above proves the same name is shared; this proves a different name
+    /// is not.
+    #[test]
+    fn two_distinct_names_never_share_one_allocation() {
+        let mut arena = ScopeArena::new();
+        let left = arena.name("alpha");
+        let right = arena.name("beta");
+        assert!(
+            !Arc::ptr_eq(&left, &right),
+            "Fix: two distinct names are two distinct allocations"
+        );
+        assert!(
+            Arc::ptr_eq(&left, &arena.name("alpha")),
+            "Fix: the same name is one allocation however often it is bound"
+        );
+        assert_eq!(
+            &*right, "beta",
+            "Fix: the arena hands back the name asked for"
+        );
+    }
 }

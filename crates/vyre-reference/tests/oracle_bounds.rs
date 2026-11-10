@@ -35,10 +35,6 @@
 //! IR constructors. The shapes here are synthetic, so a registry entry whose
 //! lowering allocates per element is outside what these numbers say.
 
-use std::sync::mpsc::{channel, RecvTimeoutError};
-use std::thread;
-use std::time::{Duration, Instant};
-
 use vyre_alloc_probe::{Region, ThreadAlloc};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Layout, Node, Program, Residency, Tile,
@@ -46,6 +42,11 @@ use vyre_foundation::ir::{
 use vyre_foundation::visit::child_bodies;
 use vyre_reference::value::Value;
 use vyre_reference::{ReferenceBudget, ReferenceErrorClass, ReferenceRequest, WorkloadEnvelope};
+
+use crate::program_scale::{
+    assert_bounded_outcome, count_nodes, flat_chain, looped_chain, run_within_deadline,
+    MILLION_NODES,
+};
 
 /// Charges every allocation to the thread that made it.
 ///
@@ -55,35 +56,27 @@ use vyre_reference::{ReferenceBudget, ReferenceErrorClass, ReferenceRequest, Wor
 #[global_allocator]
 static GLOBAL: ThreadAlloc = ThreadAlloc;
 
-/// Wall-clock ceiling one bounded evaluation in this file may take.
-///
-/// Measured, not chosen: the million-node refusal below arrives in 4.2 seconds
-/// under the unoptimized test profile, for both the flat and the loop-wrapped
-/// shape. The ceiling stands an order of magnitude above that so a loaded host
-/// does not fail the run, and far enough below an unbounded evaluation that a
-/// lost bound is a failed assertion rather than a stalled suite: the
-/// loop-wrapped program declares two billion statements, which the interpreter
-/// would grind through for hours if the program-size ceiling stopped refusing
-/// it.
-const EVALUATION_DEADLINE: Duration = Duration::from_secs(45);
-
-/// IR nodes the program-size proof builds.
-const MILLION_NODES: usize = 1_000_000;
-
 /// Bytes the oracle allocates per IR node, measured.
 ///
-/// 887.3 bytes per node, as the difference between a 20,001-node and an
+/// 220.9 bytes per node, as the difference between a 20,001-node and an
 /// 80,001-node evaluation divided by the 60,000-node delta, under the
-/// unoptimized test profile. The figure is stable across that span because
+/// test profile. The figure is stable across that span because
 /// fixed per-evaluation setup cancels in the difference.
-const MEASURED_BYTES_PER_NODE: f64 = 887.3;
+///
+/// It stood at 887.3 while an evaluation fingerprinted its program twice:
+/// once to have a name ready for a refusal that almost never comes, and once
+/// to fill a certificate field that a caller reading output bytes discards. A
+/// fingerprint is the hash of the program's canonical wire encoding, so each
+/// one serialized every node. Both are gone from the output path, and what
+/// remains is the admission pass.
+const MEASURED_BYTES_PER_NODE: f64 = 220.9;
 
 /// Bytes per IR node the oracle may allocate.
 ///
 /// [`MEASURED_BYTES_PER_NODE`] plus a third, which absorbs allocator size-class
 /// rounding and the growth steps of the interpreter's own vectors without
 /// admitting a per-node scratch buffer.
-const BYTES_PER_NODE_CEILING: f64 = 1200.0;
+const BYTES_PER_NODE_CEILING: f64 = 295.0;
 
 /// Extent of each side of the square tile the sharing bound reads.
 const TILE_EXTENT: u32 = 64;
@@ -96,7 +89,7 @@ const TILE_ELEMENTS: u32 = TILE_EXTENT * TILE_EXTENT;
 /// A tile local holds its elements in shared storage, so reading it back costs
 /// a refcount plus whatever the reading statement allocates for itself, and
 /// nothing that scales with the tile. Measured at 957 bytes under the
-/// unoptimized test profile, for the store's own coordinate and expression
+/// test profile, for the store's own coordinate and expression
 /// work; the ceiling stands at twice that, and fifty times below the 98,304
 /// bytes a copy of the tile's elements costs, which is what the bound refuses.
 const BYTES_PER_TILE_READ_CEILING: usize = 2000;
@@ -106,39 +99,6 @@ const BYTES_PER_TILE_READ_CEILING: usize = 2000;
 /// Reported alongside a failure so the number the ceiling refuses is visible
 /// next to the number that was measured.
 const TILE_COPY_BYTES: usize = TILE_ELEMENTS as usize * size_of::<vyre_reference::value::Value>();
-
-/// What one bounded evaluation ended as.
-///
-/// Reduced to what the bound contract states, and to types that cross a thread
-/// boundary: the evaluation produced outputs, or it refused with a class and a
-/// message.
-#[derive(Debug)]
-enum Verdict {
-    /// The evaluation produced this many output buffers.
-    Outputs(usize),
-    /// The evaluation refused with this class and message.
-    Refused(ReferenceErrorClass, String),
-}
-
-/// IR nodes reachable from `nodes`, counted by walking the built program.
-///
-/// The generator's loop bound states what it intended to build. This states
-/// what it built, including whatever `Program::wrapped` adds around the body.
-fn count_nodes(nodes: &[Node]) -> usize {
-    let mut pending: Vec<&[Node]> = vec![nodes];
-    let mut total = 0usize;
-    while let Some(body) = pending.pop() {
-        total += body.len();
-        for node in body {
-            for child in child_bodies(node) {
-                if !child.is_empty() {
-                    pending.push(child);
-                }
-            }
-        }
-    }
-    total
-}
 
 /// Frame depth a lane reaches at the deepest point of `nodes`.
 ///
@@ -161,47 +121,6 @@ fn static_frame_depth(nodes: &[Node]) -> usize {
         .map(static_frame_depth)
         .max()
         .unwrap_or(0)
-}
-
-/// A program whose entry body is `statements` unnested stores.
-fn flat_chain(statements: usize) -> Program {
-    Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        store_chain(statements),
-    )
-}
-
-/// A program whose `statements` stores sit inside one loop of `trips` trips.
-///
-/// The node count is the same as [`flat_chain`], and the work the program
-/// declares is `trips` times larger. That separates the two bounds: the size
-/// ceiling refuses this program before anything runs, and without that ceiling
-/// the declared work is what the run would have to execute.
-fn looped_chain(statements: usize, trips: u32) -> Program {
-    Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![Node::loop_(
-            "outer",
-            Expr::u32(0),
-            Expr::u32(trips),
-            store_chain(statements),
-        )],
-    )
-}
-
-/// `statements` stores into the single-element `out` buffer.
-fn store_chain(statements: usize) -> Vec<Node> {
-    (0..statements)
-        .map(|index| {
-            Node::store(
-                "out",
-                Expr::u32(0),
-                Expr::u32(u32::try_from(index % 1000).unwrap_or(0)),
-            )
-        })
-        .collect()
 }
 
 /// A program whose single store sits under `depth` nested blocks.
@@ -298,73 +217,6 @@ fn one_invocation<'a>(program: &'a Program, inputs: &'a [Value]) -> ReferenceReq
         .with_workload_envelope(WorkloadEnvelope::for_program(program).with_grid([1, 1, 1]))
 }
 
-/// Evaluate `program` under `budget` on its own thread and refuse to wait past
-/// [`EVALUATION_DEADLINE`].
-///
-/// The deadline is the point of the call. A bound that stops being enforced
-/// turns the run into a stalled suite with no failure text, so the evaluation
-/// runs where the assertion can outlive it and the timeout is reported as the
-/// termination failure it is.
-///
-/// # Panics
-/// Panics when the evaluation has not terminated within the deadline, and
-/// resumes the evaluation's own panic when it had one.
-fn verdict_within_deadline(program: Program, budget: ReferenceBudget, label: &str) -> Verdict {
-    let (sender, receiver) = channel();
-    let started = Instant::now();
-    let worker = thread::Builder::new()
-        .name(format!("oracle-bounds-{label}"))
-        .spawn(move || {
-            let verdict = match ReferenceRequest::new(&program, &[], budget).outputs() {
-                Ok(outputs) => Verdict::Outputs(outputs.len()),
-                Err(error) => Verdict::Refused(error.error_class(), error.message().to_string()),
-            };
-            drop(sender.send(verdict));
-        })
-        .expect("spawning the evaluation thread");
-    match receiver.recv_timeout(EVALUATION_DEADLINE) {
-        Ok(verdict) => {
-            let elapsed = started.elapsed();
-            worker.join().expect("joining the evaluation thread");
-            assert!(
-                elapsed <= EVALUATION_DEADLINE,
-                "the {label} evaluation took {elapsed:?}, past the {EVALUATION_DEADLINE:?} \
-                 ceiling this test states"
-            );
-            verdict
-        }
-        Err(RecvTimeoutError::Timeout) => panic!(
-            "the {label} evaluation had not terminated {EVALUATION_DEADLINE:?} after it started. \
-             The oracle bounds a program by its node count, its declared work, its allocation, \
-             and its frame depth; a run that passes this deadline has lost one of them and is \
-             unbounded rather than slow."
-        ),
-        Err(RecvTimeoutError::Disconnected) => {
-            let panic = worker
-                .join()
-                .expect_err("the evaluation thread dropped its sender without panicking");
-            std::panic::resume_unwind(panic)
-        }
-    }
-}
-
-/// Assert that `verdict` is one of the only two outcomes a bounded evaluation
-/// may end in.
-fn assert_bounded_outcome(verdict: &Verdict, label: &str) {
-    match verdict {
-        Verdict::Outputs(count) => assert_eq!(
-            *count, 1,
-            "the {label} program declares one output buffer and evaluated to {count}"
-        ),
-        Verdict::Refused(ReferenceErrorClass::BudgetExhaustion, _) => {}
-        Verdict::Refused(class, message) => panic!(
-            "the {label} evaluation refused with class {class:?}, not `BudgetExhaustion`. A \
-             program refused for its size crossed a resource ceiling, and any other class tells \
-             a caller something else went wrong. Message: {message}"
-        ),
-    }
-}
-
 /// A program with more than a million IR nodes ends in outputs or in a
 /// `BudgetExhaustion` refusal, within a stated wall-clock ceiling.
 ///
@@ -404,12 +256,13 @@ fn a_million_node_program_ends_in_a_bounded_refusal() {
             "the {label} program walks to {nodes} nodes, under the {MILLION_NODES} this proof \
              requires. Fix: build the program the generator claims to build."
         );
-        let verdict = verdict_within_deadline(
+        let run = run_within_deadline(
             program,
             ReferenceBudget::with_work_ceiling(64_000_000),
             label,
         );
-        assert_bounded_outcome(&verdict, label);
+        println!("{label} million-node refusal: {:?}", run.elapsed);
+        assert_bounded_outcome(&run.verdict, label);
     }
 }
 
@@ -463,6 +316,11 @@ fn the_oracle_allocates_under_a_measured_ceiling_per_ir_node() {
         .checked_sub(small_change.bytes_allocated)
         .expect("the larger program must allocate at least as much as the smaller one");
     let per_node = byte_delta as f64 / node_delta as f64;
+    println!(
+        "per IR node: {per_node:.1} bytes across {node_delta} nodes ({} bytes for \
+         {small_nodes}, {} bytes for {large_nodes})",
+        small_change.bytes_allocated, large_change.bytes_allocated
+    );
 
     assert!(
         per_node < BYTES_PER_NODE_CEILING,

@@ -160,6 +160,15 @@ pub struct ValidationOptions<'a> {
     pub backend_capabilities: Option<BackendCapabilities>,
     /// Allow nested-scope shadowing explicitly for this validation run.
     pub allow_shadowing: bool,
+    /// Statement-node ceiling this run admits, or `None` for
+    /// [`DEFAULT_MAX_NODE_COUNT`](crate::validate::DEFAULT_MAX_NODE_COUNT).
+    ///
+    /// The ceiling exists so a program larger than any fused bundle a backend
+    /// compiles is rejected before lowering. A host evaluator that materializes
+    /// the program itself, rather than handing it to a driver, is bounded by
+    /// its own memory and work ceilings instead, so it states a larger one
+    /// here. Raising it is explicit per pass: the default is unchanged.
+    pub max_node_count: Option<usize>,
 }
 
 impl<'a> ValidationOptions<'a> {
@@ -193,6 +202,28 @@ impl<'a> ValidationOptions<'a> {
     pub fn with_shadowing(mut self, allow_shadowing: bool) -> Self {
         self.allow_shadowing = allow_shadowing;
         self
+    }
+
+    /// Admit `max_node_count` statement nodes in this validation pass.
+    ///
+    /// A caller that bounds a program by its own memory and work ceilings
+    /// states the ceiling it can carry. Every pass that states nothing keeps
+    /// [`DEFAULT_MAX_NODE_COUNT`](crate::validate::DEFAULT_MAX_NODE_COUNT).
+    #[must_use]
+    #[inline]
+    pub const fn with_max_node_count(mut self, max_node_count: usize) -> Self {
+        self.max_node_count = Some(max_node_count);
+        self
+    }
+
+    /// Statement nodes this validation pass admits.
+    #[must_use]
+    #[inline]
+    pub const fn node_count_ceiling(&self) -> usize {
+        match self.max_node_count {
+            Some(ceiling) => ceiling,
+            None => super::DEFAULT_MAX_NODE_COUNT,
+        }
     }
 
     /// Return the backend name carried by this configuration.

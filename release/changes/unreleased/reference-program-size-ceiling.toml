@@ -1,0 +1,2 @@
+category = "Added"
+text = "`ReferenceBudget::max_program_nodes`, `ReferenceBudget::DEFAULT_MAX_PROGRAM_NODES` and `ReferenceBudget::with_max_program_nodes` bound the IR statement nodes the reference oracle admits, and `Value::shares_payload_with` reports whether two values share one reference-counted payload."

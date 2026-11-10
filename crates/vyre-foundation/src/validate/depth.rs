@@ -26,17 +26,44 @@ pub const DEFAULT_MAX_NODE_COUNT: usize = 100_000;
 pub const DEFAULT_MAX_EXPR_DEPTH: usize = 128;
 
 /// Mutable state used while checking program size and nesting limits.
-#[derive(Debug, Default)]
+///
+/// `max_node_count` is the ceiling this state enforces.
+/// [`LimitState::default`] sets it to [`DEFAULT_MAX_NODE_COUNT`], so a
+/// validation pass that states nothing keeps the standard ceiling.
+/// [`LimitState::with_max_node_count`] raises or lowers it for one pass.
+#[derive(Debug)]
 pub struct LimitState {
     /// Number of statement nodes visited so far.
     pub node_count: usize,
+    /// Statement nodes this pass admits.
+    pub max_node_count: usize,
     /// Whether the nesting depth error has already been reported.
     pub nesting_reported: bool,
     /// Whether the node count error has already been reported.
     pub node_count_reported: bool,
 }
 
-/// Increment `limits` and emit errors if depth or node count exceeds defaults.
+impl Default for LimitState {
+    fn default() -> Self {
+        Self::with_max_node_count(DEFAULT_MAX_NODE_COUNT)
+    }
+}
+
+impl LimitState {
+    /// Track limits against an explicit statement-node ceiling.
+    #[must_use]
+    pub const fn with_max_node_count(max_node_count: usize) -> Self {
+        Self {
+            node_count: 0,
+            max_node_count,
+            nesting_reported: false,
+            node_count_reported: false,
+        }
+    }
+}
+
+/// Increment `limits` and emit errors if depth or node count exceeds the
+/// ceilings `limits` carries.
 #[inline]
 pub(crate) fn check_limits(
     limits: &mut LimitState,
@@ -44,13 +71,13 @@ pub(crate) fn check_limits(
     errors: &mut Vec<ValidationError>,
 ) {
     limits.node_count = limits.node_count.saturating_add(1);
-    if limits.node_count > DEFAULT_MAX_NODE_COUNT && !limits.node_count_reported {
+    if limits.node_count > limits.max_node_count && !limits.node_count_reported {
         limits.node_count_reported = true;
         errors.push(err(
             "V019",
             ValidationPhase::Limits,
             ValidationLocation::Program,
-            format!("program node count exceeds limit {DEFAULT_MAX_NODE_COUNT}"),
+            format!("program node count exceeds limit {}", limits.max_node_count),
             "split the program into smaller kernels or run an optimization pass before lowering."
                 .to_string(),
         ));

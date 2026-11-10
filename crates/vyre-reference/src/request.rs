@@ -51,6 +51,16 @@ pub struct ReferenceBudget {
     pub max_memory_bytes: usize,
     /// Maximum block, loop, and call frame depth one lane may reach.
     pub max_recursion_depth: usize,
+    /// Maximum IR statement nodes the submitted program may carry.
+    ///
+    /// `vyre_foundation` bounds a program by what a backend compiles, because
+    /// a fused bundle past that ceiling is rejected before lowering. The
+    /// oracle does not lower: it materializes the program on the host and
+    /// walks it, so what bounds it is `max_memory_bytes` and `work_ceiling`.
+    /// The default is the foundation ceiling, so a program larger than a
+    /// compilable bundle still refuses unless a caller states a larger one
+    /// here.
+    pub max_program_nodes: usize,
 }
 
 impl ReferenceBudget {
@@ -69,6 +79,9 @@ impl ReferenceBudget {
     /// counts, so this stands far above any nesting a compiler emits and still
     /// ends a self-referential region before the host stack does.
     pub const DEFAULT_MAX_RECURSION_DEPTH: usize = 1024;
+    /// Standard program-size ceiling, taken from the foundation validator so
+    /// the two agree by construction.
+    pub const DEFAULT_MAX_PROGRAM_NODES: usize = vyre_foundation::validate::DEFAULT_MAX_NODE_COUNT;
 
     /// Construct an explicit reference execution budget whose ceiling rises to
     /// the work the program declares.
@@ -83,6 +96,7 @@ impl ReferenceBudget {
             admit_declared_work: true,
             max_memory_bytes,
             max_recursion_depth,
+            max_program_nodes: Self::DEFAULT_MAX_PROGRAM_NODES,
         }
     }
 
@@ -107,6 +121,7 @@ impl ReferenceBudget {
             admit_declared_work: false,
             max_memory_bytes: Self::DEFAULT_MAX_MEMORY_BYTES,
             max_recursion_depth: Self::DEFAULT_MAX_RECURSION_DEPTH,
+            max_program_nodes: Self::DEFAULT_MAX_PROGRAM_NODES,
         }
     }
 
@@ -139,6 +154,28 @@ impl ReferenceBudget {
             Self::DEFAULT_MAX_MEMORY_BYTES,
             depth,
         )
+    }
+
+    /// The standard budget with an explicit program-size ceiling.
+    ///
+    /// Compose it with another ceiling through struct update syntax, which
+    /// keeps both explicit:
+    ///
+    /// ```
+    /// use vyre_reference::ReferenceBudget;
+    ///
+    /// let budget = ReferenceBudget {
+    ///     max_program_nodes: 2_000_000,
+    ///     ..ReferenceBudget::with_work_ceiling(64_000_000)
+    /// };
+    /// assert_eq!(budget.max_program_nodes, 2_000_000);
+    /// ```
+    #[must_use]
+    pub const fn with_max_program_nodes(nodes: usize) -> Self {
+        Self {
+            max_program_nodes: nodes,
+            ..Self::standard()
+        }
     }
 }
 
@@ -354,7 +391,7 @@ impl<'a> ReferenceRequest<'a> {
     /// semantics, nontermination, or budget exhaustion.
     pub fn execute(&self) -> Result<StrictExecutionResult, ReferenceError> {
         self.verify_numerical_contract()?;
-        let (outputs, steps) = crate::execution::run_with_request(self)?;
+        let (outputs, steps) = self.run_strict()?;
         let fingerprint =
             self.program
                 .fingerprint()
@@ -380,12 +417,17 @@ impl<'a> ReferenceRequest<'a> {
     /// Execute this request strictly and return only the output values.
     ///
     /// The projection a caller comparing bytes against a device reads. It runs
-    /// exactly [`execute`](Self::execute) and drops the certificate.
+    /// the evaluation [`execute`](Self::execute) runs and builds no
+    /// certificate. The certificate carries the program's fingerprint, which
+    /// is the hash of its canonical wire encoding, so producing one serializes
+    /// every node of the program. A caller comparing output bytes pays that
+    /// for nothing.
     ///
     /// # Errors
     /// Same as [`execute`](Self::execute).
     pub fn outputs(&self) -> Result<Vec<Value>, ReferenceError> {
-        self.execute().map(|result| result.outputs)
+        self.verify_numerical_contract()?;
+        self.run_strict().map(|(outputs, _)| outputs)
     }
 
     /// Execute this request strictly and return the outputs with the step count
@@ -394,8 +436,20 @@ impl<'a> ReferenceRequest<'a> {
     /// # Errors
     /// Same as [`execute`](Self::execute).
     pub fn outputs_and_steps(&self) -> Result<(Vec<Value>, u64), ReferenceError> {
-        self.execute()
-            .map(|result| (result.outputs, result.steps_executed))
+        self.verify_numerical_contract()?;
+        self.run_strict()
+    }
+
+    /// One strict evaluation, with a step-ceiling refusal named after the
+    /// program that reached it.
+    ///
+    /// Naming is here rather than where the ceiling is crossed because a
+    /// program that declares no entry operation id is named by its fingerprint,
+    /// and the interpreter would have to produce one before every run to have
+    /// it ready at the refusal.
+    fn run_strict(&self) -> Result<(Vec<Value>, u64), ReferenceError> {
+        crate::execution::run_with_request(self)
+            .map_err(|error| crate::execution::step_budget::name_refusal(self.program, error))
     }
 
     /// Execute in diagnostic permissive mode.
@@ -410,7 +464,8 @@ impl<'a> ReferenceRequest<'a> {
     /// not absorb, which is every class except out-of-bounds access.
     pub fn execute_permissive(&self) -> Result<DiagnosticPermissiveReport, ReferenceError> {
         self.verify_numerical_contract()?;
-        let (outputs, steps, oob) = crate::execution::run_permissive_with_request(self)?;
+        let (outputs, steps, oob) = crate::execution::run_permissive_with_request(self)
+            .map_err(|error| crate::execution::step_budget::name_refusal(self.program, error))?;
         let mut anomalies = Vec::new();
         if oob.total() > 0 {
             anomalies.push(format!(
@@ -449,6 +504,7 @@ impl<'a> ReferenceRequest<'a> {
     pub fn explore_races(&self) -> Result<RaceExplorationReport, ReferenceError> {
         self.verify_numerical_contract()?;
         crate::execution::explore_races_with_request(self)
+            .map_err(|error| crate::execution::step_budget::name_refusal(self.program, error))
     }
 
     /// Number of step orders [`explore_races`](Self::explore_races) will run

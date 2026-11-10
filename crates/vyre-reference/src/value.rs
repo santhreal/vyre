@@ -1,4 +1,12 @@
 //! Runtime values accepted and returned by the core reference interpreter.
+//!
+//! Every payload a value carries is immutable and reference counted, so
+//! sharing a value costs one refcount bump and no payload copy. The evaluator
+//! binds the same value into a nested scope, hands it to a peer lane as part
+//! of a subgroup snapshot, and reads it back out of a local, all without
+//! duplicating the bytes behind it.
+//! [`Value::shares_payload_with`](crate::value::Value::shares_payload_with) reports
+//! whether two values stand on one payload.
 
 use std::sync::Arc;
 
@@ -61,6 +69,34 @@ impl Value {
     #[must_use]
     pub fn array(elements: impl Into<Arc<[Self]>>) -> Self {
         Self::Array(elements.into())
+    }
+
+    /// True when `self` and `other` stand on one reference-counted payload.
+    ///
+    /// A share of [`Value::Bytes`] or [`Value::Array`] is a refcount bump, so
+    /// the two values that come out of it point at the same allocation and
+    /// this reports `true`. A value rebuilt from the same elements is a
+    /// second allocation and reports `false`; equality cannot tell a share
+    /// from a copy.
+    ///
+    /// A scalar carries no payload, so two scalars never share one and this
+    /// reports `false` for every pair of them, including a value and itself.
+    #[must_use]
+    pub fn shares_payload_with(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Bytes(left), Self::Bytes(right)) => Arc::ptr_eq(left, right),
+            (Self::Array(left), Self::Array(right)) => Arc::ptr_eq(left, right),
+            (
+                Self::U32(_)
+                | Self::I32(_)
+                | Self::U64(_)
+                | Self::Bool(_)
+                | Self::Bytes(_)
+                | Self::Float(_)
+                | Self::Array(_),
+                _,
+            ) => false,
+        }
     }
 
     /// Interpret the value using the IR truth convention.

@@ -206,6 +206,7 @@ fn val_007_subgroup_backend_capabilities_resolution() {
         backend: Some(&gpu),
         backend_capabilities: None,
         allow_shadowing: false,
+        max_node_count: None,
     };
     let report = validate_with_options(&prog, opts);
     assert!(
@@ -220,6 +221,7 @@ fn val_007_subgroup_backend_capabilities_resolution() {
         backend: Some(&non_gpu),
         backend_capabilities: None,
         allow_shadowing: false,
+        max_node_count: None,
     };
     let report = validate_with_options(&prog, opts);
     assert!(

@@ -116,6 +116,7 @@ impl core::default::Default for vyre_foundation::security::CompilationQuota
 impl core::default::Default for vyre_foundation::serial::wire::decode::ScanDatabaseDecodeBudget
 impl core::default::Default for vyre_foundation::substrate::MemoryAccounting
 impl core::default::Default for vyre_foundation::substrate::QueryEngine
+impl core::default::Default for vyre_foundation::validate::LimitState
 impl core::default::Default for vyre_foundation::verifier::ResourceBounds
 impl core::error::Error for vyre_foundation::GeometryConstraintConflict
 impl core::error::Error for vyre_foundation::execution_plan::fusion::FusionError
@@ -621,6 +622,7 @@ impl vyre_foundation::types::TensorType
 impl vyre_foundation::types::VariantType
 impl vyre_foundation::types::VectorType
 impl vyre_foundation::validate::BackendCapabilities
+impl vyre_foundation::validate::LimitState
 impl vyre_foundation::validate::ValidationCode
 impl vyre_foundation::validate::ValidationError
 impl vyre_foundation::validate::ValidationPhase
@@ -1029,9 +1031,12 @@ pub const fn vyre_foundation::types::VectorType::vec16(element: vyre_foundation:
 pub const fn vyre_foundation::types::VectorType::vec2(element: vyre_foundation::types::ScalarType) -> Self
 pub const fn vyre_foundation::types::VectorType::vec4(element: vyre_foundation::types::ScalarType) -> Self
 pub const fn vyre_foundation::types::VectorType::vec8(element: vyre_foundation::types::ScalarType) -> Self
+pub const fn vyre_foundation::validate::LimitState::with_max_node_count(max_node_count: usize) -> Self
 pub const fn vyre_foundation::validate::ValidationError::location(&self) -> &vyre_foundation::validate::ValidationLocation
 pub const fn vyre_foundation::validate::ValidationError::phase(&self) -> vyre_foundation::validate::ValidationPhase
 pub const fn vyre_foundation::validate::ValidationError::retry(&self) -> vyre_foundation::diagnostics::RetryClass
+pub const fn vyre_foundation::validate::ValidationOptions<'a>::node_count_ceiling(&self) -> usize
+pub const fn vyre_foundation::validate::ValidationOptions<'a>::with_max_node_count(self, max_node_count: usize) -> Self
 pub const fn vyre_foundation::validate::ValidationPhase::as_str(self) -> &'static str
 pub const fn vyre_foundation::validate::ValidationPhase::cause_kind(self) -> vyre_foundation::diagnostics::CauseKind
 pub const fn vyre_foundation::verifier::InvariantCategory::all() -> &'static [vyre_foundation::verifier::InvariantCategory]
@@ -3910,6 +3915,7 @@ pub fn vyre_foundation::validate::BackendValidationCapabilities::supports_specia
 pub fn vyre_foundation::validate::BackendValidationCapabilities::supports_subgroup_ops(&self) -> bool
 pub fn vyre_foundation::validate::BackendValidationCapabilities::supports_tensor_cores(&self) -> bool
 pub fn vyre_foundation::validate::BackendValidationCapabilities::validation_subgroup_size(&self) -> u32
+pub fn vyre_foundation::validate::LimitState::default() -> Self
 pub fn vyre_foundation::validate::ValidationCode::as_str(&self) -> &str
 pub fn vyre_foundation::validate::ValidationCode::corrective_action(&self) -> core::option::Option<&'static str>
 pub fn vyre_foundation::validate::ValidationCode::deserialize<D>(deserializer: D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error> where D: serde_core::de::Deserializer<'de>
@@ -8544,6 +8550,7 @@ pub vyre_foundation::validate::BackendCapabilities::supports_indirect_dispatch: 
 pub vyre_foundation::validate::BackendCapabilities::supports_specialization_constants: bool
 pub vyre_foundation::validate::BackendCapabilities::supports_subgroup_ops: bool
 pub vyre_foundation::validate::BackendCapabilities::supports_tensor_cores: bool
+pub vyre_foundation::validate::LimitState::max_node_count: usize
 pub vyre_foundation::validate::LimitState::nesting_reported: bool
 pub vyre_foundation::validate::LimitState::node_count: usize
 pub vyre_foundation::validate::LimitState::node_count_reported: bool
@@ -8563,6 +8570,7 @@ pub vyre_foundation::validate::ValidationLocation::WorkgroupAxis(u8)
 pub vyre_foundation::validate::ValidationOptions::allow_shadowing: bool
 pub vyre_foundation::validate::ValidationOptions::backend: core::option::Option<&'a dyn vyre_foundation::validate::BackendValidationCapabilities>
 pub vyre_foundation::validate::ValidationOptions::backend_capabilities: core::option::Option<vyre_foundation::validate::BackendCapabilities>
+pub vyre_foundation::validate::ValidationOptions::max_node_count: core::option::Option<usize>
 pub vyre_foundation::validate::ValidationPhase::Capability
 pub vyre_foundation::validate::ValidationPhase::Composition
 pub vyre_foundation::validate::ValidationPhase::Expression
