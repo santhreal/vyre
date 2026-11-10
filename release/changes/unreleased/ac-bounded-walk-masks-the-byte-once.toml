@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The bounded Aho-Corasick walk masks each input byte with `& 0xFF` in place of a second fold against the table extent, which lowers `scan.ac.irregular_count.4m` on wgpu from 187.3 us to 178.2 us median active time on an RTX 4090 and leaves CUDA unchanged."

@@ -13,7 +13,7 @@ use vyre_libs_builder::builder::state_machine::TableStateMachineComposer;
 use crate::pattern::builders::load_packed_byte;
 
 /// Advance `state` one byte through the dense `state * 256 + byte` transition
-/// row, with both operands folded inside the table.
+/// row, with both operands held inside the table.
 ///
 /// THE Aho-Corasick transition step. The bounded suffix replay, the anchored
 /// forward walk, the per-region admission walk and the unbounded classic walk
@@ -25,13 +25,24 @@ use crate::pattern::builders::load_packed_byte;
 /// The state this reads is the previous step's table entry, and nothing
 /// constrains the contents of a read-only buffer, so `state * 256 + byte`
 /// indexes past the table on the step after an entry falls outside the state
-/// set. The state extent is the table's own run-time length over the row
-/// stride, which is identity for a table whose entries are states and covers
-/// every caller without a signature change.
+/// set. The state is folded against the table's own run-time length over the
+/// row stride, which is identity for a table whose entries are states and
+/// covers every caller without a signature change.
+///
+/// The byte takes the composer's `& 0xFF` mask rather than a second fold. Both
+/// keep the read inside the table; the mask is identity for the packed path,
+/// whose loader already masks, and is one instruction where the fold is a
+/// compare and a select on the innermost loop of every AC scan.
 pub(in crate::pattern) fn ac_advance_state_node(transitions: &str, byte: Expr) -> Node {
     let composer = TableStateMachineComposer::new(transitions);
     let state_extent = Expr::div(Expr::buf_len(transitions), Expr::u32(composer.stride));
-    composer.bounded_advance_node(state_extent, byte)
+    Node::assign(
+        composer.state_var,
+        composer.safe_byte_transition_expr(
+            bounded_index(Expr::var(composer.state_var), state_extent),
+            byte,
+        ),
+    )
 }
 
 /// One byte of the walk over a PACKED haystack: unpack the byte at `idx` from
