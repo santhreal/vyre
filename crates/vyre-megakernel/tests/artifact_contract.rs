@@ -1147,12 +1147,10 @@ fn entry_abi_inputs_and_outputs_preserve_program_buffer_order_despite_port_reord
                     contract: contract(BufferAccess::ReadOnly, ValueLifetime::Invocation),
                 },
             ],
-            vec![GraphOutput {
-                buffer: "out".into(),
-                name: "res".into(),
-                contract: contract(BufferAccess::WriteOnly, ValueLifetime::Output),
-                retained_successor_of: None,
-            }],
+            vec![graph_output(
+                "out",
+                contract(BufferAccess::WriteOnly, ValueLifetime::Output),
+            )],
         )
         .unwrap();
 
