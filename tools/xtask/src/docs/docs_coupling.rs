@@ -505,7 +505,7 @@ fn changed_from_name_status(listing: &str) -> BTreeSet<String> {
             if status == "R100" {
                 return None;
             }
-            fields.last().map(str::to_string)
+            fields.next_back().map(str::to_string)
         })
         .collect()
 }
