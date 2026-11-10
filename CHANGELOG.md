@@ -5320,6 +5320,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
 - The 186 `docs/optimization` ledgers that described subsystems vyre does not
   ship, and the 75 tests that only checked those files for strings, are
   deleted; the ledgers that code reads remain.
+- `vyre-bench` no longer writes the `.vyre_bench.db` SQLite run log, which
+  nothing read, and no longer depends on `rusqlite` and its bundled SQLite
+  (RUSTSEC-2026-0459).
 - The unpublished `vyre-lints` crate is deleted. The `gpu-loudness`,
   `host-oracle-elimination`, `hygiene-matrix` and `platform-consumer-docs`
   gates enforce its fallback, skip-guard and consumer-name rules; its raw-IR

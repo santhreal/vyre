@@ -65,11 +65,6 @@ pub fn run_suite(registry: &BenchRegistry, suite: &SuiteKind, format: &str) {
     let config = RunConfig::default();
     let report = execute_suite(registry, suite, &config);
 
-    // Write longitudinal tracking database
-    if let Err(error) = crate::report::write_sqlite_report(&report) {
-        eprintln!("Warning: failed to write longitudinal sqlite report: {error}");
-    }
-
     // Write chrome trace for roofline analysis
     if let Err(error) = crate::report::write_chrome_trace(&report) {
         eprintln!("Warning: failed to write chrome trace report: {error}");

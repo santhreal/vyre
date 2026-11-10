@@ -66,7 +66,6 @@ wide = { workspace = true }
 anyhow = { workspace = true }
 rand.workspace = true
 env_logger = { workspace = true, optional = true }
-rusqlite = { workspace = true }
 core_affinity = { workspace = true }
 # The AES-CTR CPU baseline names openssl as its comparison crate, so the
 # measured library must be the same build on every host that records a result.
