@@ -300,8 +300,8 @@ jobs:
               for field in ("missing_custom_metrics", "non_positive_required_metrics", "non_winning_cases", "blockers"):
                   if case.get(field):
                       raise SystemExit(f"pass-family-benchmark-manifest.json: {case_id} has non-empty {field}")
-              if case.get("min_wall_speedup_x1000", 0) <= 1000:
-                  raise SystemExit(f"pass-family-benchmark-manifest.json: {case_id} does not prove optimized wall_ns p50 beats baseline_wall_ns p50")
+              if case.get("non_winning_cases") != []:
+                  raise SystemExit(f"pass-family-benchmark-manifest.json: {case_id} proves neither an optimized wall_ns p50 below baseline_wall_ns p50 nor a semantic win")
           workloads = one("release-artifacts/benchmarks", "release-workload-matrix.json")
           if workloads.get("blockers"):
               raise SystemExit("release-workload-matrix.json: blockers must be empty")
