@@ -7806,6 +7806,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   `assert_oob_clean_under_over_provisioned_inputs` runs every registered
   composition with inputs longer than its declared outputs and fails on a store
   outside a declared buffer.
+- `xtask configuration-model` writes build-script paths with `/` on every host,
+  so the committed configuration space matches the tree on Windows.
 - The conformance certificate's signable body is defined once, in
   `vyre-conform`'s `certificate_wire`. The prove, merge and test paths each
   restated the serialized layout, so adding the unavailable-backend roster to

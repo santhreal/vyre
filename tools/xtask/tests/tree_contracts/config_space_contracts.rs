@@ -89,6 +89,42 @@ fn the_workspace_configuration_space_has_an_assignment() {
     }
 }
 
+/// WHY: `docs/generated/configuration-space.toml` is committed once and
+/// compared on every host, so a build-script path must be spelled the same on
+/// each. A path rendered with the host separator read `crates/x\build.rs` on
+/// Windows and the artifact disagreed with the tree there. Every audit path
+/// must be its package's manifest directory joined with `/build.rs`. On a host
+/// whose separator is `/` this case cannot tell the spellings apart; the
+/// Windows leg of CI runs it where they differ.
+#[test]
+fn build_script_audit_paths_are_slash_separated_manifest_siblings() {
+    let root = checkout_root();
+    let model = model_of(&root);
+
+    let expected: BTreeSet<String> = model
+        .crates
+        .iter()
+        .filter(|entry| entry.has_build_script)
+        .map(|entry| {
+            entry
+                .manifest_path
+                .strip_suffix("Cargo.toml")
+                .map(|directory| format!("{directory}build.rs"))
+                .unwrap_or_else(|| panic!("`{}` names a Cargo.toml", entry.manifest_path))
+        })
+        .collect();
+    let audited: BTreeSet<String> = model
+        .build_script_audits
+        .iter()
+        .map(|audit| audit.path.clone())
+        .collect();
+    assert!(
+        !expected.is_empty(),
+        "the workspace has build scripts to audit"
+    );
+    assert_eq!(audited, expected);
+}
+
 /// WHY: the covering set is what a scheduler runs, so a package whose feature
 /// never gets a cell of its own is a feature only unification ever enables.
 /// Derived from the manifests at run time, so a new feature is covered or the

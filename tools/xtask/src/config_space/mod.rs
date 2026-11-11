@@ -86,7 +86,7 @@ pub struct ToolchainCell {
 /// Audit record for a package build script (`build.rs`).
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct BuildScriptAudit {
-    /// Path to build.rs relative to workspace root.
+    /// Path to build.rs relative to workspace root, `/`-separated on every host.
     pub path: String,
     /// Whether the script declares rerun-if-changed inputs.
     pub declares_rerun_inputs: bool,
@@ -294,7 +294,7 @@ impl ConfigurationModel {
         let directory = structure_gate::member_directory(root, &facade_roster.package);
         let relative = directory
             .strip_prefix(root)
-            .map(|path| path.display().to_string())
+            .map(|path| path.to_string_lossy().replace('\\', "/"))
             .unwrap_or_else(|_| facade_roster.package.clone());
         let path = format!("{relative}/Cargo.toml");
         let text = fs::read_to_string(root.join(&path))
@@ -654,8 +654,8 @@ pub fn audit_build_script(root: &Path, build_rs: &Path) -> BuildScriptAudit {
     let relative = build_rs
         .strip_prefix(root)
         .unwrap_or(build_rs)
-        .display()
-        .to_string();
+        .to_string_lossy()
+        .replace('\\', "/");
     let text = fs::read_to_string(build_rs).unwrap_or_default();
 
     let declares_rerun_inputs = text.contains("cargo:rerun-if-changed")
@@ -760,7 +760,7 @@ fn scan_workspace_cfgs(root: &Path, members: &[String], graph: &FeatureGraph) ->
             }
             let relative = path
                 .strip_prefix(root)
-                .map(|path| path.display().to_string())
+                .map(|path| path.to_string_lossy().replace('\\', "/"))
                 .unwrap_or_else(|_| path.display().to_string());
             let inside_submember = members.iter().any(|other| {
                 other != member && other.len() > member.len() && path.starts_with(root.join(other))
