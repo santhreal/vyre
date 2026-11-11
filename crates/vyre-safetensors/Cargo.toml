@@ -1,0 +1,35 @@
+[package]
+name = "vyre-safetensors"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Bounded safetensors metadata and shard identity adapter for Vyre"
+readme = "README.md"
+keywords = ["gpu", "safetensors", "checkpoint", "vyre"]
+categories = ["encoding", "parser-implementations"]
+documentation = "https://docs.rs/vyre-safetensors"
+
+[dependencies]
+blake3.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[package.metadata.vyre]
+publication_class = "stable-consumer-sdk"
+publication_contract = "consumer-seam:vyre-model-compiler"
+
+[lints]
+workspace = true
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

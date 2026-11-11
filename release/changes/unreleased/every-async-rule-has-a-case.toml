@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The async rule roster derives its covered set from the validation catalog and the suite sources at run time, which closed a gap where the empty-tag rule V128 had no test case in the tree."

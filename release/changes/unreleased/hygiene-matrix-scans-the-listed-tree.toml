@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`xtask hygiene-matrix` scans the files git lists, so a gitignored scratch file no longer changes the committed scanned-file count."

@@ -1,0 +1,2 @@
+category = "Added"
+text = "`FloatLoweringMode` states whether a target may fold `a * b + c` into one rounding, `DispatchConfig` carries it, every cache key that admits an emitted artifact mixes in `FLOAT_LOWERING_CONTRACT_VERSION` so a stale entry misses, and the WGSL emitter publishes each f32 product through an integer reinterpretation under the strict mode so no adjacent add can absorb it."

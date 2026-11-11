@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The expected_output fixture for vyre-libs::parsing::ast_shunting_yard_reduce declared the emitted node as [3, 10, 20, 0], but reduce_loaded_operator writes the u32::MAX sentinel into the node's source-token word because an internal node has no source token. Conform compares a recorded fixture against the interpreter instead of the interpreter against itself, so the hand-written word was the only side that was never executed and it held release-conformance red on cpu-ref."

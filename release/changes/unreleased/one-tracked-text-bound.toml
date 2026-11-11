@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Tooling reads every document, generated table and evidence artifact under one 16 MiB bound, and every Rust source and Cargo manifest under the 4 MiB source bound."

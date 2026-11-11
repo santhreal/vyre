@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The `application-runnable` gate stages every registered generic frontend dialect into one connected graph and compiles and lowers it through every registered production backend, so a route that stops at a builder, a proxy, an isolated kernel, or host-only evidence is refused."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-driver-spirv` reports the shared-memory budget and subgroup width of the Vulkan device it opened. The registration inherited the neutral profile defaults, so a plan was ranked against 32 KiB of scratch and no subgroup support on a device offering more of both."

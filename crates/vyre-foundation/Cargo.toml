@@ -1,0 +1,70 @@
+[package]
+name = "vyre-foundation"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Foundation layer: IR, type system, memory model, wire format. Zero application semantics. Part of the vyre GPU compiler."
+readme = "README.md"
+keywords = ["gpu", "ir", "compiler", "wgsl", "vyre"]
+categories = ["algorithms", "compilers", "hardware-support"]
+documentation = "https://docs.rs/vyre-foundation"
+exclude = ["**/proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[features]
+default = []
+serde = []
+
+[dependencies]
+dashmap = { workspace = true }
+vyre-spec.workspace = true
+vyre-macros.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+rustc-hash.workspace = true
+hashbrown.workspace = true
+smallvec.workspace = true
+blake3.workspace = true
+inventory.workspace = true
+imbl.workspace = true
+libm.workspace = true
+itoa.workspace = true
+arrayvec.workspace = true
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "extension-point:external_ir_extension"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+vyre-reference = { workspace = true }
+# Integration tests under tests/ use the `vyre` umbrella facade (vyre::ir::*)
+# as the public boundary they assert against. The `vyre` facade package
+# depends on vyre-foundation, so this is a dev-dependency CYCLE, which cargo
+# permits because dev-deps are excluded from the normal build graph.
+vyre = { workspace = true, default-features = false }
+proptest.workspace = true
+criterion.workspace = true
+tempfile.workspace = true
+vyre-test-support = { workspace = true, features = ["ir-fixtures", "spec-strategies"] }
+
+[[bench]]
+name = "optimizer_pipeline"
+harness = false
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

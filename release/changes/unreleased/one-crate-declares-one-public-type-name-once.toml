@@ -1,0 +1,2 @@
+category = "Added"
+text = "The crate-structure gate reports a crate that declares one public `struct`, `enum`, `union` or `trait` name in two of its modules. The name space is read from source on every run, so a concept that grows a second definition is reported without a rule edit."

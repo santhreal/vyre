@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The framing module doc in vyre-foundation named the envelope tag VIR0 in two places while the constant beside it is VYRE, so a reader inspecting a blob byte by byte compared against a tag no encoder has written."

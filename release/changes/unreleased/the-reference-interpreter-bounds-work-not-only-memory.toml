@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The reference interpreter charges one step per statement, loop iteration, and scheduler round against a work ceiling and refuses a run that exceeds it with the program name and the ceiling, so a program whose trip count comes from data terminates as a structured refusal instead of running until it finishes."

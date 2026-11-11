@@ -1,0 +1,2 @@
+category = "Removed"
+text = "Types that were published at both a crate root and a submodule are now reachable at one path, so an import names the single location that defines the type."

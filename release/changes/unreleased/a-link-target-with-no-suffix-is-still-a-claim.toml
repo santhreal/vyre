@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "docs-references reads every markdown link target as a path claim, so a target with no file suffix and a target naming a directory are resolved instead of skipped."

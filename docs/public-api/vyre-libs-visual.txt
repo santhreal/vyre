@@ -1,0 +1,90 @@
+impl core::convert::From<vyre_libs_visual::visual::GridShape> for vyre_libs_builder::builder::stencil::CellGridShape
+impl core::error::Error for vyre_libs_visual::visual::GaussianKernelError
+impl core::fmt::Display for vyre_libs_visual::visual::GaussianKernelError
+impl vyre_libs_visual::visual::GaussianBlurStages
+impl vyre_libs_visual::visual::GaussianKernel
+impl vyre_libs_visual::visual::GridShape
+pub const fn vyre_libs_visual::visual::GaussianBlurStages::stage_count(&self) -> usize
+pub const fn vyre_libs_visual::visual::GaussianKernel::radius(&self) -> u32
+pub const fn vyre_libs_visual::visual::GridShape::cell_count(&self) -> u32
+pub const fn vyre_libs_visual::visual::GridShape::height(&self) -> u32
+pub const fn vyre_libs_visual::visual::GridShape::pixel_count(&self) -> u32
+pub const fn vyre_libs_visual::visual::GridShape::width(&self) -> u32
+pub const vyre_libs_visual::visual::packed_rgba_map::OP_ID: &str
+pub enum vyre_libs_visual::visual::BlendMode
+pub fn vyre_libs_builder::builder::stencil::CellGridShape::from(shape: vyre_libs_visual::visual::GridShape) -> Self
+pub fn vyre_libs_visual::link_anchor()
+pub fn vyre_libs_visual::visual::GaussianBlurStages::programs(&self) -> [&vyre_foundation::ir_inner::model::program::definition::Program; 2]
+pub fn vyre_libs_visual::visual::GaussianKernel::new(radius: u32, sigma: f32) -> Self
+pub fn vyre_libs_visual::visual::GaussianKernel::weights(&self) -> &[u32]
+pub fn vyre_libs_visual::visual::GaussianKernelError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_visual::visual::alpha_over(fg: &str, bg: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::apply_clip_mask(input: &str, mask: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::apply_scissor_rect(input: &str, output: &str, width: u32, height: u32, min_x: u32, min_y: u32, max_x: u32, max_y: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::bilinear_resample_rgba(input: &str, in_w: u32, in_h: u32, output: &str, out_w: u32, out_h: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::box_shadow(output: &str, img_w: u32, img_h: u32, rect_x: u32, rect_y: u32, rect_w: u32, rect_h: u32, blur_radius: f32, color_rgba: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::cell_grid_fill(cells: &str, output: &str, shape: vyre_libs_visual::visual::GridShape) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::composite_blend(fg: &str, bg: &str, output: &str, count: u32, mode: vyre_libs_visual::visual::BlendMode) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::cull_boxes_2d(boxes: &str, count: u32, min_x: i32, min_y: i32, max_x: i32, max_y: i32, visible_mask: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::dirty_region_patch_direct(patch: &str, patch_w: u32, patch_h: u32, dest_x: u32, dest_y: u32, target: &str, target_w: u32, target_h: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::dirty_region_patch_rgba(atlas: &str, patch: &str, atlas_w: u32, atlas_h: u32, patch_w: u32, patch_h: u32, dest_x: u32, dest_y: u32, output: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::downsample_2x(input: &str, output: &str, width: u32, height: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::filter_chain(pixels: &str, count: u32, brightness: f32, contrast: f32, saturate: f32, invert: f32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::gaussian_blur_2pass(input: &str, output: &str, scratch: &str, width: u32, height: u32, radius: u32, sigma: f32) -> vyre_libs_visual::visual::GaussianBlurStages
+pub fn vyre_libs_visual::visual::gaussian_blur_2pass_with_kernel(input: &str, output: &str, scratch: &str, width: u32, height: u32, kernel: &vyre_libs_visual::visual::GaussianKernel) -> vyre_libs_visual::visual::GaussianBlurStages
+pub fn vyre_libs_visual::visual::glass_blur_stage(input: &str, output: &str, scratch: &str, params: &vyre_libs_visual::visual::GlassParams) -> vyre_libs_visual::visual::GaussianBlurStages
+pub fn vyre_libs_visual::visual::glass_filter_stage(pixels: &str, params: &vyre_libs_visual::visual::GlassParams) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::glass_stages(input: &str, output: &str, scratch: &str, params: &vyre_libs_visual::visual::GlassParams) -> (vyre_libs_visual::visual::GaussianBlurStages, vyre_foundation::ir_inner::model::program::definition::Program)
+pub fn vyre_libs_visual::visual::glyph_grid_blend(glyphs: &str, fg: &str, bg: &str, atlas: &str, output: &str, shape: vyre_libs_visual::visual::GridShape, glyph_count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::grayscale_to_rgba(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::layout_prefix_scan_u32(sizes: &str, offsets: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::linear_gradient(output: &str, width: u32, height: u32, angle_deg: f32, stops: &[vyre_libs_visual::visual::ColorStop]) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::packed_rgba_map::packed_rgba_map(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::packed_rgba_map::packed_rgba_map_node(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_visual::visual::path_rasterize_segments(segments: &str, bg: &str, output: &str, width: u32, height: u32, segment_count: u32, stroke_radius: u32, stroke_color: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::premultiply_alpha(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::reduce_bounding_boxes_2d(boxes: &str, count: u32, output_bbox: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::rgba_to_grayscale(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::text_run_blend(glyphs: &str, glyph_count: u32, atlas: &str, atlas_w: u32, atlas_h: u32, bg: &str, output: &str, width: u32, height: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::try_linear_gradient(output: &str, width: u32, height: u32, angle_deg: f32, stops: &[vyre_libs_visual::visual::ColorStop]) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_visual::visual::unpremultiply_alpha(input: &str, output: &str, count: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_visual::visual::upsample_2x(input: &str, output: &str, width: u32, height: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub mod vyre_libs_visual
+pub mod vyre_libs_visual::visual
+pub mod vyre_libs_visual::visual::packed_rgba_map
+pub struct vyre_libs_visual::visual::ColorStop
+pub struct vyre_libs_visual::visual::GaussianBlurStages
+pub struct vyre_libs_visual::visual::GaussianKernel
+pub struct vyre_libs_visual::visual::GaussianKernelError
+pub struct vyre_libs_visual::visual::GlassParams
+pub struct vyre_libs_visual::visual::GridShape
+pub vyre_libs_visual::visual::BlendMode::Add = 11
+pub vyre_libs_visual::visual::BlendMode::DstAtop = 7
+pub vyre_libs_visual::visual::BlendMode::DstIn = 3
+pub vyre_libs_visual::visual::BlendMode::DstOut = 5
+pub vyre_libs_visual::visual::BlendMode::DstOver = 1
+pub vyre_libs_visual::visual::BlendMode::Multiply = 9
+pub vyre_libs_visual::visual::BlendMode::Screen = 10
+pub vyre_libs_visual::visual::BlendMode::SrcAtop = 6
+pub vyre_libs_visual::visual::BlendMode::SrcIn = 2
+pub vyre_libs_visual::visual::BlendMode::SrcOut = 4
+pub vyre_libs_visual::visual::BlendMode::SrcOver = 0
+pub vyre_libs_visual::visual::BlendMode::Xor = 8
+pub vyre_libs_visual::visual::ColorStop::color: u32
+pub vyre_libs_visual::visual::ColorStop::position: f32
+pub vyre_libs_visual::visual::GaussianBlurStages::horizontal: vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_libs_visual::visual::GaussianBlurStages::vertical: vyre_foundation::ir_inner::model::program::definition::Program
+pub vyre_libs_visual::visual::GaussianKernelError::actual: usize
+pub vyre_libs_visual::visual::GaussianKernelError::expected: usize
+pub vyre_libs_visual::visual::GaussianKernelError::radius: u32
+pub vyre_libs_visual::visual::GlassParams::blur_radius: u32
+pub vyre_libs_visual::visual::GlassParams::blur_sigma: f32
+pub vyre_libs_visual::visual::GlassParams::brightness: f32
+pub vyre_libs_visual::visual::GlassParams::height: u32
+pub vyre_libs_visual::visual::GlassParams::saturation: f32
+pub vyre_libs_visual::visual::GlassParams::tint_rgba: u32
+pub vyre_libs_visual::visual::GlassParams::width: u32
+pub vyre_libs_visual::visual::GridShape::cell_height: u32
+pub vyre_libs_visual::visual::GridShape::cell_width: u32
+pub vyre_libs_visual::visual::GridShape::cols: u32
+pub vyre_libs_visual::visual::GridShape::rows: u32

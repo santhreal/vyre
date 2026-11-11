@@ -1,0 +1,687 @@
+//! Disk-backed neutral-artifact cache.
+//!
+//! Each fingerprint maps to one versioned, digest-bound file under
+//! `<root>/<hex>.bin`. Readers reject stale schemas, torn writes, bit rot, and
+//! tampering before returning payload bytes.
+
+use rustc_hash::FxHashSet;
+use std::fs::{self, File};
+use std::io::Read;
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+use std::sync::{Mutex, MutexGuard};
+
+use super::fingerprint::PipelineFingerprint;
+use super::metrics::{PipelineCacheCounters, PipelineCacheMetrics};
+use super::store::PipelineCacheStore;
+
+/// Disk-backed pipeline cache. Writes one file per fingerprint
+/// under `<root>/<hex>.bin`. Reads are stateless; writes are
+/// `write + rename` for atomicity. No eviction policy today
+/// (user decides)  -  the footprint is bounded by
+/// sum(artifact_size × unique_canonical_programs).
+#[derive(Debug)]
+pub struct DiskCache {
+    root: PathBuf,
+    pending_flushes: Mutex<PendingFlushes>,
+    flush_order: Mutex<()>,
+    metrics: PipelineCacheCounters,
+}
+
+#[derive(Debug, Default)]
+struct PendingFlushes {
+    queued: FxHashSet<PathBuf>,
+    syncing: usize,
+}
+
+/// An unfinished batch remains pending after an I/O error or unwinding.
+struct FlushBatch<'a> {
+    cache: &'a DiskCache,
+    paths: Vec<PathBuf>,
+    committed: bool,
+}
+
+impl Drop for FlushBatch<'_> {
+    fn drop(&mut self) {
+        let mut pending = self.cache.lock_pending_flushes();
+        pending.syncing -= self.paths.len();
+        if !self.committed {
+            pending.queued.extend(self.paths.drain(..));
+            self.cache
+                .metrics
+                .flush_errors
+                .fetch_add(1, Ordering::Relaxed);
+        }
+    }
+}
+
+/// Crash-durability evidence for disk cache artifacts.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DiskCacheDurabilityReport {
+    /// Queued or in-flight entries awaiting successful synchronization.
+    pub pending_flushes: u64,
+    /// True when no installed artifacts are waiting on file and parent-dir
+    /// fsync evidence.
+    pub durable: bool,
+}
+
+/// Persistent process-crossing pipeline-cache store.
+///
+/// This is the default disk-backed store for callers that need compiled
+/// pipeline artifacts to survive process restarts.
+static DISK_CACHE_TMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+// On-disk layout:
+//   "VPC0"  <u16 little-endian schema>  <payload bytes..>  <32-byte blake3 footer>
+// The checksum covers the versioned header and payload. Readers reject stale
+// schema versions before returning bytes, so persisted entries cannot revive an
+// earlier cache contract.
+pub(super) const PIPELINE_CACHE_SCHEMA_VERSION: u16 = 1;
+const PIPELINE_CACHE_MAGIC: &[u8; 4] = b"VPC0";
+const PIPELINE_CACHE_HEADER_LEN: usize = 6;
+const PIPELINE_CACHE_HEADER_LEN_U64: u64 = 6;
+pub(super) const CHECKSUM_LEN: usize = 32;
+pub(super) const CHECKSUM_LEN_U64: u64 = 32;
+pub(super) const MAX_PIPELINE_BLOB_BYTES: u64 = 64 * 1024 * 1024;
+pub(super) const MAX_ENCODED_PIPELINE_BLOB_BYTES: u64 =
+    MAX_PIPELINE_BLOB_BYTES + PIPELINE_CACHE_HEADER_LEN_U64 + CHECKSUM_LEN_U64;
+
+impl DiskCache {
+    /// Construct a cache rooted at `root`. Creates the directory if
+    /// it doesn't exist.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DiskCacheError::Io`] when the directory can't be
+    /// created.
+    pub fn new(root: impl Into<PathBuf>) -> Result<Self, DiskCacheError> {
+        let root = root.into();
+        fs::create_dir_all(&root).map_err(DiskCacheError::Io)?;
+        Ok(Self {
+            root,
+            pending_flushes: Mutex::new(PendingFlushes::default()),
+            flush_order: Mutex::new(()),
+            metrics: PipelineCacheCounters::default(),
+        })
+    }
+
+    /// Construct a cache rooted at `~/.cache/vyre/pipelines/` (or
+    /// `$XDG_CACHE_HOME/vyre/pipelines/` if set).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DiskCacheError::CacheDirUnknown`] when neither env
+    /// var resolves, or [`DiskCacheError::Io`] on mkdir failure.
+    pub fn in_user_cache() -> Result<Self, DiskCacheError> {
+        let base = std::env::var_os("XDG_CACHE_HOME")
+            .map(PathBuf::from)
+            .or_else(|| std::env::var_os("HOME").map(|h| Path::new(&h).join(".cache")))
+            .ok_or(DiskCacheError::CacheDirUnknown)?;
+        Self::new(base.join("vyre").join("pipelines"))
+    }
+
+    /// Root directory this cache operates on.
+    #[must_use]
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    /// Snapshot whether installed artifacts have crossed the explicit
+    /// durability boundary.
+    #[must_use]
+    pub fn durability_report(&self) -> DiskCacheDurabilityReport {
+        let pending = self.lock_pending_flushes();
+        let pending_flushes =
+            match u64::try_from(pending.queued.len().saturating_add(pending.syncing)) {
+                Ok(pending_flushes) => pending_flushes,
+                Err(_) => u64::MAX,
+            };
+        DiskCacheDurabilityReport {
+            pending_flushes,
+            durable: pending_flushes == 0,
+        }
+    }
+
+    /// Keep installed paths after a panic: discarding them would claim
+    /// durability for files that have not been synchronized.
+    fn lock_pending_flushes(&self) -> MutexGuard<'_, PendingFlushes> {
+        vyre_foundation::failure_domain::reclaim_poisoned_mutex(
+            &self.pending_flushes,
+            "runtime disk pipeline cache",
+            "installed artifacts pending synchronization",
+        )
+    }
+
+    fn flush_with(&self, sync: impl FnOnce(&[PathBuf]) -> io::Result<()>) -> io::Result<()> {
+        self.metrics.flushes.fetch_add(1, Ordering::Relaxed);
+        // A later flush must include the durability result of earlier accepted
+        // writes, even when another caller already removed them from the queue.
+        let _order = vyre_foundation::failure_domain::reclaim_poisoned_mutex(
+            &self.flush_order,
+            "runtime disk pipeline cache",
+            "flush completion ordering",
+        );
+        let mut batch = {
+            let mut pending = self.lock_pending_flushes();
+            let mut paths = Vec::with_capacity(pending.queued.len());
+            paths.extend(pending.queued.drain());
+            pending.syncing += paths.len();
+            FlushBatch {
+                cache: self,
+                paths,
+                committed: false,
+            }
+        };
+        sync(&batch.paths)?;
+        batch.committed = true;
+        Ok(())
+    }
+
+    fn path_for(&self, fp: &PipelineFingerprint) -> PathBuf {
+        self.root.join(cache_file_name(fp))
+    }
+}
+
+fn cache_file_name(fp: &PipelineFingerprint) -> String {
+    let mut file_name = String::with_capacity(68);
+    fp.push_hex(&mut file_name);
+    file_name.push_str(".bin");
+    file_name
+}
+
+impl PipelineCacheStore for DiskCache {
+    fn get(&self, fp: &PipelineFingerprint) -> Option<Vec<u8>> {
+        self.metrics.lookups.fetch_add(1, Ordering::Relaxed);
+        let path = self.path_for(fp);
+        // FINDING-CACHE-1: reject symlinks before reading. `symlink_metadata`
+        // does NOT follow the symlink; regular-file check is strict.
+        let Some(meta) = fs::symlink_metadata(&path).ok() else {
+            self.metrics.misses.fetch_add(1, Ordering::Relaxed);
+            return None;
+        };
+        if !meta.file_type().is_file() {
+            self.metrics.misses.fetch_add(1, Ordering::Relaxed);
+            return None;
+        }
+        if meta.len() > MAX_ENCODED_PIPELINE_BLOB_BYTES {
+            self.metrics.misses.fetch_add(1, Ordering::Relaxed);
+            return None;
+        }
+        let Some(file) = File::open(&path).ok() else {
+            self.metrics.misses.fetch_add(1, Ordering::Relaxed);
+            return None;
+        };
+        let capacity = usize::try_from(meta.len()).ok()?;
+        let result = read_verified_cache_blob_with_capacity(file, capacity);
+        if result.is_some() {
+            self.metrics.hits.fetch_add(1, Ordering::Relaxed);
+        } else {
+            self.metrics.misses.fetch_add(1, Ordering::Relaxed);
+        }
+        result
+    }
+
+    fn put(&self, fp: PipelineFingerprint, artifact: Vec<u8>) {
+        let tmp_id = DISK_CACHE_TMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+        let mut tmp_name = String::with_capacity(85);
+        tmp_name.push('.');
+        fp.push_hex(&mut tmp_name);
+        tmp_name.push('-');
+        append_u64_decimal(&mut tmp_name, tmp_id);
+        tmp_name.push_str(".bin.tmp");
+        let tmp_path = self.root.join(&tmp_name);
+
+        let mut final_name = String::with_capacity(68);
+        fp.push_hex(&mut final_name);
+        final_name.push_str(".bin");
+        let final_path = self.root.join(&final_name);
+
+        // Write the versioned header, payload, and digest footer, then install by
+        // rename so readers see either the prior complete file or the new
+        // complete file. Durability is batched through `flush`; fsyncing every
+        // insertion turns steady-state cache population into a storage latency
+        // bottleneck.
+        let write_rename = || -> io::Result<()> {
+            let encoded = encode_cache_blob(&artifact);
+            let mut f = File::create(&tmp_path)?;
+            f.write_all(&encoded)?;
+            drop(f);
+            // FINDING-CACHE-1: if the final path is a symlink, unlink it
+            // first so rename replaces the symlink (not its target).
+            if let Ok(meta) = fs::symlink_metadata(&final_path) {
+                if meta.file_type().is_symlink() {
+                    fs::remove_file(&final_path)?;
+                }
+            }
+            fs::rename(&tmp_path, &final_path)?;
+            self.lock_pending_flushes().queued.insert(final_path);
+            Ok(())
+        };
+        if write_rename().is_err() {
+            self.metrics.rejected_puts.fetch_add(1, Ordering::Relaxed);
+            // Best-effort; caller falls back to recompile. Clean up
+            // the tmp file so it doesn't accumulate on failure.
+            match fs::remove_file(&tmp_path) {
+                Ok(()) => {}
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+                Err(error) => tracing::warn!(
+                    tmp_path = %tmp_path.display(),
+                    error = %error,
+                    "failed to remove temporary disk-cache artifact after rejected put"
+                ),
+            }
+        } else {
+            self.metrics.puts.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    fn flush(&self) -> io::Result<()> {
+        self.flush_with(flush_paths)
+    }
+
+    fn metrics(&self) -> PipelineCacheMetrics {
+        self.metrics.snapshot(0, 0)
+    }
+}
+
+fn flush_paths(paths: &[PathBuf]) -> io::Result<()> {
+    vyre_driver::durable_fanout::sync_paths_and_parents(
+        paths,
+        vyre_driver::durable_fanout::into_io_error,
+    )
+}
+
+/// Errors from disk-backed pipeline cache construction / use.
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
+pub enum DiskCacheError {
+    /// Neither `$XDG_CACHE_HOME` nor `$HOME` is set.
+    #[error(
+        "could not resolve a user cache directory  -  set XDG_CACHE_HOME or HOME, or call DiskCache::new() with an explicit path"
+    )]
+    CacheDirUnknown,
+    /// `std::io` failure (mkdir, read, write).
+    #[error("disk-cache I/O error: {0}")]
+    Io(#[from] io::Error),
+}
+
+#[cfg_attr(
+    not(any(test, feature = "remote-cache")),
+    expect(
+        dead_code,
+        reason = "the zero-capacity entry point is called by the remote-cache reader and by this module's own tests, so it has no caller in a build with neither"
+    )
+)]
+pub(super) fn read_verified_cache_blob(mut reader: impl Read) -> Option<Vec<u8>> {
+    read_verified_cache_blob_with_capacity(&mut reader, 0)
+}
+
+fn read_verified_cache_blob_with_capacity(
+    mut reader: impl Read,
+    capacity: usize,
+) -> Option<Vec<u8>> {
+    let max_encoded_capacity = usize::try_from(MAX_ENCODED_PIPELINE_BLOB_BYTES).ok()?;
+    let mut bytes = Vec::with_capacity(capacity.min(max_encoded_capacity));
+    reader
+        .by_ref()
+        .take(MAX_ENCODED_PIPELINE_BLOB_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .ok()?;
+    verify_cache_blob(bytes)
+}
+
+pub(super) fn verify_cache_blob(mut bytes: Vec<u8>) -> Option<Vec<u8>> {
+    let byte_len = u64::try_from(bytes.len()).ok()?;
+    if byte_len > MAX_ENCODED_PIPELINE_BLOB_BYTES
+        || bytes.len() < PIPELINE_CACHE_HEADER_LEN + CHECKSUM_LEN
+    {
+        return None;
+    }
+    let signed_len = bytes.len() - CHECKSUM_LEN;
+    let (signed, footer) = bytes.split_at(signed_len);
+    let expected = ::blake3::hash(signed);
+    if footer != expected.as_bytes()
+        || signed.get(..4)? != PIPELINE_CACHE_MAGIC
+        || u16::from_le_bytes(signed.get(4..6)?.try_into().ok()?) != PIPELINE_CACHE_SCHEMA_VERSION
+    {
+        return None;
+    }
+    let payload_len = signed_len.checked_sub(PIPELINE_CACHE_HEADER_LEN)?;
+    if u64::try_from(payload_len).ok()? > MAX_PIPELINE_BLOB_BYTES {
+        return None;
+    }
+    bytes.truncate(signed_len);
+    bytes.drain(..PIPELINE_CACHE_HEADER_LEN);
+    Some(bytes)
+}
+
+fn encode_cache_blob(payload: &[u8]) -> Vec<u8> {
+    let mut encoded = Vec::with_capacity(PIPELINE_CACHE_HEADER_LEN + payload.len() + CHECKSUM_LEN);
+    encoded.extend_from_slice(PIPELINE_CACHE_MAGIC);
+    encoded.extend_from_slice(&PIPELINE_CACHE_SCHEMA_VERSION.to_le_bytes());
+    encoded.extend_from_slice(payload);
+    let checksum = ::blake3::hash(&encoded);
+    encoded.extend_from_slice(checksum.as_bytes());
+    encoded
+}
+
+fn append_u64_decimal(out: &mut String, mut value: u64) {
+    let mut digits = [0u8; 20];
+    let mut len = 0usize;
+    loop {
+        digits[len] = b'0' + (value % 10) as u8;
+        len += 1;
+        value /= 10;
+        if value == 0 {
+            break;
+        }
+    }
+    for digit in digits[..len].iter().rev() {
+        out.push(char::from(*digit));
+    }
+}
+
+// Inline: covers `CHECKSUM_LEN`, `MAX_ENCODED_PIPELINE_BLOB_BYTES`, `encode_cache_blob`, `flush`
+// and 2 more items this module keeps private, which no integration test can name.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vyre_test_support::artifact_fixtures::tiny_artifact;
+
+    #[test]
+    fn disk_cache_persists_across_store_reopen() {
+        let temp = tempfile::TempDir::new().expect("Fix: tempdir required for disk cache test");
+        let fp = PipelineFingerprint::of(&tiny_artifact());
+        {
+            let cache = DiskCache::new(temp.path())
+                .expect("Fix: disk cache test must create isolated cache root");
+            cache.put(fp, b"driver-pipeline-blob".to_vec());
+        }
+        let reopened =
+            DiskCache::new(temp.path()).expect("Fix: disk cache must reopen an existing root");
+        assert_eq!(
+            reopened.get(&fp),
+            Some(b"driver-pipeline-blob".to_vec()),
+            "Fix: disk PipelineCacheStore must survive process/backend reconstruction"
+        );
+    }
+
+    #[test]
+    fn disk_cache_flush_is_explicit_durability_boundary() {
+        let temp = tempfile::TempDir::new().expect("Fix: tempdir required for disk cache test");
+        let fp = PipelineFingerprint::of(&tiny_artifact());
+        let cache = DiskCache::new(temp.path())
+            .expect("Fix: disk cache test must create isolated cache root");
+        cache.put(fp, b"driver-pipeline-blob".to_vec());
+        assert!(
+            !cache.durability_report().durable,
+            "Fix: DiskCache::put must defer fsync work until explicit flush."
+        );
+        cache
+            .flush()
+            .expect("Fix: explicit disk cache flush must fsync pending entries.");
+        assert!(
+            cache.durability_report().durable,
+            "Fix: explicit disk cache flush must drain pending entries."
+        );
+        assert_eq!(
+            cache.get(&fp),
+            Some(b"driver-pipeline-blob".to_vec()),
+            "Fix: explicit flush must preserve the installed cache artifact."
+        );
+    }
+
+    /// A poisoned pending set must retain every unsynchronized installed path.
+    #[test]
+    fn pending_flushes_survive_lock_poison() {
+        let temp = tempfile::TempDir::new().expect("isolated cache directory");
+        let cache = DiskCache::new(temp.path()).expect("cache");
+        let fingerprint = PipelineFingerprint::of(&tiny_artifact());
+        cache.put(fingerprint, b"pending".to_vec());
+        let poisoned = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _pending = cache.pending_flushes.lock().expect("unpoisoned lock");
+            panic!("injected pending-set lock failure");
+        }));
+        assert!(poisoned.is_err());
+        assert_eq!(cache.durability_report().pending_flushes, 1);
+        cache.flush().expect("retained paths must synchronize");
+        assert!(cache.durability_report().durable);
+        assert_eq!(cache.get(&fingerprint), Some(b"pending".to_vec()));
+    }
+
+    /// WHY: removing a batch before I/O must not report premature durability,
+    /// lose later writes, or discard the batch on errors and unwinding.
+    #[test]
+    fn flush_batches_preserve_pending_state_across_all_outcomes() {
+        #[derive(Clone, Copy)]
+        enum Outcome {
+            Success,
+            Error,
+            Panic,
+        }
+        for outcome in [Outcome::Success, Outcome::Error, Outcome::Panic] {
+            for same_path in [false, true] {
+                let temp = tempfile::tempdir().expect("isolated cache directory");
+                let cache = DiskCache::new(temp.path()).expect("cache");
+                let first = PipelineFingerprint([1; 32]);
+                let later = if same_path {
+                    first
+                } else {
+                    PipelineFingerprint([2; 32])
+                };
+                cache.put(first, b"first".to_vec());
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    cache.flush_with(|paths| {
+                        assert_eq!(paths, [cache.path_for(&first)]);
+                        assert_eq!(
+                            cache.durability_report(),
+                            DiskCacheDurabilityReport {
+                                pending_flushes: 1,
+                                durable: false,
+                            }
+                        );
+                        flush_paths(paths)?;
+                        cache.put(later, b"later".to_vec());
+                        assert_eq!(cache.durability_report().pending_flushes, 2);
+                        match outcome {
+                            Outcome::Success => Ok(()),
+                            Outcome::Error => Err(io::Error::other("injected sync failure")),
+                            Outcome::Panic => panic!("injected sync unwind"),
+                        }
+                    })
+                }));
+                match outcome {
+                    Outcome::Success => assert!(matches!(result, Ok(Ok(())))),
+                    Outcome::Error => assert!(
+                        matches!(result, Ok(Err(error)) if error.to_string() == "injected sync failure")
+                    ),
+                    Outcome::Panic => {
+                        let payload = result.expect_err("synchronization must unwind");
+                        assert_eq!(
+                            payload.downcast_ref::<&str>(),
+                            Some(&"injected sync unwind")
+                        );
+                    }
+                }
+                let failed = !matches!(outcome, Outcome::Success);
+                assert_eq!(cache.metrics().flush_errors, u64::from(failed));
+                assert_eq!(
+                    cache.durability_report(),
+                    DiskCacheDurabilityReport {
+                        pending_flushes: if failed && !same_path { 2 } else { 1 },
+                        durable: false,
+                    }
+                );
+                cache.flush().expect("retry pending writes");
+                assert!(cache.durability_report().durable);
+                assert_eq!(cache.get(&later), Some(b"later".to_vec()));
+                assert_eq!(cache.metrics().flushes, 2);
+            }
+        }
+    }
+
+    /// WHY: a later flush must not succeed while earlier accepted writes are
+    /// still synchronizing, and waiting must end when the earlier batch finishes.
+    #[test]
+    fn overlapping_flushes_wait_for_prior_accepted_writes() {
+        use std::sync::mpsc::{channel, RecvTimeoutError};
+        use std::time::Duration;
+
+        let temp = tempfile::tempdir().expect("isolated cache directory");
+        let cache = DiskCache::new(temp.path()).expect("cache");
+        let first = PipelineFingerprint([1; 32]);
+        let second = PipelineFingerprint([2; 32]);
+        cache.put(first, b"first".to_vec());
+        std::thread::scope(|scope| {
+            let (entered_tx, entered_rx) = channel();
+            let (release_tx, release_rx) = channel();
+            let (started_tx, started_rx) = channel();
+            let (finished_tx, finished_rx) = channel();
+            let cache = &cache;
+            let first_flush = scope.spawn(move || {
+                cache.flush_with(|paths| {
+                    entered_tx.send(()).expect("announce in-flight batch");
+                    release_rx
+                        .recv_timeout(Duration::from_secs(5))
+                        .expect("release first batch");
+                    flush_paths(paths)
+                })
+            });
+            entered_rx
+                .recv_timeout(Duration::from_secs(5))
+                .expect("first batch entered");
+            assert!(!cache.durability_report().durable);
+            cache.put(second, b"second".to_vec());
+            let second_flush = scope.spawn(move || {
+                started_tx.send(()).expect("announce later flush");
+                finished_tx.send(cache.flush()).expect("report later flush");
+            });
+            started_rx
+                .recv_timeout(Duration::from_secs(5))
+                .expect("later flush started");
+            let early = finished_rx.recv_timeout(Duration::from_millis(100));
+            release_tx
+                .send(())
+                .expect("allow synchronization to finish");
+            if early.is_err() {
+                finished_rx
+                    .recv_timeout(Duration::from_secs(5))
+                    .expect("later flush must finish")
+                    .expect("later flush succeeds");
+            }
+            first_flush
+                .join()
+                .expect("first flush thread")
+                .expect("first flush succeeds");
+            second_flush.join().expect("later flush thread");
+            assert!(
+                matches!(early, Err(RecvTimeoutError::Timeout)),
+                "later flush returned before prior writes synchronized: {early:?}"
+            );
+        });
+        assert!(cache.durability_report().durable);
+        assert_eq!(cache.metrics().flushes, 2);
+        assert_eq!(cache.metrics().flush_errors, 0);
+        assert_eq!(cache.get(&first), Some(b"first".to_vec()));
+        assert_eq!(cache.get(&second), Some(b"second".to_vec()));
+    }
+
+    #[test]
+    fn cache_blob_verifier_accepts_current_versioned_frame() {
+        let payload = b"compiled-artifact".to_vec();
+        let encoded = encode_cache_blob(&payload);
+
+        assert_eq!(verify_cache_blob(encoded), Some(payload));
+    }
+
+    #[test]
+    fn cache_blob_verifier_rejects_corrupted_footer() {
+        let payload = b"compiled-artifact".to_vec();
+        let mut encoded = encode_cache_blob(&payload);
+        let footer_start = encoded.len() - CHECKSUM_LEN;
+        encoded[footer_start..].fill(0xA5);
+
+        assert!(
+            verify_cache_blob(encoded).is_none(),
+            "Fix: disk and remote cache readers must reject artifacts whose checksum footer does not match"
+        );
+    }
+
+    /// WHY: persisted cache framing must reject a stale schema even when its
+    /// digest is internally valid, or old cache semantics can survive upgrades.
+    #[test]
+    fn cache_blob_verifier_rejects_stale_schema_version() {
+        let mut encoded = encode_cache_blob(b"compiled-artifact");
+        encoded[4..6].copy_from_slice(&0_u16.to_le_bytes());
+        let footer_start = encoded.len() - CHECKSUM_LEN;
+        let digest = ::blake3::hash(&encoded[..footer_start]);
+        encoded[footer_start..].copy_from_slice(digest.as_bytes());
+
+        assert!(
+            verify_cache_blob(encoded).is_none(),
+            "Fix: stale persisted pipeline-cache schemas must miss and recompile"
+        );
+    }
+
+    // WHY not under miri: the cap is 64 MiB, and the reader stops one byte
+    // past it, so the assertion is only reachable by moving 64 MiB through
+    // `read_to_end`. Miri interprets every one of those bytes and does not
+    // finish inside any CI budget. The body executes no `unsafe`, so miri has
+    // nothing here to falsify; every non-miri run still asserts the cap.
+    #[test]
+    #[cfg_attr(miri, ignore = "moves 64 MiB through an interpreter")]
+    fn cache_blob_reader_rejects_oversized_encoded_blob() {
+        let oversized = std::io::repeat(0).take(MAX_ENCODED_PIPELINE_BLOB_BYTES + 1);
+
+        assert!(
+            read_verified_cache_blob(oversized).is_none(),
+            "Fix: disk and remote cache readers must cap encoded blob bytes before allocation"
+        );
+    }
+
+    #[test]
+    fn disk_cache_durability_report_tracks_pending_flush_boundary() {
+        let temp = tempfile::tempdir().expect("Fix: create temp disk cache root");
+        let fp = PipelineFingerprint::of(&tiny_artifact());
+        let cache = DiskCache::new(temp.path()).expect("Fix: create disk cache");
+
+        assert_eq!(
+            cache.durability_report(),
+            DiskCacheDurabilityReport {
+                pending_flushes: 0,
+                durable: true,
+            }
+        );
+
+        cache.put(fp, b"driver-pipeline-blob".to_vec());
+        let after_put = cache.durability_report();
+        assert_eq!(after_put.pending_flushes, 1);
+        assert!(
+            !after_put.durable,
+            "Fix: installed artifacts must not be reported durable before explicit flush"
+        );
+
+        cache
+            .flush()
+            .expect("Fix: disk cache flush must fsync pending file and parent dir");
+        assert_eq!(
+            cache.durability_report(),
+            DiskCacheDurabilityReport {
+                pending_flushes: 0,
+                durable: true,
+            }
+        );
+    }
+}
+
+impl crate::StateOwnerRecovery for DiskCache {
+    fn failure_domain(&self) -> crate::FailureDomain {
+        crate::FailureDomain::DiskJournal
+    }
+
+    fn recovery_class(&self) -> crate::RecoveryClass {
+        crate::RecoveryClass::RestartableFromCanonicalInput
+    }
+}

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Nineteen source files that carried unrelated concerns in one compilation unit are split into submodules, and the ten whose test suites outweighed the implementation they cover now keep those suites beside the code. Every moved item keeps its path through the parent module, so no caller changes."

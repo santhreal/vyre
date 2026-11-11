@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A strict reference execution refuses an out-of-bounds load, store, atomic or async copy span at the access site, naming the index and the extent it exceeded, instead of absorbing it and reporting a tally after the run. The absorbed value never enters the value graph, so no output is derived from an index the program did not gate. Diagnostic permissive mode still absorbs the access and counts it."

@@ -1,0 +1,407 @@
+# Structural IR golden for the nn/attention clone families.
+#
+# One section per clone-family entry point, in roster order. `digest` is BLAKE3
+# over the canonicalized buffer roster and node tree of the program that entry
+# point builds. The remaining lines say which class of change a moved digest is:
+# the roster is the ABI, the histograms and depth say whether a node was added
+# or dropped, and the per-region breakdown localizes a change to one owner.
+#
+# Nothing here reads the wire format, so a serialization revision does not move
+# a section and a changed operand, dropped node or reordered data dependence
+# does.
+#
+# Regenerate with the bless test in the file that reads this golden, then read
+# the diff: a change here is a change in what the compiler emits.
+===== recurrent_gated_delta/f32
+digest 87564dce1d740a597b294e73436a8f1b647aef91e7891f1d04dd9607cdca336c
+nodes 37 exprs 293
+depth 6
+node_kinds Assign=4 If=1 Let=16 Loop=11 Region=1 Store=4
+expr_kinds BinOp=107 Cast=9 LitF32=9 LitU32=67 Load=13 LogicalIndex=1 UnOp=6 Var=81
+buffers:
+  BufferDecl { name: "key", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 840, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 6, access: ReadWrite, kind: Global, element: F32, count: 2800, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "query", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 840, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "value", binding: 2, access: ReadOnly, kind: Readonly, element: F32, count: 2800, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "state_in", binding: 5, access: ReadWrite, kind: Global, element: F32, count: 120, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "decay_log", binding: 3, access: ReadOnly, kind: Readonly, element: F32, count: 560, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "state_out", binding: 7, access: ReadWrite, kind: Global, element: F32, count: 120, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "beta_logits", binding: 4, access: ReadOnly, kind: Readonly, element: F32, count: 560, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::recurrent_gated_delta nodes=36 exprs=293 node_kinds=Assign=4 If=1 Let=16 Loop=11 Store=4 expr_kinds=BinOp=107 Cast=9 LitF32=9 LitU32=67 Load=13 LogicalIndex=1 UnOp=6 Var=81
+===== recurrent_gated_delta/f16
+digest 2c2ec537ba823a2272933e63d39223518a2ec61976a295597f498fc9c6f3914f
+nodes 37 exprs 293
+depth 6
+node_kinds Assign=4 If=1 Let=16 Loop=11 Region=1 Store=4
+expr_kinds BinOp=107 Cast=9 LitF32=9 LitU32=67 Load=13 LogicalIndex=1 UnOp=6 Var=81
+buffers:
+  BufferDecl { name: "key", binding: 1, access: ReadOnly, kind: Readonly, element: F16, count: 840, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 6, access: ReadWrite, kind: Global, element: F16, count: 2800, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "query", binding: 0, access: ReadOnly, kind: Readonly, element: F16, count: 840, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "value", binding: 2, access: ReadOnly, kind: Readonly, element: F16, count: 2800, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "state_in", binding: 5, access: ReadWrite, kind: Global, element: F32, count: 120, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "decay_log", binding: 3, access: ReadOnly, kind: Readonly, element: F16, count: 560, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "state_out", binding: 7, access: ReadWrite, kind: Global, element: F32, count: 120, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "beta_logits", binding: 4, access: ReadOnly, kind: Readonly, element: F16, count: 560, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::recurrent_gated_delta nodes=36 exprs=293 node_kinds=Assign=4 If=1 Let=16 Loop=11 Store=4 expr_kinds=BinOp=107 Cast=9 LitF32=9 LitU32=67 Load=13 LogicalIndex=1 UnOp=6 Var=81
+===== chunked_gated_delta/f32
+digest 1ff32c5f0ced1b867123f561e97e1f70060186f88dc10c32a1b8f79e98763322
+nodes 80 exprs 533
+depth 9
+node_kinds Assign=14 If=1 Let=38 Loop=21 Region=1 Store=5
+expr_kinds BinOp=184 Cast=15 LitF32=17 LitU32=104 Load=28 LogicalIndex=1 Select=1 UnOp=14 Var=169
+buffers:
+  BufferDecl { name: "key", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 840, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 6, access: ReadWrite, kind: Global, element: F32, count: 2800, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "query", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 840, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "value", binding: 2, access: ReadOnly, kind: Readonly, element: F32, count: 2800, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "state_in", binding: 5, access: ReadWrite, kind: Global, element: F32, count: 120, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "decay_log", binding: 3, access: ReadOnly, kind: Readonly, element: F32, count: 560, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "state_out", binding: 7, access: ReadWrite, kind: Global, element: F32, count: 120, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "beta_logits", binding: 4, access: ReadOnly, kind: Readonly, element: F32, count: 560, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "chunk_decay", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 64, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "chunk_value", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 320, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::chunked_gated_delta nodes=79 exprs=533 node_kinds=Assign=14 If=1 Let=38 Loop=21 Store=5 expr_kinds=BinOp=184 Cast=15 LitF32=17 LitU32=104 Load=28 LogicalIndex=1 Select=1 UnOp=14 Var=169
+===== chunked_gated_delta/f16
+digest 6b7655f84acfa9e3ea63569ead21400b6c8b97fa61329e386904c124b0082bcf
+nodes 80 exprs 533
+depth 9
+node_kinds Assign=14 If=1 Let=38 Loop=21 Region=1 Store=5
+expr_kinds BinOp=184 Cast=15 LitF32=17 LitU32=104 Load=28 LogicalIndex=1 Select=1 UnOp=14 Var=169
+buffers:
+  BufferDecl { name: "key", binding: 1, access: ReadOnly, kind: Readonly, element: F16, count: 840, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 6, access: ReadWrite, kind: Global, element: F16, count: 2800, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "query", binding: 0, access: ReadOnly, kind: Readonly, element: F16, count: 840, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "value", binding: 2, access: ReadOnly, kind: Readonly, element: F16, count: 2800, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "state_in", binding: 5, access: ReadWrite, kind: Global, element: F32, count: 120, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "decay_log", binding: 3, access: ReadOnly, kind: Readonly, element: F16, count: 560, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "state_out", binding: 7, access: ReadWrite, kind: Global, element: F32, count: 120, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "beta_logits", binding: 4, access: ReadOnly, kind: Readonly, element: F16, count: 560, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "chunk_decay", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 64, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "chunk_value", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 320, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::chunked_gated_delta nodes=79 exprs=533 node_kinds=Assign=14 If=1 Let=38 Loop=21 Store=5 expr_kinds=BinOp=184 Cast=15 LitF32=17 LitU32=104 Load=28 LogicalIndex=1 Select=1 UnOp=14 Var=169
+===== mla_decode
+digest b17cb703a6c67f766052eb1afbaf9071e491183c3a425df62558e9e303eca70e
+nodes 48 exprs 520
+depth 7
+node_kinds Assign=8 If=2 Let=18 Loop=13 Region=1 Store=6
+expr_kinds BinOp=149 Fma=1 LitF32=44 LitU32=68 Load=33 LogicalIndex=1 LogicalWithinTileId=1 Select=32 UnOp=24 Var=167
+buffers:
+  BufferDecl { name: "q", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 24, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 5, access: ReadWrite, kind: Global, element: F32, count: 24, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "w_uk", binding: 3, access: ReadOnly, kind: Readonly, element: F32, count: 96, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "w_uv", binding: 4, access: ReadOnly, kind: Readonly, element: F32, count: 96, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "o_acc", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 512, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "kr_cache", binding: 2, access: ReadOnly, kind: Readonly, element: F32, count: 520, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "kv_cache", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 520, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "q_scratch", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 512, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "score_tile", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 4096, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::mla_decode nodes=47 exprs=520 node_kinds=Assign=8 If=2 Let=18 Loop=13 Store=6 expr_kinds=BinOp=149 Fma=1 LitF32=44 LitU32=68 Load=33 LogicalIndex=1 LogicalWithinTileId=1 Select=32 UnOp=24 Var=167
+===== flash_attention_2
+digest a358683c0e991682684352c2bd9bf8b154971366fbf12b366144a01451fa6291
+nodes 42 exprs 460
+depth 8
+node_kinds Assign=6 If=1 Let=16 Loop=10 Region=4 Store=5
+expr_kinds BinOp=123 Fma=4 LitF32=43 LitU32=54 Load=29 LogicalIndex=1 LogicalWithinTileId=1 Select=32 UnOp=24 Var=149
+buffers:
+  BufferDecl { name: "k", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 1040, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "q", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 1040, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "v", binding: 2, access: ReadOnly, kind: Readonly, element: F32, count: 1040, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 3, access: ReadWrite, kind: Global, element: F32, count: 1040, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "o_acc", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 512, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "q_scratch", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 512, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "score_tile", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 4096, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::attention::absorb_values nodes=5 exprs=136 node_kinds=Assign=1 Let=1 Loop=2 Store=1 expr_kinds=BinOp=40 Fma=2 LitF32=11 LitU32=16 Load=12 Select=8 UnOp=6 Var=41
+  vyre-libs::nn::attention::online_softmax nodes=28 exprs=285 node_kinds=Assign=4 If=1 Let=12 Loop=6 Region=2 Store=3 expr_kinds=BinOp=75 Fma=1 LitF32=29 LitU32=32 Load=15 LogicalIndex=1 LogicalWithinTileId=1 Select=22 UnOp=16 Var=93
+  vyre-libs::nn::attention::tile_scores nodes=7 exprs=39 node_kinds=Assign=1 Let=3 Loop=2 Store=1 expr_kinds=BinOp=8 Fma=1 LitF32=3 LitU32=6 Load=2 Select=2 UnOp=2 Var=15
+  vyre-libs::nn::flash_attention_2 nodes=1 exprs=0 node_kinds=Region=1 expr_kinds=none
+===== softmax
+digest 4d1abf2c8c35f849d6a7d3545c32186bc43b01cca2bcda5ca8b21651962030b4
+nodes 97 exprs 404
+depth 6
+node_kinds Assign=2 If=39 Let=8 LogicalBarrier=19 Loop=3 Region=6 Store=20
+expr_kinds BinOp=132 LitF32=2 LitU32=102 Load=40 LogicalTileId=20 LogicalWithinTileId=1 Select=1 UnOp=2 Var=104
+buffers:
+  BufferDecl { name: "input", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 1000, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "output", binding: 1, access: ReadWrite, kind: Global, element: F32, count: 1000, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "softmax_max", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 1, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "softmax_scratch", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 256, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  anonymous::vyre-libs::builder::strided_writeback nodes=7 exprs=25 node_kinds=If=2 Let=3 Loop=1 Store=1 expr_kinds=BinOp=6 LitU32=7 Load=3 LogicalTileId=1 UnOp=1 Var=7
+  vyre-libs::builder::strided_accumulate nodes=14 exprs=48 node_kinds=Assign=2 If=4 Let=4 Loop=2 Store=2 expr_kinds=BinOp=11 LitF32=2 LitU32=11 Load=4 LogicalTileId=2 Select=1 UnOp=1 Var=16
+  vyre-libs::nn::softmax nodes=11 exprs=11 node_kinds=If=1 Let=1 LogicalBarrier=3 Region=5 Store=1 expr_kinds=BinOp=3 LitU32=4 Load=1 LogicalTileId=1 LogicalWithinTileId=1 Var=1
+  vyre-libs::reduce::workgroup_max_f32 nodes=32 exprs=160 node_kinds=If=16 LogicalBarrier=8 Store=8 expr_kinds=BinOp=56 LitU32=40 Load=16 LogicalTileId=8 Var=40
+  vyre-libs::reduce::workgroup_sum_f32 nodes=32 exprs=160 node_kinds=If=16 LogicalBarrier=8 Store=8 expr_kinds=BinOp=56 LitU32=40 Load=16 LogicalTileId=8 Var=40
+===== layer_norm
+digest 0f5f82e2f6223f853447a3fe146b38e173cee24e78c1efa104edc651b93674fa
+nodes 95 exprs 402
+depth 6
+node_kinds Assign=2 If=37 Let=10 LogicalBarrier=18 Loop=2 Region=5 Store=21
+expr_kinds BinOp=133 LitF32=5 LitU32=98 Load=40 LogicalTileId=19 LogicalWithinTileId=1 UnOp=1 Var=105
+buffers:
+  BufferDecl { name: "input", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 1000, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "output", binding: 1, access: ReadWrite, kind: Global, element: F32, count: 1000, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "ln_stats", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 2, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "ln_sq_scratch", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 256, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "ln_sum_scratch", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 256, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  anonymous::vyre-libs::builder::strided_writeback nodes=7 exprs=24 node_kinds=If=2 Let=3 Loop=1 Store=1 expr_kinds=BinOp=6 LitU32=7 Load=3 LogicalTileId=1 Var=7
+  vyre-libs::builder::strided_accumulate nodes=10 exprs=30 node_kinds=Assign=2 If=2 Let=3 Loop=1 Store=2 expr_kinds=BinOp=7 LitF32=2 LitU32=5 Load=3 LogicalTileId=1 Var=12
+  vyre-libs::nn::layer_norm nodes=13 exprs=28 node_kinds=If=1 Let=4 LogicalBarrier=2 Region=4 Store=2 expr_kinds=BinOp=8 LitF32=3 LitU32=6 Load=2 LogicalTileId=1 LogicalWithinTileId=1 UnOp=1 Var=6
+  vyre-libs::reduce::workgroup_sum_f32 nodes=64 exprs=320 node_kinds=If=32 LogicalBarrier=16 Store=16 expr_kinds=BinOp=112 LitU32=80 Load=32 LogicalTileId=16 Var=80
+===== flash_attention
+digest 10893c184d5fefaa77463b5e9275b69d666d39200032567557998e9e35344da2
+nodes 42 exprs 460
+depth 8
+node_kinds Assign=6 If=1 Let=16 Loop=10 Region=4 Store=5
+expr_kinds BinOp=123 Fma=4 LitF32=43 LitU32=54 Load=29 LogicalIndex=1 LogicalWithinTileId=1 Select=32 UnOp=24 Var=149
+buffers:
+  BufferDecl { name: "k", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 1040, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "q", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 1040, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "v", binding: 2, access: ReadOnly, kind: Readonly, element: F32, count: 1040, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 3, access: ReadWrite, kind: Global, element: F32, count: 1040, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "o_acc", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 1024, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "q_scratch", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 1024, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "score_tile", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 128, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::attention::absorb_values nodes=5 exprs=136 node_kinds=Assign=1 Let=1 Loop=2 Store=1 expr_kinds=BinOp=40 Fma=2 LitF32=11 LitU32=16 Load=12 Select=8 UnOp=6 Var=41
+  vyre-libs::nn::attention::online_softmax nodes=28 exprs=285 node_kinds=Assign=4 If=1 Let=12 Loop=6 Region=2 Store=3 expr_kinds=BinOp=75 Fma=1 LitF32=29 LitU32=32 Load=15 LogicalIndex=1 LogicalWithinTileId=1 Select=22 UnOp=16 Var=93
+  vyre-libs::nn::attention::tile_scores nodes=7 exprs=39 node_kinds=Assign=1 Let=3 Loop=2 Store=1 expr_kinds=BinOp=8 Fma=1 LitF32=3 LitU32=6 Load=2 Select=2 UnOp=2 Var=15
+  vyre-libs::nn::flash_attention nodes=1 exprs=0 node_kinds=Region=1 expr_kinds=none
+===== flash_attention/direct
+digest d56fdac337774f4c3ca534565ad88b7b64ca463692875d80fe4e4dd132b50219
+nodes 42 exprs 14855
+depth 3
+node_kinds If=1 Let=24 Region=1 Store=16
+expr_kinds BinOp=3061 Fma=384 LitF32=2380 LitU32=657 Load=640 LogicalIndex=1 Select=1840 UnOp=1364 Var=4528
+buffers:
+  BufferDecl { name: "k", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "q", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "v", binding: 2, access: ReadOnly, kind: Readonly, element: F32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 3, access: ReadWrite, kind: Global, element: F32, count: 16, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::flash_attention nodes=41 exprs=14855 node_kinds=If=1 Let=24 Store=16 expr_kinds=BinOp=3061 Fma=384 LitF32=2380 LitU32=657 Load=640 LogicalIndex=1 Select=1840 UnOp=1364 Var=4528
+===== attention
+digest 1f52baf4de0aae7fa0ffa978a2ee0a596f259f0c3db1dbd63193f2506ce488cb
+nodes 39 exprs 324
+depth 6
+node_kinds Assign=6 If=4 Let=18 LogicalBarrier=1 Loop=6 Region=1 Store=3
+expr_kinds BinOp=70 Fma=4 LitF32=45 LitU32=46 Load=23 LogicalTileId=2 LogicalWithinTileId=1 Select=27 UnOp=22 Var=84
+buffers:
+  BufferDecl { name: "k", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 1040, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "q", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 1040, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "v", binding: 2, access: ReadOnly, kind: Readonly, element: F32, count: 1040, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 3, access: ReadWrite, kind: Global, element: F32, count: 33280, is_output: true, pipeline_live_out: true, output_byte_range: Some(0..4160), hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "attention_scratch", binding: 0, access: Workgroup, kind: Shared, element: F32, count: 256, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::attention nodes=38 exprs=324 node_kinds=Assign=6 If=4 Let=18 LogicalBarrier=1 Loop=6 Store=3 expr_kinds=BinOp=70 Fma=4 LitF32=45 LitU32=46 Load=23 LogicalTileId=2 LogicalWithinTileId=1 Select=27 UnOp=22 Var=84
+===== attention/direct
+digest 5b9bde8b6569783620b3866a7045664336b705102e0f6c2132691bace7504afe
+nodes 42 exprs 14855
+depth 3
+node_kinds If=1 Let=24 Region=1 Store=16
+expr_kinds BinOp=3061 Fma=384 LitF32=2380 LitU32=657 Load=640 LogicalIndex=1 Select=1840 UnOp=1364 Var=4528
+buffers:
+  BufferDecl { name: "k", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "q", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "v", binding: 2, access: ReadOnly, kind: Readonly, element: F32, count: 16, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 3, access: ReadWrite, kind: Global, element: F32, count: 16, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::attention nodes=41 exprs=14855 node_kinds=If=1 Let=24 Store=16 expr_kinds=BinOp=3061 Fma=384 LitF32=2380 LitU32=657 Load=640 LogicalIndex=1 Select=1840 UnOp=1364 Var=4528
+===== attention_reference
+digest 460079e7497da6d8ee2404c14e6cf333fbcadab95bebb0c884d9e36d1b6f2bc6
+nodes 44 exprs 464
+depth 8
+node_kinds Assign=15 If=1 Let=15 Loop=5 Region=7 Store=1
+expr_kinds BinOp=113 Cast=27 Fma=13 LitF32=47 LitU32=76 Load=26 LogicalIndex=1 Select=27 UnOp=22 Var=112
+buffers:
+  BufferDecl { name: "k", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 32, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "q", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 32, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "v", binding: 2, access: ReadOnly, kind: Readonly, element: F32, count: 32, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 3, access: ReadWrite, kind: Global, element: F32, count: 32, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::math::dot_partial nodes=26 exprs=426 node_kinds=Assign=15 Let=11 expr_kinds=BinOp=107 Cast=26 Fma=13 LitF32=40 LitU32=64 Load=26 Select=25 UnOp=20 Var=105
+  vyre-libs::nn::attention_max_pass nodes=2 exprs=2 node_kinds=Loop=1 Region=1 expr_kinds=LitU32=2
+  vyre-libs::nn::attention_reference nodes=8 exprs=16 node_kinds=If=1 Let=3 Loop=1 Region=3 expr_kinds=BinOp=3 LitF32=4 LitU32=3 LogicalIndex=1 Select=1 UnOp=1 Var=3
+  vyre-libs::nn::attention_sum_pass nodes=2 exprs=2 node_kinds=Loop=1 Region=1 expr_kinds=LitU32=2
+  vyre-libs::nn::attention_write_pass nodes=5 exprs=18 node_kinds=Let=1 Loop=2 Region=1 Store=1 expr_kinds=BinOp=3 Cast=1 LitF32=3 LitU32=5 Select=1 UnOp=1 Var=4
+===== gqa_attention
+digest db6d4d28fdfd806eddbdaa93190ff172695eaf391ec32654fe338dbeb3ab1fcb
+nodes 44 exprs 551
+depth 7
+node_kinds Assign=15 If=1 Let=16 Loop=4 Region=7 Store=1
+expr_kinds BinOp=155 Cast=27 Fma=13 LitF32=47 LitU32=102 Load=26 LogicalIndex=1 Select=28 UnOp=23 Var=129
+buffers:
+  BufferDecl { name: "k", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 64, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "q", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 128, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "v", binding: 2, access: ReadOnly, kind: Readonly, element: F32, count: 64, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 3, access: ReadWrite, kind: Global, element: F32, count: 128, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::math::dot_partial nodes=26 exprs=510 node_kinds=Assign=15 Let=11 expr_kinds=BinOp=149 Cast=26 Fma=13 LitF32=40 LitU32=92 Load=26 Select=25 UnOp=20 Var=119
+  vyre-libs::nn::attention_max_pass nodes=2 exprs=2 node_kinds=Loop=1 Region=1 expr_kinds=LitU32=2
+  vyre-libs::nn::attention_sum_pass nodes=2 exprs=2 node_kinds=Loop=1 Region=1 expr_kinds=LitU32=2
+  vyre-libs::nn::attention_write_pass nodes=5 exprs=18 node_kinds=Let=1 Loop=2 Region=1 Store=1 expr_kinds=BinOp=3 Cast=1 LitF32=3 LitU32=5 Select=1 UnOp=1 Var=4
+  vyre-libs::nn::gqa_attention nodes=8 exprs=19 node_kinds=If=1 Let=4 Region=3 expr_kinds=BinOp=3 LitF32=4 LitU32=1 LogicalIndex=1 Select=2 UnOp=2 Var=6
+===== gqa_attention_causal
+digest 549694201b589c3b03d06602e6d00555c76f0217ce2d3d664808dc4a8ca9c93a
+nodes 44 exprs 1253
+depth 7
+node_kinds Assign=15 If=1 Let=16 Loop=4 Region=7 Store=1
+expr_kinds BinOp=506 Cast=27 Fma=13 LitF32=47 LitU32=335 Load=26 LogicalIndex=1 Select=28 UnOp=23 Var=247
+buffers:
+  BufferDecl { name: "k", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 128, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "q", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 96, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "v", binding: 2, access: ReadOnly, kind: Readonly, element: F32, count: 128, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 3, access: ReadWrite, kind: Global, element: F32, count: 96, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::math::dot_partial nodes=26 exprs=1110 node_kinds=Assign=15 Let=11 expr_kinds=BinOp=449 Cast=26 Fma=13 LitF32=40 LitU32=292 Load=26 Select=25 UnOp=20 Var=219
+  vyre-libs::nn::attention_max_pass nodes=2 exprs=24 node_kinds=Loop=1 Region=1 expr_kinds=BinOp=11 LitU32=9 Var=4
+  vyre-libs::nn::attention_sum_pass nodes=2 exprs=24 node_kinds=Loop=1 Region=1 expr_kinds=BinOp=11 LitU32=9 Var=4
+  vyre-libs::nn::attention_write_pass nodes=5 exprs=76 node_kinds=Let=1 Loop=2 Region=1 Store=1 expr_kinds=BinOp=32 Cast=1 LitF32=3 LitU32=24 Select=1 UnOp=1 Var=14
+  vyre-libs::nn::gqa_attention_causal nodes=8 exprs=19 node_kinds=If=1 Let=4 Region=3 expr_kinds=BinOp=3 LitF32=4 LitU32=1 LogicalIndex=1 Select=2 UnOp=2 Var=6
+===== gqa_attention_causal/f16
+digest 96aa2f487fccc9cb9406dd9902d38233f0928d2de071e178f085ef793b0eaadb
+nodes 44 exprs 1253
+depth 7
+node_kinds Assign=15 If=1 Let=16 Loop=4 Region=7 Store=1
+expr_kinds BinOp=506 Cast=27 Fma=13 LitF32=47 LitU32=335 Load=26 LogicalIndex=1 Select=28 UnOp=23 Var=247
+buffers:
+  BufferDecl { name: "k", binding: 1, access: ReadOnly, kind: Readonly, element: F16, count: 128, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "q", binding: 0, access: ReadOnly, kind: Readonly, element: F16, count: 96, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "v", binding: 2, access: ReadOnly, kind: Readonly, element: F16, count: 128, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 3, access: ReadWrite, kind: Global, element: F16, count: 96, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::math::dot_partial nodes=26 exprs=1110 node_kinds=Assign=15 Let=11 expr_kinds=BinOp=449 Cast=26 Fma=13 LitF32=40 LitU32=292 Load=26 Select=25 UnOp=20 Var=219
+  vyre-libs::nn::attention_max_pass nodes=2 exprs=24 node_kinds=Loop=1 Region=1 expr_kinds=BinOp=11 LitU32=9 Var=4
+  vyre-libs::nn::attention_sum_pass nodes=2 exprs=24 node_kinds=Loop=1 Region=1 expr_kinds=BinOp=11 LitU32=9 Var=4
+  vyre-libs::nn::attention_write_pass nodes=5 exprs=76 node_kinds=Let=1 Loop=2 Region=1 Store=1 expr_kinds=BinOp=32 Cast=1 LitF32=3 LitU32=24 Select=1 UnOp=1 Var=14
+  vyre-libs::nn::gqa_attention_causal nodes=8 exprs=19 node_kinds=If=1 Let=4 Region=3 expr_kinds=BinOp=3 LitF32=4 LitU32=1 LogicalIndex=1 Select=2 UnOp=2 Var=6
+===== kv_cache_append
+digest 5257317312b7c9e8c3d5fc6cb5773d371ebfbe48b86167694700a1cbeb1cab97
+nodes 6 exprs 57
+depth 4
+node_kinds If=2 Let=1 Region=1 Store=2
+expr_kinds BinOp=24 LitU32=20 Load=2 LogicalIndex=1 Var=10
+buffers:
+  BufferDecl { name: "next", binding: 2, access: ReadWrite, kind: Global, element: F32, count: 128, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "chunk", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 48, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "prior", binding: 0, access: ReadWrite, kind: Global, element: F32, count: 128, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::kv_cache_append nodes=5 exprs=57 node_kinds=If=2 Let=1 Store=2 expr_kinds=BinOp=24 LitU32=20 Load=2 LogicalIndex=1 Var=10
+===== kv_cache_append/f16
+digest 3e081484cacd8acfa633ef98fd2f821d9b5c1f1483c8cd73ecec871bc79a56c9
+nodes 6 exprs 57
+depth 4
+node_kinds If=2 Let=1 Region=1 Store=2
+expr_kinds BinOp=24 LitU32=20 Load=2 LogicalIndex=1 Var=10
+buffers:
+  BufferDecl { name: "next", binding: 2, access: ReadWrite, kind: Global, element: F16, count: 128, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "chunk", binding: 1, access: ReadOnly, kind: Readonly, element: F16, count: 48, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "prior", binding: 0, access: ReadWrite, kind: Global, element: F16, count: 128, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::kv_cache_append nodes=5 exprs=57 node_kinds=If=2 Let=1 Store=2 expr_kinds=BinOp=24 LitU32=20 Load=2 LogicalIndex=1 Var=10
+===== attention_head_to_token
+digest 98d7312afd790d1b25e965a69610d36a7be6449e26c267ba6d340ddaa5f0bb1f
+nodes 4 exprs 37
+depth 3
+node_kinds If=1 Let=1 Region=1 Store=1
+expr_kinds BinOp=16 LitU32=13 Load=1 LogicalIndex=1 Var=6
+buffers:
+  BufferDecl { name: "input", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 120, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "output", binding: 1, access: ReadWrite, kind: Global, element: F32, count: 120, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::attention_head_to_token nodes=3 exprs=37 node_kinds=If=1 Let=1 Store=1 expr_kinds=BinOp=16 LitU32=13 Load=1 LogicalIndex=1 Var=6
+===== attention_head_to_token/f16
+digest 3cf384a1e4aea25dbbce10b11a3b45c6fab64eea29914452ca39abd8e81b85ea
+nodes 4 exprs 37
+depth 3
+node_kinds If=1 Let=1 Region=1 Store=1
+expr_kinds BinOp=16 LitU32=13 Load=1 LogicalIndex=1 Var=6
+buffers:
+  BufferDecl { name: "input", binding: 0, access: ReadOnly, kind: Readonly, element: F16, count: 120, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "output", binding: 1, access: ReadWrite, kind: Global, element: F16, count: 120, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::attention_head_to_token nodes=3 exprs=37 node_kinds=If=1 Let=1 Store=1 expr_kinds=BinOp=16 LitU32=13 Load=1 LogicalIndex=1 Var=6
+===== attention_token_to_head
+digest c836a555f047feb7bfe0f075c9ad67ee2e567e087c309f529b5833a18ee49c11
+nodes 4 exprs 37
+depth 3
+node_kinds If=1 Let=1 Region=1 Store=1
+expr_kinds BinOp=16 LitU32=13 Load=1 LogicalIndex=1 Var=6
+buffers:
+  BufferDecl { name: "input", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 120, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "output", binding: 1, access: ReadWrite, kind: Global, element: F32, count: 120, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::attention_token_to_head nodes=3 exprs=37 node_kinds=If=1 Let=1 Store=1 expr_kinds=BinOp=16 LitU32=13 Load=1 LogicalIndex=1 Var=6
+===== quest_paging
+digest 2d0add9b6fb8d47d202eb24288f6186a1cfd9d788087196d9498c605ecc06bbd
+nodes 29 exprs 93
+depth 7
+node_kinds Assign=6 If=4 Let=6 LogicalBarrier=1 Loop=4 Region=4 Store=4
+expr_kinds BinOp=20 Fma=4 LitF32=3 LitU32=31 Load=9 LogicalIndex=3 Var=23
+buffers:
+  BufferDecl { name: "q", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 4, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "io", binding: 3, access: ReadWrite, kind: Global, element: U32, count: 8, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "meta", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 32, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "scores", binding: 2, access: ReadWrite, kind: Global, element: F32, count: 8, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::attention::quest_paging nodes=4 exprs=0 node_kinds=LogicalBarrier=1 Region=3 expr_kinds=none
+  vyre-libs::nn::quest_score_pages nodes=9 exprs=57 node_kinds=Assign=4 If=1 Let=2 Loop=1 Store=1 expr_kinds=BinOp=13 Fma=4 LitF32=1 LitU32=18 Load=8 LogicalIndex=1 Var=12
+  vyre-libs::nn::quest_select_top_k nodes=11 exprs=20 node_kinds=Assign=2 If=2 Let=3 Loop=2 Store=2 expr_kinds=BinOp=2 LitF32=2 LitU32=6 Load=1 LogicalIndex=1 Var=8
+  vyre-libs::nn::quest_zero_fill nodes=4 exprs=16 node_kinds=If=1 Let=1 Loop=1 Store=1 expr_kinds=BinOp=5 LitU32=7 LogicalIndex=1 Var=3
+===== partial_rope
+digest fb8d681c117927fefdfe8a2583b066c970b8a29eb46473ec408b2cddf2df6e64
+nodes 4 exprs 189
+depth 3
+node_kinds If=1 Let=1 Region=1 Store=1
+expr_kinds BinOp=67 Cast=6 Fma=2 LitF32=1 LitU32=64 Load=9 LogicalIndex=1 Select=10 Var=29
+buffers:
+  BufferDecl { name: "cos", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 10, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "sin", binding: 2, access: ReadOnly, kind: Readonly, element: F32, count: 10, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "input", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 80, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "output", binding: 3, access: ReadWrite, kind: Global, element: F32, count: 80, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::partial_rope nodes=3 exprs=189 node_kinds=If=1 Let=1 Store=1 expr_kinds=BinOp=67 Cast=6 Fma=2 LitF32=1 LitU32=64 Load=9 LogicalIndex=1 Select=10 Var=29
+===== qk_gain
+digest b4adfeefb4060a0d4163fa97e193a6e18b590a8b1a5d9e6ad7fd8a0ea62d66cd
+nodes 3 exprs 11
+depth 3
+node_kinds If=1 Region=1 Store=1
+expr_kinds BinOp=3 LitU32=2 Load=2 LogicalIndex=4
+buffers:
+  BufferDecl { name: "gain", binding: 2, access: ReadOnly, kind: Readonly, element: F32, count: 3, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "q_in", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 60, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "q_out", binding: 1, access: ReadWrite, kind: Global, element: F32, count: 60, is_output: true, pipeline_live_out: true, output_byte_range: Some(0..240), hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::qk_gain nodes=2 exprs=11 node_kinds=If=1 Store=1 expr_kinds=BinOp=3 LitU32=2 Load=2 LogicalIndex=4
+===== turboquant_attention
+digest 7816b4f344343a73b34ef8fca2cb79c342cbf8ccd271a2546913299900626962
+nodes 10 exprs 357
+depth 5
+node_kinds Assign=2 If=1 Let=3 Loop=2 Region=1 Store=1
+expr_kinds BinOp=141 Fma=2 LitF32=18 LitU32=103 Load=15 LogicalIndex=2 Select=14 Var=62
+buffers:
+  BufferDecl { name: "q", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 4, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "out", binding: 3, access: ReadWrite, kind: Global, element: F32, count: 4, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "k_packed", binding: 1, access: ReadOnly, kind: Readonly, element: U32, count: 3, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "v_packed", binding: 2, access: ReadOnly, kind: Readonly, element: U32, count: 3, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::attention::turboquant nodes=9 exprs=357 node_kinds=Assign=2 If=1 Let=3 Loop=2 Store=1 expr_kinds=BinOp=141 Fma=2 LitF32=18 LitU32=103 Load=15 LogicalIndex=2 Select=14 Var=62
+===== mla_compress_kv
+digest ffc61801438b4701e6246a96b2f1659dffcb959fa54c37e1178b353f646176be
+nodes 7 exprs 20
+depth 4
+node_kinds Assign=1 If=1 Let=2 Loop=1 Region=1 Store=1
+expr_kinds BinOp=5 LitF32=1 LitU32=4 Load=2 LogicalIndex=1 Var=7
+buffers:
+  BufferDecl { name: "h", binding: 0, access: ReadOnly, kind: Readonly, element: F32, count: 6, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "w_dk", binding: 1, access: ReadOnly, kind: Readonly, element: F32, count: 24, is_output: false, pipeline_live_out: false, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+  BufferDecl { name: "c_out", binding: 2, access: ReadWrite, kind: Global, element: F32, count: 4, is_output: true, pipeline_live_out: true, output_byte_range: None, hints: MemoryHints { coalesce_axis: None, preferred_alignment: 0, cache_locality: Temporal }, bytes_extraction: false, linear_type: Unrestricted, shape_predicate: None }
+regions:
+  vyre-libs::nn::mla_compress_kv nodes=6 exprs=20 node_kinds=Assign=1 If=1 Let=2 Loop=1 Store=1 expr_kinds=BinOp=5 LitF32=1 LitU32=4 Load=2 LogicalIndex=1 Var=7

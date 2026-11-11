@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The public-api-paths gate reads a declaration only where the crate publishes one, in the namespace the name occupies, so a module beside an item of the same name, an associated item, a #[cfg(test)] item, a pub(crate) item and a constant whose value is another module's item of the same name no longer suppress a real second path; the corrected scan raised the measured count from 44 to 46 and the run note reports how many pub lines it refused."

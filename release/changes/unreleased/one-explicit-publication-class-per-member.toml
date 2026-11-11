@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every workspace member declares an explicit publication class in manifest metadata and crate ownership, internal non-extension crates default to unpublishable, the public facade curates compiler re-exports to exclude internal modules, and release ordering derives from the dependency graph."

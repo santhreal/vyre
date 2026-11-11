@@ -1,0 +1,2 @@
+category = "Added"
+text = "Add a multi-workgroup grid-stride tree reduction to vyre-libs. The fused program carries a whole-grid fence, so it runs as one cooperative launch and the caller supplies the workgroup count that its device can hold co-resident; pass 1 strides the whole grid to cover the input and pass 2 combines the partials in a single workgroup. No atomics take part in the combine."

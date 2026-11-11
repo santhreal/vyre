@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`ReferenceRequest::outputs` and `outputs_and_steps` no longer fingerprint the program, and the oracle reuses scope name storage across frames, which cuts per-node allocation in the reference interpreter."

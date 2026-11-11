@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre_lower::emit_adversarial_corpus` and `vyre_lower::artifact_golden` require the `test-fixtures` feature, matching `descriptor_builder`, because every consumer of both is a test."

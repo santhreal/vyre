@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "CUDA device acquisition now converts cudarc's missing-driver-library unwind into an actionable backend error while preserving unrelated panics and the GPU-only execution contract."

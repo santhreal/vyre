@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Documentation, test fixtures, and probe samples in the workspace crates state the mechanism instead of naming a model family that only a downstream compiler declares."

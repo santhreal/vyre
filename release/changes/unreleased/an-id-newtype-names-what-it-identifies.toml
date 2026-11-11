@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre_foundation::substrate::ids::NodeId` and `RegionId` are renamed `InternedNodeId` and `InternedRegionId`, matching `InternedStringId` and `InternedTypeId`. `ir::RegionId` is renamed `ByteRegionId` for the interpreter byte regions it keys, and `region_ssa::EffectToken` is renamed `EffectTokenId` beside `ValueId` and `BlockId`."

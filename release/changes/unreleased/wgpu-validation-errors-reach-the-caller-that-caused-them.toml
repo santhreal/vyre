@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A WGPU validation error raised while another thread records, submits or compiles on the same device is reported to the caller that caused it, and a recording or submission that returns early no longer leaves an error scope on the device that captures a later caller's error."

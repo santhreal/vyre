@@ -1,0 +1,133 @@
+//! Parity test: GPU motif matching matches the reference oracle.
+
+#![cfg(all(test, feature = "device-tests"))]
+
+use crate::harness;
+
+use harness::with_cuda_optimizer_dispatcher;
+use vyre_libs::graph::dispatch::motif::match_motif_via;
+use vyre_libs::graph::motif::MotifEdge;
+use vyre_reference::composition_witness::motif_witness;
+
+fn reference_match_motif(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    motif: &[MotifEdge],
+) -> Vec<u32> {
+    let motif_tuples: Vec<(u32, u32, u32)> = motif
+        .iter()
+        .map(|edge| (edge.from, edge.kind_mask, edge.to))
+        .collect();
+    motif_witness(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        &motif_tuples,
+    )
+}
+#[test]
+fn cuda_match_motif_via_triangle_full_match() {
+    // 0 -> 1 -> 2 -> 0, all kind 1.
+    let edge_offsets = vec![0u32, 1, 2, 3];
+    let edge_targets = vec![1u32, 2, 0];
+    let edge_kind_mask = vec![1u32, 1, 1];
+    let motif = vec![
+        MotifEdge {
+            from: 0,
+            kind_mask: 1,
+            to: 1,
+        },
+        MotifEdge {
+            from: 1,
+            kind_mask: 1,
+            to: 2,
+        },
+        MotifEdge {
+            from: 2,
+            kind_mask: 1,
+            to: 0,
+        },
+    ];
+    with_cuda_optimizer_dispatcher("triangle motif", |dispatcher, policy| {
+        let gpu = match_motif_via(
+            dispatcher,
+            policy,
+            3,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &motif,
+        )
+        .expect("dispatch");
+        let reference =
+            reference_match_motif(3, &edge_offsets, &edge_targets, &edge_kind_mask, &motif);
+        assert_eq!(gpu, reference);
+    });
+}
+
+#[test]
+fn cuda_match_motif_via_partial_match_returns_zero() {
+    let edge_offsets = vec![0u32, 1, 2, 3];
+    let edge_targets = vec![1u32, 2, 0];
+    let edge_kind_mask = vec![1u32, 1, 1];
+    let motif = vec![
+        MotifEdge {
+            from: 0,
+            kind_mask: 1,
+            to: 1,
+        }, // exists
+        MotifEdge {
+            from: 0,
+            kind_mask: 1,
+            to: 2,
+        }, // missing
+    ];
+    with_cuda_optimizer_dispatcher("partial motif", |dispatcher, policy| {
+        let gpu = match_motif_via(
+            dispatcher,
+            policy,
+            3,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &motif,
+        )
+        .expect("dispatch");
+        let reference =
+            reference_match_motif(3, &edge_offsets, &edge_targets, &edge_kind_mask, &motif);
+        assert_eq!(gpu, reference);
+        assert_eq!(gpu, vec![0, 0, 0]);
+    });
+}
+
+#[test]
+fn cuda_match_motif_via_kind_mask_filter() {
+    let edge_offsets = vec![0u32, 1, 1];
+    let edge_targets = vec![1u32];
+    let edge_kind_mask = vec![0b0010u32];
+    // Demand kind bit 0  -  graph has only kind bit 1  -  no match.
+    let motif = vec![MotifEdge {
+        from: 0,
+        kind_mask: 0b0001,
+        to: 1,
+    }];
+    with_cuda_optimizer_dispatcher("kind-mask motif", |dispatcher, policy| {
+        let gpu = match_motif_via(
+            dispatcher,
+            policy,
+            2,
+            &edge_offsets,
+            &edge_targets,
+            &edge_kind_mask,
+            &motif,
+        )
+        .expect("dispatch");
+        let reference =
+            reference_match_motif(2, &edge_offsets, &edge_targets, &edge_kind_mask, &motif);
+        assert_eq!(gpu, reference);
+        assert_eq!(gpu, vec![0, 0]);
+    });
+}

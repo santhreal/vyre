@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Documentation coverage now reports measured gates instead of universal completeness. Public guides distinguish generic consumers from named integrations, and the documentation gate rejects missing or gitignored repository inputs hidden in code spans and shell examples."

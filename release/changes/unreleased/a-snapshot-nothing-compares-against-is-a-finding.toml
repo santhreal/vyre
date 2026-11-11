@@ -1,0 +1,2 @@
+category = "Added"
+text = "The `frozen-contracts` gate reads the snapshot directory and reports a snapshot no frozen contract claims. The frozen set is a table in the gate and the snapshots are files on disk, so deleting a row left its snapshot behind, where it read as a frozen declaration that nothing compares against. The gate sweep reports a workflow step that names a script the checkout does not carry, which is what every script this campaign deletes leaves behind: a step that fails at run time under a name that still reads as coverage."

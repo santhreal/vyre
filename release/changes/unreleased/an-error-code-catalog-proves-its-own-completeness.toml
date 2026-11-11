@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`ErrorCode::ALL` claimed a const assertion made a missing variant a compile error. It could not: the assertion walks `ALL`, so a variant absent from the list is never evaluated. The list order is now held to `stable_id` at compile time and its membership to the `pub enum ErrorCode` declaration, read from source at run time, so a variant added to the enum and not to the list fails the suite."

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`c_frontend::token_fixture::classify_without_annotation` names the weaker of the two classification chains, which the C-AST contracts restated as a builder call plus a classifier call seventeen times. The classifier reads the typedef flags an annotation pass writes, and the two chains disagree on the kind of a GNU attribute's payload identifier, so a contract about declarator and specifier kinds may skip annotation and one about attribute payloads may not. Both are now spelled as which chain they mean."

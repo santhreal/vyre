@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre_lower::descriptor_builder` is the only definition of the elementary `KernelOp` and `BindingSlot` constructors; the adversarial corpus and the CUDA PTX benchmark cases call it instead of carrying their own."

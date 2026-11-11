@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The hardware CPU-oracle fixtures move from a `#[path]`-included module in `vyre-primitives/tests` to `vyre_test_support::hardware_oracle`, so each helper has a reachable library owner instead of five per-item dead-code suppressions in the six suites that shared it. Two of those suites declared the module and read nothing from it."

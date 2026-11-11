@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre_runtime::resource_transfer::select_transfer_path` is now `admissible_transfer_path` and returns `AdmissibleTransferPath` with a `path` field, stating the most capable transfer the device, filesystem and offset alignment admit rather than a ranked choice."

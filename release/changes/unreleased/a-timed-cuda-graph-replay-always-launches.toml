@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Timed CUDA graph replay no longer answers from the materialized output cache, which reported zero device nanoseconds for every sample after the first."

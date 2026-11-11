@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "One authority states the lock policy for every failure domain, so a poisoned lock produces a typed recovery outcome instead of a per-callsite decision, and the closure over domains is derived from source."

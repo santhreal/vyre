@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`TimedDispatchResult` gains `host_timed`, `device_timed` and `split_timed` constructors, and the thirty-two five-field struct literals across the driver, the CUDA, WGPU, Metal and SPIR-V backends and the benchmark harness now call them. A dispatch path states which timing shape it produced instead of restating every field name."

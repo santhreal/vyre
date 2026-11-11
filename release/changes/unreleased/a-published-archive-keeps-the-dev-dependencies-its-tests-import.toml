@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Publishable crates declare their internal dev-dependencies through the workspace table, so cargo keeps the version and the published archive resolves the dependencies its shipped test sources import."

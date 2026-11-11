@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A target payload whose module reads a value that no caller binds and no earlier module writes is rejected when it is loaded, with the module, the value and the target binding in the error, instead of failing every submission as an unbound input."

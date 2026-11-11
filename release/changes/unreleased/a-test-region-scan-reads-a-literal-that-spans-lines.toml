@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Gate scans that track block nesting count braces over the whole source text, so a string or comment spanning several lines no longer ends a #[cfg(test)] region early and no longer reports a test helper as production code with only test callers."

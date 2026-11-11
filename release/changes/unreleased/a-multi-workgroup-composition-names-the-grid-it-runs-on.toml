@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Eleven registered compositions whose writable footprint exceeds one workgroup now index their global writes by a grid-varying id or confine them to the first workgroup, so a multi-workgroup launch no longer repeats the same writes in every workgroup."

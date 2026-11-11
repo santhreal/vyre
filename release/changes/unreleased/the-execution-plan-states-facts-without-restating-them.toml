@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`vyre_foundation::execution_plan::StrategyPlan` and the `FusionStrategy`, `DispatchStrategy`, `AutotuneStrategy`, `ProvenanceStrategy`, `LayoutStrategy`, `ConformanceStrength` and `ReadbackStrategy` types are deleted, along with `ExecutionPlan::strategy`. Each restated a bool or byte count the plan already carried on `ExecutionPlan::{fusion, memory, provenance, accuracy, autotune}`, and `DispatchStrategy` was a constant. Read the fact instead: `ReadbackStrategy::visible_bytes()` is `memory.visible_readback_bytes`."

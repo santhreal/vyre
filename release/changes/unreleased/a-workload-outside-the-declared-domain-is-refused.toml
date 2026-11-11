@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Variant selection refuses a workload outside the domain the specialization contract declares instead of serving it from the generic remainder compiled for that domain."

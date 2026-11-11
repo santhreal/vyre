@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`matmul_tiled` and `matmul_bias_tiled` name `vyre-libs::math::semiring_gemm` as the child region carrying their contraction for every element type they accept, where the shared contraction composer previously produced a program that claimed every node as own work; the composition trend check also stops reporting a regression for an operation that composes every node below its own entry boundary and whose program shrank."

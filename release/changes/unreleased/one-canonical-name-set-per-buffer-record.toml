@@ -1,0 +1,2 @@
+category = "Changed"
+text = "ExternalIfdsSecurityBuffers borrows its ten buffer names and publishes them as ExternalIfdsSecurityBuffers::CANONICAL. The ten-argument positional constructor is gone; build the record from CANONICAL or from a struct literal. ExternalIfdsSecurityDispatch and route_security_taint_through_external_ifds carry the buffer lifetime."

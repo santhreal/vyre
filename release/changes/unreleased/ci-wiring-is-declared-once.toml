@@ -1,0 +1,2 @@
+category = "Added"
+text = "xtask/ci-registry.toml declares which subsets hold each gate, which workflows run it, every check CI runs that is not a gate, and every paused workflow with the condition that ends the pause; the ci-registry gate holds that declaration to the registry, the subsets and the workflow steps in both directions."

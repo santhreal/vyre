@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A region reading a quantized value is priced at its logical format and carries the step of the grid the value was placed on, a region reading two layouts that do not propagate is refused where they meet, and a region writing its value onto a different grid is priced for the second quantization."

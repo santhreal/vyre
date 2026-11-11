@@ -1,0 +1,2 @@
+category = "Added"
+text = "The docs-register gate reads docs/REGISTER.toml and fails on a banned register phrase, an em dash, or a host-local build setting in any authored Markdown page, and on a repository-root page the documentation manifest does not declare."

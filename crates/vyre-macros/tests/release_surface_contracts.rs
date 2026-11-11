@@ -1,0 +1,270 @@
+#![allow(missing_docs)]
+
+use crate::expansion_fixtures;
+
+#[path = "expansion_fixtures/default_metadata.rs"]
+mod default_metadata;
+
+pub use expansion_fixtures::{ir, optimizer};
+
+use vyre_macros::vyre_pass;
+
+#[vyre_pass(
+    name = "release_surface_pass",
+    requires = ["domtree"],
+    invalidates = ["alias"],
+    phase = "megakernel",
+    boundary_class = "backend_aware",
+    requires_caps = ["cuda", "resident_dispatch"],
+    preserves_abi = false,
+    cost_model_family = "dataflow"
+)]
+pub struct ReleaseSurfacePass;
+
+crate::define_id_gated_pass_body!(ReleaseSurfacePass);
+
+#[vyre_pass(name = "release_surface_defaults", requires = [], invalidates = [])]
+pub struct ReleaseSurfaceDefaultsPass;
+
+crate::define_always_run_pass_body!(ReleaseSurfaceDefaultsPass);
+
+#[vyre_pass(
+    name = "release_surface_analyze_always",
+    requires = [],
+    invalidates = [],
+    analyze = "always"
+)]
+pub struct ReleaseSurfaceAnalyzeAlwaysPass;
+
+crate::define_unchanged_pass_body!(ReleaseSurfaceAnalyzeAlwaysPass);
+
+macro_rules! define_metadata_matrix_pass {
+    (
+        $type_name:ident,
+        $pass_name:literal,
+        $phase:literal,
+        $boundary_class:literal,
+        $cost_model_family:literal
+    ) => {
+        #[vyre_pass(
+                                                            name = $pass_name,
+                                                            requires = [],
+                                                            invalidates = [],
+                                                            phase = $phase,
+                                                            boundary_class = $boundary_class,
+                                                            cost_model_family = $cost_model_family
+                                                        )]
+        pub struct $type_name;
+
+        crate::define_always_run_pass_body!($type_name);
+    };
+}
+
+define_metadata_matrix_pass!(
+    MatrixCanonicalizationPass,
+    "matrix_canonicalization",
+    "canonicalization",
+    "abi_preserving",
+    "scalar"
+);
+define_metadata_matrix_pass!(
+    MatrixScalarAlgebraPass,
+    "matrix_scalar_algebra",
+    "scalar_algebra",
+    "abi_changing",
+    "loop"
+);
+define_metadata_matrix_pass!(
+    MatrixLoopPass,
+    "matrix_loop",
+    "loop",
+    "runtime_aware",
+    "memory"
+);
+define_metadata_matrix_pass!(
+    MatrixMemoryPass,
+    "matrix_memory",
+    "memory",
+    "domain_specific",
+    "fusion"
+);
+define_metadata_matrix_pass!(
+    MatrixFusionPass,
+    "matrix_fusion",
+    "fusion_cse",
+    "abi_preserving",
+    "sync"
+);
+define_metadata_matrix_pass!(
+    MatrixSyncPass,
+    "matrix_sync",
+    "sync",
+    "abi_changing",
+    "megakernel"
+);
+define_metadata_matrix_pass!(
+    MatrixSpecializationPass,
+    "matrix_specialization",
+    "specialization",
+    "runtime_aware",
+    "scalar"
+);
+define_metadata_matrix_pass!(
+    MatrixCleanupPass,
+    "matrix_cleanup",
+    "cleanup",
+    "domain_specific",
+    "loop"
+);
+define_metadata_matrix_pass!(
+    MatrixDataflowPass,
+    "matrix_dataflow",
+    "dataflow",
+    "backend_aware",
+    "dataflow"
+);
+
+#[test]
+fn vyre_pass_emits_metadata_trait_impl_and_inventory_registration() {
+    let pass = ReleaseSurfacePass;
+    let metadata = optimizer::ProgramPass::metadata(&pass);
+
+    assert_eq!(metadata.name, "release_surface_pass");
+    assert_eq!(metadata.requires, &["domtree"]);
+    assert_eq!(metadata.invalidates, &["alias"]);
+    assert_eq!(metadata.phase, optimizer::PassPhase::Megakernel);
+    assert_eq!(
+        metadata.boundary_class,
+        optimizer::PassBoundaryClass::BackendAware
+    );
+    assert_eq!(metadata.requires_caps, &["cuda", "resident_dispatch"]);
+    assert!(!metadata.preserves_abi);
+    assert_eq!(
+        metadata.cost_model_family,
+        optimizer::CostModelFamily::Dataflow
+    );
+
+    assert_eq!(
+        optimizer::ProgramPass::analyze(&pass, &ir::Program { id: 0 }),
+        optimizer::PassAnalysis::SKIP
+    );
+    assert_eq!(
+        optimizer::ProgramPass::analyze(&pass, &ir::Program { id: 1 }),
+        optimizer::PassAnalysis::RUN
+    );
+    assert_eq!(
+        optimizer::ProgramPass::fingerprint(&pass, &ir::Program { id: 5 }),
+        optimizer::fingerprint_program(&ir::Program { id: 5 })
+    );
+
+    let registered = inventory::iter::<optimizer::ProgramPassRegistration>
+        .into_iter()
+        .any(|registration| {
+            registration.metadata.name == "release_surface_pass"
+                && (registration.factory)().metadata().requires_caps
+                    == ["cuda", "resident_dispatch"]
+        });
+    assert!(registered);
+}
+
+#[test]
+fn vyre_pass_default_metadata_is_a_stable_contract() {
+    let pass = ReleaseSurfaceDefaultsPass;
+    let metadata = optimizer::ProgramPass::metadata(&pass);
+    default_metadata::assert_default_metadata(&metadata, "release_surface_defaults");
+
+    let program = ir::Program { id: 11 };
+    assert_eq!(
+        optimizer::ProgramPass::analyze(&pass, &program),
+        optimizer::PassAnalysis::RUN
+    );
+    assert_eq!(
+        optimizer::ProgramPass::transform(&pass, program.clone()),
+        optimizer::unchanged(program)
+    );
+}
+
+#[test]
+fn vyre_pass_analyze_always_does_not_require_inherent_analyze_impl() {
+    let pass = ReleaseSurfaceAnalyzeAlwaysPass;
+    let metadata = optimizer::ProgramPass::metadata(&pass);
+
+    assert_eq!(metadata.name, "release_surface_analyze_always");
+    assert_eq!(
+        optimizer::ProgramPass::analyze(&pass, &ir::Program { id: 0 }),
+        optimizer::PassAnalysis::RUN
+    );
+    assert_eq!(
+        optimizer::ProgramPass::analyze(&pass, &ir::Program { id: u64::MAX }),
+        optimizer::PassAnalysis::RUN
+    );
+}
+
+#[test]
+fn vyre_pass_metadata_matrix_covers_every_non_default_phase_mapping() {
+    let cases = [
+        (
+            optimizer::ProgramPass::metadata(&MatrixCanonicalizationPass),
+            optimizer::PassPhase::Canonicalization,
+            optimizer::PassBoundaryClass::AbiPreserving,
+            optimizer::CostModelFamily::Scalar,
+        ),
+        (
+            optimizer::ProgramPass::metadata(&MatrixScalarAlgebraPass),
+            optimizer::PassPhase::ScalarAlgebra,
+            optimizer::PassBoundaryClass::AbiChanging,
+            optimizer::CostModelFamily::Loop,
+        ),
+        (
+            optimizer::ProgramPass::metadata(&MatrixLoopPass),
+            optimizer::PassPhase::Loop,
+            optimizer::PassBoundaryClass::RuntimeAware,
+            optimizer::CostModelFamily::Memory,
+        ),
+        (
+            optimizer::ProgramPass::metadata(&MatrixMemoryPass),
+            optimizer::PassPhase::Memory,
+            optimizer::PassBoundaryClass::DomainSpecific,
+            optimizer::CostModelFamily::Fusion,
+        ),
+        (
+            optimizer::ProgramPass::metadata(&MatrixFusionPass),
+            optimizer::PassPhase::FusionCse,
+            optimizer::PassBoundaryClass::AbiPreserving,
+            optimizer::CostModelFamily::Sync,
+        ),
+        (
+            optimizer::ProgramPass::metadata(&MatrixSyncPass),
+            optimizer::PassPhase::Sync,
+            optimizer::PassBoundaryClass::AbiChanging,
+            optimizer::CostModelFamily::Megakernel,
+        ),
+        (
+            optimizer::ProgramPass::metadata(&MatrixSpecializationPass),
+            optimizer::PassPhase::Specialization,
+            optimizer::PassBoundaryClass::RuntimeAware,
+            optimizer::CostModelFamily::Scalar,
+        ),
+        (
+            optimizer::ProgramPass::metadata(&MatrixCleanupPass),
+            optimizer::PassPhase::Cleanup,
+            optimizer::PassBoundaryClass::DomainSpecific,
+            optimizer::CostModelFamily::Loop,
+        ),
+        (
+            optimizer::ProgramPass::metadata(&MatrixDataflowPass),
+            optimizer::PassPhase::Dataflow,
+            optimizer::PassBoundaryClass::BackendAware,
+            optimizer::CostModelFamily::Dataflow,
+        ),
+    ];
+
+    for (metadata, expected_phase, expected_boundary, expected_cost) in cases {
+        assert_eq!(metadata.phase, expected_phase);
+        assert_eq!(metadata.boundary_class, expected_boundary);
+        assert_eq!(metadata.cost_model_family, expected_cost);
+        assert_eq!(metadata.requires, &[] as &[&str]);
+        assert_eq!(metadata.invalidates, &[] as &[&str]);
+        assert!(metadata.preserves_abi);
+    }
+}

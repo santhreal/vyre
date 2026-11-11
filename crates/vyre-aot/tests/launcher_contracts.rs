@@ -1,0 +1,35 @@
+//! Launcher source emission contract tests.
+
+use crate::fixture_target;
+
+use vyre_aot::{emit_launcher_rust, ArtifactEnvelope, LauncherError, LauncherOpts, TargetId};
+
+fn minimal_ptx_artifact() -> ArtifactEnvelope {
+    fixture_target::compiled_artifact()
+}
+
+#[test]
+fn launcher_requires_linked_target_emitter() {
+    let artifact = minimal_ptx_artifact();
+    let opts = LauncherOpts::default();
+    let target = TargetId::expect_valid("unlinked-fixture-target");
+    let err = emit_launcher_rust(&artifact, target.clone(), &opts).expect_err(
+        "Fix: vyre-aot must not synthesize target-owned launcher files without a linked driver.",
+    );
+    assert!(
+        matches!(&err, LauncherError::TargetNotEnabled(id) if id == &target),
+        "Fix: missing launcher emitter must report target-not-enabled, got {err:?}."
+    );
+}
+
+#[test]
+fn launcher_options_are_target_neutral() {
+    let opts = LauncherOpts {
+        crate_name: "custom-launcher".to_string(),
+        include_collectives: false,
+        include_ttt_loop: true,
+    };
+    assert_eq!(opts.crate_name, "custom-launcher");
+    assert!(!opts.include_collectives);
+    assert!(opts.include_ttt_loop);
+}

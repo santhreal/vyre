@@ -70,7 +70,7 @@ driver crates. Benchmark orchestration remains in `vyre-bench`.
    byte-identity across every backend.
 
 See `vyre-conform/tests/parity_matrix.rs` for the end-to-end
-wiring and `vyre-conform/src/prover.rs` for the verdict
+wiring and `vyre-conform/src/law_proof.rs` for the verdict
 shape.
 
 ## Release evidence

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The routing-contract closure test reads a split op as one module. An op whose program moved into its own file registered in the tests module beside it, which the test looked for only under a directory named for the file, so a routed convergence op read as unregistered while its registration sat two lines away. A registration in a neighbouring file counts when it names the op, so a dialect directory shared by several ops still cannot lend one op's registration to another."

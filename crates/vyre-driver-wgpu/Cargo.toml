@@ -1,0 +1,121 @@
+[package]
+name = "vyre-driver-wgpu"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "wgpu backend for vyre IR  -  implements VyreBackend, owns GPU runtime, buffer pool, pipeline cache"
+readme = "README.md"
+keywords = ["gpu", "wgpu", "ir", "backend", "vyre"]
+categories = ["graphics", "rendering::graphics-api", "hardware-support"]
+documentation = "https://docs.rs/vyre-wgpu"
+exclude = ["**/proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[features]
+default = []
+# A test that acquires a real device is compiled only where the device is.
+# The lanes that own hardware turn this on; a hosted runner leaves it off and
+# never links a test whose first line would abort inside the driver.
+device-tests = []
+wgpu = []
+parity-testing = []
+
+[dependencies]
+vyre-spec = { workspace = true }
+vyre-driver = { workspace = true }
+vyre-foundation = { workspace = true }
+vyre-megakernel = { workspace = true }
+vyre-lower.workspace = true
+vyre-emit-naga.workspace = true
+naga = { workspace = true, features = ["wgsl-out", "spv-out"] }
+wgpu.workspace = true
+bytemuck.workspace = true
+crossbeam-queue = { workspace = true }
+crossbeam-channel.workspace = true
+arc-swap = { workspace = true }
+tracing.workspace = true
+thiserror.workspace = true
+rustc-hash.workspace = true
+blake3.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+dashmap = { workspace = true }
+smallvec.workspace = true
+fs2.workspace = true
+bincode = { workspace = true }
+
+[dev-dependencies]
+# `artifact_golden` (the emitted-WGSL byte-stability harness) is test-only and
+# lives behind this feature, like `descriptor_builder`.
+vyre-lower = { workspace = true, features = ["test-fixtures"] }
+vyre-runtime.workspace = true
+# The self-hosted optimizer device suites drive pass-engine scheduling directly.
+vyre-pass-engine.workspace = true
+# `ir-fixtures` carries the shared u32 binop parity tables the live-GPU
+# parity suites read their operands and pinned oracle answers from.
+vyre-test-support = { workspace = true, features = ["semantic-requests", "driver-artifact-contracts", "parity-oracles", "host-input-abi"] }
+# The dispatch allocation budget installs the counting global allocator.
+vyre-alloc-probe = { workspace = true }
+# The canonical self-hosted optimizer scaling bench lives behind this feature,
+# so both concrete driver crates report the same fixtures and table.
+vyre-driver = { workspace = true, features = ["test-fixtures"] }
+tempfile.workspace = true
+proptest.workspace = true
+vyre-libs = { workspace = true, features = ["pattern", "parsing", "nn-attention", "crypto-blake3", "hash"] }
+# The integration tests under tests/ exercise the public `vyre` umbrella facade
+# (vyre::ir, vyre::{DispatchConfig, VyreBackend, validate, ...}), the ergonomic
+# surface a real consumer uses. The 0.6.2 refactor dropped this dev-dep, which
+# silently RED-ed ~90 test files (use of unlinked crate `vyre`). `default-features
+# = false` keeps the `wgpu` feature OFF, so vyre does NOT pull vyre-driver-wgpu back
+# in: no dependency cycle.
+# PATH-ONLY (no version): the `vyre` facade is published AFTER this crate in the publish
+# order, so a versioned/workspace dev-dep would be unsatisfiable at publish time.
+# cargo strips path-only dev-deps from the published manifest; the local test build
+# still links it through the path.
+vyre = { workspace = true, default-features = false }
+# Tests reach `vyre_primitives::wire::pack_u32_slice`, `wire::decode_u*` and
+# `operation_catalog::intrinsic_entries` directly; the facade does not re-export them.
+vyre-primitives = { workspace = true, features = ["inventory-registry"], default-features = false }
+# Cross-OS shader-VALIDITY coverage for the combined segmented megakernel: the
+# winning Vulkan/DX12 runs implicitly prove SPIR-V/HLSL validity, but macOS/Metal
+# is hardware-blocked, so the megakernel descriptor is lowered to MSL here (naga's
+# MSL backend runs the validator, so a successful emit IS a Metal-validity proof)
+# and to SPIR-V (explicit, not run-implied). PATH-ONLY (no version), like the `vyre`
+# dev-dep above: cargo strips path-only dev-deps at publish, so this never creates a
+# publish-ordering constraint, and `--edges=normal` keeps it out of the layering lint.
+# CPU-reference parity tests compare against vyre-reference.
+vyre-reference = { workspace = true }
+# GPU parity tests consume the canonical conformance library without enabling
+# its optional concrete-backend dependencies. PATH-ONLY keeps this unpublished
+# harness out of the packaged dependency graph.
+vyre-conform = { path = "../../conform/vyre-conform", default-features = false }
+tracing-subscriber.workspace = true
+libc.workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+# build.rs reads this to stamp VYRE_NAGA_VERSION into the binary so the
+# pipeline-cache key invalidates when the shader frontend changes. Bump in
+# lockstep with the workspace `naga` dep.
+[package.metadata.vyre]
+publication_class = "concrete-backend"
+publication_contract = "target-support:wgpu"
+naga_version = "25.0.0"
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "vyre-wgpu"
+path = "src/bin/vyre.rs"
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

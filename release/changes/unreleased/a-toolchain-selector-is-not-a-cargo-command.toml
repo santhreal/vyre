@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The hygiene-matrix rule raw_workspace_cargo read `cargo +<toolchain>` as a command name, so a blanket `cargo +` fallback fired before every exemption and reported the pinned-nightly line that installs cargo-public-api for the gate sweep as a release blocker, while the identical `cargo install` line was exempt. The selector chooses a compiler, not a command; the rule now strips it and reads the command underneath, which also makes `cargo +stable build` a precise match rather than an accidental one."

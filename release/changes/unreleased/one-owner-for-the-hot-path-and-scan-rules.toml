@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`scripts/check_no_hot_path_inventory.sh`, `scripts/check_no_hot_path_vec_vec.sh` and the shared `scripts/lib/source_scan.sh` they read the tree through are gone. The `hot-path-inventory` and `hot-path-nested-rows` gates own those two rules and read the tree through `xtask/src/gates/scan.rs`, where a failed scan is an error by type and a scan path that does not exist is a finding rather than a clean count."

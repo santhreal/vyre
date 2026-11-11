@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Equality saturation rejects a rewrite rule whose recorded witness carries no proof, before any rule in the set runs."

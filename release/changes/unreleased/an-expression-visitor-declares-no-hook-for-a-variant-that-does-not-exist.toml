@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`ExprVisitor::visit_sequence` is gone. No `Expr` variant dispatched to it, so every implementor carried an override that traversal never called, and the frozen-contract snapshot recorded a hook the trait did not use."

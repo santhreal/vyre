@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The host-oracle elimination test built its scan root from `env!(\"CARGO_MANIFEST_DIR\")` and a `../` hop, which bakes the path of the checkout the binary was compiled in into the binary. It now resolves the root through `checkout::checkout_root()`, the same run-time walk every other gate uses, so the test reads the tree it runs against."

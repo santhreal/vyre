@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The release workload matrix calls a CUDA command reproducible only when --release reaches cargo. Everything after the argument separator goes to the benchmark harness, which builds nothing, so a --release written there described an optimized build that never happened."

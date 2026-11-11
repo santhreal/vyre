@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The benchmark harness names its build profile from the optimization level cargo compiled it with and the assertion cfg together. It read the assertion cfg alone, so a profile that turns assertions off without optimizing reported itself as release, and the guard that refuses an unoptimized release measurement let it through. The recorded environment carries the level as `build.opt_level:<n>`."

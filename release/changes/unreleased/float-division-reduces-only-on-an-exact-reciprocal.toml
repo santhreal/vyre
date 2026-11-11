@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Division of a float by a constant becomes a reciprocal multiply only when the reciprocal is exact, so a divisor that is not a power of two keeps the quotient it computed before and a divisor below 2^-127 no longer turns every quotient into an infinity or a NaN."

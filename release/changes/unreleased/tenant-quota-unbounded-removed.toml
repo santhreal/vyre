@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`TenantQuota::unbounded()` is removed in favor of `TenantQuota::default()` and explicit finite bounded quotas across `vyre-runtime`."

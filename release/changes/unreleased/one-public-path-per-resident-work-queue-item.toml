@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every resident work queue item is published at one path. The parent module blanket re-export of 174 names from its public submodules is gone, so a caller names the submodule that owns the item, and the crate duplicate-path count drops from 735 to 119."

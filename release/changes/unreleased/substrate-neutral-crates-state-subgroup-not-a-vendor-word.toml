@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Substrate-neutral crates state `subgroup` where they stated one vendor's word for it: `BackendCapabilities::has_warp_shuffle` is `has_subgroup_shuffle`, `DeviceSignature::warp_size` and its device-signature TOML key are `subgroup_size`, `FrontierTopology::WarpSparseFrontier` is `SubgroupSparseFrontier`, `TargetCapabilityAxis::WarpShuffle` is `SubgroupShuffle`, the attention plan's `warp_lanes` and `warps_per_block` are `subgroup_lanes` and `subgroups_per_block`, and the frontier topology reason reads `ultra_sparse_subgroup_specialized`."

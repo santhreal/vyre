@@ -1,0 +1,2 @@
+category = "Added"
+text = "`cargo xtask portability-evidence` runs the host-identity corpus on every cell the cargo configuration declares a way to reach, records what each one computed in `release/evidence/portability/host-identity.json`, and settles the corpus pins only to an identity every cell agreed on."

@@ -1,0 +1,4 @@
+category = "Removed"
+text = """
+`vyre_runtime::paged_resource::PagedResidencyPlanner` and `PagingCandidateStrategy` are deleted. The selector returned its `device_supports_paging` argument as a two-arm enum, and the caller holding the device capability decides what to run instead.
+"""

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Graph delta wire encoding reads its `BufferAccess` tag from the canonical table the decoder uses. The encoder held a second table that assigned `ReadOnly` the tag the decoder read as `ReadWrite`, and omitted `Uniform` and `WriteOnly`."

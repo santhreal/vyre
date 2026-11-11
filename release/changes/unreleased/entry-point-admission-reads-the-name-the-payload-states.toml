@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Target module admission requires an entry point that the payload metadata names instead of the literal name `main`, so a payload whose dialect renames its entry point materializes."

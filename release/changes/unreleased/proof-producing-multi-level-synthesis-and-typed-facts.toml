@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The optimizer replaces closure-based rule predicates with typed fact identities, deterministic cache keys, and replayable proof terms, enforces content-addressed opaque expression interning, and establishes proof-producing multi-level synthesis over device-pure semantic equality saturation and capability-authenticated schedule exploration."

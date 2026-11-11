@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`conform/vyre-conform` introduces `OracleSession` evaluating programs directly through `vyre-reference` interpreter, deleting `cpu-ref` from the `VyreBackend` registry, precedence order, and `vyre-registry-link`."

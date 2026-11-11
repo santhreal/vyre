@@ -1,0 +1,2 @@
+category = "Added"
+text = "`vyre_megakernel::mesh::implied_width` states the parallel width a placed region set implies, and plan construction, plan validation and the topology tests all read it from there."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "vyre-libs-analysis resolves graph::scc_decompose::dense_reachability_bitsets. The builder is public under the analysis feature that gates it, so a crate that enables the feature can call it."

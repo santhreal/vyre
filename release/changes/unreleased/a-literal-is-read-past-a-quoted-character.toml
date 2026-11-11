@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The reader that finds which file defines an operation no longer loses every literal after a char literal holding a double quote, so a lexer is placed where it is registered."

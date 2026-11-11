@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The workspace version is 0.8.0. The 0.7 line's public API is not preserved: modules moved, constructors gained fields, enums gained and lost variants, and several functions and features were removed as duplicated surfaces were consolidated onto one owner."

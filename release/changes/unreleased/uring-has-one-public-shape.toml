@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre-runtime/src/uring/` exposes its flat parent re-exports and nothing else. Its six submodules were public alongside those re-exports, giving every type two paths, and the io_uring ABI structures and opcodes were public from a crate that never intends a caller to build a submission queue entry by hand. Every caller in the workspace already spelled `uring::X`, so the submodules are private and the ABI items, `get_sqe`, and `peek_cqe` are `pub(crate)`."

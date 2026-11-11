@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The runtime-sized input witness contract derives its consumer from the live operation registry and fails when no candidate exists, so it exercises the witness comparison rather than a static count rejection."

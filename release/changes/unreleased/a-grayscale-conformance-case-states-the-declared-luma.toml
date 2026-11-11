@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The rgba_to_grayscale conformance case states the luma the operation declares, `(77 * R + 150 * G + 29 * B + 128) >> 8`, instead of values recorded from a floating-point Rec. 601 implementation."

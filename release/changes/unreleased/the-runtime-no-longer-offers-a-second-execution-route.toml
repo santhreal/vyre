@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`vyre_runtime::routing` is deleted. It exported a `RoutingPolicy` trait, a `RoutingEngine`, and a `RoutingDecision` enum whose `GpuPipeline` variant nothing served, behind one policy that ignored its argument and returned `PersistentMegakernel` for every plan; no production path called any of it. Every production compile emits a megakernel artifact, so there is one route, and the `device_only_routing` gate now asserts that no type enumerates execution routes rather than that an existing route type holds only device routes."

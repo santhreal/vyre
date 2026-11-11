@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The reference interpreter executes as an independent strict oracle through typed versioned ReferenceRequest with mandatory budget, interpreting collectives and composite calls directly without invoking production transforms or silently zero-filling out-of-bounds accesses."

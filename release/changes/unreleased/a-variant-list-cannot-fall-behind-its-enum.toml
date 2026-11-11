@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`RingEncodingFault`, `CounterArithmetic`, `RequestFault` and `RingSlotTransition` declare their variants and their `ALL` list from one source, so a variant added without entering the list is a compile error rather than a caller that covers all but one class while the tests iterating `ALL` stay green."

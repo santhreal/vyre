@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Every authored page row in docs/DOCS.toml carries a covers list naming the source paths the page states the content of. docs/lego-block-rule.md also records both anonymous generator prefixes: it named only anonymous:: while vyre_foundation::composition::ANONYMOUS_GENERATOR_PREFIXES has held inline:: as well, so a reader checking a region against the gate saw half the rule."

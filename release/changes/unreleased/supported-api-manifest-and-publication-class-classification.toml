@@ -1,0 +1,2 @@
+category = "Added"
+text = "The crate ownership registry declares publication classes for all workspace packages, and a generated supported-API manifest classifies exported public API items by stability, feature, and wire compatibility."

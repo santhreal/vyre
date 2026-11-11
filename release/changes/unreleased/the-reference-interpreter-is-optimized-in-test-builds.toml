@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Debug and test builds compile `vyre-reference` and `vyre-foundation` at opt-level 3, so a 300-case reference-interpreter sweep runs in 22 s instead of 318 s, with debug assertions and overflow checks still on."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A tile matmul forms a matrix fragment product only from tiles whose declaration states a subgroup-distributed fragment with a fragment orientation and enough bound elements, and lowers through the scalar expansion otherwise instead of assembling operand words from substitute scalar ids."

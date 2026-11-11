@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The public-API snapshot fixture no longer forces `CARGO_BUILD_JOBS=1` on the refresh it runs. Parallelism is declared in `.cargo/config.toml`, and an environment variable overrides it, so the fixture rebuilt one codegen job at a time regardless of the host."

@@ -1,0 +1,2 @@
+category = "Removed"
+text = "The WGPU host-ingress and raw persistent-kernel compiler routes are gone. Persistent product execution uses authenticated artifact sessions; concrete pipeline compilation remains available only as a hidden oracle helper for driver cache tests."

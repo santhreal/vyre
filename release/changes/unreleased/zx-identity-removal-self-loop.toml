@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "ZX identity removal no longer splices out a phase-zero spider whose two edges are self-loops. The rule only checked that the spider had degree two, so a spider wired to itself twice satisfied it, was deleted, and left the loop edge naming an index past the end of the spider list. It now requires both neighbours to be other spiders of matching colour. `simplified_diagram` runs fusion and identity removal to a joint fixpoint, which terminates because every firing removes exactly one spider."

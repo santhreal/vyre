@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The generated-program corpus and the run-then-compare scaffold the optimizer contract suites draw from have one owner, `contract_cases::optimizer_program_corpus`. Two suites carried a copy each, down to identical recursion depth and branch weights, with two names for the same single-store program builder. Two copies of a generator is not a duplicated helper: the property a suite proves is only as wide as the programs it draws, so a generator that drifts in one file narrows one suite's claim while both stay green."

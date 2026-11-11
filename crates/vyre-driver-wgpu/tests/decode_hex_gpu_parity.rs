@@ -1,0 +1,57 @@
+//! WGPU parity for the hex decoder.
+
+#![cfg(feature = "device-tests")]
+#![allow(deprecated)]
+use crate::harness;
+use harness::acquire_live_backend as live_backend;
+use harness::bytes_u32;
+use harness::u32_bytes;
+
+use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_libs::decode::hex::{
+    hex_decode, hex_decode_table, hex_decoded_capacity, HEX_WORKGROUP_SIZE,
+};
+use vyre_reference::composition_witness::hex_decode_packed_witness as hex_decode_reference_packed;
+
+fn hex_lanes() -> u32 {
+    HEX_WORKGROUP_SIZE[0]
+}
+
+fn dispatch_hex(input: &[u8]) -> Vec<u32> {
+    let backend = live_backend();
+    let decoded_words = hex_decoded_capacity(input.len() as u32);
+    let program = hex_decode("input", "output", input.len() as u32);
+    let grid = [decoded_words.div_ceil(hex_lanes()).max(1), 1, 1];
+    let mut config = DispatchConfig::default();
+    config.grid_override = Some(grid);
+    let ascii_words: Vec<u32> = input.iter().map(|&b| u32::from(b)).collect();
+    let outputs = backend
+        .dispatch(
+            &program,
+            &[
+                u32_bytes(&ascii_words),
+                u32_bytes(hex_decode_table().as_ref()),
+            ],
+            &config,
+        )
+        .expect("Fix: WGPU hex_decode dispatch must succeed");
+    let mut gpu = bytes_u32(&outputs[0]);
+    gpu.truncate(decoded_words as usize);
+    gpu
+}
+
+#[test]
+fn wgpu_hex_decode_matches_reference_for_mixed_case_and_invalid_nibbles() {
+    let input = b"0001020a0FfF7gzzA5";
+    assert_eq!(dispatch_hex(input), hex_decode_reference_packed(input));
+}
+
+#[test]
+fn wgpu_hex_decode_crosses_workgroup_lanes() {
+    let mut input = Vec::with_capacity((hex_lanes() as usize + 73) * 2);
+    for idx in 0..(hex_lanes() as usize + 73) {
+        let byte = ((idx * 37) ^ (idx >> 3)) as u8;
+        input.extend_from_slice(format!("{byte:02x}").as_bytes());
+    }
+    assert_eq!(dispatch_hex(&input), hex_decode_reference_packed(&input));
+}

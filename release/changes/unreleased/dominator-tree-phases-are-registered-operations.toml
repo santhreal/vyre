@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The dominator-tree fixpoint composes two registered operations instead of two anonymous inline phase generators. vyre-primitives::graph::dominator_tree_depth writes the depth of every node from an immediate-dominator forest, and vyre-primitives::graph::dominator_tree_intersect_step walks predecessor edges once and reports whether the forest moved. Both are callable on their own and the composed fixpoint builds the same IR as before."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A faulted interactive completion reports the reason passed to `fault_all`, and a superseded completion names the channel's current generation. The reason was discarded and replaced by the fixed text `session was faulted`, and the superseding generation was reported as the stale generation plus one, which named a frame that need not exist when a channel skips ahead."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The `graph` feature names the `telemetry` feature it uses. `graph::alias_registry` bumps `alias_registry_calls` in production code, so selecting `graph` without `telemetry` failed to resolve `crate::telemetry` and the crate did not build. `default_alias_registry` also carried two public aliases that only called it, and the test asserting the two agreed compared a function with itself; the aliases are gone and every caller names the one function."

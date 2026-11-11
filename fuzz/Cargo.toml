@@ -5,20 +5,20 @@ publish = false
 edition = "2021"
 repository = "https://github.com/santhreal/vyre"
 
+[workspace]
+
 [package.metadata]
 cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-vyre = { path = "../vyre", default-features = false }
-vyre-foundation = { path = "../vyre-foundation" }
-vyre-driver = { path = "../vyre-driver" }
-vyre-driver-wgpu = { path = "../vyre-driver-wgpu" }
+vyre = { path = "../crates/vyre", default-features = false }
+vyre-foundation = { path = "../crates/vyre-foundation" }
+vyre-driver = { path = "../crates/vyre-driver" }
+vyre-driver-wgpu = { path = "../crates/vyre-driver-wgpu" }
 
 [[bin]]
 name = "dispatch"
 path = "fuzz_targets/dispatch.rs"
 test = false
 doc = false
-
-[workspace]

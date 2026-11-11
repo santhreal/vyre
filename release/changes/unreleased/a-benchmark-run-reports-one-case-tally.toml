@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A benchmark report counts its cases in one place, so the printed pass and fail pair equals the per-case tally, and a case whose performance contract failed reads as failed in every run instead of only when budgets are enforced."

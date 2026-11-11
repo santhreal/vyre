@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre_driver::durable_fanout` exposes `sync_paths_and_parents`, `SyncFailure`, `SyncPass` and `into_io_error` in place of `for_each_bounded`, `open_for_sync`, `parent_directories` and `worker_count`, and the driver, runtime and wgpu disk caches flush through it."

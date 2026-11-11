@@ -1,0 +1,360 @@
+//! `loop_peel`  -  peel the first iteration of a `Node::Loop` when the
+//! body's leading node is a guard conditioned on the loop variable being
+//! the first-iteration value.
+//!
+//! Op id: `vyre-foundation::optimizer::passes::loop_peel`.
+//! Soundness: `Exact`  -  the peeled iteration body is identical to what the
+//! original loop would execute for `i == from`. The remaining loop starts
+//! at `from + 1`. Cost-direction: down on branch count (removes one
+//! iteration's predicate check). Preserves: every analysis. Invalidates:
+//! nothing.
+//!
+//! ## Pattern
+//!
+//! ```text
+//! Loop(var, LitU32(0), LitU32(N), [If(Eq(Var(var), LitU32(0)), then, []), rest...])
+//!   where N > 1
+//!   → Block((then ++ rest)[var := 0]); Loop(var, LitU32(1), LitU32(N), [rest...])
+//! ```
+//!
+//! The peeled prologue materializes the WHOLE first iteration with `var` fixed
+//! to `0`: the guard is statically true at `i == 0` so it collapses to `then`,
+//! and the trailing `rest` also runs (the original loop executes `then` *and*
+//! `rest` on iteration 0). `var := 0` is substituted into both halves because
+//! `var` is no longer an induction variable in the lifted block.
+//!
+//! Peels the first iteration when it is guarded.
+
+use super::substitution::body_writes_loop_var;
+use crate::ir::{BinOp, Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
+use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::transform::subst::substitute_nodes;
+
+/// Peel the first iteration of guarded loops.
+#[derive(Debug, Default)]
+#[vyre_pass(
+    name = "loop_peel",
+    requires = ["const_fold"],
+    invalidates = []
+)]
+pub struct LoopPeelPass;
+
+impl LoopPeelPass {
+    /// Quick scan: skip programs without any peelable loop.
+    #[must_use]
+    fn analyze_impl(program: &Program) -> PassAnalysis {
+        driver::analyze_candidates(
+            program,
+            &[crate::ir::stats::NODE_KIND_LOOP],
+            &mut is_peelable_loop,
+        )
+    }
+
+    /// Walk the entry tree; peel every peelable loop.
+    #[must_use]
+    pub fn transform(program: Program) -> PassResult {
+        driver::rewrite_entry_nodes(program, &mut peel_node)
+    }
+}
+
+/// The peeled first iteration followed by the loop over the remaining range.
+fn peel_node(node: &Node) -> Option<Vec<Node>> {
+    let loop_ref = super::loop_bounds::match_loop(node)?;
+    let (peeled_body, rest_body) =
+        try_peel(loop_ref.var, loop_ref.from, loop_ref.to, loop_ref.body)?;
+    Some(vec![
+        Node::Block(peeled_body),
+        Node::Loop {
+            var: loop_ref.var.clone(),
+            from: Expr::u32(1),
+            to: loop_ref.to.clone(),
+            body: rest_body,
+        },
+    ])
+}
+
+/// Try to match the A28 peeling pattern:
+/// - from = LitU32(0), to = LitU32(N) with N > 1
+/// - first body node = `If(Eq(Var(loop_var), LitU32(0)), then, [])`
+/// - the first-iteration body (`then` ++ trailing `rest`) does not rebind the
+///   loop var (we substitute `loop_var := 0` into the lifted copy)
+///
+/// Returns `Some((peeled_body, rest_of_loop_body))` on success, where
+/// `peeled_body` is the entire first iteration `(then ++ rest)` with the loop
+/// var fixed to `0`, and `rest_of_loop_body` is the loop body with the now-dead
+/// first-iteration guard removed (used as the body of the `1..N` remainder).
+fn try_peel(var: &Ident, from: &Expr, to: &Expr, body: &[Node]) -> Option<(Vec<Node>, Vec<Node>)> {
+    // Require from = 0, to = N literal > 1
+    let Expr::LitU32(0) = from else { return None };
+    let Expr::LitU32(n) = to else { return None };
+    if *n <= 1 {
+        return None;
+    }
+
+    // First body node must be If(Eq(Var(var), LitU32(0)), then, [])
+    let first = body.first()?;
+    let Node::If {
+        cond,
+        then,
+        otherwise,
+    } = first
+    else {
+        return None;
+    };
+
+    // otherwise must be empty
+    if !otherwise.is_empty() {
+        return None;
+    }
+
+    // cond must be Eq(Var(var), LitU32(0))
+    let Expr::BinOp {
+        op: BinOp::Eq,
+        left,
+        right,
+    } = cond
+    else {
+        return None;
+    };
+
+    let matches_var = match (left.as_ref(), right.as_ref()) {
+        (Expr::Var(name), Expr::LitU32(0)) if name == var => true,
+        (Expr::LitU32(0), Expr::Var(name)) if name == var => true,
+        _ => false,
+    };
+
+    if !matches_var {
+        return None;
+    }
+
+    let rest_body: Vec<Node> = body[1..].to_vec();
+
+    // Safety: the lifted prologue substitutes `var := 0`, so neither the
+    // guard's `then` nor the trailing `rest` may rebind the loop var. A
+    // `Let`/`Assign` to `var` would make a later `Var(var)` denote that new
+    // binding, not 0, and the substitution would corrupt it. (This subsumes
+    // the previous Assign-only guard.)
+    if body_writes_loop_var(then, var) || body_writes_loop_var(&rest_body, var) {
+        return None;
+    }
+
+    // Materialize the entire first iteration with the loop var fixed to 0:
+    // the guard is statically true (0 == 0) so it collapses to `then`, then
+    // `rest` runs. The original loop executes BOTH on iteration 0.
+    let zero = Expr::u32(0);
+    let mut peeled_body = substitute_nodes(then, var, &zero);
+    peeled_body.extend(substitute_nodes(&rest_body, var, &zero));
+    Some((peeled_body, rest_body))
+}
+
+/// True iff `node` is a loop matching the A28 peeling pattern.
+fn is_peelable_loop(node: &Node) -> bool {
+    if let Node::Loop {
+        var,
+        from,
+        to,
+        body,
+    } = node
+    {
+        try_peel(var, from, to, body).is_some()
+    } else {
+        false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node};
+    use crate::visit::for_each_node;
+
+    fn buf() -> BufferDecl {
+        BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
+    }
+
+    fn program_with_entry(entry: Vec<Node>) -> Program {
+        Program::wrapped(vec![buf()], [1, 1, 1], entry)
+    }
+
+    fn count_loops(node: &Node) -> usize {
+        crate::test_ir_inspect::count_nodes(std::slice::from_ref(node), |candidate| {
+            matches!(candidate, Node::Loop { .. })
+        })
+    }
+
+    /// Positive: peel fires for Loop(i, 0, 10, [If(Eq(i, 0), [store], []), rest])
+    #[test]
+    fn peel_fires_for_guarded_first_iteration() {
+        let guard = Node::If {
+            cond: Expr::eq(Expr::var("i"), Expr::u32(0)),
+            then: vec![Node::store("buf", Expr::u32(0), Expr::u32(99))],
+            otherwise: vec![],
+        };
+        let rest = Node::store("buf", Expr::var("i"), Expr::u32(7));
+        let entry = vec![Node::Loop {
+            var: Ident::from("i"),
+            from: Expr::u32(0),
+            to: Expr::u32(10),
+            body: vec![guard, rest],
+        }];
+        let program = program_with_entry(entry);
+        let result = LoopPeelPass::transform(program);
+        assert!(result.changed, "peeling must fire");
+        // After peeling: peeled body (Block) + remaining loop from 1..10
+        let loops: usize = result.program.entry().iter().map(count_loops).sum();
+        assert!(loops >= 1, "remaining loop must exist");
+    }
+
+    /// Negative: from != 0
+    #[test]
+    fn peel_skips_when_from_is_not_zero() {
+        let guard = Node::If {
+            cond: Expr::eq(Expr::var("i"), Expr::u32(0)),
+            then: vec![Node::store("buf", Expr::u32(0), Expr::u32(99))],
+            otherwise: vec![],
+        };
+        let entry = vec![Node::Loop {
+            var: Ident::from("i"),
+            from: Expr::u32(1), // not zero
+            to: Expr::u32(10),
+            body: vec![guard],
+        }];
+        let program = program_with_entry(entry);
+        let result = LoopPeelPass::transform(program);
+        assert!(!result.changed, "peeling must not fire when from != 0");
+    }
+
+    /// Negative: to is not literal
+    #[test]
+    fn peel_skips_when_to_is_not_literal() {
+        let guard = Node::If {
+            cond: Expr::eq(Expr::var("i"), Expr::u32(0)),
+            then: vec![Node::store("buf", Expr::u32(0), Expr::u32(99))],
+            otherwise: vec![],
+        };
+        let entry = vec![Node::Loop {
+            var: Ident::from("i"),
+            from: Expr::u32(0),
+            to: Expr::var("n"), // not literal
+            body: vec![guard],
+        }];
+        let program = program_with_entry(entry);
+        let result = LoopPeelPass::transform(program);
+        assert!(!result.changed, "peeling must not fire when to is Var");
+    }
+
+    /// Negative: first body node is not the matching If
+    #[test]
+    fn peel_skips_when_first_node_is_not_matching_if() {
+        let entry = vec![Node::Loop {
+            var: Ident::from("i"),
+            from: Expr::u32(0),
+            to: Expr::u32(10),
+            body: vec![Node::store("buf", Expr::var("i"), Expr::u32(7))],
+        }];
+        let program = program_with_entry(entry);
+        let result = LoopPeelPass::transform(program);
+        assert!(!result.changed, "peeling must not fire without matching If");
+    }
+
+    /// Negative: peeled body assigns to the loop variable
+    #[test]
+    fn peel_skips_when_peeled_body_assigns_loop_var() {
+        let guard = Node::If {
+            cond: Expr::eq(Expr::var("i"), Expr::u32(0)),
+            then: vec![Node::assign("i", Expr::u32(42))], // assigns to loop var!
+            otherwise: vec![],
+        };
+        let entry = vec![Node::Loop {
+            var: Ident::from("i"),
+            from: Expr::u32(0),
+            to: Expr::u32(10),
+            body: vec![guard],
+        }];
+        let program = program_with_entry(entry);
+        let result = LoopPeelPass::transform(program);
+        assert!(
+            !result.changed,
+            "peeling must not fire when peeled body assigns to loop var"
+        );
+    }
+
+    /// Collect every `(index, value)` Store pair in document order.
+    ///
+    /// Descent comes from `visit::for_each_node`, the one owner of
+    /// which node variants nest. The hand-written match this replaces ended in
+    /// `_ => {}`, so a store inside a fifth body-bearing variant would have been
+    /// missing from the pair list and the peeled-prologue assertion would have
+    /// passed on a prologue that dropped it.
+    fn store_pairs(nodes: &[Node]) -> Vec<(Expr, Expr)> {
+        let mut out = Vec::new();
+        for_each_node(nodes, |n| {
+            if let Node::Store { index, value, .. } = n {
+                out.push((index.clone(), value.clone()));
+            }
+        });
+        out
+    }
+
+    /// The peeled prologue must materialize the WHOLE first iteration -- the
+    /// guard's `then` AND the trailing `rest` -- with the loop var fixed to 0.
+    ///
+    /// Two bugs this locks down, both latent because the only positive test
+    /// asserted just `changed` + loop-count:
+    ///   1. `then` was lifted verbatim, so `Var(i)` inside it referenced an
+    ///      out-of-scope induction variable instead of `0`.
+    ///   2. the first iteration's `rest` was dropped entirely (the remainder
+    ///      loop starts at `i = 1`), losing `rest[i := 0]`.
+    #[test]
+    fn peel_materializes_full_first_iteration_with_var_substituted() {
+        // `then` reads Var(i); `rest` reads Var(i). At i == 0 both are 0.
+        let guard = Node::If {
+            cond: Expr::eq(Expr::var("i"), Expr::u32(0)),
+            then: vec![Node::store("buf", Expr::var("i"), Expr::u32(99))],
+            otherwise: vec![],
+        };
+        let rest = Node::store("buf", Expr::var("i"), Expr::u32(7));
+        let entry = vec![Node::Loop {
+            var: Ident::from("i"),
+            from: Expr::u32(0),
+            to: Expr::u32(10),
+            body: vec![guard, rest],
+        }];
+        let result = LoopPeelPass::transform(program_with_entry(entry));
+        assert!(result.changed, "peeling must fire");
+
+        let body = crate::test_ir_inspect::region_body(&result.program);
+
+        // Full store sequence across the peeled program, in document order.
+        // The peeled prologue runs `then[i:=0]` (store 0,99) then `rest[i:=0]`
+        // (store 0,7); the remainder loop runs `rest` (store Var(i),7).
+        // Pre-fix this was [(Var(i),99),(Var(i),7)]: the prologue lifted `then`
+        // verbatim (unsubstituted) and dropped `rest[i:=0]` entirely.
+        assert_eq!(
+            store_pairs(&body),
+            vec![
+                (Expr::u32(0), Expr::u32(99)),
+                (Expr::u32(0), Expr::u32(7)),
+                (Expr::var("i"), Expr::u32(7)),
+            ],
+            "peel must materialize then++rest at i = 0, then loop rest over 1..N"
+        );
+
+        let mut loop_found = None;
+        crate::visit::for_each_node(&body, |n: &Node| {
+            if let Node::Loop { from, body, .. } = n {
+                if loop_found.is_none() {
+                    loop_found = Some((from, body.as_slice()));
+                }
+            }
+        });
+        let (from, lbody) = loop_found.expect("remainder loop present");
+        assert_eq!(from, &Expr::u32(1), "remainder loop starts at i = 1");
+        assert_eq!(
+            store_pairs(lbody),
+            vec![(Expr::var("i"), Expr::u32(7))],
+            "remainder keeps rest with the induction variable"
+        );
+    }
+}

@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`fixture_bytes` owns the reference-interpreter call every `vyre-libs` module test makes. Fifteen modules each declared a local `run` that packed its own buffers, called `reference_eval` and decoded the result, which is the same eight lines fifteen times and the largest remaining duplicate cluster in the crate. They now build through `eval_bytes` and its typed `eval_f32` and `eval_u32` wrappers, and no module declares a `run`."

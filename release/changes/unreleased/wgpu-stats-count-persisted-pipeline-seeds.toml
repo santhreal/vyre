@@ -1,0 +1,2 @@
+category = "Added"
+text = "`WgpuBackendStats` reports `persisted_pipeline_seeded` and `persisted_pipeline_cold`, the pipeline compiles whose driver cache was or was not created from a persisted blob."

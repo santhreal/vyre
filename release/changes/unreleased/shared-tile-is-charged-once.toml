@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Megakernel selection charges a workgroup tile once per fusion group instead of once per member, so a group whose members share a tile by name is no longer pushed over the device scratch budget and ranked below the pair it beats."

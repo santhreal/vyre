@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The WGPU tiered cache drops a key's access-tracker node when no tier accepts the entry, so a rejected insert or an unplaceable promote no longer leaves a node that eviction can never reclaim."

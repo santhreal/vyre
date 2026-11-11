@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "An IR float literal compares by bit pattern instead of by IEEE equality, so a program holding a NaN literal is equal to itself and reaches an optimizer fixpoint rather than failing every dispatch at the iteration cap, and `0.0` and `-0.0` are two literals."

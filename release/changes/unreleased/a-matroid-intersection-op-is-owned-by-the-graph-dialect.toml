@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The full matroid intersection operation is owned by the graph dialect under the id vyre-libs::graph::matroid_intersection_full. It composes the exchange-graph BFS step and path reconstruction, which vyre-libs-graph defines, and vyre-libs-math cannot declare that edge because vyre-libs-graph already depends on vyre-libs-math."

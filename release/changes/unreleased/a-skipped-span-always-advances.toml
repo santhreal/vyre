@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The source scanner reports the length of a non-code span as a non-zero value, so a scanner that skips one cannot fail to advance and every caller drops its own guard against a zero-length answer."

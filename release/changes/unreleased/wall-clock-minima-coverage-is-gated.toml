@@ -1,0 +1,2 @@
+category = "Added"
+text = "A gate takes the published `min_` key set from the serialized `WallClockMinima` at run time and fails unless each key is either a sample floor or a member of the aggregate percentile field list. A minimum added to the record that no reader checks now fails the suite by name instead of reaching the artifacts unexamined."

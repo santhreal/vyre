@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The self-hosted DCE pass declares the portable 256-invocation workgroup every sibling pass uses, so it is dispatchable on a dialect that caps a workgroup at 256, and its frontier seed strides instead of assuming one lane per word."

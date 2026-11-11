@@ -1,0 +1,564 @@
+//! store-to-load forwarding under the conservative
+//! same-block / structurally-equal-index alias proof.
+//!
+//! Op id: `vyre-foundation::optimizer::passes::store_to_load_forward`.
+//! Soundness: `Exact` when the rule fires. A `Node::Store(b, i, v)`
+//! followed in the same sibling Vec by `Node::Let(name, Load(b, i))`
+//! with no intervening write or barrier to `b` lets us replace the
+//! Load with a direct copy of `v`  -  the bytes the Load would observe
+//! are exactly the bytes the prior Store wrote. Cost direction:
+//! monotone-down on `node_count` (one fewer Load expression) and on
+//! per-iteration memory traffic. Preserves: every analysis.
+//! Invalidates: nothing.
+//!
+//! ## Rule
+//!
+//! ```text
+//! Node::Store { buffer: b, index: i, value: v }
+//! ... straight-line siblings, no Store/Atomic/Load/AsyncLoad/AsyncStore/
+//!     IndirectDispatch/Trap/Barrier touching `b` ...
+//! Node::Let { name, value: Expr::Load { buffer: b, index: i } }
+//! →
+//! Node::Store { buffer: b, index: i, value: v }
+//! ... unchanged siblings ...
+//! Node::Let { name, value: v.clone() }
+//! ```
+//!
+//! ## Conservatism
+//!
+//! - Both operations must live in the same `Vec<Node>` body. Cross-
+//!   container forwarding (across an If branch boundary, into a Loop
+//!   body, etc.) needs downstream reaching-store analysis.
+//! - The `index` expressions must be structurally equal (`Expr` PartialEq).
+//!   Dynamic indexes that happen to coincide at runtime are conservatively
+//!   left alone.
+//! - Any node between the two whose evaluation could observe or mutate
+//!   `b` blocks the rewrite. `memory::alias` owns that proof, under
+//!   `Interference::ReadsAndWrites`: unlike `dead_store_elim`, a write to
+//!   `b` in the gap is as disqualifying as a read, because a structurally
+//!   distinct index may still name the forwarded lane at run time.
+//! - The forwarded `v` is `Expr::clone()`d into the Let. If `v` itself
+//!   is observably side-effecting (e.g. contains an Atomic), forwarding
+//!   would duplicate the side effect. The shared re-execution safety predicate
+//!   rejects that case.
+//! - `v` is re-evaluated at the LOAD position, so every input it reads must
+//!   be invariant across the gap. The safety predicate already excludes
+//!   buffer loads, leaving scalar variables; if one of `v`'s free variables is
+//!   reassigned by an intervening `Node::Assign` (vyre scalars are mutable),
+//!   the forwarded expression would observe the new value, not the stored one.
+//!   `find_forwarding_store` rejects that case (`node_reassigns_any_var`).
+
+use super::alias::{node_interferes, Interference};
+use crate::ir::{Expr, Ident, Node, Program};
+use crate::optimizer::passes::driver;
+use crate::optimizer::passes::expr_is_observably_free_for_reexecution;
+use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
+use crate::visit::{any_descendant, for_each_subexpr};
+use rustc_hash::FxHashSet;
+
+/// `ProgramPass` registration for the store-to-load forwarding rewrite.
+#[derive(Debug, Default)]
+#[vyre_pass(
+    name = "store_to_load_forward",
+    requires = [],
+    invalidates = [],
+    phase = "memory",
+    boundary_class = "abi_preserving",
+    cost_model_family = "memory"
+)]
+pub struct StoreToLoadForward;
+
+impl StoreToLoadForward {
+    #![allow(missing_docs)]
+    /// Skip when no body in the program contains a forwardable
+    /// `Store` / `Let(Load)` pair under the conservative rule.
+    #[must_use]
+    fn analyze_impl(program: &Program) -> PassAnalysis {
+        use crate::ir::stats::{NODE_KIND_LET, NODE_KIND_STORE};
+        driver::analyze_candidate_bodies(
+            program,
+            &[NODE_KIND_STORE, NODE_KIND_LET],
+            &mut body_has_forwardable_pair,
+        )
+    }
+
+    /// Walk the program; rewrite every forwardable `Let(Load)` to
+    /// the value of its preceding `Store`.
+    #[must_use]
+    pub fn transform(program: Program) -> PassResult {
+        driver::rewrite_entry_bodies(program, &mut forward_in_body)
+    }
+}
+
+fn forward_in_body(body: &[Node]) -> Option<Vec<Node>> {
+    let mut out: Vec<Node> = Vec::with_capacity(body.len());
+    let mut forwarded_any = false;
+    // Forwarding lookback scans the partially-built `out` instead of
+    // `body[..idx]`. Since we only rewrite Let-of-Load (never Store), and
+    // find_forwarding_store only inspects Store nodes (which we never
+    // rewrite), `out` carries the same Store-position information as the
+    // original prefix did.
+    for node in body {
+        let Node::Let { name, value } = node else {
+            out.push(node.clone());
+            continue;
+        };
+        let Expr::Load {
+            buffer: load_buffer,
+            index: load_index,
+        } = value
+        else {
+            out.push(node.clone());
+            continue;
+        };
+        let Some(forwarded_value) = find_forwarding_store(&out, load_buffer, load_index) else {
+            out.push(node.clone());
+            continue;
+        };
+        if !expr_is_observably_free_for_reexecution(&forwarded_value, true) {
+            out.push(node.clone());
+            continue;
+        }
+        forwarded_any = true;
+        out.push(Node::Let {
+            name: name.clone(),
+            value: forwarded_value,
+        });
+    }
+    forwarded_any.then_some(out)
+}
+
+/// Walk back through `prev_siblings` looking for a `Node::Store(b, i, v)`
+/// whose buffer equals `buffer` and whose index is structurally equal to
+/// `index`. Return the stored value `v`. Bail out the moment
+/// [`node_interferes`] reports a node in the gap that could read or write
+/// `buffer` -- which includes a same-buffer `Store` to a structurally
+/// different index, since the two may name one lane at run time.
+fn find_forwarding_store(prev_siblings: &[Node], buffer: &Ident, index: &Expr) -> Option<Expr> {
+    for (passed, prev) in prev_siblings.iter().rev().enumerate() {
+        if let Node::Store {
+            buffer: store_buffer,
+            index: store_index,
+            value,
+        } = prev
+        {
+            if store_buffer == buffer && store_index == index {
+                // The bytes are forwardable, but `value` is cloned to the
+                // LOAD position and re-evaluated there -- so every input it
+                // reads must be invariant across the gap. Loads/atomics/calls
+                // are already rejected by `expr_is_observably_free_for_reexecution`, leaving
+                // scalar variables as the only mutable input. vyre scalars are
+                // reassignable via `Node::Assign` (only loop vars are
+                // immutable), so if one of `value`'s free variables is
+                // reassigned between this store and the load, the forwarded
+                // expression would observe the NEW value, not the stored one.
+                // The `passed` siblings already walked are exactly that gap.
+                let mut vars = FxHashSet::default();
+                collect_value_vars(value, &mut vars);
+                if !vars.is_empty() {
+                    let gap = &prev_siblings[prev_siblings.len() - passed..];
+                    if gap.iter().any(|n| node_reassigns_any_var(n, &vars)) {
+                        return None;
+                    }
+                }
+                return Some(value.clone());
+            }
+        }
+        if node_interferes(prev, buffer, Interference::ReadsAndWrites) {
+            return None;
+        }
+    }
+    None
+}
+
+/// Collect every `Expr::Var` name in `value`. By the time forwarding is
+/// considered, `value` has passed [`expr_is_observably_free_for_reexecution`],
+/// so it contains no `Load`/`Atomic`/`Call`/subgroup ops -- its only
+/// runtime-mutable inputs are these scalar variables (literals and
+/// invocation/workgroup/local ids are invariant within an invocation's
+/// straight-line execution).
+///
+/// Operand positions come from [`for_each_subexpr`]. The hand-written match
+/// this replaces ended in `_ => {}`, so a variable reachable only through an
+/// operand position it did not enumerate read as absent, and the pass forwarded
+/// a value whose input the gap had already reassigned.
+fn collect_value_vars(value: &Expr, out: &mut FxHashSet<Ident>) {
+    for_each_subexpr(value, &mut |expr| {
+        if let Expr::Var(name) = expr {
+            out.insert(name.clone());
+        }
+    });
+}
+
+/// True if `node` -- or any node nested in its bodies -- reassigns a variable
+/// in `vars` via `Node::Assign`. Reassignment is the only way a scalar's value
+/// changes between two siblings: loop variables are immutable, and `Let`
+/// cannot rebind an in-scope name (shadowing is rejected). So this is the
+/// complete set of value-invalidating motions for a forwarded expression.
+///
+/// Descent comes from [`any_descendant`], the one owner of which node variants
+/// nest. The hand-written match this replaces ended in `_ => false`, so a
+/// reassignment inside a fifth body-bearing variant read as absent and the pass
+/// forwarded a value the gap had already invalidated.
+fn node_reassigns_any_var(node: &Node, vars: &FxHashSet<Ident>) -> bool {
+    any_descendant(
+        node,
+        &mut |n| matches!(n, Node::Assign { name, .. } if vars.contains(name)),
+    )
+}
+
+/// True when `body` holds a forwardable `Store` / `Let(Load)` pair.
+///
+/// The candidate is a relation between ADJACENT siblings, so it cannot flatten
+/// to a per-node scan. [`driver::analyze_candidate_bodies`] hands this each
+/// enclosing body and takes its slot list from `child_bodies`; the wrapper this
+/// replaces restated the slot list and ended in `_ => return false`, so a
+/// forwardable pair inside a fifth body-bearing variant read as absent and the
+/// pass reported SKIP.
+fn body_has_forwardable_pair(body: &[Node]) -> bool {
+    for (idx, node) in body.iter().enumerate() {
+        let Node::Let { value, .. } = node else {
+            continue;
+        };
+        let Expr::Load { buffer, index } = value else {
+            continue;
+        };
+        if find_forwarding_store(&body[..idx], buffer, index)
+            .as_ref()
+            .is_some_and(|value| expr_is_observably_free_for_reexecution(value, true))
+        {
+            return true;
+        }
+    }
+    false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
+
+    fn buf(name: &str) -> BufferDecl {
+        BufferDecl::storage(name, 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
+    }
+
+    fn program(entry: Vec<Node>) -> Program {
+        Program::wrapped(vec![buf("a"), buf("b")], [1, 1, 1], entry)
+    }
+
+    fn region_body(entry: &[Node]) -> Vec<Node> {
+        for n in entry {
+            if let Node::Region { body, .. } = n {
+                return body.as_ref().clone();
+            }
+        }
+        entry.to_vec()
+    }
+
+    fn count_loads_in_lets(nodes: &[Node]) -> usize {
+        crate::test_ir_inspect::count_nodes(nodes, |node| {
+            matches!(
+                node,
+                Node::Let {
+                    value: Expr::Load { .. },
+                    ..
+                }
+            )
+        })
+    }
+
+    #[test]
+    fn does_not_forward_across_a_shuffle_lane_atomic_write() {
+        use crate::ir::AtomicOp;
+        use crate::memory_model::MemoryOrdering;
+        // Store(a, 0, 7); Let(t, shuffle(5, atomic_add(a[0], 1))); Let(x, Load(a, 0))
+        // The shuffle's LANE performs an atomic RMW on a[0]  -  a write that
+        // invalidates the stored 7. `node_blocks_forwarding` scans intervening
+        // nodes via `expr_touches_buffer`, which dropped `SubgroupShuffle.lane`,
+        // so the atomic write was invisible and `Load(a, 0)` got forwarded to
+        // the stale literal 7. The lane must be inspected so the hidden write
+        // blocks forwarding.
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::u32(7)),
+            Node::let_bind(
+                "t",
+                Expr::subgroup_shuffle(
+                    Expr::u32(5),
+                    Expr::Atomic {
+                        op: AtomicOp::Add,
+                        buffer: "a".into(),
+                        index: Box::new(Expr::u32(0)),
+                        expected: None,
+                        value: Box::new(Expr::u32(1)),
+                        ordering: MemoryOrdering::Relaxed,
+                    },
+                ),
+            ),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(
+            !result.changed,
+            "an atomic RMW in a shuffle lane writes the buffer; the later load must not be forwarded to the stale store value"
+        );
+        assert_eq!(
+            count_loads_in_lets(&region_body(result.program.entry())),
+            1,
+            "the load must survive (not be forwarded to a stale literal) across a lane atomic write"
+        );
+    }
+
+    #[test]
+    fn forwards_store_value_into_immediate_load() {
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::u32(7)),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+            Node::store("b", Expr::u32(0), Expr::var("x")),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(result.changed);
+        let body = region_body(result.program.entry());
+        assert_eq!(
+            count_loads_in_lets(&body),
+            0,
+            "the Load should be forwarded to the literal 7"
+        );
+    }
+
+    #[test]
+    fn does_not_forward_when_intervening_write_to_same_buffer_clobbers() {
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::u32(7)),
+            Node::store("a", Expr::u32(0), Expr::u32(9)),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        // The forwarder finds the SECOND Store as the most recent one
+        //  -  it is the same buffer/index, so the load forwards from `9`,
+        // not the original `7`. That IS a valid forwarding (the value
+        // the Load would observe)  -  assert it fired.
+
+        assert!(result.changed);
+    }
+
+    #[test]
+    fn does_not_forward_when_intervening_store_clobbers_same_buffer_different_index() {
+        // Store(a, 0, 7); Store(a, 1, 9); Load(a, 0)   -  forwarding
+        // should still find the (a, 0) Store, but the intervening
+        // (a, 1) Store is on the same buffer and our conservative
+        // walker bails out the moment it sees a same-buffer Store
+        // that doesn't match the index. Document that behavior here.
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::u32(7)),
+            Node::store("a", Expr::u32(1), Expr::u32(9)),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(
+            !result.changed,
+            "conservative same-buffer different-index Store blocks forwarding"
+        );
+    }
+
+    #[test]
+    fn does_not_forward_across_barrier() {
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::u32(7)),
+            Node::barrier(),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(!result.changed, "Barrier blocks forwarding");
+    }
+
+    #[test]
+    fn does_not_forward_when_value_contains_load() {
+        // Forwarding a value that itself reads memory would duplicate
+        // the read  -  different observable behavior under relaxed memory.
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::load("b", Expr::u32(0))),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(!result.changed, "forwarded value contains a Load; rejected");
+    }
+
+    #[test]
+    fn does_not_forward_when_intervening_atomic_touches_buffer() {
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::u32(7)),
+            Node::let_bind(
+                "y",
+                Expr::Atomic {
+                    op: crate::ir::AtomicOp::Add,
+                    buffer: crate::ir::Ident::from("a"),
+                    index: Box::new(Expr::u32(0)),
+                    expected: None,
+                    value: Box::new(Expr::u32(1)),
+                    ordering: crate::ir::MemoryOrdering::Relaxed,
+                },
+            ),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(
+            !result.changed,
+            "intervening Atomic on the same buffer blocks"
+        );
+    }
+
+    #[test]
+    fn forwards_through_unrelated_buffer_writes() {
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::u32(7)),
+            Node::store("b", Expr::u32(0), Expr::u32(9)),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(result.changed, "Store to a different buffer doesn't block");
+        let body = region_body(result.program.entry());
+        assert_eq!(count_loads_in_lets(&body), 0);
+    }
+
+    #[test]
+    fn analyze_skips_program_with_no_forwardable_pair() {
+        let entry = vec![Node::store("a", Expr::u32(0), Expr::u32(7))];
+        assert_eq!(
+            crate::optimizer::ProgramPass::analyze(&StoreToLoadForward, &program(entry)),
+            PassAnalysis::SKIP
+        );
+    }
+
+    #[test]
+    fn analyze_runs_when_forwardable_pair_present() {
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::u32(7)),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        assert_eq!(
+            crate::optimizer::ProgramPass::analyze(&StoreToLoadForward, &program(entry)),
+            PassAnalysis::RUN
+        );
+    }
+
+    #[test]
+    fn does_not_forward_when_forwarded_var_is_reassigned() {
+        // store(a, 0, t); assign t = 99; let x = load(a, 0). Forwarding would
+        // make `x = t`, but `t` is 99 at the load point while a[0] holds 5.
+        // The reassignment never touches buffer `a`, so only the value-var
+        // invalidation check catches it. (Oracle-differential proof:
+        // tests/store_to_load_forward_value_invalidation.rs.)
+        let entry = vec![
+            Node::let_bind("t", Expr::u32(5)),
+            Node::store("a", Expr::u32(0), Expr::var("t")),
+            Node::assign("t", Expr::u32(99)),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(
+            !result.changed,
+            "reassignment of the forwarded value's variable blocks forwarding"
+        );
+        let body = region_body(result.program.entry());
+        assert_eq!(
+            count_loads_in_lets(&body),
+            1,
+            "the Load must survive: forwarding `t` would read the reassigned 99"
+        );
+    }
+
+    #[test]
+    fn still_forwards_var_when_not_reassigned_in_gap() {
+        // The fix must NOT over-block: a forwarded variable that is untouched
+        // across an unrelated write still forwards.
+        let entry = vec![
+            Node::let_bind("t", Expr::u32(5)),
+            Node::store("a", Expr::u32(0), Expr::var("t")),
+            Node::store("b", Expr::u32(0), Expr::u32(1)), // unrelated; t untouched
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(
+            result.changed,
+            "an unmodified forwarded variable must still forward"
+        );
+        let body = region_body(result.program.entry());
+        assert_eq!(
+            count_loads_in_lets(&body),
+            0,
+            "the Load forwards to Var(t), which is invariant across the gap"
+        );
+    }
+
+    #[test]
+    fn does_not_forward_when_var_reassigned_inside_intervening_if() {
+        // The reassignment is nested inside an intervening `If` whose body does
+        // not touch buffer `a`, so the buffer-only block misses it; the
+        // value-var check must recurse into the If body.
+        let entry = vec![
+            Node::let_bind("t", Expr::u32(5)),
+            Node::store("a", Expr::u32(0), Expr::var("t")),
+            Node::if_then_else(
+                Expr::bool(true),
+                vec![Node::assign("t", Expr::u32(99))],
+                vec![],
+            ),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(
+            !result.changed,
+            "reassignment nested in an intervening If still blocks forwarding"
+        );
+        let body = region_body(result.program.entry());
+        assert_eq!(count_loads_in_lets(&body), 1, "the Load must survive");
+    }
+    #[test]
+    fn does_not_forward_across_intervening_call() {
+        // Store(a, 0, 5); Let(r, Call("mutating_op", [])); Let(x, Load(a, 0))
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::u32(5)),
+            Node::let_bind(
+                "r",
+                Expr::Call {
+                    op_id: "test::foreign_op".into(),
+                    args: vec![],
+                },
+            ),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(
+            !result.changed,
+            "intervening Call blocks store-to-load forwarding (fail-closed)"
+        );
+        let body = region_body(result.program.entry());
+        assert_eq!(count_loads_in_lets(&body), 1, "the Load must survive");
+    }
+
+    #[test]
+    fn does_not_forward_across_intervening_nested_call() {
+        // Store(a, 0, 5); Let(r, Mul(2, Call("foreign_op", []))); Let(x, Load(a, 0))
+        let entry = vec![
+            Node::store("a", Expr::u32(0), Expr::u32(5)),
+            Node::let_bind(
+                "r",
+                Expr::mul(
+                    Expr::u32(2),
+                    Expr::Call {
+                        op_id: "test::foreign_op".into(),
+                        args: vec![],
+                    },
+                ),
+            ),
+            Node::let_bind("x", Expr::load("a", Expr::u32(0))),
+        ];
+        let result = StoreToLoadForward::transform(program(entry));
+        assert!(
+            !result.changed,
+            "nested Call blocks store-to-load forwarding"
+        );
+        let body = region_body(result.program.entry());
+        assert_eq!(count_loads_in_lets(&body), 1, "the Load must survive");
+    }
+}

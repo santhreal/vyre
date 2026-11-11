@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Subgroup-coalesced match append in the Aho-Corasick bounded-ranges and regex whole-buffer scans now runs its collective in subgroup-uniform control flow, so the shipped default dispatch produces the same matches as the per-lane append instead of reading a value no peer lane bound."

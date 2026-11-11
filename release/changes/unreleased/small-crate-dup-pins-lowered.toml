@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Duplication pins for two crates now record the measured tree: vyre-macros 89 to 41, vyre-debug 54 to 9. Their total line counts are corrected to the measured values, which were already stale before these changes. A no-op test whose body was a comment claiming to pin a test count is deleted."

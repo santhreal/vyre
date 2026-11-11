@@ -2,7 +2,6 @@
 # Route changes require effect size, confidence, baseline, and blocker records.
 
 schema = "vyre.performance.statistical_regression_gate.v1"
-owner = "bench_harness"
 evidence_tokens = ["CRITERION_RS", "GOOGLE_BENCHMARK"]
 
 required_fields = [

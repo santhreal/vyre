@@ -1,0 +1,11 @@
+category = "Fixed"
+text = """
+`DiagnosticPermissiveReport::output_digest` is now `run_digest` and is hashed \
+under a permissive-run label. Diagnostic permissive mode issues no expected \
+output, and an unlabeled blake3 over the output bytes was one: a caller hashed \
+a device's outputs the same way and compared, which grades that device against \
+a mode whose bytes were produced while out-of-bounds accesses were absorbed \
+rather than refused. The label is mixed in before any output byte, so the \
+published value is unreachable from a device's outputs, while two permissive \
+runs of one program still agree.
+"""

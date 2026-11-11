@@ -1,0 +1,91 @@
+# vyre-libs  -  architecture
+
+Tier-3 compositions: every `fn(...) -> Program` that lowers via
+existing IR ops + intrinsics as pure mathematical and semantic transformations.
+No hardware-specific arms, no hardcoded thread-indexing/execution schedules,
+no host dispatch orchestration, and no CPU reference oracles.
+## Modules (one folder per domain)
+
+### `decode/`
+GPU-resident decoders: base64, hex, urlencoded, gzip-fragment,
+zstd-block. Composes `pattern::dfa` + `bitset` + `scatter`.
+
+### `pattern/`
+Pattern-matching and scanning primitives: `aho_corasick`, `dfa_compile`,
+`dfa_compile_with_budget`, `substring_search`, `bracket_match`, regex DFAs.
+Downstream pattern pre-passes use these.
+
+### `math/`
+Arithmetic primitives, atomic-style ops, fixed-point, hash-
+adjacent math, transcendentals lowered to `Expr::Fma` chains.
+
+### `nn/`
+Neural-net building blocks: matmul_tiled, linear, layer_norm,
+softmax, attention. CPU references in `vyre-reference`.
+
+### `hash/`
+Hash compressors: blake3_compress, sha2_block, fnv1a32, fnv1a64,
+crc32, adler32. Composes with `bitset` for streaming.
+
+### `graph/`
+Graph traversals: csr_forward_traverse, csr_backward_traverse,
+sanitizer_cut_csr, path_reconstruct.
+
+### `dataflow/`
+Bitset-fixpoint, frontier_advance, dataflow_join. The substrate
+dataflow engines run IFDS over.
+
+### `parsing/`
+Source-language parsers (C/C++/Rust/Go/Python/JS/TS) wrapped as
+`PackedAst` emitters. Stays on CPU per the parsing-stays-on-CPU
+decision in `docs/ARCHITECTURE.md`.
+
+### `compiler/`
+Compiler-style passes that lower one Program shape into another
+(pattern-engine compile, predicate-registry resolution).
+
+### `intern/`
+String/Ident interning helpers + the perfect-hash table for
+canonical lookups.
+
+### `logical/`
+Boolean primitives  -  `and`, `or`, `xor`, `nand`, `nor`. Each
+declares its `Commutative`/`Associative`/`Idempotent` markers
+for the algebraic-law registry.
+
+### `plumbing/`
+What every composition needs around the IR it builds, and no dialect owns.
+`operand/` decides what a buffer argument is: its name, its element type and
+its cell count. `program/` reads a built Program back out for tooling and
+demotes the intermediate outputs of a fused pair. `registration/` holds the
+type-signature and contract presets a catalog entry declares, plus the
+library-tier view over the canonical foundation registry. `host/` is the work
+between a Program and a backend call: operand marshalling, scratch
+reservation, the shape-keyed Program cache and the composition call counters.
+
+### `representation/`
+Frozen wire-form types that downstream frontends rely on (PackedAst,
+PgBuffers carrier, etc.).
+
+### `builder/`
+The shapes a composition is written in: elementwise maps, tiled reductions,
+sorted-range helpers for the matching and dataflow stacks, and the catalog
+registrations that publish them.
+
+## Public types
+
+- **`security::*`**  -  downstream analyzers consume these: `flows_to`,
+  `sanitized_by`, `bounded_by_comparison`, `dominator_tree`,
+  `label_by_family`, `path_reconstruct`, `aliases_dataflow`.
+- **`pattern::CompiledDfa`**  -  DFA build result.
+- Per-domain types are documented in their respective module
+  rustdoc.
+
+## Integration points
+
+- Consumed by downstream analyzers for every predicate that lowers to a
+  composition.
+- Consumed by `vyre-runtime` for higher-level pipeline
+  scheduling.
+- Feature gates (`go-parser`, `intern`, `security`, etc.) keep
+  consumers from pulling unused domains.

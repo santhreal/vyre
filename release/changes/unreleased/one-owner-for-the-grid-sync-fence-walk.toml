@@ -1,0 +1,2 @@
+category = "Changed"
+text = "vyre_foundation::transform::grid_sync_split owns the whole-grid fence walk, hoist and segmentation. The compile-time planner cut and the dispatch-time split in vyre-driver both call it, replacing the copy that lived in vyre-driver. Hoisted let bindings are collected in sorted order, so a split segment's entry sequence no longer depends on a hash seed and the compiled artifact digest is reproducible."

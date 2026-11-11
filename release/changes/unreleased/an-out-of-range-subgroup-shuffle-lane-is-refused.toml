@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A subgroup shuffle whose source lane falls outside the active subgroup is refused on both the u32 and f32 value paths instead of returning zero."

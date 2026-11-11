@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Repository tooling resolves every crate directory through the workspace roster, so a crate outside the directory its package name spells is read or reported instead of skipped, and `docs/PROTECTED_BOUNDARIES.toml` records members by package name."

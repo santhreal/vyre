@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A publishable crate's src tree is held to product. The test-material-placement gate reads every source file whose name says fixture, oracle, mock, stub, sample, golden or harness, and reports the ones a default build compiles that only test code refers to, or that nothing refers to at all. A module behind a test-only cfg, a module product code calls, and a module behind a feature that is off by default all pass, so no frozen public path has to be renamed. No dependency outside dev-dependencies may name the test support crate."

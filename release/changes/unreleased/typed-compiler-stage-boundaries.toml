@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Compilation now crosses validated whole-program graph, versioned logical domains, selected schedule, physical kernel, and authenticated target payload stages; logical regions include positive typed extents, layouts, reduction axes, aliases, effects, dependencies, and bounded parallel, sequential, reduction, or retained-state semantics, while unresolved runtime extents fail before search."

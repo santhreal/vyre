@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Brute-force substring search, the cooperative DFA scan, the Aho-Corasick bounded suffix scan, and the atomic trace compositions bound every store by the extent of the buffer they write instead of the extent of the buffer they read. An invocation whose output buffer is shorter than its input buffer stored one element past the end of the output. `assert_oob_clean_under_over_provisioned_inputs` runs every registered composition with inputs longer than its declared outputs and fails on a store outside a declared buffer."

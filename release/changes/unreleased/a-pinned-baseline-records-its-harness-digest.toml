@@ -1,0 +1,4 @@
+category = "Fixed"
+text = """
+Every pinned native baseline records the digest of the harness source it names; the six recorded digests matched no file on disk, and one was the digest of the empty string.
+"""

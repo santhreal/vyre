@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The composition audit reports an unreviewed shape pair rather than a duplicate. A shape verdict cannot tell a shared algorithm from a shared IR idiom: a guarded lane index, a row-major loop nest and straight-line unrolled arithmetic have one fingerprint whatever work they do. The reviewer records one of two outcomes, a shared builder or a reviewed pair with the reason the shape cannot express, and every row of both lists is checked against the live registry."

@@ -1,0 +1,2 @@
+category = "Added"
+text = "The neural library now executes chunk-size-64 gated delta prefill with F32 cumulative log-decay, a strict lower-triangular solve, initial-state correction, chunk output reconstruction, and explicit final matrix state. F16, BF16, and F32 inputs retain F32 internal math. Guarded rows in the final structural tile cannot read padding, change state, or appear in truncated output."

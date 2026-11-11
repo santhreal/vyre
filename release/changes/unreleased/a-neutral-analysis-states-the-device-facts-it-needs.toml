@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Neutral kernel analyses take shared-memory bank count, per-workgroup shared capacity, and constant capacity as stated device facts, and a capacity the caller leaves unstated yields no report section and no promotion instead of one computed from an assumed limit."

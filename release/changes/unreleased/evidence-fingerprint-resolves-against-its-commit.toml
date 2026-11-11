@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A recorded `source_fingerprint` is the content digest of every non-evidence path the tree differs from the recorded commit by, so the `evidence-provenance` gate recomputes it from the commit carrying the artifact instead of trusting `git status` text that no longer exists once those changes are committed."

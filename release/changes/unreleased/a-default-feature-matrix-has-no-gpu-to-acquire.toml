@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Thirty-two tests that acquire a real GPU were compiled and run by the default-feature matrix, which has no device. The wgpu and CUDA in-crate cases now carry the device-tests admission, vyre-driver-spirv gained the admission its Vulkan dispatch suite needed, and vyre-conform's parity targets require device-tests instead of gpu, which was on by default and so admitted every one of them. gpu-parity.yml runs the wgpu lib suite and the SPIR-V dispatch suite, so no newly admitted test stops running."

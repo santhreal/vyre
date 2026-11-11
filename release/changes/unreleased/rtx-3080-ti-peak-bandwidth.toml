@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Benchmark runs on an RTX 3080 Ti record the roofline memory fraction against its 912 GB/s peak instead of omitting it."

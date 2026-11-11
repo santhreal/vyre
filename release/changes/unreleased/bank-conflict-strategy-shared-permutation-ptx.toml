@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The PTX emitter applies the selected bank-conflict mitigation strategy to permutable shared-memory bindings and scales the shared-memory declaration for padded row layouts."

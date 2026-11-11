@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "WGPU adapter probing, device requests, selected-adapter acquisition and device-loss recovery each run under a 120 second deadline and return an error naming the stage, instead of parking forever on a driver that never wakes the future."

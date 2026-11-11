@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The device wait timeout setting is `runtime.device_wait_timeout_ms`, read from `VYRE_DEVICE_WAIT_TIMEOUT_MS`. It applies to any backend, and the previous spelling named one vendor."

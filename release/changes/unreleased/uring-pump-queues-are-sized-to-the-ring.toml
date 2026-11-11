@@ -1,0 +1,2 @@
+category = "Changed"
+text = "`vyre_runtime::uring::IoUringState::submission_entries` and `AsyncUringStream::submission_entries` publish the submission entries the kernel allocated for a ring, and `UringPump::new` sizes its iovec scratch, free list and pending queue to that number. A submission needs a submission-queue slot, so the ring depth is the hard bound on anything tracking one submission each; the three queues previously started empty and grew during a scan."

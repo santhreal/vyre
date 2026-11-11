@@ -1,0 +1,277 @@
+//! The `prove` subcommand: certificate defaults, proof execution, and Ed25519 signing of
+//! the emitted artifact.
+
+use std::collections::BTreeSet;
+
+use crate::artifact_json::write_json_artifact;
+use crate::operation_selection::{select_entries, unified_entries};
+use crate::proof_options::parse_proof_options;
+use crate::proof_plan::{hash_proof_plan, proof_plan_summary};
+use crate::proof_scheduler::{
+    prepare_entries_in_parallel, proof_worker_count, prove_backends_in_sequence,
+};
+use crate::proof_timing::{emit_proof_timing, ProofTimingReport};
+use ed25519_dalek::{Signer, SigningKey};
+use vyre_conform::backend_selection::{
+    partition_by_host_availability, select_backends, semantic_execution_backends,
+};
+use vyre_conform::law_proof::{prove_declared_laws, LawVerdict};
+
+pub(crate) const DEFAULT_CERTIFICATE_DIR: &str = ".internals/certs/";
+
+pub(crate) const DEFAULT_CERTIFICATE_FILE: &str = "prove.json";
+
+pub(crate) use vyre_conform::certificate_wire::{LawRecord, ProveArtifact, ProveSignableBody};
+
+/// Prove every declared law of every selected operation, refusing the
+/// certificate when the oracle refutes one.
+///
+/// A law the declared buffer shape cannot exercise is not recorded here: the
+/// roster of those pairs, and the payload each one is missing, is a source
+/// contract the conformance suite judges. What belongs in a certificate is what
+/// this run executed.
+fn prove_selected_laws(selected: &[&'static str]) -> Result<Vec<LawRecord>, String> {
+    let selected: BTreeSet<&str> = selected.iter().copied().collect();
+    let mut records = Vec::new();
+    let mut rejected = Vec::new();
+    for entry in vyre_registry_link::operation::live_operation_registry().iter() {
+        if !selected.contains(entry.id) {
+            continue;
+        }
+        for proof in prove_declared_laws(&entry) {
+            match proof.verdict {
+                LawVerdict::Holds { cases } => records.push(LawRecord {
+                    op_id: proof.op_id.to_string(),
+                    law: proof.law.to_string(),
+                    witness: proof
+                        .witness
+                        .map_or("none", vyre_conform::LawWitness::name)
+                        .to_string(),
+                    cases,
+                }),
+                LawVerdict::Refuted { case, detail } => rejected.push(format!(
+                    "  - ({}, {}): refuted on fixture case {case}: {detail}",
+                    proof.op_id, proof.law
+                )),
+                LawVerdict::Unrunnable { reason } => rejected.push(format!(
+                    "  - ({}, {}): proof could not run: {reason}",
+                    proof.op_id, proof.law
+                )),
+                LawVerdict::Unproven { .. } => {}
+            }
+        }
+    }
+    if rejected.is_empty() {
+        Ok(records)
+    } else {
+        Err(format!(
+            "{} declared law(s) did not survive the reference oracle:\n{}\nFix: correct the operation, correct its fixtures, or remove a declaration the oracle refutes.",
+            rejected.len(),
+            rejected.join("\n")
+        ))
+    }
+}
+
+pub(crate) fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String> {
+    let total_started = std::time::Instant::now();
+    let options = parse_proof_options("prove", args)?;
+    let out = options
+        .out
+        .as_deref()
+        .map(str::to_owned)
+        .unwrap_or_else(|| {
+            std::path::Path::new(
+                options
+                    .certificates_dir
+                    .as_deref()
+                    .unwrap_or(DEFAULT_CERTIFICATE_DIR),
+            )
+            .join(DEFAULT_CERTIFICATE_FILE)
+            .to_string_lossy()
+            .into_owned()
+        });
+
+    let all_backends = semantic_execution_backends()?;
+    if all_backends.is_empty() {
+        return Err(
+            "prove refused to emit the certificate: no dispatch-capable backend is linked into this binary. \
+             Fix: build with `--features gpu` (or another backend feature) so a backend that implements \
+             real dispatch registers itself via `inventory::submit!(BackendCapability { dispatches: true, .. })`. \
+             Emission-only backends are filtered out because they cannot execute Programs \
+             against vyre-reference."
+                .to_string(),
+        );
+    }
+    // Every reference oracle is filtered out of `all_backends`, so a reference
+    // backend cannot reach the proof: selection is where that is decided and
+    // where the refusal is worded.
+    let selected = select_backends(&all_backends, &options.backend_filter)
+        .map_err(|reason| format!("prove refused to emit the certificate: {reason}"))?;
+    // A backend named by id is proved whatever the host says: the caller asked
+    // for it, and its acquisition refusal is the answer they came for. `all` is
+    // the set the host can run, because the `gpu` feature links the Metal and
+    // SPIR-V registrations on every platform and an `all` run on Linux
+    // otherwise wrote one failed pair per operation for a framework the machine
+    // does not have.
+    //
+    // `_live` holds every probed acquisition open until the run ends. Dropping
+    // one tears its vendor runtime back down, and a Vulkan ICD unloaded out from
+    // under the process-wide instance loses the devices every later route needs.
+    let (backends, _live, unavailable) = if options.backend_filter == "all" {
+        let (live, unavailable) = partition_by_host_availability(&selected);
+        let (backends, handles): (Vec<_>, Vec<_>) = live.into_iter().unzip();
+        (backends, handles, unavailable)
+    } else {
+        (selected, Vec::new(), Vec::new())
+    };
+    if backends.is_empty() {
+        let refused = unavailable
+            .iter()
+            .map(|backend| format!("  - {}: {}", backend.id, backend.reason))
+            .collect::<Vec<_>>()
+            .join("\n");
+        return Err(format!(
+            "prove refused to emit the certificate: no registered backend can be acquired on this \
+             host:\n{refused}\nFix: run on a host with one of these devices, or link a backend it \
+             has."
+        ));
+    }
+    let all_entries = unified_entries();
+    let entries = select_entries(&all_entries, &options.ops_filter, options.shard)?;
+    let selected_op_count = entries.len();
+    let worker_count = proof_worker_count(selected_op_count);
+    let prepare_started = std::time::Instant::now();
+    let prepared = prepare_entries_in_parallel(entries, &backends);
+    let prepare_elapsed = prepare_started.elapsed();
+    let prepared_entries = prepared.entries;
+    let mut pairs = prepared.pairs;
+    let mut any_failed = prepared.any_failed;
+    let backend_started = std::time::Instant::now();
+    for backend_pairs in prove_backends_in_sequence(&backends, &prepared_entries) {
+        for pair in backend_pairs {
+            if !pair.passed {
+                any_failed = true;
+            }
+            pairs.push(pair);
+        }
+    }
+    let backend_elapsed = backend_started.elapsed();
+    if any_failed {
+        use std::fmt::Write;
+        let mut failing_count = 0usize;
+        let mut failing_detail = String::new();
+        for pair in pairs.iter().filter(|pair| !pair.passed) {
+            if !failing_detail.is_empty() {
+                failing_detail.push('\n');
+            }
+            let _ = write!(
+                &mut failing_detail,
+                "  - ({}, {}): {}",
+                pair.executor_id, pair.op_id, pair.message
+            );
+            failing_count += 1;
+        }
+        return Err(format!(
+            "prove refused to emit `{out}` because {} (backend, op) pair(s) diverged from vyre-reference:\n{}\nFix: resolve every failing pair before re-running prove.",
+            failing_count,
+            failing_detail
+        ));
+    }
+
+    let selected_ops: Vec<&'static str> = prepared_entries
+        .iter()
+        .map(|prepared| prepared.id)
+        .collect();
+    let laws = prove_selected_laws(&selected_ops)
+        .map_err(|reason| format!("prove refused to emit `{out}`: {reason}"))?;
+
+    let plan = proof_plan_summary(
+        &all_backends,
+        &all_entries,
+        &backends,
+        &unavailable,
+        &prepared_entries,
+        pairs.len(),
+        &options,
+    );
+
+    let signing_started = std::time::Instant::now();
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(b"vyre-conform/prove/v2");
+    hash_proof_plan(&mut hasher, &plan);
+    for pair in &pairs {
+        hasher.update(pair.op_id.as_bytes());
+        hasher.update(pair.executor_id.as_bytes());
+        hasher.update(&[u8::from(pair.passed)]);
+        hasher.update(pair.message.as_bytes());
+    }
+    for law in &laws {
+        hasher.update(law.op_id.as_bytes());
+        hasher.update(law.law.as_bytes());
+        hasher.update(law.witness.as_bytes());
+        hasher.update(&(law.cases as u64).to_le_bytes());
+    }
+    let program_hash = hasher.finalize().to_hex().to_string();
+
+    // The prior derivation
+    // hashed `program_hash:pid:SystemTime::now()` into the Ed25519
+    // seed. All three inputs are attacker-guessable (program_hash is
+    // public, pid is ~2^22, SystemTime has microsecond resolution)
+    // so an attacker who knew approximate CI runtime could brute-force
+    // the seed and forge signed artifacts. The signature was
+    // security theater.
+    //
+    // Use OS randomness instead. This makes every cert non-reproducible
+    // (a feature  -  two runs of `prove` MUST produce different keys)
+    // and removes the brute-force attack surface entirely. If a user
+    // later needs reproducibility, they can thread a high-entropy
+    // secret through an env var + HKDF; the insecure derivation above
+    // is never the right answer.
+    use rand_core::RngCore;
+    let mut seed = [0u8; 32];
+    rand_core::OsRng.fill_bytes(&mut seed);
+    let key = SigningKey::from_bytes(&seed);
+    let signable = ProveSignableBody {
+        wire_format_version: vyre_spec::schema_registry::SchemaId::ProveArtifact.version_u32(),
+        program_hash: &program_hash,
+        backend_id: "all",
+        plan: &plan,
+        pairs: &pairs,
+        laws: &laws,
+    };
+    let signable_bytes = serde_json::to_vec(&signable).map_err(|error| {
+        format!("failed to serialize prove artifact body: {error}. Fix: keep certificate fields JSON-serializable.")
+    })?;
+    let signature = key.sign(&signable_bytes);
+    let emitted_pair_count = pairs.len();
+    let artifact = ProveArtifact {
+        wire_format_version: vyre_spec::schema_registry::SchemaId::ProveArtifact.version_u32(),
+        program_hash,
+        backend_id: "all".to_string(),
+        plan,
+        signature: hex::encode(signature.to_bytes()),
+        public_key: hex::encode(key.verifying_key().to_bytes()),
+        pairs,
+        laws,
+    };
+    let json = serde_json::to_string_pretty(&artifact).map_err(|error| {
+        format!("failed to serialize prove artifact: {error}. Fix: keep certificate fields JSON-serializable.")
+    })?;
+    let signing_elapsed = signing_started.elapsed();
+    let result = write_json_artifact(&out, json, "prove artifact");
+    if result.is_ok() {
+        emit_proof_timing(ProofTimingReport {
+            out: &out,
+            backend_count: backends.len(),
+            selected_op_count,
+            prepared_op_count: prepared_entries.len(),
+            pair_count: emitted_pair_count,
+            worker_count,
+            prepare_elapsed,
+            backend_elapsed,
+            signing_elapsed,
+            total_elapsed: total_started.elapsed(),
+        });
+    }
+    result
+}

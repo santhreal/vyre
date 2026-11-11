@@ -1,0 +1,2 @@
+category = "Added"
+text = "The configuration space model derives typed package, feature, target, toolchain, and backend cells from workspace manifests, enforcing minimal deterministic covering set isolation, build script determinism, and capability-based feature naming."

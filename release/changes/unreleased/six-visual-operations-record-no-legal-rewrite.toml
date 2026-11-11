@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The `apply_scissor_rect`, `composite_blend`, `cull_boxes_2d`, `layout_prefix_scan`, `path_raster`, and `rgba_to_grayscale` operations record no-legal-rewrite instead of uncharacterized, matching the reference oracle's refutation of every law family their shape admits."

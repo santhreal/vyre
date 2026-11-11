@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Tile matmul and tile reduce read the extents the `TileDecl` or `TileLoad` declared instead of inferring a shape from the element count, and refuse an operand whose declared extents do not account for its elements."

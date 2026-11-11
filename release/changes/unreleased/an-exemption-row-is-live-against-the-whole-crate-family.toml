@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Exemption liveness resolves a directory row against every crate of the composition family, so a row whose subject module now lives in a partition crate is live instead of reported dead. An empty family roster fails the gate instead of convicting every row."

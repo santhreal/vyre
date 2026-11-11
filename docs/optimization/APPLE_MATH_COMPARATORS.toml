@@ -2,7 +2,6 @@
 # MPSGraph, Vyre MSL, and CPU references compare reductions, elementwise ops, and ranking kernels.
 
 schema = "vyre.metal.apple_math_comparator.v1"
-owner = "sparse_math_ai"
 evidence_tokens = ["MPS_GRAPH", "METAL_COUNTERS"]
 
 routes = [

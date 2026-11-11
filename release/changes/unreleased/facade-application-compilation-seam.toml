@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The vyre public facade and vyre-libs expose complete compiler schemas, target profiles with provenance, resource ingestion, and admission sessions for downstream application consumers without internal crate dependencies, native handles, or domain schedule hints."

@@ -1,0 +1,100 @@
+//! Parity test: GPU per-word popcount matches CPU oracle.
+//!
+//! Drives `vyre_libs::encoding::bitset_summary::per_word_popcount_via`
+//! against the CPU oracle on real CUDA hardware. Asserts identical
+//! per-word popcount across a battery of inputs.
+
+#![cfg(all(test, feature = "device-tests"))]
+
+use crate::harness;
+
+use harness::with_cuda_optimizer_dispatcher;
+use vyre_libs::encoding::bitset_summary::{
+    per_word_popcount_via, saturation_ratio_via, total_set_bits_via,
+};
+use vyre_reference::composition_witness::{
+    bitset_popcount_witness, bitset_saturation_ratio_witness, reduce_count_witness,
+};
+
+#[test]
+fn cuda_per_word_popcount_matches_cpu_small() {
+    let input = vec![0u32, 1, 0xFFFF_FFFF, 0xAAAA_AAAA, 0x12345678];
+    let gpu = with_cuda_optimizer_dispatcher("small popcount", |dispatcher, policy| {
+        per_word_popcount_via(dispatcher, policy, &input).expect("dispatch")
+    });
+    let cpu = bitset_popcount_witness(&input);
+    assert_eq!(gpu, cpu);
+}
+
+#[test]
+fn cuda_per_word_popcount_handles_empty() {
+    let gpu = with_cuda_optimizer_dispatcher("empty popcount", |dispatcher, policy| {
+        per_word_popcount_via(dispatcher, policy, &[]).expect("dispatch")
+    });
+    assert!(gpu.is_empty());
+}
+
+#[test]
+fn cuda_per_word_popcount_large_input() {
+    // 1024 words covers multiple workgroups (workgroup_size=256).
+    let input: Vec<u32> = (0..1024).map(|i| i as u32 ^ 0xDEAD_BEEF).collect();
+    let gpu = with_cuda_optimizer_dispatcher("large popcount", |dispatcher, policy| {
+        per_word_popcount_via(dispatcher, policy, &input).expect("dispatch")
+    });
+    let cpu = bitset_popcount_witness(&input);
+    assert_eq!(gpu, cpu, "popcount divergence on n=1024");
+}
+
+#[test]
+fn cuda_total_set_bits_via_matches_cpu() {
+    let input: Vec<u32> = (0..512)
+        .map(|i| (i as u32).wrapping_mul(0x9E37_79B9))
+        .collect();
+    let gpu = with_cuda_optimizer_dispatcher("total set bits", |dispatcher, policy| {
+        total_set_bits_via(dispatcher, policy, &input).expect("dispatch")
+    });
+    let cpu = u64::from(reduce_count_witness(&input));
+    assert_eq!(gpu, cpu, "total_set_bits divergence: gpu={gpu} cpu={cpu}");
+}
+
+#[test]
+fn cuda_saturation_ratio_via_matches_cpu() {
+    let input = vec![0xAAAA_AAAAu32; 64]; // 50% saturation across 64 words.
+    let gpu = with_cuda_optimizer_dispatcher("saturation ratio", |dispatcher, policy| {
+        saturation_ratio_via(dispatcher, policy, &input).expect("dispatch")
+    });
+    let cpu = bitset_saturation_ratio_witness(&input);
+    assert!(
+        (gpu - cpu).abs() < 1e-5,
+        "saturation_ratio divergence: gpu={gpu} cpu={cpu}"
+    );
+}
+
+#[test]
+fn cuda_saturation_ratio_via_matches_cpu_arbitrary_pattern() {
+    // Non-50% pattern across 128 words reflecting f32 device reduction precision.
+    let input: Vec<u32> = (0..128)
+        .map(|i| (i as u32).wrapping_mul(0x5555_5555) ^ 0x1234_5678)
+        .collect();
+    let gpu = with_cuda_optimizer_dispatcher("arbitrary saturation ratio", |dispatcher, policy| {
+        saturation_ratio_via(dispatcher, policy, &input).expect("dispatch")
+    });
+    let cpu = bitset_saturation_ratio_witness(&input);
+    assert!(
+        (gpu - cpu).abs() < 1e-5,
+        "arbitrary saturation_ratio divergence: gpu={gpu} cpu={cpu}"
+    );
+}
+
+#[test]
+fn cuda_per_word_popcount_partial_workgroup() {
+    // 200 words  -  fewer than one workgroup; tests bounds-check.
+    let input: Vec<u32> = (0..200)
+        .map(|i| (i as u32).wrapping_mul(0x9E37_79B9))
+        .collect();
+    let gpu = with_cuda_optimizer_dispatcher("partial workgroup popcount", |dispatcher, policy| {
+        per_word_popcount_via(dispatcher, policy, &input).expect("dispatch")
+    });
+    let cpu = bitset_popcount_witness(&input);
+    assert_eq!(gpu, cpu);
+}

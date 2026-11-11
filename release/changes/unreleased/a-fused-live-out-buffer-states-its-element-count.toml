@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A fused megakernel module resolves the element count of every live-out and output buffer from the group entry ABI, so an arm whose carrier is sized at run time no longer declares an allocation of length zero."

@@ -51,7 +51,7 @@ pub struct BackendFingerprint {
 impl BackendFingerprint {
     /// Compute a fingerprint from observed backend behavior.
     ///
-    /// CRITIQUE_CONFORM_2026-04-23 M3: the earlier version used
+    /// 2026-04-23 M3: the earlier version used
     /// `\0`-delimited `format!` concatenation, which let an attacker
     /// inject a `\0` into `backend` or `adapter` to shift delimiter
     /// boundaries and collide with a different configuration

@@ -1,0 +1,43 @@
+[package]
+name = "vyre-macros"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Procedural macros for vyre compiler passes  -  #[vyre_pass], #[vyre_ast_registry]"
+readme = "README.md"
+keywords = ["gpu", "macro", "compiler", "ir", "vyre"]
+categories = ["development-tools::procedural-macro-helpers", "compilers"]
+documentation = "https://docs.rs/vyre-macros"
+exclude = ["**/SKILL.md"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2.workspace = true
+quote.workspace = true
+syn.workspace = true
+
+[dev-dependencies]
+inventory.workspace = true
+trybuild = { workspace = true }
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "closure:vyre-foundation"
+
+[lints]
+workspace = true
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

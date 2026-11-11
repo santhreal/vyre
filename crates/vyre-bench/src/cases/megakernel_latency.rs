@@ -1,0 +1,358 @@
+use super::byte_pack::{rate_per_second_x1000, read_word, write_word};
+use crate::api::case::{
+    prepared_as_mut, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
+    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+};
+use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::resident::{dispatch_artifact_timed, ResidentInputPool};
+use crate::cases::reference_sample::{reference_metrics, timed_reference};
+use crate::cases::resident_queue::{
+    account, accounted_metrics, queue_buffers, resident_pool_sets_metric,
+};
+use vyre_driver::autotune_store::{AutotuneRecord, AutotuneStore};
+use vyre_driver::speculation_verdict::SpeculationVerdict;
+use vyre_driver::SpecCacheKey;
+use vyre_driver::SpeculativeVariantKeys;
+use vyre_runtime::resident_work_queue::protocol::{control, slot, SLOT_WORDS, STATUS_WORD};
+use vyre_runtime::resident_work_queue::speculation::{
+    PairedSpeculationSample, PairedSpeculationWindow,
+};
+use vyre_runtime::resident_work_queue::{self};
+
+/// Names this case's buffers in word codec errors.
+const WORD_CONTEXT: &str = "megakernel latency output";
+
+pub struct MegakernelLatency;
+
+const SLOT_COUNT: u32 = 256;
+const WORKGROUP_SIZE: u32 = 256;
+const RESIDENT_SAMPLE_SETS: usize = 8;
+/// Device active time one slot-drain dispatch must stay under.
+const DISPATCH_CEILING_NS: u64 = 6_000;
+
+struct MegakernelLatencyPrepared {
+    program: vyre_foundation::ir::Program,
+    inputs: Vec<Vec<u8>>,
+    input_bytes_total: u64,
+    resident: Option<ResidentInputPool>,
+}
+
+impl BenchCase for MegakernelLatency {
+    fn id(&self) -> BenchId {
+        BenchId("runtime.megakernel.dispatch.256".to_string())
+    }
+
+    fn metadata(&self) -> BenchMetadata {
+        BenchMetadata {
+            id: self.id(),
+            name: "Megakernel Dispatch 256 Slots".to_string(),
+            description: "Finite one-pass persistent-megakernel slot drain latency".to_string(),
+            tags: vec![
+                "runtime".to_string(),
+                "megakernel".to_string(),
+                "latency".to_string(),
+            ],
+            layer: BenchLayer::Runtime,
+            workload: WorkloadClass::Macro,
+            determinism: DeterminismClass::Deterministic,
+            owner_crate: "vyre-runtime".to_string(),
+        }
+    }
+
+    fn performance_contract(&self) -> Option<PerformanceContract> {
+        Some(PerformanceContract::active_time_ceiling_ns(
+            "resident megakernel slot dispatch",
+            DISPATCH_CEILING_NS,
+            "The quantity under test is how long one dispatch takes, so the contract states that time. \
+             The case launches one workgroup over grid [1,1,1] and drains 256 slots, and its measured \
+             device active time is 2848 ns at the minimum with a p50 between 3840 ns and 4064 ns across \
+             runs. The 6000 ns ceiling is 1.48x the worst measured p50, so it holds through run-to-run \
+             spread and goes red when the dispatch path costs a second launch, which is the regression \
+             this case exists to catch. It is not a ratio: the host reference drains 256 slots in a single \
+             thread in 261 ns to 561 ns, faster than any launch on this device, so no multiple over it is \
+             reachable and none of it measures a competing implementation.",
+        ))
+    }
+
+    fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
+        let program =
+            resident_work_queue::build_program_sharded_once_slots(WORKGROUP_SIZE, SLOT_COUNT, &[]);
+        let ring_bytes = published_ring(SLOT_COUNT)?;
+        let queue = queue_buffers(
+            ctx,
+            ring_bytes,
+            RESIDENT_SAMPLE_SETS,
+            "megakernel latency bench",
+        )?;
+        Ok(Box::new(MegakernelLatencyPrepared {
+            program,
+            inputs: queue.inputs,
+            input_bytes_total: queue.input_bytes_total,
+            resident: queue.resident,
+        }))
+    }
+
+    fn program<'a>(&self, _prepared: &'a PreparedCase) -> Option<&'a vyre_foundation::ir::Program> {
+        None
+    }
+
+    fn run(
+        &self,
+        ctx: &mut BenchContext,
+        prepared: &mut PreparedCase,
+    ) -> Result<BenchRun, BenchError> {
+        let prepared =
+            prepared_as_mut::<MegakernelLatencyPrepared>(prepared, "megakernel latency")?;
+        let mut config = ctx.dispatch_config.clone();
+        config.grid_override = Some([1, 1, 1]);
+
+        let dispatch = dispatch_artifact_timed(
+            ctx,
+            &prepared.program,
+            prepared.resident.as_mut(),
+            &prepared.inputs,
+            &config,
+        )?;
+        let sample = account(dispatch, prepared.input_bytes_total);
+        let (baseline, baseline_ns) =
+            timed_reference(|| simulate_sharded_once_outputs(&prepared.inputs));
+        let baseline_outputs = baseline?;
+        let baseline_output_bytes = baseline_outputs.iter().map(Vec::len).sum::<usize>() as u64;
+        let speculation = record_speculation_probe()?;
+
+        Ok(BenchRun {
+            metrics: BenchMetrics {
+                atomic_op_count: Some(u64::from(SLOT_COUNT).saturating_mul(2)),
+                custom: vec![
+                    MetricPoint {
+                        name: "megakernel_slots".to_string(),
+                        value: u64::from(SLOT_COUNT),
+                    },
+                    MetricPoint {
+                        name: "megakernel_dispatch_latency_ns".to_string(),
+                        value: sample.device_ns,
+                    },
+                    MetricPoint {
+                        name: "megakernel_slots_per_sec_x1000".to_string(),
+                        value: rate_per_second_x1000(u64::from(SLOT_COUNT), sample.device_ns),
+                    },
+                    MetricPoint {
+                        name: "megakernel_roundtrip_buffers".to_string(),
+                        value: sample.outputs.len() as u64,
+                    },
+                    resident_pool_sets_metric(sample.resident_used, RESIDENT_SAMPLE_SETS),
+                    MetricPoint {
+                        name: "megakernel_speculation_samples".to_string(),
+                        value: speculation.samples,
+                    },
+                    MetricPoint {
+                        name: "megakernel_speculation_adopted".to_string(),
+                        value: speculation.adopted,
+                    },
+                    MetricPoint {
+                        name: "megakernel_speculation_rejected".to_string(),
+                        value: speculation.rejected,
+                    },
+                    MetricPoint {
+                        name: "megakernel_speculation_side_compile_cost_ns".to_string(),
+                        value: speculation.side_compile_cost_ns,
+                    },
+                    MetricPoint {
+                        name: "megakernel_speculation_autotune_records".to_string(),
+                        value: speculation.autotune_records,
+                    },
+                ],
+                ..accounted_metrics(&sample, prepared.input_bytes_total)
+            },
+            baseline_metrics: Some(reference_metrics(
+                baseline_ns,
+                prepared.input_bytes_total,
+                baseline_output_bytes,
+            )),
+            outputs: sample.outputs,
+            baseline_outputs: Some(baseline_outputs),
+        })
+    }
+
+    fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
+        run.verify_exact_outputs()?;
+        verify_megakernel_outputs(&run.outputs)
+    }
+}
+
+struct SpeculationProbe {
+    samples: u64,
+    adopted: u64,
+    rejected: u64,
+    side_compile_cost_ns: u64,
+    autotune_records: u64,
+}
+
+fn record_speculation_probe() -> Result<SpeculationProbe, BenchError> {
+    let mut store = AutotuneStore::default();
+    let adopt_conservative = spec_key(0xA001);
+    let adopt_speculative = spec_key(0xA002);
+    let reject_conservative = spec_key(0xB001);
+    let reject_speculative = spec_key(0xB002);
+    let adopt_keys = SpeculativeVariantKeys {
+        conservative: &adopt_conservative,
+        speculative: &adopt_speculative,
+        adapter_id: "release-megakernel-latency",
+    };
+    let reject_keys = SpeculativeVariantKeys {
+        conservative: &reject_conservative,
+        speculative: &reject_speculative,
+        adapter_id: "release-megakernel-latency",
+    };
+    let mut adopt_window = PairedSpeculationWindow::new();
+    let mut reject_window = PairedSpeculationWindow::new();
+    let mut adopt_verdict = SpeculationVerdict::KeepRacing;
+    let mut reject_verdict = SpeculationVerdict::KeepRacing;
+    for _ in 0..8 {
+        adopt_verdict = adopt_window
+            .record_sample(
+                &mut store,
+                adopt_keys,
+                speculation_sample(100_000, 50_000, 0),
+            )
+            .verdict;
+        reject_verdict = reject_window
+            .record_sample(
+                &mut store,
+                reject_keys,
+                speculation_sample(100_000, 50_000, 1_000_000),
+            )
+            .verdict;
+    }
+    if adopt_verdict != SpeculationVerdict::Adopt {
+        return Err(BenchError::CorrectnessViolation(format!(
+            "megakernel speculation adoption probe returned {adopt_verdict:?}, expected Adopt"
+        )));
+    }
+    if reject_verdict != SpeculationVerdict::Reject {
+        return Err(BenchError::CorrectnessViolation(format!(
+            "megakernel speculation rejection probe returned {reject_verdict:?}, expected Reject"
+        )));
+    }
+    let reject_observation = reject_window.observation();
+    Ok(SpeculationProbe {
+        samples: u64::from(adopt_window.len()).saturating_add(u64::from(reject_window.len())),
+        adopted: 1,
+        rejected: 1,
+        side_compile_cost_ns: reject_observation.side_compile_cost_ns,
+        autotune_records: store.len() as u64,
+    })
+}
+
+fn speculation_sample(
+    conservative_dispatch_ns: u64,
+    speculative_dispatch_ns: u64,
+    speculative_compile_ns: u64,
+) -> PairedSpeculationSample {
+    PairedSpeculationSample {
+        conservative_dispatch_ns,
+        speculative_dispatch_ns,
+        conservative_compile_ns: 0,
+        speculative_compile_ns,
+        conservative_record: autotune_record(1),
+        speculative_record: autotune_record(4),
+    }
+}
+
+fn autotune_record(unroll: u32) -> AutotuneRecord {
+    AutotuneRecord {
+        unroll,
+        tile: [0, 0, 0],
+        recorded_at: "2026-05-05".to_string(),
+    }
+}
+
+fn spec_key(id: u64) -> SpecCacheKey {
+    SpecCacheKey {
+        shader_hash: id,
+        binding_sig: id << 8,
+        workgroup_size: [WORKGROUP_SIZE, 1, 1],
+        spec_hash: id << 16,
+    }
+}
+
+fn published_ring(slot_count: u32) -> Result<Vec<u8>, BenchError> {
+    let mut ring = resident_work_queue::protocol::encode_empty_ring(slot_count)
+        .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
+    let slot_bytes = (SLOT_WORDS as usize).checked_mul(4).ok_or_else(|| {
+        BenchError::ExecutionFailed("megakernel slot byte width overflowed usize".to_string())
+    })?;
+    let status_offset = (STATUS_WORD as usize).checked_mul(4).ok_or_else(|| {
+        BenchError::ExecutionFailed("megakernel status byte offset overflowed usize".to_string())
+    })?;
+    for slot in ring.chunks_exact_mut(slot_bytes) {
+        slot[status_offset..status_offset + 4].copy_from_slice(&slot::PUBLISHED.to_le_bytes());
+    }
+    Ok(ring)
+}
+
+fn simulate_sharded_once_outputs(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, BenchError> {
+    if inputs.len() != 4 {
+        return Err(BenchError::ExecutionFailed(format!(
+            "megakernel baseline received {} buffers, expected 4",
+            inputs.len()
+        )));
+    }
+    let mut control = inputs[0].clone();
+    let mut ring = inputs[1].clone();
+    let debug = inputs[2].clone();
+    let io = inputs[3].clone();
+
+    write_word(&mut control, control::DONE_COUNT, SLOT_COUNT, WORD_CONTEXT)?;
+    write_word(
+        &mut control,
+        control::METRICS_BASE,
+        SLOT_COUNT,
+        WORD_CONTEXT,
+    )?;
+    for slot_index in 0..SLOT_COUNT {
+        write_word(
+            &mut ring,
+            slot_index
+                .saturating_mul(SLOT_WORDS)
+                .saturating_add(STATUS_WORD),
+            slot::DONE,
+            WORD_CONTEXT,
+        )?;
+    }
+    Ok(vec![control, ring, debug, io])
+}
+
+fn verify_megakernel_outputs(outputs: &[Vec<u8>]) -> Result<Correctness, BenchError> {
+    if outputs.len() != 4 {
+        return Err(BenchError::CorrectnessViolation(format!(
+            "megakernel dispatch returned {} buffers, expected 4",
+            outputs.len()
+        )));
+    }
+    let done_count = read_word(&outputs[0], control::DONE_COUNT, WORD_CONTEXT)?;
+    if done_count != SLOT_COUNT {
+        return Err(BenchError::CorrectnessViolation(format!(
+            "megakernel DONE_COUNT was {done_count}, expected {SLOT_COUNT}"
+        )));
+    }
+    for slot_index in 0..SLOT_COUNT {
+        let status = read_word(
+            &outputs[1],
+            slot_index
+                .saturating_mul(SLOT_WORDS)
+                .saturating_add(STATUS_WORD),
+            WORD_CONTEXT,
+        )?;
+        if status != slot::DONE {
+            return Err(BenchError::CorrectnessViolation(format!(
+                "megakernel slot {slot_index} status was {status}, expected DONE"
+            )));
+        }
+    }
+    Ok(Correctness::Exact)
+}
+
+inventory::submit! {
+    &MegakernelLatency as &'static dyn BenchCase
+}

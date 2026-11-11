@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The vyre-foundation public-API snapshot records BackendSupport and the three-argument check_backend_capabilities. It still held the seven-boolean signature that the struct replaced, so the snapshot described a function the crate no longer exports."

@@ -1,0 +1,612 @@
+#[non_exhaustive] pub enum vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError
+#[non_exhaustive] pub struct vyre_libs_builder::builder::BuildOptions
+#[non_exhaustive] pub struct vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef
+#[non_exhaustive] pub struct vyre_libs_builder::plumbing::program::descriptor::BufferDescriptor
+#[non_exhaustive] pub struct vyre_libs_builder::plumbing::program::descriptor::ProgramDescriptor
+#[non_exhaustive] pub struct vyre_libs_builder::prelude::BuildOptions
+#[non_exhaustive] pub struct vyre_libs_builder::prelude::TensorRef
+impl core::fmt::Debug for vyre_libs_builder::builder::gemm::ContractionEpilogue
+impl core::fmt::Debug for vyre_libs_builder::builder::gemm::ContractionSemiring
+impl inventory::Collect for vyre_libs_builder::plumbing::registration::operation_catalog::ConvergenceContract
+impl vyre_libs_builder::builder::BuildOptions
+impl vyre_libs_builder::builder::csr::CsrBuffers<'static>
+impl vyre_libs_builder::builder::elementwise::ElementwiseComposer
+impl vyre_libs_builder::builder::gemm::ContractionComposer
+impl vyre_libs_builder::builder::gemm::ContractionOutputTile
+impl vyre_libs_builder::builder::gemm::ContractionSemiring
+impl vyre_libs_builder::builder::reduction::ReductionComposer
+impl vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'_>
+impl vyre_libs_builder::builder::stencil::CellGridShape
+impl vyre_libs_builder::builder::stencil::Grid2DComposer
+impl vyre_libs_builder::builder::stencil::Grid2DShape
+impl vyre_libs_builder::builder::stencil::Stencil3x3Tap
+impl vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef
+impl vyre_libs_builder::plumbing::program::descriptor::BufferDescriptor
+impl vyre_libs_builder::plumbing::program::descriptor::ProgramDescriptor
+impl<'a> core::default::Default for vyre_libs_builder::builder::csr::CsrBuffers<'a>
+impl<'a> vyre_libs_builder::builder::csr::CsrBuffers<'a>
+impl<'a> vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>
+impl<'a> vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>
+impl<K, V> core::default::Default for vyre_libs_builder::plumbing::host::program_cache::ProgramCache<K, V>
+impl<K: core::cmp::Eq, V> vyre_libs_builder::plumbing::host::program_cache::ProgramCache<K, V>
+pub const fn vyre_libs_builder::builder::cooperative::chunks(count: u32, tile: u32) -> u32
+pub const fn vyre_libs_builder::builder::csr::CsrBuffers<'a>::new(offsets: &'a str, targets: &'a str, edge_kind_mask: core::option::Option<&'a str>) -> Self
+pub const fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::with_allow_mask(self, allow_mask: u32) -> Self
+pub const fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::with_buffers(self, buffers: vyre_libs_builder::builder::csr::CsrBuffers<'a>) -> Self
+pub const fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::with_direction(self, direction: vyre_libs_builder::builder::csr::CsrDirection) -> Self
+pub const fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::with_edge_count(self, edge_count: u32) -> Self
+pub const fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::with_prefix(self, prefix: &'a str) -> Self
+pub const fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::with_workgroup_size(self, workgroup_size: [u32; 3]) -> Self
+pub const fn vyre_libs_builder::builder::csr::bitset_words(bit_count: u32) -> u32
+pub const fn vyre_libs_builder::builder::gemm::ContractionOutputTile::register_footprint(rows: u32, columns: u32) -> u32
+pub const fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'_>::flat_byte_index(state: u32, byte: u8) -> usize
+pub const fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::alphabet_size(self, alphabet_size: u32) -> Self
+pub const fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::new(transitions: &'a str) -> Self
+pub const fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::state_var(self, var: &'a str) -> Self
+pub const fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::stride(self, stride: u32) -> Self
+pub const fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::with_alphabet_size(transitions: &'a str, alphabet_size: u32) -> Self
+pub const fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::with_stride(transitions: &'a str, stride: u32) -> Self
+pub const fn vyre_libs_builder::builder::stencil::CellGridShape::cell_count(&self) -> u32
+pub const fn vyre_libs_builder::builder::stencil::CellGridShape::height(&self) -> u32
+pub const fn vyre_libs_builder::builder::stencil::CellGridShape::new(cols: u32, rows: u32, cell_width: u32, cell_height: u32) -> Self
+pub const fn vyre_libs_builder::builder::stencil::CellGridShape::pixel_count(&self) -> u32
+pub const fn vyre_libs_builder::builder::stencil::CellGridShape::width(&self) -> u32
+pub const fn vyre_libs_builder::builder::stencil::Grid2DShape::is_empty(&self) -> bool
+pub const fn vyre_libs_builder::builder::stencil::Grid2DShape::new(width: u32, height: u32) -> Self
+pub const fn vyre_libs_builder::builder::stencil::Grid2DShape::pixel_count(&self) -> u32
+pub const fn vyre_libs_builder::builder::stencil::Grid2DShape::safe_height(&self) -> u32
+pub const fn vyre_libs_builder::builder::stencil::Grid2DShape::safe_width(&self) -> u32
+pub const vyre_libs_builder::builder::INDEXED_MAP_OP_ID: &str
+pub const vyre_libs_builder::builder::STRIDED_ACCUMULATE_OP_ID: &str
+pub const vyre_libs_builder::builder::STRIDED_WRITEBACK_OP_ID: &str
+pub const vyre_libs_builder::builder::csr::BINDING_EDGE_KIND_MASK: u32
+pub const vyre_libs_builder::builder::csr::BINDING_EDGE_OFFSETS: u32
+pub const vyre_libs_builder::builder::csr::BINDING_EDGE_TARGETS: u32
+pub const vyre_libs_builder::builder::csr::BINDING_NODES: u32
+pub const vyre_libs_builder::builder::csr::BINDING_NODE_TAGS: u32
+pub const vyre_libs_builder::builder::csr::BINDING_PRIMITIVE_START: u32
+pub const vyre_libs_builder::builder::csr::CSR_TRAVERSAL_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_builder::builder::csr::CsrBuffers<'static>::CANONICAL: Self
+pub const vyre_libs_builder::builder::csr::NAME_EDGE_KIND_MASK: &str
+pub const vyre_libs_builder::builder::csr::NAME_EDGE_OFFSETS: &str
+pub const vyre_libs_builder::builder::csr::NAME_EDGE_TARGETS: &str
+pub const vyre_libs_builder::builder::csr::NAME_NODES: &str
+pub const vyre_libs_builder::builder::csr::NAME_NODE_TAGS: &str
+pub const vyre_libs_builder::builder::range_ordering::MAX_CACHED_POSITIONS: u32
+pub const vyre_libs_builder::builder::range_ordering::MAX_DEPTH: u32
+pub const vyre_libs_builder::builder::state_machine::DEFAULT_BYTE_ALPHABET_SIZE: u32
+pub const vyre_libs_builder::builder::state_machine::DEFAULT_STATE_VAR: &str
+pub const vyre_libs_builder::builder::stencil::DEFAULT_2D_WORKGROUP_SIZE: [u32; 3]
+pub const vyre_libs_builder::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE: &str
+pub const vyre_libs_builder::plumbing::registration::contracts::PURE_DETERMINISTIC_CHEAP: vyre_spec::op_contract::OperationContract
+pub const vyre_libs_builder::plumbing::registration::contracts::RULE_PREDICATE_CHEAP: vyre_spec::op_contract::OperationContract
+pub const vyre_libs_builder::plumbing::registration::signatures::BOOL_OUTPUTS: &[vyre_spec::data_type::DataType]
+pub const vyre_libs_builder::plumbing::registration::signatures::BYTES_TO_BYTES_INPUTS: &[vyre_spec::data_type::DataType]
+pub const vyre_libs_builder::plumbing::registration::signatures::BYTES_TO_BYTES_OUTPUTS: &[vyre_spec::data_type::DataType]
+pub const vyre_libs_builder::plumbing::registration::signatures::BYTES_TO_U32_OUTPUTS: &[vyre_spec::data_type::DataType]
+pub const vyre_libs_builder::plumbing::registration::signatures::F32_F32_F32_INPUTS: &[vyre_spec::data_type::DataType]
+pub const vyre_libs_builder::plumbing::registration::signatures::F32_F32_INPUTS: &[vyre_spec::data_type::DataType]
+pub const vyre_libs_builder::plumbing::registration::signatures::F32_INPUTS: &[vyre_spec::data_type::DataType]
+pub const vyre_libs_builder::plumbing::registration::signatures::F32_OUTPUTS: &[vyre_spec::data_type::DataType]
+pub const vyre_libs_builder::plumbing::registration::signatures::I32_OUTPUTS: &[vyre_spec::data_type::DataType]
+pub const vyre_libs_builder::plumbing::registration::signatures::U32_INPUTS: &[vyre_spec::data_type::DataType]
+pub const vyre_libs_builder::plumbing::registration::signatures::U32_OUTPUTS: &[vyre_spec::data_type::DataType]
+pub const vyre_libs_builder::plumbing::registration::signatures::U32_U32_INPUTS: &[vyre_spec::data_type::DataType]
+pub enum vyre_libs_builder::builder::csr::CsrDirection
+pub enum vyre_libs_builder::builder::csr::CsrQueueEmit<'a>
+pub enum vyre_libs_builder::builder::csr::CsrQueueLanes
+pub enum vyre_libs_builder::builder::csr::CsrQueueRowPlan<'a>
+pub enum vyre_libs_builder::builder::elementwise::F32MulRhs<'a>
+pub enum vyre_libs_builder::builder::gemm::ContractionEpilogue
+pub enum vyre_libs_builder::builder::gemm::ContractionGeometry
+pub enum vyre_libs_builder::builder::gemm::ContractionSemiring
+pub enum vyre_libs_builder::builder::gemm::ContractionTiling
+pub fn vyre_libs_builder::builder::BuildOptions::new() -> Self
+pub fn vyre_libs_builder::builder::BuildOptions::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs_builder::builder::BuildOptions::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs_builder::builder::BuildOptions::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs_builder::builder::build_elementwise_binary<F>(op_id: &'static str, a: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, b: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, options: vyre_libs_builder::builder::BuildOptions, f: F) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError> where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::build_elementwise_unary<F>(op_id: &'static str, a: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, options: vyre_libs_builder::builder::BuildOptions, f: F) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError> where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::build_indexed_map<F>(op_id: &'static str, buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, output: &str, count: u32, workgroup_size: [u32; 3], f: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr) -> (vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr)
+pub fn vyre_libs_builder::builder::check_same_shape(op: &'static str, input: &vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, output: &vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef) -> core::result::Result<(), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_builder::builder::check_tensors(op: &'static str, tensors: &[(&vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, vyre_spec::data_type::DataType)]) -> core::result::Result<(), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_builder::builder::checked_element_count(op: &'static str, input: &vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef) -> core::result::Result<u32, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_builder::builder::cooperative::for_each_index(count: u32, tile: u32, var: &str, body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_builder::builder::csr::CsrBuffers<'a>::default() -> Self
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::backward(op_id: &'a str, node_count: u32, edge_count: u32, allow_mask: u32) -> Self
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::build_backward_step(&self, frontier_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::build_forward_step(&self, frontier_in: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::build_forward_step_excluding(&self, frontier_in: &str, excluded_sources: &str, frontier_out: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::build_parallel_backward_or_changed(&self, frontier_out: &str, changed: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::build_parallel_batch_forward_or_changed(&self, frontier_out: &str, changed: &str, query_count: u32, changed_index: vyre_foundation::ir_inner::model::generated::Expr, changed_slots: u32, prologue: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, extra_buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, alloc::string::String>
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::build_parallel_forward_or_changed(&self, frontier_out: &str, changed: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::emit_backward_scan(&self, src: vyre_foundation::ir_inner::model::generated::Expr, frontier_in: &str, frontier_out: &str, on_hit: impl core::ops::function::Fn() -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::emit_backward_scan_full(&self, src: vyre_foundation::ir_inner::model::generated::Expr, frontier_in: &str, frontier_out: &str, on_hit: impl core::ops::function::Fn() -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, on_new_bit: impl core::ops::function::Fn() -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::emit_edge_expand(&self, frontier_out: &str, src: vyre_foundation::ir_inner::model::generated::Expr, frontier_index: impl core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr, on_new_bit: impl core::ops::function::Fn() -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::emit_edge_scan(&self, frontier_out: &str, src: vyre_foundation::ir_inner::model::generated::Expr, frontier_index: impl core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr, on_new_bit: impl core::ops::function::Fn() -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::emit_neighbor_walk<F>(&self, src: vyre_foundation::ir_inner::model::generated::Expr, edge_var: core::option::Option<&str>, on_neighbor: F) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node> where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::emit_parallel_forward_or_changed_body(&self, frontier_out: &str, changed: &str, snapshot_barrier: core::option::Option<vyre_foundation::memory_model::legacy::MemoryOrdering>, active_gate: core::option::Option<vyre_foundation::ir_inner::model::generated::Expr>, extra_changed: core::option::Option<(&str, vyre_foundation::ir_inner::model::generated::Expr)>) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::emit_row_bounds_and_loop(&self, src: vyre_foundation::ir_inner::model::generated::Expr, edge_var: &str, loop_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::emit_row_degree(&self, src: vyre_foundation::ir_inner::model::generated::Expr, lo_var: &str, hi_var: &str, degree_var: &str) -> [vyre_foundation::ir_inner::model::generated::Node; 3]
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::emit_row_offsets(&self, src: vyre_foundation::ir_inner::model::generated::Expr, start_var: &str, end_var: &str) -> [vyre_foundation::ir_inner::model::generated::Node; 2]
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::forward(op_id: &'a str, node_count: u32, edge_count: u32, allow_mask: u32) -> Self
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::local_name(&self, name: &str) -> alloc::string::String
+pub fn vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>::new(op_id: &'a str, builder_name: &'a str, node_count: u32) -> Self
+pub fn vyre_libs_builder::builder::csr::active_source_lane(node_count: u32, frontier_in: &str, excluded_sources: core::option::Option<&str>, source: vyre_foundation::ir_inner::model::generated::Expr, active_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_builder::builder::csr::bind_bit_address(bit: &vyre_foundation::ir_inner::model::generated::Expr, word: &str, mask: &str, word_index: impl core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr) -> [vyre_foundation::ir_inner::model::generated::Node; 2]
+pub fn vyre_libs_builder::builder::csr::bind_word(buffer: &str, names: vyre_libs_builder::builder::csr::BitAccess<'_>) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_builder::builder::csr::bit_is_clear(value: &str, mask: &str) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::csr::bit_is_set(names: vyre_libs_builder::builder::csr::BitAccess<'_>) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::csr::checked_batched_frontier_words(words: u32, query_count: u32) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_libs_builder::builder::csr::checked_csr_offset_count(node_count: u32, builder_name: &str) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_libs_builder::builder::csr::csr_frontier_buffer(name: &str, binding: u32, access: vyre_spec::buffer_access::BufferAccess, node_count: u32) -> vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl
+pub fn vyre_libs_builder::builder::csr::csr_push_frontier_changed_buffers(buffers: &mut alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, frontier_out: &str, changed: &str, node_count: u32)
+pub fn vyre_libs_builder::builder::csr::csr_read_only_buffers(node_count: u32, edge_count: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>
+pub fn vyre_libs_builder::builder::csr::csr_word_buffer(name: &str, binding: u32, access: vyre_spec::buffer_access::BufferAccess, word_count: u32) -> vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl
+pub fn vyre_libs_builder::builder::csr::set_bit(buffer: &str, bit: &vyre_foundation::ir_inner::model::generated::Expr, names: vyre_libs_builder::builder::csr::BitAccess<'_>, word_index: impl core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr, on_new_bit: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::csr::try_csr_read_only_buffers(node_count: u32, edge_count: u32) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, alloc::string::String>
+pub fn vyre_libs_builder::builder::csr::when_bit_set(buffer: &str, bit: &vyre_foundation::ir_inner::model::generated::Expr, word: core::option::Option<&str>, value: &str, mask: &str, word_index: impl core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr, body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::add_buffer(self, decl: vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl) -> Self
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::add_input(self, name: &str, dtype: vyre_spec::data_type::DataType, count: u32) -> Self
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::add_input_storage(self, name: &str, access: vyre_spec::buffer_access::BufferAccess, dtype: vyre_spec::data_type::DataType, count: u32) -> Self
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::add_output(self, name: &str, dtype: vyre_spec::data_type::DataType, count: u32) -> Self
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::add_output_storage(self, name: &str, access: vyre_spec::buffer_access::BufferAccess, dtype: vyre_spec::data_type::DataType, count: u32) -> Self
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::add_output_with_byte_range(self, name: &str, dtype: vyre_spec::data_type::DataType, count: u32, range: core::ops::range::Range<u64>) -> Self
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::binary<F>(op_id: &'static str, lhs: &str, rhs: &str, in_dtype: vyre_spec::data_type::DataType, output: &str, out_dtype: vyre_spec::data_type::DataType, count: u32, op: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::binary_broadcast_rhs<F, I>(op_id: &'static str, lhs: &str, rhs: &str, out: &str, count: u32, rhs_count: u32, dtype: vyre_spec::data_type::DataType, rhs_index: I, op: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr, I: core::ops::function::FnOnce(&vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::broadcast_scalar(op_id: &'static str, src: &str, dst: &str, n: u32, dtype: vyre_spec::data_type::DataType) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::build_custom<F>(self, body_fn: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::build_pointwise<F>(self, output: &str, f: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::build_pointwise_multi<F>(self, outputs: &[&str], f: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Expr>
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::f32_binary<F>(op_id: &'static str, lhs: &str, rhs: &str, output: &str, count: u32, op: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::f32_unary<F>(op_id: &'static str, input: &str, output: &str, count: u32, op: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::fill_constant(op_id: &'static str, target: &str, n: u32, dtype: vyre_spec::data_type::DataType, constant: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::new(op_id: &'static str, count: u32) -> Self
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::ternary<F>(op_id: &'static str, a: &str, b: &str, c: &str, in_dtype: vyre_spec::data_type::DataType, output: &str, out_dtype: vyre_spec::data_type::DataType, count: u32, op: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::try_binary<F>(op_id: &'static str, a: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, b: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, options: vyre_libs_builder::builder::BuildOptions, op: F) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError> where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::try_unary<F>(op_id: &'static str, a: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, options: vyre_libs_builder::builder::BuildOptions, op: F) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError> where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::u32_binary<F>(op_id: &'static str, lhs: &str, rhs: &str, output: &str, count: u32, op: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::u32_unary<F>(op_id: &'static str, input: &str, output: &str, count: u32, op: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::unary<F>(op_id: &'static str, input: &str, in_dtype: vyre_spec::data_type::DataType, output: &str, out_dtype: vyre_spec::data_type::DataType, count: u32, op: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::FnOnce(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::with_anonymous(self, anonymous: bool) -> Self
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::with_child_op_id(self, child_op_id: &'static str) -> Self
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::with_options(self, options: &vyre_libs_builder::builder::BuildOptions) -> Self
+pub fn vyre_libs_builder::builder::elementwise::ElementwiseComposer::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs_builder::builder::elementwise::f32_elementwise_mul(op_id: &'static str, input: &str, rhs: vyre_libs_builder::builder::elementwise::F32MulRhs<'_>, output: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_builder::builder::elementwise::try_u32_elementwise_binary<F>(op_id: &'static str, a: &str, b: &str, out: &str, size: u32, op: F) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError> where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::elementwise::try_u32_elementwise_unary<F>(op_id: &'static str, input: &str, out: &str, size: u32, op: F) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError> where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::elementwise::u32_elementwise_binary<F>(op_id: &'static str, a: &str, b: &str, out: &str, size: u32, op: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::elementwise::u32_elementwise_unary<F>(op_id: &'static str, input: &str, out: &str, size: u32, op: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::batched_matmul_3d(op_id: &'static str, a: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, b: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, batch: u32, m: u32, k: u32, n: u32) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::batched_rows(op_id: &'static str, x: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, w: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, bias: core::option::Option<vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef>, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, rows: u32, in_dim: u32, out_dim: u32, dtype: vyre_spec::data_type::DataType, weight_out_in: bool) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::build(self) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::custom_u32_2d<C, A>(op_id: &'static str, lhs: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, rhs: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, m: u32, k: u32, n: u32, identity: u32, combine: C, accumulate: A) -> Self where C: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr + core::marker::Send + core::marker::Sync + 'static, A: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr + core::marker::Send + core::marker::Sync + 'static
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::fixed_u32_matvec(op_id: &'static str, matrix: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, vector: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, n: u32, matrix_cells: u32) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::matmul_2d(op_id: &'static str, a: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, b: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, m: u32, k: u32, n: u32) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::matmul_bias_2d(op_id: &'static str, a: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, b: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, bias: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, m: u32, k: u32, n: u32) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::semiring_2d(op_id: &'static str, a: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, b: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, m: u32, k: u32, n: u32, semiring: vyre_spec::semiring::Semiring) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::tiled_2d(op_id: &'static str, a: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, b: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, bias: core::option::Option<vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef>, out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, m: u32, k: u32, n: u32, tile: u32) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_acc_dtype(self, acc_dtype: vyre_spec::data_type::DataType) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_device_facts(self, facts: vyre_megakernel::device_facts::DeviceFacts) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_epilogue(self, epilogue: vyre_libs_builder::builder::gemm::ContractionEpilogue) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_region_generator(self, name: &'static str) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_semiring(self, semiring: vyre_libs_builder::builder::gemm::ContractionSemiring) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_tenant_id(self, tenant_id: u32) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_tiling(self, tiling: vyre_libs_builder::builder::gemm::ContractionTiling) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionComposer::with_workgroup_size(self, size: [u32; 3]) -> Self
+pub fn vyre_libs_builder::builder::gemm::ContractionEpilogue::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_builder::builder::gemm::ContractionOutputTile::derive(rows: u32, columns: u32, facts: &vyre_megakernel::device_facts::DeviceFacts) -> core::option::Option<Self>
+pub fn vyre_libs_builder::builder::gemm::ContractionSemiring::accumulate_expr(&self, acc: vyre_foundation::ir_inner::model::generated::Expr, val: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::gemm::ContractionSemiring::combine_expr(&self, a: vyre_foundation::ir_inner::model::generated::Expr, b: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::gemm::ContractionSemiring::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_libs_builder::builder::gemm::ContractionSemiring::identity_expr(&self, dtype: &vyre_spec::data_type::DataType) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::gemm::fixed_mul_16_16_signed_expr(left: vyre_foundation::ir_inner::model::generated::Expr, right: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::gemm::semiring_accumulate_expr(semiring: vyre_spec::semiring::Semiring, acc: vyre_foundation::ir_inner::model::generated::Expr, val: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::gemm::semiring_combine_expr(semiring: vyre_spec::semiring::Semiring, a: vyre_foundation::ir_inner::model::generated::Expr, b: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::gemm::tiled_workgroup_bound(facts: &vyre_megakernel::device_facts::DeviceFacts) -> core::option::Option<u32>
+pub fn vyre_libs_builder::builder::matrix_tile::bind_output_tile_coordinates(shape: vyre_libs_builder::builder::matrix_tile::MatrixShape, tile: vyre_libs_builder::builder::matrix_tile::TileShape, names: vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::matrix_tile::cooperative_slab_loop(a: &str, b: &str, a_tile_name: &str, b_tile_name: &str, shape: vyre_libs_builder::builder::matrix_tile::MatrixShape, tile: vyre_libs_builder::builder::matrix_tile::TileShape, in_bounds: &vyre_foundation::ir_inner::model::generated::Expr, arithmetic: &vyre_libs_builder::builder::matrix_tile::TileArithmetic<'_>) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_builder::builder::matrix_tile::in_output_bounds(row: vyre_foundation::ir_inner::model::generated::Expr, col: vyre_foundation::ir_inner::model::generated::Expr, shape: vyre_libs_builder::builder::matrix_tile::MatrixShape) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::matrix_tile::output_tile_shape(workgroup: [u32; 3]) -> core::result::Result<(u32, u32, u32), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_builder::builder::matrix_tile::padded_tile_lane_count(m: u32, n: u32, out_rows: u32, out_cols: u32, lanes: u32) -> core::result::Result<u32, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_builder::builder::range_ordering::match_order(left_id: vyre_foundation::ir_inner::model::generated::Expr, right_id: vyre_foundation::ir_inner::model::generated::Expr, res_name: &str) -> (alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, vyre_foundation::ir_inner::model::generated::Expr)
+pub fn vyre_libs_builder::builder::reduction::ReductionComposer::build(self) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_builder::builder::reduction::ReductionComposer::new(generator: &'static str, buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>, workgroup_size: [u32; 3]) -> Self
+pub fn vyre_libs_builder::builder::reduction::ReductionComposer::tiled_variance(generator: &'static str, input: &str, output: &str, n: u32, bessel: bool, tile: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_builder::builder::reduction::ReductionComposer::with_phase(self, phase: vyre_libs_builder::builder::reduction::ReductionPhase) -> Self
+pub fn vyre_libs_builder::builder::reduction::ReductionComposer::with_phases(self, phases: impl core::iter::traits::collect::IntoIterator<Item = vyre_libs_builder::builder::reduction::ReductionPhase>) -> Self
+pub fn vyre_libs_builder::builder::reduction::ReductionComposer::with_writeback(self, writeback: vyre_foundation::ir_inner::model::generated::Node) -> Self
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'_>::byte_advance_state_node(state_var: &str, transitions: &str, byte: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'_>::byte_table_lookup(table: &str, byte: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'_>::byte_transition_expr(transitions: &str, state: vyre_foundation::ir_inner::model::generated::Expr, byte: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'_>::masked_byte_load(buffer: &str, index: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'_>::source_byte_table_lookup(table: &str, source: &str, index: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'_>::table_lookup_2d(table: &str, row: vyre_foundation::ir_inner::model::generated::Expr, stride: u32, col: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::advance_node(&self, symbol: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::advance_node_named(&self, state_var: &str, symbol: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::advance_step_nodes(&self, input: &str, idx: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::bounded_advance_node(&self, state_extent: vyre_foundation::ir_inner::model::generated::Expr, symbol: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::bounded_suffix_scan_body(&self, haystack: &str, accept: &str, matches: &str, max_pattern_len: u32) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::linear_scan_body(&self, input: &str, accept: &str, matches: &str, valid_len: vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::safe_byte_transition_expr(&self, state: vyre_foundation::ir_inner::model::generated::Expr, byte: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::tiled_decode_scan_body<ByteAt, StoreDecoded>(&self, accept: &str, matches: &str, valid_len: vyre_foundation::ir_inner::model::generated::Expr, tile_width: u32, byte_at: ByteAt, store_decoded: StoreDecoded) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node> where ByteAt: core::ops::function::FnMut(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr, StoreDecoded: core::ops::function::FnMut(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> core::option::Option<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::transition_expr(&self, state: vyre_foundation::ir_inner::model::generated::Expr, symbol: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::transition_index(&self, state: vyre_foundation::ir_inner::model::generated::Expr, symbol: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::walk_input_slice(&self, loop_var: &str, input: &str, start: vyre_foundation::ir_inner::model::generated::Expr, end: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>::walk_loop(&self, loop_var: &str, start: vyre_foundation::ir_inner::model::generated::Expr, end: vyre_foundation::ir_inner::model::generated::Expr, step_nodes: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_builder::builder::stencil::CellGridShape::validated(self) -> Self
+pub fn vyre_libs_builder::builder::stencil::Grid2DComposer::build<F>(self, body_fn: F) -> vyre_foundation::ir_inner::model::program::definition::Program where F: core::ops::function::FnOnce(&vyre_libs_builder::builder::stencil::Grid2DShape, vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::stencil::Grid2DComposer::new(op_id: &'static str, width: u32, height: u32) -> Self
+pub fn vyre_libs_builder::builder::stencil::Grid2DComposer::with_buffers(self, buffers: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl>) -> Self
+pub fn vyre_libs_builder::builder::stencil::Grid2DComposer::with_child_region(self, child_op_id: &'static str, parent_op_id: &'static str) -> Self
+pub fn vyre_libs_builder::builder::stencil::Grid2DComposer::with_workgroup_size(self, workgroup_size: [u32; 3]) -> Self
+pub fn vyre_libs_builder::builder::stencil::Stencil3x3Tap::bounded_input_index(&self) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::avg4_channel(c0: vyre_foundation::ir_inner::model::generated::Expr, c1: vyre_foundation::ir_inner::model::generated::Expr, c2: vyre_foundation::ir_inner::model::generated::Expr, c3: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::axis_in_bounds(coord: &vyre_foundation::ir_inner::model::generated::Expr, delta: i32, extent: u32) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::blend_channel_coverage(fg_c: vyre_foundation::ir_inner::model::generated::Expr, bg_c: vyre_foundation::ir_inner::model::generated::Expr, cov: vyre_foundation::ir_inner::model::generated::Expr, inv_cov: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::blend_channel_porter_duff(fg_c: vyre_foundation::ir_inner::model::generated::Expr, bg_c: vyre_foundation::ir_inner::model::generated::Expr, inv_a: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::cell_lookup_nodes(shape: vyre_libs_builder::builder::stencil::CellGridShape) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::builder::stencil::clamp_u8(val: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::coord_clamp_offset(coord: &vyre_foundation::ir_inner::model::generated::Expr, offset: i32, extent: u32) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::decompose_index(idx: &vyre_foundation::ir_inner::model::generated::Expr, width: u32) -> (vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr)
+pub fn vyre_libs_builder::builder::stencil::decompose_index_fast(idx: &vyre_foundation::ir_inner::model::generated::Expr, width: u32) -> (vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr)
+pub fn vyre_libs_builder::builder::stencil::downsample_2x_source_indices(oy: &vyre_foundation::ir_inner::model::generated::Expr, ox: &vyre_foundation::ir_inner::model::generated::Expr, src_width: u32) -> [vyre_foundation::ir_inner::model::generated::Expr; 4]
+pub fn vyre_libs_builder::builder::stencil::fixed_mul_16_16(left: vyre_foundation::ir_inner::model::generated::Expr, right: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::flat_index(y: vyre_foundation::ir_inner::model::generated::Expr, width: u32, x: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::flat_index_expr(y: vyre_foundation::ir_inner::model::generated::Expr, width: vyre_foundation::ir_inner::model::generated::Expr, x: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::pack_rgba(r: vyre_foundation::ir_inner::model::generated::Expr, g: vyre_foundation::ir_inner::model::generated::Expr, b: vyre_foundation::ir_inner::model::generated::Expr, a: vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::pack_rgba_named(r_var: &str, g_var: &str, b_var: &str, a_var: &str) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::sample_stencil_3x3_or_zero(input: &str, tap: &vyre_libs_builder::builder::stencil::Stencil3x3Tap) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::separable_sample_index(is_horizontal: bool, py: &vyre_foundation::ir_inner::model::generated::Expr, px: &vyre_foundation::ir_inner::model::generated::Expr, offset: i32, width: u32, height: u32) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::shifted_coord(coord: &vyre_foundation::ir_inner::model::generated::Expr, delta: i32) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::stencil_3x3_taps(y: &vyre_foundation::ir_inner::model::generated::Expr, x: &vyre_foundation::ir_inner::model::generated::Expr, height: u32, width: u32) -> alloc::vec::Vec<vyre_libs_builder::builder::stencil::Stencil3x3Tap>
+pub fn vyre_libs_builder::builder::stencil::unpack_channel(pixel_var: &str, shift: u32) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::unpack_channel_expr(pixel: vyre_foundation::ir_inner::model::generated::Expr, shift: u32) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::unpack_rgba(pixel_var: &str) -> (vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr)
+pub fn vyre_libs_builder::builder::stencil::upsample_2x_source_index(oy: &vyre_foundation::ir_inner::model::generated::Expr, ox: &vyre_foundation::ir_inner::model::generated::Expr, in_width: u32) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::stencil::wide_mul_shr_u32(left: vyre_foundation::ir_inner::model::generated::Expr, right: vyre_foundation::ir_inner::model::generated::Expr, shift: u32) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::strided_accumulate2_child<F1, F2>(parent_op_id: &'static str, tile: u32, chunks: u32, n: u32, first: (&'static str, vyre_foundation::ir_inner::model::generated::Expr, &'static str, F1), second: (&'static str, vyre_foundation::ir_inner::model::generated::Expr, &'static str, F2)) -> vyre_foundation::ir_inner::model::generated::Node where F1: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr, F2: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::strided_accumulate_child<F>(parent_op_id: &'static str, tile: u32, chunks: u32, n: u32, acc_name: &'static str, initial: vyre_foundation::ir_inner::model::generated::Expr, scratch: &'static str, step: F) -> vyre_foundation::ir_inner::model::generated::Node where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::strided_loop(tile: u32, chunks: u32, n: u32, guarded_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_builder::builder::strided_loop_from(base: vyre_foundation::ir_inner::model::generated::Expr, tile: u32, chunks: u32, n: u32, guarded_body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> vyre_foundation::ir_inner::model::generated::Node
+pub fn vyre_libs_builder::builder::strided_writeback_child<F>(parent_op_id: &'static str, tile: u32, chunks: u32, n: u32, output: &str, prelude: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, value: F) -> vyre_foundation::ir_inner::model::generated::Node where F: core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::builder::trip_count::clamped_by_extents<const N: usize>(requested: vyre_foundation::ir_inner::model::generated::Expr, indexed: &str, also_indexed: [&str; N]) -> vyre_foundation::ir_inner::model::generated::Expr
+pub fn vyre_libs_builder::link_anchor()
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::checked_product_count(left: u32, right: u32, left_name: &str, right_name: &str, context: &str) -> core::result::Result<usize, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::checked_square_cells(n: u32, context: &str) -> core::result::Result<usize, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::decode_f32_input_aligned(bytes: &[u8], context: &str) -> core::result::Result<alloc::vec::Vec<f32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::decode_f32_output_exact(bytes: &[u8], expected_words: usize, context: &str, out: &mut alloc::vec::Vec<f32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::decode_i32_output_exact(bytes: &[u8], expected_words: usize, context: &str, out: &mut alloc::vec::Vec<i32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_input_aligned(bytes: &[u8], context: &str) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::decode_u32_output_exact(bytes: &[u8], expected_words: usize, context: &str, out: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::ensure_input_slots(inputs: &mut alloc::vec::Vec<alloc::vec::Vec<u8>>, count: usize)
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, program: vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], policy: &vyre_megakernel::execution::SemanticExecutionPolicy) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::execute_program_first_output(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, program: vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[alloc::vec::Vec<u8>], policy: &vyre_megakernel::execution::SemanticExecutionPolicy, context: &str) -> core::result::Result<alloc::vec::Vec<u8>, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::output_buffer_index(program: &vyre_foundation::ir_inner::model::program::definition::Program, name: &str) -> core::option::Option<usize>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::read_f32s(bytes: &[u8]) -> alloc::vec::Vec<f32>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::read_u32s(bytes: &[u8]) -> alloc::vec::Vec<u32>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::require_exactly_one_output<'a>(outputs: &'a [alloc::vec::Vec<u8>], context: &str) -> core::result::Result<&'a [u8], vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::require_named_output<'a>(outputs: &'a [alloc::vec::Vec<u8>], program: &vyre_foundation::ir_inner::model::program::definition::Program, name: &str, context: &str) -> core::result::Result<&'a [u8], vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::u32_word_bytes(count: usize, context: &str) -> core::result::Result<usize, vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::write_f32_slice_le_bytes(out: &mut alloc::vec::Vec<u8>, values: &[f32])
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::write_u32_slice_le_bytes(out: &mut alloc::vec::Vec<u8>, values: &[u32])
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::write_zero_bytes(out: &mut alloc::vec::Vec<u8>, len: usize)
+pub fn vyre_libs_builder::plumbing::host::dispatch_buffers::write_zero_u32_words(out: &mut alloc::vec::Vec<u8>, count: usize, context: &str) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::program_cache::ProgramCache<K, V>::default() -> Self
+pub fn vyre_libs_builder::plumbing::host::program_cache::ProgramCache<K, V>::get_or_insert_with(&mut self, key: K, build: impl core::ops::function::FnOnce() -> V) -> &V
+pub fn vyre_libs_builder::plumbing::host::program_cache::ProgramCache<K, V>::try_get_or_insert_with<E>(&mut self, key: K, build: impl core::ops::function::FnOnce() -> core::result::Result<V, E>) -> core::result::Result<&V, E>
+pub fn vyre_libs_builder::plumbing::host::scratch::reserve_items<T>(buffer: &mut alloc::vec::Vec<T>, additional: usize, owner: &str, context: &str) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_libs_builder::plumbing::host::scratch::reserve_items_with<T, E>(buffer: &mut alloc::vec::Vec<T>, additional: usize, owner: &str, context: &str, map: impl core::ops::function::FnOnce(alloc::string::String) -> E) -> core::result::Result<(), E>
+pub fn vyre_libs_builder::plumbing::host::scratch::reserve_vec<T>(buffer: &mut alloc::vec::Vec<T>, additional: usize, context: &'static str) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity<T>(buffer: &mut alloc::vec::Vec<T>, capacity: usize, context: &'static str) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>
+pub fn vyre_libs_builder::plumbing::host::scratch::try_reserve_vec_capacity<T>(buffer: &mut alloc::vec::Vec<T>, capacity: usize) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_libs_builder::plumbing::host::telemetry::bump(c: &core::sync::atomic::AtomicU64)
+pub fn vyre_libs_builder::plumbing::host::telemetry::snapshot_counters() -> alloc::vec::Vec<(&'static str, u64)>
+pub fn vyre_libs_builder::plumbing::host::telemetry::total_calls() -> u64
+pub fn vyre_libs_builder::plumbing::operand::buffer_names::fixed_name(family_prefix: &str, role: &str) -> alloc::string::String
+pub fn vyre_libs_builder::plumbing::operand::buffer_names::scoped_generic_name(family_prefix: &str, role: &str, requested: &str, generic_aliases: &[&str]) -> alloc::string::String
+pub fn vyre_libs_builder::plumbing::operand::element_zero::element_zero(dtype: &vyre_spec::data_type::DataType) -> core::option::Option<vyre_foundation::ir_inner::model::generated::Expr>
+pub fn vyre_libs_builder::plumbing::operand::shape::matrix_cells(context: &str, rows: u32, cols: u32) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_libs_builder::plumbing::operand::shape::square_matrix_cells(context: &str, n: u32) -> core::result::Result<u32, alloc::string::String>
+pub fn vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef::element_count(&self) -> core::option::Option<u32>
+pub fn vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef::f16_1d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::ident::Ident>, len: u32) -> Self
+pub fn vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef::f16_2d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::ident::Ident>, rows: u32, cols: u32) -> Self
+pub fn vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef::f32_1d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::ident::Ident>, len: u32) -> Self
+pub fn vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef::f32_2d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::ident::Ident>, rows: u32, cols: u32) -> Self
+pub fn vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef::name_str(&self) -> &str
+pub fn vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef::new(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::ident::Ident>, dtype: vyre_spec::data_type::DataType, shape: alloc::vec::Vec<u32>) -> Self
+pub fn vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef::u32_1d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::ident::Ident>, len: u32) -> Self
+pub fn vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef::u32_2d(name: impl core::convert::Into<vyre_foundation::ir_inner::model::expr::ident::Ident>, rows: u32, cols: u32) -> Self
+pub fn vyre_libs_builder::plumbing::operand::tensor_ref::check_dtype(r: &vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, expected: vyre_spec::data_type::DataType, op: &'static str) -> core::result::Result<(), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_builder::plumbing::operand::tensor_ref::check_shape(r: &vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, expected: &[u32], op: &'static str) -> core::result::Result<(), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_builder::plumbing::operand::tensor_ref::check_unique_names(refs: &[&vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef], op: &'static str) -> core::result::Result<(), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_builder::plumbing::operand::tensor_ref::element_count(name: &str, shape: &[u32]) -> core::result::Result<u32, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_builder::plumbing::program::attribution::attribute_child(parent_op_id: &str, child_op_id: &str, program: vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_builder::plumbing::program::attribution::attribute_child_nodes(parent_op_id: &str, child_op_id: &str, program: &vyre_foundation::ir_inner::model::program::definition::Program) -> alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub fn vyre_libs_builder::plumbing::program::attribution::attribute_serial_child(parent_op_id: &str, child_op_id: &str, program: vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_builder::plumbing::program::descriptor::BufferDescriptor::new(name: alloc::string::String, access: vyre_spec::buffer_access::BufferAccess, dtype: vyre_spec::data_type::DataType, count: u32) -> Self
+pub fn vyre_libs_builder::plumbing::program::descriptor::ProgramDescriptor::from_program(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> Self
+pub fn vyre_libs_builder::plumbing::program::descriptor::ProgramDescriptor::new(buffer_count: usize, workgroup_size: [u32; 3], buffers: alloc::vec::Vec<vyre_libs_builder::plumbing::program::descriptor::BufferDescriptor>, rw_bytes_lower_bound: usize, entry_node_count: usize) -> Self
+pub fn vyre_libs_builder::plumbing::program::outputs::demote_intermediate_outputs(program: vyre_foundation::ir_inner::model::program::definition::Program, final_output: &str) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_libs_builder::plumbing::registration::operation_catalog::convergence_contract(op_id: &str) -> core::option::Option<&'static vyre_libs_builder::plumbing::registration::operation_catalog::ConvergenceContract>
+pub fn vyre_libs_builder::plumbing::registration::operation_catalog::fixture_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::semantic_op::SemanticOperation>
+pub fn vyre_libs_builder::plumbing::registration::operation_catalog::library_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::semantic_op::SemanticOperation>
+pub fn vyre_libs_builder::plumbing::registration::operation_catalog::link_anchor() -> usize
+pub fn vyre_libs_builder::prelude::check_same_shape(op: &'static str, input: &vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, output: &vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef) -> core::result::Result<(), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_builder::prelude::check_tensors(op: &'static str, tensors: &[(&vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef, vyre_spec::data_type::DataType)]) -> core::result::Result<(), vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub fn vyre_libs_builder::prelude::checked_element_count(op: &'static str, input: &vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef) -> core::result::Result<u32, vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError>
+pub macro vyre_libs_builder::impl_cat_a_builder_options!
+pub mod vyre_libs_builder
+pub mod vyre_libs_builder::builder
+pub mod vyre_libs_builder::builder::cooperative
+pub mod vyre_libs_builder::builder::csr
+pub mod vyre_libs_builder::builder::elementwise
+pub mod vyre_libs_builder::builder::gemm
+pub mod vyre_libs_builder::builder::matrix_tile
+pub mod vyre_libs_builder::builder::range_ordering
+pub mod vyre_libs_builder::builder::reduction
+pub mod vyre_libs_builder::builder::state_machine
+pub mod vyre_libs_builder::builder::stencil
+pub mod vyre_libs_builder::builder::trip_count
+pub mod vyre_libs_builder::plumbing
+pub mod vyre_libs_builder::plumbing::host
+pub mod vyre_libs_builder::plumbing::host::dispatch_buffers
+pub mod vyre_libs_builder::plumbing::host::program_cache
+pub mod vyre_libs_builder::plumbing::host::scratch
+pub mod vyre_libs_builder::plumbing::host::telemetry
+pub mod vyre_libs_builder::plumbing::operand
+pub mod vyre_libs_builder::plumbing::operand::buffer_names
+pub mod vyre_libs_builder::plumbing::operand::element_zero
+pub mod vyre_libs_builder::plumbing::operand::shape
+pub mod vyre_libs_builder::plumbing::operand::tensor_ref
+pub mod vyre_libs_builder::plumbing::program
+pub mod vyre_libs_builder::plumbing::program::attribution
+pub mod vyre_libs_builder::plumbing::program::descriptor
+pub mod vyre_libs_builder::plumbing::program::outputs
+pub mod vyre_libs_builder::plumbing::registration
+pub mod vyre_libs_builder::plumbing::registration::contracts
+pub mod vyre_libs_builder::plumbing::registration::operation_catalog
+pub mod vyre_libs_builder::plumbing::registration::signatures
+pub mod vyre_libs_builder::prelude
+pub static vyre_libs_builder::plumbing::host::telemetry::adjustment_set_pass_dependency_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::amg_pass_solver_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::bellman_tn_order_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::bitset_mask_algebra_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::conv1d_latency_smoothing_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::cost_model_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::dataflow_fixpoint_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::differentiable_autotune_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::do_calculus_change_impact_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::fmm_polyhedral_compress_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::functorial_pass_composition_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::graph_dispatch_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::kfac_autotune_step_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::knowledge_compile_pass_precondition_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::matching_diagnostic_compaction_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::matroid_exact_megakernel_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::matroid_megakernel_scheduler_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::mori_zwanzig_region_coarsen_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::multigrid_matroid_solver_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::natural_gradient_autotuner_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::persistent_homology_loop_signature_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::planar_rewrite_pass_scheduler_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::polyhedral_fusion_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::qsvt_matrix_function_fusion_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::reduction_metrics_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::scallop_provenance_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::scallop_provenance_wide_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::sheaf_heterophilic_dispatch_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::sheaf_spectral_clustering_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::sinkhorn_dispatch_clustering_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::sinkhorn_full_clustering_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::spectral_schedule_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::string_diagram_ir_rewrite_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::submodular_cache_eviction_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::tensor_network_fusion_order_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::tensor_train_chain_fusion_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::tensor_train_compression_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::toposort_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::vast_tree_walk_calls: core::sync::atomic::AtomicU64
+pub static vyre_libs_builder::plumbing::host::telemetry::vsa_fingerprint_calls: core::sync::atomic::AtomicU64
+pub struct vyre_libs_builder::builder::csr::BitAccess<'a>
+pub struct vyre_libs_builder::builder::csr::CsrBuffers<'a>
+pub struct vyre_libs_builder::builder::csr::CsrTraversalComposer<'a>
+pub struct vyre_libs_builder::builder::elementwise::ElementwiseComposer
+pub struct vyre_libs_builder::builder::gemm::ContractionComposer
+pub struct vyre_libs_builder::builder::gemm::ContractionOutputTile
+pub struct vyre_libs_builder::builder::matrix_tile::MatrixShape
+pub struct vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames
+pub struct vyre_libs_builder::builder::matrix_tile::TileArithmetic<'a>
+pub struct vyre_libs_builder::builder::matrix_tile::TileShape
+pub struct vyre_libs_builder::builder::reduction::ReductionComposer
+pub struct vyre_libs_builder::builder::reduction::ReductionPhase
+pub struct vyre_libs_builder::builder::state_machine::TableStateMachineComposer<'a>
+pub struct vyre_libs_builder::builder::stencil::CellGridShape
+pub struct vyre_libs_builder::builder::stencil::Grid2DComposer
+pub struct vyre_libs_builder::builder::stencil::Grid2DShape
+pub struct vyre_libs_builder::builder::stencil::Stencil3x3Tap
+pub struct vyre_libs_builder::plumbing::host::program_cache::ProgramCache<K, V>
+pub struct vyre_libs_builder::plumbing::registration::operation_catalog::ConvergenceContract
+pub use vyre_libs_builder::plumbing::host::dispatch_buffers::f32_slice_to_le_bytes
+pub use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes
+pub vyre_libs_builder::builder::BuildOptions::region_generator: core::option::Option<&'static str>
+pub vyre_libs_builder::builder::BuildOptions::tenant_id: core::option::Option<u32>
+pub vyre_libs_builder::builder::BuildOptions::workgroup_size: core::option::Option<[u32; 3]>
+pub vyre_libs_builder::builder::csr::BitAccess::mask: &'a str
+pub vyre_libs_builder::builder::csr::BitAccess::value: &'a str
+pub vyre_libs_builder::builder::csr::BitAccess::word: &'a str
+pub vyre_libs_builder::builder::csr::CsrBuffers::edge_kind_mask: core::option::Option<&'a str>
+pub vyre_libs_builder::builder::csr::CsrBuffers::offsets: &'a str
+pub vyre_libs_builder::builder::csr::CsrBuffers::targets: &'a str
+pub vyre_libs_builder::builder::csr::CsrDirection::Backward
+pub vyre_libs_builder::builder::csr::CsrDirection::Bidirectional
+pub vyre_libs_builder::builder::csr::CsrDirection::Forward
+pub vyre_libs_builder::builder::csr::CsrQueueEmit::EnqueueDelta
+pub vyre_libs_builder::builder::csr::CsrQueueEmit::EnqueueDelta::accumulator: &'a str
+pub vyre_libs_builder::builder::csr::CsrQueueEmit::EnqueueDelta::next_len: &'a str
+pub vyre_libs_builder::builder::csr::CsrQueueEmit::EnqueueDelta::next_queue: &'a str
+pub vyre_libs_builder::builder::csr::CsrQueueEmit::EnqueueDelta::next_queue_capacity: u32
+pub vyre_libs_builder::builder::csr::CsrQueueEmit::Frontier
+pub vyre_libs_builder::builder::csr::CsrQueueEmit::Frontier::frontier_out: &'a str
+pub vyre_libs_builder::builder::csr::CsrQueueLanes::CappedGridStride
+pub vyre_libs_builder::builder::csr::CsrQueueLanes::CappedGridStride::lanes: u32
+pub vyre_libs_builder::builder::csr::CsrQueueLanes::CappedGridStride::launch_lanes: core::option::Option<u32>
+pub vyre_libs_builder::builder::csr::CsrQueueLanes::Scalar
+pub vyre_libs_builder::builder::csr::CsrQueueLanes::Team
+pub vyre_libs_builder::builder::csr::CsrQueueLanes::Team::lanes: u32
+pub vyre_libs_builder::builder::csr::CsrQueueRowPlan::CompactHighDegree
+pub vyre_libs_builder::builder::csr::CsrQueueRowPlan::CompactHighDegree::high_degree_threshold: u32
+pub vyre_libs_builder::builder::csr::CsrQueueRowPlan::CompactHighDegree::high_len: &'a str
+pub vyre_libs_builder::builder::csr::CsrQueueRowPlan::CompactHighDegree::high_queue: &'a str
+pub vyre_libs_builder::builder::csr::CsrQueueRowPlan::CompactHighDegree::high_queue_capacity: u32
+pub vyre_libs_builder::builder::csr::CsrQueueRowPlan::Direct
+pub vyre_libs_builder::builder::csr::CsrTraversalComposer::allow_mask: u32
+pub vyre_libs_builder::builder::csr::CsrTraversalComposer::buffers: vyre_libs_builder::builder::csr::CsrBuffers<'a>
+pub vyre_libs_builder::builder::csr::CsrTraversalComposer::builder_name: &'a str
+pub vyre_libs_builder::builder::csr::CsrTraversalComposer::direction: vyre_libs_builder::builder::csr::CsrDirection
+pub vyre_libs_builder::builder::csr::CsrTraversalComposer::edge_count: u32
+pub vyre_libs_builder::builder::csr::CsrTraversalComposer::node_count: u32
+pub vyre_libs_builder::builder::csr::CsrTraversalComposer::op_id: &'a str
+pub vyre_libs_builder::builder::csr::CsrTraversalComposer::prefix: &'a str
+pub vyre_libs_builder::builder::csr::CsrTraversalComposer::workgroup_size: [u32; 3]
+pub vyre_libs_builder::builder::elementwise::F32MulRhs::Buffer(&'a str)
+pub vyre_libs_builder::builder::elementwise::F32MulRhs::SameInput
+pub vyre_libs_builder::builder::gemm::ContractionComposer::a: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef
+pub vyre_libs_builder::builder::gemm::ContractionComposer::acc_dtype: vyre_spec::data_type::DataType
+pub vyre_libs_builder::builder::gemm::ContractionComposer::b: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef
+pub vyre_libs_builder::builder::gemm::ContractionComposer::bias: core::option::Option<vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef>
+pub vyre_libs_builder::builder::gemm::ContractionComposer::device: vyre_megakernel::device_facts::DeviceFacts
+pub vyre_libs_builder::builder::gemm::ContractionComposer::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_builder::builder::gemm::ContractionComposer::epilogue: vyre_libs_builder::builder::gemm::ContractionEpilogue
+pub vyre_libs_builder::builder::gemm::ContractionComposer::generator: core::option::Option<&'static str>
+pub vyre_libs_builder::builder::gemm::ContractionComposer::geometry: vyre_libs_builder::builder::gemm::ContractionGeometry
+pub vyre_libs_builder::builder::gemm::ContractionComposer::op_id: &'static str
+pub vyre_libs_builder::builder::gemm::ContractionComposer::options: vyre_libs_builder::builder::BuildOptions
+pub vyre_libs_builder::builder::gemm::ContractionComposer::out: vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef
+pub vyre_libs_builder::builder::gemm::ContractionComposer::semiring: vyre_libs_builder::builder::gemm::ContractionSemiring
+pub vyre_libs_builder::builder::gemm::ContractionComposer::tiling: vyre_libs_builder::builder::gemm::ContractionTiling
+pub vyre_libs_builder::builder::gemm::ContractionEpilogue::Activation
+pub vyre_libs_builder::builder::gemm::ContractionEpilogue::Activation::activation: alloc::sync::Arc<(dyn core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr + core::marker::Send + core::marker::Sync)>
+pub vyre_libs_builder::builder::gemm::ContractionEpilogue::Activation::bias: core::option::Option<alloc::string::String>
+pub vyre_libs_builder::builder::gemm::ContractionEpilogue::Bias
+pub vyre_libs_builder::builder::gemm::ContractionEpilogue::Bias::buffer: alloc::string::String
+pub vyre_libs_builder::builder::gemm::ContractionEpilogue::Bias::count: u32
+pub vyre_libs_builder::builder::gemm::ContractionEpilogue::Bias::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_builder::builder::gemm::ContractionEpilogue::None
+pub vyre_libs_builder::builder::gemm::ContractionEpilogue::QuantizedScale
+pub vyre_libs_builder::builder::gemm::ContractionEpilogue::QuantizedScale::batch_scales: alloc::string::String
+pub vyre_libs_builder::builder::gemm::ContractionEpilogue::QuantizedScale::row_scales: alloc::string::String
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::BatchedMatmul3D
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::BatchedMatmul3D::batch: u32
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::BatchedMatmul3D::k: u32
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::BatchedMatmul3D::m: u32
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::BatchedMatmul3D::n: u32
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::BatchedRows
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::BatchedRows::in_dim: u32
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::BatchedRows::out_dim: u32
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::BatchedRows::rows: u32
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::BatchedRows::weight_out_in: bool
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::Matmul2D
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::Matmul2D::k: u32
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::Matmul2D::m: u32
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::Matmul2D::n: u32
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::Matvec
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::Matvec::matrix_cells: u32
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::Matvec::n: u32
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::Strassen2x2
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::StrassenOneLevel
+pub vyre_libs_builder::builder::gemm::ContractionGeometry::StrassenOneLevel::n: u32
+pub vyre_libs_builder::builder::gemm::ContractionOutputTile::columns: u32
+pub vyre_libs_builder::builder::gemm::ContractionOutputTile::rows: u32
+pub vyre_libs_builder::builder::gemm::ContractionSemiring::Closed(vyre_spec::semiring::Semiring)
+pub vyre_libs_builder::builder::gemm::ContractionSemiring::Custom
+pub vyre_libs_builder::builder::gemm::ContractionSemiring::Custom::accumulate: alloc::sync::Arc<(dyn core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr + core::marker::Send + core::marker::Sync)>
+pub vyre_libs_builder::builder::gemm::ContractionSemiring::Custom::combine: alloc::sync::Arc<(dyn core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr + core::marker::Send + core::marker::Sync)>
+pub vyre_libs_builder::builder::gemm::ContractionSemiring::Custom::identity: u32
+pub vyre_libs_builder::builder::gemm::ContractionSemiring::Fixed16_16
+pub vyre_libs_builder::builder::gemm::ContractionSemiring::Standard
+pub vyre_libs_builder::builder::gemm::ContractionTiling::Block1D
+pub vyre_libs_builder::builder::gemm::ContractionTiling::Block1D::tile: u32
+pub vyre_libs_builder::builder::gemm::ContractionTiling::CooperativeShared
+pub vyre_libs_builder::builder::gemm::ContractionTiling::CooperativeShared::a_tile_name: alloc::string::String
+pub vyre_libs_builder::builder::gemm::ContractionTiling::CooperativeShared::b_tile_name: alloc::string::String
+pub vyre_libs_builder::builder::gemm::ContractionTiling::CooperativeShared::tile: u32
+pub vyre_libs_builder::builder::gemm::ContractionTiling::Linear
+pub vyre_libs_builder::builder::gemm::ContractionTiling::Linear::workgroup_size: [u32; 3]
+pub vyre_libs_builder::builder::gemm::ContractionTiling::RegisterTiled
+pub vyre_libs_builder::builder::gemm::ContractionTiling::RegisterTiled::columns: u32
+pub vyre_libs_builder::builder::gemm::ContractionTiling::RegisterTiled::rows: u32
+pub vyre_libs_builder::builder::gemm::ContractionTiling::RegisterTiled::workgroup_size: [u32; 3]
+pub vyre_libs_builder::builder::matrix_tile::MatrixShape::k: u32
+pub vyre_libs_builder::builder::matrix_tile::MatrixShape::m: u32
+pub vyre_libs_builder::builder::matrix_tile::MatrixShape::n: u32
+pub vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames::col: &'static str
+pub vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames::lane_col: &'static str
+pub vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames::lane_row: &'static str
+pub vyre_libs_builder::builder::matrix_tile::OutputTileCoordNames::row: &'static str
+pub vyre_libs_builder::builder::matrix_tile::TileArithmetic::accumulate: &'a dyn core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub vyre_libs_builder::builder::matrix_tile::TileArithmetic::combine: &'a dyn core::ops::function::Fn(vyre_foundation::ir_inner::model::generated::Expr, vyre_foundation::ir_inner::model::generated::Expr) -> vyre_foundation::ir_inner::model::generated::Expr
+pub vyre_libs_builder::builder::matrix_tile::TileArithmetic::pad: vyre_foundation::ir_inner::model::generated::Expr
+pub vyre_libs_builder::builder::matrix_tile::TileShape::a_values: u32
+pub vyre_libs_builder::builder::matrix_tile::TileShape::b_values: u32
+pub vyre_libs_builder::builder::matrix_tile::TileShape::k_tile: u32
+pub vyre_libs_builder::builder::matrix_tile::TileShape::lanes: u32
+pub vyre_libs_builder::builder::matrix_tile::TileShape::out_cols: u32
+pub vyre_libs_builder::builder::matrix_tile::TileShape::out_rows: u32
+pub vyre_libs_builder::builder::matrix_tile::TileShape::x_lanes: u32
+pub vyre_libs_builder::builder::matrix_tile::TileShape::y_lanes: u32
+pub vyre_libs_builder::builder::reduction::ReductionPhase::accumulate: vyre_foundation::ir_inner::model::generated::Node
+pub vyre_libs_builder::builder::reduction::ReductionPhase::publish: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub vyre_libs_builder::builder::reduction::ReductionPhase::reductions: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>
+pub vyre_libs_builder::builder::state_machine::TableStateMachineComposer::alphabet_size: u32
+pub vyre_libs_builder::builder::state_machine::TableStateMachineComposer::state_var: &'a str
+pub vyre_libs_builder::builder::state_machine::TableStateMachineComposer::stride: u32
+pub vyre_libs_builder::builder::state_machine::TableStateMachineComposer::transitions: &'a str
+pub vyre_libs_builder::builder::stencil::CellGridShape::cell_height: u32
+pub vyre_libs_builder::builder::stencil::CellGridShape::cell_width: u32
+pub vyre_libs_builder::builder::stencil::CellGridShape::cols: u32
+pub vyre_libs_builder::builder::stencil::CellGridShape::rows: u32
+pub vyre_libs_builder::builder::stencil::Grid2DShape::height: u32
+pub vyre_libs_builder::builder::stencil::Grid2DShape::width: u32
+pub vyre_libs_builder::builder::stencil::Stencil3x3Tap::column: u32
+pub vyre_libs_builder::builder::stencil::Stencil3x3Tap::in_bounds: vyre_foundation::ir_inner::model::generated::Expr
+pub vyre_libs_builder::builder::stencil::Stencil3x3Tap::input_index: vyre_foundation::ir_inner::model::generated::Expr
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef::name: vyre_foundation::ir_inner::model::expr::ident::Ident
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRef::shape: alloc::sync::Arc<[u32]>
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::DtypeMismatch
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::DtypeMismatch::expected: vyre_spec::data_type::DataType
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::DtypeMismatch::found: vyre_spec::data_type::DataType
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::DtypeMismatch::name: alloc::string::String
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::DtypeMismatch::op: &'static str
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::ElementCountOverflow
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::ElementCountOverflow::name: alloc::string::String
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::ElementCountOverflow::shape: alloc::vec::Vec<u32>
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::NameCollision
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::NameCollision::name: alloc::string::String
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::NameCollision::op: &'static str
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch::expected: alloc::vec::Vec<u32>
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch::found: alloc::vec::Vec<u32>
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch::name: alloc::string::String
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::ShapeMismatch::op: &'static str
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::UnsupportedTiling
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::UnsupportedTiling::op: &'static str
+pub vyre_libs_builder::plumbing::operand::tensor_ref::TensorRefError::UnsupportedTiling::tiling: &'static str
+pub vyre_libs_builder::plumbing::program::descriptor::BufferDescriptor::access: vyre_spec::buffer_access::BufferAccess
+pub vyre_libs_builder::plumbing::program::descriptor::BufferDescriptor::count: u32
+pub vyre_libs_builder::plumbing::program::descriptor::BufferDescriptor::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_builder::plumbing::program::descriptor::BufferDescriptor::name: alloc::string::String
+pub vyre_libs_builder::plumbing::program::descriptor::ProgramDescriptor::buffer_count: usize
+pub vyre_libs_builder::plumbing::program::descriptor::ProgramDescriptor::buffers: alloc::vec::Vec<vyre_libs_builder::plumbing::program::descriptor::BufferDescriptor>
+pub vyre_libs_builder::plumbing::program::descriptor::ProgramDescriptor::entry_node_count: usize
+pub vyre_libs_builder::plumbing::program::descriptor::ProgramDescriptor::rw_bytes_lower_bound: usize
+pub vyre_libs_builder::plumbing::program::descriptor::ProgramDescriptor::workgroup_size: [u32; 3]
+pub vyre_libs_builder::plumbing::registration::operation_catalog::ConvergenceContract::max_iterations: u32
+pub vyre_libs_builder::plumbing::registration::operation_catalog::ConvergenceContract::op_id: &'static str
+pub vyre_libs_builder::prelude::BuildOptions::region_generator: core::option::Option<&'static str>
+pub vyre_libs_builder::prelude::BuildOptions::tenant_id: core::option::Option<u32>
+pub vyre_libs_builder::prelude::BuildOptions::workgroup_size: core::option::Option<[u32; 3]>
+pub vyre_libs_builder::prelude::TensorRef::dtype: vyre_spec::data_type::DataType
+pub vyre_libs_builder::prelude::TensorRef::name: vyre_foundation::ir_inner::model::expr::ident::Ident
+pub vyre_libs_builder::prelude::TensorRef::shape: alloc::sync::Arc<[u32]>

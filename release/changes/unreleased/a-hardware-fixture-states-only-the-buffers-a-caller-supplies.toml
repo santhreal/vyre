@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A hardware intrinsic fixture states only the buffers a caller supplies, so the reference interpreter receives the input list a device artifact would accept."

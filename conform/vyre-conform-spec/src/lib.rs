@@ -3,14 +3,16 @@
 //! Canonical, deterministic witness enumeration per DataType. Consumers
 //! use these to drive backend-parity testing and algebraic-law verification.
 
-#![forbid(unsafe_code)]
-#![deny(rust_2018_idioms)]
-#![deny(missing_docs)]
-
 pub mod cert;
+pub mod protocol;
 pub mod schema;
 pub mod witness;
 
+pub use protocol::{
+    derive_auth_key, hash_outputs, ulp_distance_f32, verify_receipts_for_certificate, CasePayload,
+    CertificateRejection, DeviceLease, NumericalMismatch, NumericalPolicy, WorkerBudget,
+    WorkerMode, WorkerReceipt, WorkerRequest, WorkerStatus,
+};
 pub use schema::{
     BundleCertificate, Certificate, ConformanceCase, ConformanceResult, ReplayCapsule,
     ReplayMinimization, ReplayMismatch, SchemaVersionError, CERTIFICATE_SCHEMA_VERSION,

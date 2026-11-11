@@ -1,0 +1,4 @@
+category = "Fixed"
+text = """
+The representative benchmark workloads and the pinned baseline registry declare `sm_89` and `nvcc 12.0`, the architecture and toolchain the measurements are taken on, instead of an `sm_90a` no cell could be measured against. The CUB baselines pin 2.0.1 and the cuSPARSE baseline pins 12.0.1, the versions the measuring toolkit provides.
+"""

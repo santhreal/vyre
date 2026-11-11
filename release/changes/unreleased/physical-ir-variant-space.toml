@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The physical-IR variant space is enumerated by vyre-lower from its own compiled source, so an emitter contract no longer resolves the enum through the working directory."

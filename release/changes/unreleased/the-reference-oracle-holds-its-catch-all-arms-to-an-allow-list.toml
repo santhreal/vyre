@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The reference oracle names every `DataType` variant explicitly where it used to fall through a catch-all arm, and a test holds the remaining catch-alls to an exact per-file allowance and every non-exhaustive IR variant to a named decision."

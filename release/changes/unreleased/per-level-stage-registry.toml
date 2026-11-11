@@ -1,0 +1,2 @@
+category = "Added"
+text = "Each IR level now registers one stage naming its subject, verifier, canonical form, and analyses, so a level with no verifier or two owners for one analysis fails the link-closure suite instead of passing verification by default."

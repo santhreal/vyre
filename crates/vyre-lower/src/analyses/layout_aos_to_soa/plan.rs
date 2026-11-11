@@ -1,0 +1,39 @@
+//! Output type for the AoS→SoA layout-transform analysis.
+
+use crate::analyses::candidate_plan::CandidatePlan;
+use serde::{Deserialize, Serialize};
+
+/// One compound binding eligible for layout transformation.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LayoutCandidate {
+    /// Binding slot to transform.
+    pub binding_slot: u32,
+    /// Number of LoadGlobal sites against this binding.
+    pub load_count: u32,
+    /// Number of components in the AoS element (e.g. 4 for Vec4).
+    pub component_count: u32,
+    /// Estimated speedup if split: `1.0 + (component_count - 1) * 0.3`.
+    /// Conservative  -  actual gain depends on access pattern coalescing.
+    pub estimated_speedup_factor: f32,
+}
+
+/// Layout-transformation candidates for one kernel.
+pub type LayoutTransformPlan = CandidatePlan<LayoutCandidate>;
+
+// Inline: covers items in the crate-private `analyses::layout_aos_to_soa` module, which no integration test can reach.
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vec4_speedup_grows_with_component_count() {
+        // 1.0 + (4 - 1) * 0.3 = 1.9
+        let cand = LayoutCandidate {
+            binding_slot: 0,
+            load_count: 4,
+            component_count: 4,
+            estimated_speedup_factor: 1.9,
+        };
+        assert!((cand.estimated_speedup_factor - 1.9).abs() < 1e-5);
+    }
+}

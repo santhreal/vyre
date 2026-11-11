@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Workspace crate ownership now comes from one manifest-checked registry. The tier gate rejects missing crates, undeclared production edges, and stale generated graph or ownership guides, while planned compiler boundaries stay visibly separate from current workspace members."

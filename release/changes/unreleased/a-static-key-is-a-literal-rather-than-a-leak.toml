@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The scheduler lookup contract builds its pass names from string literals. It had leaked twenty boxed strings and then reconstituted a box from a shared reference to free them, which is a retag the aliasing model rejects over memory a live lookup table still pointed at."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The `dispatch` fuzz target is excluded from the root workspace by name and built by the fuzz workflow. Nothing had compiled it since it was written."

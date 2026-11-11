@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The encoded pattern-match pass is split into the action encoding, the analysis programs, the two rule bodies, the decoder and the driver, and it reads the shared arena workgroup size instead of declaring a second copy of it."

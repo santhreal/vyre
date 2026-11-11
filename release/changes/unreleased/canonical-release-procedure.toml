@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Release operations now use one runbook and one generated checklist derived from release-train versions, repositories, package groups, tags, approval actions, and validated changelog fragments. The guarded launcher pushes candidate tags before publication, final tags afterward, and records completion only after external actions succeed."

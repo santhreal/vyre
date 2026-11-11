@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The crate ownership registry stores every declared directory slash-separated, so a row written with backslashes owns its own directory and not only the files beneath it."

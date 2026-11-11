@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "csr_sweep_arm_coverage and lr_tables_contracts reach vyre_libs::graph and vyre_libs::parsing, and neutral_target_debug_separation reaches vyre_lower::descriptor_builder. All three now declare the feature that makes those modules exist, so a default-feature build of the workspace compiles them instead of failing."

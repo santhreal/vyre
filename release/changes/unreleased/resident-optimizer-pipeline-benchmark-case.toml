@@ -1,0 +1,2 @@
+category = "Added"
+text = "The resident CUDA optimizer pipeline is registered as a release benchmark case against the foundation CPU pipeline baseline, and the release gate verifies the measured execution times, provenance, and performance contract."

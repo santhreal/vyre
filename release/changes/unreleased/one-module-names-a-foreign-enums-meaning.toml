@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The host-oracle gate names a binary operator's meaning once. Assignment, computation and comparison forms of syn::BinOp are classified in one vocabulary module that the classifier, the visitor and the extractor call, so a new operator form reaches all three."

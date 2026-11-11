@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The two grouped INT4 linear lowerings, the lane-predicated one and the weight-tile-reuse one, shared five stages by copy: the workgroup lane decomposition, the packed-column index, the nibble select, the affine dequantization, and the subgroup reduction with its lane-zero biased store. Each is now built once in the grouped layout module and used by both, so a change to the packed weight layout or the reduction cannot land in one strategy and miss the other. Both emitted programs are unchanged."

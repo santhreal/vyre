@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A failed read while building the workspace source corpus is reported with the path and the error instead of dropping the file, so a process out of descriptors no longer answers that nothing declares a name that is in the tree."

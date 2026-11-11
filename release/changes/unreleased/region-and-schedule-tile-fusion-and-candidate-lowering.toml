@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Fusion operates over logical regions and schedule tiles with dependence analysis selecting the earliest safe handoff, candidate lowering adds register and shared-memory forwarding, prologue and epilogue fusion, pipelining, and dispatch cuts, and changed schedule-only workgroup geometry fuses."

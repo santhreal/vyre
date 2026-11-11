@@ -1,0 +1,2 @@
+category = "Added"
+text = "Each IR construct records the algebraic, recurrence, reduction, layout, and numerical law families a rewrite may cite over it, or the reason it exposes none, and a construct added to the AST registry fails the suite until one is recorded."

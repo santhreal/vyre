@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A fused composition promotes its final buffer to an output instead of leaving whatever role the last stage declared, so a stage that writes its result to plain read-write storage no longer publishes nothing: the buffer stopped consuming a host input slot the reference oracle demanded and every backend allocated. The security dataflow operations and the fused token sampler now declare an expected output for every buffer the oracle returns, so each fused stage's result is checked rather than only the final scalar."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The CSE structural-hash and canonical-id kernels fold an arena word inside the hash buffer before reading it, and the compaction kernel stores a pair only for a slot the buffer holds. A leaf payload sharing the child-id row indexed past the buffer, and a compaction counter that arrived above zero handed out a slot no pair fits in."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Every gate reads test source from one classifier, a file under a crate's `tests/`, `benches/`, `examples/` or `fuzz/` directory or a module reached through a `#[cfg(test)]` declaration including a `#[path]` relocation, so shipped files named like tests, such as `bitset/test_bit.rs` and `vyre-test-support/src/test_parity_oracles.rs`, are judged as production and relocated test modules are not."

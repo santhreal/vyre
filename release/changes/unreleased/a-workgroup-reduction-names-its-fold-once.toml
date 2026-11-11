@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "A standalone workgroup reduction is built from a WorkgroupReduction value naming one fold, so the identity, the combine and the tree sweep are derived together instead of arriving as three arguments that could disagree. The nine-parameter builder and its too_many_arguments allow are gone, as are three further allows on Scallop provenance dispatch entry points that were already under the argument threshold."

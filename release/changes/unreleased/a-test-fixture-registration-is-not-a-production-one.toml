@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The walker that checks every registration is linkable now reads production text only, so a registration quoted inside a test module is no longer reported as one the build cannot reach."

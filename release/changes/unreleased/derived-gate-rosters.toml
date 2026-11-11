@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The internal dependency version rule, the benchmark coverage rule, and both sweep runners derive their crate, case, and test rosters from tracked manifests and sources instead of hardcoded lists, no longer write outside the repository, and fail on a cargo failure instead of reporting a clean tree. The volume sweep runner had a three-crate list that left one tracked volume wave in no shard, and a shard index outside the shard count selected nothing and exited 0."

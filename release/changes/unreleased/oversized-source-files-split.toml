@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Three source files over the per-file line cap are split along their existing concerns: the Vulkan backend into loader and process-wide context, descriptor bindings and readback, and the dispatch itself; the reference oracle's interleaving module into access model, shadow memory, thread-local tracking and the static walk; and the Go structure extractor into the shared declaration span, package and import extraction, and declaration extraction."

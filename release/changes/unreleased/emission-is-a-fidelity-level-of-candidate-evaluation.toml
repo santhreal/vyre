@@ -1,0 +1,2 @@
+category = "Changed"
+text = "A ranked plan the target compiler rejects is eliminated with a stable emission reason and candidate evaluation continues, instead of failing the compilation."

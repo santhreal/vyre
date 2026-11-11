@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Doc CI builds the workspace documentation through the `workspace-docs` gate. The shell wrapper it replaced built with `--keep-going` and no feature flags, and its changed-only mode was reachable from no caller; the gate builds every crate with all features and reports one finding per diagnostic."

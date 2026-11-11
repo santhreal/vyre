@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The runtime crate denies `unsafe_code` at its root and records the four files permitted to grant it back, so an `unsafe` construct added anywhere else is a compile error."

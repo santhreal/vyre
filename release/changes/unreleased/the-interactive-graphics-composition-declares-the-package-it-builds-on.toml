@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The interactive graphics pipeline composition declares the visual package it imports, so enabling the visual feature compiles instead of failing on an unresolved crate."

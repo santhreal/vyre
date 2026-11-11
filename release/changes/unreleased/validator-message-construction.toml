@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Validator and runtime diagnostics build their fix text without a formatting call that has nothing to format, the dead-store pass filters its surviving nodes instead of mapping a boolean, and the runtime module headers link items by their crate path so rustdoc resolves them."

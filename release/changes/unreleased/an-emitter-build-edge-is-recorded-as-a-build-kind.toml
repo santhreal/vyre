@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "`vyre-emit-naga` and `vyre-emit-ptx` read `vyre-foundation` from their build scripts as well as from their libraries, so cargo resolves both edges as `build` and `normal` while the ownership registry recorded `normal` alone. The two records now state both kinds, and the rendered crate graph and ownership pages were regenerated from them."

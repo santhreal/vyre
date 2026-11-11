@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The columnar program fact view is split into the tags, the fact table and the build walk, and its suite moved to an integration test that reads only the public surface."

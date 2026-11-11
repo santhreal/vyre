@@ -1,0 +1,2 @@
+category = "Changed"
+text = "Product crates are under `crates/` and repository tooling under `tools/`; package names and the published crates are unchanged."

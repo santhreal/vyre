@@ -1,0 +1,2 @@
+category = "Added"
+text = "The `oracle-independence` gate fails when `vyre-reference` names a `vyre-foundation` module or macro that decides how a program runs, so the interpreter cannot inherit the transform it is supposed to check."

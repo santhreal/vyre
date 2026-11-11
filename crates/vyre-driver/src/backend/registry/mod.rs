@@ -1,0 +1,24 @@
+//! Link-time backend registry.
+//!
+//! Backend crates submit a [`BackendRegistration`] with `inventory::submit!`.
+//! Applications discover every linked backend through [`registered_backends`]
+//! without hardcoding crate-specific constructors. Because the registry lives
+//! in the neutral driver crate and is populated by downstream crates at link
+//! time, this crate's own test sees an empty registry; concrete driver crates
+//! assert their own presence.
+
+mod acquire;
+mod grid_sync_split;
+#[cfg(test)]
+mod grid_sync_split_tests;
+mod inventory_streams;
+
+pub use acquire::{
+    acquire, acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
+    backend_registration, core_supported_ops, registered_backends_by_precedence,
+    registered_backends_by_precedence_slice,
+};
+pub use inventory_streams::{
+    registered_backends, registered_target_operation_facets, BackendCapability, BackendPrecedence,
+    BackendRegistration,
+};

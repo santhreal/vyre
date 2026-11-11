@@ -1,0 +1,77 @@
+[package]
+name = "vyre-primitives"
+version = "0.8.0"
+autotests = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "The vyre operations that cannot be composed: marker types, hardware intrinsics, and the per-domain kernels a backend sees as one unit."
+readme = "README.md"
+keywords = ["gpu", "ir", "primitive", "vyre", "lego"]
+categories = ["algorithms", "api-bindings"]
+documentation = "https://docs.rs/vyre-primitives"
+exclude = ["**/proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
+
+[features]
+# Default: marker types only, zero IR-builder deps.
+default = []
+
+# Enable GPU-backend parity tests (requires CUDA driver + device).
+gpu = []
+
+# Enable host reference oracles for explicit parity harnesses. Release
+# consumers should not enable this; CUDA/GPU dispatch builders remain
+# available without host execution paths.
+cpu-parity = []
+
+# Pulls vyre-foundation in as an optional dep. `hardware` needs it; nothing
+# else in this crate builds IR.
+vyre-foundation = ["dep:vyre-foundation"]
+
+# Category C hardware intrinsics: the one domain feature this crate declares.
+# Every op here submits an `OperationRegistration`, so the registry feature comes
+# with it rather than being a second thing to remember.
+hardware = ["vyre-foundation", "inventory-registry"]
+
+# Enable the `OperationRegistration` submissions so the universal conform
+# harness and `cargo xtask print-composition` discover every operation this
+# crate registers. Off by default to keep default-build dep-free.
+inventory-registry = ["dep:inventory", "vyre-foundation"]
+
+[dependencies]
+vyre-foundation = { workspace = true, optional = true }
+inventory = { workspace = true, optional = true }
+bytemuck.workspace = true
+
+[dev-dependencies]
+vyre-reference = { workspace = true }
+proptest.workspace = true
+criterion.workspace = true
+vyre-test-support = { workspace = true, features = ["parity-oracles"] }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[package.metadata.vyre]
+publication_class = "extension-sdk"
+publication_contract = "consumer-seam:vyre-graphics-app"
+
+[lints]
+workspace = true
+
+[[bench]]
+name = "wire_throughput"
+harness = false
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"
+
+[[test]]
+name = "all_tests_hardware"
+path = "tests/all_tests_hardware.rs"
+required-features = ["hardware"]

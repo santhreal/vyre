@@ -1,0 +1,2 @@
+category = "Changed"
+text = "The `vyre-libs-vfs` package is folded into `vyre-libs-device` behind its `vfs` feature; `vyre_libs::vfs` and the `vyre-libs::vfs::resolve` operation id are unchanged."

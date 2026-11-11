@@ -1,0 +1,2 @@
+category = "Added"
+text = "Moved named model configurations and forward graph construction out of the Vyre workspace into an independent downstream model-compiler consumer package consuming only domain-neutral graph and resource constructs."

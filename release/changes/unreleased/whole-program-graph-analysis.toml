@@ -1,0 +1,2 @@
+category = "Added"
+text = "ProgramGraph now validates complete compositions and derives canonical topological schedules, inclusive value liveness, and deterministic interval-colored allocation plans. Invocation-local values reuse only nonoverlapping slots, while immutable weights, sequence-state generations, and caller-visible outputs retain dedicated storage."

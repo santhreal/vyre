@@ -1,0 +1,2 @@
+category = "Changed"
+text = "An unregistered IO destination handle, a panicked runtime worker thread, and a tenant opcode landing in the reserved system range report `PipelineError::UnregisteredResource`, `WorkerThreadPanicked`, and `ReservedOpcode` with the handle, slot, worker, and opcode numbers as fields, instead of an untyped backend-error string a caller could only substring-scan."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "External resource admission clears a poisoned lock and continues instead of reporting the admitted resource as invalidated, which leaked the external handle the record was the only reference to."

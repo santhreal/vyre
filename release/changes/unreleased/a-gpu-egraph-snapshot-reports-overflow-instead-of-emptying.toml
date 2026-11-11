@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`GpuEGraphSnapshot::build` and `GpuEGraphSnapshot::from_egraph_with` are gone; `try_build` and `try_from_egraph_with` are the only constructors. The infallible pair returned an empty snapshot when the rows exceeded the 32-bit GPU column ABI, which a pass reads as an e-graph with nothing to rewrite and a fixture asserts against as if it had built the columns."

@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Benchmark comparison records the delta, significance and sample band every verdict was judged against, states no verdict for a pair the band cannot decide, counts the undecided cases, and fails on the loss its own verdict names rather than on a one-standard-deviation mean comparison."

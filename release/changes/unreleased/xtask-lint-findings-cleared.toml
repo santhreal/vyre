@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "Twelve clippy findings in `xtask` are gone. Two were a loop body that pushed the same item on every iteration, which reads as a copy-paste defect in the rule and was a bounded filler run in a test; both are now a resize. One was a `for` loop that could not iterate more than once, now an `if let`. The rest were a redundant trim, two complex types that wanted an alias, a manual character comparison, a block that wanted the question-mark operator, a `vec!` that never needed to allocate, and a `&PathBuf` parameter that only ever read a path."

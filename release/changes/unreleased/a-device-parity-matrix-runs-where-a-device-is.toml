@@ -1,0 +1,2 @@
+category = "Fixed"
+text = "The conformance parity matrix declares the device-tests feature, so it runs on a lane that has an adapter instead of reporting every operation unmeasured on a hosted runner with none."

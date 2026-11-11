@@ -1,0 +1,2 @@
+category = "Added"
+text = "Real-time interactive compilation and execution architecture is established with versioned real-time objectives and input-to-visible latency boundaries in `vyre-megakernel`, domain-neutral semantic resource ABI with zero-copy import/export and timeline synchronization in `vyre-driver`, transactional `GraphDelta` derivation with million-node scale closure bounding in `vyre-foundation`, and structured `InteractiveSessionStateMachine` in `vyre-runtime`."

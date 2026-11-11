@@ -1,5 +1,6 @@
 {
-  "schema_version": 2,
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"318b7c1ce0b80d1c265094650fc03d7c7bc0b034","commit_timestamp":"1794369854","parent_commit":"fcf32bc73e6e981842d0f9fe898a1f4b4f5b732e","dirty":false,"source_fingerprint":"git:318b7c1ce0b80d1c265094650fc03d7c7bc0b034:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":16},"measurement":{"state":"host_only"}},
+  "schema_version": 3,
   "generator_command": "xtask whats-similar --all --duplicate-report-json release/evidence/dedup/registered-op-duplicates.json",
   "detector_family": "registered-op-ir-shape",
   "family_count": 0,
