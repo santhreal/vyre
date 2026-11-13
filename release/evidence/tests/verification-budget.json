@@ -1,5 +1,5 @@
 {
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"318b7c1ce0b80d1c265094650fc03d7c7bc0b034","commit_timestamp":"1794369854","parent_commit":"fcf32bc73e6e981842d0f9fe898a1f4b4f5b732e","dirty":false,"source_fingerprint":"git:318b7c1ce0b80d1c265094650fc03d7c7bc0b034:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":16},"measurement":{"state":"host_only"}},
+  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"eb6167416f684449e9feef24227d42b3e004ffe2","commit_timestamp":"1794533320","parent_commit":"3e02959cf1d5030630e943e258f5e2996903599c","dirty":false,"source_fingerprint":"git:eb6167416f684449e9feef24227d42b3e004ffe2:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":16},"measurement":{"state":"host_only"}},
   "schema_version": 1,
   "tiers": [
     {
@@ -10,7 +10,7 @@
       "compile_units": 6,
       "link_units": 7,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 513613
+      "disk_use_bytes": 510313
     },
     {
       "tier": "compiler-boundary",
@@ -34,7 +34,7 @@
       "compile_units": 7,
       "link_units": 12,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 2235570
+      "disk_use_bytes": 2248237
     },
     {
       "tier": "conformance",
@@ -193,7 +193,7 @@
       "compile_units": 2,
       "link_units": 5,
       "duplicate_source_bytes": 0,
-      "disk_use_bytes": 190144
+      "disk_use_bytes": 190763
     },
     {
       "tier": "test-tooling",
@@ -217,7 +217,7 @@
       "compile_units": 8,
       "link_units": 17,
       "duplicate_source_bytes": 1172,
-      "disk_use_bytes": 966004
+      "disk_use_bytes": 971515
     }
   ],
   "shared_contracts": [
