@@ -7873,6 +7873,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   module written in its own file counted as production code. A crate whose only
   builders are test fixtures now reports zero builders and is held honest by a
   production-file guard instead of a floor.
+- The coverage lane deletes, before its report, every instrumented executable
+  whose GNU build ID no raw profile of the run records, so builds of other
+  feature sets, checkouts and removed targets no longer count as missed lines.
 - CPU-parity integration tests now declare their required Cargo features.
   Default-feature `vyre-libs` test builds no longer import reference-only
   symbols that are intentionally absent from production builds.
@@ -9219,6 +9222,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   backend uses once it has probed one, and a scheduler built without an adapter
   states the conservative fallback at the place that chose it instead of
   leaving it to whichever pass reached for a profile first.
+- The structured diagnostic of a `PipelineError::Protocol` or
+  `PipelineError::DrainIncomplete` now carries the fix its error message
+  states.
 - Single-program artifact graphs now classify every backend-allocated buffer,
   including read-write pipeline live-outs, as an output. Artifact submission no
   longer asks callers to provide internal fused-pipeline storage as a host
