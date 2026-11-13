@@ -116,7 +116,7 @@ disk_use_bytes = 640000
 compile_units = 2
 link_units = 5
 duplicate_source_bytes = 0
-disk_use_bytes = 190144
+disk_use_bytes = 190763
 
 [tier.test-tooling]
 compile_units = 3
