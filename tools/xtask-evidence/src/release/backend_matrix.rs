@@ -185,8 +185,8 @@ const CUDA_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
         relative: "crates/vyre-driver-cuda/src/backend/resident_io_download.rs",
         role: "CUDA resident sparse readback batching",
         tokens: &[
-            "download_resident_readbacks_many",
-            "download_resident_readbacks_many_into",
+            "download_resident_readback_batches_many_into",
+            "download_resident_fused_copies_many_into",
         ],
     },
     BackendFeatureRequirement {
@@ -1580,7 +1580,7 @@ mod tests {
             .expect("Fix: the test needs the cited file.");
         fs::write(
             root.path().join("resident_io_download.rs"),
-            "pub fn download_resident_readbacks_many() {}\n",
+            "pub fn download_resident_readback_batches_many_into() {}\n",
         )
         .expect("Fix: the test needs a sibling file.");
 
@@ -1591,7 +1591,7 @@ mod tests {
             "Fix: the cited file is read: {text}"
         );
         assert!(
-            !text.contains("download_resident_readbacks_many"),
+            !text.contains("download_resident_readback_batches_many_into"),
             "Fix: a leaf citation does not absorb its siblings: {text}"
         );
     }

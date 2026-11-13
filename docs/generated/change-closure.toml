@@ -20643,7 +20643,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "Backend"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:380"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:393"
 constructors = ["PipelineError::Backend", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20653,7 +20653,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "CounterOrder"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:276"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:290"
 constructors = ["PipelineError::CounterOrder", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20663,7 +20663,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "CounterOverflow"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:250"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:264"
 constructors = ["PipelineError::CounterOverflow", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20673,7 +20673,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "DrainIncomplete"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:383"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:396"
 constructors = ["PipelineError::DrainIncomplete", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20683,7 +20683,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "IllegalSlotTransition"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:410"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:422"
 constructors = ["PipelineError::IllegalSlotTransition", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20693,7 +20693,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "IntegerWidth"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:230"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:244"
 constructors = ["PipelineError::IntegerWidth", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20703,7 +20703,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "InvalidRequest"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:304"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:318"
 constructors = ["PipelineError::InvalidRequest", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20713,7 +20713,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "IoUringSyscall"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:176"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:190"
 constructors = ["PipelineError::IoUringSyscall", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20723,7 +20723,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "NotLinux"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:370"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:384"
 constructors = ["PipelineError::NotLinux", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20733,7 +20733,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "NvmePassthroughDisabled"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:375"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:387"
 constructors = ["PipelineError::NvmePassthroughDisabled", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20743,7 +20743,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "Protocol"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:361"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:375"
 constructors = ["PipelineError::Protocol", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20753,7 +20753,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "QueueFull"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:186"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:200"
 constructors = ["PipelineError::QueueFull", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20763,7 +20763,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "RegionBounds"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:202"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:216"
 constructors = ["PipelineError::RegionBounds", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20773,7 +20773,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "ReservedOpcode"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:470"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:482"
 constructors = ["PipelineError::ReservedOpcode", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20783,7 +20783,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "RingEncoding"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:346"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:360"
 constructors = ["PipelineError::RingEncoding", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20793,7 +20793,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "SlotInFlight"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:327"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:341"
 constructors = ["PipelineError::SlotInFlight", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20803,7 +20803,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "UnregisteredResource"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:435"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:447"
 constructors = ["PipelineError::UnregisteredResource", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"
@@ -20813,7 +20813,7 @@ disposition = "implemented"
 [[closure]]
 type_name = "PipelineError"
 variant_name = "WorkerThreadPanicked"
-declaration_site = "crates/vyre-runtime/src/error/mod.rs:458"
+declaration_site = "crates/vyre-runtime/src/error/mod.rs:470"
 constructors = ["PipelineError::WorkerThreadPanicked", "PipelineError::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Debug, Clone)"

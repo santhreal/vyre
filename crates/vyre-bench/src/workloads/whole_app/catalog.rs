@@ -515,8 +515,8 @@ pub fn interactive_event_pipeline() -> WholeApplicationWorkload {
 
             let mut inputs = BTreeMap::new();
             inputs.insert("dirty_boxes".to_string(), (0..count).map(|i| if i % 2 == 0 { 1u32 } else { 0u32 }).flat_map(|v| v.to_le_bytes()).collect());
-            inputs.insert("layer_fg".to_string(), (0..count).map(|i| (0xFF0000FF_u32 ^ (i as u32))).flat_map(|v| v.to_le_bytes()).collect());
-            inputs.insert("layer_bg".to_string(), (0..count).map(|i| (0x00FF00FF_u32 ^ (i as u32))).flat_map(|v| v.to_le_bytes()).collect());
+            inputs.insert("layer_fg".to_string(), (0..count).map(|i| 0xFF0000FF_u32 ^ (i as u32)).flat_map(|v| v.to_le_bytes()).collect());
+            inputs.insert("layer_bg".to_string(), (0..count).map(|i| 0x00FF00FF_u32 ^ (i as u32)).flat_map(|v| v.to_le_bytes()).collect());
 
             Ok((graph, inputs))
         },
