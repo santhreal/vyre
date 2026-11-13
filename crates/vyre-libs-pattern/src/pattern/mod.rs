@@ -53,10 +53,6 @@ pub use dfa_compile::{
     dfa_compile, dfa_compile_case_insensitive, dfa_compile_case_insensitive_with_budget,
     dfa_compile_with_budget, CompiledDfa, DfaCompileError, DfaWireError, DEFAULT_DFA_BUDGET_BYTES,
 };
-#[cfg(test)]
-pub use nfa_to_dfa::{
-    dfa_fingerprint, dfa_wire_bytes, DfaDedupBatch, DfaDedupResult, DfaDedupStats, DfaDedupTable,
-};
 pub use nfa_to_dfa::{nfa_to_dfa, NfaTables, NfaToDfaError};
 pub use region::{
     cap_regions_per_pattern_flag_program, dedup_regions_cluster_program,

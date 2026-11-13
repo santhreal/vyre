@@ -35,7 +35,7 @@ each other; a layer that admits none states `None`.
 
 ## Workspace dependency graph
 
-The workspace contains 55 crates and 288 internal production edges, resolved
+The workspace contains 55 crates and 287 internal production edges, resolved
 under the union of every feature. An arrow points from a crate to an internal
 normal or build dependency. Development dependencies are excluded.
 
@@ -283,7 +283,6 @@ graph TD
   C31 --> C50
   C32 --> C18
   C32 --> C22
-  C32 --> C28
   C32 --> C29
   C32 --> C45
   C33 --> C18
@@ -577,7 +576,6 @@ graph TD
 | `vyre-libs-parsing` | `vyre-spec` | `specification` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-pattern` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |
 | `vyre-libs-pattern` | `vyre-libs-builder` | `libs-builder` | `normal` | `always` | None | `false` | `true` | None |
-| `vyre-libs-pattern` | `vyre-libs-hash` | `libs-hash` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-pattern` | `vyre-libs-math` | `libs-math` | `normal` | `always` | None | `false` | `true` | None |
 | `vyre-libs-pattern` | `vyre-primitives` | `primitive-library` | `normal` | `always` | `inventory-registry` | `false` | `false` | None |
 | `vyre-libs-reasoning` | `vyre-foundation` | `foundation-ir` | `normal` | `always` | `serde` | `false` | `true` | None |

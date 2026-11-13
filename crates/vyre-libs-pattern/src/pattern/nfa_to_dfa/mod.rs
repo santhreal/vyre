@@ -31,16 +31,11 @@
 //!
 //! Accept metadata: a DFA state accepts if any NFA state in its set is an
 //! accept. `output_records[state]` enumerates every pattern_id whose accept
-#[cfg(test)]
-mod dedup;
+//! NFA state is in the set, in `accept_state_ids` order.
 
 mod error;
 mod state_set;
 mod subset;
 
-#[cfg(test)]
-pub use dedup::{
-    dfa_fingerprint, dfa_wire_bytes, DfaDedupBatch, DfaDedupResult, DfaDedupStats, DfaDedupTable,
-};
 pub use error::NfaToDfaError;
 pub use subset::{nfa_to_dfa, NfaTables};

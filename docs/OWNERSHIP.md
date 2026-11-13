@@ -597,7 +597,7 @@ Own hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE
 - Seam: `libs-hash`
 - Interface: Hash and checksum compositions.
 - Carried by the curated surface: `false`
-- Consumed by 5 production edge(s)
+- Consumed by 4 production edge(s)
 
 | Dependency | Seam crossed | Interface | Activated by |
 | --- | --- | --- | --- |
@@ -686,7 +686,6 @@ Own substring matching, DFA, NFA, bracket matching, and regular expression scann
 | --- | --- | --- | --- |
 | `vyre-foundation` | `foundation-ir` | Typed IR, graph, diagnostics, validation and semantic optimization contracts. | None |
 | `vyre-libs-builder` | `libs-builder` | Shared IR composition infrastructure, child region skeletons, operands and registration link anchors. | None |
-| `vyre-libs-hash` | `libs-hash` | Hash and checksum compositions. | None |
 | `vyre-libs-math` | `libs-math` | Linear algebra, matrix, scan, broadcasting, algebra and succinct structure compositions. | None |
 | `vyre-primitives` | `primitive-library` | Intrinsic operations, the wire format, guarded IR construction, launch-geometry helpers and marker types. | None |
 

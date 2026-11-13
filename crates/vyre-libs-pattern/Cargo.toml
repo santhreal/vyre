@@ -36,7 +36,6 @@ vyre-primitives = { workspace = true, features = ["inventory-registry"] }
 inventory.workspace = true
 vyre-libs-builder = { workspace = true }
 vyre-libs-math = { workspace = true }
-vyre-libs-hash = { workspace = true }
 regex-syntax = { workspace = true, optional = true }
 
 [dev-dependencies]

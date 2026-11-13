@@ -3883,7 +3883,6 @@ dependencies = [
  "regex-syntax",
  "vyre-foundation",
  "vyre-libs-builder",
- "vyre-libs-hash",
  "vyre-libs-math",
  "vyre-primitives",
  "vyre-reference",
