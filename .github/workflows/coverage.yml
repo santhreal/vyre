@@ -24,6 +24,13 @@ jobs:
     env:
       RUSTUP_TOOLCHAIN: stable
       RUST_TEST_THREADS: "1"
+      # The three high-volume pattern differentials scale with these counts and
+      # reach the same lines at the counts below as at their defaults; the test
+      # lanes still run the defaults. Under instrumentation the defaults take 40
+      # minutes and these counts take 4.
+      VYRE_FUSED_CASES: "100"
+      VYRE_PRESENCE_CASES: "500"
+      VYRE_PRESENCE_GROUND_TRUTH_CASES: "200"
     steps:
       - uses: actions/checkout@v4
 
@@ -43,14 +50,11 @@ jobs:
       # build directory persists on this host, so a run recompiles what the
       # commit changed instead of every package from nothing.
       #
-      # `report` reads every instrumented executable and proc-macro library in
-      # that directory, and the directory also holds builds of older commits,
-      # of other flag sets, and of other checkouts on the host. Their regions
-      # have no profile in this run and count as missed lines, so before the
-      # report `prune_coverage_objects` deletes every executable in `deps` and
-      # in the profile directory that no compiler-artifact record of this run
-      # lists. `examples` is kept: `wire_harness_smoke_test` builds its example
-      # with a cargo invocation of its own, so no record here lists it.
+      # `report` reads every instrumented executable in that directory, and the
+      # directory also holds builds of other flag sets, of other checkouts and
+      # of removed targets. Their regions have no profile in this run and count
+      # as missed lines, so before the report `prune_coverage_objects` deletes
+      # every executable whose GNU build ID no raw profile of this run records.
       - name: Run coverage
         shell: bash
         run: |
@@ -58,8 +62,6 @@ jobs:
           ./cargo_full llvm-cov clean --workspace --profraw-only
           packages=$(./cargo_full metadata --no-deps --format-version 1 \
             | python3 -c 'import json,sys; print("\n".join(p["name"] for p in json.load(sys.stdin)["packages"]))')
-          output="$RUNNER_TEMP/coverage-output.txt"
-          : > "$output"
           # cargo-llvm-cov selects `--tests`. Naming `--examples` alongside it
           # does not help: every explicit target selection compiles an example
           # as a test harness named `<example>-<hash>`, never the plain binary
@@ -68,12 +70,10 @@ jobs:
           # target flags of its own.
           for package in $packages; do
             echo "::group::coverage $package"
-            ./cargo_full llvm-cov --no-report --locked --all-features -p "$package" \
-              --message-format=json-render-diagnostics 2>&1 \
-              | tee -a "$output" | sed '/^{"reason":/d'
+            ./cargo_full llvm-cov --no-report --locked --all-features -p "$package"
             echo "::endgroup::"
           done
-          ./cargo_full run -q --locked -p xtask --bin prune_coverage_objects < "$output"
+          ./cargo_full run -q --locked -p xtask --bin prune_coverage_objects
           ./cargo_full llvm-cov report --lcov --output-path lcov.info \
             --fail-under-lines "$COVERAGE_FLOOR_LINES"
       # The report is written before the floor is applied, so a run below the

@@ -56,11 +56,11 @@ Commands: none.
 
 Hardware: No accelerator is required.
 
-Environment: No environment variables alter CLI behavior.
+Environment: RUSTC selects the rustc whose sysroot provides llvm-profdata; RUSTUP_TOOLCHAIN selects that toolchain under rustup.
 
-Configuration: The command reads cargo --message-format=json messages on stdin and deletes, from the instrumented profile directory those messages name, every executable no compiler-artifact record lists. The examples directory is not pruned.
+Configuration: The command reads the raw profiles in llvm-cov-target under the cargo metadata target directory, collects the build IDs they record with llvm-profdata show --binary-ids, and deletes every executable under llvm-cov-target/debug that is named for a workspace package or target and whose GNU build ID none records. Shared libraries, build scripts, incremental state and fingerprints are not pruned.
 
-Failure behavior: Unreadable stdin, a malformed record, messages that list no test executable, test executables in more than one directory, or a failed deletion return status 1.
+Failure behavior: A coverage directory with no raw profile, a raw profile that records no build ID, an executable that is not an ELF64 little-endian object, a missing llvm-profdata, or a failed deletion return status 1.
 
 Exit codes: 0 on a completed prune or help, 1 on a failure above, 2 on invalid arguments.
 
