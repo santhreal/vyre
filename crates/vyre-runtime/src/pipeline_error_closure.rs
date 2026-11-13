@@ -430,6 +430,69 @@ fn every_variant_states_a_fix_or_is_self_explanatory() {
     }
 }
 
+/// WHY: a consumer in another crate reads a `PipelineError` through
+/// `ToDiagnostic`, and the projection held its own copy of every fix. Two copies
+/// drifted from the message: the protocol variant replaced the typed fault's
+/// fix with generic advice, and the drain variant dropped half of its advice.
+///
+/// Closes: the diagnostic code of each variant (one `PIPEnnn_` code per variant,
+/// numbered in declaration order, none shared), the trait projection agreeing
+/// with the inherent one, and the diagnostic fix equalling the `Fix:` clause the
+/// message states. A variant whose message states no fix still carries one.
+///
+/// Does not catch: a diagnostic message that words the fault differently from
+/// the rendered message. The two are separate texts by design.
+#[test]
+fn every_variant_projects_its_own_code_and_the_fix_its_message_states() {
+    use vyre_foundation::diagnostics::{CompilerLevel, Severity, ToDiagnostic};
+
+    let mut codes = std::collections::BTreeSet::new();
+    for (index, error) in every_variant().iter().enumerate() {
+        let diagnostic = error.to_diagnostic();
+        assert_eq!(
+            diagnostic,
+            error.diagnostic(),
+            "Fix: ToDiagnostic for {error:?} must return PipelineError::diagnostic"
+        );
+        let code = diagnostic.code.as_str();
+        let prefix = format!("PIPE{:03}_", index + 1);
+        assert!(
+            code.starts_with(&prefix),
+            "Fix: {error:?} must report a code starting {prefix}, got {code}"
+        );
+        assert!(
+            codes.insert(code.to_string()),
+            "Fix: {error:?} reuses the diagnostic code {code}"
+        );
+        assert_eq!(diagnostic.severity, Severity::Error, "{error:?}");
+        assert_eq!(
+            diagnostic.compiler_level,
+            Some(CompilerLevel::DriverRuntime),
+            "{error:?}"
+        );
+        assert!(
+            !diagnostic.cause_chain.is_empty(),
+            "Fix: {error:?} must record the cause of its fault"
+        );
+        let fix = diagnostic.suggested_fix.as_deref().unwrap_or_default();
+        assert!(
+            !fix.is_empty(),
+            "Fix: {error:?} must carry a corrective action"
+        );
+        if facts(error).states_a_fix {
+            let rendered = error.to_string();
+            let stated = rendered
+                .split_once("Fix: ")
+                .map(|(_, stated)| stated.trim_end_matches('.'));
+            assert_eq!(
+                stated,
+                Some(fix),
+                "Fix: the diagnostic of {error:?} must carry the fix its message states: {rendered}"
+            );
+        }
+    }
+}
+
 #[test]
 fn every_variant_renders_a_non_empty_message() {
     for error in &every_variant() {

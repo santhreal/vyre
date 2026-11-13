@@ -1,6 +1,7 @@
 //! Structured diagnostics implementation for `PipelineError`.
 
-use super::PipelineError;
+use super::{PipelineError, DRAIN_INCOMPLETE_FIX, NOT_LINUX_FIX, NVME_PASSTHROUGH_FIX};
+use crate::resident_work_queue::protocol::ProtocolError;
 use vyre_foundation::diagnostics::{
     CauseKind, CompilerLevel, Diagnostic, DiagnosticStage, RetryClass,
 };
@@ -161,15 +162,13 @@ impl PipelineError {
             )
             .with_stage(DiagnosticStage::Submit)
             .with_compiler_level(CompilerLevel::DriverRuntime)
-            .with_fix("check host-device ring protocol headers and payload framing")
+            .with_fix(protocol_fix(err))
             .with_cause(CauseKind::Encoding, "protocol_error", err.to_string())
             .with_retry(RetryClass::RecompileSource),
             Self::NotLinux => Diagnostic::error("PIPE011_NOT_LINUX", "io_uring is Linux-only")
                 .with_stage(DiagnosticStage::Submit)
                 .with_compiler_level(CompilerLevel::DriverRuntime)
-                .with_fix(
-                    "run on Linux 5.1+ and attach an AsyncUringStream to UringCompletionPump",
-                )
+                .with_fix(NOT_LINUX_FIX)
                 .with_cause(
                     CauseKind::UnsupportedCapability,
                     "unsupported_os",
@@ -182,7 +181,7 @@ impl PipelineError {
             )
             .with_stage(DiagnosticStage::Submit)
             .with_compiler_level(CompilerLevel::DriverRuntime)
-            .with_fix("add `features = [\"uring-cmd-nvme\"]` to your Cargo.toml")
+            .with_fix(NVME_PASSTHROUGH_FIX)
             .with_cause(
                 CauseKind::Configuration,
                 "feature_disabled",
@@ -210,9 +209,7 @@ impl PipelineError {
             )
             .with_stage(DiagnosticStage::Complete)
             .with_compiler_level(CompilerLevel::DriverRuntime)
-            .with_fix(
-                "raise the dispatch timeout (BatchDispatchConfig.timeout) or shard the batch into smaller queues",
-            )
+            .with_fix(DRAIN_INCOMPLETE_FIX)
             .with_cause(
                 CauseKind::Timeout,
                 "drain_incomplete",
@@ -293,5 +290,17 @@ impl PipelineError {
                 .with_context_value("global_opcode", global_opcode.to_string())
             }
         }
+    }
+}
+
+/// The corrective action a protocol fault states.
+///
+/// Exhaustive with no catch-all, so a fault added to [`ProtocolError`] fails to
+/// compile here until its fix reaches the diagnostic.
+fn protocol_fix(error: &ProtocolError) -> &'static str {
+    match error {
+        ProtocolError::ByteLengthOverflow { fix, .. }
+        | ProtocolError::MisalignedByteLength { fix, .. }
+        | ProtocolError::MissingWord { fix, .. } => fix,
     }
 }

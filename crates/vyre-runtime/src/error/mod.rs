@@ -168,6 +168,20 @@ impl fmt::Display for RequestFault {
     }
 }
 
+/// Corrective action of [`PipelineError::NotLinux`], stated by its message and
+/// by its diagnostic.
+const NOT_LINUX_FIX: &str =
+    "run on Linux 5.1+ and attach an AsyncUringStream to UringCompletionPump";
+
+/// Corrective action of [`PipelineError::NvmePassthroughDisabled`], stated by
+/// its message and by its diagnostic.
+const NVME_PASSTHROUGH_FIX: &str = "add `features = [\"uring-cmd-nvme\"]` to your Cargo.toml";
+
+/// Corrective action of [`PipelineError::DrainIncomplete`], stated by its
+/// message and by its diagnostic.
+const DRAIN_INCOMPLETE_FIX: &str = "raise the dispatch timeout (BatchDispatchConfig.timeout) so \
+     the drain loop can exhaust the queue, or shard the batch into smaller queues";
+
 /// Errors surfaced by the runtime layer. Every variant carries a
 /// `Fix:`-bearing message so a reviewer can act on the failure.
 #[derive(Debug, Clone, thiserror::Error)]
@@ -368,13 +382,12 @@ pub enum PipelineError {
     #[error(transparent)]
     Protocol(#[from] crate::resident_work_queue::protocol::ProtocolError),
     /// Attempted to use io_uring on a non-platform platform.
-    #[error(
-        "io_uring is Linux-only. Fix: run on Linux 5.1+ and attach an AsyncUringStream to UringCompletionPump"
-    )]
+    #[error("io_uring is Linux-only. Fix: {fix}", fix = NOT_LINUX_FIX)]
     NotLinux,
     /// Feature required for NVMe passthrough is not enabled.
     #[error(
-        "NVMe passthrough requires the `uring-cmd-nvme` feature + Linux kernel 6.0+. Fix: add `features = [\"uring-cmd-nvme\"]` to your Cargo.toml"
+        "NVMe passthrough requires the `uring-cmd-nvme` feature + Linux kernel 6.0+. Fix: {fix}",
+        fix = NVME_PASSTHROUGH_FIX
     )]
     NvmePassthroughDisabled,
     /// Backend error bubbled up from compile or dispatch.
@@ -389,10 +402,9 @@ pub enum PipelineError {
     #[error(
         "{descriptor} drain incomplete: only {claimed} of {expected} {unit} were claimed before \
          the dispatch ended, so {unscanned} {unit} went unscanned and their matches were dropped. \
-         This dispatch's hit set is INCOMPLETE. Fix: raise the dispatch timeout \
-         (BatchDispatchConfig.timeout) so the drain loop can exhaust the queue, or shard the batch \
-         into smaller queues.",
+         This dispatch's hit set is INCOMPLETE. Fix: {fix}.",
         unscanned = expected.saturating_sub(*claimed),
+        fix = DRAIN_INCOMPLETE_FIX,
     )]
     DrainIncomplete {
         /// Which dispatch path under-drained: `"megakernel"` (per-rule) or
