@@ -169,12 +169,12 @@ fn compiled_pipeline_dispatch_steady_state_alloc_bounded() {
         .expect("Fix: oracle pipeline compilation must succeed");
 
     let _ = pipeline
-        .dispatch(&[input.clone()], &DispatchConfig::default())
+        .dispatch_borrowed_timed(&[input.as_slice()], &DispatchConfig::default())
         .expect("Fix: warm-up compiled dispatch must succeed");
 
     let region = Region::new();
     let _ = pipeline
-        .dispatch(&[input], &DispatchConfig::default())
+        .dispatch_borrowed_timed(&[input.as_slice()], &DispatchConfig::default())
         .expect("Fix: hot compiled dispatch must succeed");
     let change = region.change();
 

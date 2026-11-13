@@ -6,12 +6,10 @@ mod resident;
 #[cfg(test)]
 mod tests;
 
-use std::hash::{Hash, Hasher};
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
-use rustc_hash::FxHasher;
 use vyre_driver::{BackendError, ResidentHandle};
 
 pub(crate) use self::align::{aligned_len, aligned_len_u64, write_padded};
@@ -20,10 +18,16 @@ pub(crate) use self::resident::check_resident_owner;
 use super::pool::PoolReturn;
 use super::staging::StagingBufferPool;
 
-fn pointer_identity_key<T>(ptr: *const T) -> u64 {
-    let mut hasher = FxHasher::default();
-    ptr.addr().hash(&mut hasher);
-    hasher.finish()
+/// Next serial for a newly created `wgpu::Buffer`.
+static NEXT_ALLOCATION_SERIAL: AtomicU64 = AtomicU64::new(1);
+
+/// Mint the identity of one newly created `wgpu::Buffer`.
+///
+/// The serial is never reused within a process, so a cache keyed on it cannot
+/// resolve a dropped allocation to a later one that happens to occupy the same
+/// address.
+pub(crate) fn next_allocation_serial() -> u64 {
+    NEXT_ALLOCATION_SERIAL.fetch_add(1, Ordering::Relaxed)
 }
 
 /// Cheaply cloneable handle for a GPU-resident buffer.
@@ -39,6 +43,7 @@ pub struct GpuBufferHandle {
 struct GpuBufferInner {
     id: u64,
     buffer: Arc<wgpu::Buffer>,
+    allocation_serial: u64,
     byte_len: u64,
     allocation_len: u64,
     element_count: usize,
@@ -94,6 +99,7 @@ impl GpuBufferHandle {
             })?;
             return Ok(Self::from_parts(
                 Arc::new(buffer),
+                next_allocation_serial(),
                 logical_len,
                 allocation_len,
                 bytes.len(),
@@ -113,6 +119,7 @@ impl GpuBufferHandle {
         write_padded(queue, &buffer, bytes, allocation_len)?;
         Ok(Self::from_parts(
             Arc::new(buffer),
+            next_allocation_serial(),
             0,
             allocation_len,
             bytes.len(),
@@ -146,6 +153,7 @@ impl GpuBufferHandle {
         })?;
         Ok(Self::from_parts(
             Arc::new(buffer),
+            next_allocation_serial(),
             len,
             allocation_len,
             host_len,
@@ -357,12 +365,13 @@ impl GpuBufferHandle {
     /// Stable process-local identity for the backing GPU allocation.
     ///
     /// Unlike [`Self::id`], this survives pool release/reacquire cycles for the
-    /// same underlying `wgpu::Buffer`. Bind-group caches must key on this value
-    /// plus the logical binding range; otherwise hot dispatches miss every time
-    /// a pooled allocation is wrapped in a fresh handle.
+    /// same underlying `wgpu::Buffer`, and it is never reassigned to another
+    /// allocation. Bind-group caches key on this value plus the logical binding
+    /// range; otherwise hot dispatches miss every time a pooled allocation is
+    /// wrapped in a fresh handle.
     #[must_use]
     pub(crate) fn allocation_identity(&self) -> u64 {
-        pointer_identity_key(Arc::as_ptr(&self.inner.buffer))
+        self.inner.allocation_serial
     }
 
     /// Resolve a process-local resident buffer id back into a live GPU handle.
@@ -438,6 +447,7 @@ impl GpuBufferHandle {
 
     pub(crate) fn from_parts(
         buffer: Arc<wgpu::Buffer>,
+        allocation_serial: u64,
         byte_len: u64,
         allocation_len: u64,
         element_count: usize,
@@ -447,6 +457,7 @@ impl GpuBufferHandle {
         let inner = Arc::new(GpuBufferInner {
             id: resident::next_buffer_id(),
             buffer,
+            allocation_serial,
             byte_len,
             allocation_len,
             element_count,
@@ -477,6 +488,7 @@ impl Drop for GpuBufferInner {
         if let Some(pool_return) = self.pool_return.take() {
             pool_return.release(
                 Arc::clone(&self.buffer),
+                self.allocation_serial,
                 self.byte_len,
                 self.allocation_len,
                 self.usage,

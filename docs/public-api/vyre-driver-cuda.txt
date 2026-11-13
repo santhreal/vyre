@@ -906,8 +906,6 @@ pub vyre_driver_cuda::CudaResidentGraphSessionProfile::per_run_output_bytes: u64
 pub vyre_driver_cuda::CudaResidentGraphSessionProfile::readback: vyre_driver_cuda::CudaResidentGraphReadback
 pub vyre_driver_cuda::CudaResidentGraphSessionProfile::reusable_scratch_bytes: u64
 pub vyre_driver_cuda::CudaResidentGraphSessionProfile::run_count: u64
-pub vyre_driver_cuda::CudaTelemetrySnapshot::cuda_graph_batched_replay_chunks: u64
-pub vyre_driver_cuda::CudaTelemetrySnapshot::cuda_graph_batched_replay_lanes: u64
 pub vyre_driver_cuda::CudaTelemetrySnapshot::cuda_graph_launches: u64
 pub vyre_driver_cuda::CudaTelemetrySnapshot::cuda_graph_materialized_cache_hits: u64
 pub vyre_driver_cuda::CudaTelemetrySnapshot::device_pool_hits: u64

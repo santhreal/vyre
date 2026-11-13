@@ -426,26 +426,72 @@ struct SnapshotError {
 impl WorkspaceSnapshot {
     /// Capture the exact relative file set and BLAKE3 content digests across `root`.
     ///
+    /// The file set is the one [`crate::gates::scan::Tree`] lists: every
+    /// tracked path and every untracked path git does not ignore. A difference
+    /// under an ignored path is dropped by [`Self::detect_mutations`], so
+    /// reading one only spends time, and scratch output beside a checkout can
+    /// outweigh the tracked tree many times over. A root git cannot list is
+    /// walked whole, skipping `.git` and `target`, which records every file.
+    ///
     /// Every gate invocation captures this twice, before and after the gate
-    /// runs, so the whole checkout is read twice per gate. The reads are
-    /// latency-bound rather than core-bound on a network checkout, which made
-    /// one gate spend minutes inside `fs::read` and nothing inside its own
-    /// contract: the walk names the files serially and the reads run over
-    /// `structure_gate::workspace_manifest::read_lanes` lanes, the same bound
-    /// the source-corpus reads use, so the descriptor budget is shared under
-    /// one rule.
+    /// runs. The reads are latency-bound rather than core-bound on a network
+    /// checkout, so they run over
+    /// `structure_gate::workspace_manifest::read_lanes` lanes, the bound the
+    /// source-corpus reads use.
     #[must_use]
     pub fn capture(root: &Path) -> Self {
         record_snapshot_capture();
-        let mut files = std::collections::BTreeMap::new();
-        let mut errors = Vec::new();
+        let mut snapshot = Self::default();
         let mut contents = Vec::new();
+        match crate::gates::scan::Tree::open(root) {
+            Ok(tree) => {
+                for relative in tree.paths().iter().chain(tree.absent()) {
+                    snapshot.record_listed(root, relative, &mut contents);
+                }
+            }
+            Err(_) => snapshot.walk(root, &mut contents),
+        }
+        let (read, read_errors) = digest_files(&contents);
+        snapshot.files.extend(read);
+        snapshot.errors.extend(read_errors);
+        snapshot
+    }
+
+    /// Record one path git listed: a symlink by its target, a regular file
+    /// queued for its digest. A tracked path the worktree no longer holds is
+    /// left out, which is how its deletion is seen.
+    fn record_listed(
+        &mut self,
+        root: &Path,
+        relative: &Path,
+        contents: &mut Vec<(PathBuf, PathBuf)>,
+    ) {
+        let path = root.join(relative);
+        match fs::symlink_metadata(&path) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                self.record_symlink(relative.to_path_buf(), &path);
+            }
+            Ok(metadata) if metadata.is_file() => contents.push((relative.to_path_buf(), path)),
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => self.errors.push(SnapshotError {
+                message: format!(
+                    "workspace snapshot could not stat `{}`: {error}",
+                    relative.display()
+                ),
+                path: Some(relative.to_path_buf()),
+            }),
+        }
+    }
+
+    /// Walk every file under `root` except `.git` and `target`.
+    fn walk(&mut self, root: &Path, contents: &mut Vec<(PathBuf, PathBuf)>) {
         let mut walker = walkdir::WalkDir::new(root).into_iter();
         while let Some(result) = walker.next() {
             let entry = match result {
                 Ok(entry) => entry,
                 Err(error) => {
-                    errors.push(SnapshotError {
+                    self.errors.push(SnapshotError {
                         path: error
                             .path()
                             .map(|path| path.strip_prefix(root).unwrap_or(path).to_path_buf()),
@@ -466,29 +512,26 @@ impl WorkspaceSnapshot {
             }
             let relative = path.strip_prefix(root).unwrap_or(path).to_path_buf();
             if entry.file_type().is_symlink() {
-                match fs::read_link(path) {
-                    Ok(target) => {
-                        files.insert(relative, SnapshotEntry::Symlink(target));
-                    }
-                    Err(error) => errors.push(SnapshotError {
-                        message: format!(
-                            "workspace snapshot could not read symlink `{}`: {error}",
-                            relative.display()
-                        ),
-                        path: Some(relative),
-                    }),
-                }
-                continue;
+                self.record_symlink(relative, path);
+            } else if entry.file_type().is_file() {
+                contents.push((relative, path.to_path_buf()));
             }
-            if !entry.file_type().is_file() {
-                continue;
-            }
-            contents.push((relative, path.to_path_buf()));
         }
-        let (read, read_errors) = digest_files(&contents);
-        files.extend(read);
-        errors.extend(read_errors);
-        Self { files, errors }
+    }
+
+    fn record_symlink(&mut self, relative: PathBuf, path: &Path) {
+        match fs::read_link(path) {
+            Ok(target) => {
+                self.files.insert(relative, SnapshotEntry::Symlink(target));
+            }
+            Err(error) => self.errors.push(SnapshotError {
+                message: format!(
+                    "workspace snapshot could not read symlink `{}`: {error}",
+                    relative.display()
+                ),
+                path: Some(relative),
+            }),
+        }
     }
 
     /// Detect any creation, deletion, or modification against a post-execution state.
@@ -1616,6 +1659,61 @@ mod tests {
             violations[0].contains("tracked.txt"),
             "Fix: the tracked write must still be reported; violation={}",
             violations[0]
+        );
+    }
+
+    /// WHY: the capture reads only what git lists, because a difference under
+    /// an ignored path is dropped and reading it cost every gate run the size
+    /// of the scratch beside the checkout, twice. The recorded set must equal
+    /// tracked plus unignored untracked paths: an ignored file in it means the
+    /// capture went back to reading scratch, and a missing tracked, untracked,
+    /// or symlink path means a mutation there would go unseen. Not covered: a
+    /// root git cannot list, which takes the whole walk.
+    #[test]
+    fn the_capture_records_exactly_the_paths_git_lists() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+        crate::fixture_checkout::seeded(root);
+        fs::write(root.join(".gitignore"), "scratch/\n").expect("Fix: write the ignore rule.");
+        fs::create_dir_all(root.join("scratch/nested")).expect("Fix: create scratch.");
+        fs::write(root.join("scratch/nested/big.bin"), [7u8; 4096])
+            .expect("Fix: write the ignored file.");
+        fs::create_dir_all(root.join("src")).expect("Fix: create src.");
+        fs::write(root.join("src/new.rs"), "fn new() {}\n").expect("Fix: write untracked file.");
+        #[cfg(unix)]
+        std::os::unix::fs::symlink("tracked.txt", root.join("link"))
+            .expect("Fix: create the symlink.");
+
+        let snap = WorkspaceSnapshot::capture(root);
+
+        let recorded: Vec<String> = snap
+            .files
+            .keys()
+            .map(|path| path.to_string_lossy().replace('\\', "/"))
+            .collect();
+        let mut expected = vec![".gitignore", "src/new.rs", "tracked.txt"];
+        #[cfg(unix)]
+        expected.insert(1, "link");
+        assert_eq!(
+            recorded, expected,
+            "Fix: record tracked and unignored untracked paths and nothing git ignores."
+        );
+        #[cfg(unix)]
+        assert_eq!(
+            snap.files.get(Path::new("link")),
+            Some(&SnapshotEntry::Symlink(PathBuf::from("tracked.txt"))),
+            "Fix: a symlink is recorded by its target, never by the file it names."
+        );
+
+        fs::remove_file(root.join("tracked.txt")).expect("Fix: delete the tracked file.");
+        let violations = snap.detect_mutations(root, "test-gate", &[], false);
+        assert_eq!(
+            violations,
+            vec![
+                "gate `test-gate` deleted workspace file `tracked.txt` without --write (violating Section 182.5.6: comparison mode must never mutate workspace)"
+                    .to_string()
+            ],
+            "Fix: a tracked file the worktree no longer holds is a deletion."
         );
     }
 

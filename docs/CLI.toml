@@ -47,6 +47,17 @@ exit_codes = "0 on complete contracts or help, 1 on contract failure, 2 on inval
 
 [[binary]]
 package = "xtask"
+name = "prune_coverage_objects"
+readme = "tools/xtask/README.md"
+audience = "internal"
+hardware = "No accelerator is required."
+environment = "No environment variables alter CLI behavior."
+config = "The command reads cargo --message-format=json messages on stdin and deletes, from the instrumented profile directory those messages name, every executable no compiler-artifact record lists. The examples directory is not pruned."
+failure = "Unreadable stdin, a malformed record, messages that list no test executable, test executables in more than one directory, or a failed deletion return status 1."
+exit_codes = "0 on a completed prune or help, 1 on a failure above, 2 on invalid arguments."
+
+[[binary]]
+package = "xtask"
 name = "publishable_packages"
 readme = "tools/xtask/README.md"
 audience = "internal"

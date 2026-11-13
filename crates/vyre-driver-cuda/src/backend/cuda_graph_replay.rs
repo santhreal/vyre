@@ -212,10 +212,6 @@ impl CudaBackend {
         Ok(())
     }
 
-    pub(crate) fn record_cuda_graph_batched_replay_chunk(&self, lanes: u64) {
-        self.telemetry.record_cuda_graph_batched_replay(lanes);
-    }
-
     pub(crate) fn prepare_cuda_graph_replay_input_state(
         &self,
         cached: &CachedCudaGraph,

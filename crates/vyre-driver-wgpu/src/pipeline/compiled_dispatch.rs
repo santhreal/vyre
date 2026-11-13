@@ -21,26 +21,28 @@ use crate::engine::record_and_readback::timestamp::{
 use crate::numeric::WGPU_NUMERIC;
 use crate::pipeline::output_slots::resize_vec_with;
 use crate::pipeline::WgpuPipeline;
-use crate::staging_reserve::{reserve_pipeline_vec, reserve_smallvec, reserve_vec};
+use crate::staging_reserve::reserve_smallvec;
 
-pub(crate) struct WgpuPendingPersistentDispatch {
-    pipeline: Arc<WgpuPipeline>,
+/// One persistent dispatch whose compute pass, output copies, trap-flag copy
+/// and timestamp resolve are submitted and still in flight.
+///
+/// Every resident entry point of the compiled pipeline runs through this
+/// record: the timed dispatch retires it at once, the asynchronous dispatch
+/// returns it to the caller, and the batched dispatch submits one per item
+/// before retiring any. Each item's output copies are queued directly behind
+/// its own compute pass, so items that bind the same output buffer still read
+/// back their own results.
+struct EnqueuedPersistentDispatch {
     resolved: crate::pipeline::persistent_resources::ResolvedPersistentResources,
     output_readbacks: SmallVec<[crate::buffer::PendingGpuBufferReadback; 8]>,
     trap_flag_readback: Option<crate::buffer::PendingGpuBufferReadback>,
     timestamp_profile: Option<PendingTimestampProfile>,
-    started: Instant,
     deadline: Option<Instant>,
     timestamp_deadline: Instant,
-    enqueue_ns: u64,
-    config: DispatchConfig,
 }
 
-impl vyre_driver::sealed::Sealed for WgpuPendingPersistentDispatch {}
-
-impl WgpuPendingPersistentDispatch {
-    fn is_ready_inner(&self) -> bool {
-        let (device, _) = &*self.pipeline.device_queue;
+impl EnqueuedPersistentDispatch {
+    fn is_ready(&self, device: &wgpu::Device) -> bool {
         let outputs_ready = self
             .output_readbacks
             .iter()
@@ -57,55 +59,25 @@ impl WgpuPendingPersistentDispatch {
             .unwrap_or(true);
         outputs_ready && trap_ready && timestamp_ready
     }
+}
 
+pub(crate) struct WgpuPendingPersistentDispatch {
+    pipeline: Arc<WgpuPipeline>,
+    enqueued: EnqueuedPersistentDispatch,
+    started: Instant,
+    enqueue_ns: u64,
+    config: DispatchConfig,
+}
+
+impl vyre_driver::sealed::Sealed for WgpuPendingPersistentDispatch {}
+
+impl WgpuPendingPersistentDispatch {
     fn retire(self) -> Result<TimedDispatchResult, BackendError> {
         let wait_started = Instant::now();
-        let (device, queue) = &*self.pipeline.device_queue;
-        if let Some(trap_flag) = self.trap_flag_readback {
-            let mut flag = Vec::new();
-            trap_flag.await_into(device, self.deadline, &mut flag)?;
-            if flag.len() != 4 {
-                return Err(BackendError::new(format!(
-                    "internal wgpu trap flag readback returned {} bytes but 4 bytes are required. Fix: allocate the trap sidecar as four or more bytes.",
-                    flag.len()
-                )));
-            }
-            if u32::from_le_bytes([flag[0], flag[1], flag[2], flag[3]]) != 0 {
-                self.pipeline.raise_if_trapped(
-                    &self.resolved.inputs,
-                    device,
-                    queue,
-                    self.deadline,
-                )?;
-            }
-        }
-
         let mut outputs = Vec::new();
-        resize_vec_with(
-            &mut outputs,
-            self.output_readbacks.len(),
-            Vec::new,
-            "asynchronous persistent output slots",
-        )?;
-        for ((pending, output), bytes) in self
-            .output_readbacks
-            .into_iter()
-            .zip(self.pipeline.output_bindings.iter())
-            .zip(outputs.iter_mut())
-        {
-            pending.await_into(device, self.deadline, bytes)?;
-            if bytes.len() != output.layout.read_size {
-                return Err(BackendError::new(format!(
-                    "asynchronous persistent readback for `{}` returned {} bytes but {} bytes are required. Fix: keep async output range validation synchronized with OutputLayout.",
-                    output.name,
-                    bytes.len(),
-                    output.layout.read_size
-                )));
-            }
-        }
-        enforce_actual_output_budget(&self.config, outputs.as_slice())?;
-        let device_ns = collect_timestamp_profile(self.timestamp_profile, self.timestamp_deadline)?
-            .map(|profile| profile.dispatch_ns);
+        let device_ns =
+            self.pipeline
+                .retire_persistent_into(self.enqueued, &self.config, &mut outputs)?;
         let wait_ns =
             WGPU_NUMERIC.elapsed_nanos_u64(wait_started, "persistent asynchronous wait")?;
         Ok(TimedDispatchResult::split_timed(
@@ -120,7 +92,7 @@ impl WgpuPendingPersistentDispatch {
 
 impl vyre_driver::PendingDispatch for WgpuPendingPersistentDispatch {
     fn is_ready(&self) -> bool {
-        self.is_ready_inner()
+        self.enqueued.is_ready(&self.pipeline.device_queue.0)
     }
 
     fn await_result(self: Box<Self>) -> Result<OutputBuffers, BackendError> {
@@ -139,8 +111,30 @@ impl WgpuPipeline {
         config: &DispatchConfig,
         started: Instant,
     ) -> Result<WgpuPendingPersistentDispatch, BackendError> {
-        self.enforce_static_output_budget(config)?;
         let enqueue_started = Instant::now();
+        let enqueued = self.enqueue_persistent(resources, config, started)?;
+        let enqueue_ns =
+            WGPU_NUMERIC.elapsed_nanos_u64(enqueue_started, "persistent asynchronous enqueue")?;
+        Ok(WgpuPendingPersistentDispatch {
+            pipeline: Arc::clone(self),
+            enqueued,
+            started,
+            enqueue_ns,
+            config: config.clone(),
+        })
+    }
+
+    /// Record one resident dispatch, submit it, and start every readback it
+    /// needs without waiting for any of them.
+    ///
+    /// The timeout in `config` counts from `started`.
+    fn enqueue_persistent(
+        &self,
+        resources: &[vyre_driver::Resource],
+        config: &DispatchConfig,
+        started: Instant,
+    ) -> Result<EnqueuedPersistentDispatch, BackendError> {
+        self.enforce_static_output_budget(config)?;
         let (device, queue) = &*self.device_queue;
         let deadline = config
             .timeout
@@ -150,7 +144,7 @@ impl WgpuPipeline {
         let resolved = self.resolve_persistent_resources(resources, queue)?;
         if resolved.outputs.len() != self.output_bindings.len() {
             return Err(BackendError::new(format!(
-                "WGPU asynchronous persistent dispatch resolved {} output handles for {} output layouts. Fix: keep resident resource resolution synchronized with compiled output bindings.",
+                "WGPU persistent dispatch resolved {} output handles for {} output layouts. Fix: keep resident resource resolution synchronized with compiled output bindings.",
                 resolved.outputs.len(),
                 self.output_bindings.len()
             )));
@@ -161,7 +155,13 @@ impl WgpuPipeline {
             params: None,
             workgroups: self.workgroups_for_dispatch(config)?,
         };
-        // See `dispatch_persistent_handles_timed`.
+        // Every `CompiledPipeline` timed entry reports timing the backend
+        // already owns: the trait default is host wall time and `device_ns`
+        // is an `Option`, so an adapter that records no timestamp answers
+        // `None`. Requesting the queries unconditionally turned that into a
+        // refusal, and both a retained execution through `launch_resident`
+        // and a plain `MaterializedInstance::dispatch` failed on every
+        // adapter advertising no timestamp pair.
         let timestamp_recorder = TimestampRecorder::new(
             device,
             queue,
@@ -170,7 +170,7 @@ impl WgpuPipeline {
             0,
         )?;
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("vyre asynchronous persistent dispatch"),
+            label: Some("vyre persistent dispatch"),
         });
         let timestamp_writes = timestamp_recorder
             .as_ref()
@@ -187,7 +187,7 @@ impl WgpuPipeline {
         }
         queue.submit(std::iter::once(encoder.finish()));
 
-        let pending_after_submit = (|| {
+        let in_flight = (|| {
             let timestamp_profile = timestamp_recorder
                 .map(TimestampRecorder::map_async)
                 .transpose()?;
@@ -195,7 +195,7 @@ impl WgpuPipeline {
             reserve_smallvec(
                 &mut output_readbacks,
                 resolved.outputs.len(),
-                "asynchronous persistent dispatch",
+                "persistent dispatch",
                 "output readback",
                 "split the dispatch output set before submission",
             )?;
@@ -206,7 +206,7 @@ impl WgpuPipeline {
                     device,
                     &self.staging_pool,
                     queue,
-                    "asynchronous persistent output",
+                    "persistent output",
                 )?);
             }
 
@@ -238,279 +238,120 @@ impl WgpuPipeline {
                 .transpose()?;
             Ok::<_, BackendError>((output_readbacks, trap_flag_readback, timestamp_profile))
         })();
-        let (output_readbacks, trap_flag_readback, timestamp_profile) = match pending_after_submit {
-            Ok(pending) => pending,
+        let (output_readbacks, trap_flag_readback, timestamp_profile) = match in_flight {
+            Ok(in_flight) => in_flight,
             Err(error) => {
-                let fence = queue.submit(std::iter::empty::<wgpu::CommandBuffer>());
-                crate::runtime::device::poll_device_wait_for(device, fence)?;
+                self.drain_queue()?;
                 return Err(error);
             }
         };
-
-        let enqueue_ns = match WGPU_NUMERIC
-            .elapsed_nanos_u64(enqueue_started, "persistent asynchronous enqueue")
-        {
-            Ok(elapsed) => elapsed,
-            Err(error) => {
-                let fence = queue.submit(std::iter::empty::<wgpu::CommandBuffer>());
-                crate::runtime::device::poll_device_wait_for(device, fence)?;
-                return Err(error);
-            }
-        };
-        Ok(WgpuPendingPersistentDispatch {
-            pipeline: Arc::clone(self),
+        Ok(EnqueuedPersistentDispatch {
             resolved,
             output_readbacks,
             trap_flag_readback,
             timestamp_profile,
-            started,
             deadline,
             timestamp_deadline,
-            enqueue_ns,
-            config: config.clone(),
         })
+    }
+
+    /// Wait for one enqueued dispatch, raise its trap if it set one, read its
+    /// outputs into `outputs`, and return its device duration.
+    ///
+    /// `outputs` keeps the slots and byte capacity it already holds.
+    fn retire_persistent_into(
+        &self,
+        enqueued: EnqueuedPersistentDispatch,
+        config: &DispatchConfig,
+        outputs: &mut OutputBuffers,
+    ) -> Result<Option<u64>, BackendError> {
+        let (device, queue) = &*self.device_queue;
+        if let Some(trap_flag) = enqueued.trap_flag_readback {
+            let mut flag = Vec::new();
+            trap_flag.await_into(device, enqueued.deadline, &mut flag)?;
+            if flag.len() != 4 {
+                return Err(BackendError::new(format!(
+                    "internal wgpu trap flag readback returned {} bytes but 4 bytes are required. Fix: allocate the trap sidecar as four or more bytes.",
+                    flag.len()
+                )));
+            }
+            if u32::from_le_bytes([flag[0], flag[1], flag[2], flag[3]]) != 0 {
+                self.raise_if_trapped(&enqueued.resolved.inputs, device, queue, enqueued.deadline)?;
+            }
+        }
+
+        resize_vec_with(
+            outputs,
+            enqueued.output_readbacks.len(),
+            Vec::new,
+            "persistent output slots",
+        )?;
+        for ((pending, output), bytes) in enqueued
+            .output_readbacks
+            .into_iter()
+            .zip(self.output_bindings.iter())
+            .zip(outputs.iter_mut())
+        {
+            pending.await_into(device, enqueued.deadline, bytes)?;
+            if bytes.len() != output.layout.read_size {
+                return Err(BackendError::new(format!(
+                    "persistent readback for `{}` returned {} bytes but {} bytes are required. Fix: keep output range validation synchronized with OutputLayout.",
+                    output.name,
+                    bytes.len(),
+                    output.layout.read_size
+                )));
+            }
+        }
+        enforce_actual_output_budget(config, outputs.as_slice())?;
+        Ok(
+            collect_timestamp_profile(enqueued.timestamp_profile, enqueued.timestamp_deadline)?
+                .map(|profile| profile.dispatch_ns),
+        )
+    }
+
+    /// Block until every submission on this pipeline's queue has completed.
+    ///
+    /// A failure after a submission leaves work in flight that references
+    /// buffers the caller is about to drop.
+    fn drain_queue(&self) -> Result<(), BackendError> {
+        let (device, queue) = &*self.device_queue;
+        let fence = queue.submit(std::iter::empty::<wgpu::CommandBuffer>());
+        crate::runtime::device::poll_device_wait_for(device, fence).map(|_| ())
+    }
+}
+
+impl WgpuPipeline {
+    /// Dispatch against resident resources and leave every output on the
+    /// device.
+    ///
+    /// Device-buffer dispatch binds caller-owned output buffers that the
+    /// caller downloads afterwards, so no output is read back here. Only the
+    /// trap sidecar is checked before returning.
+    pub(crate) fn dispatch_persistent_handles_without_readback(
+        &self,
+        inputs: &[vyre_driver::Resource],
+        config: &DispatchConfig,
+    ) -> Result<(), BackendError> {
+        self.enforce_static_output_budget(config)?;
+        let (device, queue) = &*self.device_queue;
+        let deadline = config
+            .timeout
+            .and_then(|timeout| Instant::now().checked_add(timeout));
+        let resolved = self.resolve_persistent_resources(inputs, queue)?;
+        let item = crate::pipeline::persistent::BorrowedDispatchItem {
+            inputs: crate::pipeline::persistent::borrowed_handle_refs(&resolved.inputs),
+            outputs: crate::pipeline::persistent::borrowed_handle_refs(&resolved.outputs),
+            params: None,
+            workgroups: self.workgroups_for_dispatch(config)?,
+        };
+        self.submit_borrowed_persistent(&item)?;
+        self.raise_if_trapped(&resolved.inputs, device, queue, deadline)
     }
 }
 
 impl CompiledPipeline for WgpuPipeline {
-    fn dispatch_persistent_handles(
-        &self,
-        inputs: &[vyre_driver::Resource],
-        config: &DispatchConfig,
-    ) -> Result<OutputBuffers, BackendError> {
-        let mut outputs = Vec::new();
-        reserve_vec(
-            &mut outputs,
-            self.output_bindings.len(),
-            "WGPU pipeline",
-            "persistent dispatch output buffers",
-            "split the dispatch batch before submission",
-        )?;
-        self.dispatch_persistent_handles_into(inputs, config, &mut outputs)?;
-        enforce_actual_output_budget(config, outputs.as_slice())?;
-        Ok(outputs)
-    }
-
-    fn dispatch_persistent_handles_into(
-        &self,
-        inputs: &[vyre_driver::Resource],
-        config: &DispatchConfig,
-        outputs: &mut OutputBuffers,
-    ) -> Result<(), BackendError> {
-        self.enforce_static_output_budget(config)?;
-        let (device, queue) = &*self.device_queue;
-        let workgroup_count = self.workgroups_for_dispatch(config)?;
-        let deadline = config
-            .timeout
-            .and_then(|timeout| Instant::now().checked_add(timeout));
-        let resolved = self.resolve_persistent_resources(inputs, queue)?;
-        let item = crate::pipeline::persistent::BorrowedDispatchItem {
-            inputs: crate::pipeline::persistent::borrowed_handle_refs(&resolved.inputs),
-            outputs: crate::pipeline::persistent::borrowed_handle_refs(&resolved.outputs),
-            params: None,
-            workgroups: workgroup_count,
-        };
-        self.dispatch_borrowed_persistent_batched(&[item])?;
-        self.raise_if_trapped(&resolved.inputs, device, queue, deadline)?;
-        self.readback_persistent_outputs(&resolved.outputs, deadline, outputs)?;
-        enforce_actual_output_budget(config, outputs.as_slice())
-    }
-
-    fn dispatch_persistent_handles_timed(
-        &self,
-        inputs: &[vyre_driver::Resource],
-        config: &DispatchConfig,
-    ) -> Result<TimedDispatchResult, BackendError> {
-        self.enforce_static_output_budget(config)?;
-        let started = Instant::now();
-        let enqueue_started = Instant::now();
-        let (device, queue) = &*self.device_queue;
-        let deadline = config
-            .timeout
-            .and_then(|timeout| started.checked_add(timeout));
-        let timestamp_deadline =
-            deadline.unwrap_or_else(|| Instant::now() + Duration::from_secs(30));
-        let resolved = self.resolve_persistent_resources(inputs, queue)?;
-        let item = crate::pipeline::persistent::BorrowedDispatchItem {
-            inputs: crate::pipeline::persistent::borrowed_handle_refs(&resolved.inputs),
-            outputs: crate::pipeline::persistent::borrowed_handle_refs(&resolved.outputs),
-            params: None,
-            workgroups: self.workgroups_for_dispatch(config)?,
-        };
-
-        // Every `CompiledPipeline` timed entry reports timing the backend
-        // already owns: the trait default is host wall time and `device_ns`
-        // is an `Option`, so an adapter that records no timestamp answers
-        // `None`. Requesting the queries unconditionally turned that into a
-        // refusal, and both a retained execution through `launch_resident`
-        // and a plain `MaterializedInstance::dispatch` failed on every
-        // adapter advertising no timestamp pair.
-        let timestamp_recorder = TimestampRecorder::new(
-            device,
-            queue,
-            &self.persistent_pool,
-            device_records_timestamps(device),
-            0,
-        )?;
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("vyre timed persistent dispatch"),
-        });
-        let timestamp_writes = timestamp_recorder
-            .as_ref()
-            .map(TimestampRecorder::pass_writes);
-        self.record_borrowed_persistent_item_with_timestamps(
-            device,
-            &mut encoder,
-            &item,
-            timestamp_writes,
-        )?;
-        if let Some(recorder) = &timestamp_recorder {
-            recorder.finish_and_resolve(&mut encoder)?;
-        }
-        queue.submit(std::iter::once(encoder.finish()));
-        let timestamp_profile = timestamp_recorder
-            .map(TimestampRecorder::map_async)
-            .transpose()?;
-        let enqueue_ns = WGPU_NUMERIC.elapsed_nanos_u64(enqueue_started, "persistent enqueue")?;
-
-        let wait_started = Instant::now();
-        self.raise_if_trapped(&resolved.inputs, device, queue, deadline)?;
-        let mut outputs = Vec::new();
-        self.readback_persistent_outputs(&resolved.outputs, deadline, &mut outputs)?;
-        enforce_actual_output_budget(config, outputs.as_slice())?;
-        let device_ns = collect_timestamp_profile(timestamp_profile, timestamp_deadline)?
-            .map(|profile| profile.dispatch_ns);
-        let wait_ns = WGPU_NUMERIC.elapsed_nanos_u64(wait_started, "persistent wait")?;
-
-        Ok(TimedDispatchResult::split_timed(
-            outputs,
-            WGPU_NUMERIC.elapsed_nanos_u64(started, "persistent timed dispatch")?,
-            device_ns,
-            enqueue_ns,
-            wait_ns,
-        ))
-    }
-
-    fn dispatch_persistent_resource_outputs(
-        &self,
-        inputs: &[vyre_driver::Resource],
-        config: &DispatchConfig,
-    ) -> Result<Vec<vyre_driver::Resource>, BackendError> {
-        self.enforce_static_output_budget(config)?;
-        let (device, queue) = &*self.device_queue;
-        let resolved = self.resolve_persistent_resources_for_resource_outputs(inputs, queue)?;
-        let item = crate::pipeline::persistent::BorrowedDispatchItem {
-            inputs: crate::pipeline::persistent::borrowed_handle_refs(&resolved.inputs),
-            outputs: crate::pipeline::persistent::borrowed_handle_refs(&resolved.outputs),
-            params: None,
-            workgroups: self.workgroups_for_dispatch(config)?,
-        };
-        self.dispatch_borrowed_persistent_batched(&[item])?;
-        let deadline = config
-            .timeout
-            .and_then(|timeout| Instant::now().checked_add(timeout));
-        self.raise_if_trapped(&resolved.inputs, device, queue, deadline)?;
-        Ok(resolved.output_resources.into_iter().collect())
-    }
-
-    fn dispatch_persistent_handles_batched(
-        &self,
-        batches: &[&[vyre_driver::Resource]],
-        config: &DispatchConfig,
-    ) -> Result<Vec<OutputBuffers>, BackendError> {
-        let mut outputs = Vec::new();
-        reserve_vec(
-            &mut outputs,
-            batches.len(),
-            "WGPU pipeline",
-            "persistent batched dispatch output sets",
-            "split the dispatch batch before submission",
-        )?;
-        self.dispatch_persistent_handles_batched_into(batches, config, &mut outputs)?;
-        Ok(outputs)
-    }
-
-    fn dispatch_persistent_handles_batched_into(
-        &self,
-        batches: &[&[vyre_driver::Resource]],
-        config: &DispatchConfig,
-        batch_outputs: &mut Vec<OutputBuffers>,
-    ) -> Result<(), BackendError> {
-        if batches.is_empty() {
-            batch_outputs.clear();
-            return Ok(());
-        }
-        self.enforce_static_output_budget(config)?;
-        let (device, queue) = &*self.device_queue;
-        let workgroup_count = self.workgroups_for_dispatch(config)?;
-        let deadline = config
-            .timeout
-            .and_then(|timeout| Instant::now().checked_add(timeout));
-
-        let mut resolved = SmallVec::<[_; 8]>::new();
-        reserve_smallvec(
-            &mut resolved,
-            batches.len(),
-            "persistent batched dispatch",
-            "resolved resource set",
-            "split the persistent dispatch batch before submission",
-        )?;
-        for batch in batches {
-            resolved.push(self.resolve_persistent_resources(batch, queue)?);
-        }
-
-        let mut items =
-            SmallVec::<[crate::pipeline::persistent::BorrowedDispatchItem<'_>; 8]>::new();
-        reserve_smallvec(
-            &mut items,
-            resolved.len(),
-            "persistent batched dispatch",
-            "command item",
-            "split the persistent dispatch batch before submission",
-        )?;
-        for item in resolved.iter() {
-            items.push(crate::pipeline::persistent::BorrowedDispatchItem {
-                inputs: crate::pipeline::persistent::borrowed_handle_refs(&item.inputs),
-                outputs: crate::pipeline::persistent::borrowed_handle_refs(&item.outputs),
-                params: None,
-                workgroups: workgroup_count,
-            });
-        }
-
-        self.dispatch_borrowed_persistent_batched(&items)?;
-
-        resize_vec_with(
-            batch_outputs,
-            resolved.len(),
-            Vec::new,
-            "persistent batched dispatch output slots",
-        )?;
-        for (item, outputs) in resolved.iter().zip(batch_outputs.iter_mut()) {
-            self.raise_if_trapped(&item.inputs, device, queue, deadline)?;
-            self.readback_persistent_outputs(&item.outputs, deadline, outputs)?;
-            enforce_actual_output_budget(config, outputs.as_slice())?;
-        }
-
-        Ok(())
-    }
-
     fn id(&self) -> &str {
         &self.id
-    }
-
-    fn dispatch_borrowed(
-        &self,
-        inputs: &[&[u8]],
-        config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        let mut outputs = Vec::new();
-        reserve_pipeline_vec(
-            &mut outputs,
-            self.output_bindings.len(),
-            "borrowed dispatch output buffers",
-        )?;
-        self.dispatch_borrowed_into(inputs, config, &mut outputs)?;
-        Ok(outputs)
     }
 
     fn dispatch_borrowed_timed(
@@ -581,116 +422,79 @@ impl CompiledPipeline for WgpuPipeline {
         ))
     }
 
-    fn dispatch_borrowed_batched(
+    fn dispatch_persistent_handles_timed(
         &self,
-        batches: &[&[&[u8]]],
+        inputs: &[vyre_driver::Resource],
         config: &DispatchConfig,
-    ) -> Result<Vec<OutputBuffers>, BackendError> {
+    ) -> Result<TimedDispatchResult, BackendError> {
+        let started = Instant::now();
+        let enqueued = self.enqueue_persistent(inputs, config, started)?;
+        let enqueue_ns = WGPU_NUMERIC.elapsed_nanos_u64(started, "persistent enqueue")?;
+
+        let wait_started = Instant::now();
         let mut outputs = Vec::new();
-        reserve_pipeline_vec(
-            &mut outputs,
-            batches.len(),
-            "borrowed batched dispatch output sets",
-        )?;
-        self.dispatch_borrowed_batched_into(batches, config, &mut outputs)?;
-        Ok(outputs)
+        let device_ns = self.retire_persistent_into(enqueued, config, &mut outputs)?;
+        let wait_ns = WGPU_NUMERIC.elapsed_nanos_u64(wait_started, "persistent wait")?;
+
+        Ok(TimedDispatchResult::split_timed(
+            outputs,
+            WGPU_NUMERIC.elapsed_nanos_u64(started, "persistent timed dispatch")?,
+            device_ns,
+            enqueue_ns,
+            wait_ns,
+        ))
     }
 
-    fn dispatch_borrowed_batched_into(
+    /// Submit every item, each with its own output copies and timestamp
+    /// queries, before waiting for any of them.
+    ///
+    /// The device stays busy across the batch instead of idling for one
+    /// host round trip per item. Each item's timeout counts from its own
+    /// submission.
+    fn dispatch_persistent_handles_batched_timed(
         &self,
-        batches: &[&[&[u8]]],
+        batches: &[&[vyre_driver::Resource]],
         config: &DispatchConfig,
-        batch_outputs: &mut Vec<OutputBuffers>,
+        outputs: &mut Vec<OutputBuffers>,
+        device_ns_by_item: &mut Vec<Option<u64>>,
     ) -> Result<(), BackendError> {
-        if batches.is_empty() {
-            batch_outputs.clear();
-            return Ok(());
-        }
-        self.enforce_static_output_budget(config)?;
-        let deadline = config
-            .timeout
-            .and_then(|timeout| Instant::now().checked_add(timeout));
-        let workgroup_count = self.workgroups_for_dispatch(config)?;
-
-        let mut resolved = SmallVec::<[_; 8]>::new();
-        reserve_smallvec(
-            &mut resolved,
-            batches.len(),
-            "borrowed batched dispatch",
-            "resolved handle set",
-            "split the borrowed dispatch batch before submission",
-        )?;
-        for inputs in batches {
-            resolved.push(self.legacy_handles_from_inputs(inputs)?);
-        }
-
-        let mut items =
-            SmallVec::<[crate::pipeline::persistent::BorrowedDispatchItem<'_>; 8]>::new();
-        reserve_smallvec(
-            &mut items,
-            resolved.len(),
-            "borrowed batched dispatch",
-            "command item",
-            "split the borrowed dispatch batch before submission",
-        )?;
-        for (inputs, outputs) in resolved.iter() {
-            items.push(crate::pipeline::persistent::BorrowedDispatchItem {
-                inputs: crate::pipeline::persistent::borrowed_handle_refs(inputs),
-                outputs: crate::pipeline::persistent::borrowed_handle_refs(outputs),
-                params: None,
-                workgroups: workgroup_count,
-            });
-        }
-
-        let max_iters = resolve_fixpoint_iterations_usize(config, "WGPU")?;
-        for _ in 0..max_iters {
-            self.dispatch_borrowed_persistent_batched(&items)?;
-        }
-
-        let (device, queue) = &*self.device_queue;
         resize_vec_with(
-            batch_outputs,
-            resolved.len(),
+            outputs,
+            batches.len(),
             Vec::new,
-            "borrowed batched dispatch output slots",
+            "persistent batch output sets",
         )?;
-        for ((inputs, outputs), item_outputs) in resolved.iter().zip(batch_outputs.iter_mut()) {
-            self.raise_if_trapped(inputs, device, queue, deadline)?;
-            self.readback_persistent_outputs(outputs, deadline, item_outputs)?;
-            enforce_actual_output_budget(config, item_outputs.as_slice())?;
+        device_ns_by_item.clear();
+        device_ns_by_item
+            .try_reserve_exact(batches.len())
+            .map_err(|error| {
+                BackendError::new(format!(
+                    "failed to reserve {} persistent batch timing slot(s): {error}. Fix: submit a smaller resident batch.",
+                    batches.len()
+                ))
+            })?;
+        let mut enqueued = SmallVec::<[EnqueuedPersistentDispatch; 8]>::new();
+        reserve_smallvec(
+            &mut enqueued,
+            batches.len(),
+            "persistent batch dispatch",
+            "enqueued item",
+            "submit a smaller resident batch",
+        )?;
+        for batch in batches {
+            match self.enqueue_persistent(batch, config, Instant::now()) {
+                Ok(item) => enqueued.push(item),
+                Err(error) => {
+                    if !enqueued.is_empty() {
+                        self.drain_queue()?;
+                    }
+                    return Err(error);
+                }
+            }
         }
-        Ok(())
-    }
-
-    fn dispatch_borrowed_into(
-        &self,
-        inputs: &[&[u8]],
-        config: &DispatchConfig,
-        outputs: &mut OutputBuffers,
-    ) -> Result<(), BackendError> {
-        self.enforce_static_output_budget(config)?;
-        let deadline = config
-            .timeout
-            .and_then(|timeout| Instant::now().checked_add(timeout));
-        let workgroup_count = self.workgroups_for_dispatch(config)?;
-
-        let (input_handles, mut output_handles) = self.legacy_handles_from_inputs(inputs)?;
-        let max_iters = resolve_fixpoint_iterations_usize(config, "WGPU")?;
-        for _iter in 0..max_iters {
-            self.dispatch_persistent(&input_handles, &mut output_handles, None, workgroup_count)?;
+        for (item, slot) in enqueued.into_iter().zip(outputs.iter_mut()) {
+            device_ns_by_item.push(self.retire_persistent_into(item, config, slot)?);
         }
-        if max_iters > 1 {
-            tracing::trace!(
-                target: "vyre.dispatch.fixpoint",
-                iters = max_iters,
-                substrate_path = "persistent_pipeline_fixpoint_loop",
-                "persistent pipeline fixpoint loop ran",
-            );
-        }
-        let (device, queue) = &*self.device_queue;
-        self.raise_if_trapped(&input_handles, device, queue, deadline)?;
-        self.readback_persistent_outputs(&output_handles, deadline, outputs)?;
-        enforce_actual_output_budget(config, outputs.as_slice())?;
         Ok(())
     }
 }

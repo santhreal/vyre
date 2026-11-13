@@ -35,6 +35,7 @@ The crate lives at `tools/xtask` and owns the `gate-registry` seam in the `tooli
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
 | `bin` | `audit_rule_contracts` | `tools/xtask/src/bin/audit_rule_contracts.rs` | None | `./cargo_full test -p xtask --bin audit_rule_contracts` |
+| `bin` | `prune_coverage_objects` | `tools/xtask/src/bin/prune_coverage_objects.rs` | None | `./cargo_full test -p xtask --bin prune_coverage_objects` |
 | `bin` | `publishable_packages` | `tools/xtask/src/bin/publishable_packages.rs` | None | `./cargo_full test -p xtask --bin publishable_packages` |
 | `bin` | `scaffold_rule` | `tools/xtask/src/bin/scaffold_rule.rs` | None | `./cargo_full test -p xtask --bin scaffold_rule` |
 | `bin` | `xtask` | `tools/xtask/src/main.rs` | None | `./cargo_full test -p xtask --bin xtask` |

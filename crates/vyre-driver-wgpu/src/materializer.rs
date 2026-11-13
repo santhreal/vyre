@@ -8,7 +8,7 @@ use vyre_driver::materialize::{
 };
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet,
-    CompiledPipeline, Device, DeviceIdentity, DispatchConfig, Resource, Submission,
+    CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig, Resource, Submission,
     TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
@@ -182,6 +182,25 @@ impl ArtifactInstance for WgpuArtifactInstance {
             return Err(device_lost_error(&self.core.device));
         }
         self.submit_routed(&bindings, || {
+            materialize::invalid_module(
+                "WGPU artifact submission cannot mix host and resident resources",
+            )
+        })
+    }
+
+    /// Submit every item of a resident batch before awaiting any of them.
+    ///
+    /// The compiled pipeline submits each item's compute pass and output
+    /// copies back to back, so an item is already queued when the item before
+    /// it finishes and its timestamp pair spans its own pass.
+    fn submit_resident_batch(
+        &self,
+        batches: Vec<BindingSet>,
+    ) -> Result<Vec<Completion>, BackendError> {
+        if self.lost.load(Ordering::Acquire) {
+            return Err(device_lost_error(&self.core.device));
+        }
+        self.submit_resident_batch_routed(&batches, || {
             materialize::invalid_module(
                 "WGPU artifact submission cannot mix host and resident resources",
             )

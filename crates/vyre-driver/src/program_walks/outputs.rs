@@ -16,9 +16,9 @@ pub fn enforce_actual_output_budget(
     config: &DispatchConfig,
     outputs: &[Vec<u8>],
 ) -> Result<(), BackendError> {
-    if config.max_output_bytes.is_none() {
+    let Some(limit) = config.max_output_bytes else {
         return Ok(());
-    }
+    };
     let actual = outputs.iter().try_fold(0usize, |sum, output| {
         sum.checked_add(output.len()).ok_or_else(|| {
             BackendError::new(
@@ -26,23 +26,6 @@ pub fn enforce_actual_output_budget(
             )
         })
     })?;
-    enforce_output_budget(config, actual)
-}
-
-/// Enforces [`DispatchConfig::max_output_bytes`] against an already-summed
-/// readback total.
-///
-/// Batched paths keep their rows in one contiguous buffer whose length is the
-/// total, so they state the total here rather than re-summing per row through a
-/// second copy of this policy.
-///
-/// # Errors
-///
-/// Returns when `actual` exceeds the configured cap.
-pub fn enforce_output_budget(config: &DispatchConfig, actual: usize) -> Result<(), BackendError> {
-    let Some(limit) = config.max_output_bytes else {
-        return Ok(());
-    };
     if actual > limit {
         return Err(BackendError::new(format!(
             "readback size {actual} exceeds DispatchConfig.max_output_bytes {limit}. Fix: narrow BufferDecl::output_byte_range or raise max_output_bytes."
@@ -292,6 +275,33 @@ pub fn element_size_bytes(data_type: &DataType) -> Result<usize, BackendError> {
 mod tests {
     use super::*;
     use vyre_foundation::ir::{BufferDecl, DataType};
+
+    /// The cap is inclusive: a readback of exactly `max_output_bytes` is
+    /// accepted and one byte more is rejected, over output sets whose slot
+    /// count, slot widths and empty slots vary independently.
+    #[test]
+    fn generated_output_budget_accepts_the_exact_total_and_rejects_one_byte_more() {
+        for case in 0..512usize {
+            let outputs: Vec<Vec<u8>> = (0..(case % 7) + 1)
+                .map(|slot| vec![0u8; (case * 31 + slot * 13) % 257])
+                .collect();
+            let total: usize = outputs.iter().map(Vec::len).sum();
+            let mut config = DispatchConfig::default();
+            config.max_output_bytes = Some(total);
+            enforce_actual_output_budget(&config, &outputs)
+                .expect("Fix: a readback of exactly max_output_bytes must be accepted");
+            if total == 0 {
+                continue;
+            }
+            config.max_output_bytes = Some(total - 1);
+            let error = enforce_actual_output_budget(&config, &outputs)
+                .expect_err("Fix: a readback one byte over max_output_bytes must be rejected");
+            assert!(
+                error.to_string().contains("max_output_bytes"),
+                "case {case}: the rejection must state the violated setting, got {error}"
+            );
+        }
+    }
 
     #[test]
     fn output_layout_alignment_rejects_usize_overflow() {

@@ -28,10 +28,6 @@ pub struct CudaTelemetrySnapshot {
     pub cuda_graph_launches: u64,
     /// CUDA graph requests satisfied from a materialized host-output cache.
     pub cuda_graph_materialized_cache_hits: u64,
-    /// Batched cudaGraph replay chunks issued by compiled pipelines.
-    pub cuda_graph_batched_replay_chunks: u64,
-    /// Individual cudaGraph lanes launched inside batched replay chunks.
-    pub cuda_graph_batched_replay_lanes: u64,
     /// Host synchronization points against CUDA events or streams.
     pub sync_points: u64,
     /// Non-empty host-to-device copy operations.
@@ -133,8 +129,6 @@ impl CudaTelemetrySnapshot {
                 "vyre_cuda_kernel_launches_total {}\n",
                 "vyre_cuda_graph_launches_total {}\n",
                 "vyre_cuda_graph_materialized_cache_hits_total {}\n",
-                "vyre_cuda_graph_batched_replay_chunks_total {}\n",
-                "vyre_cuda_graph_batched_replay_lanes_total {}\n",
                 "vyre_cuda_sync_points_total {}\n",
                 "vyre_cuda_host_upload_operations_total {}\n",
                 "vyre_cuda_device_readback_operations_total {}\n",
@@ -172,8 +166,6 @@ impl CudaTelemetrySnapshot {
             self.kernel_launches,
             self.cuda_graph_launches,
             self.cuda_graph_materialized_cache_hits,
-            self.cuda_graph_batched_replay_chunks,
-            self.cuda_graph_batched_replay_lanes,
             self.sync_points,
             self.host_upload_operations,
             self.device_readback_operations,
@@ -217,8 +209,6 @@ pub(crate) struct CudaTelemetry {
     kernel_launches: AtomicU64,
     cuda_graph_launches: AtomicU64,
     cuda_graph_materialized_cache_hits: AtomicU64,
-    cuda_graph_batched_replay_chunks: AtomicU64,
-    cuda_graph_batched_replay_lanes: AtomicU64,
     sync_points: AtomicU64,
     host_upload_operations: AtomicU64,
     device_readback_operations: AtomicU64,
@@ -262,12 +252,6 @@ impl CudaTelemetry {
             cuda_graph_launches: self.cuda_graph_launches.load(Ordering::Relaxed),
             cuda_graph_materialized_cache_hits: self
                 .cuda_graph_materialized_cache_hits
-                .load(Ordering::Relaxed),
-            cuda_graph_batched_replay_chunks: self
-                .cuda_graph_batched_replay_chunks
-                .load(Ordering::Relaxed),
-            cuda_graph_batched_replay_lanes: self
-                .cuda_graph_batched_replay_lanes
                 .load(Ordering::Relaxed),
             sync_points: self.sync_points.load(Ordering::Relaxed),
             host_upload_operations: self.host_upload_operations.load(Ordering::Relaxed),
@@ -326,10 +310,6 @@ impl CudaTelemetry {
         self.kernel_launches.store(0, Ordering::Relaxed);
         self.cuda_graph_launches.store(0, Ordering::Relaxed);
         self.cuda_graph_materialized_cache_hits
-            .store(0, Ordering::Relaxed);
-        self.cuda_graph_batched_replay_chunks
-            .store(0, Ordering::Relaxed);
-        self.cuda_graph_batched_replay_lanes
             .store(0, Ordering::Relaxed);
         self.sync_points.store(0, Ordering::Relaxed);
         self.host_upload_operations.store(0, Ordering::Relaxed);
@@ -494,19 +474,6 @@ impl CudaTelemetry {
             "cuda_graph_materialized_cache_hits",
             &self.cuda_graph_materialized_cache_hits,
             1,
-        );
-    }
-
-    pub(crate) fn record_cuda_graph_batched_replay(&self, lanes: u64) {
-        self.add(
-            "cuda_graph_batched_replay_chunks",
-            &self.cuda_graph_batched_replay_chunks,
-            1,
-        );
-        self.add(
-            "cuda_graph_batched_replay_lanes",
-            &self.cuda_graph_batched_replay_lanes,
-            lanes,
         );
     }
 
@@ -738,7 +705,6 @@ mod tests {
         telemetry.record_param_upload_bytes(4);
         telemetry.record_cuda_graph_launch(3, Some(384), 192);
         telemetry.record_cuda_graph_materialized_cache_hit();
-        telemetry.record_cuda_graph_batched_replay(4);
         telemetry.record_sync_point();
         telemetry.record_host_upload_operations(2);
         telemetry.record_device_readback_operations(1);
@@ -754,8 +720,6 @@ mod tests {
         assert_eq!(snapshot.cuda_graph_launches, 1);
         assert_eq!(snapshot.kernel_launches, 3);
         assert_eq!(snapshot.cuda_graph_materialized_cache_hits, 1);
-        assert_eq!(snapshot.cuda_graph_batched_replay_chunks, 1);
-        assert_eq!(snapshot.cuda_graph_batched_replay_lanes, 4);
         assert_eq!(snapshot.sync_points, 1);
         assert_eq!(snapshot.host_upload_operations, 2);
         assert_eq!(snapshot.device_readback_operations, 1);
@@ -777,8 +741,6 @@ mod tests {
         assert_eq!(snapshot.logical_elements_per_thread_slot_bps, 5_000);
         let prometheus = snapshot.to_prometheus_text();
         assert!(prometheus.contains("vyre_cuda_graph_materialized_cache_hits_total 1\n"));
-        assert!(prometheus.contains("vyre_cuda_graph_batched_replay_chunks_total 1\n"));
-        assert!(prometheus.contains("vyre_cuda_graph_batched_replay_lanes_total 4\n"));
         assert!(prometheus.contains("vyre_cuda_sync_points_total 1\n"));
         assert!(prometheus.contains("vyre_cuda_timed_dispatches_total 1\n"));
         assert!(prometheus.contains("vyre_cuda_timed_device_ns_total 40\n"));

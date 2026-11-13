@@ -36,3 +36,7 @@ pub mod public_api_paths_masking;
 /// Integration tests from `tests/gate_write_ownership.rs`.
 #[path = "gate_write_ownership.rs"]
 pub mod gate_write_ownership;
+
+/// Integration tests from `tests/coverage_objects.rs`.
+#[path = "coverage_objects.rs"]
+pub mod coverage_objects;

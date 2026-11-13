@@ -13,6 +13,7 @@ mod sync;
 mod timed;
 
 pub(crate) use crate::backend::resident_dispatch_accounting::CudaResidentDispatch;
+pub(crate) use batch::output_disjoint_prefix;
 pub(crate) use descriptor_cursor::next_dispatch_binding;
 
 use std::sync::Arc;

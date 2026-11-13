@@ -1223,7 +1223,7 @@ seam = "backend-contract"
 publication_class = "extension-sdk"
 publication_contract = "extension-point:external_ir_extension"
 stability = "extension"
-exported_item_count = 2742
+exported_item_count = 2720
 
   [[package.item]]
   path = "T::dispatch_bytes(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>"
@@ -1759,13 +1759,6 @@ exported_item_count = 2742
 
   [[package.item]]
   path = "impl vyre_driver::BackendRegistration"
-  kind = "impl"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl vyre_driver::BatchOutputs"
   kind = "impl"
   stability = "extension"
   feature = "unconditional"
@@ -3606,62 +3599,6 @@ exported_item_count = 2742
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::BatchOutputs"
-  kind = "struct"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::BatchOutputs::is_empty(&self) -> bool"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::BatchOutputs::len(&self) -> usize"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::BatchOutputs::push_row(&mut self, row: &[u8])"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::BatchOutputs::row(&self, index: usize) -> core::option::Option<&[u8]>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::BatchOutputs::rows(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &[u8]> + '_"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::BatchOutputs::total_bytes(&self) -> usize"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::BatchOutputs::try_reserve(&mut self, rows: usize, bytes: usize) -> core::result::Result<(), alloc::collections::TryReserveError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_driver::Binding"
   kind = "struct"
   stability = "extension"
@@ -4026,70 +3963,7 @@ exported_item_count = 2742
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::CompiledPipeline::dispatch(&self, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::CompiledPipeline::dispatch_borrowed(&self, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::CompiledPipeline::dispatch_borrowed_batched(&self, batches: &[&[&[u8]]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::OutputBuffers>, vyre_driver::BackendError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::CompiledPipeline::dispatch_borrowed_batched_into(&self, batches: &[&[&[u8]]], config: &vyre_driver::DispatchConfig, outputs: &mut alloc::vec::Vec<vyre_driver::OutputBuffers>) -> core::result::Result<(), vyre_driver::BackendError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::CompiledPipeline::dispatch_borrowed_into(&self, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig, outputs: &mut vyre_driver::OutputBuffers) -> core::result::Result<(), vyre_driver::BackendError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_driver::CompiledPipeline::dispatch_borrowed_timed(&self, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::CompiledPipeline::dispatch_persistent_handle_rows_into(&self, rows: &[[vyre_driver::Resource; 4]], config: &vyre_driver::DispatchConfig, outputs: &mut alloc::vec::Vec<vyre_driver::OutputBuffers>) -> core::result::Result<(), vyre_driver::BackendError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::CompiledPipeline::dispatch_persistent_handles(&self, _inputs: &[vyre_driver::Resource], _config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::OutputBuffers, vyre_driver::BackendError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::CompiledPipeline::dispatch_persistent_handles_batched(&self, batches: &[&[vyre_driver::Resource]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::OutputBuffers>, vyre_driver::BackendError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::CompiledPipeline::dispatch_persistent_handles_batched_into(&self, batches: &[&[vyre_driver::Resource]], config: &vyre_driver::DispatchConfig, outputs: &mut alloc::vec::Vec<vyre_driver::OutputBuffers>) -> core::result::Result<(), vyre_driver::BackendError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -4103,21 +3977,7 @@ exported_item_count = 2742
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::CompiledPipeline::dispatch_persistent_handles_into(&self, inputs: &[vyre_driver::Resource], config: &vyre_driver::DispatchConfig, outputs: &mut vyre_driver::OutputBuffers) -> core::result::Result<(), vyre_driver::BackendError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_driver::CompiledPipeline::dispatch_persistent_handles_timed(&self, inputs: &[vyre_driver::Resource], config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::CompiledPipeline::dispatch_persistent_resource_outputs(&self, _inputs: &[vyre_driver::Resource], _config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::Resource>, vyre_driver::BackendError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -11285,20 +11145,6 @@ exported_item_count = 2742
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver::borrowed_input_batch_shapes_match(batches: &[&[&[u8]]]) -> bool"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::borrowed_input_shapes_match(left: &[&[u8]], right: &[&[u8]]) -> bool"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_driver::borrowed_input_slices<'a>(inputs: &'a [alloc::vec::Vec<u8>], field: &'static str) -> core::result::Result<smallvec::SmallVec<[&'a [u8]; 8]>, vyre_driver::BackendError>"
   kind = "fn"
   stability = "extension"
@@ -12938,13 +12784,6 @@ exported_item_count = 2742
 
   [[package.item]]
   path = "vyre_driver::enforce_actual_output_budget(config: &vyre_driver::DispatchConfig, outputs: &[alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>"
-  kind = "fn"
-  stability = "extension"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver::enforce_output_budget(config: &vyre_driver::DispatchConfig, actual: usize) -> core::result::Result<(), vyre_driver::BackendError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -15010,6 +14849,13 @@ exported_item_count = 2742
 
   [[package.item]]
   path = "vyre_driver::materialize::ResidentInstance::resident_module_label(&self) -> &'static str"
+  kind = "fn"
+  stability = "extension"
+  feature = "unconditional"
+  wire_compatibility = "api-only"
+
+  [[package.item]]
+  path = "vyre_driver::materialize::ResidentInstance::submit_resident_batch_routed(&self, batches: &[vyre_driver::BindingSet], mixed: fn() -> vyre_driver::BackendError) -> core::result::Result<alloc::vec::Vec<vyre_driver::Completion>, vyre_driver::BackendError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
@@ -20426,7 +20272,7 @@ seam = "cuda-driver"
 publication_class = "concrete-backend"
 publication_contract = "target-support:cuda"
 stability = "backend"
-exported_item_count = 1018
+exported_item_count = 1016
 
   [[package.item]]
   path = "impl core::convert::From<&vyre_driver_cuda::CudaDeviceCaps> for vyre_driver_cuda::CudaMegakernelDeviceKey"
@@ -26176,20 +26022,6 @@ exported_item_count = 1018
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver_cuda::CudaTelemetrySnapshot::cuda_graph_batched_replay_chunks: u64"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_cuda::CudaTelemetrySnapshot::cuda_graph_batched_replay_lanes: u64"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_driver_cuda::CudaTelemetrySnapshot::cuda_graph_launches: u64"
   kind = "field"
   stability = "backend"
@@ -28099,21 +27931,7 @@ seam = "portable-driver"
 publication_class = "concrete-backend"
 publication_contract = "target-support:wgpu"
 stability = "backend"
-exported_item_count = 517
-
-  [[package.item]]
-  path = "impl core::convert::From<alloc::vec::Vec<u8>> for vyre_driver_wgpu::engine::graph::GpuResource"
-  kind = "impl"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl core::convert::From<vyre_driver_wgpu::buffer::GpuBufferHandle> for vyre_driver_wgpu::engine::graph::GpuResource"
-  kind = "impl"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
+exported_item_count = 478
 
   [[package.item]]
   path = "impl core::default::Default for vyre_driver_wgpu::buffer::BindGroupCache"
@@ -28299,20 +28117,6 @@ exported_item_count = 517
 
   [[package.item]]
   path = "impl vyre_driver_wgpu::emit::WgpuProgram"
-  kind = "impl"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl vyre_driver_wgpu::engine::graph::GpuDispatchGraph"
-  kind = "impl"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "impl vyre_driver_wgpu::engine::graph::LaunchAccounting"
   kind = "impl"
   stability = "backend"
   feature = "unconditional"
@@ -29810,125 +29614,6 @@ exported_item_count = 517
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph"
-  kind = "mod"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::GpuDispatchGraph"
-  kind = "struct"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::GpuDispatchGraph::dispatch(&self, config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver::backend::dispatch_result::BatchOutputs, vyre_driver::backend::error::BackendError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::GpuDispatchGraph::is_empty(&self) -> bool"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::GpuDispatchGraph::len(&self) -> usize"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::GpuDispatchGraph::new() -> Self"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::GpuDispatchGraph::push(&mut self, pipeline: vyre_driver_wgpu::pipeline::WgpuPipeline, input: impl core::convert::Into<vyre_driver_wgpu::engine::graph::GpuResource>)"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::GpuResource"
-  kind = "enum"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::GpuResource::Borrowed(alloc::vec::Vec<u8>)"
-  kind = "variant"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::GpuResource::Resident(vyre_driver_wgpu::buffer::GpuBufferHandle)"
-  kind = "variant"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::GpuResource::from(bytes: alloc::vec::Vec<u8>) -> Self"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::GpuResource::from(handle: vyre_driver_wgpu::buffer::GpuBufferHandle) -> Self"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::LaunchAccounting"
-  kind = "struct"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::LaunchAccounting::graph_submissions: usize"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::LaunchAccounting::reduction_factor(self) -> usize"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::LaunchAccounting::sequential_submissions: usize"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::engine::graph::launch_accounting(op_count: usize) -> vyre_driver_wgpu::engine::graph::LaunchAccounting"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_driver_wgpu::engine::multi_gpu"
   kind = "mod"
   stability = "backend"
@@ -30391,56 +30076,7 @@ exported_item_count = 517
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_borrowed(&self, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_borrowed_batched(&self, batches: &[&[&[u8]]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::backend::dispatch_result::OutputBuffers>, vyre_driver::backend::error::BackendError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_borrowed_batched_into(&self, batches: &[&[&[u8]]], config: &vyre_driver::backend::dispatch_config::DispatchConfig, batch_outputs: &mut alloc::vec::Vec<vyre_driver::backend::dispatch_result::OutputBuffers>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_borrowed_into(&self, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig, outputs: &mut vyre_driver::backend::dispatch_result::OutputBuffers) -> core::result::Result<(), vyre_driver::backend::error::BackendError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_borrowed_timed(&self, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver::backend::dispatch_result::TimedDispatchResult, vyre_driver::backend::error::BackendError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_coalesced(&self, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver::backend::dispatch_result::BatchOutputs, vyre_driver::backend::error::BackendError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_coalesced_borrowed(&self, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver::backend::dispatch_result::BatchOutputs, vyre_driver::backend::error::BackendError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_compound_v2(requests: &[(&vyre_driver_wgpu::pipeline::WgpuPipeline, vyre_driver::backend::resource::Resource)], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver::backend::dispatch_result::BatchOutputs, vyre_driver::backend::error::BackendError>"
   kind = "fn"
   stability = "backend"
   feature = "unconditional"
@@ -30454,13 +30090,6 @@ exported_item_count = 517
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_batched(&self, items: &[vyre_driver_wgpu::pipeline::persistent::DispatchItem<'_>]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
   path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_borrowed(&self, inputs: &[&vyre_driver_wgpu::buffer::GpuBufferHandle], outputs: &[&vyre_driver_wgpu::buffer::GpuBufferHandle], params: core::option::Option<&vyre_driver_wgpu::buffer::GpuBufferHandle>, workgroups: [u32; 3]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>"
   kind = "fn"
   stability = "backend"
@@ -30468,28 +30097,7 @@ exported_item_count = 517
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_handles(&self, inputs: &[vyre_driver::backend::resource::Resource], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver::backend::dispatch_result::OutputBuffers, vyre_driver::backend::error::BackendError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_handles_batched(&self, batches: &[&[vyre_driver::backend::resource::Resource]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::backend::dispatch_result::OutputBuffers>, vyre_driver::backend::error::BackendError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_handles_batched_into(&self, batches: &[&[vyre_driver::backend::resource::Resource]], config: &vyre_driver::backend::dispatch_config::DispatchConfig, batch_outputs: &mut alloc::vec::Vec<vyre_driver::backend::dispatch_result::OutputBuffers>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_handles_into(&self, inputs: &[vyre_driver::backend::resource::Resource], config: &vyre_driver::backend::dispatch_config::DispatchConfig, outputs: &mut vyre_driver::backend::dispatch_result::OutputBuffers) -> core::result::Result<(), vyre_driver::backend::error::BackendError>"
+  path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_handles_batched_timed(&self, batches: &[&[vyre_driver::backend::resource::Resource]], config: &vyre_driver::backend::dispatch_config::DispatchConfig, outputs: &mut alloc::vec::Vec<vyre_driver::backend::dispatch_result::OutputBuffers>, device_ns_by_item: &mut alloc::vec::Vec<core::option::Option<u64>>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>"
   kind = "fn"
   stability = "backend"
   feature = "unconditional"
@@ -30497,13 +30105,6 @@ exported_item_count = 517
 
   [[package.item]]
   path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_handles_timed(&self, inputs: &[vyre_driver::backend::resource::Resource], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver::backend::dispatch_result::TimedDispatchResult, vyre_driver::backend::error::BackendError>"
-  kind = "fn"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_resource_outputs(&self, inputs: &[vyre_driver::backend::resource::Resource], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::backend::resource::Resource>, vyre_driver::backend::error::BackendError>"
   kind = "fn"
   stability = "backend"
   feature = "unconditional"
@@ -30561,48 +30162,6 @@ exported_item_count = 517
   [[package.item]]
   path = "vyre_driver_wgpu::pipeline::output_layout_from_program"
   kind = "use"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::persistent"
-  kind = "mod"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::persistent::DispatchItem::inputs: &'a [vyre_driver_wgpu::buffer::GpuBufferHandle]"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::persistent::DispatchItem::outputs: &'a [vyre_driver_wgpu::buffer::GpuBufferHandle]"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::persistent::DispatchItem::params: core::option::Option<&'a vyre_driver_wgpu::buffer::GpuBufferHandle>"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::persistent::DispatchItem::workgroups: [u32; 3]"
-  kind = "field"
-  stability = "backend"
-  feature = "unconditional"
-  wire_compatibility = "api-only"
-
-  [[package.item]]
-  path = "vyre_driver_wgpu::pipeline::persistent::DispatchItem<'a>"
-  kind = "struct"
   stability = "backend"
   feature = "unconditional"
   wire_compatibility = "api-only"

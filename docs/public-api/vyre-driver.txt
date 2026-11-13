@@ -81,7 +81,6 @@ impl vyre_driver::AttrMap
 impl vyre_driver::BackendError
 impl vyre_driver::BackendLayoutFingerprint
 impl vyre_driver::BackendRegistration
-impl vyre_driver::BatchOutputs
 impl vyre_driver::BindingPlan
 impl vyre_driver::BindingSet
 impl vyre_driver::BindingSetFingerprint
@@ -435,13 +434,6 @@ pub fn vyre_driver::BackendLayoutFingerprint::new(slots: alloc::vec::Vec<vyre_dr
 pub fn vyre_driver::BackendRegistration::acquire(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError>
 pub fn vyre_driver::BackendRegistration::materializer(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::ArtifactMaterializer>, vyre_driver::BackendError>
 pub fn vyre_driver::BackendRegistration::target_compiler(&self) -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::compile::TargetCompiler>, vyre_driver::BackendError>
-pub fn vyre_driver::BatchOutputs::is_empty(&self) -> bool
-pub fn vyre_driver::BatchOutputs::len(&self) -> usize
-pub fn vyre_driver::BatchOutputs::push_row(&mut self, row: &[u8])
-pub fn vyre_driver::BatchOutputs::row(&self, index: usize) -> core::option::Option<&[u8]>
-pub fn vyre_driver::BatchOutputs::rows(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &[u8]> + '_
-pub fn vyre_driver::BatchOutputs::total_bytes(&self) -> usize
-pub fn vyre_driver::BatchOutputs::try_reserve(&mut self, rows: usize, bytes: usize) -> core::result::Result<(), alloc::collections::TryReserveError>
 pub fn vyre_driver::BindingPlan::build(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<Self, vyre_driver::BackendError>
 pub fn vyre_driver::BindingPlan::from_borrowed_inputs(program: &vyre_foundation::ir_inner::model::program::definition::Program, inputs: &[&[u8]]) -> core::result::Result<Self, vyre_driver::BackendError>
 pub fn vyre_driver::BindingPlan::from_input_lengths(program: &vyre_foundation::ir_inner::model::program::definition::Program, input_lengths: &[usize]) -> core::result::Result<Self, vyre_driver::BackendError>
@@ -455,20 +447,9 @@ pub fn vyre_driver::BindingSetFingerprint::from_plan(plan: &vyre_driver::Binding
 pub fn vyre_driver::Chain<A, B>::evaluate(&self, program: &vyre_foundation::ir_inner::model::program::definition::Program) -> vyre_driver::EnforceVerdict
 pub fn vyre_driver::Chain<A, B>::name(&self) -> &'static str
 pub fn vyre_driver::Chain<A, B>::new(first: A, second: B) -> Self
-pub fn vyre_driver::CompiledPipeline::dispatch(&self, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
-pub fn vyre_driver::CompiledPipeline::dispatch_borrowed(&self, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::BackendError>
-pub fn vyre_driver::CompiledPipeline::dispatch_borrowed_batched(&self, batches: &[&[&[u8]]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::OutputBuffers>, vyre_driver::BackendError>
-pub fn vyre_driver::CompiledPipeline::dispatch_borrowed_batched_into(&self, batches: &[&[&[u8]]], config: &vyre_driver::DispatchConfig, outputs: &mut alloc::vec::Vec<vyre_driver::OutputBuffers>) -> core::result::Result<(), vyre_driver::BackendError>
-pub fn vyre_driver::CompiledPipeline::dispatch_borrowed_into(&self, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig, outputs: &mut vyre_driver::OutputBuffers) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::CompiledPipeline::dispatch_borrowed_timed(&self, inputs: &[&[u8]], config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>
-pub fn vyre_driver::CompiledPipeline::dispatch_persistent_handle_rows_into(&self, rows: &[[vyre_driver::Resource; 4]], config: &vyre_driver::DispatchConfig, outputs: &mut alloc::vec::Vec<vyre_driver::OutputBuffers>) -> core::result::Result<(), vyre_driver::BackendError>
-pub fn vyre_driver::CompiledPipeline::dispatch_persistent_handles(&self, _inputs: &[vyre_driver::Resource], _config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::OutputBuffers, vyre_driver::BackendError>
-pub fn vyre_driver::CompiledPipeline::dispatch_persistent_handles_batched(&self, batches: &[&[vyre_driver::Resource]], config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::OutputBuffers>, vyre_driver::BackendError>
-pub fn vyre_driver::CompiledPipeline::dispatch_persistent_handles_batched_into(&self, batches: &[&[vyre_driver::Resource]], config: &vyre_driver::DispatchConfig, outputs: &mut alloc::vec::Vec<vyre_driver::OutputBuffers>) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::CompiledPipeline::dispatch_persistent_handles_batched_timed(&self, batches: &[&[vyre_driver::Resource]], config: &vyre_driver::DispatchConfig, outputs: &mut alloc::vec::Vec<vyre_driver::OutputBuffers>, device_ns_by_item: &mut alloc::vec::Vec<core::option::Option<u64>>) -> core::result::Result<(), vyre_driver::BackendError>
-pub fn vyre_driver::CompiledPipeline::dispatch_persistent_handles_into(&self, inputs: &[vyre_driver::Resource], config: &vyre_driver::DispatchConfig, outputs: &mut vyre_driver::OutputBuffers) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::CompiledPipeline::dispatch_persistent_handles_timed(&self, inputs: &[vyre_driver::Resource], config: &vyre_driver::DispatchConfig) -> core::result::Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError>
-pub fn vyre_driver::CompiledPipeline::dispatch_persistent_resource_outputs(&self, _inputs: &[vyre_driver::Resource], _config: &vyre_driver::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::Resource>, vyre_driver::BackendError>
 pub fn vyre_driver::CompiledPipeline::id(&self) -> &str
 pub fn vyre_driver::Device::identity(&self) -> &vyre_driver::DeviceIdentity
 pub fn vyre_driver::Device::is_healthy(&self) -> bool
@@ -798,8 +779,6 @@ pub fn vyre_driver::benchmark_pass_selection::select_benchmark_passes(candidates
 pub fn vyre_driver::benchmark_pass_selection::select_benchmark_passes_with_scratch(candidates: &[vyre_driver::benchmark_pass_selection::BenchmarkPassCandidate], sample: vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionSample, scratch: &mut vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionScratch) -> core::result::Result<vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionPlan, vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionError>
 pub fn vyre_driver::binding_plans_share_layout(a: &vyre_driver::BindingPlan, b: &vyre_driver::BindingPlan) -> bool
 pub fn vyre_driver::bindless_policy::decide_bindless(inputs: vyre_driver::bindless_policy::BindlessInputs) -> vyre_driver::bindless_policy::BindlessDecision
-pub fn vyre_driver::borrowed_input_batch_shapes_match(batches: &[&[&[u8]]]) -> bool
-pub fn vyre_driver::borrowed_input_shapes_match(left: &[&[u8]], right: &[&[u8]]) -> bool
 pub fn vyre_driver::borrowed_input_slices<'a>(inputs: &'a [alloc::vec::Vec<u8>], field: &'static str) -> core::result::Result<smallvec::SmallVec<[&'a [u8]; 8]>, vyre_driver::BackendError>
 pub fn vyre_driver::cache_eviction::CacheEvictionAllocationError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver::cache_eviction::eviction_basis_points(dropped_entries: usize, total_entries: usize) -> u32
@@ -858,7 +837,6 @@ pub fn vyre_driver::element_size_bytes(data_type: &vyre_spec::data_type::DataTyp
 pub fn vyre_driver::emit_aot_launcher_target(target: &vyre_foundation::operation::target_facet::TargetId, request: &vyre_driver::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::AotLauncherFiles, vyre_driver::BackendError>
 pub fn vyre_driver::encode_counter_tail(report: vyre_driver::SpeculationReport) -> [u8; 8]
 pub fn vyre_driver::enforce_actual_output_budget(config: &vyre_driver::DispatchConfig, outputs: &[alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::BackendError>
-pub fn vyre_driver::enforce_output_budget(config: &vyre_driver::DispatchConfig, actual: usize) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::error_catalog::render_catalog_toml() -> alloc::string::String
 pub fn vyre_driver::external_import::ExternalImportDescriptor<H>::unsupported_combination(&self) -> vyre_spec::resource_capability::ResourceAbiError
 pub fn vyre_driver::external_import::ExternalImportHandle::memory_kind(&self) -> vyre_spec::resource_capability::sampler::ExternalMemoryKind
@@ -962,6 +940,7 @@ pub fn vyre_driver::materialize::ResidentInstance::launch_resident_batch(&self, 
 pub fn vyre_driver::materialize::ResidentInstance::ordered_resident(&self, module_index: usize, module: &Self::Module, plan: &vyre_driver::BindingPlan, resources: &alloc::collections::btree::map::BTreeMap<vyre_megakernel::identity::ArtifactValueId, vyre_driver::Resource>) -> core::result::Result<alloc::vec::Vec<vyre_driver::Resource>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::ResidentInstance::resident_messages(&self) -> &vyre_driver::materialize::InstanceMessages
 pub fn vyre_driver::materialize::ResidentInstance::resident_module_label(&self) -> &'static str
+pub fn vyre_driver::materialize::ResidentInstance::submit_resident_batch_routed(&self, batches: &[vyre_driver::BindingSet], mixed: fn() -> vyre_driver::BackendError) -> core::result::Result<alloc::vec::Vec<vyre_driver::Completion>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::ResidentInstance::submit_routed(&self, bindings: &vyre_driver::BindingSet, mixed: fn() -> vyre_driver::BackendError) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::Submission>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::admit(artifact: &vyre_megakernel::schema::Artifact, payload: &vyre_megakernel::envelope::TargetPayload, target: vyre_driver::materialize::MaterializerTarget<'_>) -> core::result::Result<alloc::vec::Vec<vyre_driver::materialize::AdmittedModule>, vyre_driver::BackendError>
 pub fn vyre_driver::materialize::compile_error(backend: &str, error: impl core::fmt::Display) -> vyre_driver::BackendError
@@ -1337,7 +1316,6 @@ pub struct vyre_driver::BackendLayoutFingerprint
 pub struct vyre_driver::BackendLayoutSlot
 pub struct vyre_driver::BackendPrecedence
 pub struct vyre_driver::BackendRegistration
-pub struct vyre_driver::BatchOutputs
 pub struct vyre_driver::Binding
 pub struct vyre_driver::BindingPlan
 pub struct vyre_driver::BindingSet

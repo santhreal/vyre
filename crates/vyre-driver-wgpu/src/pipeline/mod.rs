@@ -8,7 +8,6 @@ pub(crate) mod binding;
 pub(crate) mod bindings_reflection;
 pub(crate) mod cache_impact;
 pub(crate) mod compiled_dispatch;
-pub(crate) mod compound;
 #[cfg(test)]
 pub(crate) mod descriptor_fixture;
 pub(crate) mod descriptor_metadata;
@@ -16,7 +15,7 @@ pub(crate) mod disk_cache;
 pub(crate) mod disk_cache_entries;
 pub(crate) mod output_readback;
 pub(crate) mod output_slots;
-pub mod persistent;
+pub(crate) mod persistent;
 pub(crate) mod persistent_resources;
 #[cfg(test)]
 mod tests;
@@ -35,7 +34,7 @@ use vyre_driver::BackendLayoutFingerprint;
 use vyre_driver::{admit_dispatch_grid, find_indirect_dispatch, infer_launch_grid};
 pub(crate) use vyre_driver::{element_size_bytes, OutputBindingLayout};
 pub use vyre_driver::{output_layout_from_program, IndirectDispatch, OutputLayout};
-use vyre_driver::{BackendError, DispatchConfig, LaunchGeometry, OutputBuffers};
+use vyre_driver::{BackendError, DispatchConfig, LaunchGeometry};
 use vyre_emit_naga::program::TrapTag;
 use vyre_foundation::execution_plan::{self, ExecutionPlan};
 use vyre_foundation::ir::Program;
@@ -535,43 +534,6 @@ impl WgpuPipeline {
 }
 
 impl WgpuPipeline {
-    /// Read every persistent output handle back into caller slots, trimmed to
-    /// each output's declared byte range.
-    ///
-    /// The single readback pass for the persistent pool. Both the resident and
-    /// the legacy borrowed dispatch paths land here.
-    fn readback_persistent_outputs(
-        &self,
-        output_handles: &[crate::buffer::GpuBufferHandle],
-        deadline: Option<Instant>,
-        outputs: &mut OutputBuffers,
-    ) -> Result<(), BackendError> {
-        let (device, queue) = &*self.device_queue;
-        self::output_slots::resize_vec_with(
-            outputs,
-            output_handles.len(),
-            Vec::new,
-            "persistent pipeline output slots",
-        )?;
-        for ((handle, output), bytes) in output_handles
-            .iter()
-            .zip(self.output_bindings.iter())
-            .zip(outputs.iter_mut())
-        {
-            crate::pipeline::output_readback::read_trimmed_output(
-                handle,
-                output,
-                device,
-                &self.staging_pool,
-                queue,
-                "persistent pipeline output",
-                deadline,
-                bytes,
-            )?;
-        }
-        Ok(())
-    }
-
     fn raise_if_trapped(
         &self,
         input_handles: &[crate::buffer::GpuBufferHandle],

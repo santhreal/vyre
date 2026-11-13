@@ -1665,25 +1665,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   driver crates have zero dependencies on semantic libraries or application
   policy, physical-IR variants have exhaustive emitter decisions, and Metal
   artifact metadata uses typed descriptors.
-- Batched dispatch readback has one owner and one allocation for its rows.
-  `vyre_driver::BatchOutputs` stores every dispatch's output row end to end in
-  a single buffer and hands rows out borrowed, replacing the
-  `Vec<Vec<Vec<u8>>>` returned by `vyre_driver_wgpu::pipeline::compound` and
-  `vyre_driver_wgpu::engine::graph`. The middle level of that type held exactly
-  one output slot at every call site, so an n-dispatch batch allocated 2n+1
-  vectors to carry n byte rows and copied each row out of the mapped staging
-  range into a vector of its own.
-  `vyre_driver::program_walks::enforce_output_budget` now owns the
-  `DispatchConfig::max_output_bytes` policy that a second wgpu-local
-  implementation had restated with its own wording, and
-  `vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_coalesced_borrowed`
-  absorbed the private function whose arguments it forwarded unchanged. A new
-  `xtask` tree contract, `nested_byte_row_types`, parses every crate that
-  implements the backend trait and fails on any three-deep byte-row vector;
-  scope comes from the root manifest and a parsed trait scan at run time, so a
-  backend crate added later is covered the day it lands. The existing ratchet
-  counted the legitimate two-level per-slot output in one crate only, which
-  left a three-deep copy in any other crate unobserved.
+- A new `xtask` tree contract, `nested_byte_row_types`, parses every crate that
+  implements the backend trait and fails on any three-deep byte-row vector,
+  with scope read from the root manifest and a parsed trait scan at run time.
 - Artifact materialization has one skeleton for every backend.
   `vyre_driver::materializer_passthrough` answers
   `ArtifactMaterializer::device` from the acquired descriptor and, given a
@@ -1717,8 +1701,7 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   enumerating the `DataType` enum instead would demand a case for the sub-byte
   quantization storage families that predicate deliberately excludes.
 - Every dispatch trait requires the borrowed-row form and defaults the owned
-  one over it. `vyre_driver::VyreBackend::dispatch_borrowed`,
-  `vyre_driver::backend::CompiledPipeline::dispatch_borrowed` and the
+  one over it. `vyre_driver::VyreBackend::dispatch_borrowed` and the
   C-preprocess `ProgramOracle` are now the methods an implementor writes;
   `dispatch` is a default that borrows the rows it was handed. It was the other
   way around, so a backend that binds caller memory received rows it had to own
@@ -2553,6 +2536,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   wrapper. `xtask_registry::corpus::selected_cases` selects release corpus
   cases for the compile and shrink gates, which carried the same filter and the
   same empty-selection error.
+- The workspace snapshot each xtask gate takes before and after it runs reads
+  only the paths git lists as tracked or untracked and not ignored, so ignored
+  files beside a checkout no longer add to every gate run.
 - `xtask gates` no longer accepts a failing gate. `xtask/gate-baselines.toml`
   pinned both a `status` and an `owner` sentence per row, and the sweep treated
   `status = "red"` as the expected result whenever the row named an owner, so a
@@ -4736,13 +4722,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   that pre-recorded and persistent dispatch each spelled out.
   `TimestampRecorder::pass_writes` and `TimestampRecorder::finish_and_resolve`
   own the timestamp write pair and the query resolve, which three and two
-  callers respectively had inlined. Borrowed dispatch into caller buffers now
-  runs the same `readback_persistent_outputs` pass as the owned path rather
-  than a second copy of the output loop, so a change to output trimming cannot
-  reach one entry point and miss the other, which would have returned
-  differently trimmed bytes for the same program depending on whether the
-  caller supplied the output buffers. Emitted shader text, binding order, and
-  readback ranges are unchanged.
+  callers respectively had inlined. Every resident dispatch entry point reads
+  its outputs back through one trimmed-readback pass. Emitted shader text,
+  binding order, and readback ranges are unchanged.
 - The wgpu runtime cache publishes AccessTracker and the tiered cache types;
   IntrusiveLru, AccessMeta and DEFAULT_INTRUSIVE_LRU_CAPACITY are
   crate-internal because no consumer outside the crate could reach them.
@@ -4772,6 +4754,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   replaces three local nanosecond conversions that each re-decided what happens
   when an elapsed duration does not fit `u64`. Reported nanosecond values are
   unchanged.
+- On wgpu, `ArtifactInstance::submit_resident_batch` submits every item's
+  compute pass and output copies before awaiting any of them and reports each
+  item's own device time, and a resident dispatch waits once for all of its
+  readbacks instead of once per output.
 - The WGPU target compiler is declared as a
   `vyre_driver::target_dialect::TargetDialect` value instead of a hand-written
   implementation. The shell it duplicated (the compiler struct, the profile
@@ -4980,6 +4966,18 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   semantic pass registration generators. Test-only operation registration,
   algebraic-law derive, no-op builder marker, and generated decoder stubs are
   gone.
+- `vyre_driver::CompiledPipeline` keeps `id`, `dispatch_borrowed_timed`,
+  `dispatch_persistent_handles_timed` and
+  `dispatch_persistent_handles_batched_timed`, the methods a materialized
+  instance calls; `dispatch`, `dispatch_borrowed`, `dispatch_borrowed_into`,
+  `dispatch_borrowed_batched`, `dispatch_borrowed_batched_into`,
+  `dispatch_persistent_handles`, `dispatch_persistent_handles_into`,
+  `dispatch_persistent_handles_batched`,
+  `dispatch_persistent_handles_batched_into`,
+  `dispatch_persistent_handle_rows_into`,
+  `dispatch_persistent_resource_outputs`,
+  `vyre_driver::borrowed_input_shapes_match` and
+  `vyre_driver::borrowed_input_batch_shapes_match` are removed.
 - `vyre_foundation::transform::compiler` is deleted, with the
   `dataflow_fixpoint`, `recursive_descent`, `string_interner`, `typed_arena`
   and `visitor_walk` specs it held. Each published a workgroup size, an
@@ -5017,6 +5015,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   of those needs no edit. The default-feature public-API snapshots for
   `vyre-primitives` and `vyre-libs` are unaffected, since `graph` is not a
   default feature.
+- The CUDA compiled pipeline no longer copies every materialized output into a
+  pipeline-level cache that no dispatch read, the borrowed graph-lane batch
+  replay with no caller is removed, and
+  `CudaTelemetrySnapshot::cuda_graph_batched_replay_chunks`,
+  `CudaTelemetrySnapshot::cuda_graph_batched_replay_lanes` and the metrics of
+  the same names are removed with it.
 - Twenty-seven files under `scripts/` are gone. Each was a check whose rule a
   registered gate already owns, a helper only such a check called, or a
   baseline nothing read. Nothing in the tree invoked any of them, so they were
@@ -5338,6 +5342,12 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   Persistent product execution uses authenticated artifact sessions; concrete
   pipeline compilation remains available only as a hidden oracle helper for
   driver cache tests.
+- `vyre_driver_wgpu::engine::graph` (`GpuDispatchGraph`, `GpuResource`,
+  `LaunchAccounting`, `launch_accounting`), `WgpuPipeline::dispatch_coalesced`,
+  `dispatch_coalesced_borrowed`, `dispatch_compound_v2`,
+  `dispatch_persistent_batched` and
+  `vyre_driver_wgpu::pipeline::persistent::DispatchItem` are removed; a
+  resident batch runs through `ArtifactInstance::submit_resident_batch`.
 
 ### Fixed
 
@@ -7971,6 +7981,8 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   pass engine, so the stability gate reported drift on a surface nobody had
   changed and would have gone on reporting it in front of every real change to
   that crate.
+- A CUDA resident batch whose items share an output buffer returns each item's
+  own output instead of failing the batch.
 - A CUDA device now reports a device trap instead of returning wrong data.
   `Node::trap` is how an op refuses an input outside its declared domain, and
   `vyre-emit-ptx` lowered `KernelOpKind::Trap` to a source comment and a branch
@@ -10378,6 +10390,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   Public signatures and emitted pipelines are unchanged.
 - The WGPU demo allocates its output without host input and rejects malformed
   output or values other than 42.
+- On wgpu, `VyreBackend::dispatch_with_device_buffers` accepts buffers from
+  `allocate_device_buffer` for read-only bindings instead of failing on the
+  missing `INDIRECT` usage, and leaves outputs in the caller's device buffers
+  instead of reading each one back and discarding it.
 - WGPU resident dispatch now splits `GridSync` programs at launch boundaries
   before compilation, preventing oversized resident fixed-point grids from
   deadlocking inside a software global barrier.
@@ -10392,6 +10408,10 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   device, and the backend's own re-derivations disagreed with the reference
   oracle on a `Persistent`-kind buffer and on a pipeline live-out whose access
   is not `ReadWrite`.
+- On wgpu, a repeated host-input dispatch reuses its cached bind group instead
+  of creating one per dispatch, and the cache keys a pooled buffer by an
+  allocation serial that is never reassigned, so a dropped buffer's bind group
+  cannot be served for a later allocation at the same address.
 - The wgpu record-and-readback path binds exactly one input slot per
   host-consuming binding and refuses an input list of any other length with a
   named error stating the expected and received counts.

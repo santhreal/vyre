@@ -711,14 +711,6 @@ impl VyreBackend for CudaBackendRegistration {
             "cuda_graph_materialized_cache_hits",
             telemetry.cuda_graph_materialized_cache_hits,
         ));
-        metrics.push((
-            "cuda_graph_batched_replay_chunks",
-            telemetry.cuda_graph_batched_replay_chunks,
-        ));
-        metrics.push((
-            "cuda_graph_batched_replay_lanes",
-            telemetry.cuda_graph_batched_replay_lanes,
-        ));
         metrics.push(("cuda_host_to_device_bytes", telemetry.host_to_device_bytes));
         metrics.push(("cuda_device_to_host_bytes", telemetry.device_to_host_bytes));
         metrics.push(("cuda_readback_bytes", telemetry.readback_bytes));

@@ -53,7 +53,7 @@ pub(super) fn build_bind_groups(
                             info.binding, info.name
                         ))
             })?;
-            buffer_ids.push(buffer.id());
+            buffer_ids.push(buffer.allocation_identity());
             buffer_ids.push(padded_wgpu_u64(
                 *logical_size_bytes,
                 "record-and-readback bind-group cache key byte length",

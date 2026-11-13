@@ -1,33 +1,10 @@
-//! Backend-neutral dispatch shape comparison helpers.
+//! Backend-neutral dispatch shape comparison.
 //!
-//! Native graph replay, pipeline cache reuse, and future backend command replay
-//! all need the same answer to two questions: do these borrowed input batches
-//! have the same byte shape, and does a runtime [`DispatchConfig`] preserve the
-//! launch-relevant shape captured at compile time?
+//! Native graph replay and pipeline cache reuse need one answer: does a
+//! runtime [`DispatchConfig`] preserve the launch-relevant shape captured at
+//! compile time?
 
 use crate::{fixpoint_iterations::resolve_fixpoint_iterations, DispatchConfig};
-
-/// Return true when two borrowed input lists have the same arity and per-input
-/// byte lengths.
-#[must_use]
-pub fn borrowed_input_shapes_match(left: &[&[u8]], right: &[&[u8]]) -> bool {
-    left.len() == right.len()
-        && left
-            .iter()
-            .zip(right.iter())
-            .all(|(left, right)| left.len() == right.len())
-}
-
-/// Return true when every borrowed-input batch item has the same shape as the
-/// first item.
-#[must_use]
-pub fn borrowed_input_batch_shapes_match(batches: &[&[&[u8]]]) -> bool {
-    let Some((first, rest)) = batches.split_first() else {
-        return true;
-    };
-    rest.iter()
-        .all(|batch| borrowed_input_shapes_match(first, batch))
-}
 
 /// Return true when a runtime dispatch config preserves a compiled launch
 /// shape.
@@ -69,43 +46,8 @@ fn ulp_budgets_share_launch_shape(compiled: &DispatchConfig, runtime: &DispatchC
 // suite exercises.
 #[cfg(test)]
 mod tests {
-    use super::{
-        borrowed_input_batch_shapes_match, borrowed_input_shapes_match,
-        dispatch_configs_share_launch_shape,
-    };
+    use super::dispatch_configs_share_launch_shape;
     use crate::DispatchConfig;
-
-    #[test]
-    fn borrowed_input_shapes_compare_arity_and_lengths_only() {
-        let a0 = [1_u8, 2, 3];
-        let a1 = [4_u8];
-        let b0 = [9_u8, 8, 7];
-        let b1 = [6_u8];
-        let c = [5_u8, 4];
-
-        assert!(borrowed_input_shapes_match(&[&a0, &a1], &[&b0, &b1]));
-        assert!(!borrowed_input_shapes_match(&[&a0, &a1], &[&b0]));
-        assert!(!borrowed_input_shapes_match(&[&a0, &a1], &[&b0, &c]));
-    }
-
-    #[test]
-    fn borrowed_input_batch_shapes_accept_empty_and_uniform_batches() {
-        let a0 = [1_u8, 2];
-        let a1 = [3_u8, 4, 5];
-        let b0 = [9_u8, 8];
-        let b1 = [7_u8, 6, 5];
-        let c1 = [0_u8];
-
-        assert!(borrowed_input_batch_shapes_match(&[]));
-        assert!(borrowed_input_batch_shapes_match(&[
-            &[&a0, &a1],
-            &[&b0, &b1]
-        ]));
-        assert!(!borrowed_input_batch_shapes_match(&[
-            &[&a0, &a1],
-            &[&b0, &c1]
-        ]));
-    }
 
     #[test]
     fn dispatch_config_launch_shape_ignores_timeout_but_tracks_launch_fields() {

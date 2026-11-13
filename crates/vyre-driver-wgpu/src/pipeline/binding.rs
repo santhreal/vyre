@@ -57,6 +57,16 @@ pub(crate) fn declared_byte_size(info: &BufferBindingInfo) -> Result<usize, Back
         })
 }
 
+/// Usage of every caller-held resident storage buffer.
+///
+/// A resident handle or device buffer can bind as an input, an output, or an
+/// indirect workgroup count, and is read back by copy, so it carries the
+/// union [`usage_for_binding`] can require of any storage binding.
+pub(crate) const RESIDENT_STORAGE_USAGE: wgpu::BufferUsages = wgpu::BufferUsages::STORAGE
+    .union(wgpu::BufferUsages::COPY_SRC)
+    .union(wgpu::BufferUsages::COPY_DST)
+    .union(wgpu::BufferUsages::INDIRECT);
+
 /// Required wgpu usage flags for a compiled binding.
 pub(crate) fn usage_for_binding(
     info: &BufferBindingInfo,
@@ -68,10 +78,7 @@ pub(crate) fn usage_for_binding(
             | wgpu::BufferUsages::COPY_DST);
     }
     if info.is_output {
-        return Ok(wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_SRC
-            | wgpu::BufferUsages::COPY_DST
-            | wgpu::BufferUsages::INDIRECT);
+        return Ok(RESIDENT_STORAGE_USAGE);
     }
     match info.kind {
         vyre_foundation::ir::MemoryKind::Readonly | vyre_foundation::ir::MemoryKind::Global => {

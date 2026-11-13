@@ -1,7 +1,6 @@
 //! Power-of-two GPU buffer pool for persistent dispatch.
 
 use std::fmt;
-use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 
@@ -11,7 +10,7 @@ use vyre_driver::accounting::{
 };
 use vyre_driver::{BackendError, DispatchConfig};
 
-use super::handle::GpuBufferHandle;
+use super::handle::{next_allocation_serial, GpuBufferHandle};
 use super::tiering::PoolTiering;
 
 #[derive(Debug, Default)]
@@ -173,6 +172,7 @@ struct PoolInner {
 
 struct FreeEntry {
     buffer: Arc<wgpu::Buffer>,
+    allocation_serial: u64,
     allocation_len: u64,
     usage: wgpu::BufferUsages,
 }
@@ -284,8 +284,7 @@ impl BufferPool {
 
             if let Some(entry) = self.inner.free[idx][usage_kind.index()].pop() {
                 if let Some(tiering) = &self.inner.tiering {
-                    let key = buffer_identity_key(Arc::as_ptr(&entry.buffer));
-                    tiering.record_access(key);
+                    tiering.record_access(entry.allocation_serial);
                 }
                 // Defensive: if the stored usage doesn't cover the request,
                 // route it to its correct canonical sub-bucket rather than
@@ -351,6 +350,7 @@ impl BufferPool {
                 self.inner.stats.hits.fetch_add(1, Ordering::Relaxed);
                 return Ok(GpuBufferHandle::from_parts(
                     entry.buffer,
+                    entry.allocation_serial,
                     len,
                     entry.allocation_len,
                     host_len,
@@ -384,6 +384,7 @@ impl BufferPool {
         self.inner.stats.allocations.fetch_add(1, Ordering::Relaxed);
         Ok(GpuBufferHandle::from_parts(
             Arc::new(buffer),
+            next_allocation_serial(),
             len,
             allocation_len,
             host_len,
@@ -427,6 +428,7 @@ impl PoolReturn {
     pub(crate) fn release(
         self,
         buffer: Arc<wgpu::Buffer>,
+        allocation_serial: u64,
         _byte_len: u64,
         allocation_len: u64,
         usage: wgpu::BufferUsages,
@@ -447,13 +449,13 @@ impl PoolReturn {
         let usage_kind = canonical_usage_kind(usage);
 
         if let Some(tiering) = &inner.tiering {
-            let key = buffer_identity_key(Arc::as_ptr(&buffer));
-            tiering.record_retained(key, allocation_len);
+            tiering.record_retained(allocation_serial, allocation_len);
         }
 
         if inner.free[class_idx][usage_kind.index()]
             .push(FreeEntry {
                 buffer,
+                allocation_serial,
                 allocation_len,
                 usage,
             })
@@ -524,12 +526,6 @@ impl PoolReturn {
             }
         }
     }
-}
-
-fn buffer_identity_key(buffer: *const wgpu::Buffer) -> u64 {
-    let mut hasher = rustc_hash::FxHasher::default();
-    buffer.addr().hash(&mut hasher);
-    hasher.finish()
 }
 
 fn u64_to_usize(value: u64, label: &'static str) -> Result<usize, BackendError> {

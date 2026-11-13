@@ -22,7 +22,7 @@
 use std::collections::BTreeMap;
 
 use vyre_driver::BackendRegistration;
-use vyre_driver::{BindingSet, BoundResource};
+use vyre_driver::{BindingSet, BoundResource, Resource};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
@@ -153,6 +153,40 @@ pub fn two_stage_artifact(access: BufferAccess) -> Artifact {
     crate::artifact_fixtures::compile_graph(graph, 0)
 }
 
+/// Canonical input value name of the copy-lane fixture.
+const COPY_INPUT: &str = "in";
+
+/// A single-node artifact that copies lane zero of a caller-bound input into
+/// the output.
+///
+/// Its result depends on the bound input, so a batch of these with distinct
+/// inputs shows which binding set each item's output came from.
+pub fn copy_lane_artifact(access: BufferAccess) -> Artifact {
+    let contract = ValueContract {
+        dtype: DataType::U32,
+        shape: vec![ShapeDim::Known(1)],
+        access: BufferAccess::ReadOnly,
+        lifetime: ValueLifetime::Invocation,
+    };
+    let mut graph = ProgramGraph::new();
+    let input = graph
+        .add_external_value(COPY_INPUT, contract.clone())
+        .expect("copy-lane fixture graph must accept its input. Fix: keep the input value name unique in this fixture");
+    graph
+        .add_node(
+            "copy",
+            copy_one_program(COPY_INPUT, OUTPUT),
+            vec![GraphInput {
+                buffer: COPY_INPUT.into(),
+                value: input,
+                contract,
+            }],
+            vec![store_one_output(access)],
+        )
+        .expect("copy-lane fixture graph must accept its node. Fix: correct the program or the contracts this fixture declares for `copy`");
+    crate::artifact_fixtures::compile_graph(graph, 0)
+}
+
 /// The registration a backend publishes, proven reachable by both registry routes.
 ///
 /// Enumerating the inventory and looking the id up directly are two independent
@@ -240,6 +274,23 @@ impl TargetExpectation<'_> {
     /// the single-lane fixture and refuses to return a payload that turned out to
     /// carry one group after all.
     pub fn compiled_two_stage(&self) -> (Artifact, TargetPayload) {
+        let artifact = two_stage_artifact(self.output_access.clone());
+        assert!(
+            artifact.fusion().len() >= 2,
+            "Fix: the two-stage fixture compiled to {} fusion group(s), so every contract over paired per-group lists built on it is vacuous. Give the fixture a dependency the planner cannot fuse away.",
+            artifact.fusion().len()
+        );
+        self.compile_fixture(artifact, "two-stage")
+    }
+
+    /// The copy-lane fixture artifact and the payload this backend's compiler
+    /// emits for it.
+    pub fn compiled_copy_lane(&self) -> (Artifact, TargetPayload) {
+        self.compile_fixture(copy_lane_artifact(self.output_access.clone()), "copy-lane")
+    }
+
+    /// Compile `artifact` with this backend's registered target compiler.
+    fn compile_fixture(&self, artifact: Artifact, fixture: &str) -> (Artifact, TargetPayload) {
         let compiler = registration(self.backend_id)
             .target_compiler()
             .unwrap_or_else(|error| {
@@ -248,15 +299,9 @@ impl TargetExpectation<'_> {
                     self.backend_id
                 )
             });
-        let artifact = two_stage_artifact(self.output_access.clone());
-        assert!(
-            artifact.fusion().len() >= 2,
-            "Fix: the two-stage fixture compiled to {} fusion group(s), so every contract over paired per-group lists built on it is vacuous. Give the fixture a dependency the planner cannot fuse away.",
-            artifact.fusion().len()
-        );
         let payload = compiler.compile(&artifact).unwrap_or_else(|error| {
             panic!(
-                "Fix: backend `{}` must compile the two-stage artifact: {error}",
+                "Fix: backend `{}` must compile the {fixture} artifact: {error}",
                 self.backend_id
             )
         });
@@ -376,6 +421,163 @@ pub fn assert_materializer_executes_resident_binding(expectation: &TargetExpecta
         panic!("Fix: backend `{backend_id}` must release its resident output: {error}")
     });
     assert_lane_zero(backend_id, &completion.outputs);
+}
+
+/// Number of items in the resident batch fixture.
+const BATCH_ITEMS: u32 = 5;
+
+/// The value batch item `item` uploads and must read back.
+fn batch_item_value(item: u32) -> u32 {
+    0x5eed_0000 | (item * 7 + 3)
+}
+
+/// The canonical value `name` of `artifact`.
+fn value_named(artifact: &Artifact, name: &str) -> ArtifactValueId {
+    artifact
+        .resources()
+        .iter()
+        .find(|resource| resource.name == name)
+        .unwrap_or_else(|| panic!("Fix: the fixture artifact must declare value `{name}`"))
+        .value
+}
+
+/// WHY: a resident batch submits every item before awaiting any of them, so a
+/// backend can return the outputs of the wrong item, in the wrong order, or as
+/// they stood after the whole batch ran. Each item binds a distinct input and
+/// must read back that input. The last two items bind one output buffer, so a
+/// backend that copies outputs back only after the batch retires returns the
+/// last item's value for both.
+pub fn assert_materializer_executes_resident_batch(expectation: &TargetExpectation<'_>) {
+    let backend_id = expectation.backend_id;
+    let (artifact, payload) = expectation.compiled_copy_lane();
+    let materializer = materializer_for(backend_id);
+    let instance = materializer
+        .materialize(&artifact, &payload)
+        .unwrap_or_else(|error| {
+            panic!("Fix: backend `{backend_id}` must materialize its own payload: {error}")
+        });
+    let input_value = value_named(&artifact, COPY_INPUT);
+    let output_value = value_named(&artifact, OUTPUT);
+
+    let mut allocated: Vec<Resource> = Vec::new();
+    let mut resident = |bytes: [u8; 4]| -> Resource {
+        let resource = materializer.allocate_resident(4).unwrap_or_else(|error| {
+            panic!("Fix: backend `{backend_id}` must allocate a resident buffer: {error}")
+        });
+        materializer
+            .upload_resident(&resource, &bytes)
+            .unwrap_or_else(|error| {
+                panic!("Fix: backend `{backend_id}` must upload a resident buffer: {error}")
+            });
+        allocated.push(resource.clone());
+        resource
+    };
+    let shared_output = resident([0; 4]);
+    let batches: Vec<BindingSet> = (0..BATCH_ITEMS)
+        .map(|item| {
+            let mut bindings = BindingSet::new(artifact.digest());
+            bindings.insert(
+                input_value,
+                BoundResource::Resident(resident(batch_item_value(item).to_le_bytes())),
+            );
+            let output = if item + 2 >= BATCH_ITEMS {
+                shared_output.clone()
+            } else {
+                resident([0; 4])
+            };
+            bindings.insert(output_value, BoundResource::Resident(output));
+            bindings
+        })
+        .collect();
+
+    let submitted = instance.submit_resident_batch(batches);
+    let freed = allocated
+        .into_iter()
+        .try_for_each(|resource| materializer.free_resident(resource));
+    let completions = submitted.unwrap_or_else(|error| {
+        panic!("Fix: backend `{backend_id}` must execute a valid resident batch: {error}")
+    });
+    freed.unwrap_or_else(|error| {
+        panic!("Fix: backend `{backend_id}` must release the batch's resident buffers: {error}")
+    });
+
+    assert_eq!(
+        completions.len(),
+        BATCH_ITEMS as usize,
+        "Fix: backend `{backend_id}` must return one completion per batch item"
+    );
+    let timed = completions
+        .iter()
+        .filter(|completion| completion.device_ns.is_some())
+        .count();
+    assert!(
+        timed == 0 || timed == completions.len(),
+        "Fix: backend `{backend_id}` timed {timed} of {} batch items; a device timer covers every item or none",
+        completions.len()
+    );
+    for (item, completion) in (0..BATCH_ITEMS).zip(&completions) {
+        assert_eq!(
+            completion.artifact,
+            artifact.digest(),
+            "Fix: backend `{backend_id}` must attribute batch item {item} to the executed artifact"
+        );
+        assert_eq!(
+            completion.outputs.get(&output_value),
+            Some(&batch_item_value(item).to_le_bytes().to_vec()),
+            "Fix: backend `{backend_id}` batch item {item} must read back its own input, after its own launch"
+        );
+        if let Some(device_ns) = completion.device_ns {
+            assert!(
+                device_ns > 0,
+                "Fix: backend `{backend_id}` reported zero device time for batch item {item}"
+            );
+        }
+    }
+}
+
+/// WHY: a resident batch carries device-resident binding sets only. A set that
+/// binds a host value is rejected with `rejection`, the backend's own words,
+/// rather than run on another path.
+pub fn assert_resident_batch_rejects_host_bindings(
+    expectation: &TargetExpectation<'_>,
+    rejection: &str,
+) {
+    let backend_id = expectation.backend_id;
+    let (artifact, payload) = expectation.compiled_copy_lane();
+    let materializer = materializer_for(backend_id);
+    let instance = materializer
+        .materialize(&artifact, &payload)
+        .unwrap_or_else(|error| {
+            panic!("Fix: backend `{backend_id}` must materialize its own payload: {error}")
+        });
+    let input_value = value_named(&artifact, COPY_INPUT);
+    let output_value = value_named(&artifact, OUTPUT);
+
+    let output = materializer.allocate_resident(4).unwrap_or_else(|error| {
+        panic!("Fix: backend `{backend_id}` must allocate a resident output: {error}")
+    });
+    let mut mixed = BindingSet::new(artifact.digest());
+    mixed.insert(
+        input_value,
+        BoundResource::Host(batch_item_value(0).to_le_bytes().to_vec()),
+    );
+    mixed.insert(output_value, BoundResource::Resident(output.clone()));
+    let submitted = instance.submit_resident_batch(vec![mixed]);
+    let freed = materializer.free_resident(output);
+
+    let error = match submitted {
+        Ok(_) => panic!(
+            "Fix: backend `{backend_id}` must reject a resident batch item that binds a host value"
+        ),
+        Err(error) => error,
+    };
+    freed.unwrap_or_else(|error| {
+        panic!("Fix: backend `{backend_id}` must release its resident output: {error}")
+    });
+    assert!(
+        error.to_string().contains(rejection),
+        "Fix: backend `{backend_id}` must reject a mixed batch item with `{rejection}`, got: {error}"
+    );
 }
 
 /// The device materializer a backend registers.

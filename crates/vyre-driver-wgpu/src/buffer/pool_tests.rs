@@ -162,6 +162,71 @@ fn pooled_reuse_updates_logical_element_count() {
     assert_eq!(small.byte_len(), 7);
 }
 
+/// Bind-group caches key on `allocation_identity`, so the identity must
+/// follow one `wgpu::Buffer` through every pool reacquire and must never be
+/// handed to a later allocation. Keying on the buffer's address satisfied the
+/// first half and broke the second: once the pool drops an allocation past its
+/// retention budget, the next allocation can land at the same address and a
+/// cached bind group would bind the dropped buffer.
+///
+/// Does not cover identities across processes, which no cache here persists.
+#[cfg(feature = "device-tests")]
+#[test]
+fn allocation_identity_follows_reuse_and_is_never_reassigned() {
+    let arc = crate::runtime::cached_device()
+        .expect("Fix: GPU device is required for persistent buffer pool test");
+    let (device, queue) = &*arc;
+    let usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
+
+    let retaining = BufferPool::new(
+        device.clone(),
+        queue.clone(),
+        &vyre_driver::DispatchConfig::default(),
+    );
+    let first = retaining
+        .acquire(64, usage)
+        .expect("Fix: initial pooled allocation should succeed");
+    let retained_identity = first.allocation_identity();
+    retaining.release(first);
+    let reused = retaining
+        .acquire(64, usage)
+        .expect("Fix: pooled reuse should succeed");
+    assert_eq!(
+        retaining.stats().hits,
+        1,
+        "the second acquire must reuse the retained buffer"
+    );
+    assert_eq!(
+        reused.allocation_identity(),
+        retained_identity,
+        "a reacquired allocation must keep its identity so cached bind groups hit"
+    );
+
+    let mut evicting_config = vyre_driver::DispatchConfig::default();
+    evicting_config.max_output_bytes = Some(0);
+    let evicting = BufferPool::new(device.clone(), queue.clone(), &evicting_config);
+    let mut seen = std::collections::HashSet::new();
+    for round in 0..64 {
+        let handle = evicting
+            .acquire(64, usage)
+            .expect("Fix: pooled allocation should succeed");
+        assert!(
+            seen.insert(handle.allocation_identity()),
+            "round {round}: a fresh allocation reused the identity of a dropped one"
+        );
+        evicting.release(handle);
+    }
+    let stats = evicting.stats();
+    assert_eq!(
+        stats.hits, 0,
+        "a zero retention budget must drop every release: {stats:?}"
+    );
+    assert_eq!(
+        stats.allocations, 64,
+        "every acquire must allocate afresh: {stats:?}"
+    );
+}
+
 #[cfg(feature = "device-tests")]
 #[test]
 fn tiering_acquire_release_is_nonblocking_under_contention() {

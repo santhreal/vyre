@@ -1,0 +1,2 @@
+category = "Removed"
+text = "`vyre_driver_wgpu::engine::graph` (`GpuDispatchGraph`, `GpuResource`, `LaunchAccounting`, `launch_accounting`), `WgpuPipeline::dispatch_coalesced`, `dispatch_coalesced_borrowed`, `dispatch_compound_v2`, `dispatch_persistent_batched` and `vyre_driver_wgpu::pipeline::persistent::DispatchItem` are removed; a resident batch runs through `ArtifactInstance::submit_resident_batch`."

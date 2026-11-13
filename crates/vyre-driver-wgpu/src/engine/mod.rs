@@ -9,8 +9,6 @@
 
 /// Per-thread scratch arenas for record/readback hot-path vectors.
 pub(crate) mod dispatch_scratch;
-/// GPU-resident command graph execution.
-pub mod graph;
 /// Mockable multi-GPU work partitioning.
 pub mod multi_gpu;
 /// Shared command recording and readback for vyre IR dispatch paths.

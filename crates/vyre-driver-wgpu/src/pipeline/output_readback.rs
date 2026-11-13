@@ -5,36 +5,10 @@
 //! device allocation and trimming on the host silently turns small logical
 //! outputs into full-buffer PCIe transfers.
 
-use std::time::Instant;
-
 use vyre_driver::BackendError;
 use vyre_driver::OutputBindingLayout;
 
 use crate::buffer::{GpuBufferHandle, StagingBufferPool};
-
-pub(crate) fn read_trimmed_output(
-    handle: &GpuBufferHandle,
-    output: &OutputBindingLayout,
-    device: &wgpu::Device,
-    staging_pool: &StagingBufferPool,
-    queue: &wgpu::Queue,
-    label: &str,
-    deadline: Option<Instant>,
-    bytes: &mut Vec<u8>,
-) -> Result<(), BackendError> {
-    start_trimmed_output(handle, output, device, staging_pool, queue, label)?
-        .await_into(device, deadline, bytes)?;
-    if output.layout.read_size > bytes.len() {
-        return Err(BackendError::new(format!(
-            "{label} readback slice for `{}` returned {} bytes but {} bytes are required. Fix: verify staging readback length handling.",
-            output.name,
-            bytes.len(),
-            output.layout.read_size
-        )));
-    }
-    bytes.truncate(output.layout.read_size);
-    Ok(())
-}
 
 pub(crate) fn start_trimmed_output(
     handle: &GpuBufferHandle,

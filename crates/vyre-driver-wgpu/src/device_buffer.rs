@@ -60,10 +60,10 @@ impl DeviceBuffer for WgpuDeviceBuffer {
 }
 
 impl WgpuBackend {
-    /// Allocate a new GPU-resident buffer of `byte_len` bytes. The
-    /// buffer is created with STORAGE | COPY_SRC | COPY_DST so it can
-    /// participate in dispatch as either input or output and round-
-    /// trip through `upload_device_buffer` / `download_device_buffer`.
+    /// Allocate a new GPU-resident buffer of `byte_len` bytes with the
+    /// resident storage usage, so it can bind as any input or output
+    /// storage binding and round-trip through `upload_device_buffer` /
+    /// `download_device_buffer`.
     ///
     /// # Errors
     /// Returns a backend error if the underlying wgpu allocation
@@ -73,9 +73,7 @@ impl WgpuBackend {
         byte_len: usize,
     ) -> Result<Box<dyn DeviceBuffer>, BackendError> {
         let device_queue = self.current_device_queue();
-        let usage = wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_SRC
-            | wgpu::BufferUsages::COPY_DST;
+        let usage = crate::pipeline::binding::RESIDENT_STORAGE_USAGE;
         let len = u64::try_from(byte_len).map_err(|_| {
             BackendError::new(format!(
                 "Fix: WgpuBackend::allocate_device_buffer received byte_len {byte_len} that does not fit in u64."

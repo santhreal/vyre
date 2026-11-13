@@ -10,7 +10,8 @@
 use vyre_foundation::ir::BufferAccess;
 
 use vyre_test_support::target_compiler_contract::{
-    assert_materializer_executes_payload, assert_materializer_executes_resident_binding,
+    assert_materializer_executes_payload, assert_materializer_executes_resident_batch,
+    assert_materializer_executes_resident_binding, assert_resident_batch_rejects_host_bindings,
     assert_target_compiler_emits_bundle, TargetExpectation,
 };
 
@@ -75,4 +76,20 @@ fn registered_materializer_executes_authenticated_wgsl() {
 #[test]
 fn registered_materializer_executes_resident_artifact_bindings() {
     assert_materializer_executes_resident_binding(&wgpu());
+}
+
+/// WHY: a resident batch submits every item before awaiting any of them, and
+/// each item's outputs must still come from its own binding set.
+#[test]
+fn registered_materializer_executes_resident_batch_items_in_order() {
+    assert_materializer_executes_resident_batch(&wgpu());
+}
+
+/// WHY: a resident batch carries device-resident sets only.
+#[test]
+fn registered_materializer_rejects_host_values_in_a_resident_batch() {
+    assert_resident_batch_rejects_host_bindings(
+        &wgpu(),
+        "WGPU artifact submission cannot mix host and resident resources",
+    );
 }

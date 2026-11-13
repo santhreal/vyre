@@ -28,6 +28,12 @@ use crate::backend::resident_dispatch_accounting::{
 use crate::backend::staging_reserve::{reserve_hash_set, reserve_smallvec};
 
 impl CudaBackend {
+    /// Submit every item of `batches` on one stream without awaiting any of
+    /// it.
+    ///
+    /// Every item is read back after the whole submission retires, so the
+    /// items' output handles must be pairwise distinct, as
+    /// [`output_disjoint_prefix`] measures.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn dispatch_resident_batch_async_concrete_with_ptx_key(
         &self,
@@ -38,7 +44,6 @@ impl CudaBackend {
         module_key: ModuleCacheKey,
         static_params_ptr: Option<u64>,
         prepared: &CudaDispatchPlan,
-        capture_item_timing: bool,
     ) -> Result<CudaResidentBatchDispatch, BackendError> {
         if batches.is_empty() {
             return Err(BackendError::InvalidProgram {
@@ -115,35 +120,6 @@ impl CudaBackend {
             batches.len(),
             "resident batch launch pointer groups",
         )?;
-        let output_binding_count = prepared.output_binding_indices.len();
-        let total_output_entries = if output_binding_count == 0 {
-            0usize
-        } else {
-            checked_resident_dispatch_capacity_mul(
-                batches.len(),
-                output_binding_count,
-                "batch output-handle set",
-            )?
-        };
-        let seen_outputs_small = total_output_entries <= 8 && total_output_entries != 0;
-        let mut seen_output_handles_small = SmallVec::<[ResidentHandle; 8]>::new();
-        reserve_smallvec(
-            &mut seen_output_handles_small,
-            total_output_entries.min(8),
-            "resident batch small output duplicate set",
-        )?;
-        let mut seen_output_handles = if !seen_outputs_small && total_output_entries != 0 {
-            let mut set = FxHashSet::default();
-            reserve_hash_set(
-                &mut set,
-                total_output_entries,
-                "resident batch output duplicate set",
-            )?;
-            Some(set)
-        } else {
-            None
-        };
-
         for (batch_index, handles) in batches.iter().enumerate() {
             let mut launch_ptrs = SmallVec::<[u64; 8]>::new();
             reserve_smallvec(
@@ -231,28 +207,6 @@ impl CudaBackend {
                 "resident batch output readbacks",
             )?;
             for (_, handle, readback) in output_handles_by_index {
-                if !seen_outputs_small {
-                    if let Some(seen_output_handles) = seen_output_handles.as_mut() {
-                        if !seen_output_handles.insert(handle.handle) {
-                            return Err(BackendError::InvalidProgram {
-                                fix: format!(
-                                    "Fix: CUDA resident batch dispatch cannot reuse output handle {} across submitted items; allocate one output resident buffer tuple per in-flight batch item so batched readback observes every result instead of the final overwrite.",
-                                    handle.handle
-                                ),
-                            });
-                        }
-                    }
-                } else {
-                    if seen_output_handles_small.contains(&handle.handle) {
-                        return Err(BackendError::InvalidProgram {
-                            fix: format!(
-                                "Fix: CUDA resident batch dispatch cannot reuse output handle {} across submitted items; allocate one output resident buffer tuple per in-flight batch item so batched readback observes every result instead of the final overwrite.",
-                                handle.handle
-                            ),
-                        });
-                    }
-                    seen_output_handles_small.push(handle.handle);
-                }
                 output_handles.push(handle);
                 output_readbacks.push(readback);
             }
@@ -284,15 +238,13 @@ impl CudaBackend {
         // device still holds.
         let mut item_timing =
             SmallVec::<[(crate::stream::CudaEvent, crate::stream::CudaEvent); 8]>::new();
-        if capture_item_timing {
-            reserve_smallvec(
-                &mut item_timing,
-                batches.len(),
-                "resident batch item timing",
-            )?;
-            for _ in 0..batches.len() {
-                item_timing.push(self.launch_resources.acquire_timing_event_pair()?);
-            }
+        reserve_smallvec(
+            &mut item_timing,
+            batches.len(),
+            "resident batch item timing",
+        )?;
+        for _ in 0..batches.len() {
+            item_timing.push(self.launch_resources.acquire_timing_event_pair()?);
         }
 
         // Marked in-flight before the launch lease is taken: the lease blocks
@@ -462,3 +414,77 @@ impl CudaBackend {
         }
     }
 }
+
+/// The number of leading items of `batches` whose output handles are pairwise
+/// distinct.
+///
+/// Every item of one submission is read back after the last item retires, so
+/// two items of a submission that wrote one handle would both report the later
+/// item's bytes. A caller submits this many items, retires them, and continues
+/// from the next item, which returns the per-item results a submission per item
+/// would. Items that share no output stay one submission. An item that binds one
+/// handle to two of its own outputs has no order that separates them and is
+/// rejected. An item with fewer handles than the plan binds ends the prefix
+/// after it, so the submission reports the count it received.
+///
+/// # Errors
+///
+/// Returns [`BackendError::InvalidProgram`] when the first item binds one
+/// handle to two outputs, or when the alias set cannot be reserved.
+pub(crate) fn output_disjoint_prefix(
+    prepared: &CudaDispatchPlan,
+    batches: &[SmallVec<[CudaResidentBuffer; 8]>],
+) -> Result<usize, BackendError> {
+    let mut output_positions = SmallVec::<[usize; 8]>::new();
+    let mut position = 0usize;
+    for binding in &prepared.bindings.bindings {
+        if binding.role == BindingRole::Shared {
+            continue;
+        }
+        if binding.output_index.is_some() {
+            output_positions.push(position);
+        }
+        position += 1;
+    }
+    if output_positions.is_empty() {
+        return Ok(batches.len());
+    }
+    let total = output_positions.len().saturating_mul(batches.len());
+    let mut small = SmallVec::<[ResidentHandle; OUTPUT_ALIAS_SCAN_LIMIT]>::new();
+    let mut large = FxHashSet::default();
+    if total > OUTPUT_ALIAS_SCAN_LIMIT {
+        reserve_hash_set(&mut large, total, "resident batch output alias set")?;
+    }
+    for (item, handles) in batches.iter().enumerate() {
+        for &position in &output_positions {
+            let Some(buffer) = handles.get(position) else {
+                return Ok(item + 1);
+            };
+            let fresh = if total > OUTPUT_ALIAS_SCAN_LIMIT {
+                large.insert(buffer.handle)
+            } else if small.contains(&buffer.handle) {
+                false
+            } else {
+                small.push(buffer.handle);
+                true
+            };
+            if fresh {
+                continue;
+            }
+            if item == 0 {
+                return Err(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: CUDA resident batch item binds output handle {} to two outputs; bind one resident buffer per output.",
+                        buffer.handle
+                    ),
+                });
+            }
+            return Ok(item);
+        }
+    }
+    Ok(batches.len())
+}
+
+/// Output handle count at which the alias check switches from a linear scan to
+/// a hash set.
+const OUTPUT_ALIAS_SCAN_LIMIT: usize = 16;

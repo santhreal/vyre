@@ -275,13 +275,13 @@ const WGPU_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
         tokens: &["cache", "pipeline", "MAX_PENDING_DURABLE_CACHE_FILES"],
     },
     BackendFeatureRequirement {
-        id: "wgpu-megakernel-dispatcher",
-        relative: "crates/vyre-driver-wgpu/src/pipeline/persistent.rs",
-        role: "WGPU batched megakernel dispatch through persistent bindings",
+        id: "wgpu-resident-batch-dispatch",
+        relative: "crates/vyre-driver-wgpu/src/pipeline/compiled_dispatch.rs",
+        role: "WGPU resident batch submitted before any item is awaited",
         tokens: &[
-            "dispatch_persistent_batched",
-            "dispatch_borrowed_persistent_batched",
-            "DispatchItem",
+            "dispatch_persistent_handles_batched_timed",
+            "enqueue_persistent",
+            "retire_persistent_into",
         ],
     },
     BackendFeatureRequirement {

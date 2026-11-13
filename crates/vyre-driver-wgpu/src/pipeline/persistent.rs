@@ -12,18 +12,6 @@ use crate::buffer::{BindGroupCacheStats, GpuBufferHandle};
 use crate::numeric::WGPU_NUMERIC;
 use crate::pipeline::{BufferBindingInfo, WgpuPipeline};
 
-/// One persistent dispatch record for batched queue submission.
-pub struct DispatchItem<'a> {
-    /// Input storage/uniform handles in declaration order.
-    pub inputs: &'a [GpuBufferHandle],
-    /// Output storage handles in declaration order.
-    pub outputs: &'a [GpuBufferHandle],
-    /// Optional params handle used for the first uniform/push binding.
-    pub params: Option<&'a GpuBufferHandle>,
-    /// Direct dispatch workgroup counts.
-    pub workgroups: [u32; 3],
-}
-
 /// Borrowed persistent dispatch record for hot paths that already own
 /// resident buffer handles elsewhere.
 pub(crate) struct BorrowedDispatchItem<'a> {
@@ -119,10 +107,9 @@ impl WgpuPipeline {
 
     /// Dispatch using borrowed GPU-resident buffer handles.
     ///
-    /// This is the zero-refcount-churn variant for resident hot paths such as
-    /// the batched megakernel dispatcher. It records bindings directly from
-    /// caller-owned handles instead of cloning [`GpuBufferHandle`] just to
-    /// assemble temporary input/output slices.
+    /// This is the zero-refcount-churn variant for resident hot paths. It
+    /// records bindings directly from caller-owned handles instead of cloning
+    /// [`GpuBufferHandle`] just to assemble temporary input/output slices.
     ///
     /// # Errors
     ///
@@ -141,64 +128,24 @@ impl WgpuPipeline {
             params,
             workgroups,
         };
-        self.dispatch_borrowed_persistent_batched(&[item])
+        self.submit_borrowed_persistent(&item)
     }
 
-    /// Dispatch multiple persistent items in one queue submission.
+    /// Record one borrowed persistent item and submit it without waiting.
     ///
     /// # Errors
     ///
-    /// Returns a backend error when any item violates the binding contract or
+    /// Returns a backend error when the item violates the binding contract or
     /// command recording fails.
-    pub fn dispatch_persistent_batched(
+    pub(crate) fn submit_borrowed_persistent(
         &self,
-        items: &[DispatchItem<'_>],
+        item: &BorrowedDispatchItem<'_>,
     ) -> Result<(), BackendError> {
-        if items.is_empty() {
-            return Ok(());
-        }
         let (device, queue) = &*self.device_queue;
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("vyre persistent dispatch batch"),
+            label: Some("vyre borrowed persistent dispatch"),
         });
-        for item in items {
-            let input_refs = borrowed_handle_refs(item.inputs);
-            let output_refs = borrowed_handle_refs(item.outputs);
-            self.record_borrowed_persistent_item(
-                device,
-                &mut encoder,
-                &BorrowedDispatchItem {
-                    inputs: input_refs,
-                    outputs: output_refs,
-                    params: item.params,
-                    workgroups: item.workgroups,
-                },
-            )?;
-        }
-        queue.submit(std::iter::once(encoder.finish()));
-        Ok(())
-    }
-
-    /// Dispatch multiple borrowed persistent items in one queue submission.
-    ///
-    /// # Errors
-    ///
-    /// Returns a backend error when any item violates the binding contract or
-    /// command recording fails.
-    pub(crate) fn dispatch_borrowed_persistent_batched(
-        &self,
-        items: &[BorrowedDispatchItem<'_>],
-    ) -> Result<(), BackendError> {
-        if items.is_empty() {
-            return Ok(());
-        }
-        let (device, queue) = &*self.device_queue;
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("vyre borrowed persistent dispatch batch"),
-        });
-        for item in items {
-            self.record_borrowed_persistent_item(device, &mut encoder, item)?;
-        }
+        self.record_borrowed_persistent_item_with_timestamps(device, &mut encoder, item, None)?;
         queue.submit(std::iter::once(encoder.finish()));
         Ok(())
     }
@@ -207,35 +154,6 @@ impl WgpuPipeline {
     #[must_use]
     pub fn bind_group_cache_stats(&self) -> BindGroupCacheStats {
         self.bind_group_cache.stats()
-    }
-
-    pub(crate) fn record_persistent_item(
-        &self,
-        device: &wgpu::Device,
-        encoder: &mut wgpu::CommandEncoder,
-        item: &DispatchItem<'_>,
-    ) -> Result<(), BackendError> {
-        let input_refs = borrowed_handle_refs(item.inputs);
-        let output_refs = borrowed_handle_refs(item.outputs);
-        self.record_borrowed_persistent_item(
-            device,
-            encoder,
-            &BorrowedDispatchItem {
-                inputs: input_refs,
-                outputs: output_refs,
-                params: item.params,
-                workgroups: item.workgroups,
-            },
-        )
-    }
-
-    pub(crate) fn record_borrowed_persistent_item(
-        &self,
-        device: &wgpu::Device,
-        encoder: &mut wgpu::CommandEncoder,
-        item: &BorrowedDispatchItem<'_>,
-    ) -> Result<(), BackendError> {
-        self.record_borrowed_persistent_item_with_timestamps(device, encoder, item, None)
     }
 
     pub(crate) fn record_borrowed_persistent_item_with_timestamps(

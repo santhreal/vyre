@@ -46,6 +46,24 @@ Failure behavior: A missing rules tree or incomplete rule contract returns statu
 
 Exit codes: 0 on complete contracts or help, 1 on contract failure, 2 on invalid arguments.
 
+### `prune_coverage_objects`
+
+```console
+./cargo_full run -p xtask --bin prune_coverage_objects -- --help
+```
+
+Commands: none.
+
+Hardware: No accelerator is required.
+
+Environment: No environment variables alter CLI behavior.
+
+Configuration: The command reads cargo --message-format=json messages on stdin and deletes, from the instrumented profile directory those messages name, every executable no compiler-artifact record lists. The examples directory is not pruned.
+
+Failure behavior: Unreadable stdin, a malformed record, messages that list no test executable, test executables in more than one directory, or a failed deletion return status 1.
+
+Exit codes: 0 on a completed prune or help, 1 on a failure above, 2 on invalid arguments.
+
 ### `publishable_packages`
 
 ```console

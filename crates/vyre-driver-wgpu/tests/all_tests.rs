@@ -157,6 +157,11 @@ pub mod default_workgroup_contract;
 #[path = "determinism_contract.rs"]
 pub mod determinism_contract;
 
+/// Integration tests from `tests/device_buffer_dispatch.rs`.
+#[cfg(feature = "device-tests")]
+#[path = "device_buffer_dispatch.rs"]
+pub mod device_buffer_dispatch;
+
 /// Integration tests from `tests/device_lost_recovery.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "device_lost_recovery.rs"]

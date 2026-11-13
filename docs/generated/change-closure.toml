@@ -24862,7 +24862,7 @@ declaration_site = "crates/vyre-driver/src/backend/resource.rs:131"
 constructors = ["Resource::Borrowed", "Resource::from", "Resource::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-driver-wgpu.txt"
+public_api_entry = "docs/public-api/vyre-driver.txt"
 disposition = "implemented"
 
 [[closure]]
@@ -24872,7 +24872,7 @@ declaration_site = "crates/vyre-driver/src/backend/resource.rs:133"
 constructors = ["Resource::Resident", "Resource::from", "Resource::from"]
 child_traversal = "leaf"
 equality_and_hash = "derived(Clone, Debug, Eq, PartialEq)"
-public_api_entry = "docs/public-api/vyre-driver-wgpu.txt"
+public_api_entry = "docs/public-api/vyre-driver.txt"
 disposition = "implemented"
 
 [[closure]]

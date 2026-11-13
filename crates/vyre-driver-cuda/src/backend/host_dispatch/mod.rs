@@ -23,14 +23,6 @@ use super::pinned_allocations::HostTransferAllocations;
 use super::plan::CudaDispatchPlan;
 use super::staging_reserve::{reserve_smallvec, reserved_vec};
 
-#[cfg(test)]
-pub(crate) mod attribution_harness;
-/// Per-dispatch host-cost attribution instrument. Test-only: it exists to
-/// decompose the enqueue-bound dispatch profile this file sits at the centre
-/// of, and it needs `pub(crate)` reach into the plan, cache and launch-resource
-/// internals that an integration test cannot see.
-#[cfg(test)]
-mod host_cost_attribution;
 mod transfers;
 
 use self::transfers::*;
@@ -402,20 +394,6 @@ impl CudaBackend {
         let module_key = self.module_cache_key_for_ptx_source_key(ptx_source_key)?;
         self.dispatch_prepared_borrowed_timed_with_ptx_key(
             program, inputs, config, &ptx_src, module_key, &prepared,
-        )
-    }
-
-    pub(crate) fn dispatch_borrowed_async_with_ptx_key(
-        &self,
-        program: &Program,
-        inputs: &[&[u8]],
-        config: &DispatchConfig,
-        ptx_src: &str,
-        module_key: ModuleCacheKey,
-    ) -> Result<Box<dyn PendingDispatch>, BackendError> {
-        let prepared = self.prepare_host_dispatch(program, inputs, config)?;
-        self.dispatch_prepared_borrowed_async_with_ptx_key(
-            program, inputs, ptx_src, module_key, &prepared,
         )
     }
 

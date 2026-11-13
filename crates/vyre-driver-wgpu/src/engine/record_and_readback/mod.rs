@@ -3,7 +3,7 @@
 use crate::buffer::BindGroupCache;
 use crate::buffer::{BufferPool, GpuBufferHandle};
 use crate::numeric::WGPU_NUMERIC;
-use crate::pipeline::binding::{consumes_host_input, declared_byte_size};
+use crate::pipeline::binding::{consumes_host_input, declared_byte_size, RESIDENT_STORAGE_USAGE};
 use crate::pipeline::{BufferBindingInfo, OutputBindingLayout};
 use smallvec::SmallVec;
 use std::sync::Arc;
@@ -346,10 +346,7 @@ fn record_dispatch_unsubmitted_impl(
                     output.name
                 ))
             })?;
-            let usage = wgpu::BufferUsages::STORAGE
-                | wgpu::BufferUsages::COPY_SRC
-                | wgpu::BufferUsages::COPY_DST
-                | wgpu::BufferUsages::INDIRECT;
+            let usage = RESIDENT_STORAGE_USAGE;
             let output_bytes_u64 =
                 WGPU_NUMERIC.usize_to_u64(output_bytes, "output allocation bytes")?;
             let b = pool

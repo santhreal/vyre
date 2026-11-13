@@ -42,6 +42,15 @@ jobs:
       # Only the raw profiles of the previous run are removed. The instrumented
       # build directory persists on this host, so a run recompiles what the
       # commit changed instead of every package from nothing.
+      #
+      # `report` reads every instrumented executable and proc-macro library in
+      # that directory, and the directory also holds builds of older commits,
+      # of other flag sets, and of other checkouts on the host. Their regions
+      # have no profile in this run and count as missed lines, so before the
+      # report `prune_coverage_objects` deletes every executable in `deps` and
+      # in the profile directory that no compiler-artifact record of this run
+      # lists. `examples` is kept: `wire_harness_smoke_test` builds its example
+      # with a cargo invocation of its own, so no record here lists it.
       - name: Run coverage
         shell: bash
         run: |
@@ -49,6 +58,8 @@ jobs:
           ./cargo_full llvm-cov clean --workspace --profraw-only
           packages=$(./cargo_full metadata --no-deps --format-version 1 \
             | python3 -c 'import json,sys; print("\n".join(p["name"] for p in json.load(sys.stdin)["packages"]))')
+          output="$RUNNER_TEMP/coverage-output.txt"
+          : > "$output"
           # cargo-llvm-cov selects `--tests`. Naming `--examples` alongside it
           # does not help: every explicit target selection compiles an example
           # as a test harness named `<example>-<hash>`, never the plain binary
@@ -57,9 +68,12 @@ jobs:
           # target flags of its own.
           for package in $packages; do
             echo "::group::coverage $package"
-            ./cargo_full llvm-cov --no-report --locked --all-features -p "$package"
+            ./cargo_full llvm-cov --no-report --locked --all-features -p "$package" \
+              --message-format=json-render-diagnostics 2>&1 \
+              | tee -a "$output" | sed '/^{"reason":/d'
             echo "::endgroup::"
           done
+          ./cargo_full run -q --locked -p xtask --bin prune_coverage_objects < "$output"
           ./cargo_full llvm-cov report --lcov --output-path lcov.info \
             --fail-under-lines "$COVERAGE_FLOOR_LINES"
       - name: Upload

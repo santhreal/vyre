@@ -91,7 +91,7 @@ fn bind_group_cache_reused_on_repeated_dispatches() {
 
     // First dispatch: bind groups are created fresh.
     let _ = pipeline
-        .dispatch(&[input.clone()], &DispatchConfig::default())
+        .dispatch_borrowed_timed(&[input.as_slice()], &DispatchConfig::default())
         .expect("Fix: first compiled dispatch must succeed");
     let stats_after_first = pipeline.bind_group_cache_stats();
     assert_eq!(
@@ -106,7 +106,7 @@ fn bind_group_cache_reused_on_repeated_dispatches() {
     // Second dispatch with identical inputs: the compiled pipeline path reuses
     // the same bind-group layout + buffer identities, so the cache must hit.
     let _ = pipeline
-        .dispatch(&[input.clone()], &DispatchConfig::default())
+        .dispatch_borrowed_timed(&[input.as_slice()], &DispatchConfig::default())
         .expect("Fix: second compiled dispatch must succeed");
     let stats_after_second = pipeline.bind_group_cache_stats();
     assert_eq!(
@@ -138,7 +138,7 @@ fn persistent_pool_reuses_allocations_on_repeated_dispatches() {
 
     for i in 0..5 {
         let _ = pipeline
-            .dispatch(&[input.clone()], &DispatchConfig::default())
+            .dispatch_borrowed_timed(&[input.as_slice()], &DispatchConfig::default())
             .unwrap_or_else(|_| panic!("Fix: repeated compiled dispatch #{i} must succeed"));
     }
 
@@ -169,8 +169,9 @@ fn compiled_dispatch_never_cpu_fallback() {
 
     let start = Instant::now();
     let outputs = pipeline
-        .dispatch(&[input], &DispatchConfig::default())
-        .expect("Fix: compiled dispatch must succeed");
+        .dispatch_borrowed_timed(&[input.as_slice()], &DispatchConfig::default())
+        .expect("Fix: compiled dispatch must succeed")
+        .outputs;
     let elapsed = start.elapsed();
 
     // A true CPU fallback would return in < 1 microsecond.

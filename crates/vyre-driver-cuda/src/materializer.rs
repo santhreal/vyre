@@ -116,12 +116,11 @@ impl ArtifactInstance for CudaArtifactInstance {
         &self,
         batches: Vec<BindingSet>,
     ) -> Result<Vec<Completion>, BackendError> {
-        let items = self.core().resident_batch_resources(&batches, || {
+        self.submit_resident_batch_routed(&batches, || {
             materialize::invalid_module(
                 "CUDA artifact submission cannot mix host and resident resources",
             )
-        })?;
-        self.execute_resident_batch(&items)
+        })
     }
 
     fn emitted_resources(&self) -> Result<Vec<EmittedResources>, BackendError> {

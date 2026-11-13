@@ -1,0 +1,2 @@
+category = "Changed"
+text = "On wgpu, `ArtifactInstance::submit_resident_batch` submits every item's compute pass and output copies before awaiting any of them and reports each item's own device time, and a resident dispatch waits once for all of its readbacks instead of once per output."

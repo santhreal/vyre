@@ -16,10 +16,7 @@ pub(crate) fn allocate_resident(
     let handle = crate::buffer::GpuBufferHandle::alloc(
         &device_queue.0,
         len,
-        wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_SRC
-            | wgpu::BufferUsages::COPY_DST
-            | wgpu::BufferUsages::INDIRECT,
+        crate::pipeline::binding::RESIDENT_STORAGE_USAGE,
     )?;
     let id = handle.resident_handle()?;
     backend.resident_handles.insert(id, handle);

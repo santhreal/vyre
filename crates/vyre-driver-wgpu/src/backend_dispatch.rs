@@ -1076,10 +1076,7 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         }
 
         let pipeline = self.compile_resident_pipeline_cached(program, config)?;
-        let _outputs = vyre_driver::CompiledPipeline::dispatch_persistent_handles(
-            &*pipeline, &resources, config,
-        )?;
-        Ok(())
+        pipeline.dispatch_persistent_handles_without_readback(&resources, config)
     }
 
     fn pipeline_cache_snapshot(&self) -> Option<vyre_driver::PipelineCacheSnapshot> {

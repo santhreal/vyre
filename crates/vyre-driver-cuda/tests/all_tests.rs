@@ -165,6 +165,11 @@ pub mod dispatch_overhead_breakdown;
 #[path = "dispatch_overhead_profile.rs"]
 pub mod dispatch_overhead_profile;
 
+/// Integration tests from `tests/dispatch_phase_probe.rs`.
+#[cfg(feature = "device-tests")]
+#[path = "dispatch_phase_probe.rs"]
+pub mod dispatch_phase_probe;
+
 /// Integration tests from `tests/div_zero_shift_mask_cuda_parity.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "div_zero_shift_mask_cuda_parity.rs"]

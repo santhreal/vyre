@@ -57,8 +57,8 @@ pub use dispatch_config::DispatchConfig;
 pub use dispatch_result::{
     replace_output_buffers_preserving_slots,
     replace_output_buffers_preserving_slots_with_memory_stats,
-    replace_output_buffers_preserving_slots_with_stats, BatchOutputs, OutputBuffers,
-    OutputReplacementStats, OutputSlotByteStats, OutputSlotStats, TimedDispatchResult,
+    replace_output_buffers_preserving_slots_with_stats, OutputBuffers, OutputReplacementStats,
+    OutputSlotByteStats, OutputSlotStats, TimedDispatchResult,
 };
 pub use error::{BackendError, ErrorCode};
 pub use pending_dispatch::PendingDispatch;
@@ -118,15 +118,6 @@ pub(crate) fn reserve_batch_output_slots(
             ),
         }
     })
-}
-
-pub(crate) fn reserved_batch_output_slots(
-    batch_len: usize,
-    field: &'static str,
-) -> Result<Vec<OutputBuffers>, BackendError> {
-    let mut outputs = Vec::new();
-    reserve_batch_output_slots(&mut outputs, batch_len, field)?;
-    Ok(outputs)
 }
 
 pub(crate) fn resize_batch_output_slots(

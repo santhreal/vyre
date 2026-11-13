@@ -47,21 +47,6 @@ pub(crate) fn reserve_backend_vec<T>(
     )
 }
 
-/// Pipeline-domain wrapper: reserve Vec capacity for compiled output buffers.
-pub(crate) fn reserve_pipeline_vec<T>(
-    vec: &mut Vec<T>,
-    additional: usize,
-    context: &'static str,
-) -> Result<(), BackendError> {
-    reserve_vec(
-        vec,
-        additional,
-        context,
-        "buffer",
-        "reduce output binding count or pipeline batch size",
-    )
-}
-
 /// Multi-GPU domain wrapper: reserve Vec capacity for executor devices/outputs.
 pub(crate) fn reserve_multi_gpu_vec<T>(
     vec: &mut Vec<T>,

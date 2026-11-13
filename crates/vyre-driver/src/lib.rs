@@ -99,6 +99,7 @@ pub(crate) mod materialize_admission;
 pub(crate) mod materialize_input_slots;
 /// Materialized instance execution and resident submission paths.
 pub(crate) mod materialize_instance;
+mod materialize_macros;
 /// Backend-neutral monotonic ordering helpers for staging hot paths.
 pub mod ordering;
 /// Backend-neutral fallible output-slot vector management.
@@ -267,10 +268,10 @@ pub use backend::{
 pub use backend::{
     borrowed_input_slices, default_dispatch_with_device_buffers,
     replace_output_buffers_preserving_slots, validate_buffer_ownership, ArtifactInstance,
-    ArtifactMaterializer, BackendError, BackendRegistration, BatchOutputs, BindingSet,
-    BoundResource, CompiledPipeline, Completion, Device, DeviceBuffer, DeviceIdentity,
-    DispatchConfig, HostShimBuffer, OutputBuffers, PendingDispatch, ResidentDispatchStep,
-    ResidentHandle, ResidentOwner, ResidentReadRange, ResidentSequenceTiming, Resource, Submission,
+    ArtifactMaterializer, BackendError, BackendRegistration, BindingSet, BoundResource,
+    CompiledPipeline, Completion, Device, DeviceBuffer, DeviceIdentity, DispatchConfig,
+    HostShimBuffer, OutputBuffers, PendingDispatch, ResidentDispatchStep, ResidentHandle,
+    ResidentOwner, ResidentReadRange, ResidentSequenceTiming, Resource, Submission,
     TimedDispatchResult, TypedDispatchExt, VyreBackend, DEVICE_BUFFER_FEATURE,
 };
 pub use binding::{
@@ -282,10 +283,7 @@ pub use device_profile::{DeviceProfile, DeviceTimingQuality};
 pub use device_signature::{DeviceSignature, DeviceSignatureTable};
 pub use diagnostics::{Diagnostic, DiagnosticCode, OpLocation, Severity};
 pub use diagnostics::{DiagnosticCause, DiagnosticStage, RetryClass};
-pub use dispatch_shape::{
-    borrowed_input_batch_shapes_match, borrowed_input_shapes_match,
-    dispatch_configs_share_launch_shape,
-};
+pub use dispatch_shape::dispatch_configs_share_launch_shape;
 pub use fixpoint_iterations::{resolve_fixpoint_iterations, resolve_fixpoint_iterations_usize};
 pub use launch::{
     launch_width_measurements, record_launch_measurement, resolve_launch_workgroup,
@@ -317,7 +315,7 @@ pub use program_walks::{
     try_coerce_to_pow2_with_tail_mask, try_dispatch_param_words, try_dispatch_param_words_into,
     IndirectDispatch, OutputBindingLayout, OutputLayout, TailMaskPolicy,
 };
-pub use program_walks::{auto_grid, enforce_output_budget, output_binding_layouts_into};
+pub use program_walks::{auto_grid, output_binding_layouts_into};
 pub use read_only_alias::ReadOnlyAliasCheck;
 pub use registry::DEPRECATED_OP_CODE;
 pub use registry::{

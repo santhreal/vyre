@@ -6,8 +6,7 @@
 //! of output slots, each a vector of bytes. The middle level held exactly one
 //! slot at every call site, so an `n`-dispatch batch allocated `2n + 1` vectors
 //! to carry `n` byte rows and copied each row out of the mapped staging range
-//! into a vector of its own. Batched rows now live in one buffer behind
-//! `vyre_driver::BatchOutputs`.
+//! into a vector of its own.
 //!
 //! The `hot-path-nested-rows` gate reads the two-level `Vec<Vec<u8>>` on the
 //! trait that returns it: rows returned by a dispatch trait are legitimate as
@@ -197,7 +196,7 @@ fn backend_sources_reject_triple_nested_byte_row_types() {
     assert_eq!(
         violations,
         Vec::<String>::new(),
-        "replace three-deep byte-row vectors with one contiguous buffer plus row offsets, such as `vyre_driver::BatchOutputs`"
+        "replace three-deep byte-row vectors with one contiguous buffer plus row offsets"
     );
 }
 
