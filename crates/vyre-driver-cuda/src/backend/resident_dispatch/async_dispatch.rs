@@ -28,7 +28,7 @@ use crate::backend::resident_dispatch::host_uploads::{
     enqueue_optional_resident_h2d_copy, enqueue_resident_h2d_copy,
 };
 use crate::backend::resident_dispatch_accounting::{
-    add_resident_dispatch_bytes, add_resident_dispatch_u64_count, CudaResidentDispatch,
+    add_resident_dispatch_bytes, add_resident_dispatch_u64_count,
 };
 use crate::backend::staging_reserve::{reserve_smallvec, reserved_vec};
 use crate::numeric::CUDA_NUMERIC;
@@ -162,10 +162,10 @@ impl CudaBackend {
         let prepared = self.prepare_resident_dispatch(program, bindings, config)?;
         let (ptx_src, ptx_source_key) = self.ptx_for_program_cached_with_key(program, config)?;
         let module_key = self.module_cache_key_for_ptx_source_key(ptx_source_key)?;
-        let native = self.dispatch_resident_async_concrete_with_ptx_key(
+        let pending = self.dispatch_resident_async_concrete_with_ptx_key(
             program, bindings, config, &ptx_src, module_key, true, None, true, &prepared,
         )?;
-        Ok(Box::new(native.pending))
+        Ok(Box::new(pending))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -180,7 +180,7 @@ impl CudaBackend {
         static_params_ptr: Option<u64>,
         capture_outputs: bool,
         prepared: &CudaDispatchPlan,
-    ) -> Result<CudaResidentDispatch, BackendError> {
+    ) -> Result<crate::stream::CudaPendingDispatch, BackendError> {
         let _profiler_range =
             crate::profiler::cuda_profiler_range(crate::profiler::CUDA_RESIDENT_DISPATCH_RANGE);
         let trace = crate::instrumentation::cuda_stage_trace_enabled();
@@ -236,12 +236,12 @@ impl CudaBackend {
             "resident dispatch output staged readbacks",
         )?;
         let mut next_binding = 0usize;
-        let mut output_handles_by_index =
-            SmallVec::<[(usize, Option<CudaResidentBuffer>, CudaOutputReadback, u64); 8]>::new();
+        let mut output_readbacks_by_index =
+            SmallVec::<[(usize, CudaOutputReadback, u64); 8]>::new();
         reserve_smallvec(
-            &mut output_handles_by_index,
+            &mut output_readbacks_by_index,
             prepared.output_binding_indices.len(),
-            "resident dispatch output handles by index",
+            "resident dispatch output readbacks by index",
         )?;
         let mut output_clears = SmallVec::<[(u64, usize); 8]>::new();
         reserve_smallvec(
@@ -343,7 +343,7 @@ impl CudaBackend {
                     full_byte_len,
                     "resident async output readback",
                 )?;
-                output_handles_by_index.push((output_index, resident_handle, readback, launch_ptr));
+                output_readbacks_by_index.push((output_index, readback, launch_ptr));
                 if clears_resident_output_before_launch(
                     program,
                     binding.buffer_index,
@@ -358,42 +358,28 @@ impl CudaBackend {
                 }
             }
         }
-        if output_handles_by_index.len() != prepared.output_binding_indices.len() {
+        if output_readbacks_by_index.len() != prepared.output_binding_indices.len() {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
                     "Fix: CUDA resident dispatch expected {} output handle(s) but resolved {}.",
                     prepared.output_binding_indices.len(),
-                    output_handles_by_index.len()
+                    output_readbacks_by_index.len()
                 ),
             });
         }
         sort_unstable_by_key_if_needed(
-            output_handles_by_index.as_mut_slice(),
-            |(output_index, _, _, _)| *output_index,
+            output_readbacks_by_index.as_mut_slice(),
+            |(output_index, _, _)| *output_index,
         );
         validate_dense_resident_output_indices(
-            output_handles_by_index
+            output_readbacks_by_index
                 .iter()
-                .map(|(output_index, _, _, _)| *output_index),
+                .map(|(output_index, _, _)| *output_index),
             prepared.output_binding_indices.len(),
             "resident dispatch output handles",
         )?;
-        let mut output_handles = SmallVec::<[Option<CudaResidentBuffer>; 8]>::new();
-        reserve_smallvec(
-            &mut output_handles,
-            output_handles_by_index.len(),
-            "resident dispatch output handles",
-        )?;
-        let mut output_readbacks = SmallVec::<[CudaOutputReadback; 8]>::new();
-        reserve_smallvec(
-            &mut output_readbacks,
-            output_handles_by_index.len(),
-            "resident dispatch output readbacks",
-        )?;
-        for (_, handle, readback, launch_ptr) in output_handles_by_index {
-            output_handles.push(handle);
-            output_readbacks.push(readback);
-            if capture_outputs {
+        if capture_outputs {
+            for (_, readback, launch_ptr) in output_readbacks_by_index {
                 output_stage_readbacks.push((launch_ptr, readback));
             }
         }
@@ -767,10 +753,6 @@ impl CudaBackend {
                 start.elapsed().as_millis()
             );
         }
-        Ok(CudaResidentDispatch {
-            pending,
-            output_handles,
-            output_readbacks,
-        })
+        Ok(pending)
     }
 }

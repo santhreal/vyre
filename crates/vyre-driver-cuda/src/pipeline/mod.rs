@@ -4,7 +4,9 @@ use std::sync::{Arc, Mutex};
 
 use smallvec::SmallVec;
 use vyre_driver::input_identity::{domain_separated_exact_input_key, ExactInputKey};
-use vyre_driver::{sealed, BackendError, DispatchConfig, LaunchPlan};
+use vyre_driver::{
+    dispatch_configs_share_launch_shape, sealed, BackendError, DispatchConfig, LaunchPlan,
+};
 use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::DeviceAllocation;
@@ -193,6 +195,25 @@ impl Drop for CudaCompiledPipeline {
 
 impl sealed::Sealed for CudaCompiledPipeline {}
 
+/// Reject a dispatch whose config changes the launch shape the pipeline was
+/// compiled for.
+///
+/// The dispatch plan, the uploaded static launch parameters and every recorded
+/// CUDA graph are products of the compiled config, and an artifact module
+/// dispatches with the config it was compiled under. A config that changes the
+/// shape therefore has no compiled launch to run.
+pub(crate) fn require_compiled_launch_shape(
+    compiled: &DispatchConfig,
+    runtime: &DispatchConfig,
+) -> Result<(), BackendError> {
+    if dispatch_configs_share_launch_shape(compiled, runtime) {
+        return Ok(());
+    }
+    Err(BackendError::InvalidProgram {
+        fix: "Fix: a compiled CUDA pipeline was dispatched with a config that changes its launch shape, as `vyre_driver::dispatch_configs_share_launch_shape` defines it. Compile the artifact for that config and dispatch the instance it materializes.".to_string(),
+    })
+}
+
 fn cuda_graph_replay_enabled() -> bool {
     crate::instrumentation::cuda_graph_replay_enabled()
 }
@@ -218,7 +239,38 @@ mod tests {
     use vyre_driver::replace_output_buffers_preserving_slots;
     use vyre_driver::LaunchPlan;
 
-    use super::cuda_compiled_pipeline_identity_key;
+    use super::{cuda_compiled_pipeline_identity_key, require_compiled_launch_shape};
+
+    /// A compiled pipeline runs only the launch shape it was compiled for: a
+    /// config differing in a field that is not part of the shape dispatches, and
+    /// one differing in a shape field is rejected with the recompile fix.
+    #[test]
+    fn dispatch_config_must_preserve_the_compiled_launch_shape() {
+        let compiled = vyre_driver::DispatchConfig::default();
+        let mut timeout_only = compiled.clone();
+        timeout_only.timeout = Some(std::time::Duration::from_millis(1));
+        require_compiled_launch_shape(&compiled, &compiled)
+            .expect("Fix: the compiled config must dispatch");
+        require_compiled_launch_shape(&compiled, &timeout_only)
+            .expect("Fix: a timeout is not part of the launch shape");
+
+        let mut regridded = compiled.clone();
+        regridded.grid_override = Some([2, 1, 1]);
+        let mut refixed = compiled.clone();
+        refixed.fixpoint_iterations = Some(2);
+        for reshaped in [regridded, refixed] {
+            let error = require_compiled_launch_shape(&compiled, &reshaped)
+                .expect_err("Fix: a reshaped config must be rejected");
+            let vyre_driver::BackendError::InvalidProgram { fix } = error else {
+                panic!("Fix: a reshaped config must report InvalidProgram, got {error:?}");
+            };
+            assert!(
+                fix.starts_with("Fix: a compiled CUDA pipeline was dispatched with a config that changes its launch shape")
+                    && fix.ends_with("Compile the artifact for that config and dispatch the instance it materializes."),
+                "{fix}"
+            );
+        }
+    }
 
     fn generated_pipeline_identity_key(seed: u32, salt: u32) -> [u8; 32] {
         let mut out = [0_u8; 32];

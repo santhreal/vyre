@@ -1,12 +1,10 @@
 use smallvec::SmallVec;
 use vyre_driver::input_identity::ExactInputKey;
-use vyre_driver::{
-    dispatch_configs_share_launch_shape, BackendError, DispatchConfig, OutputBuffers,
-};
+use vyre_driver::{BackendError, DispatchConfig, OutputBuffers};
 
 use crate::backend::cuda_graph_replay::CudaGraphReplayInputState;
-use crate::backend::resident_dispatch::{output_disjoint_prefix, CudaResidentDispatch};
-use crate::backend::staging_reserve::{reserve_smallvec, reserve_vec, resize_vec_slots};
+use crate::backend::resident_dispatch::output_disjoint_prefix;
+use crate::backend::staging_reserve::reserve_vec;
 use crate::backend::CachedCudaGraph;
 use crate::pipeline::{CudaCompiledPipeline, MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE};
 
@@ -95,15 +93,6 @@ impl CudaCompiledPipeline {
             device_ns_by_item.clear();
             return Ok(());
         }
-        if !dispatch_configs_share_launch_shape(&self.compiled_config, config) {
-            return self.dispatch_dynamic_persistent_batches_concurrently(
-                resident_batches,
-                config,
-                outputs,
-                device_ns_by_item,
-            );
-        }
-
         let resident_dispatch = self
             .backend
             .dispatch_resident_batch_async_concrete_with_ptx_key(
@@ -127,62 +116,6 @@ impl CudaCompiledPipeline {
             &output_readbacks,
             outputs,
         )
-    }
-
-    pub(crate) fn dispatch_dynamic_persistent_batches_concurrently(
-        &self,
-        resident_batches: &[SmallVec<[crate::backend::CudaResidentBuffer; 8]>],
-        config: &DispatchConfig,
-        outputs: &mut Vec<OutputBuffers>,
-        device_ns_by_item: &mut Vec<Option<u64>>,
-    ) -> Result<(), BackendError> {
-        let mut dispatches = SmallVec::<[CudaResidentDispatch; 8]>::new();
-        reserve_smallvec(
-            &mut dispatches,
-            resident_batches.len(),
-            "dynamic resident dispatch",
-        )?;
-        for handles in resident_batches {
-            let batch_bindings = crate::backend::resident_bindings_from_handles(handles)?;
-            let prepared =
-                self.backend
-                    .prepare_resident_dispatch(&self.program, &batch_bindings, config)?;
-            dispatches.push(self.backend.dispatch_resident_async_concrete_with_ptx_key(
-                &self.program,
-                &batch_bindings,
-                config,
-                &self.ptx_src,
-                self.module_key,
-                false,
-                None,
-                true,
-                &prepared,
-            )?);
-        }
-
-        resize_vec_slots(outputs, dispatches.len(), "dynamic resident output")?;
-        device_ns_by_item.clear();
-        device_ns_by_item
-            .try_reserve_exact(dispatches.len())
-            .map_err(|error| BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: failed to reserve {} dynamic resident batch timing slot(s): {error}. Submit a smaller resident batch.",
-                    dispatches.len()
-                ),
-            })?;
-        for (dispatch, item_outputs) in dispatches.into_iter().zip(outputs.iter_mut()) {
-            let output_handles =
-                dispatch.resident_output_handles("dynamic persistent batch readback")?;
-            let output_readbacks = dispatch.output_readbacks;
-            let (_, device_ns) = dispatch.pending.await_timed_result()?;
-            device_ns_by_item.push(device_ns);
-            self.backend.download_resident_readbacks_many_into(
-                &output_handles,
-                &output_readbacks,
-                item_outputs,
-            )?;
-        }
-        Ok(())
     }
 
     pub(crate) fn take_cached_graph_with_replay_state(

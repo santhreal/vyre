@@ -78,7 +78,7 @@ impl CudaBackend {
         let enqueue_ns = crate::numeric::CUDA_NUMERIC
             .elapsed_nanos_u64(enqueue_started, "native-resident-dispatch enqueue latency")?;
         let wait_started = std::time::Instant::now();
-        let (outputs, device_ns) = resident_dispatch.pending.await_timed_result()?;
+        let (outputs, device_ns) = resident_dispatch.await_timed_result()?;
         let wait_ns = crate::numeric::CUDA_NUMERIC
             .elapsed_nanos_u64(wait_started, "native-resident-dispatch wait latency")?;
         let wall_ns = crate::numeric::CUDA_NUMERIC
@@ -107,7 +107,7 @@ impl CudaBackend {
         let dispatch = self.dispatch_resident_async_concrete_with_ptx_key(
             program, bindings, config, ptx_src, module_key, false, None, true, &prepared,
         )?;
-        let (dispatch_outputs, _) = dispatch.pending.await_timed_result()?;
+        let (dispatch_outputs, _) = dispatch.await_timed_result()?;
         vyre_driver::replace_output_buffers_preserving_slots(dispatch_outputs, outputs);
         Ok(())
     }

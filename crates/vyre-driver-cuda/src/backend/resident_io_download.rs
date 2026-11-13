@@ -344,48 +344,6 @@ impl CudaBackend {
         Ok(())
     }
 
-    /// Download selected byte ranges from several CUDA-resident buffers into
-    /// caller-owned output slots with one stream fence.
-    pub(crate) fn download_resident_readbacks_many_into(
-        &self,
-        handles: &[CudaResidentBuffer],
-        readbacks: &[CudaOutputReadback],
-        outputs: &mut OutputBuffers,
-    ) -> Result<(), BackendError> {
-        if handles.len() != readbacks.len() {
-            return Err(BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: CUDA resident readback expected matching handle/range counts but got {} handle(s) and {} range(s).",
-                    handles.len(),
-                    readbacks.len()
-                ),
-            });
-        }
-        let mut copies = SmallVec::<[ResidentReadbackCopy; 8]>::new();
-        reserve_smallvec(&mut copies, handles.len(), "readback copy")?;
-        let mut resident_view_cache = ResidentViewCache::new();
-        reserve_smallvec(
-            &mut resident_view_cache,
-            handles.len(),
-            "resident readback view cache",
-        )?;
-        for (&handle, readback) in handles.iter().zip(readbacks.iter()) {
-            let buffer = self.resident_store.view_cached(
-                handle,
-                &mut resident_view_cache,
-                "resident readback view cache",
-            )?;
-            copies.push(resident_readback_copy(
-                "resident readback",
-                handle.handle,
-                buffer,
-                readback.device_offset,
-                readback.byte_len,
-            )?);
-        }
-        self.download_resident_fused_copies_many_into(&copies, outputs)
-    }
-
     pub(crate) fn stage_fused_resident_readbacks_to_host(
         &self,
         fused_readbacks: &FusedResidentReadbacks,

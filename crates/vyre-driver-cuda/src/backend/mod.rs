@@ -112,7 +112,6 @@ pub(crate) use define_required_input;
 
 pub(crate) use module_cache::ModuleCacheKey;
 pub(crate) use plan::CudaDispatchPlan;
-pub(crate) use resident::resident_bindings_from_handles;
 pub(crate) use resident_dispatch_accounting::CudaResidentDispatchStep;
 // Public surface  -  these names appear on the crate root.
 pub use cuda_graph::CachedCudaGraph;
