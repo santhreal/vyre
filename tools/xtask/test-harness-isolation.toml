@@ -349,3 +349,8 @@ reason = "the LazyLock holds the path of the example binary built once for the f
 path = "crates/vyre-runtime/tests/artifact_session_fixtures/mod.rs"
 grouping = "grouped"
 reason = "the LazyLock holds an empty operation set as a cache; no case observes when it was filled"
+
+[[test]]
+path = "tools/structure-gate/tests/live_workspace.rs"
+grouping = "grouped"
+reason = "the OnceLock holds one scan of the checked-in tree; every contract reads it and no case writes the tree"
