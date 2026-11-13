@@ -1,25 +1,33 @@
 //! Parity tests for vyre-primitives graph::toposort + graph::reachable
 //! + graph::level_wave.
+//!
+//! The topological sort runs through `topo_order_csr_via`, the dispatch
+//! wrapper every caller uses, so these cases cover its CSR validation, its
+//! keyed static inputs and its order validation together with the kernel.
 
 #![cfg(all(test, feature = "device-tests"))]
 
 use crate::harness;
 
-use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_driver::{BindingPlan, DispatchConfig};
+use harness::{bytes_u32, u32_bytes, with_cuda_optimizer_dispatcher, with_live_backend};
+use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_libs::graph::dispatch::toposort::{
+    topo_order_csr_via, topo_order_csr_via_with_scratch_into, ToposortGpuScratch,
+};
 use vyre_libs::graph::level_wave::level_wave_program;
 use vyre_libs::graph::reachable::reachable_program;
-use vyre_libs::graph::toposort::toposort_program;
+use vyre_megakernel::SemanticExecutionError;
 use vyre_reference::composition_witness::{
     level_wave_witness as level_wave_cpu, reachable_witness as reachable,
     toposort_witness as toposort,
 };
 
-/// Build CSR for `toposort_program`: offsets indexed by `to`, targets
-/// listing `from`-nodes. Mirrors the CPU `toposort` "outgoing"
-/// adjacency (edges grouped by their `to`-endpoint).
+/// Build the toposort CSR: offsets indexed by `to`, targets listing
+/// `from`-nodes. An edge `(from, to)` states that `from` depends on `to`, so
+/// each row lists the dependents of one prerequisite, which is the adjacency
+/// the CPU `toposort` witness reads.
 fn build_toposort_csr(node_count: u32, edges: &[(u32, u32)]) -> (Vec<u32>, Vec<u32>) {
     let n = node_count as usize;
     let mut counts = vec![0u32; n];
@@ -40,87 +48,139 @@ fn build_toposort_csr(node_count: u32, edges: &[(u32, u32)]) -> (Vec<u32>, Vec<u
     (offsets, targets)
 }
 
-fn run_toposort(backend: &CudaBackend, node_count: u32, edges: &[(u32, u32)]) -> Vec<u32> {
+fn run_toposort_csr(
+    case: &str,
+    node_count: u32,
+    offsets: &[u32],
+    targets: &[u32],
+) -> Result<Vec<u32>, SemanticExecutionError> {
+    with_cuda_optimizer_dispatcher(case, |dispatcher, policy| {
+        topo_order_csr_via(dispatcher, policy, node_count, offsets, targets)
+    })
+}
+
+fn run_toposort(case: &str, node_count: u32, edges: &[(u32, u32)]) -> Vec<u32> {
     let (offsets, targets) = build_toposort_csr(node_count, edges);
-    let program = toposort_program(node_count, "offsets", "targets", "indeg", "queue", "order");
-    // The ABI plan is the one answer to which declarations take a host input
-    // slot and which come back as outputs. `order` is pipeline-live-out, so the
-    // backend allocates and clears it and no host input slot exists for it.
-    let plan = BindingPlan::build(&program).expect("toposort program has a backend ABI plan");
-    let inputs: Vec<Vec<u8>> = plan
-        .input_indices
-        .iter()
-        .map(|&index| {
-            let buffer = &program.buffers()[index];
-            match buffer.name() {
-                "offsets" => u32_bytes(&offsets),
-                // The kernel reads up to edge_count; an edgeless graph still
-                // needs one word of storage to bind.
-                "targets" if targets.is_empty() => vec![0u8; 4],
-                "targets" => u32_bytes(&targets),
-                "indeg" | "queue" => vec![0u8; buffer.count().max(1) as usize * 4],
-                other => panic!("unexpected toposort host input `{other}`"),
-            }
-        })
-        .collect();
-    let mut config = DispatchConfig::default();
-    // workgroup [1,1,1], serial lane-0 kernel.
-    config.grid_override = Some([1, 1, 1]);
-    let outputs = backend
-        .dispatch(&program, &inputs, &config)
-        .expect("dispatch");
-    let order_slot = plan
-        .output_indices
-        .iter()
-        .position(|&index| program.buffers()[index].name() == "order")
-        .expect("toposort declares `order` as an output");
-    let mut out = bytes_u32(&outputs[order_slot]);
-    out.truncate(node_count as usize);
-    out
+    run_toposort_csr(case, node_count, &offsets, &targets)
+        .unwrap_or_else(|error| panic!("Fix: toposort case `{case}` failed to dispatch: {error}"))
 }
 
 #[test]
 fn cuda_toposort_two_node_chain() {
-    with_live_backend("cuda_toposort_two_node_chain", |backend| {
-        let edges = vec![(0u32, 1u32)];
-        let cpu = toposort(2, &edges).expect("acyclic");
-        let gpu = run_toposort(backend, 2, &edges);
-        assert_eq!(gpu, cpu);
-        assert_eq!(gpu, vec![1, 0]);
-    });
+    let edges = vec![(0u32, 1u32)];
+    let cpu = toposort(2, &edges).expect("acyclic");
+    let gpu = run_toposort("two node chain", 2, &edges);
+    assert_eq!(gpu, cpu);
+    assert_eq!(gpu, vec![1, 0]);
 }
 
 #[test]
 fn cuda_toposort_diamond() {
-    with_live_backend("cuda_toposort_diamond", |backend| {
-        // 0 depends on 1 and 2; both depend on 3.
-        let edges = vec![(0u32, 1u32), (0, 2), (1, 3), (2, 3)];
-        let cpu = toposort(4, &edges).expect("acyclic diamond");
-        let gpu = run_toposort(backend, 4, &edges);
-        assert_eq!(gpu, cpu);
-        let pos = |v: u32| gpu.iter().position(|&x| x == v).unwrap();
-        assert!(pos(3) < pos(1));
-        assert!(pos(3) < pos(2));
-        assert!(pos(1) < pos(0));
-        assert!(pos(2) < pos(0));
-    });
+    // 0 depends on 1 and 2; both depend on 3.
+    let edges = vec![(0u32, 1u32), (0, 2), (1, 3), (2, 3)];
+    let cpu = toposort(4, &edges).expect("acyclic diamond");
+    let gpu = run_toposort("diamond", 4, &edges);
+    assert_eq!(gpu, cpu);
+    let pos = |v: u32| gpu.iter().position(|&x| x == v).unwrap();
+    assert!(pos(3) < pos(1));
+    assert!(pos(3) < pos(2));
+    assert!(pos(1) < pos(0));
+    assert!(pos(2) < pos(0));
 }
 
 #[test]
 fn cuda_toposort_no_edges_emits_all_nodes() {
-    with_live_backend("cuda_toposort_no_edges_emits_all_nodes", |backend| {
-        let edges: Vec<(u32, u32)> = vec![];
-        let cpu = toposort(3, &edges).expect("no-edge toposort");
-        let gpu = run_toposort(backend, 3, &edges);
-        // Both should permute {0,1,2}; the kernel emits in iteration
-        // order which equals CPU LIFO order.
-        let mut sorted_gpu = gpu.clone();
-        sorted_gpu.sort_unstable();
-        assert_eq!(sorted_gpu, vec![0, 1, 2]);
-        let mut sorted_cpu = cpu.clone();
-        sorted_cpu.sort_unstable();
-        assert_eq!(sorted_cpu, sorted_gpu);
+    let edges: Vec<(u32, u32)> = vec![];
+    let cpu = toposort(3, &edges).expect("no-edge toposort");
+    let gpu = run_toposort("no edges", 3, &edges);
+    let mut sorted_gpu = gpu.clone();
+    sorted_gpu.sort_unstable();
+    assert_eq!(sorted_gpu, vec![0, 1, 2]);
+    let mut sorted_cpu = cpu.clone();
+    sorted_cpu.sort_unstable();
+    assert_eq!(sorted_cpu, sorted_gpu);
+}
+
+#[test]
+fn cuda_toposort_of_no_nodes_is_empty() {
+    assert_eq!(
+        run_toposort_csr("no nodes", 0, &[0], &[]).expect("an empty graph sorts"),
+        Vec::<u32>::new()
+    );
+}
+
+/// One scratch serves a sequence of graphs with one node count. The graph
+/// inputs are keyed by content, so a repeat reuses them and a different graph
+/// replaces them; either mistake returns the other graph's order.
+#[test]
+fn cuda_toposort_reused_scratch_follows_each_graph() {
+    // Chains have one valid order each: 0,1,2,3 and its reverse.
+    let (ascending_offsets, ascending_targets) = build_toposort_csr(4, &[(1, 0), (2, 1), (3, 2)]);
+    let (descending_offsets, descending_targets) = build_toposort_csr(4, &[(0, 1), (1, 2), (2, 3)]);
+    let ascending = (&ascending_offsets, &ascending_targets, [0u32, 1, 2, 3]);
+    let descending = (&descending_offsets, &descending_targets, [3u32, 2, 1, 0]);
+
+    with_cuda_optimizer_dispatcher("toposort reused scratch", |dispatcher, policy| {
+        let mut scratch = ToposortGpuScratch::default();
+        let mut order = Vec::new();
+        for (step, (offsets, targets, expected)) in [ascending, ascending, descending, ascending]
+            .into_iter()
+            .enumerate()
+        {
+            topo_order_csr_via_with_scratch_into(
+                dispatcher,
+                policy,
+                4,
+                offsets,
+                targets,
+                &mut scratch,
+                &mut order,
+            )
+            .unwrap_or_else(|error| panic!("Fix: reused-scratch step {step} failed: {error}"));
+            assert_eq!(order, expected, "reused-scratch step {step}");
+        }
     });
+}
+
+/// The kernel does not diagnose a cycle; the wrapper's order validation does,
+/// and reports it as a backend failure rather than returning a partial order.
+#[test]
+fn cuda_toposort_rejects_a_cycle() {
+    let (offsets, targets) = build_toposort_csr(3, &[(0, 1), (1, 2), (2, 0)]);
+    match run_toposort_csr("three node cycle", 3, &offsets, &targets) {
+        Err(SemanticExecutionError::Backend(message)) => assert!(
+            message.contains("graph may be cyclic"),
+            "Fix: a cyclic graph must be reported as one: {message}"
+        ),
+        other => panic!("Fix: a cyclic graph must fail order validation, got {other:?}"),
+    }
+}
+
+/// Malformed CSR is an invalid request, rejected before any dispatch.
+#[test]
+fn cuda_toposort_rejects_malformed_csr() {
+    for (case, offsets, targets, expected) in [
+        (
+            "short offsets",
+            &[0u32, 1, 2][..],
+            &[1u32, 2][..],
+            "offsets.len() == node_count + 1",
+        ),
+        (
+            "target out of range",
+            &[0u32, 1, 1, 1][..],
+            &[7u32][..],
+            "targets[0]=7 is outside node_count=3",
+        ),
+    ] {
+        match run_toposort_csr(case, 3, offsets, targets) {
+            Err(SemanticExecutionError::InvalidRequest(message)) => assert!(
+                message.contains(expected),
+                "Fix: case `{case}` must state `{expected}`: {message}"
+            ),
+            other => panic!("Fix: case `{case}` must be an invalid request, got {other:?}"),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------

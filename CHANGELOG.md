@@ -4560,6 +4560,9 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   module; `xtask/tests/common` owns the `path:line:column` violation format.
   `vyre_test_support::ir_variants::single_u32_output_program` owns the
   validator program fixture that three validation suites each built by hand.
+- `vyre_libs::graph::dispatch::toposort::topo_order_csr_via` and its two
+  scratch variants take the dispatcher as `&dyn SemanticExecutor`, as every
+  other graph dispatch wrapper does.
 - `vyre_foundation::algebra::composition::trap_program` builds the program a
   builder returns when its inputs cannot produce a valid one. `vyre-primitives`
   and `vyre-libs` each had their own copy, differing only in whether one output

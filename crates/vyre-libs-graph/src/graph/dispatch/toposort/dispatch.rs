@@ -27,7 +27,7 @@ use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticE
 /// rejects the primitive, or the returned order is not a full permutation of
 /// `0..node_count` (cycle or malformed backend output).
 pub fn topo_order_csr_via(
-    dispatcher: &impl SemanticExecutor,
+    dispatcher: &dyn SemanticExecutor,
     policy: &SemanticExecutionPolicy,
     node_count: u32,
     offsets: &[u32],
@@ -49,7 +49,7 @@ pub fn topo_order_csr_via(
 
 /// Topologically sort a dependency graph through the dispatcher using caller-owned scratch.
 pub fn topo_order_csr_via_with_scratch(
-    dispatcher: &impl SemanticExecutor,
+    dispatcher: &dyn SemanticExecutor,
     policy: &SemanticExecutionPolicy,
     node_count: u32,
     offsets: &[u32],
@@ -65,7 +65,7 @@ pub fn topo_order_csr_via_with_scratch(
 
 /// Topologically sort a dependency graph into caller-owned output storage.
 pub fn topo_order_csr_via_with_scratch_into(
-    dispatcher: &impl SemanticExecutor,
+    dispatcher: &dyn SemanticExecutor,
     policy: &SemanticExecutionPolicy,
     node_count: u32,
     offsets: &[u32],

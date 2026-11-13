@@ -1,10 +1,8 @@
-//! DAG topological-sort dispatch wrapper.
+//! Dispatch wrapper for the CSR topological sort in `crate::graph::toposort`.
 //!
-//! Wires `crate::graph::toposort::toposort` (zero prior
-//! consumers) and `reachable::reachable` so the optimizer's pass
-//! scheduler / megakernel scheduler / dispatch ordering can rely on
-//! the same primitive shipped to user dialects. Replaces ad-hoc
-//! Kahn's-algorithm reimplementations the optimizer carried inline.
+//! The wrapper validates the CSR, keys the encoded graph inputs so a reused
+//! [`ToposortGpuScratch`] encodes one graph once, and validates the returned
+//! order before returning it.
 
 mod dispatch;
 

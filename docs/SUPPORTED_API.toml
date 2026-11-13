@@ -108434,21 +108434,21 @@ exported_item_count = 1043
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_libs_graph::graph::dispatch::toposort::topo_order_csr_via(dispatcher: &impl vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, offsets: &[u32], targets: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>"
+  path = "vyre_libs_graph::graph::dispatch::toposort::topo_order_csr_via(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, offsets: &[u32], targets: &[u32]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_libs_graph::graph::dispatch::toposort::topo_order_csr_via_with_scratch(dispatcher: &impl vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, offsets: &[u32], targets: &[u32], scratch: &mut vyre_libs_graph::graph::dispatch::toposort::ToposortGpuScratch) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>"
+  path = "vyre_libs_graph::graph::dispatch::toposort::topo_order_csr_via_with_scratch(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, offsets: &[u32], targets: &[u32], scratch: &mut vyre_libs_graph::graph::dispatch::toposort::ToposortGpuScratch) -> core::result::Result<alloc::vec::Vec<u32>, vyre_megakernel::execution::SemanticExecutionError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
   wire_compatibility = "api-only"
 
   [[package.item]]
-  path = "vyre_libs_graph::graph::dispatch::toposort::topo_order_csr_via_with_scratch_into(dispatcher: &impl vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, offsets: &[u32], targets: &[u32], scratch: &mut vyre_libs_graph::graph::dispatch::toposort::ToposortGpuScratch, order: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>"
+  path = "vyre_libs_graph::graph::dispatch::toposort::topo_order_csr_via_with_scratch_into(dispatcher: &dyn vyre_megakernel::execution::SemanticExecutor, policy: &vyre_megakernel::execution::SemanticExecutionPolicy, node_count: u32, offsets: &[u32], targets: &[u32], scratch: &mut vyre_libs_graph::graph::dispatch::toposort::ToposortGpuScratch, order: &mut alloc::vec::Vec<u32>) -> core::result::Result<(), vyre_megakernel::execution::SemanticExecutionError>"
   kind = "fn"
   stability = "extension"
   feature = "unconditional"
