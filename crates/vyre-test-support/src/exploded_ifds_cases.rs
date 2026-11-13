@@ -1,22 +1,14 @@
 //! The declared exploded-supergraph (IFDS) CPU-reference case table.
 //!
-//! Two suites drove the same generated case stream against the same CSR
-//! contract: the primitive reference in `vyre_libs::graph::exploded` and
-//! the substrate consumer in `vyre_libs::graph::dispatch::exploded`. Each
-//! carried its own copy of the construction, and the copies had already drifted
-//! in breadth: the primitive suite ran 1024 mixed-flow cases and the substrate
-//! suite ran 512 of the same stream, so the substrate dispatch path was never
-//! asked about the upper half of a corpus its own file claimed to define. Two
-//! copies of a case stream are two corpora that only look identical.
+//! This module defines which cases exist and what a correct CSR for them holds
+//! ([`ExplodedIfdsCase::assert_csr`]). The arm in
+//! `vyre-libs-graph/tests/sweep_graph_cpu_oracle_matrix.rs` holds the CPU
+//! witness `vyre_reference::composition_witness::exploded_ifds_csr_witness` and
+//! the dispatched Program `vyre_libs_graph::graph::dispatch::exploded` to it.
 //!
-//! This module owns which cases exist and what a correct CSR for them looks
-//! like ([`ExplodedIfdsCase::assert_csr`]). What each crate asserts stays in
-//! that crate: an arm names the builder it pins.
-//!
-//! [`arm_coverage`] is why a case group cannot be declared and then quietly
-//! skipped: each arm records the groups it asserted and the ledger reads this
-//! table back at run time, so a group added here with no arm in a crate turns
-//! that crate's suite red instead of widening the table for nobody.
+//! [`arm_coverage`] keeps a group from being declared and then skipped: the arm
+//! records the groups it asserted and the ledger reads this table back at run
+//! time, so a group added here with no arm turns that suite red.
 
 use crate::case_table::ArmCoverage;
 
@@ -152,9 +144,6 @@ impl ExplodedIfdsCase {
 }
 
 /// Every declared exploded-IFDS case group.
-///
-/// Bounds are the union of what the two copied suites drove, so no arm loses a
-/// case to the merge.
 #[must_use]
 pub fn declared_groups() -> Vec<ExplodedIfdsCaseGroup> {
     vec![

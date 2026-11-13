@@ -10,18 +10,21 @@
 
 #![cfg(feature = "graph-dispatch")]
 #![forbid(unsafe_code)]
+use vyre_test_support::exploded_ifds_cases::{arm_coverage, declared_groups, ExplodedIfdsCase};
 use vyre_test_support::semantic_requests;
 
 use vyre_driver_reference::ReferenceSemanticExecutor;
-use vyre_libs_graph::graph::dispatch::exploded::build_ifds_csr_via;
+use vyre_libs_graph::graph::dispatch::exploded::{
+    build_ifds_csr_via, build_ifds_csr_via_with_scratch_into, IfdsCsrGpuScratch,
+};
 use vyre_libs_graph::graph::motif::MotifEdge;
 use vyre_reference::composition_witness::{
     csr_backward_closure_witness as backward_closure_witness,
     csr_backward_step_with_change_witness as backward_step_with_change_witness,
     csr_bidirectional_step_witness as reference_bidirectional_step,
     csr_forward_step_with_change_witness as reference_forward_step_with_change_flag,
-    csr_persistent_closure_witness, exploded_ifds_csr_witness as build_cpu_reference,
-    exploded_ifds_csr_witness as reference_build_ifds_csr, motif_witness, path_reconstruct_witness,
+    csr_persistent_closure_witness, exploded_ifds_csr_witness, motif_witness,
+    path_reconstruct_witness,
 };
 
 /// Shapes per substrate-wrapper family. The wrappers delegate to the primitive
@@ -209,23 +212,16 @@ fn oracle_backward_closure(
     out
 }
 
-fn canonical_ifds_csr(
-    num_procs: u32,
-    blocks_per_proc: u32,
-    facts_per_proc: u32,
-    intra: &[(u32, u32, u32)],
-    inter: &[(u32, u32, u32, u32)],
-    gen: &[(u32, u32, u32)],
-    kill: &[(u32, u32, u32)],
-) -> (Vec<u32>, Vec<u32>) {
-    let (row_ptr, col_idx) = build_cpu_reference(
-        num_procs,
-        blocks_per_proc,
-        facts_per_proc,
-        intra,
-        inter,
-        gen,
-        kill,
+/// The CPU witness CSR of `case`, rows sorted.
+fn canonical_ifds_csr(case: &ExplodedIfdsCase) -> (Vec<u32>, Vec<u32>) {
+    let (row_ptr, col_idx) = exploded_ifds_csr_witness(
+        case.num_procs,
+        case.blocks_per_proc,
+        case.facts_per_proc,
+        &case.intra_edges,
+        &case.inter_edges,
+        &case.flow_gen,
+        &case.flow_kill,
     );
     canonicalize_csr_rows(&row_ptr, &col_idx)
 }
@@ -240,73 +236,6 @@ fn canonicalize_csr_rows(row_ptr: &[u32], col_idx: &[u32]) -> (Vec<u32>, Vec<u32
         }
     }
     (row_ptr.to_vec(), canonical_col)
-}
-
-type GeneratedIfdsRules = (
-    u32,
-    u32,
-    u32,
-    Vec<(u32, u32, u32)>,
-    Vec<(u32, u32, u32, u32)>,
-    Vec<(u32, u32, u32)>,
-    Vec<(u32, u32, u32)>,
-);
-
-fn generated_ifds_rules(seed: u64) -> GeneratedIfdsRules {
-    let mut rng = Rng::new(seed);
-    let num_procs = 1 + rng.range(4);
-    let blocks_per_proc = 1 + rng.range(8);
-    let facts_per_proc = 1 + rng.range(8);
-    let mut intra_edges = Vec::new();
-    let mut inter_edges = Vec::new();
-    let mut flow_gen = Vec::new();
-    let mut flow_kill = Vec::new();
-
-    for p in 0..num_procs {
-        for b in 0..blocks_per_proc {
-            if blocks_per_proc > 1 && rng.next_u32() & 1 == 0 {
-                intra_edges.push((p, b, (b + 1) % blocks_per_proc));
-            }
-            let fact = rng.range(facts_per_proc);
-            if rng.next_u32() % 3 == 0 {
-                flow_gen.push((p, b, fact));
-            }
-            if rng.next_u32() % 5 == 0 && fact != 0 {
-                flow_kill.push((p, b, fact));
-            }
-        }
-    }
-    if num_procs > 1 {
-        for p in 0..num_procs - 1 {
-            if rng.next_u32() & 1 == 0 {
-                inter_edges.push((p, 0, p + 1, 0));
-            }
-        }
-    }
-
-    (
-        num_procs,
-        blocks_per_proc,
-        facts_per_proc,
-        intra_edges,
-        inter_edges,
-        flow_gen,
-        flow_kill,
-    )
-}
-
-/// Deterministic IFDS rule-set stream for one sweep family.
-fn ifds_cases(
-    cases: u64,
-    seed: u64,
-    stride: u64,
-) -> impl Iterator<Item = (u64, GeneratedIfdsRules)> {
-    (0..cases).map(move |index| {
-        (
-            index,
-            generated_ifds_rules(seed ^ index.wrapping_mul(stride)),
-        )
-    })
 }
 
 fn generated_parent(seed: u64) -> (Vec<u32>, Vec<u32>, u32) {
@@ -554,75 +483,86 @@ fn sweep_persistent_bfs_matches_independent_oracle_matrix() {
     assert_eq!(assertions, CASES_PER_FAMILY as usize * 2);
 }
 
+/// Every declared exploded-IFDS case group holds on the CPU witness and on the
+/// dispatched Program, and the two agree row for row.
+///
+/// Which cases exist, and which edges a correct CSR must and must not hold,
+/// belong to `vyre_test_support::exploded_ifds_cases`. The ledger reads that
+/// table at run time, so a group declared there with no branch here fails by
+/// name. Every case dispatches through one scratch reused in table order, so a
+/// rule-column or input cache that serves a previous case's rules diverges from
+/// the witness. The hand-checked groups also dispatch through the allocating
+/// wrapper, which starts from an empty scratch.
 #[test]
-fn sweep_exploded_ifds_substrate_matches_primitive_oracle_matrix() {
-    let mut assertions = 0usize;
-    for (case, (num_procs, blocks_per_proc, facts_per_proc, intra, inter, gen, kill)) in
-        ifds_cases(CASES_PER_FAMILY, 0x1F05_0004, 0x85EB_CA6B)
-    {
-        let expected = canonical_ifds_csr(
-            num_procs,
-            blocks_per_proc,
-            facts_per_proc,
-            &intra,
-            &inter,
-            &gen,
-            &kill,
-        );
-        let (row_ptr, col_idx) = reference_build_ifds_csr(
-            num_procs,
-            blocks_per_proc,
-            facts_per_proc,
-            &intra,
-            &inter,
-            &gen,
-            &kill,
-        );
-        let actual = canonicalize_csr_rows(&row_ptr, &col_idx);
-        assert_eq!(
-            actual, expected,
-            "Fix: exploded IFDS substrate reference case {case} procs={num_procs} blocks={blocks_per_proc} facts={facts_per_proc} must match primitive CPU oracle."
-        );
-        assertions += 2;
-    }
-    assert_eq!(assertions, CASES_PER_FAMILY as usize * 2);
-}
-
-#[test]
-fn sweep_exploded_ifds_via_matches_cpu_oracle_matrix() {
+fn exploded_ifds_arms_cover_every_declared_case_group() {
     let dispatcher = ReferenceSemanticExecutor;
-    let mut assertions = 0usize;
-    for (case, (num_procs, blocks_per_proc, facts_per_proc, intra, inter, gen, kill)) in
-        ifds_cases(CASES_PER_FAMILY, 0x1F05_0005, 0xC2B2_AE35)
-    {
-        let expected = canonical_ifds_csr(
-            num_procs,
-            blocks_per_proc,
-            facts_per_proc,
-            &intra,
-            &inter,
-            &gen,
-            &kill,
-        );
-        let actual = build_ifds_csr_via(
-            &dispatcher,
-            &semantic_requests::wrapper_policy(),
-            num_procs,
-            blocks_per_proc,
-            facts_per_proc,
-            &intra,
-            &inter,
-            &gen,
-            &kill,
-        )
-        .unwrap_or_else(|error| {
-            panic!("Fix: exploded IFDS via CPU oracle case {case} must dispatch: {error:?}")
-        });
-        assert_eq!(
-            actual, expected,
-            "Fix: exploded IFDS via CPU oracle case {case} procs={num_procs} blocks={blocks_per_proc} facts={facts_per_proc} must match reference CSR."
-        );
-        assertions += 2;
+    let policy = semantic_requests::wrapper_policy();
+    let mut scratch = IfdsCsrGpuScratch::default();
+    let mut row_ptr = Vec::new();
+    let mut col_idx = Vec::new();
+    let mut coverage = arm_coverage();
+    for group in declared_groups() {
+        let through_wrapper = match group.name {
+            "flow_rule_edges" | "empty_domain" => true,
+            "mixed_flow_stream" | "dense_chain" => false,
+            _ => continue,
+        };
+        for case in &group.cases {
+            let witness = canonical_ifds_csr(case);
+            case.assert_csr("CPU witness", &witness.0, &witness.1);
+            build_ifds_csr_via_with_scratch_into(
+                &dispatcher,
+                &policy,
+                case.num_procs,
+                case.blocks_per_proc,
+                case.facts_per_proc,
+                &case.intra_edges,
+                &case.inter_edges,
+                &case.flow_gen,
+                &case.flow_kill,
+                &mut scratch,
+                &mut row_ptr,
+                &mut col_idx,
+            )
+            .unwrap_or_else(|error| {
+                panic!(
+                    "Fix: exploded IFDS dispatch must accept {}: {error:?}",
+                    case.label
+                )
+            });
+            case.assert_csr("dispatch", &row_ptr, &col_idx);
+            assert_eq!(
+                (row_ptr.as_slice(), col_idx.as_slice()),
+                (witness.0.as_slice(), witness.1.as_slice()),
+                "Fix: exploded IFDS dispatch with a reused scratch must match the CPU witness at {}.",
+                case.label
+            );
+            if through_wrapper {
+                let fresh = build_ifds_csr_via(
+                    &dispatcher,
+                    &policy,
+                    case.num_procs,
+                    case.blocks_per_proc,
+                    case.facts_per_proc,
+                    &case.intra_edges,
+                    &case.inter_edges,
+                    &case.flow_gen,
+                    &case.flow_kill,
+                )
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "Fix: exploded IFDS dispatch from an empty scratch must accept {}: {error:?}",
+                        case.label
+                    )
+                });
+                assert_eq!(
+                    fresh, witness,
+                    "Fix: exploded IFDS dispatch from an empty scratch must match the CPU witness at {}.",
+                    case.label
+                );
+            }
+        }
+        coverage.record(group.name, group.cases.len());
     }
-    assert_eq!(assertions, CASES_PER_FAMILY as usize * 2);
+    coverage.assert_covers_declared_table();
 }
