@@ -1,5 +1,5 @@
 schema_version = 2
-bom_timestamp = "2026-11-13T01:28:40Z"
+bom_timestamp = "2026-11-13T02:18:46Z"
 rustc_version = "1.86.0 (05f9846f8 2025-03-31)"
 cargo_version = "1.86.0 (adf9b6ad1 2025-02-28)"
 target_triples = [
@@ -3867,7 +3867,7 @@ digest = "9819c7f64d16e6b20a994bad2d21a2f85b409f1cf868cf0478178306da0956e4"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/release-workload-matrix.json"
-digest = "57c4f1e6d84a8d31d708046a2b3fbe57b5fa564141c988355cd3bb9bd0c1fd91"
+digest = "f80a91b2090f50d891d49193509f43e5ac34127eab397e995c0c0c6c060d44be"
 
 [[benchmark_baselines]]
 path = "release/evidence/benchmarks/resident-optimizer-pipeline.json"
