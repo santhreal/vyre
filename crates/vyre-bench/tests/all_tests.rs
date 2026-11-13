@@ -64,6 +64,11 @@ pub mod device_profile_admissibility;
 #[path = "dfa_full_coverage.rs"]
 pub mod dfa_full_coverage;
 
+/// Integration tests from `tests/every_registered_case_verifies.rs`.
+#[cfg(feature = "device-tests")]
+#[path = "every_registered_case_verifies.rs"]
+pub mod every_registered_case_verifies;
+
 /// Integration tests from `tests/evidence_receipt_contracts.rs`.
 #[path = "evidence_receipt_contracts.rs"]
 pub mod evidence_receipt_contracts;
