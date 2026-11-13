@@ -24,13 +24,10 @@ use structure_gate::module_layout::{
 use structure_gate::{
     category_home_failures, duplicate_public_type_name_failures, frontend_owner_failures,
     geometry_constant_failures, operation_identity_failures, registration_owner_failures,
-    registry_link_failures, roster_failures, scan, substrate_home_failures, workspace_root,
-    Workspace,
+    registry_link_failures, roster_failures, substrate_home_failures, workspace_root,
 };
 
-fn workspace() -> Workspace {
-    scan(&workspace_root())
-}
+use crate::live_workspace::workspace;
 
 fn report(kind: &str, failures: &[String]) -> String {
     let mut message = format!("{} {kind} violation(s):\n", failures.len());
@@ -128,7 +125,7 @@ fn every_crate_in_the_checkout_is_declared() {
 /// every registration rule pass by finding no registrations to judge.
 #[test]
 fn the_registration_scan_is_not_vacuous() {
-    let registrations = workspace().registrations;
+    let registrations = &workspace().registrations;
 
     assert!(
         registrations.len() > 100,
@@ -148,7 +145,7 @@ fn the_registration_scan_is_not_vacuous() {
 /// attribute the file can see, so they are judged by `TestSources`.
 #[test]
 fn no_production_registration_comes_from_a_test_source() {
-    let registrations = workspace().registrations;
+    let registrations = &workspace().registrations;
     let tests = TestSources::of(&workspace_root());
     let from_tests: Vec<&str> = registrations
         .iter()
@@ -200,7 +197,7 @@ fn no_registry_source_is_linked_by_a_discarding_import() {
 /// make this fail on a correct tree.
 #[test]
 fn the_registry_submitter_scan_is_not_vacuous() {
-    let submitters = workspace().registry_submitters;
+    let submitters = &workspace().registry_submitters;
 
     for expected in [
         "vyre-libs",

@@ -13,7 +13,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::Path;
 
-use structure_gate::{scan, workspace_root};
+use structure_gate::workspace_root;
 
 /// Directory holding one public-API snapshot per publishable package.
 const SNAPSHOT_DIR: &str = "docs/public-api";
@@ -90,7 +90,7 @@ fn reexported_paths(lines: &[String]) -> Vec<&str> {
 fn a_facade_module_re_export_reaches_the_published_module_set() {
     let root = workspace_root();
     let lines = snapshot_lines(&root);
-    let workspace = scan(&root);
+    let workspace = crate::live_workspace::workspace();
     let published: BTreeSet<&str> = workspace
         .published_modules
         .iter()

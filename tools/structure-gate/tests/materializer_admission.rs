@@ -15,7 +15,7 @@
 //! `admit` decides lives in
 //! `crates/vyre-driver-spirv/tests/target_payload_admission_contract.rs`.
 
-use structure_gate::{materializer_admission_failures, scan, workspace_root};
+use structure_gate::materializer_admission_failures;
 
 /// WHY: a private `invalid_module` or `compile_error` is how the four copies
 /// diverged in the first place.
@@ -114,8 +114,7 @@ fn a_backend_that_defines_its_own_admission_is_a_violation() {
 /// while the four copies existed, and it stays red if one comes back.
 #[test]
 fn every_concrete_backend_admits_through_the_shared_module() {
-    let root = workspace_root();
-    let workspace = scan(&root);
+    let workspace = crate::live_workspace::workspace();
     assert!(
         !workspace.materializers.is_empty(),
         "no `vyre-driver-*` materializer was scanned; the rule would pass vacuously"
