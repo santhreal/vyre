@@ -9,6 +9,7 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "The vyre operations that cannot be composed: marker types, hardware intrinsics, and the per-domain kernels a backend sees as one unit."
+readme = "README.md"
 keywords = ["gpu", "ir", "primitive", "vyre", "lego"]
 categories = ["algorithms", "api-bindings"]
 documentation = "https://docs.rs/vyre-primitives"

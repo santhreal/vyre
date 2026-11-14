@@ -9,6 +9,7 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Sole owner of inventory registry link anchors and the per-source floor every registry read is judged against."
+readme = "README.md"
 # Linkage owner for internal binaries, never published.
 publish = false
 

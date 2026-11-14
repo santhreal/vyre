@@ -9,6 +9,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Workspace structural verifier, duplication scanner, coverage pruner, and IR debugger."
+readme = "README.md"
 publish = false
 default-run = "xtask"
 

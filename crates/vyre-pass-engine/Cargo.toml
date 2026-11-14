@@ -10,6 +10,7 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Vyre pass engine: executes optimizer analysis Programs through compiler-owned semantic execution."
+readme = "README.md"
 keywords = ["compiler", "optimizer", "dispatch", "vyre"]
 categories = ["compilers", "algorithms"]
 documentation = "https://docs.rs/vyre-pass-engine"

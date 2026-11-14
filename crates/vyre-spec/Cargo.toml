@@ -5,6 +5,7 @@ autotests = false
 edition.workspace = true
 rust-version.workspace = true
 description = "Frozen data contracts for vyre  -  OpDef, AlgebraicLaw, Category, IntrinsicTable"
+readme = "README.md"
 license.workspace = true
 authors.workspace = true
 repository.workspace = true

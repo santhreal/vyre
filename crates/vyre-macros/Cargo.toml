@@ -9,6 +9,7 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Procedural macros for vyre compiler passes  -  #[vyre_pass], #[vyre_ast_registry]"
+readme = "README.md"
 keywords = ["gpu", "macro", "compiler", "ir", "vyre"]
 categories = ["development-tools::procedural-macro-helpers", "compilers"]
 documentation = "https://docs.rs/vyre-macros"
