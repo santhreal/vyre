@@ -119,11 +119,15 @@ impl EvidenceStore {
         if let Some(dir) = &self.root_dir {
             let file_path = dir.join(format!("{address}.json"));
             if file_path.exists() {
-                let content = xtask::output_arg::read_text_bounded(
-                    &file_path,
-                    MAX_BENCHMARK_RECEIPT_BYTES,
-                    "evidence receipt",
-                )?;
+                let meta = std::fs::metadata(&file_path)?;
+                if meta.len() > MAX_BENCHMARK_RECEIPT_BYTES as u64 {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "evidence receipt exceeds byte limit",
+                    )
+                    .into());
+                }
+                let content = std::fs::read_to_string(&file_path)?;
                 let receipt: BenchmarkReceipt = serde_json::from_str(&content)?;
                 let computed = receipt.content_address();
                 if computed != address {

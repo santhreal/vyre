@@ -31,7 +31,6 @@ pub(crate) struct RequestIdentity<'a> {
     objective: CompileObjective,
     search_budget: SearchBudget,
     device: DeviceIdentity,
-    mesh: Digest,
 }
 
 /// The identity of one target a guarded artifact set was compiled for.
@@ -96,7 +95,6 @@ impl<'a> From<&'a ValidatedCompileRequest> for RequestIdentity<'a> {
             objective: request.objective,
             search_budget: request.search_budget,
             device: request.device.into(),
-            mesh: request.mesh().authentication(),
         }
     }
 }

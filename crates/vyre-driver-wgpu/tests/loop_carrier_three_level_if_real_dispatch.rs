@@ -2,7 +2,7 @@
 //! a loop body whose only outer-var Assign is nested 3-deep inside
 //! `if_then(cond_a) { if_then(cond_b) { if_then_else(cond_c) { assign(out_var, ..) } } }`.
 //!
-//! `crates/vyre-emit-naga/tests/carrier_scope_regression.rs` only checks WGSL
+//! `crates/vyre-emit/tests/naga/carrier_scope_regression.rs` only checks WGSL
 //! validation; it cannot catch behavioral divergence. This test
 //! actually dispatches the program on the live wgpu backend and asserts
 //! the carrier value escapes the loop with the expected post-iteration

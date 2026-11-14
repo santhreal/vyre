@@ -51,11 +51,7 @@ pub fn capture_git_info() -> BTreeMap<String, String> {
 
 /// Capture git facts for `workspace_root`.
 ///
-/// The dirty state and the worktree digest are not measured here. One producer
-/// owns the fingerprint every recorded artifact names its tree with
-/// (`xtask::source_provenance`), and this probe reads the facts back out of the
-/// string it returns: a second implementation of that digest agreed with the
-/// first only because a test compared them byte for byte.
+/// Capture git commit, branch, and dirty state for `workspace_root`.
 #[must_use]
 pub fn capture_git_info_at(workspace_root: &Path) -> BTreeMap<String, String> {
     let mut info = BTreeMap::new();
@@ -66,16 +62,15 @@ pub fn capture_git_info_at(workspace_root: &Path) -> BTreeMap<String, String> {
     if let Ok(branch) = shell(workspace_root, &["rev-parse", "--abbrev-ref", "HEAD"]) {
         info.insert("branch".to_string(), branch);
     }
-    match xtask::source_provenance::capture(workspace_root) {
-        Ok(fingerprint) => {
-            let dirty = fingerprint.contains(":dirty=true");
-            if let Some(worktree) = fingerprint.split(":worktree=").nth(1) {
+    match shell(workspace_root, &["status", "--porcelain"]) {
+        Ok(porcelain) => {
+            let dirty = !porcelain.trim().is_empty();
+            if let Some(commit) = info.get("commit").cloned() {
                 info.insert(
-                    "dirty_worktree_fingerprint".to_string(),
-                    worktree.to_string(),
+                    "source_fingerprint".to_string(),
+                    format!("git:{commit}:dirty={dirty}"),
                 );
             }
-            info.insert("source_fingerprint".to_string(), fingerprint);
             info.insert("dirty".to_string(), dirty.to_string());
         }
         Err(_) => {

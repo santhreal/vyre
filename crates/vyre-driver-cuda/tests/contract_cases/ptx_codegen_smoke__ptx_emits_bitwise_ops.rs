@@ -281,7 +281,7 @@ fn ptx_uses_strict_inverse_sqrt_without_ulp_budget() {
 /// not took 21 registered ops out of the conformance certificate on cuda.
 ///
 /// The invariant over the whole `UnOp` space lives with the emitter that owns
-/// the decision, in `crates/vyre-emit-ptx/tests/ulp_budget_is_not_an_admission_gate.rs`.
+/// the decision, in `crates/vyre-emit/tests/ptx/ulp_budget_is_not_an_admission_gate.rs`.
 /// What this asserts is that the direct CUDA dispatch route inherits it.
 ///
 /// Does not catch: a budget that changes the emitted numbers beyond the parity
@@ -530,8 +530,8 @@ fn ptx_emits_trap_as_lane_exit() {
     assert!(
         secondary_text.contains(&format!(
             "{}1 decode.invalid",
-            vyre_emit_ptx::TRAP_TAG_PTX_MARKER
-        )) && secondary_text.contains(vyre_emit_ptx::TRAP_SIDECAR_SYMBOL)
+            vyre_emit::ptx::TRAP_TAG_PTX_MARKER
+        )) && secondary_text.contains(vyre_emit::ptx::TRAP_SIDECAR_SYMBOL)
             && secondary_text.contains("atom.global.cas.b32")
             && secondary_text.contains("st.global.u32")
             && secondary_text.contains("bra $L_exit;"),

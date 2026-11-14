@@ -103,7 +103,6 @@ pub const MAX_ENCODED_DEBUG_RECORDS: u32 = 1_048_576;
 
 mod codec;
 
-pub(crate) use codec::read_word;
 pub use codec::{
     control_byte_len, count_done_ring_slots, debug_log_byte_len, encode_control,
     encode_empty_debug_log, encode_empty_ring, read_debug_log, read_debug_log_into,

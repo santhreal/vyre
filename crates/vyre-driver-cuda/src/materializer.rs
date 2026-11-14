@@ -64,6 +64,7 @@ impl ArtifactMaterializer for CudaMaterializer {
                         program: module.program,
                         pipeline,
                         config: module.config,
+                        plan: module.plan,
                     })
                 })?;
         // The neutral rejection record, in full. This backend used to reword an
@@ -84,6 +85,7 @@ struct CudaExecutableModule {
     program: Arc<Program>,
     pipeline: Arc<CudaCompiledPipeline>,
     config: DispatchConfig,
+    plan: vyre_driver::BindingPlan,
 }
 
 struct CudaArtifactInstance {
@@ -99,7 +101,7 @@ impl ArtifactInstance for CudaArtifactInstance {
     vyre_driver::artifact_instance_identity!();
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-        self.submit_routed(&bindings, || {
+        self.submit_routed(bindings, || {
             materialize::invalid_module(
                 "CUDA artifact submission cannot mix host and resident resources",
             )

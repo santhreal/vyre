@@ -36,16 +36,11 @@ struct RecordedModule {
     index: usize,
     program: Arc<Program>,
     config: DispatchConfig,
+    plan: vyre_driver::BindingPlan,
 }
 
 impl ExecutableModule for RecordedModule {
-    fn program(&self) -> &Program {
-        &self.program
-    }
-
-    fn config(&self) -> &DispatchConfig {
-        &self.config
-    }
+    vyre_driver::executable_module!();
 }
 
 /// What one resident launch was handed.
@@ -156,6 +151,7 @@ fn two_stage_instance() -> (Artifact, TargetPayload, RecordingInstance) {
             index,
             program: module.program,
             config: module.config,
+            plan: module.plan,
         })
         .collect();
     let instance = RecordingInstance {

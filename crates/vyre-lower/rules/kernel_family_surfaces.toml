@@ -9,13 +9,13 @@ public_reexport = "crates/vyre-lower/src/analyses/mod.rs"
 schedule_config = "crates/vyre-lower/rules/schedules/lower_analyses.toml"
 evidence_writer = "crates/vyre-lower/src/audit.rs"
 forbid_section_dividers = true
-forbidden_private_import_prefixes = ["vyre_emit_naga::", "vyre_emit_ptx::", "vyre_driver_cuda::", "vyre_driver_wgpu::"]
+forbidden_private_import_prefixes = ["vyre_emit::naga::", "vyre_emit::ptx::", "vyre_driver_cuda::", "vyre_driver_wgpu::"]
 
 [[family]]
 family_id = "emit.naga"
-root = "crates/vyre-emit-naga/src/emitter"
-public_reexport = "crates/vyre-emit-naga/src/emitter/mod.rs"
+root = "crates/vyre-emit/src/naga/emitter"
+public_reexport = "crates/vyre-emit/src/naga/emitter/mod.rs"
 schedule_config = "crates/vyre-lower/rules/schedules/emit_naga.toml"
-evidence_writer = "crates/vyre-emit-naga/src/lib.rs"
+evidence_writer = "crates/vyre-emit/src/naga/mod.rs"
 forbid_section_dividers = true
 forbidden_private_import_prefixes = ["vyre_lower::rewrites::", "vyre_lower::analyses::"]

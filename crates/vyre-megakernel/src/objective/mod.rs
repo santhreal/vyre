@@ -6,8 +6,8 @@
 //! because neither artifact says which it is. Every production compile therefore
 //! carries a [`CompileObjective`]: an ordered primary metric, tie breakers, the
 //! workload arrangements it optimizes for, the risk statistic that decides a
-//! measured comparison, the horizon one-time cost is amortized over, hard
-//! service bounds, and the artifact-portfolio policy.
+//! measured comparison, the horizon one-time cost is amortized over, and hard
+//! service bounds.
 //!
 //! The whole record is `Copy` and `Serialize`, so it participates in request,
 //! artifact, cache, and measurement identity by value: changing any field
@@ -16,8 +16,6 @@
 mod bounds;
 mod figures;
 mod metric;
-mod portfolio;
-mod real_time;
 mod sequence;
 mod workload;
 
@@ -29,12 +27,6 @@ use crate::DeviceFacts;
 pub use bounds::{BoundViolation, ObjectiveBounds};
 pub use figures::MetricFigures;
 pub use metric::{MetricSequence, ObjectiveMetric, RequiredFact};
-pub use portfolio::{CoveragePolicy, PortfolioPolicy};
-pub use real_time::{
-    EnergyPolicy, InputToVisibleMeasurement, InterferenceAssumptions, LatencyPercentile,
-    RealTimeDeadline, RealTimeObjective, RealTimeViolation, WarmColdState, WorkloadArrivalTrace,
-    REAL_TIME_OBJECTIVE_SCHEMA_VERSION,
-};
 pub use workload::{RiskStatistic, WorkloadAggregation, WorkloadClass, WorkloadProfile};
 
 /// Current objective schema.
@@ -42,7 +34,7 @@ pub use workload::{RiskStatistic, WorkloadAggregation, WorkloadClass, WorkloadPr
 /// A compile records this version beside the objective, so an artifact selected
 /// under an older objective schema is rejected rather than compared against a
 /// record whose fields mean something else.
-pub const OBJECTIVE_SCHEMA_VERSION: u16 = 1;
+pub const OBJECTIVE_SCHEMA_VERSION: u16 = 2;
 
 /// What one compile optimizes, and the limits it refuses to exceed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -54,7 +46,6 @@ pub struct CompileObjective {
     risk: RiskStatistic,
     amortization_launches: u32,
     bounds: ObjectiveBounds,
-    portfolio: PortfolioPolicy,
 }
 
 impl CompileObjective {
@@ -73,7 +64,6 @@ impl CompileObjective {
             risk: RiskStatistic::TrimmedMean,
             amortization_launches: 1,
             bounds: ObjectiveBounds::unbounded(),
-            portfolio: PortfolioPolicy::single(),
         }
     }
 
@@ -88,7 +78,6 @@ impl CompileObjective {
             risk: RiskStatistic::TrimmedMean,
             amortization_launches,
             bounds: ObjectiveBounds::unbounded(),
-            portfolio: PortfolioPolicy::single(),
         }
     }
 
@@ -134,13 +123,6 @@ impl CompileObjective {
         self
     }
 
-    /// Replace the retained-artifact policy.
-    #[must_use]
-    pub const fn with_portfolio(mut self, portfolio: PortfolioPolicy) -> Self {
-        self.portfolio = portfolio;
-        self
-    }
-
     /// Objective schema version.
     #[must_use]
     pub const fn version(&self) -> u16 {
@@ -183,12 +165,6 @@ impl CompileObjective {
         &self.bounds
     }
 
-    /// Retained-artifact policy.
-    #[must_use]
-    pub const fn portfolio(&self) -> &PortfolioPolicy {
-        &self.portfolio
-    }
-
     /// Every metric this objective orders by, primary first.
     #[must_use]
     pub fn ordering_metrics(&self) -> Vec<ObjectiveMetric> {
@@ -208,9 +184,8 @@ impl CompileObjective {
     ///
     /// Returns `MKC029_INVALID_OBJECTIVE` when the record is internally
     /// inconsistent: a schema skew, an empty or over-weighted workload profile,
-    /// a zero batch, stream or horizon, a repeated or unorderable ordering
-    /// metric, or a portfolio ceiling that its own coverage requirement cannot
-    /// reach.
+    /// a zero batch, stream or horizon, or a repeated or unorderable ordering
+    /// metric.
     ///
     /// Returns `MKC030_MISSING_CALIBRATED_FACT` when a stated metric needs a
     /// calibrated target fact this device never reported. Ranking against an
@@ -306,22 +281,6 @@ impl CompileObjective {
                     "order by a metric candidate scoring reports and bound this one instead",
                 ));
             }
-        }
-        let minimum = self
-            .portfolio
-            .coverage()
-            .minimum_variants(self.workload.len());
-        if (self.portfolio.max_variants() as usize) < minimum {
-            return Err(invalid(
-                "portfolio.max_variants",
-                format!(
-                    "coverage `{}` over {} workload classes needs at least {minimum} artifacts and the ceiling is {}",
-                    self.portfolio.coverage().name(),
-                    self.workload.len(),
-                    self.portfolio.max_variants()
-                ),
-                "raise the artifact ceiling or state a coverage policy one artifact can satisfy",
-            ));
         }
         self.validate_facts(device)
     }

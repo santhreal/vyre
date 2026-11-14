@@ -92,7 +92,7 @@ pub(super) fn update_wgsl_lowering_contract(hasher: &mut blake3::Hasher) {
     // anyone editing it, so the label alone leaves an emitter fix answered by a
     // pipeline the previous emitter compiled.
     hasher.update(b"\0wgsl_emitter_digest\0");
-    hasher.update(vyre_emit_naga::LOWERING_DIGEST.as_bytes());
+    hasher.update(vyre_emit::LOWERING_DIGEST.as_bytes());
 }
 
 pub(super) fn adapter_fingerprint(adapter_info: &wgpu::AdapterInfo) -> String {

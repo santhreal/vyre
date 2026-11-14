@@ -178,7 +178,7 @@ impl CudaBackend {
     ///
     /// The PTX emitter lowers each `MemoryOrdering::GridSync` barrier to a
     /// monotonic-counter cooperative grid barrier
-    /// (`vyre_emit_ptx` `emit_grid_sync_barrier`) backed by the module-scope
+    /// (`vyre_emit::ptx` `emit_grid_sync_barrier`) backed by the module-scope
     /// `_vyre_grid_barrier` counter, and the host dispatch path launches such
     /// kernels with `cuLaunchCooperativeKernel`, zeroing the counter before
     /// each launch. `supports_grid_sync()` additionally gates on

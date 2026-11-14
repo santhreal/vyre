@@ -449,7 +449,7 @@ fn snapshot_naga_emit_succeeds_for_simple_kernels() {
     // emit must succeed for the empty kernel and the basic-load kernels.
     // FMA chain may use unsupported ops; verify each independently.
     for kernel in [empty_kernel(), coalesced_load_kernel()] {
-        let m = vyre_emit_naga::emit(&kernel).unwrap_or_else(|e| {
+        let m = vyre_emit::naga::emit(&kernel).unwrap_or_else(|e| {
             panic!("emit failed for {}: {e}", kernel.id);
         });
         assert_ne!(
@@ -468,7 +468,7 @@ fn snapshot_ptx_emit_succeeds_for_simple_kernels() {
         coalesced_load_kernel(),
         strided_load_kernel(),
     ] {
-        let s = vyre_emit_ptx::emit(&kernel).unwrap_or_else(|e| {
+        let s = vyre_emit::ptx::emit(&kernel).unwrap_or_else(|e| {
             panic!("ptx emit failed for {}: {e}", kernel.id);
         });
         assert!(s.contains(".version"));
@@ -479,10 +479,10 @@ fn snapshot_ptx_emit_succeeds_for_simple_kernels() {
 #[test]
 fn snapshot_spirv_emit_succeeds_for_simple_kernels() {
     for kernel in [empty_kernel(), coalesced_load_kernel()] {
-        let words = vyre_emit_spirv::emit(&kernel).unwrap_or_else(|e| {
+        let words = vyre_emit::spirv::emit(&kernel).unwrap_or_else(|e| {
             panic!("spirv emit failed for {}: {e}", kernel.id);
         });
-        assert_eq!(words[0], vyre_emit_spirv::SPIRV_MAGIC);
+        assert_eq!(words[0], vyre_emit::spirv::SPIRV_MAGIC);
     }
 }
 
@@ -492,9 +492,9 @@ fn snapshot_three_substrate_emit_byte_lengths_within_bounds() {
     // empty output, and SPIR-V should be substantially larger than naga
     // (binary vs IR).
     let kernel = coalesced_load_kernel();
-    let naga_module = vyre_emit_naga::emit(&kernel).unwrap();
-    let ptx_text = vyre_emit_ptx::emit(&kernel).unwrap();
-    let spirv_words = vyre_emit_spirv::emit(&kernel).unwrap();
+    let naga_module = vyre_emit::naga::emit(&kernel).unwrap();
+    let ptx_text = vyre_emit::ptx::emit(&kernel).unwrap();
+    let spirv_words = vyre_emit::spirv::emit(&kernel).unwrap();
     assert!(naga_module.entry_points.len() == 1);
     assert!(
         ptx_text.len() > 100,

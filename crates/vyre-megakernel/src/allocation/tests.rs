@@ -18,13 +18,11 @@
 
 use super::pack::ValueFact;
 use super::{
-    owned_by_artifact, peak, plan, AllocationPlan, DeviceSlot, PlacementLayout, RegionOwner,
-    ValueLiveness,
+    owned_by_artifact, peak, plan, AllocationPlan, PlacementLayout, RegionOwner, ValueLiveness,
 };
 use crate::identity::{ArtifactNodeId, ArtifactValueId, FusionGroupId};
-use crate::mesh::{MeshTopologyPlan, RegionPartition};
 use crate::schema::ResourceLifetime;
-use crate::{DeviceFacts, Digest};
+use crate::DeviceFacts;
 use vyre_foundation::validate::BackendCapabilities;
 
 /// One value of a test graph, in the shape both the ranking and the packer read.
@@ -101,7 +99,6 @@ fn facts(values: &[Value], nodes: u32) -> Vec<ValueFact> {
             );
             ValueFact {
                 value: ArtifactValueId(value.id),
-                producer: value.producer.map(ArtifactNodeId),
                 bytes: value.bytes,
                 element_bytes: 4,
                 lifetime: value.lifetime,
@@ -141,23 +138,10 @@ fn liveness(values: &[Value]) -> Vec<ValueLiveness> {
         .collect()
 }
 
-fn topology(nodes: u32) -> MeshTopologyPlan {
-    MeshTopologyPlan::single_device(
-        Digest([0; 32]),
-        DeviceSlot(0),
-        (0..nodes)
-            .map(|node| {
-                RegionPartition::replicated_on(ArtifactNodeId(node), DeviceSlot(0), vec![0], 1)
-            })
-            .collect(),
-    )
-}
-
 fn planned(values: &[Value], nodes: u32) -> AllocationPlan {
     plan(
         &facts(values, nodes),
         DeviceFacts::new(BackendCapabilities::default(), 256),
-        &topology(nodes),
     )
     .expect("the fixture plan is valid")
 }
@@ -358,9 +342,9 @@ fn the_ranked_peak_is_the_peak_the_assembled_plan_holds() {
         let ranked = peak(&liveness(&values), &groups, &stages);
         let plan = planned(&values, nodes);
         assert_eq!(
-            plan.aggregate_peak_bytes, ranked,
+            plan.peak_bytes, ranked,
             "{name}: ranking priced {ranked} bytes and the assembled plan holds {}",
-            plan.aggregate_peak_bytes
+            plan.peak_bytes
         );
     }
 }

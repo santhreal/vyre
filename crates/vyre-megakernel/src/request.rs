@@ -16,7 +16,6 @@ use crate::grammar::{DerivationStep, ScheduleProduction};
 use crate::grid_sync;
 use crate::identity::Digest;
 use crate::measure::MeasurementRecord;
-use crate::mesh::MeshFacts;
 use crate::objective::{CompileObjective, ObjectiveMetric};
 
 /// Schedule family the caller requires the selected plan to exercise.
@@ -218,7 +217,6 @@ pub struct CompileRequest {
     pub(crate) search_budget: SearchBudget,
     representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
     recorded_measurement: Option<MeasurementRecord>,
-    mesh: Option<MeshFacts>,
     numeric: Option<NumericContract>,
     pub(crate) constraints: DeclaredConstraints,
 }
@@ -246,7 +244,6 @@ impl CompileRequest {
             search_budget,
             representative_inputs: BTreeMap::new(),
             recorded_measurement: None,
-            mesh: None,
             numeric: None,
             constraints: DeclaredConstraints::new(),
         }
@@ -270,16 +267,6 @@ impl CompileRequest {
     #[must_use]
     pub fn with_constraints(mut self, constraints: DeclaredConstraints) -> Self {
         self.constraints = constraints;
-        self
-    }
-
-    /// Supply the device mesh this compilation may place work on.
-    ///
-    /// A caller that states none is compiled for the one device its facts
-    /// describe, which is a mesh of one device rather than a separate path.
-    #[must_use]
-    pub fn with_mesh(mut self, mesh: MeshFacts) -> Self {
-        self.mesh = Some(mesh);
         self
     }
 
@@ -376,13 +363,6 @@ impl CompileRequest {
         if let Some(recorded) = &self.recorded_measurement {
             recorded.validate()?;
         }
-        let mesh = match self.mesh {
-            Some(mesh) => {
-                mesh.authenticate()?;
-                mesh
-            }
-            None => MeshFacts::single_device(0)?,
-        };
         Ok(ValidatedCompileRequest {
             graph,
             facts: self.facts,
@@ -391,7 +371,6 @@ impl CompileRequest {
             device: self.device,
             objective: self.objective,
             search_budget: self.search_budget,
-            mesh,
             numeric: self.numeric,
             required_schedule: self.constraints.required_schedule(),
         })
@@ -472,7 +451,6 @@ pub struct ValidatedCompileRequest {
     pub(crate) search_budget: SearchBudget,
     representative_inputs: BTreeMap<GraphValueId, Vec<u8>>,
     recorded_measurement: Option<MeasurementRecord>,
-    mesh: MeshFacts,
     pub(crate) numeric: Option<NumericContract>,
     pub(crate) required_schedule: Option<RequiredSchedule>,
 }
@@ -544,72 +522,6 @@ impl ValidatedCompileRequest {
     #[must_use]
     pub const fn device(&self) -> DeviceFacts {
         self.device
-    }
-
-    /// Borrow the authenticated device mesh the plan is placed on.
-    #[must_use]
-    pub const fn mesh(&self) -> &MeshFacts {
-        &self.mesh
-    }
-
-    /// The same validated request under a different stated objective.
-    ///
-    /// Portfolio selection compiles one part of a workload partition at a time,
-    /// and a part is this graph, these facts, and this device under an objective
-    /// narrowed to that part. The objective stays the request's own field rather
-    /// than a parameter threaded past it, so every compile reads the objective
-    /// from one place and records that one in the artifact.
-    pub(crate) fn restated(&self, objective: CompileObjective) -> Self {
-        Self {
-            graph: self.graph.clone(),
-            facts: self.facts.clone(),
-            device: self.device,
-            objective,
-            search_budget: self.search_budget,
-            representative_inputs: self.representative_inputs.clone(),
-            recorded_measurement: self.recorded_measurement.clone(),
-            mesh: self.mesh.clone(),
-            numeric: self.numeric,
-            required_schedule: self.required_schedule,
-        }
-    }
-
-    /// The same validated request under narrowed external facts.
-    ///
-    /// A specialization variant is this graph and this device compiled for a
-    /// pinned dimension or a stated submission arrangement. Only the facts move,
-    /// so only the fact validations run again: the graph already passed
-    /// structural, capability and device admission, and re-running the grid-fence
-    /// cut over an already cut graph would be a second answer to a question that
-    /// was settled.
-    pub(crate) fn restated_facts(&self, facts: ExternalFacts) -> Result<Self, CompileError> {
-        if facts.expected_launch_batch == 0 {
-            return Err(failure(
-                CompilerFailureKind::InvalidDeviceFacts,
-                "request.facts.expected_launch_batch",
-                "expected launch batch is zero, so the artifact would never run",
-                "supply the number of launches the caller will submit, at least one",
-            ));
-        }
-        validate_bindings(&self.graph, &facts.symbolic_bindings)?;
-        validate_constant_identities(&self.graph, &facts.constant_identities)?;
-        validate_representative_inputs(
-            &self.graph,
-            &self.representative_inputs,
-            &facts.symbolic_bindings,
-        )?;
-        Ok(Self {
-            graph: self.graph.clone(),
-            facts,
-            device: self.device,
-            objective: self.objective,
-            search_budget: self.search_budget,
-            representative_inputs: self.representative_inputs.clone(),
-            recorded_measurement: self.recorded_measurement.clone(),
-            mesh: self.mesh.clone(),
-            numeric: self.numeric,
-            required_schedule: self.required_schedule,
-        })
     }
 }
 

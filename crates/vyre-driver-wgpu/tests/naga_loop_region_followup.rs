@@ -5,7 +5,7 @@
 use naga::{Block, Statement};
 use std::sync::Arc;
 
-use vyre_emit_naga::program::emit_module;
+use vyre_emit::naga::program::emit_module;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];

@@ -7,7 +7,7 @@
 //!   * −∞ / underflow     → target MIN (0 for unsigned)
 //!   * **NaN             → 0**
 //!
-//! vyre-emit-naga emits a bare `As{Uint/Sint}`; naga's SPIR-V backend wraps it
+//! vyre_emit::naga emits a bare `As{Uint/Sint}`; naga's SPIR-V backend wraps it
 //! in `FClamp(x, min, max)` then `ConvertFToU/S`, so ±∞ and out-of-range
 //! saturate correctly. BUT `FClamp(NaN, …)` reduces to FMin/FMax of a NaN,
 //! whose result is UNDEFINED per the SPIR-V GLSL.std.450 spec (it may return

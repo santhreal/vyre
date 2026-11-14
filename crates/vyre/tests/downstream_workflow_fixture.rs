@@ -239,7 +239,7 @@ fn neutral_downstream_consumer_complete_submission_and_receipt_seam() {
     assert_ne!(provenance.semantic_graph, Digest([0; 32]));
     assert_eq!(artifact.schema_version(), ARTIFACT_SCHEMA_VERSION);
 
-    // 8. Form Guarded Artifact Portfolio & Envelope
+    // 8. Wrap the artifact in an envelope
     let envelope = ArtifactEnvelope::new(artifact.clone());
     assert_eq!(envelope.neutral().digest(), artifact.digest());
 

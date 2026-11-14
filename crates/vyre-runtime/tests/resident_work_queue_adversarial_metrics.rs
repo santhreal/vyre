@@ -1,9 +1,8 @@
 //! Adversarial metrics-decode sanity: hostile control buffers, truncation
 //! boundaries, misalignment, and region-non-alias contracts.
 
-use vyre_runtime::resident_work_queue::telemetry::{ControlSnapshot, RingTelemetry};
 use vyre_runtime::resident_work_queue::{
-    protocol::{control, control_byte_len, ProtocolError},
+    protocol::{control, ProtocolError},
     ResidentWorkQueue,
 };
 use vyre_runtime::PipelineError;
@@ -85,25 +84,6 @@ fn read_metrics_preserves_u32_max_counts() {
     }
 }
 
-#[test]
-fn control_snapshot_decode_preserves_max_done_count_and_epoch() {
-    let mut buf = ResidentWorkQueue::encode_control(false, 1, 0).unwrap();
-    write_word(&mut buf, control::DONE_COUNT as usize, u32::MAX);
-    write_word(&mut buf, control::EPOCH as usize, u32::MAX);
-    let snapshot = ControlSnapshot::try_decode(&buf).expect("control snapshot decode");
-    assert_eq!(snapshot.done_count, u32::MAX);
-    assert_eq!(snapshot.epoch, u32::MAX);
-    assert!(!snapshot.shutdown);
-}
-
-#[test]
-fn control_snapshot_decode_skips_zero_metrics() {
-    let mut buf = ResidentWorkQueue::encode_control(false, 1, 0).unwrap();
-    write_word(&mut buf, (control::METRICS_BASE + 3) as usize, 99);
-    let snapshot = ControlSnapshot::try_decode(&buf).expect("control snapshot decode");
-    assert_eq!(snapshot.metrics, vec![(3, 99)]);
-}
-
 // ---------------------------------------------------------------------------
 // 3. Region non-alias sanity
 // ---------------------------------------------------------------------------
@@ -118,52 +98,10 @@ fn metrics_slot_31_does_not_alias_epoch_word() {
     );
     write_word(&mut buf, last_metric as usize, 0xDEAD_BEEF);
     write_word(&mut buf, control::EPOCH as usize, 0x1111_2222);
-    let snapshot = ControlSnapshot::try_decode(&buf).expect("control snapshot decode");
-    assert!(snapshot
-        .metrics
-        .contains(&(control::METRICS_SLOTS - 1, 0xDEAD_BEEF)));
-    assert_eq!(snapshot.epoch, 0x1111_2222);
-}
-
-#[test]
-fn metrics_decode_sanity_on_hostile_control_with_mixed_values() {
-    let mut control = ResidentWorkQueue::encode_control(false, 1, 0).unwrap();
-    for i in 0..control::METRICS_SLOTS {
-        write_word(
-            &mut control,
-            (control::METRICS_BASE + i) as usize,
-            (i + 1).wrapping_mul(0x1111_1111),
-        );
-    }
-    let ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
-    let telemetry = RingTelemetry::try_decode(&control, &ring).expect("telemetry decode");
-    assert_eq!(
-        telemetry.control.metrics.len(),
-        control::METRICS_SLOTS as usize,
-        "every non-zero hostile metric must be captured"
-    );
-    // Slot 0 with value 0 may or may not appear depending on decode; verify explicitly.
-    let m = &telemetry.control.metrics;
-    assert!(m.iter().any(|(idx, _)| *idx == 1));
-    assert!(m.iter().any(|(idx, _)| *idx == control::METRICS_SLOTS - 1));
-}
-
-#[test]
-fn strict_ring_telemetry_rejects_control_shorter_than_metrics_window() {
-    let control = vec![0u8; (control::METRICS_BASE as usize) * 4];
-    let ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
-    let err = RingTelemetry::try_decode(&control, &ring)
-        .expect_err("control shorter than fixed metrics window must reject");
-    let PipelineError::Backend(message) = err else {
-        panic!("a control buffer short of the metrics window must reject as a control snapshot fault, got {err:?}")
-    };
-    let min_control =
-        control_byte_len(0).expect("the minimum control length must be representable");
+    let metrics = ResidentWorkQueue::read_metrics(&buf);
+    assert!(metrics.contains(&(control::METRICS_SLOTS - 1, 0xDEAD_BEEF)));
     assert!(
-        message.contains(&format!(
-            "control snapshot has {} bytes, expected at least {min_control} and 4-byte alignment",
-            (control::METRICS_BASE as usize) * 4
-        )),
-        "the fault must report the byte length it received and the minimum it required: {message}"
+        !metrics.contains(&(control::METRICS_SLOTS - 1, 0x1111_2222)),
+        "the epoch word must not decode as a metric"
     );
 }

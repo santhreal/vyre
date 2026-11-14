@@ -6,7 +6,7 @@ use crate::numeric::WGPU_NUMERIC;
 use smallvec::SmallVec;
 use std::sync::Arc;
 use vyre_driver::BackendError;
-use vyre_emit_naga::program::TRAP_SIDECAR_WORDS;
+use vyre_emit::naga::program::TRAP_SIDECAR_WORDS;
 
 pub(super) fn record_readback_copies(
     device: &wgpu::Device,

@@ -143,6 +143,7 @@ impl ArtifactMaterializer for WgpuMaterializer {
                         input_slots,
                         resident_slots,
                         config,
+                        plan: module.plan,
                     })
                 })?;
         Ok(Box::new(WgpuArtifactInstance {
@@ -161,6 +162,7 @@ struct WgpuExecutableModule {
     input_slots: Vec<ArtifactInputSlot>,
     resident_slots: Vec<String>,
     config: DispatchConfig,
+    plan: vyre_driver::BindingPlan,
 }
 
 struct WgpuArtifactInstance {
@@ -181,7 +183,7 @@ impl ArtifactInstance for WgpuArtifactInstance {
         if self.lost.load(Ordering::Acquire) {
             return Err(device_lost_error(&self.core.device));
         }
-        self.submit_routed(&bindings, || {
+        self.submit_routed(bindings, || {
             materialize::invalid_module(
                 "WGPU artifact submission cannot mix host and resident resources",
             )

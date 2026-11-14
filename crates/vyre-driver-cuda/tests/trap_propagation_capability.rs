@@ -74,13 +74,13 @@ fn cuda_advertises_trap_propagation_only_when_its_ptx_records_a_trap() {
             .any(|slot| slot.name == TRAP_SIDECAR_NAME),
         "Fix: the lowering must insert the reserved `{TRAP_SIDECAR_NAME}` binding for a trap-declaring program, otherwise no backend has anywhere to record a trap and this contract judges nothing."
     );
-    let ptx = vyre_emit_ptx::emit(lowered.descriptor())
+    let ptx = vyre_emit::ptx::emit(lowered.descriptor())
         .expect("Fix: a trap-declaring descriptor must emit PTX.");
     // The reserved sidecar is the only place a device can record a trap. Both the
     // module-scope declaration and the compare-and-swap that claims word 0 must be
     // present: a declaration alone reserves memory nothing writes, which reads back
     // as zero and reports no trap on a launch that trapped.
-    let declares_sidecar = ptx.contains(vyre_emit_ptx::TRAP_SIDECAR_SYMBOL);
+    let declares_sidecar = ptx.contains(vyre_emit::ptx::TRAP_SIDECAR_SYMBOL);
     let claims_record = ptx.contains("atom.global.cas.b32");
     let records_trap = declares_sidecar && claims_record;
 

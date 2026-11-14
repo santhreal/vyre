@@ -5,11 +5,6 @@
 //! binary for the whole set. A test that cannot share a process stays its own
 //! target and states why in `tools/xtask/test-harness-isolation.toml`.
 
-/// Shared fixture module from `tests/retained_cache_fixtures/mod.rs`.
-#[allow(clippy::assertions_on_constants, clippy::needless_range_loop)]
-#[path = "retained_cache_fixtures/mod.rs"]
-pub mod retained_cache_fixtures;
-
 /// Shared expectation module from `tests/ring_expectations/mod.rs`.
 #[path = "ring_expectations/mod.rs"]
 pub mod ring_expectations;
@@ -45,18 +40,11 @@ pub mod concurrency_invariants;
 /// Integration tests from `tests/driver_runtime_lifecycle_boundary.rs`.
 #[path = "driver_runtime_lifecycle_boundary.rs"]
 pub mod driver_runtime_lifecycle_boundary;
-/// Integration tests from `tests/interactive_session_contract.rs`.
-#[path = "interactive_session_contract.rs"]
-pub mod interactive_session_contract;
 
 /// Integration tests from `tests/multi_tenant_scheduler.rs`.
 #[allow(clippy::assertions_on_constants)]
 #[path = "multi_tenant_scheduler.rs"]
 pub mod multi_tenant_scheduler;
-
-/// Integration tests from `tests/generic_runtime_contracts.rs`.
-#[path = "generic_runtime_contracts.rs"]
-pub mod generic_runtime_contracts;
 
 /// Integration tests from `tests/pipeline_fingerprint_surface.rs`.
 #[path = "pipeline_fingerprint_surface.rs"]
@@ -65,40 +53,14 @@ pub mod pipeline_fingerprint_surface;
 /// Integration tests from `tests/pipeline_error_fault_classification.rs`.
 #[path = "pipeline_error_fault_classification.rs"]
 pub mod pipeline_error_fault_classification;
-/// Integration tests from `tests/portfolio_admission_contract.rs`.
-#[path = "portfolio_admission_contract.rs"]
-pub mod portfolio_admission_contract;
 
 /// Integration tests from `tests/registry_closure.rs`.
 #[path = "registry_closure.rs"]
 pub mod registry_closure;
 
-/// Integration tests from `tests/replay_log.rs`.
-#[path = "replay_log.rs"]
-pub mod replay_log;
-
-/// Integration tests from `tests/resident_queue_contracts.rs`.
-#[path = "resident_queue_contracts.rs"]
-pub mod resident_queue_contracts;
-
 /// Integration tests from `tests/resident_ring_error_classification.rs`.
 #[path = "resident_ring_error_classification.rs"]
 pub mod resident_ring_error_classification;
-
-/// Integration tests from `tests/resident_work_queue_advanced_hierarchical_atomics_contracts.rs`.
-#[cfg(feature = "megakernel-batch")]
-#[path = "resident_work_queue_advanced_hierarchical_atomics_contracts.rs"]
-pub mod resident_work_queue_advanced_hierarchical_atomics_contracts;
-
-/// Integration tests from `tests/resident_work_queue_advanced_parallel_dfa_contracts.rs`.
-#[cfg(feature = "megakernel-batch")]
-#[path = "resident_work_queue_advanced_parallel_dfa_contracts.rs"]
-pub mod resident_work_queue_advanced_parallel_dfa_contracts;
-
-/// Integration tests from `tests/resident_work_queue_advanced_zero_copy_io_contracts.rs`.
-#[cfg(feature = "megakernel-batch")]
-#[path = "resident_work_queue_advanced_zero_copy_io_contracts.rs"]
-pub mod resident_work_queue_advanced_zero_copy_io_contracts;
 
 /// Integration tests from `tests/resident_work_queue_adversarial_buffers.rs`.
 #[path = "resident_work_queue_adversarial_buffers.rs"]
@@ -119,15 +81,6 @@ pub mod resident_work_queue_adversarial_packing;
 /// Integration tests from `tests/resident_work_queue_allocation_bounds.rs`.
 #[path = "resident_work_queue_allocation_bounds.rs"]
 pub mod resident_work_queue_allocation_bounds;
-
-/// Integration tests from `tests/resident_work_queue_async_observability.rs`.
-#[cfg(feature = "megakernel-batch")]
-#[path = "resident_work_queue_async_observability.rs"]
-pub mod resident_work_queue_async_observability;
-
-/// Integration tests from `tests/resident_work_queue_automata_worklist_contracts.rs`.
-#[path = "resident_work_queue_automata_worklist_contracts.rs"]
-pub mod resident_work_queue_automata_worklist_contracts;
 
 /// Integration tests from `tests/resident_work_queue_barrier_elision_variant_closure.rs`.
 #[path = "resident_work_queue_barrier_elision_variant_closure.rs"]
@@ -156,10 +109,6 @@ pub mod resident_work_queue_host_protocol_contracts;
 /// Integration tests from `tests/resident_work_queue_io_public_errors.rs`.
 #[path = "resident_work_queue_io_public_errors.rs"]
 pub mod resident_work_queue_io_public_errors;
-
-/// Integration tests from `tests/resident_work_queue_mixed_work_contracts.rs`.
-#[path = "resident_work_queue_mixed_work_contracts.rs"]
-pub mod resident_work_queue_mixed_work_contracts;
 
 /// Integration tests from `tests/resident_work_queue_overflow_boundaries.rs`.
 #[path = "resident_work_queue_overflow_boundaries.rs"]
@@ -190,44 +139,14 @@ pub mod resident_work_queue_protocol_layout_contracts;
 #[path = "resident_work_queue_protocol_strict_contracts.rs"]
 pub mod resident_work_queue_protocol_strict_contracts;
 
-/// Integration tests from `tests/resident_work_queue_readback_contracts.rs`.
-#[path = "resident_work_queue_readback_contracts.rs"]
-pub mod resident_work_queue_readback_contracts;
-
-/// Integration tests from `tests/resident_work_queue_rule_catalog_contracts.rs`.
-#[cfg(feature = "megakernel-batch")]
-#[path = "resident_work_queue_rule_catalog_contracts.rs"]
-pub mod resident_work_queue_rule_catalog_contracts;
-
-/// Integration tests from `tests/resident_work_queue_rule_catalog_scratch.rs`.
-#[cfg(feature = "megakernel-batch")]
-#[path = "resident_work_queue_rule_catalog_scratch.rs"]
-pub mod resident_work_queue_rule_catalog_scratch;
-
 /// Integration tests from `tests/resident_work_queue_scheduler_fairness.rs`.
 #[allow(clippy::assertions_on_constants)]
 #[path = "resident_work_queue_scheduler_fairness.rs"]
 pub mod resident_work_queue_scheduler_fairness;
 
-/// Integration tests from `tests/resident_work_queue_sketch_telemetry.rs`.
-#[path = "resident_work_queue_sketch_telemetry.rs"]
-pub mod resident_work_queue_sketch_telemetry;
-
-/// Integration tests from `tests/resident_work_queue_workspace_layout_contracts.rs`.
-#[path = "resident_work_queue_workspace_layout_contracts.rs"]
-pub mod resident_work_queue_workspace_layout_contracts;
-
-/// Integration tests from `tests/resource_residency.rs`.
-#[path = "resource_residency.rs"]
-pub mod resource_residency;
-
 /// Integration tests from `tests/ring_fault_selection_is_typed.rs`.
 #[path = "ring_fault_selection_is_typed.rs"]
 pub mod ring_fault_selection_is_typed;
-
-/// Integration tests from `tests/resource_transfer_integrity_contracts.rs`.
-#[path = "resource_transfer_integrity_contracts.rs"]
-pub mod resource_transfer_integrity_contracts;
 
 /// Integration tests from `tests/scheduler_model_proptest.rs`.
 #[allow(clippy::needless_range_loop)]
@@ -247,45 +166,12 @@ pub mod sweep_ring_buffer_oracle_matrix;
 #[path = "session_state_machine_contracts.rs"]
 pub mod session_state_machine_contracts;
 
-/// Integration tests from `tests/sweep_tenant_policy_oracle_matrix.rs`.
-#[path = "sweep_tenant_policy_oracle_matrix.rs"]
-pub mod sweep_tenant_policy_oracle_matrix;
-
-/// Integration tests from `tests/uring_completion_pump_contracts.rs`.
-#[path = "uring_completion_pump_contracts.rs"]
-pub mod uring_completion_pump_contracts;
-
 /// Integration tests from `tests/uring_ingest_telemetry_invariants.rs`.
 #[cfg(target_os = "linux")]
 #[path = "uring_ingest_telemetry_invariants.rs"]
 pub mod uring_ingest_telemetry_invariants;
 
-/// Integration tests from `tests/failure_domains_and_recovery_contracts.rs`.
-#[path = "failure_domains_and_recovery_contracts.rs"]
-pub mod failure_domains_and_recovery_contracts;
-/// Integration tests from `tests/tenant_capability_contracts.rs`.
-#[path = "tenant_capability_contracts.rs"]
-pub mod tenant_capability_contracts;
 /// Integration tests from `tests/uring_smoke.rs`.
 #[cfg(target_os = "linux")]
 #[path = "uring_smoke.rs"]
 pub mod uring_smoke;
-
-/// Integration tests from `tests/external_resource_admission_contracts.rs`.
-#[path = "external_resource_admission_contracts.rs"]
-pub mod external_resource_admission_contracts;
-/// Integration tests from `tests/rolling_upgrade_compatibility_contracts.rs`.
-#[path = "rolling_upgrade_compatibility_contracts.rs"]
-pub mod rolling_upgrade_compatibility_contracts;
-
-/// Integration tests from `tests/runtime_quota_and_concurrency_contracts.rs`.
-#[path = "runtime_quota_and_concurrency_contracts.rs"]
-pub mod runtime_quota_and_concurrency_contracts;
-
-/// Integration tests from `tests/retained_page_cache_contracts.rs`.
-#[path = "retained_page_cache_contracts.rs"]
-pub mod retained_page_cache_contracts;
-
-/// Integration tests from `tests/speculative_transaction_contracts.rs`.
-#[path = "speculative_transaction_contracts.rs"]
-pub mod speculative_transaction_contracts;

@@ -33,18 +33,14 @@ pub trait TargetCompiler: Send + Sync {
     fn compile(&self, artifact: &Artifact) -> Result<TargetPayload, TargetCompileError>;
 }
 
-/// Compile one target payload and attach it for every device the artifact places
-/// work on.
+/// Compile one target payload and attach it to the artifact's envelope.
 pub fn attach_target(
     artifact: Artifact,
     compiler: &dyn TargetCompiler,
 ) -> Result<ArtifactEnvelope, TargetCompileError> {
     let payload = compiler.compile(&artifact)?;
-    let devices = artifact.topology().submission_devices();
     let mut envelope = ArtifactEnvelope::new(artifact);
-    for device in devices {
-        envelope.attach_target_payload(payload.for_device(device)?)?;
-    }
+    envelope.attach_target_payload(payload)?;
     Ok(envelope)
 }
 

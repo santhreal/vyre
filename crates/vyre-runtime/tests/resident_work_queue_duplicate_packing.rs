@@ -5,9 +5,8 @@
 
 use crate::ring_expectations::assert_publish_rejected_by_status;
 use vyre_runtime::resident_work_queue::{
-    descriptor::{BatchDescriptor, SlotDescriptor, SlotOpcode, WindowDescriptor},
+    descriptor::{BatchDescriptor, SlotDescriptor, SlotOpcode},
     protocol::{self, slot},
-    telemetry::RingTelemetry,
     ResidentWorkQueue,
 };
 
@@ -26,12 +25,15 @@ fn batch_descriptor_counts_duplicate_items_independently() {
         .expect("duplicate items must publish");
     assert_eq!(consumed, 2);
 
-    let telemetry = RingTelemetry::try_decode(
-        &ResidentWorkQueue::encode_control(false, 1, 0).unwrap(),
-        &ring,
-    )
-    .expect("telemetry decode");
-    assert_eq!(telemetry.occupancy.published, 2);
+    for index in 0..2 {
+        let base = index * protocol::SLOT_WORDS as usize * 4;
+        let status = u32::from_le_bytes(ring[base..base + 4].try_into().unwrap());
+        assert_eq!(
+            status,
+            slot::PUBLISHED,
+            "slot {index} must hold its own copy"
+        );
+    }
 }
 
 #[test]
@@ -45,46 +47,6 @@ fn packed_slot_accepts_duplicate_inner_opcodes() {
         .expect("duplicate inner opcodes must be allowed in packed slot");
     let status = u32::from_le_bytes(ring[..4].try_into().unwrap());
     assert_eq!(status, slot::PUBLISHED);
-}
-
-#[test]
-fn duplicate_window_tickets_aggregate_in_telemetry() {
-    let mut ring = ResidentWorkQueue::encode_empty_ring(4).unwrap();
-    let window_opcode = 0xF102;
-    let w1 = WindowDescriptor::new(
-        0,
-        3,
-        SlotOpcode::Custom(window_opcode),
-        99,
-        vec![vec![10]],
-        vec![],
-    );
-    let w2 = WindowDescriptor::new(
-        1,
-        3,
-        SlotOpcode::Custom(window_opcode),
-        99,
-        vec![vec![20]],
-        vec![],
-    );
-    w1.publish_into(&mut ring).unwrap();
-    w2.publish_into(&mut ring).unwrap();
-
-    let telemetry = RingTelemetry::try_decode_with_window_opcodes(
-        &ResidentWorkQueue::encode_control(false, 1, 0).unwrap(),
-        &ring,
-        &[window_opcode],
-    )
-    .expect("window telemetry decode");
-    assert_eq!(
-        telemetry.windows.len(),
-        1,
-        "duplicate ticket must aggregate into one WindowTelemetry"
-    );
-    let window = &telemetry.windows[0];
-    assert_eq!(window.ticket, 99);
-    assert_eq!(window.required_slots, 2);
-    assert_eq!(window.published, 2);
 }
 
 #[test]

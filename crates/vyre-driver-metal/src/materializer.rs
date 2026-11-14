@@ -38,7 +38,7 @@ mod native {
                 artifact,
                 payload,
                 |admitted_module| {
-                    let target: vyre_emit_metal::MetalArtifact =
+                    let target: vyre_emit::metal::MetalArtifact =
                         serde_json::from_slice(&admitted_module.image.bytes).map_err(|error| {
                             materialize::invalid_module(&format!(
                                 "Metal target artifact is malformed: {error}"
@@ -61,6 +61,7 @@ mod native {
                         program,
                         module,
                         config,
+                        plan: admitted_module.plan,
                     })
                 },
             )?;
@@ -78,6 +79,7 @@ mod native {
         program: Arc<Program>,
         module: MetalTargetModule,
         config: DispatchConfig,
+        plan: vyre_driver::BindingPlan,
     }
 
     struct MetalArtifactInstance {
@@ -95,7 +97,7 @@ mod native {
         vyre_driver::artifact_instance_unreported_resources!();
 
         fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-            self.submit_routed(&bindings, || {
+            self.submit_routed(bindings, || {
                 materialize::invalid_module(
                     "Metal artifact submission cannot mix host and resident resources",
                 )

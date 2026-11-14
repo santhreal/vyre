@@ -404,7 +404,7 @@ mod tests {
 
             let ptx_trap = format!(
                 ".version 7.0\n.target sm_70\n.address_size 64\n.global .align 4 .u32 {}[4];\n.visible .entry main() {{ ret; }}\n",
-                vyre_emit_ptx::TRAP_SIDECAR_SYMBOL
+                vyre_emit::ptx::TRAP_SIDECAR_SYMBOL
             );
             assert!(crate::backend::module_cache::declares_trap_sidecar(
                 &ptx_trap

@@ -143,7 +143,7 @@ pub(super) fn dispatch_planned_buffers_with_queue(
     program: &Program,
     binding_plan: &BindingPlan,
     config: &DispatchConfig,
-    artifact: &vyre_emit_metal::MetalArtifact,
+    artifact: &vyre_emit::metal::MetalArtifact,
     pipeline: &metal::ComputePipelineState,
     buffers: Vec<PlannedBuffer>,
 ) -> Result<MetalDispatchResult, BackendError> {
@@ -168,7 +168,7 @@ pub(super) fn submit_planned_buffers_with_queue(
     program: &Program,
     binding_plan: &BindingPlan,
     config: &DispatchConfig,
-    artifact: &vyre_emit_metal::MetalArtifact,
+    artifact: &vyre_emit::metal::MetalArtifact,
     pipeline: &metal::ComputePipelineState,
     buffers: Vec<PlannedBuffer>,
     output_by_binding: BTreeMap<u32, OutputBindingLayout>,
@@ -318,7 +318,7 @@ fn collect_outputs(
 fn new_buffer_sizes_buffer(
     device: &Device,
     slot: u8,
-    bindings: &[vyre_emit_metal::MetalBindingMetadata],
+    bindings: &[vyre_emit::metal::MetalBindingMetadata],
     buffers: &[PlannedBuffer],
 ) -> Result<(u8, Buffer), BackendError> {
     let sidecar_words = bindings

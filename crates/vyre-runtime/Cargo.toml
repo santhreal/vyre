@@ -9,7 +9,6 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Persistent megakernel + io_uring zero-copy streaming runtime for vyre typed programs"
-readme = "README.md"
 keywords = ["gpu", "io-uring", "megakernel", "nvme", "vyre"]
 categories = ["asynchronous", "hardware-support", "api-bindings"]
 documentation = "https://docs.rs/vyre-runtime"
@@ -20,7 +19,6 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
 default = []
-megakernel-batch = []
 subgroup-ops = []
 # The megakernel planner's program builders, each a vyre-libs composition.
 # Named `self-substrate-adapters` until the crate it was named for,
@@ -63,9 +61,6 @@ vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-req
 tempfile.workspace = true
 serde_json.workspace = true
 proptest.workspace = true
-# The unsafe-permission contract reads the lint level from the manifest that
-# owns it rather than from a duplicate attribute in lib.rs.
-toml.workspace = true
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
 libc.workspace = true

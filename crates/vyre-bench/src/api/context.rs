@@ -202,7 +202,7 @@ impl BenchContext {
             .submit_and_wait(bindings)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         session
-            .program_outputs(prog, &completion)
+            .program_outputs(prog, completion)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))
     }
 
@@ -221,13 +221,14 @@ impl BenchContext {
         let completion = session
             .submit_and_wait(bindings)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        let device_ns = completion.device_ns;
         let outputs = session
-            .program_outputs(prog, &completion)
+            .program_outputs(prog, completion)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         Ok(vyre_driver::TimedDispatchResult::device_timed(
             outputs,
             elapsed_ns(start),
-            completion.device_ns,
+            device_ns,
         ))
     }
     /// Dispatch resident resources and include output readback in wall time.
@@ -266,8 +267,9 @@ impl BenchContext {
             .submit_and_wait(bindings)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         let execution_wall_ns = elapsed_ns(start);
+        let device_ns = completion.device_ns;
         let outputs = session
-            .program_outputs(prog, &completion)
+            .program_outputs(prog, completion)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         Ok(vyre_driver::TimedDispatchResult::device_timed(
             outputs,
@@ -276,7 +278,7 @@ impl BenchContext {
             } else {
                 execution_wall_ns
             },
-            completion.device_ns,
+            device_ns,
         ))
     }
 
@@ -312,11 +314,12 @@ impl BenchContext {
             .submit_resident_batch_and_wait(batches)
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
         let mut dispatched = Vec::with_capacity(completions.len());
-        for completion in &completions {
+        for completion in completions {
+            let device_ns = completion.device_ns;
             let outputs = session
                 .program_outputs(prog, completion)
                 .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-            dispatched.push((outputs, completion.device_ns));
+            dispatched.push((outputs, device_ns));
         }
         Ok(dispatched)
     }

@@ -10,7 +10,7 @@
 use vyre::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::MemoryOrdering;
 
-use vyre_emit_naga::program as naga_emit;
+use vyre_emit::naga::program as naga_emit;
 
 const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 

@@ -80,7 +80,7 @@ fn bind_group_cache_lru_heap_stays_capacity_scale() {
 /// on the binding layout alone, and counts the creations it saves.
 ///
 /// This exists because a `patterns::bind_group_reuse` module in
-/// vyre-emit-naga was removed after an audit found it grouped
+/// vyre_emit::naga was removed after an audit found it grouped
 /// `KernelDescriptor`s for bind-group sharing by hashing only their
 /// binding LAYOUT (slot, dtype, count, memory class, visibility). A
 /// `wgpu::BindGroup` binds a layout PLUS concrete resources, so that rule

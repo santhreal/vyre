@@ -1,7 +1,7 @@
 //! Wgpu artifact emission.
 //!
 //! Core IR is lowered through `vyre-lower`; this module only applies wgpu
-//! runtime policy, emits a Naga module via `vyre-emit-naga`, and writes WGSL
+//! runtime policy, emits a Naga module via `vyre_emit::naga`, and writes WGSL
 //! accepted by `wgpu`.
 
 pub(crate) mod descriptor_gate;
@@ -57,7 +57,7 @@ pub struct WgpuProgram {
 ///
 /// The shader text is produced only after structural Naga IR construction and
 /// validation. Callers that need the module itself should use
-/// [`vyre_lower::lower_physical`] and [`vyre_emit_naga::emit`].
+/// [`vyre_lower::lower_physical`] and [`vyre_emit::naga::emit`].
 ///
 /// # Errors
 ///
@@ -292,9 +292,9 @@ pub(crate) fn emit_naga_module_for_descriptor(
             vyre_lower::format_verify_errors(&errors)
         )));
     }
-    vyre_emit_naga::emit_with_float_mode(descriptor, float_lowering).map_err(|error| {
+    vyre_emit::naga::emit_with_float_mode(descriptor, float_lowering).map_err(|error| {
         LoweringError::invalid(format!(
-            "KernelDescriptor Naga emission failed before wgpu WGSL writing: {error}. Fix: extend vyre-emit-naga descriptor emission; do not route around it with driver-local lowering."
+            "KernelDescriptor Naga emission failed before wgpu WGSL writing: {error}. Fix: extend vyre_emit::naga descriptor emission; do not route around it with driver-local lowering."
         ))
     })
 }

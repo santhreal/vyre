@@ -8,10 +8,9 @@
 //! first instruction.
 //!
 //! A materializer that staged only the Program's host inputs launched that
-//! module over an allocation nothing had filled. `vyre-libs::security`'s fused
-//! flow operations read the stage-one bitset as zero on every case, which is why
-//! `sink_intersection` counted nothing and `aliases_dataflow` returned its seed
-//! frontier unchanged.
+//! module over an allocation nothing had filled: fused multi-stage operations
+//! read their stage-one buffer as zero on every case rather than reading the
+//! carried intermediate value.
 
 use vyre_foundation::ir::Program;
 use vyre_lower::KernelDescriptor;

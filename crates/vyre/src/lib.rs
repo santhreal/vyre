@@ -52,37 +52,27 @@ pub use vyre_spec::soundness;
 
 /// Whole-program compiler request, artifact, payload, receipt, and target-facet APIs.
 pub mod compiler {
-    pub use vyre_megakernel::specialization::{
-        compile_specialized_portfolio, compile_specialized_portfolio_measured, AxisDomain,
-        AxisValue, CoverageProof, GuardTerm, PortfolioEnvelope, PortfolioVariant, RemainderKind,
-        SpecializationAxis, SpecializationContract, SpecializedPortfolio, SpecializedRemainder,
-        TargetCapabilityAxis, TargetResourceAxis, VariantGuard, MAX_COVERAGE_CELLS,
-        MAX_PROPOSED_VARIANTS, PORTFOLIO_ENVELOPE_SCHEMA_VERSION, SPECIALIZATION_SCHEMA_VERSION,
-    };
     pub use vyre_megakernel::{
-        attach_target, compile, compile_measured, compile_portfolio, compile_portfolio_measured,
-        compile_selected_modules, target_identity, AbiAccess, Artifact, ArtifactAbi,
-        ArtifactEnvelope, ArtifactNodeId, ArtifactPortfolio, ArtifactValueId, BarrierPhaseRecord,
-        BarrierRecord, BoundViolation, CompileError, CompileObjective, CompileRequest,
-        CoveragePolicy, DeclaredConstraints, DependencyEdge, DependencyEndpoint, DependencyKind,
+        attach_target, compile, compile_measured, compile_selected_modules, target_identity,
+        AbiAccess, Artifact, ArtifactAbi, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId,
+        BarrierPhaseRecord, BarrierRecord, BoundViolation, CompileError, CompileObjective,
+        CompileRequest, DeclaredConstraints, DependencyEdge, DependencyEndpoint, DependencyKind,
         DerivationStep, DerivedFamily, DeviceFacts, Digest, EmittedResources, EmittedTargetModule,
         EntryAbiRecord, EntryPersistence, EntryResourceBinding, ExecutionMode, ExternalFacts,
         FinalistEvaluator, FrontierTopology, FusionGroupId, FusionRecord, FusionRejection,
         GeometryRecord, LaunchObservation, LaunchResourceIntent, LawCitation,
         MaterializationReason, MaterializationRecord, MetricFigures, MetricSequence,
         ModuleNumericRecord, NodeRecord, NumericRecord, ObjectiveBounds, ObjectiveMetric,
-        PlanMeasurement, PortfolioPolicy, Provenance, PruneReason, PrunedFamily, PrunedLaw,
-        RealTimeDeadline, RealTimeObjective, RealTimeViolation, RequiredFact, RequiredSchedule,
-        ResourceAbiRecord, ResourceEnvelope, ResourceLifetime, ResourceNameCollision,
-        ResourceRecord, RiskStatistic, ScheduleProduction, SearchBudget, SearchCertificate,
-        SearchWork, SelectedLowering, SelectedModule, SelectedPlan, TargetArmAssignment,
-        TargetCompileError, TargetCompiler, TargetEntryPoint, TargetModuleBundle,
-        TargetModuleImage, TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess,
-        TargetResourceBinding, TargetResourceMemory, ValidatedCompileRequest, WorkloadAggregation,
-        WorkloadArrivalTrace, WorkloadClass, WorkloadProfile, ARTIFACT_ENVELOPE_SCHEMA_VERSION,
-        ARTIFACT_SCHEMA_VERSION, OBJECTIVE_SCHEMA_VERSION, REAL_TIME_OBJECTIVE_SCHEMA_VERSION,
-        SCHEDULE_GRAMMAR_VERSION, TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
-        TARGET_PAYLOAD_SCHEMA_VERSION,
+        PlanMeasurement, Provenance, PruneReason, PrunedFamily, PrunedLaw, RequiredFact,
+        RequiredSchedule, ResourceAbiRecord, ResourceEnvelope, ResourceLifetime,
+        ResourceNameCollision, ResourceRecord, RiskStatistic, ScheduleProduction, SearchBudget,
+        SearchCertificate, SearchWork, SelectedLowering, SelectedModule, SelectedPlan,
+        TargetArmAssignment, TargetCompileError, TargetCompiler, TargetEntryPoint,
+        TargetModuleBundle, TargetModuleImage, TargetPayload, TargetPayloadFormat, TargetProfile,
+        TargetResourceAccess, TargetResourceBinding, TargetResourceMemory, ValidatedCompileRequest,
+        WorkloadAggregation, WorkloadClass, WorkloadProfile, ARTIFACT_ENVELOPE_SCHEMA_VERSION,
+        ARTIFACT_SCHEMA_VERSION, OBJECTIVE_SCHEMA_VERSION, SCHEDULE_GRAMMAR_VERSION,
+        TARGET_MODULE_BUNDLE_SCHEMA_VERSION, TARGET_PAYLOAD_SCHEMA_VERSION,
     };
 }
 

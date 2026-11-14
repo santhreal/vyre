@@ -2,7 +2,7 @@ use super::readback::ReadbackPollBackoff;
 use crate::buffer::GpuBufferHandle;
 use std::time::Instant;
 use vyre_driver::BackendError;
-use vyre_emit_naga::program::{TrapTag, TRAP_SIDECAR_WORDS};
+use vyre_emit::naga::program::{TrapTag, TRAP_SIDECAR_WORDS};
 
 pub(super) fn sidecar_flag_set(mapped: &[u8]) -> Result<bool, BackendError> {
     if mapped.len() < 4 {

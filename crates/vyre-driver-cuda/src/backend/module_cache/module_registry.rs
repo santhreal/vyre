@@ -354,7 +354,7 @@ fn load_module(ptx_src: &str, ptx_target_sm: u32) -> Result<CachedModule, Backen
             BackendError::KernelCompileFailed {
                 backend: crate::CUDA_BACKEND_ID.to_string(),
                 compiler_message: format!(
-                    "CUDA trap sidecar symbol literal was invalid: {error}. Fix: keep the driver's NUL-terminated copy of vyre_emit_ptx::TRAP_SIDECAR_SYMBOL valid."
+                    "CUDA trap sidecar symbol literal was invalid: {error}. Fix: keep the driver's NUL-terminated copy of vyre_emit::ptx::TRAP_SIDECAR_SYMBOL valid."
                 ),
             }
         })?;

@@ -931,7 +931,7 @@ impl CudaBackend {
         // Reject programs that ask for capabilities the live CUDA
         // backend doesn't expose BEFORE we attempt PTX emit. Without
         // this gate, indirect_dispatch / f16 / bf16 IR falls all the
-        // way down to vyre-emit-ptx and surfaces a generic
+        // way down to vyre_emit::ptx and surfaces a generic
         // "unsupported KernelOp kind" message that hides the
         // missing-capability contract the dispatch layer is supposed
         // to enforce.

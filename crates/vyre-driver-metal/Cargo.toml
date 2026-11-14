@@ -10,7 +10,6 @@ repository.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/vyre-driver-metal"
 description = "Native Metal backend for vyre IR through Metal.framework."
-readme = "README.md"
 keywords = ["gpu", "compute", "metal", "msl", "vyre"]
 categories = ["hardware-support"]
 
@@ -41,7 +40,7 @@ vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-lower = { workspace = true }
-vyre-emit-metal = { workspace = true }
+vyre-emit = { workspace = true, features = ["metal"] }
 tracing.workspace = true
 serde_json.workspace = true
 

@@ -33,21 +33,16 @@ vyre-libs = { workspace = true, features = [
     "graph",
     "math-scan",
     "nn-linear-4bit",
-    "predicate",
 ] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
 vyre-pass-engine = { workspace = true }
 vyre-megakernel = { workspace = true }
-vyre-emit-ptx = { workspace = true }
+vyre-emit = { workspace = true, features = ["ptx", "naga", "spirv"] }
 vyre-spec = { workspace = true }
 # The per-thread allocation probe the runner installs. It is a runtime
 # dependency because `main.rs` declares the global allocator.
 vyre-alloc-probe = { workspace = true }
-# The source fingerprint every recorded artifact names its tree with has one
-# producer, and it is the crate that links no vyre crate so it still identifies a
-# checkout while the workspace does not compile.
-xtask = { path = "../../tools/xtask" }
 blake3 = { workspace = true }
 
 aho-corasick = { workspace = true }
@@ -89,8 +84,6 @@ device-tests = []
 [dev-dependencies]
 criterion = { workspace = true }
 proptest = { workspace = true }
-vyre-emit-naga = { path = "../vyre-emit-naga" }
-vyre-emit-spirv = { path = "../vyre-emit-spirv" }
 syn.workspace = true
 tempfile.workspace = true
 # The baseline suite recomputes each pinned harness digest from the file on disk.

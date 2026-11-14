@@ -100,11 +100,10 @@ pub fn write_whole_application_evidence_artifacts(
 ) -> Result<Vec<PathBuf>, String> {
     let matrix = generate_whole_application_evidence_suite(backend_id, measured_samples)?;
 
-    let root = xtask::checkout::checkout_root();
     let mut written_paths = Vec::new();
 
     let matrix_path = artifacts_dir.join("whole-application-domain-matrix.json");
-    record_whole_application_artifact(&root, &matrix_path, &matrix)?;
+    record_whole_application_artifact(&matrix_path, &matrix)?;
     written_paths.push(matrix_path);
 
     for record in &matrix.records {
@@ -116,27 +115,23 @@ pub fn write_whole_application_evidence_artifacts(
             }
         };
         let record_path = artifacts_dir.join(file_name);
-        record_whole_application_artifact(&root, &record_path, record)?;
+        record_whole_application_artifact(&record_path, record)?;
         written_paths.push(record_path);
     }
 
     Ok(written_paths)
 }
 
-/// Record one whole-application artifact under the devices that measured it.
-///
-/// These records carry wall times a device produced, so the measurement class
-/// is `Device` and the stamp names every device the run could see. The suite
-/// refuses to run without one, so a host-only record here would be false.
 fn record_whole_application_artifact(
-    root: &Path,
     path: &Path,
     body: &impl serde::Serialize,
 ) -> Result<(), String> {
-    xtask::artifact_gate::write_recorded(
-        root,
-        path,
-        xtask::evidence_record::MeasurementRecord::device(),
-        body,
-    )
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+    }
+    let mut json = serde_json::to_string_pretty(body).map_err(|e| e.to_string())?;
+    json.push('\n');
+    std::fs::write(path, json).map_err(|e| e.to_string())
 }

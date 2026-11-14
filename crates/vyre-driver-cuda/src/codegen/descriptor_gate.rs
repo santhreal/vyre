@@ -14,7 +14,7 @@ pub(crate) fn validate_and_analyze(
             facts = facts.with_shared_memory_banks(banks);
         }
         let neutral = vyre_lower::audit(&descriptor, &facts);
-        let concrete = vyre_emit_ptx::patterns::audit(&descriptor, compute_capability(target_sm));
+        let concrete = vyre_emit::ptx::patterns::audit(&descriptor, compute_capability(target_sm));
         tracing::trace!(
             target: "vyre_driver_cuda::descriptor",
             kernel = %descriptor.id,
@@ -47,8 +47,8 @@ fn lower_for_cuda_emit(program: &Program) -> Result<vyre_lower::KernelDescriptor
     Ok(descriptor)
 }
 
-pub(crate) fn compute_capability(target_sm: u32) -> vyre_emit_ptx::ComputeCapability {
-    vyre_emit_ptx::ComputeCapability {
+pub(crate) fn compute_capability(target_sm: u32) -> vyre_emit::ptx::ComputeCapability {
+    vyre_emit::ptx::ComputeCapability {
         major: target_sm / 10,
         minor: target_sm % 10,
     }
@@ -103,7 +103,7 @@ mod tests {
                         case.id, case.family
                     )
                 });
-            let ptx = vyre_emit_ptx::emit_with_target(&descriptor, compute_capability(90))
+            let ptx = vyre_emit::ptx::emit_with_target(&descriptor, compute_capability(90))
                 .unwrap_or_else(|error| {
                     panic!(
                         "Fix: `{}` ({:?}) must emit CUDA PTX after shared verification: {error:?}",
@@ -129,11 +129,11 @@ mod tests {
                     )
                 })
                 .and_then(|descriptor| {
-                    vyre_emit_ptx::emit_with_target(&descriptor, compute_capability(90))
+                    vyre_emit::ptx::emit_with_target(&descriptor, compute_capability(90))
                         .map(|_| ())
                         .map_err(|error| {
                             format!(
-                                "CUDA descriptor PTX emission failed for `{}`: {error}. Fix: add the missing PTX lowering in vyre-emit-ptx.",
+                                "CUDA descriptor PTX emission failed for `{}`: {error}. Fix: add the missing PTX lowering in vyre_emit::ptx.",
                                 case.id
                             )
                         })

@@ -27,11 +27,11 @@ use vyre_registry_link::backend::{
 use vyre_registry_link::operation::{live_operation_registry, registration_sources};
 
 fn checkout_root() -> PathBuf {
-    structure_gate::workspace_root()
+    vyre_test_support::monorepo::vyre_workspace_root()
 }
 
 fn workspace_members(root: &Path) -> Vec<String> {
-    structure_gate::workspace_members(root)
+    vyre_test_support::monorepo::vyre_workspace_members(root)
 }
 
 fn crate_name(member: &str) -> String {
@@ -121,8 +121,7 @@ fn members_submitting(registration_type: &str) -> Vec<String> {
         if registration_type == "BackendRegistration"
             && (name == "vyre-driver"
                 || name == "xtask"
-                || name == "xtask-registry"
-                || name == "xtask-evidence")
+)
         {
             continue;
         }

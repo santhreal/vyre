@@ -1,6 +1,6 @@
 //! Byte-stability golden for the WGSL this backend emits.
 //!
-//! `vyre-emit-naga` already pins the module it produces from a descriptor. That
+//! `vyre_emit::naga` already pins the module it produces from a descriptor. That
 //! golden stops short of the driver: the wgpu path adds workgroup selection,
 //! dispatch geometry, binding assignment, and the WGSL writer on top, and none
 //! of that is covered by a descriptor-level corpus. This file pins the output of

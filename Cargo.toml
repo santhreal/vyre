@@ -35,11 +35,8 @@ members = [
     # on demand for the subcommands that must observe the live operation
     # registry or a measured benchmark probe, so a source edit no longer
     # rebuilds the compiler before a text-reading gate can run.
-    "tools/xtask-registry",
-    "tools/xtask-evidence",
     # Workspace structural gate. Depends on no vyre crate on purpose: it reads
     # source text so it still runs while the workspace does not compile.
-    "tools/structure-gate",
     "crates/vyre-runtime",
     "crates/vyre-safetensors",
     "crates/vyre-libs",
@@ -55,9 +52,7 @@ members = [
     "crates/vyre-libs-text",
     "crates/vyre-libs-decode",
     "crates/vyre-libs-parsing",
-    "crates/vyre-libs-security",
     "crates/vyre-libs-visual",
-    "crates/vyre-libs-rule",
     "crates/vyre-libs-device",
     "crates/vyre-libs-solvers",
     "crates/vyre-libs-encoding",
@@ -71,21 +66,11 @@ members = [
     "crates/vyre-alloc-probe",
     "crates/vyre-bench",
     "crates/vyre-lower",
-    "crates/vyre-emit-naga",
-    "crates/vyre-emit-ptx",
-    "crates/vyre-emit-spirv",
-    "crates/vyre-emit-metal",
-    "crates/vyre-debug",
+    "crates/vyre-emit",
 ]
 
 exclude = [
-    "examples/external_backend_extension",
-    "examples/external_ir_extension",
-    "examples/libs-template",
-    "fuzz",
     "crates/vyre-foundation/fuzz",
-    "consumers/vyre-model-compiler",
-    "consumers/vyre-graphics-app",
 ]
 
 [workspace.package]
@@ -304,9 +289,7 @@ vyre-libs-hash = { version = "0.8.0", path = "crates/vyre-libs-hash" }
 vyre-libs-text = { version = "0.8.0", path = "crates/vyre-libs-text" }
 vyre-libs-decode = { version = "0.8.0", path = "crates/vyre-libs-decode" }
 vyre-libs-parsing = { version = "0.8.0", path = "crates/vyre-libs-parsing" }
-vyre-libs-security = { version = "0.8.0", path = "crates/vyre-libs-security" }
 vyre-libs-visual = { version = "0.8.0", path = "crates/vyre-libs-visual" }
-vyre-libs-rule = { version = "0.8.0", path = "crates/vyre-libs-rule" }
 vyre-libs-device = { version = "0.8.0", path = "crates/vyre-libs-device" }
 vyre-libs-solvers = { version = "0.8.0", path = "crates/vyre-libs-solvers" }
 vyre-libs-encoding = { version = "0.8.0", path = "crates/vyre-libs-encoding" }
@@ -320,11 +303,7 @@ vyre-aot = { path = "crates/vyre-aot" }
 vyre-bench = { path = "crates/vyre-bench" }
 vyre-conform = { path = "conform/vyre-conform", default-features = false }
 vyre-lower = { version = "0.8.0", path = "crates/vyre-lower" }
-vyre-emit-naga = { version = "0.8.0", path = "crates/vyre-emit-naga" }
-vyre-emit-ptx = { version = "0.8.0", path = "crates/vyre-emit-ptx" }
-vyre-emit-spirv = { version = "0.8.0", path = "crates/vyre-emit-spirv" }
-vyre-emit-metal = { version = "0.8.0", path = "crates/vyre-emit-metal" }
-vyre-debug = { path = "crates/vyre-debug" }
+vyre-emit = { version = "0.8.0", path = "crates/vyre-emit", default-features = false }
 vyre-conform-spec = { path = "conform/vyre-conform-spec" }
 
 # Shared third-party pins; every member agrees on versions.

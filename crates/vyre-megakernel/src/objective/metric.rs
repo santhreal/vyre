@@ -69,8 +69,6 @@ pub enum ObjectiveMetric {
     Energy,
     /// Serialized artifact byte length.
     ArtifactBytes,
-    /// Number of artifacts a portfolio retains.
-    VariantCount,
     /// Deterministic CPU work units the search charged.
     CompileWork,
     /// On-device measurements the search spent.
@@ -86,7 +84,6 @@ impl ObjectiveMetric {
         Self::PeakMemory,
         Self::Energy,
         Self::ArtifactBytes,
-        Self::VariantCount,
         Self::CompileWork,
         Self::MeasurementWork,
     ];
@@ -101,7 +98,6 @@ impl ObjectiveMetric {
             Self::PeakMemory => "peak_memory",
             Self::Energy => "energy",
             Self::ArtifactBytes => "artifact_bytes",
-            Self::VariantCount => "variant_count",
             Self::CompileWork => "compile_work",
             Self::MeasurementWork => "measurement_work",
         }
@@ -109,8 +105,8 @@ impl ObjectiveMetric {
 
     /// Whether candidate ranking can read this metric from a scored candidate.
     ///
-    /// A metric that only exists once an artifact is serialized, or once a whole
-    /// portfolio is assembled, cannot order a candidate: ranking would have to
+    /// A metric that only exists once an artifact is serialized cannot order a
+    /// candidate: ranking would have to
     /// invent the figure. Such a metric is admissible as a hard bound, which is
     /// checked where the figure is real.
     #[must_use]
@@ -121,10 +117,7 @@ impl ObjectiveMetric {
             | Self::ColdStart
             | Self::PeakMemory
             | Self::Energy => true,
-            Self::ArtifactBytes
-            | Self::VariantCount
-            | Self::CompileWork
-            | Self::MeasurementWork => false,
+            Self::ArtifactBytes | Self::CompileWork | Self::MeasurementWork => false,
         }
     }
 
@@ -137,7 +130,6 @@ impl ObjectiveMetric {
             Self::Latency
             | Self::PeakMemory
             | Self::ArtifactBytes
-            | Self::VariantCount
             | Self::CompileWork
             | Self::MeasurementWork => None,
         }
@@ -160,7 +152,6 @@ impl ObjectiveMetric {
             Self::Latency | Self::Throughput | Self::ColdStart => "nanoseconds",
             Self::PeakMemory | Self::ArtifactBytes => "bytes",
             Self::Energy => "microjoules",
-            Self::VariantCount => "artifacts",
             Self::CompileWork => "work units",
             Self::MeasurementWork => "measurements",
         }

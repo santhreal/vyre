@@ -24,20 +24,21 @@ pub struct BoundState {
     pub resident: BTreeMap<ArtifactValueId, Resource>,
 }
 
-/// Split a binding set into its host and resident halves.
+/// Split a binding set into its host and resident halves, moving every
+/// binding rather than copying its bytes.
 ///
 /// Every backend walked the same map and sorted it the same way; what they do
 /// with a resident binding is where they differ.
 #[must_use]
-pub fn partition_bindings(bindings: &BindingSet) -> BoundState {
+pub fn partition_bindings(bindings: BindingSet) -> BoundState {
     let mut bound = BoundState::default();
-    for (value, resource) in bindings.resources() {
+    for (value, resource) in bindings.into_resources() {
         match resource {
             BoundResource::Host(bytes) => {
-                bound.host.insert(*value, bytes.clone());
+                bound.host.insert(value, bytes);
             }
             BoundResource::Resident(resource) => {
-                bound.resident.insert(*value, resource.clone());
+                bound.resident.insert(value, resource);
             }
         }
     }
@@ -54,7 +55,7 @@ pub fn partition_bindings(bindings: &BindingSet) -> BoundState {
 /// Returns `BackendError::UnsupportedFeature` when any value is bound to a
 /// device-resident resource.
 pub fn host_only_bindings(
-    bindings: &BindingSet,
+    bindings: BindingSet,
     feature: &str,
     backend: &str,
 ) -> Result<BTreeMap<ArtifactValueId, Vec<u8>>, BackendError> {
@@ -94,12 +95,12 @@ impl InstanceCore {
     /// because the execution it describes did begin.
     pub fn route_submission(
         &self,
-        bindings: &BindingSet,
+        bindings: BindingSet,
         mixed: fn() -> BackendError,
         host: impl FnOnce(BTreeMap<ArtifactValueId, Vec<u8>>) -> Result<Completion, BackendError>,
         resident: impl FnOnce(&BTreeMap<ArtifactValueId, Resource>) -> Result<Completion, BackendError>,
     ) -> Result<Box<dyn Submission>, BackendError> {
-        self.accept(bindings)?;
+        self.accept(&bindings)?;
         let bound = partition_bindings(bindings);
         if !bound.host.is_empty() && !bound.resident.is_empty() {
             return Err(mixed());
@@ -139,11 +140,16 @@ impl InstanceCore {
             })?;
         for bindings in batches {
             self.accept(bindings)?;
-            let bound = partition_bindings(bindings);
-            if !bound.host.is_empty() {
-                return Err(mixed());
+            let mut resident = BTreeMap::new();
+            for (value, resource) in bindings.resources() {
+                match resource {
+                    BoundResource::Host(_) => return Err(mixed()),
+                    BoundResource::Resident(resource) => {
+                        resident.insert(*value, resource.clone());
+                    }
+                }
             }
-            items.push(bound.resident);
+            items.push(resident);
         }
         Ok(items)
     }
@@ -167,11 +173,11 @@ impl InstanceCore {
     /// describes did begin.
     pub fn submit_host_only(
         &self,
-        bindings: &BindingSet,
+        bindings: BindingSet,
         feature: &str,
         host: impl FnOnce(BTreeMap<ArtifactValueId, Vec<u8>>) -> Result<Completion, BackendError>,
     ) -> Result<Box<dyn Submission>, BackendError> {
-        self.accept(bindings)?;
+        self.accept(&bindings)?;
         let state = host_only_bindings(bindings, feature, &self.device.backend)?;
         Ok(self.ready(host(state)))
     }
@@ -341,22 +347,22 @@ impl InstanceCore {
         let mut device_ns = 0_u64;
         let mut has_device_timing = false;
         for (module_index, module) in modules.iter().enumerate() {
-            let plan = BindingPlan::build(module.program())?;
-            let dispatched = dispatch(module_index, module, &plan, module.config(), &state)?;
+            let plan = module.plan();
+            let dispatched = dispatch(module_index, module, plan, module.config(), &state)?;
             if let Some(ns) = dispatched.device_ns {
                 device_ns = device_ns.saturating_add(ns);
                 has_device_timing = true;
             }
             self.absorb_outputs_for_module(
                 module_index,
-                &plan,
+                plan,
                 module.program(),
                 dispatched.outputs,
                 &mut state,
                 &omitted,
             )?;
         }
-        self.completion(&state, has_device_timing.then_some(device_ns))
+        self.completion(state, has_device_timing.then_some(device_ns))
     }
 }
 
@@ -472,7 +478,7 @@ pub trait MaterializedInstance {
     /// value is bound to a device-resident resource.
     fn submit_host_only(
         &self,
-        bindings: &BindingSet,
+        bindings: BindingSet,
         feature: &str,
     ) -> Result<Box<dyn Submission>, BackendError> {
         self.core()
@@ -594,8 +600,8 @@ pub trait ResidentInstance: MaterializedInstance {
         let mut device_ns = 0_u64;
         let mut has_device_timing = false;
         for (module_index, module) in self.modules().iter().enumerate() {
-            let plan = BindingPlan::build(module.program())?;
-            let ordered = self.ordered_resident(module_index, module, &plan, resources)?;
+            let plan = module.plan();
+            let ordered = self.ordered_resident(module_index, module, plan, resources)?;
             let dispatched = self.launch_resident(module, &ordered, module.config())?;
             if let Some(ns) = dispatched.device_ns {
                 device_ns = device_ns.saturating_add(ns);
@@ -603,7 +609,7 @@ pub trait ResidentInstance: MaterializedInstance {
             }
             core.absorb_outputs_for_module(
                 module_index,
-                &plan,
+                plan,
                 module.program(),
                 dispatched.outputs,
                 &mut state,
@@ -611,7 +617,7 @@ pub trait ResidentInstance: MaterializedInstance {
             )?;
         }
         core.completion_with(
-            &state,
+            state,
             has_device_timing.then_some(device_ns),
             self.resident_messages(),
         )
@@ -679,11 +685,11 @@ pub trait ResidentInstance: MaterializedInstance {
         }
         let core = self.core();
         let label = self.resident_module_label();
-        let plan = BindingPlan::build(module.program())?;
+        let plan = module.plan();
         let mut ordered = Vec::new();
         reserve_batch_items(&mut ordered, items.len(), "resident batch handles")?;
         for resources in items {
-            ordered.push(self.ordered_resident(0, module, &plan, resources)?);
+            ordered.push(self.ordered_resident(0, module, plan, resources)?);
         }
         let mut views = Vec::new();
         reserve_batch_items(&mut views, ordered.len(), "resident batch handle views")?;
@@ -693,13 +699,13 @@ pub trait ResidentInstance: MaterializedInstance {
             let mut state = BTreeMap::new();
             core.absorb_outputs_for_module(
                 0,
-                &plan,
+                plan,
                 module.program(),
                 outputs,
                 &mut state,
                 |output_index, name| omitted_output(label, output_index, name),
             )?;
-            completions.push(core.completion_with(&state, device_ns, self.resident_messages())?);
+            completions.push(core.completion_with(state, device_ns, self.resident_messages())?);
         }
         Ok(completions)
     }
@@ -715,7 +721,7 @@ pub trait ResidentInstance: MaterializedInstance {
     /// name another artifact, and `mixed` when they span both paths.
     fn submit_routed(
         &self,
-        bindings: &BindingSet,
+        bindings: BindingSet,
         mixed: fn() -> BackendError,
     ) -> Result<Box<dyn Submission>, BackendError> {
         self.core().route_submission(

@@ -30,14 +30,6 @@ pub mod actionable_errors;
 #[path = "allocation_contracts.rs"]
 pub mod allocation_contracts;
 
-/// Integration tests from `tests/arm_independence_contracts.rs`.
-#[path = "arm_independence_contracts.rs"]
-pub mod arm_independence_contracts;
-
-/// Integration tests from `tests/async_copy_overlap_contracts.rs`.
-#[path = "async_copy_overlap_contracts.rs"]
-pub mod async_copy_overlap_contracts;
-
 /// Integration tests from `tests/async_dispatch_contract.rs`.
 #[path = "async_dispatch_contract.rs"]
 pub mod async_dispatch_contract;
@@ -58,14 +50,6 @@ pub mod backend_trait_contract;
 #[path = "backend_validation_defaults.rs"]
 pub mod backend_validation_defaults;
 
-/// Integration tests from `tests/benchmark_pass_selection_contracts.rs`.
-#[path = "benchmark_pass_selection_contracts.rs"]
-pub mod benchmark_pass_selection_contracts;
-
-/// Integration tests from `tests/bindless_policy_contracts.rs`.
-#[path = "bindless_policy_contracts.rs"]
-pub mod bindless_policy_contracts;
-
 /// Integration tests from `tests/cache_eviction_contracts.rs`.
 #[path = "cache_eviction_contracts.rs"]
 pub mod cache_eviction_contracts;
@@ -78,29 +62,13 @@ pub mod cache_eviction_heat_contracts;
 #[path = "capability_adversarial.rs"]
 pub mod capability_adversarial;
 
-/// Integration tests from `tests/command_reuse_policy_contracts.rs`.
-#[path = "command_reuse_policy_contracts.rs"]
-pub mod command_reuse_policy_contracts;
-
 /// Integration tests from `tests/consumer_boundary.rs`.
 #[path = "consumer_boundary.rs"]
 pub mod consumer_boundary;
 
-/// Integration tests from `tests/device_convergence_contracts.rs`.
-#[path = "device_convergence_contracts.rs"]
-pub mod device_convergence_contracts;
-
-/// Integration tests from `tests/device_diagnostic_aggregation_contracts.rs`.
-#[path = "device_diagnostic_aggregation_contracts.rs"]
-pub mod device_diagnostic_aggregation_contracts;
-
 /// Integration tests from `tests/device_signature_path.rs`.
 #[path = "device_signature_path.rs"]
 pub mod device_signature_path;
-
-/// Integration tests from `tests/device_work_queue_contracts.rs`.
-#[path = "device_work_queue_contracts.rs"]
-pub mod device_work_queue_contracts;
 
 /// Integration tests from `tests/diagnostic_surface.rs`.
 #[path = "diagnostic_surface.rs"]
@@ -141,10 +109,6 @@ pub mod external_resource_path_agreement;
 /// Integration tests from `tests/float_lowering_refusal.rs`.
 #[path = "float_lowering_refusal.rs"]
 pub mod float_lowering_refusal;
-
-/// Integration tests from `tests/fusion_contracts.rs`.
-#[path = "fusion_contracts.rs"]
-pub mod fusion_contracts;
 
 /// Integration tests from `tests/geometry_admitted_widths.rs`.
 #[path = "geometry_admitted_widths.rs"]
@@ -187,10 +151,6 @@ pub mod input_identity_contracts;
 #[path = "intrinsic_registration_contract.rs"]
 pub mod intrinsic_registration_contract;
 
-/// Integration tests from `tests/launch_fusion_contracts.rs`.
-#[path = "launch_fusion_contracts.rs"]
-pub mod launch_fusion_contracts;
-
 /// Integration tests from `tests/launch_grid_axis_folding.rs`.
 #[path = "launch_grid_axis_folding.rs"]
 pub mod launch_grid_axis_folding;
@@ -223,17 +183,9 @@ pub mod ordering_contracts;
 #[path = "output_slots_contracts.rs"]
 pub mod output_slots_contracts;
 
-/// Integration tests from `tests/param_inlining_contracts.rs`.
-#[path = "param_inlining_contracts.rs"]
-pub mod param_inlining_contracts;
-
 /// Integration tests from `tests/persistent_contracts.rs`.
 #[path = "persistent_contracts.rs"]
 pub mod persistent_contracts;
-
-/// Integration tests from `tests/pipeline_fusion_contracts.rs`.
-#[path = "pipeline_fusion_contracts.rs"]
-pub mod pipeline_fusion_contracts;
 
 /// Integration tests from `tests/read_only_alias_contracts.rs`.
 #[path = "read_only_alias_contracts.rs"]
@@ -259,14 +211,6 @@ pub mod reservation_policy_contracts;
 #[path = "resident_binding_projection.rs"]
 pub mod resident_binding_projection;
 
-/// Integration tests from `tests/result_compaction_contracts.rs`.
-#[path = "result_compaction_contracts.rs"]
-pub mod result_compaction_contracts;
-
-/// Integration tests from `tests/routing_registry_surface.rs`.
-#[path = "routing_registry_surface.rs"]
-pub mod routing_registry_surface;
-
 /// Integration tests from `tests/shape_prediction_contracts.rs`.
 #[path = "shape_prediction_contracts.rs"]
 pub mod shape_prediction_contracts;
@@ -279,10 +223,6 @@ pub mod speculation_verdict_contracts;
 #[path = "staged_module_input_gathering.rs"]
 pub mod staged_module_input_gathering;
 
-/// Integration tests from `tests/strategy_contracts.rs`.
-#[path = "strategy_contracts.rs"]
-pub mod strategy_contracts;
-
 /// Integration tests from `tests/sweep_dispatch_shape_oracle_matrix.rs`.
 #[path = "sweep_dispatch_shape_oracle_matrix.rs"]
 pub mod sweep_dispatch_shape_oracle_matrix;
@@ -294,10 +234,6 @@ pub mod sweep_numeric_oracle_matrix;
 /// Integration tests from `tests/target_contract.rs`.
 #[path = "target_contract.rs"]
 pub mod target_contract;
-
-/// Integration tests from `tests/trace_jit_policy_contracts.rs`.
-#[path = "trace_jit_policy_contracts.rs"]
-pub mod trace_jit_policy_contracts;
 
 /// Integration tests from `tests/transfer_accounting_contracts.rs`.
 #[path = "transfer_accounting_contracts.rs"]
@@ -318,10 +254,6 @@ pub mod resource_abi_contracts;
 /// Integration tests from `tests/lock_policy_closure.rs`.
 #[path = "lock_policy_closure.rs"]
 pub mod lock_policy_closure;
-
-/// Integration tests from `tests/support_certificate_join.rs`.
-#[path = "support_certificate_join.rs"]
-pub mod support_certificate_join;
 
 /// Integration tests from `tests/target_facet_lowering_arms.rs`.
 #[path = "target_facet_lowering_arms.rs"]

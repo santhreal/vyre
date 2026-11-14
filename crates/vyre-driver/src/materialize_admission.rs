@@ -10,7 +10,7 @@ use vyre_megakernel::{
     TargetModuleImage, TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceBinding,
 };
 
-use crate::{BackendError, Device, DeviceIdentity, DispatchConfig, ResidentOwner};
+use crate::{BackendError, BindingPlan, Device, DeviceIdentity, DispatchConfig, ResidentOwner};
 
 use crate::materialize::{compile_error, invalid_module, InstanceCore, InstanceMessages};
 
@@ -34,6 +34,8 @@ pub struct AdmittedModule {
     pub program: Arc<Program>,
     /// Dispatch configuration carried by the payload entry.
     pub config: DispatchConfig,
+    /// Binding plan of `program`, built once here so no submission rebuilds it.
+    pub plan: BindingPlan,
     /// Canonical directional resource metadata carried by the payload entry.
     pub resource_bindings: Vec<TargetResourceBinding>,
 }
@@ -163,10 +165,12 @@ pub fn admit(
             geometry,
             target.backend_id,
         )?);
+        let plan = BindingPlan::build(&program)?;
         admitted.push(AdmittedModule {
             image,
             program,
             config,
+            plan,
             resource_bindings: entry.resource_bindings.clone(),
         });
     }
@@ -207,18 +211,12 @@ pub fn project_resources(artifact: &Artifact) -> ResourceProjection {
         outputs: BTreeSet::new(),
         retained: BTreeSet::new(),
     };
-    if let Ok(by_name) = artifact.canonical_value_by_name() {
-        for (name, value) in by_name {
-            projection.values.insert(name.to_string(), value);
-        }
-    } else {
-        for resource in artifact.resources() {
-            projection
-                .values
-                .insert(resource.name.clone(), resource.value);
-        }
-    }
+    // Names are unique in every artifact (`Artifact::value_named`), so one
+    // insert per record builds the total map.
     for resource in artifact.resources() {
+        projection
+            .values
+            .insert(resource.name.clone(), resource.value);
         match resource.lifetime {
             ResourceLifetime::Output => {
                 projection.outputs.insert(resource.value);

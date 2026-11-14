@@ -302,14 +302,6 @@ consumed_by = [
 ]
 
 [[crate]]
-package = "structure-gate"
-path = "tools/structure-gate"
-layer = "standalone-tooling"
-seam = "source-structure"
-interface = "Whether a directory carries Rust source, which directory owns a domain, and the checkout root a gate reports on."
-responsibility = "Enforce the crate roster, one operation identity per semantic operation, one home per concept, and one place per module. Depends on no vyre crate so it keeps running while the workspace does not compile."
-
-[[crate]]
 package = "vyre"
 path = "crates/vyre"
 layer = "facade"
@@ -356,14 +348,6 @@ layer = "conformance"
 seam = "conformance-schema"
 interface = "Versioned conformance case, result and certificate schemas."
 responsibility = "Define conformance case, result, and certificate schemas against the public facade."
-
-[[crate]]
-package = "vyre-debug"
-path = "crates/vyre-debug"
-layer = "tooling"
-seam = "debugging"
-interface = "Program and artifact inspection for a caller holding a compiled artifact."
-responsibility = "Inspect, explain, and diagnose typed programs, lowering, and product-library composition."
 
 [[crate]]
 package = "vyre-driver"
@@ -708,154 +692,6 @@ seam = "gate-registry"
 interface = "The subcommand registry and every gate that judges the tree from source text, manifests, workflows and recorded evidence."
 responsibility = "Own the subcommand registry and every gate that judges the tree from source text, manifests, workflows, and recorded evidence, linking no vyre crate."
 
-[[crate]]
-package = "xtask-evidence"
-path = "tools/xtask-evidence"
-layer = "tooling"
-seam = "evidence-gates"
-interface = "The gates that decide whether a recorded benchmark or release measurement still describes this tree."
-responsibility = "Own the xtask subcommands that decide whether a recorded benchmark or release measurement still describes this tree."
-
-# The consumer facade roster.
-#
-# `vyre-libs` is the one curated consumer facade over the domain packages of
-# the `libraries` layer. Its `[features]` table is generated from the rows
-# below by `cargo xtask configuration-model --write`, so a domain feature is
-# recorded once, beside the `[[crate]]` record of the package that owns its
-# semantics, instead of twice in two manifests that can disagree.
-#
-# A `[[facade.feature]]` row states which package owns the capability. The
-# generated manifest row forwards to that package and to nothing else, so the
-# facade is never a second declaring package for the name. `requires` names
-# the facade features the row also selects, which is the facade's own curation
-# of what a selection exposes and is not derivable from the domain manifest.
-# `activates` names third-party optional dependencies the capability needs.
-
-[facade]
-package = "vyre-libs"
-default = [
-    "math-linalg",
-    "math-scan",
-    "math-broadcast",
-    "nn-activation",
-    "nn-linear",
-    "nn-norm",
-    "pattern-substring",
-    "pattern-dfa",
-    "hash",
-    "decode",
-]
-local = ["test-fixtures"]
-
-# A named bundle of facade features. An aggregate forwards to no package of
-# its own, so it declares nothing and owns nothing.
-
-[[facade.aggregate]]
-name = "math"
-selects = ["math-linalg", "math-scan", "math-broadcast", "math-algebra", "math-succinct"]
-
-[[facade.aggregate]]
-name = "nn"
-selects = ["nn-activation", "nn-linear", "nn-norm", "nn-attention"]
-
-[[facade.aggregate]]
-name = "pattern"
-selects = ["pattern-substring", "pattern-dfa"]
-
-[[facade.aggregate]]
-name = "crypto"
-selects = ["crypto-blake3"]
-
-# One row per domain package the facade forwards to. `optional` states
-# whether the facade declares the dependency optional, which decides whether a
-# generated row activates it with `dep:` and forwards weakly.
-
-[[facade.domain]]
-package = "vyre-libs-builder"
-optional = false
-
-[[facade.domain]]
-package = "vyre-libs-bitset"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-reduce"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-fixpoint"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-math"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-nn"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-graph"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-pattern"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-hash"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-text"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-decode"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-parsing"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-security"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-visual"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-rule"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-device"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-solvers"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-encoding"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-analysis"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-reasoning"
-optional = true
-
-[[facade.domain]]
-package = "vyre-libs-scheduling"
-optional = true
-
-# One row per domain feature the facade exposes.
-
 [[facade.feature]]
 name = "builder"
 domain = "vyre-libs-builder"
@@ -1161,10 +997,3 @@ reason = "vyre-conform and vyre-primitives each gate their own requirement for a
 [[configuration.shared_capability]]
 name = "libs-compositions"
 reason = "vyre-driver and vyre-runtime each select the vyre-libs domains their own compositions need, and neither set is the other"
-[[crate]]
-package = "xtask-registry"
-path = "tools/xtask-registry"
-layer = "tooling"
-seam = "live-registry-gates"
-interface = "The gates that must observe the live operation registry, the primitive catalog or a linked backend driver."
-responsibility = "Own the xtask subcommands that must observe the live operation registry, the primitive catalog behind it, or a linked backend driver."

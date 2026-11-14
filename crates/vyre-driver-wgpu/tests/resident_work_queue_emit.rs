@@ -1,7 +1,7 @@
 //! End-to-end lifecycle test for the persistent megakernel on wgpu.
 //!
 //! Lowers the vyre-runtime megakernel Program to Naga IR through
-//! `vyre_emit_naga::program::emit_module`, wraps it in a
+//! `vyre_emit::naga::program::emit_module`, wraps it in a
 //! compiled pipeline, and dispatches a single cycle with the SHUTDOWN
 //! flag pre-set so the persistent loop exits on its first iteration.
 //!
@@ -54,7 +54,7 @@ fn megakernel_shutdown_on_first_iteration_dispatches_cleanly() {
     // is what Gate E cares about  -  both halves must succeed end to
     // end, without the test having to dig into naga_emit internals.
     {
-        use vyre_emit_naga::program::emit_module;
+        use vyre_emit::naga::program::emit_module;
         let module = emit_module(&program, [workgroup_size_x, 1, 1])
             .expect("megakernel Program must emit valid Naga");
         let info = naga::valid::Validator::new(
@@ -135,7 +135,7 @@ fn megakernel_shutdown_on_first_iteration_dispatches_cleanly() {
 /// makes the IR-level Expr::Atomic usable as a scalar.)
 #[test]
 fn megakernel_wgsl_contains_compute_entry_and_atomic_cas() {
-    use vyre_emit_naga::program::emit_module;
+    use vyre_emit::naga::program::emit_module;
 
     let program = resident_work_queue::build_program_sharded(64, &[]);
     let module = emit_module(&program, [64, 1, 1]).expect("megakernel must emit Naga");

@@ -1,0 +1,66 @@
+[package]
+name = "vyre-emit"
+version = "0.8.0"
+autotests = false
+autoexamples = false
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Target emitters for vyre KernelDescriptor: Naga (WGSL), PTX, SPIR-V and Metal."
+repository = "https://github.com/santhreal/vyre"
+homepage = "https://santh.dev/vyre/"
+documentation = "https://docs.rs/vyre-emit"
+categories = ["compilers", "hardware-support"]
+keywords = ["vyre", "ptx", "spirv", "wgsl", "metal"]
+
+[package.metadata.vyre]
+publication_class = "internal-engine"
+publication_contract = "closure:vyre-driver-cuda,vyre-driver-wgpu,vyre-driver-spirv,vyre-driver-metal"
+
+[lints]
+workspace = true
+
+[lib]
+name = "vyre_emit"
+path = "src/lib.rs"
+
+[features]
+default = ["naga", "ptx", "spirv", "metal"]
+naga = ["dep:naga", "dep:inventory", "dep:tracing", "dep:serde_json"]
+ptx = []
+nvrtc = ["ptx"]
+spirv = ["naga"]
+metal = ["naga", "dep:blake3", "dep:bincode"]
+
+[dependencies]
+vyre-foundation = { workspace = true }
+vyre-lower = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+rustc-hash = { workspace = true }
+smallvec = { workspace = true }
+naga = { workspace = true, optional = true }
+inventory = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+blake3 = { workspace = true, optional = true }
+bincode = { workspace = true, optional = true }
+
+# build.rs includes src/source_digest.rs, which needs only these.
+[build-dependencies]
+blake3 = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+vyre-lower = { workspace = true, features = ["test-fixtures"] }
+vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
+vyre-spec = { workspace = true }
+# carrier_scope_regression lowers the real python312 lexer megakernel.
+vyre-libs = { workspace = true, features = ["python-parser"] }
+blake3 = { workspace = true }
+cudarc = { workspace = true }
+proptest = { workspace = true }
+tempfile = { workspace = true }
+
+[[test]]
+name = "all_tests"
+path = "tests/all_tests.rs"

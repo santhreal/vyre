@@ -57,7 +57,6 @@ toml = { workspace = true }
 # Resolves the checkout root from the working directory. A compiled-in manifest
 # path names whichever checkout built the binary, and every checkout here shares
 # one target directory.
-structure-gate = { path = "../../tools/structure-gate" }
 # The level-stage closure reads the `IrLevel` variants from `vyre-spec` source
 # and resolves that source through the shared monorepo helpers. `ir-fixtures`
 # carries the strict-float witness program the strict-dispatch contract runs,

@@ -1,0 +1,172 @@
+//! SPIR-V binary emitter for vyre `KernelDescriptor`.
+//!
+//! Substrate parity strategy: route the descriptor through
+//! `vyre_emit::naga` to get a `naga::Module`, then use
+//! `naga::back::spv::Writer` to produce a SPIR-V binary. This shares
+//! the lossless lowering work with the wgpu/naga path  -  both backends
+//! see the exact same naga::Module  -  and avoids forking a second
+//! KernelOp → SPIR-V translation table.
+//!
+//! ## Op coverage
+//!
+//! Inherits from `vyre_emit::naga`. Anything that emit-naga refuses
+//! also fails here. Anything emit-naga accepts gets converted to a
+//! valid SPIR-V binary if naga's spv-out can lower it (essentially
+//! everything except SPIR-V-specific extensions naga doesn't model).
+//!
+//! ## Validation gate
+//!
+//! `naga::valid::Validator` runs before `naga::back::spv::Writer`, so
+//! any invalid module is rejected at the boundary. The emitted SPIR-V
+//! binary is guaranteed to satisfy SPIR-V's structural requirements
+//! per naga's spec compliance. Optional external `spirv-val` validation
+//! sits in the integration-test surface (added when CI has spirv-tools).
+
+use thiserror::Error;
+use vyre_foundation::diagnostics::{CauseKind, Diagnostic};
+use vyre_lower::KernelDescriptor;
+pub mod patterns;
+
+/// Target identity every diagnostic this emitter raises carries.
+const TARGET: &str = "spirv";
+
+/// Errors produced while lowering and encoding a SPIR-V module.
+#[derive(Debug, Error)]
+pub enum EmitError {
+    /// Shared descriptor-to-Naga lowering failed.
+    #[error("naga emission failed: {0}")]
+    NagaEmit(#[from] crate::naga::EmitError),
+
+    /// Naga rejected the generated module during validation.
+    #[error("naga validation failed: {0}")]
+    NagaValidation(String),
+
+    /// The SPIR-V writer could not be constructed for the module.
+    #[error("SPIR-V writer construction failed: {0}")]
+    WriterConstruction(String),
+
+    /// The SPIR-V writer could not encode the module.
+    #[error("SPIR-V writer.write failed: {0}")]
+    WriterWrite(String),
+}
+
+impl EmitError {
+    /// Project this error into the versioned structured diagnostic contract.
+    #[must_use]
+    pub fn diagnostic(&self) -> Diagnostic {
+        match self {
+            Self::NagaEmit(naga_err) => {
+                naga_err.retargeted_diagnostic(TARGET, "during SPIR-V emission from Naga module")
+            }
+            Self::NagaValidation(msg) => Diagnostic::emission_error(
+                TARGET,
+                "SPV001_NAGA_VALIDATION_FAILED",
+                format!("naga validation failed during SPIR-V emission: {msg}"),
+            )
+            .with_fix("repair the shared descriptor/Naga emission path before emitting SPIR-V")
+            .with_cause(CauseKind::Emission, "naga_validation", msg.clone()),
+            Self::WriterConstruction(msg) => Diagnostic::emission_error(
+                TARGET,
+                "SPV002_WRITER_CONSTRUCTION_FAILED",
+                format!("SPIR-V writer construction failed: {msg}"),
+            )
+            .with_fix("ensure Naga capabilities and SPIR-V writer options are compatible")
+            .with_cause(CauseKind::Emission, "writer_construction", msg.clone()),
+            Self::WriterWrite(msg) => Diagnostic::emission_error(
+                TARGET,
+                "SPV003_WRITER_WRITE_FAILED",
+                format!("SPIR-V writer.write failed: {msg}"),
+            )
+            .with_fix("check Naga module instructions for SPIR-V encoding compatibility")
+            .with_cause(CauseKind::Emission, "writer_write", msg.clone()),
+        }
+    }
+}
+
+/// Emit a SPIR-V binary from a `KernelDescriptor`.
+///
+/// Returns the raw SPIR-V words as a `Vec<u32>` (the canonical SPIR-V
+/// representation per the spec). Callers that need bytes can convert
+/// via `bytemuck::cast_slice` or by writing each word as little-endian
+/// (SPIR-V is host-endian per spec but most consumers expect LE).
+pub fn emit(desc: &KernelDescriptor) -> Result<Vec<u32>, EmitError> {
+    let module = crate::naga::emit(desc).map_err(EmitError::NagaEmit)?;
+    emit_from_naga_module(&module)
+}
+
+/// Emit SPIR-V only when `target` supports every descriptor requirement.
+///
+/// Capability admission is delegated to the Naga emitter, the single owner of
+/// descriptor-to-Naga translation, before the shared module is encoded.
+///
+/// # Errors
+///
+/// Returns [`EmitError::NagaEmit`] with a stable unsupported-capability
+/// diagnostic when the supplied target cannot admit the descriptor.
+pub fn emit_with_capabilities(
+    desc: &KernelDescriptor,
+    target: &vyre_lower::EmissionTargetCapabilities,
+) -> Result<Vec<u32>, EmitError> {
+    let module = crate::naga::emit_with_capabilities(desc, target).map_err(EmitError::NagaEmit)?;
+    emit_from_naga_module(&module)
+}
+
+/// Lower-level entry: emit SPIR-V from a pre-built naga::Module.
+/// Useful when callers want to apply naga-level analyses or rewrites
+/// between `vyre_emit::naga::emit` and SPIR-V conversion.
+pub fn emit_from_naga_module(module: &naga::Module) -> Result<Vec<u32>, EmitError> {
+    use naga::back::spv::{Options, PipelineOptions, Writer, WriterFlags};
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+
+    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
+    let info = validator
+        .validate(module)
+        .map_err(|e| EmitError::NagaValidation(format!("{e:?}")))?;
+
+    let options = Options {
+        lang_version: (1, 3),
+        capabilities: None,
+        flags: WriterFlags::empty(),
+        binding_map: Default::default(),
+        zero_initialize_workgroup_memory:
+            naga::back::spv::ZeroInitializeWorkgroupMemoryMode::Polyfill,
+        force_loop_bounding: true,
+        bounds_check_policies: naga::proc::BoundsCheckPolicies::default(),
+        debug_info: None,
+    };
+    let pipeline = PipelineOptions {
+        shader_stage: naga::ShaderStage::Compute,
+        entry_point: "main".to_string(),
+    };
+
+    let mut writer = Writer::new(&options).map_err(|e| {
+        EmitError::WriterConstruction(format!(
+            "{e:?}. Fix: upgrade naga or relax spv-out feature flags."
+        ))
+    })?;
+    let mut out = Vec::new();
+    writer
+        .write(module, &info, Some(&pipeline), &None, &mut out)
+        .map_err(|e| EmitError::WriterWrite(format!("{e:?}")))?;
+    Ok(out)
+}
+
+/// Convenience: emit SPIR-V as raw little-endian bytes (the form most
+/// runtime loaders accept directly).
+pub fn emit_bytes(desc: &KernelDescriptor) -> Result<Vec<u8>, EmitError> {
+    words_to_le_bytes(emit(desc)?)
+}
+
+fn words_to_le_bytes(words: Vec<u32>) -> Result<Vec<u8>, EmitError> {
+    let mut bytes = Vec::with_capacity(words.len() * 4);
+    for word in words {
+        bytes.extend_from_slice(&word.to_le_bytes());
+    }
+    Ok(bytes)
+}
+
+/// SPIR-V magic number  -  `0x07230203` per the spec. Useful for
+/// integration tests and consumer-side sanity checks.
+pub const SPIRV_MAGIC: u32 = 0x07230203;
+
+vyre_foundation::diagnostic_conversions!(EmitError, diagnostic);

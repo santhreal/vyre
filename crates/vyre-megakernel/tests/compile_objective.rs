@@ -10,9 +10,9 @@
 use std::collections::BTreeSet;
 
 use vyre_megakernel::{
-    compile, CompileObjective, CompileRequest, CoveragePolicy, MetricFigures, MetricSequence,
-    ObjectiveBounds, ObjectiveMetric, PortfolioPolicy, RequiredFact, RiskStatistic,
-    WorkloadAggregation, WorkloadClass, WorkloadProfile, OBJECTIVE_SCHEMA_VERSION,
+    compile, CompileObjective, CompileRequest, MetricFigures, MetricSequence, ObjectiveBounds,
+    ObjectiveMetric, RequiredFact, RiskStatistic, WorkloadAggregation, WorkloadClass,
+    WorkloadProfile, OBJECTIVE_SCHEMA_VERSION,
 };
 
 use crate::search_fixtures::{
@@ -117,8 +117,8 @@ fn every_declared_calibrated_fact_is_listed_and_names_its_builder() {
     }
 }
 
-/// WHY: the three policy enumerations decide an aggregate, a comparison, and a
-/// retained artifact count. Each is read through its own `ALL` by validation and
+/// WHY: the policy enumerations decide an aggregate and a comparison. Each is
+/// read through its own `ALL` by validation and
 /// by evidence projection, and a variant missing from one of those lists is a
 /// policy no compile can be validated against.
 #[test]
@@ -131,10 +131,6 @@ fn every_declared_policy_variant_is_listed() {
         source_variants("objective/workload.rs", "pub enum RiskStatistic {"),
         listed(RiskStatistic::ALL)
     );
-    assert_eq!(
-        source_variants("objective/portfolio.rs", "pub enum CoveragePolicy {"),
-        listed(CoveragePolicy::ALL)
-    );
 }
 
 // ============================================================================
@@ -142,7 +138,7 @@ fn every_declared_policy_variant_is_listed() {
 // ============================================================================
 
 /// WHY: ranking reads a figure per candidate. A metric whose figure only exists
-/// after emission or after a whole portfolio is assembled would have to be
+/// after emission would have to be
 /// invented at ranking time, and an invented figure orders candidates by a
 /// number no stage computed. Such a metric is admissible as a bound only, so
 /// `is_orderable` must agree with what candidate scoring actually derives.
@@ -270,7 +266,7 @@ fn an_unorderable_metric_bounds_but_never_orders() {
     let tie_break = error_of(
         latency()
             .with_primary(ObjectiveMetric::Latency)
-            .with_tie_breaker(ObjectiveMetric::VariantCount),
+            .with_tie_breaker(ObjectiveMetric::CompileWork),
     );
     assert_eq!(
         tie_break.diagnostic.code.as_str(),
@@ -324,16 +320,6 @@ fn every_inconsistent_objective_is_refused_at_its_own_field() {
             "the primary metric restated as a tie breaker",
             latency().with_tie_breaker(ObjectiveMetric::Latency),
             "request.objective.tie_breakers",
-        ),
-        (
-            "a coverage requirement the artifact ceiling cannot reach",
-            latency()
-                .with_workload(
-                    WorkloadProfile::of(WorkloadClass::new(1, 1, 500))
-                        .pushed(WorkloadClass::new(64, 1, 500)),
-                )
-                .with_portfolio(PortfolioPolicy::new(CoveragePolicy::EveryWorkloadClass, 1)),
-            "request.objective.portfolio.max_variants",
         ),
     ];
     for (name, objective, path) in cases {
@@ -628,16 +614,6 @@ fn distinct_objectives() -> Vec<(&'static str, CompileObjective)> {
             CompileObjective::minimize_latency()
                 .with_bound(ObjectiveMetric::ArtifactBytes, CEILING - 1),
         ),
-        (
-            "portfolio",
-            latency().with_portfolio(PortfolioPolicy::new(CoveragePolicy::Single, 8)),
-        ),
-        (
-            "portfolio_aggregate_bytes",
-            latency().with_portfolio(
-                PortfolioPolicy::single().with_max_aggregate_bytes(16 * 1024 * 1024),
-            ),
-        ),
     ]
 }
 
@@ -836,27 +812,6 @@ fn the_ordering_metric_list_states_the_primary_first_and_each_metric_once() {
         ]
     );
     assert_eq!(objective.tie_breakers().len(), 2);
-}
-
-/// WHY: a portfolio ceiling that a coverage policy cannot reach is rejected at
-/// validation, so `admits` and `minimum_variants` must agree with that check.
-/// Two answers to "is this retained set legal" is how a compile retains a set
-/// its own objective refuses.
-#[test]
-fn a_portfolio_admits_exactly_the_sets_its_coverage_and_ceiling_allow() {
-    let single = PortfolioPolicy::single();
-    assert!(single.admits(1, 1));
-    assert!(!single.admits(2, 1), "the ceiling is one artifact");
-    assert_eq!(CoveragePolicy::Single.minimum_variants(4), 1);
-    assert_eq!(CoveragePolicy::EveryWorkloadClass.minimum_variants(4), 4);
-    let every = PortfolioPolicy::new(CoveragePolicy::EveryWorkloadClass, 4);
-    assert!(!every.admits(3, 4), "one class would be served by nothing");
-    assert!(every.admits(4, 4));
-    assert_eq!(single.max_aggregate_bytes(), None);
-    assert_eq!(
-        single.with_max_aggregate_bytes(1024).max_aggregate_bytes(),
-        Some(1024)
-    );
 }
 
 /// WHY: the artifact-bytes bound is the ceiling every production compile states,

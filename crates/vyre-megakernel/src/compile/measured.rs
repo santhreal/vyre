@@ -14,7 +14,7 @@ use crate::schema::{Artifact, PlanMeasurement};
 use crate::target::{TargetCompileError, TargetCompiler};
 use crate::{candidate, cost, select};
 
-use super::{assemble, first_ranked, require_single_artifact};
+use super::{assemble, first_ranked};
 
 /// Registers, spill and shared bytes one emitted entry point allocates.
 ///
@@ -114,7 +114,6 @@ pub fn compile_measured(
     request: &ValidatedCompileRequest,
     evaluator: &dyn FinalistEvaluator,
 ) -> Result<Artifact, CompileError> {
-    require_single_artifact(request)?;
     let context = super::prepare(request)?;
     let budget = request.search_budget;
     if budget.max_measurements == 0 || budget.max_target_compilations == 0 {

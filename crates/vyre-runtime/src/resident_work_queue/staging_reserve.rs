@@ -1,8 +1,6 @@
 //! Shared fallible staging reservations for megakernel host-side runtime paths.
 
 use crate::PipelineError;
-use std::collections::HashMap;
-use std::hash::{BuildHasher, Hash};
 use vyre_driver::reservation_policy::ReservationPolicy;
 
 const MEGAKERNEL_STAGING: ReservationPolicy = ReservationPolicy::new(
@@ -33,26 +31,7 @@ pub(super) fn reserve_vec_capacity<T>(
         })
 }
 
-pub(super) fn reserve_hash_map_capacity<K, V, S>(
-    values: &mut HashMap<K, V, S>,
-    capacity: usize,
-    label: &'static str,
-) -> Result<(), PipelineError>
-where
-    K: Eq + Hash,
-    S: BuildHasher,
-{
-    MEGAKERNEL_STAGING
-        .reserve_hash_map_to_capacity(values, capacity, label)
-        .map_err(|source| {
-            PipelineError::Backend(format!(
-                "megakernel {label} reservation failed for {capacity} entry(s): {source}"
-            ))
-        })
-}
-
-// Inline: covers `reserve_hash_map_capacity`, `reserve_vec_capacity`, which no integration test can
-// name.
+// Inline: covers `reserve_vec_capacity`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -76,17 +55,5 @@ mod tests {
         let message = err.to_string();
         assert!(message.contains("huge telemetry"));
         assert!(message.contains("Fix:"));
-    }
-
-    #[test]
-    fn reserve_hash_map_capacity_uses_shared_policy_and_preserves_entries() {
-        let mut values = HashMap::<u32, u32>::new();
-        values.insert(7, 11);
-
-        reserve_hash_map_capacity(&mut values, 32, "test map")
-            .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - hash map reservation should use shared staging policy");
-
-        assert_eq!(values.get(&7), Some(&11));
-        assert!(values.capacity() >= 32);
     }
 }

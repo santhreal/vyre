@@ -57,7 +57,7 @@ fn registered_target_compiler_emits_selected_metal_bundle() {
     assert_eq!(compiler.format().identity(), "msl");
     assert_eq!(compiler.format().version(), 2);
     assert_eq!(bundle.modules.len(), 1);
-    let target: vyre_emit_metal::MetalArtifact =
+    let target: vyre_emit::metal::MetalArtifact =
         serde_json::from_slice(&bundle.modules[0].bytes).unwrap();
     assert!(target.msl.contains("kernel"));
     assert_eq!(target.entry_point, bundle.modules[0].entry_point);

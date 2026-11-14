@@ -52,10 +52,10 @@ pub(crate) fn owned_by_artifact(produced: bool, lifetime: ResourceLifetime) -> b
 
 /// Schema version of the allocation plan carried inside one artifact.
 ///
-/// Version 1 is the first plan that states offsets, alignment, address space,
-/// device placement, alias classes and permitted storage operations. A stored
-/// plan of another version is refused by version rather than reinterpreted.
-pub const ALLOCATION_SCHEMA_VERSION: u16 = 1;
+/// Version 2 states one device: regions carry no device slot and the plan
+/// records one peak and one allocated total. A stored plan of another version
+/// is refused by version rather than reinterpreted.
+pub const ALLOCATION_SCHEMA_VERSION: u16 = 2;
 
 /// Byte alignment every region offset is a multiple of.
 ///
@@ -73,16 +73,6 @@ pub enum AddressSpace {
     /// Immutable storage a caller fills once and no entry writes.
     Constant,
 }
-
-/// One authenticated device a plan places regions on.
-///
-/// A target that authenticates one device places every region on slot zero. The
-/// slot is recorded rather than assumed so a plan states which device holds each
-/// region instead of leaving it to whoever submits the artifact.
-#[derive(
-    Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
-pub struct DeviceSlot(pub u16);
 
 /// Set of values that may name the same storage.
 ///
@@ -179,16 +169,14 @@ impl ValuePlacement {
     }
 }
 
-/// One physical region of one device, holding every value placed in it.
+/// One physical region, holding every value placed in it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AllocationRegion {
-    /// Device holding the region.
-    pub device: DeviceSlot,
     /// Space the region is addressed in.
     pub address_space: AddressSpace,
     /// Who allocates the backing storage.
     pub owner: RegionOwner,
-    /// Byte offset of the region inside its device allocation.
+    /// Byte offset of the region inside the artifact allocation.
     pub offset: u64,
     /// Bytes the region reserves.
     pub bytes: u64,
@@ -211,7 +199,7 @@ impl AllocationRegion {
             .unwrap_or(0)
     }
 
-    /// Exclusive byte end of the region inside its device allocation.
+    /// Exclusive byte end of the region inside the artifact allocation.
     ///
     /// # Errors
     ///
@@ -226,36 +214,25 @@ impl AllocationRegion {
     }
 }
 
-/// Bytes one device holds under this plan.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct DevicePeak {
-    /// Device the figures belong to.
-    pub device: DeviceSlot,
-    /// Largest byte total simultaneously live in any one stage, over every
-    /// placement the device holds.
-    ///
-    /// This is what the device holds at its busiest stage, so it is the figure
-    /// candidate ranking prices and a hard memory bound is checked against.
-    pub peak_bytes: u64,
-    /// Bytes the artifact-owned regions of this device reserve.
-    ///
-    /// The runtime allocates exactly this. It is never below the liveness peak of
-    /// the artifact-owned placements; the difference is what this packer left
-    /// unused.
-    pub allocated_bytes: u64,
-}
-
 /// Every physical allocation and layout decision one selected schedule made.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AllocationPlan {
     /// Schema version of the plan.
     pub schema_version: u16,
-    /// Regions ascending by device, address space, owner and offset.
+    /// Regions ascending by address space, owner and offset.
     pub regions: Vec<AllocationRegion>,
-    /// One entry per device the plan places a region on, ascending by device.
-    pub device_peaks: Vec<DevicePeak>,
-    /// Sum of every device peak.
-    pub aggregate_peak_bytes: u64,
+    /// Largest byte total simultaneously live in any one stage, over every
+    /// placement.
+    ///
+    /// This is what the device holds at its busiest stage, so it is the figure
+    /// candidate ranking prices and a hard memory bound is checked against.
+    pub peak_bytes: u64,
+    /// Bytes the artifact-owned regions reserve.
+    ///
+    /// The runtime allocates exactly this. It is never below the liveness peak
+    /// of the artifact-owned placements; the difference is what the packer left
+    /// unused.
+    pub allocated_bytes: u64,
 }
 
 impl Default for AllocationPlan {
@@ -271,43 +248,24 @@ impl AllocationPlan {
         Self {
             schema_version: ALLOCATION_SCHEMA_VERSION,
             regions: Vec::new(),
-            device_peaks: Vec::new(),
-            aggregate_peak_bytes: 0,
+            peak_bytes: 0,
+            allocated_bytes: 0,
         }
     }
 
-    /// Bytes the artifact's own storage must hold at once, summed over devices.
+    /// Bytes the artifact's own storage must hold at once.
     ///
-    /// [`Self::aggregate_peak_bytes`] counts caller-owned regions too, because
-    /// candidate ranking prices everything the device addresses. A backend
-    /// allocator owns only the artifact's half: the caller binds its own
-    /// buffers, and on a host-input launch those bytes are staged rather than
-    /// held in any allocator the backend can count. Reconciling a device figure
-    /// against the aggregate therefore compares two different quantities, and
-    /// on one backend's sweep it refused 278 of 349 operations for the caller's
-    /// share of a plan the artifact was running correctly.
+    /// [`Self::peak_bytes`] counts caller-owned regions too, because candidate
+    /// ranking prices everything the device addresses. A backend allocator owns
+    /// only the artifact's half: the caller binds its own buffers, and on a
+    /// host-input launch those bytes are staged rather than held in any
+    /// allocator the backend can count.
     ///
     /// # Errors
     ///
-    /// Returns an error when a device's live placements sum past `u64`.
+    /// Returns an error when the live placements sum past `u64`.
     pub fn artifact_peak_bytes(&self) -> Result<u64, CompileError> {
-        let mut devices: Vec<DeviceSlot> = self
-            .regions
-            .iter()
-            .filter(|region| region.owner == RegionOwner::Artifact)
-            .map(|region| region.device)
-            .collect();
-        devices.sort_unstable();
-        devices.dedup();
-        devices.into_iter().try_fold(0u64, |total, device| {
-            let peak = self.live_peak(device, Some(RegionOwner::Artifact))?;
-            total.checked_add(peak).ok_or_else(|| {
-                overflow(
-                    "artifact.allocation.device_peaks",
-                    "artifact-owned device peak sum exceeds u64",
-                )
-            })
-        })
+        self.live_peak(Some(RegionOwner::Artifact))
     }
 
     /// Region and placement holding `value`, when the plan places it.
@@ -352,10 +310,8 @@ impl AllocationPlan {
     /// its region, two placements of different alias classes hold the same bytes
     /// while both live, a permit names a value the plan does not place, a
     /// caller-owned region takes over storage it does not own, a reuse permit
-    /// names a value that is not placed beside it or is still live, a device
-    /// peak has no region or a region has no device peak, a recorded figure is
-    /// not the one the placements hold, or the aggregate peak is not the sum of
-    /// the device peaks.
+    /// names a value that is not placed beside it or is still live, or a
+    /// recorded peak or allocated total is not the one the regions hold.
     pub fn validate(&self) -> Result<(), CompileError> {
         if self.schema_version != ALLOCATION_SCHEMA_VERSION {
             return Err(failure(
@@ -374,7 +330,7 @@ impl AllocationPlan {
     }
 
     fn validate_regions(&self) -> Result<(), CompileError> {
-        let mut previous: Option<(DeviceSlot, AddressSpace, RegionOwner, u64)> = None;
+        let mut previous: Option<(AddressSpace, RegionOwner, u64)> = None;
         for (index, region) in self.regions.iter().enumerate() {
             let path = format!("artifact.allocation.regions[{index}]");
             if region.placements.is_empty() {
@@ -430,16 +386,16 @@ impl AllocationPlan {
                     "bind constant values the caller supplies, never allocate them",
                 ));
             }
-            let ordering = (region.device, region.address_space, region.owner);
-            if let Some((device, space, owner, end)) = previous {
-                if ordering < (device, space, owner) {
+            let ordering = (region.address_space, region.owner);
+            if let Some((space, owner, end)) = previous {
+                if ordering < (space, owner) {
                     return Err(invalid(
-                        format!("{path}.device"),
-                        "regions are not ordered by device, address space and owner",
-                        "record regions ascending by device, address space, owner and offset",
+                        format!("{path}.address_space"),
+                        "regions are not ordered by address space and owner",
+                        "record regions ascending by address space, owner and offset",
                     ));
                 }
-                if ordering == (device, space, owner)
+                if ordering == (space, owner)
                     && region.owner == RegionOwner::Artifact
                     && region.offset < end
                 {
@@ -450,12 +406,7 @@ impl AllocationPlan {
                     ));
                 }
             }
-            previous = Some((
-                region.device,
-                region.address_space,
-                region.owner,
-                region.end()?,
-            ));
+            previous = Some((region.address_space, region.owner, region.end()?));
             self.validate_placements(region, &path)?;
         }
         Ok(())
@@ -573,115 +524,61 @@ impl AllocationPlan {
     }
 
     fn validate_peaks(&self) -> Result<(), CompileError> {
-        let mut aggregate = 0u64;
-        let mut previous: Option<DeviceSlot> = None;
-        for (index, peak) in self.device_peaks.iter().enumerate() {
-            let path = format!("artifact.allocation.device_peaks[{index}]");
-            if previous.is_some_and(|last| peak.device <= last) {
-                return Err(invalid(
-                    format!("{path}.device"),
-                    "device peaks are not ascending and unique",
-                    "record one ascending peak entry per placed device",
-                ));
-            }
-            previous = Some(peak.device);
-            let allocated = self
-                .regions
-                .iter()
-                .filter(|region| {
-                    region.device == peak.device && region.owner == RegionOwner::Artifact
-                })
-                .try_fold(0u64, |total, region| {
-                    total.checked_add(region.bytes).ok_or_else(|| {
-                        overflow(format!("{path}.allocated_bytes"), "region sum exceeds u64")
-                    })
-                })?;
-            if allocated != peak.allocated_bytes {
-                return Err(invalid(
-                    format!("{path}.allocated_bytes"),
-                    format!(
-                        "device peak records {} allocated bytes and its regions reserve {allocated}",
-                        peak.allocated_bytes
-                    ),
-                    "record the bytes the artifact-owned regions reserve",
-                ));
-            }
-            let owned_peak = self.live_peak(peak.device, Some(RegionOwner::Artifact))?;
-            if peak.allocated_bytes < owned_peak {
-                return Err(invalid(
-                    format!("{path}.allocated_bytes"),
-                    format!(
-                        "device allocates {} bytes and its own placements need {owned_peak}",
-                        peak.allocated_bytes
-                    ),
-                    "reserve at least the peak the artifact-owned placements require",
-                ));
-            }
-            let live = self.live_peak(peak.device, None)?;
-            if live != peak.peak_bytes {
-                return Err(invalid(
-                    format!("{path}.peak_bytes"),
-                    format!(
-                        "device peak records {} live bytes and its placements hold {live}",
-                        peak.peak_bytes
-                    ),
-                    "record the exact liveness peak of the placed values",
-                ));
-            }
-            aggregate = aggregate.checked_add(peak.peak_bytes).ok_or_else(|| {
+        let allocated = self.owned().try_fold(0u64, |total, region| {
+            total.checked_add(region.bytes).ok_or_else(|| {
                 overflow(
-                    "artifact.allocation.aggregate_peak_bytes",
-                    "device peak sum exceeds u64",
+                    "artifact.allocation.allocated_bytes",
+                    "region sum exceeds u64",
                 )
-            })?;
-        }
-        for (index, region) in self.regions.iter().enumerate() {
-            if !self
-                .device_peaks
-                .iter()
-                .any(|peak| peak.device == region.device)
-            {
-                return Err(invalid(
-                    format!("artifact.allocation.regions[{index}].device"),
-                    format!(
-                        "device {} holds a region and no peak entry",
-                        region.device.0
-                    ),
-                    "record one peak entry per device the plan places a region on",
-                ));
-            }
-        }
-        if aggregate != self.aggregate_peak_bytes {
+            })
+        })?;
+        if allocated != self.allocated_bytes {
             return Err(invalid(
-                "artifact.allocation.aggregate_peak_bytes",
+                "artifact.allocation.allocated_bytes",
                 format!(
-                    "plan records {} aggregate bytes and its devices hold {aggregate}",
-                    self.aggregate_peak_bytes
+                    "plan records {} allocated bytes and its regions reserve {allocated}",
+                    self.allocated_bytes
                 ),
-                "record the sum of the device peaks",
+                "record the bytes the artifact-owned regions reserve",
+            ));
+        }
+        let owned_peak = self.live_peak(Some(RegionOwner::Artifact))?;
+        if self.allocated_bytes < owned_peak {
+            return Err(invalid(
+                "artifact.allocation.allocated_bytes",
+                format!(
+                    "plan allocates {} bytes and its own placements need {owned_peak}",
+                    self.allocated_bytes
+                ),
+                "reserve at least the peak the artifact-owned placements require",
+            ));
+        }
+        let live = self.live_peak(None)?;
+        if live != self.peak_bytes {
+            return Err(invalid(
+                "artifact.allocation.peak_bytes",
+                format!(
+                    "plan records {} live bytes and its placements hold {live}",
+                    self.peak_bytes
+                ),
+                "record the exact liveness peak of the placed values",
             ));
         }
         Ok(())
     }
 
-    /// Largest byte total live in any one stage on `device`, over the regions
-    /// of `owner` or over every region when no owner is stated.
+    /// Largest byte total live in any one stage, over the regions of `owner`
+    /// or over every region when no owner is stated.
     ///
     /// Storage is counted once however many values hold it. A retained chain
     /// places every value of the chain over the same bytes, and charging the
     /// stage for each of them would report a device holding more bytes than its
     /// regions reserve.
-    fn live_peak(
-        &self,
-        device: DeviceSlot,
-        owner: Option<RegionOwner>,
-    ) -> Result<u64, CompileError> {
+    fn live_peak(&self, owner: Option<RegionOwner>) -> Result<u64, CompileError> {
         let regions: Vec<&AllocationRegion> = self
             .regions
             .iter()
-            .filter(|region| {
-                region.device == device && owner.is_none_or(|owner| region.owner == owner)
-            })
+            .filter(|region| owner.is_none_or(|owner| region.owner == owner))
             .collect();
         let final_stage = regions
             .iter()
@@ -728,7 +625,7 @@ impl AllocationPlan {
 fn sum_live(total: u64, bytes: u64) -> Result<u64, CompileError> {
     total.checked_add(bytes).ok_or_else(|| {
         overflow(
-            "artifact.allocation.device_peaks",
+            "artifact.allocation.peak_bytes",
             "live placement sum exceeds u64",
         )
     })

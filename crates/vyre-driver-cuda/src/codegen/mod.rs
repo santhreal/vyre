@@ -68,9 +68,9 @@ pub fn program_to_ptx_for_sm_and_subgroup(
             descriptor.bindings.slots.len()
         );
     }
-    let ptx = vyre_emit_ptx::emit_with_options(
+    let ptx = vyre_emit::ptx::emit_with_options(
         &descriptor,
-        vyre_emit_ptx::PtxEmitOptions {
+        vyre_emit::ptx::PtxEmitOptions {
             target: descriptor_gate::compute_capability(target_sm),
             subgroup_size,
             ulp_budget: config.ulp_budget.map(u32::from),
@@ -85,7 +85,7 @@ pub fn program_to_ptx_for_sm_and_subgroup(
     )
     .map_err(|error| {
         format!(
-            "CUDA descriptor PTX emission failed: {error}. Fix: add the missing PTX lowering in vyre-emit-ptx rather than reintroducing driver-local Program emission."
+            "CUDA descriptor PTX emission failed: {error}. Fix: add the missing PTX lowering in vyre_emit::ptx rather than reintroducing driver-local Program emission."
         )
     })?;
     if trace {

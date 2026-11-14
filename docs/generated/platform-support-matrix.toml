@@ -606,11 +606,6 @@ declared_in = "crates/vyre-driver-wgpu/src/device_buffer.rs"
 claimed = true
 
 [[package_features]]
-package = "structure-gate"
-feature = "default"
-publication_class = "conformance-tooling"
-
-[[package_features]]
 package = "vyre"
 feature = "cpu-parity"
 publication_class = "stable-consumer-sdk"
@@ -677,11 +672,6 @@ publication_class = "conformance-tooling"
 
 [[package_features]]
 package = "vyre-conform-spec"
-feature = "default"
-publication_class = "conformance-tooling"
-
-[[package_features]]
-package = "vyre-debug"
 feature = "default"
 publication_class = "conformance-tooling"
 
@@ -1755,12 +1745,3 @@ package = "xtask"
 feature = "public-api-tool"
 publication_class = "conformance-tooling"
 
-[[package_features]]
-package = "xtask-evidence"
-feature = "default"
-publication_class = "conformance-tooling"
-
-[[package_features]]
-package = "xtask-registry"
-feature = "default"
-publication_class = "conformance-tooling"

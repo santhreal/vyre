@@ -9,10 +9,6 @@
 #[path = "support/search_fixtures.rs"]
 pub mod search_fixtures;
 
-/// Shared fixture module from `tests/support/specialization_fixtures.rs`.
-#[path = "support/specialization_fixtures.rs"]
-pub mod specialization_fixtures;
-
 /// Integration tests from `tests/algebraic_equivalence.rs`.
 #[path = "algebraic_equivalence.rs"]
 pub mod algebraic_equivalence;
@@ -28,10 +24,6 @@ pub mod candidate_budget_and_dependency_endpoints;
 /// Integration tests from `tests/compile_objective.rs`.
 #[path = "compile_objective.rs"]
 pub mod compile_objective;
-
-/// Integration tests from `tests/compile_portfolio.rs`.
-#[path = "compile_portfolio.rs"]
-pub mod compile_portfolio;
 
 /// Integration tests from `tests/frontier_topology_selection.rs`.
 #[path = "frontier_topology_selection.rs"]
@@ -52,10 +44,6 @@ pub mod level_stage_verdict;
 /// Integration tests from `tests/measurement_protocol.rs`.
 #[path = "measurement_protocol.rs"]
 pub mod measurement_protocol;
-
-/// Integration tests from `tests/mesh_topology_contract.rs`.
-#[path = "mesh_topology_contract.rs"]
-pub mod mesh_topology_contract;
 
 /// Integration tests from `tests/multi_fidelity_ladder.rs`.
 #[path = "multi_fidelity_ladder.rs"]
@@ -85,14 +73,6 @@ pub mod shared_tile_cost;
 #[path = "staged_input_slots_contract.rs"]
 pub mod staged_input_slots_contract;
 
-/// Integration tests from `tests/specialization_contract.rs`.
-#[path = "specialization_contract.rs"]
-pub mod specialization_contract;
-
-/// Integration tests from `tests/specialization_portfolio.rs`.
-#[path = "specialization_portfolio.rs"]
-pub mod specialization_portfolio;
-
 /// Integration tests from `tests/target_payload_contract.rs`.
 #[path = "target_payload_contract.rs"]
 pub mod target_payload_contract;
@@ -101,9 +81,6 @@ pub mod target_payload_contract;
 #[path = "topology_contract.rs"]
 pub mod topology_contract;
 
-/// Integration tests from `tests/real_time_objectives.rs`.
-#[path = "real_time_objectives.rs"]
-pub mod real_time_objectives;
 /// Integration tests from `tests/region_fusion_legality_contracts.rs`.
 #[path = "region_fusion_legality_contracts.rs"]
 pub mod region_fusion_legality_contracts;

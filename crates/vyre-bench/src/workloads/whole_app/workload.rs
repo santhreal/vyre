@@ -365,7 +365,7 @@ impl WholeApplicationWorkload {
             .to_string());
         }
 
-        let peak_bytes = artifact.allocation().aggregate_peak_bytes;
+        let peak_bytes = artifact.allocation().peak_bytes;
         let resident_bytes = workspace.total_bytes();
         for (value, bound) in bindings.resources() {
             if workspace.owns(*value) {

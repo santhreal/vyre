@@ -137,7 +137,7 @@ impl MetalBackend {
         program: &Program,
         binding_plan: &BindingPlan,
         config: &DispatchConfig,
-        artifact: &vyre_emit_metal::MetalArtifact,
+        artifact: &vyre_emit::metal::MetalArtifact,
         pipeline: &metal::ComputePipelineState,
         buffers: Vec<PlannedBuffer>,
     ) -> Result<MetalDispatchResult, BackendError> {

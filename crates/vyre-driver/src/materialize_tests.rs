@@ -132,7 +132,7 @@ fn sparse_and_reordered_module_binding_identities() {
         &[3, 0, 0, 0]
     );
 
-    let completion = core.completion(&state, None).unwrap();
+    let completion = core.completion(state, None).unwrap();
     assert_eq!(
         completion.outputs.get(&ArtifactValueId(res_id.0)).unwrap(),
         &[3, 0, 0, 0]
@@ -386,7 +386,7 @@ fn transitive_retained_predecessor_lineage_preservation() {
         &[1, 2, 3, 4]
     );
 
-    let completion = core.completion(&state, Some(1000)).unwrap();
+    let completion = core.completion(state, Some(1000)).unwrap();
     assert_eq!(
         completion
             .retained
@@ -648,7 +648,7 @@ fn write_only_binding_of_an_output_value_is_output_only() {
     )
     .unwrap();
 
-    let completion = core.completion(&state, None).unwrap();
+    let completion = core.completion(state, None).unwrap();
     assert_eq!(
         completion.outputs.get(&ArtifactValueId(out_id.0)).unwrap(),
         &[42, 0, 0, 0]
@@ -940,16 +940,11 @@ fn payload_access_decides_projection_membership_at_every_lifetime() {
 struct GeometryTestModule {
     program: Arc<Program>,
     config: DispatchConfig,
+    plan: BindingPlan,
 }
 
 impl ExecutableModule for GeometryTestModule {
-    fn program(&self) -> &Program {
-        &self.program
-    }
-
-    fn config(&self) -> &DispatchConfig {
-        &self.config
-    }
+    crate::executable_module!();
 }
 
 /// WHY: artifact bindings are caller-controlled resource bytes, not a launch
@@ -999,6 +994,7 @@ fn hostile_binding_bytes_cannot_resize_admitted_launch_geometry() {
     let modules = [GeometryTestModule {
         program: admitted.program,
         config: admitted.config,
+        plan: admitted.plan,
     }];
 
     let hostile_bytes = [u32::MAX, 0, 1]
@@ -1007,7 +1003,8 @@ fn hostile_binding_bytes_cannot_resize_admitted_launch_geometry() {
         .collect::<Vec<_>>();
     let mut bindings = BindingSet::new(artifact_identity);
     bindings.insert(input, BoundResource::Host(hostile_bytes.clone()));
-    let state = partition_bindings(&bindings).host;
+    assert_eq!(bindings.artifact(), artifact_identity);
+    let state = partition_bindings(bindings).host;
     let completion = core
         .execute_modules(
             &modules,
@@ -1026,7 +1023,6 @@ fn hostile_binding_bytes_cannot_resize_admitted_launch_geometry() {
         )
         .expect("resource bindings must submit with admitted geometry");
 
-    assert_eq!(bindings.artifact(), artifact_identity);
     assert_eq!(completion.artifact, artifact_identity);
     assert_eq!(core.artifact, artifact_identity);
     assert_eq!(core.payload, payload_identity);

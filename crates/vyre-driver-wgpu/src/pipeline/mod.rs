@@ -35,7 +35,7 @@ use vyre_driver::{admit_dispatch_grid, find_indirect_dispatch, infer_launch_grid
 pub(crate) use vyre_driver::{element_size_bytes, OutputBindingLayout};
 pub use vyre_driver::{output_layout_from_program, IndirectDispatch, OutputLayout};
 use vyre_driver::{BackendError, DispatchConfig, LaunchGeometry};
-use vyre_emit_naga::program::TrapTag;
+use vyre_emit::naga::program::TrapTag;
 use vyre_foundation::execution_plan::{self, ExecutionPlan};
 use vyre_foundation::ir::Program;
 use vyre_foundation::validate::ValidationOptions;

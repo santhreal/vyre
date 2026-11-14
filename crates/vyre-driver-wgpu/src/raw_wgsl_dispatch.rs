@@ -10,7 +10,7 @@ use dashmap::mapref::entry::Entry;
 use crate::engine::record_and_readback::{record_and_readback, DispatchLabels, RecordAndReadback};
 use crate::pipeline::{BufferBindingInfo, OutputBindingLayout, OutputLayout};
 use crate::WgpuBackend;
-use vyre_emit_naga::program::bind_group_for;
+use vyre_emit::naga::program::bind_group_for;
 use vyre_foundation::ir::{BufferAccess, DataType};
 
 impl WgpuBackend {

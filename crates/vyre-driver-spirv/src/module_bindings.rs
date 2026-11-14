@@ -51,7 +51,7 @@ pub(crate) struct ModuleDescriptor {
 pub(crate) fn module_descriptors(words: &[u32]) -> Result<Vec<ModuleDescriptor>, BackendError> {
     if words.first().copied() != Some(SPIRV_MAGIC) || words.len() < HEADER_WORDS {
         return Err(BackendError::InvalidProgram {
-            fix: "Fix: SPIR-V module does not start with the SPIR-V header. Emit the module through vyre-emit-spirv before Vulkan dispatch.".to_string(),
+            fix: "Fix: SPIR-V module does not start with the SPIR-V header. Emit the module through vyre_emit::spirv before Vulkan dispatch.".to_string(),
         });
     }
 
@@ -65,7 +65,7 @@ pub(crate) fn module_descriptors(words: &[u32]) -> Result<Vec<ModuleDescriptor>,
         if length == 0 || index + length > words.len() {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
-                    "Fix: SPIR-V instruction at word {index} declares a {length}-word length that runs past the {}-word module. Re-emit the module through vyre-emit-spirv.",
+                    "Fix: SPIR-V instruction at word {index} declares a {length}-word length that runs past the {}-word module. Re-emit the module through vyre_emit::spirv.",
                     words.len()
                 ),
             });
@@ -89,7 +89,7 @@ pub(crate) fn module_descriptors(words: &[u32]) -> Result<Vec<ModuleDescriptor>,
     for (target, binding) in bindings {
         let set = sets.remove(&target).ok_or_else(|| BackendError::InvalidProgram {
             fix: format!(
-                "Fix: SPIR-V id {target} is decorated Binding {binding} with no DescriptorSet, so the driver cannot place it in a descriptor set. Re-emit the module through vyre-emit-spirv."
+                "Fix: SPIR-V id {target} is decorated Binding {binding} with no DescriptorSet, so the driver cannot place it in a descriptor set. Re-emit the module through vyre_emit::spirv."
             ),
         })?;
         descriptors.push(ModuleDescriptor { set, binding });
@@ -97,7 +97,7 @@ pub(crate) fn module_descriptors(words: &[u32]) -> Result<Vec<ModuleDescriptor>,
     if let Some((target, set)) = sets.into_iter().next() {
         return Err(BackendError::InvalidProgram {
             fix: format!(
-                "Fix: SPIR-V id {target} is decorated DescriptorSet {set} with no Binding, so the driver cannot place it in a descriptor set. Re-emit the module through vyre-emit-spirv."
+                "Fix: SPIR-V id {target} is decorated DescriptorSet {set} with no Binding, so the driver cannot place it in a descriptor set. Re-emit the module through vyre_emit::spirv."
             ),
         });
     }

@@ -8,10 +8,9 @@
 //! that reads it binds it as a readable descriptor slot on entry.
 //!
 //! A materializer that staged the `Program`'s host inputs launched the reading
-//! module over an allocation nothing had filled. The fused operations in
-//! `vyre-libs::security` read their stage-one bitset as zero in every case,
-//! which returns a wrong answer rather than a rejection: `sink_intersection`
-//! counted nothing and `aliases_dataflow` returned its seed frontier unchanged.
+//! module over an allocation nothing had filled: fused multi-stage operations
+//! read their stage-one buffer as zero in every case, returning a wrong answer
+//! rather than a rejection.
 //!
 //! # Why the cases are shaped this way
 //!

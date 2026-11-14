@@ -6,7 +6,7 @@ use crate::harness;
 
 use harness::emit_validated_wgsl as emit_wgsl;
 
-use vyre_emit_naga::program::emit_module;
+use vyre_emit::naga::program::emit_module;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 
 const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];

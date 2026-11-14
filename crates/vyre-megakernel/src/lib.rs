@@ -51,21 +51,14 @@ mod level_stage;
 /// Versioned protocol budgeted device measurement runs under, and the evidence
 /// one measured selection retains.
 pub mod measure;
-/// Authenticated device-mesh facts, and the one coordinated topology a selected
-/// schedule records for the whole mesh.
-pub mod mesh;
 mod normalize;
 mod objective;
-mod portfolio;
 mod request;
 mod request_identity;
 mod resource_records;
 mod schema;
 mod search;
 mod select;
-/// Which facts a compile may specialize on, the guards that select one variant,
-/// and the authenticated set a consumer admits whole.
-pub mod specialization;
 /// The target bindings a module's launch stages bytes into.
 mod staged_input_slots;
 /// Target compiler facets over compiler-selected modules and canonical ABI.
@@ -107,13 +100,10 @@ pub use identity::{
 };
 pub use level_stage::{registered_level_stage, PayloadAttachment};
 pub use objective::{
-    BoundViolation, CompileObjective, CoveragePolicy, EnergyPolicy, InputToVisibleMeasurement,
-    InterferenceAssumptions, LatencyPercentile, MetricFigures, MetricSequence, ObjectiveBounds,
-    ObjectiveMetric, PortfolioPolicy, RealTimeDeadline, RealTimeObjective, RealTimeViolation,
-    RequiredFact, RiskStatistic, WarmColdState, WorkloadAggregation, WorkloadArrivalTrace,
-    WorkloadClass, WorkloadProfile, OBJECTIVE_SCHEMA_VERSION, REAL_TIME_OBJECTIVE_SCHEMA_VERSION,
+    BoundViolation, CompileObjective, MetricFigures, MetricSequence, ObjectiveBounds,
+    ObjectiveMetric, RequiredFact, RiskStatistic, WorkloadAggregation, WorkloadClass,
+    WorkloadProfile, OBJECTIVE_SCHEMA_VERSION,
 };
-pub use portfolio::{compile_portfolio, compile_portfolio_measured, ArtifactPortfolio};
 pub use request::{
     CompileRequest, DeclaredConstraints, ExternalFacts, RequiredSchedule, SearchBudget, SearchWork,
     ValidatedCompileRequest,

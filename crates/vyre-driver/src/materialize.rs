@@ -191,22 +191,22 @@ pub fn omitted_output(module_label: &str, output_index: usize, name: &str) -> Ba
 /// A backend's module record also holds its native pipeline and whatever
 /// binding metadata its dialect needs; those stay private to the backend
 /// because the shared loop never touches them. What it does need is the
-/// canonical Program and the payload-declared dispatch config, which every
-/// backend records under the same two names.
+/// canonical Program, the payload-declared dispatch config, and the binding
+/// plan admission built from that Program, which every backend records under
+/// the same three names.
 pub trait ExecutableModule {
     /// Canonical Program this module implements.
     fn program(&self) -> &Program;
     /// Dispatch configuration the payload entry declared.
     fn config(&self) -> &DispatchConfig;
+    /// Binding plan of [`Self::program`], built once at admission.
+    fn plan(&self) -> &crate::BindingPlan;
 }
 
-/// Answer the two [`ExecutableModule`] methods from fields named `program` and
-/// `config`.
+/// Answer the three [`ExecutableModule`] methods from fields named `program`,
+/// `config` and `plan`.
 ///
-/// The trait's whole purpose is to let the shared execution loop read those two
-/// out of a record it does not otherwise know, and every backend stores them
-/// under those names, so every backend wrote the same eight lines. A backend
-/// that stores them elsewhere writes the impl by hand instead.
+/// A backend that stores them elsewhere writes the impl by hand instead.
 #[macro_export]
 macro_rules! executable_module {
     () => {
@@ -216,6 +216,10 @@ macro_rules! executable_module {
 
         fn config(&self) -> &$crate::DispatchConfig {
             &self.config
+        }
+
+        fn plan(&self) -> &$crate::BindingPlan {
+            &self.plan
         }
     };
 }
@@ -397,9 +401,6 @@ impl InstanceCore {
         messages: InstanceMessages,
         module_buffer_slots: Vec<BTreeMap<String, (u32, u32)>>,
     ) -> Result<Self, BackendError> {
-        artifact.canonical_value_by_name().map_err(|collision| {
-            invalid_module(&format!("resource name collision: {collision}"))
-        })?;
         let resources = project_resources(artifact);
         let mut direct_predecessors: BTreeMap<ArtifactValueId, ArtifactValueId> = BTreeMap::new();
         for resource in artifact.resources() {
@@ -875,7 +876,10 @@ impl InstanceCore {
         self.absorb_outputs_for_module(0, plan, program, produced, state, missing)
     }
 
-    /// Collect `values` out of executed state, rejecting any that is absent.
+    /// Move `values` out of executed state, rejecting any that is absent.
+    ///
+    /// Output and retained values are disjoint resource lifetimes, so each
+    /// buffer moves into exactly one projection and no byte is copied.
     ///
     /// # Errors
     ///
@@ -883,15 +887,14 @@ impl InstanceCore {
     pub fn project(
         &self,
         values: &BTreeSet<ArtifactValueId>,
-        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
+        state: &mut BTreeMap<ArtifactValueId, Vec<u8>>,
         missing: fn(ArtifactValueId) -> BackendError,
     ) -> Result<BTreeMap<ArtifactValueId, Vec<u8>>, BackendError> {
         values
             .iter()
             .map(|value| {
                 state
-                    .get(value)
-                    .cloned()
+                    .remove(value)
                     .map(|bytes| (*value, bytes))
                     .ok_or_else(|| missing(*value))
             })
@@ -906,7 +909,7 @@ impl InstanceCore {
     /// did not leave a declared value behind.
     pub fn completion(
         &self,
-        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
+        state: BTreeMap<ArtifactValueId, Vec<u8>>,
         device_ns: Option<u64>,
     ) -> Result<Completion, BackendError> {
         self.completion_with(state, device_ns, &self.messages)
@@ -925,14 +928,14 @@ impl InstanceCore {
     /// declared value behind.
     pub fn completion_with(
         &self,
-        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
+        mut state: BTreeMap<ArtifactValueId, Vec<u8>>,
         device_ns: Option<u64>,
         messages: &InstanceMessages,
     ) -> Result<Completion, BackendError> {
         Ok(Completion {
             artifact: self.artifact,
-            outputs: self.project(&self.outputs, state, messages.missing_output_value)?,
-            retained: self.project(&self.retained, state, messages.missing_retained_value)?,
+            outputs: self.project(&self.outputs, &mut state, messages.missing_output_value)?,
+            retained: self.project(&self.retained, &mut state, messages.missing_retained_value)?,
             device_ns,
         })
     }

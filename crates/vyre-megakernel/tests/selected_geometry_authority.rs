@@ -379,7 +379,7 @@ fn every_value_is_placed_where_its_resource_row_says_it_lives() {
         })
         .max()
         .unwrap_or(0);
-    assert_eq!(plan.aggregate_peak_bytes, independent_peak);
+    assert_eq!(plan.peak_bytes, independent_peak);
     assert_eq!(
         plan.owned_bytes(),
         plan.owned().map(|region| region.bytes).sum::<u64>()

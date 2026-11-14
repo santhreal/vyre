@@ -60,6 +60,7 @@ impl ArtifactMaterializer for SpirvMaterializer {
                     program: admitted_module.program,
                     words,
                     config: admitted_module.config,
+                    plan: admitted_module.plan,
                     input_slots,
                 })
             },
@@ -78,6 +79,7 @@ struct SpirvExecutableModule {
     program: Arc<Program>,
     words: Vec<u32>,
     config: DispatchConfig,
+    plan: vyre_driver::BindingPlan,
     /// Bindings this module's launch stages bytes into, in target binding
     /// order. A fused artifact carries a value from one module to the next
     /// through a buffer the reading module's Program declares as consuming no
@@ -100,7 +102,7 @@ impl ArtifactInstance for SpirvArtifactInstance {
     vyre_driver::artifact_instance_unreported_resources!();
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
-        self.submit_host_only(&bindings, "SPIR-V artifact resident binding")
+        self.submit_host_only(bindings, "SPIR-V artifact resident binding")
     }
 }
 

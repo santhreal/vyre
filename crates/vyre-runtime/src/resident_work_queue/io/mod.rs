@@ -29,7 +29,6 @@ pub use complete::{
     complete_io_request, complete_io_requests_batch, try_complete_io_request,
     try_complete_io_requests_batch,
 };
-pub(crate) use encode::empty_io_queue_byte_len;
 pub use encode::{
     encode_empty_io_queue, try_encode_empty_io_queue, try_encode_empty_io_queue_into,
     validate_io_queue_bytes,

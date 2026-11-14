@@ -15,31 +15,14 @@ pub(crate) mod accounting_atomic;
 pub mod allocation;
 /// Backend-neutral ahead-of-time emission registry.
 pub(crate) mod aot;
-/// Independent-arm detection for queue-parallel dispatch.
-/// Pure set arithmetic over (reads, writes) summaries; the dispatcher
-/// uses `can_dispatch_concurrently` to decide whether two megakernel
-/// arms can launch on independent backend queues or streams.
-pub mod arm_independence;
-/// Async-copy / kernel-overlap decision policy. Pure
-/// per-slot read/write conflict check that decides whether an H2D
-/// copy can run on a side stream concurrently with a downstream
-/// kernel.
-pub mod async_copy_overlap;
 /// Persistent autotuning record store.
 pub mod autotune_store;
 /// VyreBackend trait, BackendError, capability records, validation.
 pub(crate) mod backend;
-/// Backend-neutral benchmark-driven optimization pass selection.
-pub mod benchmark_pass_selection;
 /// Backend-neutral program binding plans.
 pub(crate) mod binding;
 /// Stable fingerprints and descriptor-layout sharing for binding plans.
 pub(crate) mod binding_layout;
-/// Bindless buffers / textures decision policy. Decides
-/// whether to use a bindless descriptor array or traditional per-
-/// resource bindings, given the kernel's resource count and the
-/// backend's bindless support level (Full / Static / Unsupported).
-pub mod bindless_policy;
 /// Backend-neutral cache eviction policy.
 pub mod cache_eviction;
 /// N5 substrate: spec-cache eviction with frequency × recency heat
@@ -49,28 +32,12 @@ pub mod cache_eviction;
 pub mod cache_eviction_heat;
 /// Backend-neutral cache invalidation policy.
 pub mod cache_invalidation;
-/// Pre-recorded command reuse decision policy. Decides
-/// whether to record a native command sequence once and replay it for
-/// repeated identical dispatches, based on per-launch overhead vs
-/// record + replay overhead.
-pub mod command_reuse_policy;
-/// Device-conditioned e-graph extraction helpers.
-/// Backend-neutral device-side convergence planning.
-pub mod device_convergence;
-/// Backend-neutral device diagnostic aggregation planning.
-pub mod device_diagnostic_aggregation;
 /// Backend-neutral device capability profile and projections.
 pub(crate) mod device_profile;
 /// Tier-B device signature TOML loader.
 pub(crate) mod device_signature;
-/// Backend-neutral device-side work queue planning.
-pub mod device_work_queue;
 /// Structured, machine-readable diagnostic rendering.
 pub(crate) mod diagnostics;
-/// Bundled D-series + I2 policy invocation. One-shot eval of every
-/// dispatch-side decision substrate so the runtime threads a single
-/// `DispatchPolicyVerdict` instead of six per-substrate verdicts.
-pub mod dispatch_policy;
 /// Backend-neutral dispatch-shape comparison helpers.
 pub(crate) mod dispatch_shape;
 /// Bounded, backend-neutral durability flush for a set of written files.
@@ -82,8 +49,6 @@ pub mod external_import;
 pub mod external_import_contracts;
 /// Backend-neutral fixpoint-iteration resolution.
 pub(crate) mod fixpoint_iterations;
-/// Cross-dispatch fusion decision types and pure analysis.
-pub mod fusion;
 /// Backend-neutral replayable graph-capture binding planning.
 pub mod graph_capture;
 /// Hostile-input closure obligations shared by every backend's adversarial gate.
@@ -104,24 +69,11 @@ mod materialize_macros;
 pub mod ordering;
 /// Backend-neutral fallible output-slot vector management.
 pub mod output_slots;
-/// Push-constant / tiny-param inlining decision policy.
-/// Backends consume `decide_param_inlining` to choose between inlined
-/// launch metadata and a uniform buffer upload, based on a per-backend
-/// [`crate::param_inlining::ParamInliningPolicy`].
-pub mod param_inlining;
 /// Elementwise parity-gate scaffolding shared by the concrete driver crates.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod parity_harness;
-/// Backend-neutral peer-transfer capability contracts and checked accounting.
-pub(crate) mod peer_transfer;
 /// Compiled-pipeline cache, dispatch config, batched dispatch.
 pub(crate) mod pipeline;
-/// N4 substrate: cross-pipeline disjoint-binding fusion analysis.
-/// Lifts D2's in-megakernel-arm independence check to the
-/// cross-dispatch boundary so consecutive pipelines with disjoint
-/// reads/writes can fuse into one launch with a workgroup-bounded
-/// fence instead of a full grid-sync.
-pub mod pipeline_fusion;
 /// The dispatch-boundary rule that makes a read-only binding declaration true.
 pub(crate) mod read_only_alias;
 /// Read-only semantic operation projections, migrations, and policy.
@@ -136,10 +88,6 @@ pub(crate) mod residency;
 pub mod resident_transfer_fixtures;
 /// Backend-neutral resident transfer interval fusion.
 pub mod resident_transfer_fusion;
-/// Backend-neutral compact result readback planning.
-pub mod result_compaction;
-/// Runtime routing: profile-guided variant selection, algorithm heuristics.
-pub(crate) mod routing;
 /// Canonical self-hosted optimizer scaling bench shared by every concrete
 /// driver crate's scaling suite.
 #[cfg(any(test, feature = "test-fixtures"))]
@@ -161,11 +109,6 @@ pub(crate) mod subgroup;
 /// Stable compilation and emission target identifiers.
 pub(crate) mod target;
 pub mod target_dialect;
-/// Trace-based JIT specialization decision policy.
-/// Decides whether the dispatcher should fire a speculative
-/// pre-spec on a predicted shape, weighted by recent hit count and
-/// prediction confidence vs the speculative spec cost.
-pub mod trace_jit_policy;
 /// Backend-neutral checked transfer accounting policy.
 pub mod transfer_accounting;
 /// Device-side trap record layout shared by every backend that reports one.
@@ -173,13 +116,6 @@ pub mod trap_record;
 /// Shared validation caches and launch-geometry contracts.
 pub mod validation;
 
-/// Backend-specific lowering strategies (Layer 2 of the two-layer
-/// optimization architecture). Target-dependent emission decisions
-/// that don't change what a program computes but change how it's
-/// emitted for a specific chip/API.
-///
-/// See the [module docs](strategy/index.html) for the full architecture.
-pub mod strategy;
 
 /// Pure [`vyre_foundation::ir::Program`] analysis shared by all backends.
 pub(crate) mod program_walks;
@@ -210,8 +146,6 @@ pub(crate) mod launch_facts;
 /// and launch fact tests.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod launch_fixtures;
-/// Backend-neutral adjacent-stage launch fusion planning.
-pub mod launch_fusion;
 /// The failure domain of a poisoned lock, and the two answers an owner may give.
 pub mod lock_policy;
 /// Backend-neutral megakernel wave barrier planning.
@@ -224,8 +158,6 @@ pub mod megakernel_execution;
 pub mod megakernel_fixtures;
 /// Backend-neutral megakernel frontier memory planning.
 pub mod megakernel_frontier;
-/// Backend-neutral resident-graph multi-query execution planning.
-pub mod multi_query_execution;
 /// Backend-neutral numeric boundary conversions.
 pub mod numeric;
 /// G7: persistent-thread engine + device-side work queue.
@@ -234,8 +166,6 @@ pub mod numeric;
 pub mod persistent;
 /// Domain-neutral semantic resource ABI, logical image/view types, and zero-copy timeline synchronization.
 mod semantic_resource_abi;
-/// Production-path support certificate for backend operations.
-mod support_certificate;
 
 /// The `inventory` crate `register_backend!` submits through. A concrete
 /// driver expands the macro and needs no `inventory` dependency of its own.
@@ -291,10 +221,6 @@ pub use launch::{
 };
 pub use launch::{program_vsa_fingerprint, program_vsa_fingerprint_words, LaunchPlan};
 pub use launch_directive::LaunchDirective;
-pub use peer_transfer::{
-    PeerAccessCapability, PeerLinkKind, PeerTopology, PeerTransferAccounting, PeerTransferError,
-    PeerTransferPlan, PeerTransferPlanner, PeerTransferRequest,
-};
 pub use pipeline::{
     dispatch_policy_cache_digest, dispatch_policy_cache_string, normalized_program_cache_digest,
     pipeline_cache_limits_from_env, push_lower_hex, try_normalized_program_cache_digest,
@@ -327,8 +253,6 @@ pub use registry::{
     MutationClass,
 };
 pub use residency::{ResidentGraphReuseTelemetry, ResidentGraphReuseTelemetryError};
-pub use routing::pgo;
-pub use routing::{select_sort_backend, Distribution, RoutingTable, SortBackend};
 pub use semantic_resource_abi::{
     all_address_modes, all_alias_set_kinds, all_border_colors, all_color_interpretations,
     all_compare_functions, all_external_event_kinds, all_external_memory_kinds, all_filter_modes,
@@ -360,8 +284,4 @@ pub use subgroup::{
     reduction_offsets, reduction_offsets_into, try_reduction_offsets, try_reduction_offsets_into,
 };
 pub use subgroup::{SubgroupCaps, SubgroupOp};
-pub use support_certificate::{
-    FactStatus, ProductionPathFact, ProductionPathStage, SupportCertificate,
-    SupportCertificateRegistry, SupportStatus, SUPPORT_CERTIFICATE_SCHEMA,
-};
 pub use target::Target;

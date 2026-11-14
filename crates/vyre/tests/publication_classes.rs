@@ -62,18 +62,16 @@ pub(crate) const EXPECTED_PUBLISHABLE_PACKAGES: &[&str] = &[
     "vyre-libs-pattern",
     "vyre-libs-reasoning",
     "vyre-libs-reduce",
-    "vyre-libs-rule",
     "vyre-libs-scheduling",
-    "vyre-libs-security",
     "vyre-libs-solvers",
     "vyre-libs-text",
     "vyre-libs-visual",
     "vyre-libs",
     "vyre-lower",
-    "vyre-emit-naga",
-    "vyre-emit-ptx",
-    "vyre-emit-spirv",
-    "vyre-emit-metal",
+    "vyre_emit::naga",
+    "vyre_emit::ptx",
+    "vyre_emit::spirv",
+    "vyre_emit::metal",
 ];
 
 /// The checkout this run is inside.

@@ -9,7 +9,7 @@ use smallvec::SmallVec;
 use std::sync::Arc;
 use std::time::Instant;
 use vyre_driver::BackendError;
-use vyre_emit_naga::program::{TrapTag, TRAP_SIDECAR_WORDS};
+use vyre_emit::naga::program::{TrapTag, TRAP_SIDECAR_WORDS};
 
 mod bind_groups;
 pub(super) mod binding_lookup;

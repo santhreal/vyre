@@ -1,8 +1,5 @@
 mod finalist;
 mod ingestion;
-mod interactive_session;
-mod mesh;
-mod portfolio;
 mod retained;
 mod session;
 mod workspace;
@@ -11,19 +8,9 @@ pub use ingestion::{
     GeneratedDataSource, ResourceDataSource, ResourceIngestionError, ResourceManifest,
     ResourceManifestEntry, ResourceManifestSource, TypedResource, TypedResourceDataset,
 };
-pub use interactive_session::{
-    CancellationOutcome, InteractiveAdmissionError, InteractiveCancellationError,
-    InteractiveChannelId, InteractiveCompletion, InteractiveRequestId, InteractiveSessionState,
-    InteractiveSessionStateMachine, InteractiveSubmissionRequest, PriorityClass,
-    INTERACTIVE_DISPATCH_HEADROOM, MAX_INTERACTIVE_STEP_BUDGET_MICROS,
-    MEASURED_INTERACTIVE_DISPATCH_CEILING_MICROS,
-};
-pub use mesh::{MeshSession, MeshSessionError, MeshSubmission};
-pub use portfolio::{admit_portfolio, AdmittedPortfolio};
 pub use retained::{RetainedArtifactSession, RetainedSessionPhase, RetainedSessionTransition};
 pub use session::{ArtifactSession, ArtifactSessionError};
 use thiserror::Error;
-use vyre_megakernel::allocation::DeviceSlot;
 use vyre_megakernel::{
     Artifact, ArtifactEnvelope, CompileError, Diagnostic, TargetPayload, TargetPayloadFormat,
 };
@@ -64,7 +51,6 @@ impl From<CompileError> for ArtifactAdmissionError {
 pub struct AdmittedArtifact {
     envelope: ArtifactEnvelope,
     target_payload_index: usize,
-    device_payload_indices: Vec<(DeviceSlot, usize)>,
 }
 
 impl AdmittedArtifact {
@@ -84,37 +70,6 @@ impl AdmittedArtifact {
     #[must_use]
     pub fn target_payload(&self) -> &TargetPayload {
         &self.envelope.target_payloads()[self.target_payload_index]
-    }
-
-    /// Devices this artifact is submitted to, in slot order.
-    #[must_use]
-    pub fn submission_devices(&self) -> Vec<DeviceSlot> {
-        self.device_payload_indices
-            .iter()
-            .map(|(device, _)| *device)
-            .collect()
-    }
-
-    /// Borrow the payload one mesh device submits.
-    ///
-    /// # Errors
-    ///
-    /// Returns when the artifact is not submitted to `device`.
-    pub fn target_payload_for_device(
-        &self,
-        device: DeviceSlot,
-    ) -> Result<&TargetPayload, ArtifactAdmissionError> {
-        let index = match self
-            .device_payload_indices
-            .iter()
-            .find(|(slot, _)| *slot == device)
-        {
-            Some((_, index)) => *index,
-            None => self
-                .envelope
-                .require_target_payload_index_for_device(self.target_payload().format(), device)?,
-        };
-        Ok(&self.envelope.target_payloads()[index])
     }
 
     /// Consume the admission result and recover its owned canonical envelope.
@@ -142,15 +97,9 @@ pub fn admit_envelope(
     required_format: &TargetPayloadFormat,
 ) -> Result<AdmittedArtifact, ArtifactAdmissionError> {
     let target_payload_index = envelope.require_target_payload_index(required_format)?;
-    let mut device_payload_indices = Vec::new();
-    for device in envelope.neutral().topology().submission_devices() {
-        let index = envelope.require_target_payload_index_for_device(required_format, device)?;
-        device_payload_indices.push((device, index));
-    }
     Ok(AdmittedArtifact {
         envelope,
         target_payload_index,
-        device_payload_indices,
     })
 }
 

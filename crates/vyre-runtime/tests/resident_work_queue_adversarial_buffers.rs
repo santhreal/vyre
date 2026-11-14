@@ -3,10 +3,9 @@
 
 use vyre_runtime::resident_work_queue::{
     protocol::{self, debug, slot, ProtocolError, ARGS_PER_SLOT, SLOT_WORDS},
-    telemetry::RingTelemetry,
     ResidentWorkQueue, RingSlotTransition,
 };
-use vyre_runtime::{PipelineError, RingEncodingFault};
+use vyre_runtime::RingEncodingFault;
 
 use crate::ring_expectations::{assert_publish_rejected_by_status, assert_ring_fault};
 use vyre_test_support::le_words::write_word;
@@ -66,73 +65,6 @@ fn publish_packed_slot_rejects_ring_with_non_slot_multiple_length() {
         &err,
         RingEncodingFault::Geometry,
         "a non-slot-multiple ring is malformed geometry",
-    );
-}
-
-#[test]
-fn strict_ring_telemetry_rejects_ring_one_byte_under_slot_multiple() {
-    let control = ResidentWorkQueue::encode_control(false, 1, 0).unwrap();
-    let mut ring = ResidentWorkQueue::encode_empty_ring(2).unwrap();
-    ring.pop();
-    let err = RingTelemetry::try_decode(&control, &ring)
-        .expect_err("ring one byte under slot multiple must reject strict decode");
-    let PipelineError::Backend(message) = err else {
-        panic!("a partial trailing slot must reject as a ring alignment fault, got {err:?}")
-    };
-    assert!(
-        message.contains(&format!(
-            "ring snapshot has {} bytes, not a multiple of slot size {}",
-            (SLOT_WORDS as usize * 4) * 2 - 1,
-            SLOT_WORDS as usize * 4
-        )),
-        "the fault must report the byte length it received and the slot width it required: {message}"
-    );
-}
-
-#[test]
-fn strict_ring_telemetry_rejects_ring_one_byte_over_slot_multiple() {
-    let control = ResidentWorkQueue::encode_control(false, 1, 0).unwrap();
-    let mut ring = ResidentWorkQueue::encode_empty_ring(2).unwrap();
-    ring.push(0xAA);
-    let err = RingTelemetry::try_decode(&control, &ring)
-        .expect_err("ring one byte over slot multiple must reject strict decode");
-    let PipelineError::Backend(message) = err else {
-        panic!("a trailing partial byte must reject as a ring alignment fault, got {err:?}")
-    };
-    assert!(
-        message.contains(&format!(
-            "ring snapshot has {} bytes, not a multiple of slot size {}",
-            (SLOT_WORDS as usize * 4) * 2 + 1,
-            SLOT_WORDS as usize * 4
-        )),
-        "the fault must report the byte length it received and the slot width it required: {message}"
-    );
-}
-
-// ---------------------------------------------------------------------------
-// 2. Malformed control / debug buffers
-// ---------------------------------------------------------------------------
-
-#[test]
-fn strict_ring_telemetry_rejects_control_one_byte_over_word_boundary() {
-    let mut control = ResidentWorkQueue::encode_control(false, 1, 0).unwrap();
-    control.push(0xBB);
-    let ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
-    let err = RingTelemetry::try_decode(&control, &ring)
-        .expect_err("control one byte over word boundary must reject strict decode");
-    // Control is validated before ring geometry, so a well-formed ring cannot
-    // mask this fault.
-    let PipelineError::Backend(message) = err else {
-        panic!("a control buffer past a word boundary must reject as a control snapshot fault, got {err:?}")
-    };
-    let min_control =
-        protocol::control_byte_len(0).expect("the minimum control length must be representable");
-    assert!(
-        message.contains(&format!(
-            "control snapshot has {} bytes, expected at least {min_control} and 4-byte alignment",
-            min_control + 1
-        )),
-        "the fault must report the byte length it received and the minimum it required: {message}"
     );
 }
 

@@ -58,7 +58,7 @@ fn ptx_contains_version_target_and_entry() {
         .expect("Fix: identity program must lower to PTX.");
     assert!(
         secondary_text.contains(".version 8.5"),
-        "Fix: PTX must declare version 8.5 (pinned in crates/vyre-emit-ptx/src/emitter/mod.rs)."
+        "Fix: PTX must declare version 8.5 (pinned in crates/vyre-emit/src/ptx/emitter/mod.rs)."
     );
     assert!(
         secondary_text.contains(".target sm_"),

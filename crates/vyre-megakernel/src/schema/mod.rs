@@ -15,7 +15,6 @@ use crate::frame;
 use crate::identity::{
     ArtifactNodeId, ArtifactValueId, DependencyEdge, DependencyEndpoint, Digest, FusionGroupId,
 };
-use crate::mesh::MeshTopologyPlan;
 
 pub use geometry::{BarrierPhaseRecord, EntryPersistence, GeometryRecord, LaunchResourceIntent};
 pub use plan::{ExecutionMode, FrontierTopology, NumericRecord, PlanMeasurement, SelectedPlan};
@@ -26,7 +25,7 @@ pub use records::{
 };
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 18;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 19;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -40,7 +39,6 @@ pub(crate) struct ArtifactPayload {
     pub(crate) resource_envelope: ResourceEnvelope,
     pub(crate) geometry: Vec<GeometryRecord>,
     pub(crate) allocation: AllocationPlan,
-    pub(crate) topology: MeshTopologyPlan,
     pub(crate) provenance: Provenance,
 }
 
@@ -113,6 +111,19 @@ impl Artifact {
         Ok(by_name)
     }
 
+    /// Canonical value carrying resource `name`, found without allocating.
+    ///
+    /// Names are unique in every artifact: compiled graph value names are unique
+    /// and [`Artifact::from_bytes`] rejects a duplicate, so the first match is the
+    /// only one.
+    #[must_use]
+    pub fn value_named(&self, name: &str) -> Option<ArtifactValueId> {
+        self.resources()
+            .iter()
+            .find(|resource| resource.name == name)
+            .map(|resource| resource.value)
+    }
+
     /// Checked aggregate resource envelope.
     #[must_use]
     pub const fn resource_envelope(&self) -> ResourceEnvelope {
@@ -129,12 +140,6 @@ impl Artifact {
     #[must_use]
     pub const fn allocation(&self) -> &AllocationPlan {
         &self.payload.allocation
-    }
-
-    /// The one coordinated topology the selected schedule placed on the mesh.
-    #[must_use]
-    pub const fn topology(&self) -> &MeshTopologyPlan {
-        &self.payload.topology
     }
 
     /// Admit the resource and entry mapping a decoded artifact carries.
@@ -382,23 +387,6 @@ impl Artifact {
                 return Err(malformed_allocation(format!(
                     "the placements of value {} hold {placed} bytes and its resource row states {}",
                     row.value.0, row.byte_count
-                )));
-            }
-        }
-        self.topology().validate()?;
-        // A device holding bytes the topology does not place is storage nothing
-        // submits. The converse is legal: a device computing shards of a region
-        // whose values are all caller-bound holds no artifact allocation.
-        for peak in &self.allocation().device_peaks {
-            if !self
-                .topology()
-                .devices()
-                .iter()
-                .any(|device| *device == peak.device)
-            {
-                return Err(malformed_allocation(format!(
-                    "device {} holds bytes and the topology places no work on it",
-                    peak.device.0
                 )));
             }
         }

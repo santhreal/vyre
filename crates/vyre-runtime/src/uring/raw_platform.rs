@@ -106,23 +106,6 @@ pub(crate) struct io_uring_cqe {
     pub flags: u32,
 }
 
-#[repr(C)]
-struct futex_waitv {
-    val: u64,
-    uaddr: u64,
-    flags: u32,
-    __reserved: u32,
-}
-
-#[repr(C)]
-struct Timespec {
-    tv_sec: i64,
-    tv_nsec: i64,
-}
-
-const FUTEX2_SIZE_U32: u32 = 0x02;
-const SYS_FUTEX_WAITV: libc::c_long = 449;
-
 /// The kernel resources one io_uring occupies: the ring descriptor and the
 /// submission ring, completion ring, and SQE table mapped from it.
 #[derive(Debug)]
@@ -694,61 +677,4 @@ fn sys_close_fd(fd: i32) {
             libc::close(fd);
         }
     }
-}
-
-/// Wait until the word at `host_visible_addr` stops reading `current`.
-///
-/// # Safety
-///
-/// The caller must uphold that `host_visible_addr` names a mapped, naturally
-/// aligned `u32` that stays mapped for the whole wait, because the kernel
-/// reads it after this call has parked the thread.
-///
-/// # Errors
-///
-/// Returns [`PipelineError::IoUringSyscall`] when the kernel refuses the wait.
-/// A value that already changed reports `EAGAIN`, which is success.
-pub(crate) unsafe fn sys_futex_waitv(
-    host_visible_addr: *const u32,
-    current: u32,
-    timeout_ns: u64,
-) -> Result<(), PipelineError> {
-    let waitv = [futex_waitv {
-        val: current as u64,
-        uaddr: host_visible_addr as u64,
-        flags: FUTEX2_SIZE_U32,
-        __reserved: 0,
-    }];
-
-    let ts = Timespec {
-        tv_sec: (timeout_ns / 1_000_000_000) as i64,
-        tv_nsec: (timeout_ns % 1_000_000_000) as i64,
-    };
-
-    // SAFETY: the caller has upheld that `host_visible_addr` names a mapped,
-    // naturally aligned `u32` that stays mapped for the wait. `waitv` and `ts`
-    // are live locals, so the kernel reads them from this frame.
-    let res = unsafe {
-        libc::syscall(
-            SYS_FUTEX_WAITV,
-            waitv.as_ptr() as *const libc::c_void,
-            1u32,
-            0u32,
-            &ts as *const Timespec,
-            0u64,
-        )
-    };
-
-    if res < 0 {
-        let errno = get_errno();
-        if errno == libc::EAGAIN {
-            return Ok(());
-        }
-        return Err(PipelineError::IoUringSyscall {
-            syscall: "futex_waitv",
-            errno,
-            fix: "kernel 5.16+ required; ETIMEDOUT means the value didn't change within timeout_ns",
-        });
-    }
-    Ok(())
 }

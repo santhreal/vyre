@@ -185,37 +185,37 @@ fn gen_descriptor(seed: u64, max_ops: u32) -> KernelDescriptor {
 /// True if the result is either Ok or a known EmitError variant. False
 /// would mean the emitter panicked or returned something we don't
 /// recognize (unreachable from a well-formed descriptor).
-fn naga_result_is_known<T>(r: Result<T, vyre_emit_naga::EmitError>) -> bool {
+fn naga_result_is_known<T>(r: Result<T, vyre_emit::naga::EmitError>) -> bool {
     matches!(
         r,
         Ok(_)
-            | Err(vyre_emit_naga::EmitError::UnsupportedOp(_))
-            | Err(vyre_emit_naga::EmitError::NagaConstructionFailed(_))
-            | Err(vyre_emit_naga::EmitError::InvalidBinding { .. })
-            | Err(vyre_emit_naga::EmitError::InvalidDescriptor(_))
+            | Err(vyre_emit::naga::EmitError::UnsupportedOp(_))
+            | Err(vyre_emit::naga::EmitError::NagaConstructionFailed(_))
+            | Err(vyre_emit::naga::EmitError::InvalidBinding { .. })
+            | Err(vyre_emit::naga::EmitError::InvalidDescriptor(_))
     )
 }
 
-fn ptx_result_is_known<T>(r: Result<T, vyre_emit_ptx::EmitError>) -> bool {
+fn ptx_result_is_known<T>(r: Result<T, vyre_emit::ptx::EmitError>) -> bool {
     matches!(
         r,
         Ok(_)
-            | Err(vyre_emit_ptx::EmitError::UnsupportedOp(_))
-            | Err(vyre_emit_ptx::EmitError::PtxConstructionFailed(_))
-            | Err(vyre_emit_ptx::EmitError::InvalidBinding { .. })
-            | Err(vyre_emit_ptx::EmitError::InvalidDescriptor(_))
-            | Err(vyre_emit_ptx::EmitError::UnsupportedDataType(_))
+            | Err(vyre_emit::ptx::EmitError::UnsupportedOp(_))
+            | Err(vyre_emit::ptx::EmitError::PtxConstructionFailed(_))
+            | Err(vyre_emit::ptx::EmitError::InvalidBinding { .. })
+            | Err(vyre_emit::ptx::EmitError::InvalidDescriptor(_))
+            | Err(vyre_emit::ptx::EmitError::UnsupportedDataType(_))
     )
 }
 
-fn spirv_result_is_known<T>(r: Result<T, vyre_emit_spirv::EmitError>) -> bool {
+fn spirv_result_is_known<T>(r: Result<T, vyre_emit::spirv::EmitError>) -> bool {
     matches!(
         r,
         Ok(_)
-            | Err(vyre_emit_spirv::EmitError::NagaEmit(_))
-            | Err(vyre_emit_spirv::EmitError::NagaValidation(_))
-            | Err(vyre_emit_spirv::EmitError::WriterConstruction(_))
-            | Err(vyre_emit_spirv::EmitError::WriterWrite(_))
+            | Err(vyre_emit::spirv::EmitError::NagaEmit(_))
+            | Err(vyre_emit::spirv::EmitError::NagaValidation(_))
+            | Err(vyre_emit::spirv::EmitError::WriterConstruction(_))
+            | Err(vyre_emit::spirv::EmitError::WriterWrite(_))
     )
 }
 
@@ -223,7 +223,7 @@ fn spirv_result_is_known<T>(r: Result<T, vyre_emit_spirv::EmitError>) -> bool {
 fn naga_emit_handles_50_random_descriptors_without_panic() {
     for seed in 0..50u64 {
         let desc = gen_descriptor(seed, 20);
-        let r = vyre_emit_naga::emit(&desc);
+        let r = vyre_emit::naga::emit(&desc);
         assert!(
             naga_result_is_known(r),
             "naga emit returned unknown variant for seed {seed:#x}"
@@ -235,7 +235,7 @@ fn naga_emit_handles_50_random_descriptors_without_panic() {
 fn ptx_emit_handles_50_random_descriptors_without_panic() {
     for seed in 100..150u64 {
         let desc = gen_descriptor(seed, 20);
-        let r = vyre_emit_ptx::emit(&desc);
+        let r = vyre_emit::ptx::emit(&desc);
         assert!(
             ptx_result_is_known(r),
             "ptx emit returned unknown variant for seed {seed:#x}"
@@ -247,7 +247,7 @@ fn ptx_emit_handles_50_random_descriptors_without_panic() {
 fn spirv_emit_handles_50_random_descriptors_without_panic() {
     for seed in 200..250u64 {
         let desc = gen_descriptor(seed, 20);
-        let r = vyre_emit_spirv::emit(&desc);
+        let r = vyre_emit::spirv::emit(&desc);
         assert!(
             spirv_result_is_known(r),
             "spirv emit returned unknown variant for seed {seed:#x}"
@@ -263,9 +263,9 @@ fn small_descriptors_succeed_on_all_three_emitters() {
         // We don't assert success  -  small descriptors may still hit
         // unsupported-op paths. We DO assert no panic via the
         // `_is_known` checks.
-        let _ = naga_result_is_known(vyre_emit_naga::emit(&desc));
-        let _ = ptx_result_is_known(vyre_emit_ptx::emit(&desc));
-        let _ = spirv_result_is_known(vyre_emit_spirv::emit(&desc));
+        let _ = naga_result_is_known(vyre_emit::naga::emit(&desc));
+        let _ = ptx_result_is_known(vyre_emit::ptx::emit(&desc));
+        let _ = spirv_result_is_known(vyre_emit::spirv::emit(&desc));
     }
 }
 

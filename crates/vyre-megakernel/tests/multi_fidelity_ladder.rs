@@ -779,7 +779,7 @@ fn a_launch_holding_fewer_bytes_than_the_plan_requires_refuses_the_compile() {
     )
     .expect("a launch holding the planned bytes compiles")
     .allocation()
-    .aggregate_peak_bytes;
+    .peak_bytes;
     assert!(
         planned > 0,
         "the fixture plan must require bytes for the reconciliation to have a subject"
@@ -852,7 +852,7 @@ fn every_reconciled_resident_figure_comes_from_a_counted_launch() {
 /// WHY: a backend allocator holds the artifact's storage, never the caller's.
 /// On a host-input launch the caller's bytes are staged into the launch rather
 /// than held in any allocator the backend can count, so reconciling against
-/// `aggregate_peak_bytes`, which sums both owners, demanded bytes no allocator
+/// `peak_bytes`, which sums both owners, demanded bytes no allocator
 /// was ever going to report. A CUDA sweep refused 278 of 349 operations by
 /// exactly the caller's share of plans the artifact was running correctly. The
 /// check reads `artifact_peak_bytes` now, and this fixture holds precisely that
@@ -871,10 +871,10 @@ fn a_launch_holding_only_the_artifact_share_of_the_plan_compiles() {
         "the fixture plan must own bytes for the reconciliation to have a subject"
     );
     assert!(
-        artifact_owned < allocation.aggregate_peak_bytes,
+        artifact_owned < allocation.peak_bytes,
         "the fixture plan must carry caller-owned regions, or this case cannot tell the \
          artifact-owned peak from the aggregate: artifact-owned {artifact_owned}, aggregate {}",
-        allocation.aggregate_peak_bytes
+        allocation.peak_bytes
     );
 }
 
@@ -889,5 +889,5 @@ fn a_backend_that_reports_no_resident_bytes_still_measures() {
         &LadderEvaluator::reporting(Reported::Nothing),
     )
     .expect("an unreported memory figure leaves the planned figure unreconciled");
-    assert!(artifact.allocation().aggregate_peak_bytes > 0);
+    assert!(artifact.allocation().peak_bytes > 0);
 }

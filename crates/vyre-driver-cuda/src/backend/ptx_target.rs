@@ -54,7 +54,7 @@ fn push_candidate(candidates: &mut SmallVec<[u32; 10]>, candidate: u32, native_s
 
 fn probe_ptx_target_sm(target_sm: u32) -> Result<(), CUresult> {
     // Probe PTX must use the same `.version`/`.target` pairing as
-    // `vyre-emit-ptx::ModuleBuilder::write_preamble`  -  drift here
+    // `vyre_emit::ptx::ModuleBuilder::write_preamble`  -  drift here
     // would let the probe pick a candidate that the real emitter
     // then can't load. The mapping below mirrors that emitter:
     //   sm_120 (Blackwell-2)       → PTX 8.7+

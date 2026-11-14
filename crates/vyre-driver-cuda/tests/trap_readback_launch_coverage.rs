@@ -321,9 +321,9 @@ fn crate_authored_ptx_declares_no_trap_sidecar() {
         ("signature refresh", refresh.source.as_str()),
     ] {
         assert!(
-            !source.contains(vyre_emit_ptx::TRAP_SIDECAR_SYMBOL),
+            !source.contains(vyre_emit::ptx::TRAP_SIDECAR_SYMBOL),
             "Fix: the crate-authored {name} kernel now declares `{}`, but the paths that launch it take no ModuleGlobalsLease, so nothing reads the record and a trapping launch would report success. Either route that launch through a lease and change its ledger row to LeaseReadsTheRecord, or drop the trap from the template.",
-            vyre_emit_ptx::TRAP_SIDECAR_SYMBOL
+            vyre_emit::ptx::TRAP_SIDECAR_SYMBOL
         );
     }
 }

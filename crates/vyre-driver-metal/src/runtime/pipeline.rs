@@ -18,12 +18,12 @@ use crate::METAL_BACKEND_ID;
 #[derive(Clone)]
 pub(super) struct MetalCompiledPipeline {
     pub(super) identity: PipelineCacheIdentity,
-    pub(super) artifact: vyre_emit_metal::MetalArtifact,
+    pub(super) artifact: vyre_emit::metal::MetalArtifact,
     pub(super) pipeline: metal::ComputePipelineState,
 }
 
 pub(crate) struct MetalTargetModule {
-    pub(crate) artifact: vyre_emit_metal::MetalArtifact,
+    pub(crate) artifact: vyre_emit::metal::MetalArtifact,
     pub(crate) pipeline: metal::ComputePipelineState,
 }
 
@@ -36,9 +36,9 @@ pub(super) fn metal_pipeline_cache_key(
     let device_name = device.name();
     let revision_extra = format!(
         "artifact_schema={}:msl={}.{}:driver={}:device={}",
-        vyre_emit_metal::METAL_ARTIFACT_SCHEMA,
-        vyre_emit_metal::DEFAULT_MSL_VERSION.0,
-        vyre_emit_metal::DEFAULT_MSL_VERSION.1,
+        vyre_emit::metal::METAL_ARTIFACT_SCHEMA,
+        vyre_emit::metal::DEFAULT_MSL_VERSION.0,
+        vyre_emit::metal::DEFAULT_MSL_VERSION.1,
         env!("CARGO_PKG_VERSION"),
         device_name
     );
@@ -61,7 +61,7 @@ impl MetalBackend {
     ) -> Result<
         (
             PipelineCacheIdentity,
-            vyre_emit_metal::MetalArtifact,
+            vyre_emit::metal::MetalArtifact,
             metal::ComputePipelineState,
         ),
         BackendError,
@@ -92,7 +92,7 @@ impl MetalBackend {
                 ),
             }
         })?;
-        let artifact = vyre_emit_metal::emit_artifact(lowered.descriptor()).map_err(|error| {
+        let artifact = vyre_emit::metal::emit_artifact(lowered.descriptor()).map_err(|error| {
             BackendError::KernelCompileFailed {
                 backend: METAL_BACKEND_ID.to_string(),
                 compiler_message: format!("MSL artifact emission failed: {error}"),
@@ -157,7 +157,7 @@ impl MetalBackend {
 
     pub(crate) fn materialize_target_module(
         &self,
-        artifact: vyre_emit_metal::MetalArtifact,
+        artifact: vyre_emit::metal::MetalArtifact,
     ) -> Result<MetalTargetModule, BackendError> {
         // `main` is reserved in the Metal shading language, so the translator
         // renames the entry point it emits. The name is authenticated with the
@@ -228,7 +228,7 @@ impl MetalBackend {
     /// pipeline comes from and in the labels their rejections carry.
     pub(super) fn dispatch_compiled(
         &self,
-        artifact: &vyre_emit_metal::MetalArtifact,
+        artifact: &vyre_emit::metal::MetalArtifact,
         pipeline: &metal::ComputePipelineState,
         program: &Program,
         inputs: &[&[u8]],

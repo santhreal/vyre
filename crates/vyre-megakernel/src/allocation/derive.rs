@@ -14,7 +14,6 @@ use vyre_foundation::logical::LogicalProgramGraph;
 use super::pack::ValueFact;
 use super::PlacementLayout;
 use crate::error::{failure, overflow, CompileError, CompilerFailureKind};
-use crate::identity::ArtifactNodeId;
 use crate::schema::ResourceRecord;
 
 /// Per-value planner facts for every value the graph declares.
@@ -94,7 +93,6 @@ pub(crate) fn value_facts(
                 );
             Ok(ValueFact {
                 value: resource.value,
-                producer: value.producer.map(|producer| ArtifactNodeId(producer.0)),
                 bytes: resource.byte_count,
                 element_bytes,
                 lifetime: resource.lifetime,

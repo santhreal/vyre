@@ -439,8 +439,8 @@ fn emitter_dispatch_names_every_variant_rather_than_falling_through_a_catch_all(
     let declared = kernel_op_kind_variants();
 
     for relative_path in [
-        "crates/vyre-emit-naga/src/emitter/op_dispatch/mod.rs",
-        "crates/vyre-emit-ptx/src/emitter/dispatch.rs",
+        "crates/vyre-emit/src/naga/emitter/op_dispatch/mod.rs",
+        "crates/vyre-emit/src/ptx/emitter/dispatch.rs",
     ] {
         let path = workspace_root.join(relative_path);
         let content = std::fs::read_to_string(&path).unwrap_or_else(|e| {

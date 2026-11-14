@@ -22,7 +22,7 @@ use crate::schema::{
     Artifact, ArtifactPayload, FusionRejection, GeometryRecord, NodeRecord, PlanMeasurement,
     Provenance, ARTIFACT_SCHEMA_VERSION,
 };
-use crate::{allocation, artifact, facts, mesh, normalize, search, select};
+use crate::{allocation, artifact, facts, normalize, search, select};
 
 /// Everything one compilation derives once and every finalist reuses.
 struct CompileContext<'a> {
@@ -38,9 +38,6 @@ struct CompileContext<'a> {
     pareto_frontier: u32,
     pruned_fusions: Vec<FusionRejection>,
     certificate: SearchCertificate,
-    /// Every placement of this program on the authenticated mesh, single device
-    /// first and never pruned.
-    placements: Vec<mesh::MeshTopologyPlan>,
     work: SearchWork,
 }
 
@@ -93,7 +90,6 @@ fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext<'_>, Comp
     let normalized = normalize::normalize(logical.graph())?;
     let dependencies = normalized.dependencies;
     let planning_facts = facts::derive(&logical, &dependencies, &request.facts.symbolic_bindings)?;
-    let placements = mesh::candidates(&logical, request.mesh())?;
     let search = search::explore(
         &logical,
         &planning_facts,
@@ -174,7 +170,6 @@ fn prepare(request: &ValidatedCompileRequest) -> Result<CompileContext<'_>, Comp
         ranked: ranked.admitted,
         pruned_fusions,
         certificate,
-        placements,
         work: search.work,
     })
 }
@@ -230,13 +225,6 @@ fn assemble(
     )?;
     let abi = build_abi(&request.graph)?;
     let ranked_peak = selected_plan.selection_cost.planned_peak_bytes;
-    let placement = mesh::choose(
-        &context.placements,
-        &request.objective,
-        selected_plan.selection_cost.total,
-        ranked_peak,
-    );
-    let topology = context.placements[placement].clone();
     let allocation = allocation::plan(
         &allocation::value_facts(
             &context.logical,
@@ -244,35 +232,18 @@ fn assemble(
             &request.facts.symbolic_bindings,
         )?,
         request.device,
-        &topology,
     )?;
-    let single_device = topology.devices().len() <= 1;
-    if single_device && allocation.aggregate_peak_bytes != ranked_peak {
+    if allocation.peak_bytes != ranked_peak {
         return Err(failure(
             CompilerFailureKind::InvalidAllocationPlan,
-            "artifact.allocation.aggregate_peak_bytes",
+            "artifact.allocation.peak_bytes",
             format!(
                 "the assembled plan holds {} bytes and ranking priced {ranked_peak}",
-                allocation.aggregate_peak_bytes
+                allocation.peak_bytes
             ),
             "price peak memory from the same liveness the plan is packed against",
         ));
     }
-    // A partition distributes the same bytes over more devices, so the mesh
-    // never holds more than one device would. Holding more means a share was
-    // invented rather than cut.
-    if !single_device && allocation.aggregate_peak_bytes > ranked_peak {
-        return Err(failure(
-            CompilerFailureKind::InvalidAllocationPlan,
-            "artifact.allocation.aggregate_peak_bytes",
-            format!(
-                "the mesh holds {} bytes and one device would hold {ranked_peak}",
-                allocation.aggregate_peak_bytes
-            ),
-            "cut every value's bytes across its shards instead of copying them",
-        ));
-    }
-    topology.verify_capacity(request.mesh(), &allocation.device_peaks)?;
     let nodes = frozen_nodes(&context.nodes, &geometry)?;
     let request_bytes =
         serde_json::to_vec(&RequestIdentity::from(request)).map_err(serialization_failure)?;
@@ -293,7 +264,6 @@ fn assemble(
         resource_envelope,
         geometry,
         allocation,
-        topology,
         provenance,
     };
     let framed = encode_payload(&payload)?;
@@ -383,7 +353,6 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
             "compile through compile_measured with a finalist evaluator, or set max_measurements to zero",
         ));
     }
-    require_single_artifact(request)?;
     let context = prepare(request)?;
     let selection = first_ranked(&context)?;
     assemble(
@@ -394,24 +363,6 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
         context.work,
         PlanMeasurement::Unbudgeted,
     )
-}
-
-fn require_single_artifact(request: &ValidatedCompileRequest) -> Result<(), CompileError> {
-    let objective = request.objective();
-    let classes = objective.workload().len();
-    if objective.portfolio().admits(1, classes) {
-        return Ok(());
-    }
-    Err(failure(
-        CompilerFailureKind::PortfolioCoverageUnsatisfied,
-        "request.objective.portfolio.coverage",
-        format!(
-            "coverage `{}` over {classes} workload classes retains {} artifacts and this path emits one",
-            objective.portfolio().coverage().name(),
-            objective.portfolio().coverage().minimum_variants(classes)
-        ),
-        "compile through compile_portfolio, or state a coverage policy one artifact satisfies",
-    ))
 }
 
 fn first_ranked<'a>(

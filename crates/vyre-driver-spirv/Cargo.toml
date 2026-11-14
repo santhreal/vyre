@@ -9,7 +9,6 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "SPIR-V backend adapter for Vyre."
-readme = "README.md"
 keywords = ["gpu", "compute", "spirv", "vulkan", "vyre"]
 categories = ["hardware-support", "rendering::graphics-api"]
 documentation = "https://docs.rs/vyre-driver-spirv"
@@ -48,7 +47,7 @@ vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-lower = { workspace = true }
-vyre-emit-spirv = { workspace = true }
+vyre-emit = { workspace = true, features = ["spirv"] }
 ash.workspace = true
 
 [dev-dependencies]

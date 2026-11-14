@@ -44,9 +44,8 @@ fn dispatch_backend_ids() -> anyhow::Result<Vec<&'static str>> {
 
 pub(super) fn write_run_reports(reports: &[ReportSchema], output: &str) -> anyhow::Result<()> {
     let output = std::path::Path::new(output);
-    let root = xtask::checkout::checkout_root();
     if reports.len() == 1 {
-        return record_run_report(&root, output, &reports[0]);
+        return write_single_report(output, &reports[0]);
     }
     std::fs::create_dir_all(output)?;
     for (index, report) in reports.iter().enumerate() {
@@ -57,34 +56,16 @@ pub(super) fn write_run_reports(reports: &[ReportSchema], output: &str) -> anyho
             .map(sanitize_path_component)
             .unwrap_or_else(|| "unknown-backend".to_string());
         let path = output.join(format!("{suite}-{backend}-{index:03}.json"));
-        record_run_report(&root, &path, report)?;
+        write_single_report(&path, report)?;
     }
     Ok(())
 }
 
-/// Write one report, recorded under its provenance when it is evidence.
-///
-/// A report under `release/evidence` is read by someone who no longer has the
-/// tree, the host or the device, so it goes through the recorded writer and
-/// names all three. A report written anywhere else is a scratch rendering of
-/// the same run and carries no head, which is the same split
-/// `json_document::write` enforces for every other generator.
-fn record_run_report(
-    root: &std::path::Path,
-    path: &std::path::Path,
-    report: &ReportSchema,
-) -> anyhow::Result<()> {
-    if xtask::artifact_gate::records_provenance(path) {
-        return xtask::artifact_gate::write_recorded(
-            root,
-            path,
-            xtask::evidence_record::MeasurementRecord::device(),
-            report,
-        )
-        .map_err(|error| anyhow::anyhow!("{error}"));
-    }
+fn write_single_report(path: &std::path::Path, report: &ReportSchema) -> anyhow::Result<()> {
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent)?;
+        }
     }
     std::fs::write(
         path,

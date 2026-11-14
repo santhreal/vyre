@@ -56,23 +56,6 @@ pub(crate) enum CompilerFailureKind {
     MissingCalibratedFact,
     /// Every legal candidate exceeds a hard bound the objective states.
     ObjectiveBoundViolated,
-    /// One artifact cannot satisfy the artifact coverage policy the objective
-    /// states.
-    PortfolioCoverageUnsatisfied,
-    /// The stated specialization contract declares an axis or domain nothing can
-    /// read.
-    InvalidSpecializationContract,
-    /// A variant guard reads an undeclared axis, states values its domain does
-    /// not hold, or conjoins terms that cannot hold at once.
-    InvalidVariantGuard,
-    /// Two variant guards admit the same facts at one precedence.
-    GuardOverlap,
-    /// Part of the declared domain is served by no variant and no remainder.
-    GuardCoverageGap,
-    /// A guarded artifact set holds artifacts from more than one compile.
-    PortfolioProvenanceMismatch,
-    /// The authenticated target is not the one a guarded set was compiled for.
-    TargetIdentityMismatch,
     /// No admitted variant serves the stated workload and the remainder is
     /// declared unsupported.
     UnsupportedWorkload,
@@ -82,13 +65,6 @@ pub(crate) enum CompilerFailureKind {
     /// The device reports holding fewer bytes than the selected allocation plan
     /// requires, so the plan measured is not the plan that ran.
     UnreconciledResidentBytes,
-    /// Mesh facts contradict what any device mesh can report, or their identity
-    /// does not cover them.
-    InvalidMeshFacts,
-    /// The mesh topology plan states placement no mesh could carry.
-    InvalidMeshTopology,
-    /// A device of the mesh holds fewer bytes than its share of the plan.
-    MeshCapacityExceeded,
     /// The caller required a schedule family and no legal candidate exercises
     /// it, so the compile is refused rather than served a different schedule.
     RequiredScheduleUnreachable,
@@ -133,19 +109,9 @@ impl CompilerFailureKind {
             Self::InvalidObjective => "MKC029_INVALID_OBJECTIVE",
             Self::MissingCalibratedFact => "MKC030_MISSING_CALIBRATED_FACT",
             Self::ObjectiveBoundViolated => "MKC031_OBJECTIVE_BOUND_VIOLATED",
-            Self::PortfolioCoverageUnsatisfied => "MKC032_PORTFOLIO_COVERAGE_UNSATISFIED",
-            Self::InvalidSpecializationContract => "MKC033_INVALID_SPECIALIZATION_CONTRACT",
-            Self::InvalidVariantGuard => "MKC034_INVALID_VARIANT_GUARD",
-            Self::GuardOverlap => "MKC035_GUARD_OVERLAP",
-            Self::GuardCoverageGap => "MKC036_GUARD_COVERAGE_GAP",
-            Self::PortfolioProvenanceMismatch => "MKC037_PORTFOLIO_PROVENANCE_MISMATCH",
-            Self::TargetIdentityMismatch => "MKC038_TARGET_IDENTITY_MISMATCH",
             Self::UnsupportedWorkload => "MKC039_UNSUPPORTED_WORKLOAD",
             Self::InvalidAllocationPlan => "MKC040_INVALID_ALLOCATION_PLAN",
             Self::UnreconciledResidentBytes => "MKC041_UNRECONCILED_RESIDENT_BYTES",
-            Self::InvalidMeshFacts => "MKC042_INVALID_MESH_FACTS",
-            Self::InvalidMeshTopology => "MKC043_INVALID_MESH_TOPOLOGY",
-            Self::MeshCapacityExceeded => "MKC044_MESH_CAPACITY_EXCEEDED",
             Self::RequiredScheduleUnreachable => REQUIRED_SCHEDULE_UNREACHABLE,
             Self::SemanticVersionSkew => SEMANTIC_VERSION_SKEW,
             Self::LawDerivationFailed => "MKC045_LAW_DERIVATION_FAILED",
@@ -166,19 +132,11 @@ const fn diagnostic_stage(code: CompilerFailureKind) -> DiagnosticStage {
         | CompilerFailureKind::RepresentativeInputLengthMismatch
         | CompilerFailureKind::InvalidObjective
         | CompilerFailureKind::MissingCalibratedFact
-        | CompilerFailureKind::InvalidSpecializationContract
-        | CompilerFailureKind::InvalidMeshFacts
-        | CompilerFailureKind::SemanticVersionSkew
-        | CompilerFailureKind::InvalidVariantGuard => DiagnosticStage::Validate,
+        | CompilerFailureKind::SemanticVersionSkew => DiagnosticStage::Validate,
         CompilerFailureKind::DependencyCycle
         | CompilerFailureKind::FinalistEvaluation
         | CompilerFailureKind::ObjectiveBoundViolated
-        | CompilerFailureKind::PortfolioCoverageUnsatisfied
-        | CompilerFailureKind::GuardOverlap
-        | CompilerFailureKind::GuardCoverageGap
         | CompilerFailureKind::InvalidAllocationPlan
-        | CompilerFailureKind::InvalidMeshTopology
-        | CompilerFailureKind::MeshCapacityExceeded
         | CompilerFailureKind::RequiredScheduleUnreachable
         | CompilerFailureKind::LawDerivationFailed
         | CompilerFailureKind::UnreconciledResidentBytes => DiagnosticStage::Plan,
@@ -194,8 +152,6 @@ const fn diagnostic_stage(code: CompilerFailureKind) -> DiagnosticStage {
         | CompilerFailureKind::TargetPayloadDigestMismatch
         | CompilerFailureKind::TargetPayloadAssociationMismatch
         | CompilerFailureKind::IncompatibleTargetPayload
-        | CompilerFailureKind::PortfolioProvenanceMismatch
-        | CompilerFailureKind::TargetIdentityMismatch
         | CompilerFailureKind::UnsupportedWorkload => DiagnosticStage::Admit,
     }
 }

@@ -571,52 +571,6 @@ fn snapshot_trace_events() -> Vec<SubstrateAuditEvent> {
 }
 
 #[cfg(test)]
-pub(crate) fn record_substrate_audit_event_for_test(event: SubstrateAuditEvent) {
-    if let Ok(mut events) = govern_mutex(
-        trace_events(),
-        "observability",
-        "EVENTS",
-        RecoveryClass::TransactionallyRecoverable,
-    ) {
-        if events.len() == TRACE_EVENT_CAPACITY {
-            events.pop_front();
-        }
-        events.push_back(event);
-    }
-}
-
-#[cfg(test)]
-pub(crate) fn snapshot_for_test() -> DriverObservability {
-    let audit_events = govern_mutex(
-        trace_events(),
-        "observability",
-        "EVENTS",
-        RecoveryClass::TransactionallyRecoverable,
-    )
-    .map(|events| events.iter().cloned().collect())
-    .unwrap_or_default();
-    DriverObservability {
-        substrate_calls: Vec::new(),
-        substrate_total_calls: 0,
-        decision_buckets: Vec::new(),
-        audit_events,
-        dispatch: snapshot_dispatch_telemetry(),
-    }
-}
-
-#[cfg(test)]
-pub(crate) fn clear_substrate_audit_events_for_test() {
-    if let Ok(mut events) = govern_mutex(
-        trace_events(),
-        "observability",
-        "EVENTS",
-        RecoveryClass::TransactionallyRecoverable,
-    ) {
-        events.clear();
-    }
-}
-
-#[cfg(test)]
 pub(crate) fn audit_events_test_lock() -> Option<std::sync::MutexGuard<'static, ()>> {
     static LOCK: Mutex<()> = Mutex::new(());
     govern_mutex(
@@ -652,7 +606,6 @@ mod tests {
     fn prometheus_output_contains_module_labels() {
         let snap = DriverObservability::snapshot();
         let prom = snap.to_prometheus();
-        assert!(prom.contains("module=\"matroid_megakernel_scheduler\""));
         assert!(prom.contains("module=\"vsa_fingerprint\""));
         assert!(prom.contains("# HELP vyre_driver_substrate_calls_total"));
     }

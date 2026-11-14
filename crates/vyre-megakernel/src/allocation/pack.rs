@@ -7,13 +7,11 @@
 //! the artifact records are one number.
 
 use super::{
-    AddressSpace, AliasClass, AllocationPlan, AllocationRegion, DevicePeak, DeviceSlot,
-    PlacementLayout, PlacementPermits, RegionOwner, ValuePlacement, ALLOCATION_SCHEMA_VERSION,
-    REGION_ALIGNMENT,
+    AddressSpace, AliasClass, AllocationPlan, AllocationRegion, PlacementLayout, PlacementPermits,
+    RegionOwner, ValuePlacement, ALLOCATION_SCHEMA_VERSION, REGION_ALIGNMENT,
 };
 use crate::error::{overflow, CompileError};
-use crate::identity::{ArtifactNodeId, ArtifactValueId};
-use crate::mesh::{MeshTopologyPlan, PartitionKind};
+use crate::identity::ArtifactValueId;
 use crate::schema::ResourceLifetime;
 use crate::DeviceFacts;
 
@@ -27,8 +25,6 @@ use crate::DeviceFacts;
 pub(crate) struct ValueFact {
     /// Canonical value identity.
     pub(crate) value: ArtifactValueId,
-    /// Node producing the value, absent when a caller binds it.
-    pub(crate) producer: Option<ArtifactNodeId>,
     /// Packed bytes the value occupies.
     pub(crate) bytes: u64,
     /// Packed bytes of one element.
@@ -61,7 +57,7 @@ impl ValueFact {
     }
 }
 
-/// One device's regions under construction.
+/// Regions under construction.
 #[derive(Debug, Default)]
 struct DeviceSpace {
     slots: Vec<Slot>,
@@ -76,13 +72,7 @@ struct Slot {
     placements: Vec<ValuePlacement>,
 }
 
-/// Build the one allocation and layout plan for `values` under `topology`.
-///
-/// Every device the topology places work on gets its own offset space, its own
-/// peak, and its own share of every value it holds. A partitioned value is
-/// distributed rather than duplicated: the shares sum to the byte total its
-/// resource row states, so the mesh holds one copy of the value however many
-/// devices compute it.
+/// Build the one allocation and layout plan for `values`.
 ///
 /// # Errors
 ///
@@ -91,55 +81,53 @@ struct Slot {
 pub(crate) fn plan(
     values: &[ValueFact],
     device: DeviceFacts,
-    topology: &MeshTopologyPlan,
 ) -> Result<AllocationPlan, CompileError> {
     let classes = alias_classes(values);
     let cache_capacity = device.cache_capacity_bytes();
-    let anchor = topology.devices().first().copied().unwrap_or(DeviceSlot(0));
 
     let mut order: Vec<usize> = (0..values.len())
         .filter(|index| values[*index].bytes > 0)
         .collect();
     order.sort_by_key(|index| (values[*index].first_stage, values[*index].value));
 
-    let mut spaces = std::collections::BTreeMap::<DeviceSlot, DeviceSpace>::new();
+    let mut space = DeviceSpace::default();
     for index in order {
         let fact = &values[index];
-        for (slot, bytes) in shares(fact, topology, anchor) {
-            let space = spaces.entry(slot).or_default();
-            hold(space, fact, bytes, classes[index], cache_capacity, slot);
-        }
+        hold(&mut space, fact, fact.bytes, classes[index], cache_capacity);
     }
 
-    let mut regions = Vec::new();
-    for (slot, space) in spaces {
-        let mut next = 0u64;
-        for held in space.slots {
-            let offset = align(next)?;
-            let end = offset.checked_add(held.bytes).ok_or_else(|| {
-                overflow(
-                    "planner.allocation.regions",
-                    "region end exceeds the addressable range",
-                )
-            })?;
-            let padding = align(end)?.saturating_sub(end);
-            regions.push(AllocationRegion {
-                device: slot,
-                address_space: AddressSpace::Device,
-                owner: RegionOwner::Artifact,
-                offset,
-                bytes: held.bytes,
-                alignment: REGION_ALIGNMENT,
-                padding_bytes: padding,
-                placements: held.placements,
-            });
-            next = end;
-        }
-        regions.extend(space.caller);
+    let mut regions = Vec::with_capacity(space.slots.len() + space.caller.len());
+    let mut next = 0u64;
+    let mut allocated_bytes = 0u64;
+    for held in space.slots {
+        let offset = align(next)?;
+        let end = offset.checked_add(held.bytes).ok_or_else(|| {
+            overflow(
+                "planner.allocation.regions",
+                "region end exceeds the addressable range",
+            )
+        })?;
+        let padding = align(end)?.saturating_sub(end);
+        allocated_bytes = allocated_bytes.checked_add(held.bytes).ok_or_else(|| {
+            overflow(
+                "planner.allocation.allocated_bytes",
+                "region sum exceeds u64",
+            )
+        })?;
+        regions.push(AllocationRegion {
+            address_space: AddressSpace::Device,
+            owner: RegionOwner::Artifact,
+            offset,
+            bytes: held.bytes,
+            alignment: REGION_ALIGNMENT,
+            padding_bytes: padding,
+            placements: held.placements,
+        });
+        next = end;
     }
+    regions.extend(space.caller);
     regions.sort_by_key(|region| {
         (
-            region.device,
             region.address_space,
             region.owner,
             region.offset,
@@ -150,101 +138,15 @@ pub(crate) fn plan(
     let mut plan = AllocationPlan {
         schema_version: ALLOCATION_SCHEMA_VERSION,
         regions,
-        device_peaks: Vec::new(),
-        aggregate_peak_bytes: 0,
+        peak_bytes: 0,
+        allocated_bytes,
     };
-    let mut placed = plan
-        .regions
-        .iter()
-        .map(|region| region.device)
-        .collect::<Vec<_>>();
-    placed.sort_unstable();
-    placed.dedup();
-    let mut aggregate = 0u64;
-    let mut device_peaks = Vec::with_capacity(placed.len());
-    for slot in placed {
-        let peak_bytes = plan.live_peak(slot, None)?;
-        let allocated_bytes = plan
-            .regions
-            .iter()
-            .filter(|region| region.device == slot && region.owner == RegionOwner::Artifact)
-            .try_fold(0u64, |total, region| {
-                total.checked_add(region.bytes).ok_or_else(|| {
-                    overflow(
-                        "planner.allocation.device_peaks",
-                        "device region sum exceeds u64",
-                    )
-                })
-            })?;
-        aggregate = aggregate.checked_add(peak_bytes).ok_or_else(|| {
-            overflow(
-                "planner.allocation.aggregate_peak_bytes",
-                "device peak sum exceeds u64",
-            )
-        })?;
-        device_peaks.push(DevicePeak {
-            device: slot,
-            peak_bytes,
-            allocated_bytes,
-        });
-    }
-    plan.device_peaks = device_peaks;
-    plan.aggregate_peak_bytes = aggregate;
+    plan.peak_bytes = plan.live_peak(None)?;
     plan.validate()?;
     Ok(plan)
 }
 
-/// The bytes each device holds of one value.
-///
-/// A value the topology partitions is cut in the proportion the shards are cut,
-/// with the residual on the last shard, so the shares sum to the value's own
-/// byte total exactly. A value produced by a replicated region is held whole by
-/// every device that computes it, and a value no node produces is held by the
-/// anchor device the caller binds against.
-fn shares(
-    fact: &ValueFact,
-    topology: &MeshTopologyPlan,
-    anchor: DeviceSlot,
-) -> Vec<(DeviceSlot, u64)> {
-    let partition = fact.producer.and_then(|producer| {
-        topology
-            .partitions
-            .iter()
-            .find(|partition| partition.node == producer)
-    });
-    let Some(partition) = partition else {
-        return vec![(anchor, fact.bytes)];
-    };
-    if partition.kind == PartitionKind::Replicated || partition.region_points == 0 {
-        return partition
-            .shards
-            .iter()
-            .map(|shard| (shard.device, fact.bytes))
-            .collect();
-    }
-    let mut cut = Vec::with_capacity(partition.shards.len());
-    let mut consumed = 0u64;
-    let mut points = 0u64;
-    for (index, shard) in partition.shards.iter().enumerate() {
-        points = points.saturating_add(shard.points);
-        let end = if index + 1 == partition.shards.len() {
-            fact.bytes
-        } else {
-            u64::try_from(
-                u128::from(fact.bytes) * u128::from(points) / u128::from(partition.region_points),
-            )
-            .unwrap_or(fact.bytes)
-        };
-        let bytes = end.saturating_sub(consumed);
-        consumed = end;
-        if bytes > 0 {
-            cut.push((shard.device, bytes));
-        }
-    }
-    cut
-}
-
-/// Hold `bytes` of one value on one device, in the region its retained
+/// Hold `bytes` of one value, in the region its retained
 /// predecessor already holds, otherwise reusing a dead region when the alias
 /// and stage facts permit it.
 fn hold(
@@ -253,7 +155,6 @@ fn hold(
     bytes: u64,
     alias_class: AliasClass,
     cache_capacity: u64,
-    slot: DeviceSlot,
 ) {
     let mut placement = ValuePlacement {
         value: fact.value,
@@ -277,7 +178,6 @@ fn hold(
     };
     if !fact.owned_by_artifact() {
         space.caller.push(AllocationRegion {
-            device: slot,
             address_space: if fact.lifetime == ResourceLifetime::Constant {
                 AddressSpace::Constant
             } else {

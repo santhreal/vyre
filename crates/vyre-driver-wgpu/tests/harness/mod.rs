@@ -10,7 +10,7 @@ use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::PendingDispatch;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_emit_naga::program::emit_module;
+use vyre_emit::naga::program::emit_module;
 
 const LIVE_GPU_REQUIRED: &str =
     "WgpuBackend acquisition failed on a machine that must have a GPU. \

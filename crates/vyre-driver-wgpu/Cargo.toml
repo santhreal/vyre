@@ -9,7 +9,6 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "wgpu backend for vyre IR  -  implements VyreBackend, owns GPU runtime, buffer pool, pipeline cache"
-readme = "README.md"
 keywords = ["gpu", "wgpu", "ir", "backend", "vyre"]
 categories = ["graphics", "rendering::graphics-api", "hardware-support"]
 documentation = "https://docs.rs/vyre-wgpu"
@@ -30,7 +29,7 @@ vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-lower.workspace = true
-vyre-emit-naga.workspace = true
+vyre-emit = { workspace = true, features = ["naga"] }
 naga = { workspace = true, features = ["wgsl-out", "spv-out"] }
 wgpu.workspace = true
 bytemuck.workspace = true

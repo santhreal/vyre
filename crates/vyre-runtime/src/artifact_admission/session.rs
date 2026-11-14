@@ -12,8 +12,8 @@ use vyre_foundation::failure_domain::{
 };
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{
-    AbiAccess, ArtifactEnvelope, ArtifactValueId, CompileError, Digest, ResourceLifetime,
-    TargetCompileError, TargetEntryPoint, ValidatedCompileRequest,
+    ArtifactEnvelope, ArtifactValueId, CompileError, Digest, ResourceLifetime, TargetCompileError,
+    TargetEntryPoint, ValidatedCompileRequest,
 };
 
 use super::finalist::{host_input_resources, validate_instance, DeviceFinalists};
@@ -658,66 +658,17 @@ impl ArtifactSession {
         self.submit_and_wait(self.host_bindings(inputs)?)
     }
 
-    /// Project writable completion values in canonical ABI slot order.
+    /// Move writable completion values out in Program buffer declaration order.
     ///
-    /// Slot order is graph value order. A caller holding the Program the graph was
-    /// lifted from reads [`Self::program_outputs`] instead, because that order is
-    /// the buffer declaration order the Program author bound.
-    pub fn ordered_outputs(
-        &self,
-        completion: &Completion,
-    ) -> Result<Vec<Vec<u8>>, ArtifactSessionError> {
-        let state = self.read_state()?;
-        let neutral = state.admitted.neutral();
-        let lifetimes = neutral
-            .resources()
-            .iter()
-            .map(|resource| (resource.value, resource.lifetime))
-            .collect::<BTreeMap<_, _>>();
-        let mut resources = neutral
-            .abi()
-            .resources
-            .iter()
-            .filter(|resource| {
-                matches!(resource.access, AbiAccess::ReadWrite | AbiAccess::WriteOnly)
-                    && matches!(
-                        lifetimes.get(&resource.value),
-                        Some(ResourceLifetime::Output | ResourceLifetime::Retained)
-                    )
-            })
-            .collect::<Vec<_>>();
-        resources.sort_unstable_by_key(|resource| resource.slot);
-        resources
-            .into_iter()
-            .map(|resource| {
-                completion
-                    .outputs
-                    .get(&resource.value)
-                    .or_else(|| completion.retained.get(&resource.value))
-                    .cloned()
-                    .ok_or_else(|| {
-                        BackendError::InvalidProgram {
-                            fix: format!(
-                                "Fix: materializer completion must project writable artifact value {}.",
-                                resource.value.0
-                            ),
-                        }
-                        .into()
-                    })
-            })
-            .collect()
-    }
-
-    /// Project writable completion values in Program buffer declaration order.
-    ///
-    /// [`Self::ordered_outputs`] projects canonical ABI slot order, which numbers
-    /// graph values. A graph lifted from one Program mints an external value for
-    /// every retained read-write buffer before the node that produces the declared
-    /// outputs, so slot order is retained-then-output and cannot express a Program
-    /// that declares an output buffer before a retained one. A caller that authored
-    /// the Program binds its inputs and reads its outputs in declaration order, the
-    /// order `Program::output_buffer_indices` reports, so this projects onto that
-    /// order through the canonical resource names.
+    /// Canonical ABI slot order numbers graph values. A graph lifted from one
+    /// Program mints an external value for every retained read-write buffer before
+    /// the node that produces the declared outputs, so slot order is
+    /// retained-then-output and cannot express a Program that declares an output
+    /// buffer before a retained one. A caller that authored the Program binds its
+    /// inputs and reads its outputs in declaration order, the order
+    /// `Program::output_buffer_indices` reports, so this projects onto that order
+    /// through the canonical resource names. The completion is consumed: each
+    /// buffer moves into the result, so no output byte is copied.
     ///
     /// # Errors
     ///
@@ -726,56 +677,46 @@ impl ArtifactSession {
     pub fn program_outputs(
         &self,
         program: &Program,
-        completion: &Completion,
+        mut completion: Completion,
     ) -> Result<Vec<Vec<u8>>, ArtifactSessionError> {
         let state = self.read_state()?;
-        let canonical =
-            state
-                .admitted
-                .neutral()
-                .canonical_value_by_name()
-                .map_err(|collision| {
-                    ArtifactSessionError::from(BackendError::InvalidProgram {
-                        fix: collision.to_string(),
-                    })
-                })?;
+        let neutral = state.admitted.neutral();
         let buffers = program.buffers();
-        program
-            .output_buffer_indices()
-            .iter()
-            .map(|index| {
-                let name = buffers
-                    .get(*index as usize)
-                    .ok_or_else(|| {
-                        ArtifactSessionError::from(BackendError::InvalidProgram {
-                            fix: format!(
-                                "Fix: Program declares writable buffer index {index}, which is outside its buffer list."
-                            ),
-                        })
-                    })?
-                    .name();
-                let value = canonical.get(name).copied().ok_or_else(|| {
+        let indices = program.output_buffer_indices();
+        let mut outputs = Vec::with_capacity(indices.len());
+        for index in indices {
+            let name = buffers
+                .get(*index as usize)
+                .ok_or_else(|| {
                     ArtifactSessionError::from(BackendError::InvalidProgram {
                         fix: format!(
-                            "Fix: artifact resources must carry canonical value `{name}` for the declared writable buffer."
+                            "Fix: Program declares writable buffer index {index}, which is outside its buffer list."
+                        ),
+                    })
+                })?
+                .name();
+            let value = neutral.value_named(name).ok_or_else(|| {
+                ArtifactSessionError::from(BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: artifact resources must carry canonical value `{name}` for the declared writable buffer."
+                    ),
+                })
+            })?;
+            let bytes = completion
+                .outputs
+                .remove(&value)
+                .or_else(|| completion.retained.remove(&value))
+                .ok_or_else(|| {
+                    ArtifactSessionError::from(BackendError::InvalidProgram {
+                        fix: format!(
+                            "Fix: materializer completion must project writable artifact value {} (`{name}`) once.",
+                            value.0
                         ),
                     })
                 })?;
-                completion
-                    .outputs
-                    .get(&value)
-                    .or_else(|| completion.retained.get(&value))
-                    .cloned()
-                    .ok_or_else(|| {
-                        ArtifactSessionError::from(BackendError::InvalidProgram {
-                            fix: format!(
-                                "Fix: materializer completion must project writable artifact value {} (`{name}`).",
-                                value.0
-                            ),
-                        })
-                    })
-            })
-            .collect()
+            outputs.push(bytes);
+        }
+        Ok(outputs)
     }
 
     pub(super) fn retained_values(

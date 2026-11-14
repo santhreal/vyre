@@ -12,7 +12,7 @@ use std::sync::{
 };
 use std::time::{Duration, Instant};
 use vyre_driver::BackendError;
-use vyre_emit_naga::program::TrapTag;
+use vyre_emit::naga::program::TrapTag;
 
 pub(super) type PendingMap = (Option<usize>, PendingReadback);
 pub(super) type SubmittedMap = (Option<usize>, SubmittedReadback);

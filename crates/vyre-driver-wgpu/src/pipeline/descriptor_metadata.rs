@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use rustc_hash::FxHashSet;
 use vyre_driver::{BackendError, BackendLayoutClass, BackendLayoutFingerprint, BackendLayoutSlot};
-use vyre_emit_naga::program::TrapTag;
+use vyre_emit::naga::program::TrapTag;
 use vyre_lower::TRAP_SIDECAR_NAME;
 
 use crate::descriptor_mapping::{

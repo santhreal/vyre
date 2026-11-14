@@ -1,12 +1,8 @@
-//! Readers for the buffers the megakernel writes, and the shape checks a
-//! readback passes before it is read.
-//!
-//! A reader here decodes a buffer the kernel owns. The two validators state
-//! what a readback must look like before any of them touches it.
+//! Readers for the buffers the megakernel writes.
 
 use crate::resident_work_queue::protocol::{self, DebugRecord};
 use crate::resident_work_queue::ResidentWorkQueue;
-use crate::{PipelineError, RingEncodingFault};
+use crate::PipelineError;
 
 macro_rules! protocol_counter_readers {
     () => {
@@ -157,44 +153,8 @@ fn map_protocol_counter(
     result.map_err(PipelineError::Protocol)
 }
 
-pub(in crate::resident_work_queue) fn validate_control_bytes(
-    control_bytes: &[u8],
-) -> Result<(), PipelineError> {
-    let min = protocol::control_byte_len(0).ok_or_else(|| {
-        PipelineError::Backend(
-            "megakernel minimum control-buffer length overflowed usize. Fix: keep CONTROL_MIN_WORDS within host address limits."
-                .to_string(),
-        )
-    })?;
-    if control_bytes.len() < min || control_bytes.len() % 4 != 0 {
-        return Err(PipelineError::Backend(format!(
-            "megakernel control buffer has {} bytes, expected at least {min} bytes and 4-byte alignment. Fix: build it with Megakernel::encode_control.",
-            control_bytes.len()
-        )));
-    }
-    Ok(())
-}
-
-pub(in crate::resident_work_queue) fn validate_debug_log_bytes(
-    debug_log_bytes: &[u8],
-) -> Result<(), PipelineError> {
-    let expected = protocol::debug_log_byte_len(protocol::debug::RECORD_CAPACITY)
-        .ok_or(PipelineError::RingEncoding {
-            fault: RingEncodingFault::Overflow,
-            fix: "debug-log minimum length overflowed usize; keep debug ABI constants within host limits",
-        })?;
-    if debug_log_bytes.len() != expected {
-        return Err(PipelineError::Backend(format!(
-            "megakernel debug-log buffer has {} bytes, expected exactly {expected} bytes for {} PRINTF records. Fix: build it with Megakernel::encode_empty_debug_log(protocol::debug::RECORD_CAPACITY).",
-            debug_log_bytes.len(),
-            protocol::debug::RECORD_CAPACITY
-        )));
-    }
-    Ok(())
-}
-
-// Inline: `protocol_api` is a private module, so its readers and validators
-// are unreachable from an integration test.
+// Inline: `protocol_api` is a private module, so its readers are
+// unreachable from an integration test.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -219,64 +179,5 @@ mod tests {
             metrics.is_empty(),
             "fresh control buffer must have no non-zero metric counters"
         );
-    }
-
-    #[test]
-    fn validate_control_bytes_rejects_too_short() {
-        let err =
-            validate_control_bytes(&[0u8; 4]).expect_err("must reject undersized control buffer");
-        let PipelineError::Backend(message) = err else {
-            panic!("an undersized control buffer must reject as a validation fault, got {err:?}")
-        };
-        let min = protocol::control_byte_len(0)
-            .expect("the minimum control length must be representable");
-        assert!(
-            message.contains(&format!("has 4 bytes, expected at least {min} bytes")),
-            "the fault must report the byte length it received and the minimum it required: {message}"
-        );
-    }
-
-    #[test]
-    fn validate_control_bytes_rejects_misaligned() {
-        let err = validate_control_bytes(&[0u8; 101])
-            .expect_err("must reject non-4-byte-aligned control buffer");
-        let PipelineError::Backend(message) = err else {
-            panic!("a misaligned control buffer must reject as a validation fault, got {err:?}")
-        };
-        // Length and alignment share one rejection, so a 101-byte buffer is
-        // reported by the same fault as an undersized one.
-        assert!(
-            message.contains("has 101 bytes") && message.contains("4-byte alignment"),
-            "the fault must report the byte length it received and the alignment it required: {message}"
-        );
-    }
-
-    #[test]
-
-    fn validate_control_bytes_accepts_valid() {
-        let control = ResidentWorkQueue::encode_control(false, 1, 0).unwrap();
-        validate_control_bytes(&control).expect("Fix: valid control buffer must pass validation");
-    }
-
-    #[test]
-    fn validate_debug_log_bytes_rejects_wrong_size() {
-        let err =
-            validate_debug_log_bytes(&[0u8; 4]).expect_err("must reject undersized debug log");
-        let PipelineError::Backend(message) = err else {
-            panic!("an undersized debug log must reject as a validation fault, got {err:?}")
-        };
-        let expected = protocol::debug_log_byte_len(protocol::debug::RECORD_CAPACITY)
-            .expect("the compiled debug-log length must be representable");
-        assert!(
-            message.contains(&format!("has 4 bytes, expected exactly {expected} bytes")),
-            "the fault must report the byte length it received and the exact one it required: {message}"
-        );
-    }
-
-    #[test]
-    fn validate_debug_log_bytes_accepts_valid() {
-        let log =
-            ResidentWorkQueue::encode_empty_debug_log(protocol::debug::RECORD_CAPACITY).unwrap();
-        validate_debug_log_bytes(&log).expect("Fix: valid debug log must pass validation");
     }
 }

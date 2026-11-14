@@ -32,7 +32,7 @@ pub(crate) fn output_layout_map(
 }
 
 pub(crate) fn metal_slot_map(
-    artifact: &vyre_emit_metal::MetalArtifact,
+    artifact: &vyre_emit::metal::MetalArtifact,
 ) -> Result<BTreeMap<u32, u8>, BackendError> {
     let mut slots = BTreeMap::new();
     for binding in &artifact.bindings {
@@ -58,7 +58,7 @@ pub(crate) fn plan_buffers(
     inputs: &[&[u8]],
     output_by_binding: &BTreeMap<u32, OutputBindingLayout>,
     metal_slots: &BTreeMap<u32, u8>,
-    artifact_bindings: &[vyre_emit_metal::MetalBindingMetadata],
+    artifact_bindings: &[vyre_emit::metal::MetalBindingMetadata],
 ) -> Result<Vec<PlannedBuffer>, BackendError> {
     let mut buffers = Vec::new();
     let reserve_len = binding_plan
@@ -211,7 +211,7 @@ pub(crate) fn plan_resident_buffers(
     resources: &[ResolvedMetalResource<'_>],
     output_by_binding: &BTreeMap<u32, OutputBindingLayout>,
     metal_slots: &BTreeMap<u32, u8>,
-    artifact_bindings: &[vyre_emit_metal::MetalBindingMetadata],
+    artifact_bindings: &[vyre_emit::metal::MetalBindingMetadata],
 ) -> Result<Vec<PlannedBuffer>, BackendError> {
     let mut buffers = Vec::new();
     let reserve_len = binding_plan

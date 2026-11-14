@@ -325,11 +325,6 @@ pub mod interval_merge_gpu_parity;
 #[path = "kfac_autotune_step_gpu_parity.rs"]
 pub mod kfac_autotune_step_gpu_parity;
 
-/// Integration tests from `tests/label_predicate_primitives_gpu_parity.rs`.
-#[cfg(all(test, feature = "device-tests"))]
-#[path = "label_predicate_primitives_gpu_parity.rs"]
-pub mod label_predicate_primitives_gpu_parity;
-
 /// Integration tests from `tests/launch_geometry_contracts.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "launch_geometry_contracts.rs"]
@@ -418,26 +413,6 @@ pub mod persistent_fixpoint_partial_exit_cuda;
 #[cfg(all(test, feature = "device-tests"))]
 #[path = "planar_rewrite_schedule_gpu_parity.rs"]
 pub mod planar_rewrite_schedule_gpu_parity;
-
-/// Integration tests from `tests/predicate_call_traversal_gpu_parity.rs`.
-#[cfg(all(test, feature = "device-tests"))]
-#[path = "predicate_call_traversal_gpu_parity.rs"]
-pub mod predicate_call_traversal_gpu_parity;
-
-/// Integration tests from `tests/predicate_edge_kind_mask_gpu_parity.rs`.
-#[cfg(all(test, feature = "device-tests"))]
-#[path = "predicate_edge_kind_mask_gpu_parity.rs"]
-pub mod predicate_edge_kind_mask_gpu_parity;
-
-/// Integration tests from `tests/predicate_node_kind_gpu_parity.rs`.
-#[cfg(all(test, feature = "device-tests"))]
-#[path = "predicate_node_kind_gpu_parity.rs"]
-pub mod predicate_node_kind_gpu_parity;
-
-/// Integration tests from `tests/predicate_size_arg_gpu_parity.rs`.
-#[cfg(all(test, feature = "device-tests"))]
-#[path = "predicate_size_arg_gpu_parity.rs"]
-pub mod predicate_size_arg_gpu_parity;
 
 /// Integration tests from `tests/preferred_dispatch_backend.rs`.
 #[cfg(feature = "device-tests")]

@@ -13,8 +13,8 @@
 
 use super::*;
 use crate::allocation::{
-    AddressSpace, AliasClass, AllocationRegion, DevicePeak, DeviceSlot, PlacementLayout,
-    PlacementPermits, RegionOwner, ValuePlacement, ALLOCATION_SCHEMA_VERSION, REGION_ALIGNMENT,
+    AddressSpace, AliasClass, AllocationRegion, PlacementLayout, PlacementPermits, RegionOwner,
+    ValuePlacement, ALLOCATION_SCHEMA_VERSION, REGION_ALIGNMENT,
 };
 use crate::cost::CostBreakdown;
 use crate::identity::{ArtifactNodeId, FusionGroupId};
@@ -22,7 +22,6 @@ use crate::measure::{
     CandidateMeasurement, DeviceState, MeasurementEnvironment, MeasurementProtocol,
     MeasurementRecord, SampleEstimate,
 };
-use crate::mesh::RegionPartition;
 use crate::request::{SearchBudget, SearchWork};
 use vyre_foundation::ir::DataType;
 use vyre_foundation::numeric::{NumericContract, NUMERIC_CONTRACT_VERSION};
@@ -68,16 +67,6 @@ fn payload(resources: Vec<ResourceRecord>) -> ArtifactPayload {
         resource_envelope: ResourceEnvelope { total_bytes: 0 },
         geometry: Vec::new(),
         allocation,
-        topology: MeshTopologyPlan::single_device(
-            Digest([0; 32]),
-            DeviceSlot(0),
-            vec![RegionPartition::replicated_on(
-                ArtifactNodeId(0),
-                DeviceSlot(0),
-                vec![0],
-                1,
-            )],
-        ),
         provenance: Provenance {
             source_graph: Digest([0; 32]),
             semantic_graph: Digest([0; 32]),
@@ -119,7 +108,6 @@ fn caller_bound(resources: &[ResourceRecord]) -> AllocationPlan {
     let regions: Vec<AllocationRegion> = placed
         .iter()
         .map(|resource| AllocationRegion {
-            device: DeviceSlot(0),
             address_space: AddressSpace::Device,
             owner: RegionOwner::Caller,
             offset: 0,
@@ -151,12 +139,8 @@ fn caller_bound(resources: &[ResourceRecord]) -> AllocationPlan {
     AllocationPlan {
         schema_version: ALLOCATION_SCHEMA_VERSION,
         regions,
-        device_peaks: vec![DevicePeak {
-            device: DeviceSlot(0),
-            peak_bytes: peak,
-            allocated_bytes: 0,
-        }],
-        aggregate_peak_bytes: peak,
+        peak_bytes: peak,
+        allocated_bytes: 0,
     }
 }
 
@@ -497,7 +481,6 @@ fn launchable() -> ArtifactPayload {
     payload.allocation = AllocationPlan {
         schema_version: crate::allocation::ALLOCATION_SCHEMA_VERSION,
         regions: vec![AllocationRegion {
-            device: DeviceSlot(0),
             address_space: AddressSpace::Device,
             owner: RegionOwner::Artifact,
             offset: 0,
@@ -522,12 +505,8 @@ fn launchable() -> ArtifactPayload {
                 permits: PlacementPermits::default(),
             }],
         }],
-        device_peaks: vec![DevicePeak {
-            device: DeviceSlot(0),
-            peak_bytes: 256,
-            allocated_bytes: 256,
-        }],
-        aggregate_peak_bytes: 256,
+        peak_bytes: 256,
+        allocated_bytes: 256,
     };
     payload
 }
@@ -743,8 +722,8 @@ fn every_allocation_field_participates_in_artifact_identity() {
         ("size", |payload| {
             payload.allocation.regions[0].placements[0].bytes = 512;
         }),
-        ("device", |payload| {
-            payload.allocation.regions[0].device = DeviceSlot(3);
+        ("allocated total", |payload| {
+            payload.allocation.allocated_bytes = 512;
         }),
         ("synchronization", |payload| {
             payload.allocation.regions[0].placements[0].synchronized = true;
@@ -764,16 +743,16 @@ fn every_allocation_field_participates_in_artifact_identity() {
     }
 }
 
-/// WHY: a region on a device the peaks do not account for states bytes on
-/// hardware nothing sized, so the runtime would allocate against a total no
-/// ranking ever priced.
+/// WHY: an allocated total its regions do not reserve states bytes nothing
+/// sized, so the runtime would allocate against a total no ranking ever
+/// priced.
 #[test]
-fn decode_rejects_a_region_the_device_peaks_do_not_account_for() {
+fn decode_rejects_an_allocated_total_its_regions_do_not_reserve() {
     let mut invalid = launchable();
-    invalid.allocation.regions[0].device = DeviceSlot(3);
+    invalid.allocation.allocated_bytes = 512;
     assert_eq!(
-        rejection_path(invalid, "region on an unaccounted device"),
-        "artifact.allocation.device_peaks[0].allocated_bytes"
+        rejection_path(invalid, "allocated total its regions do not reserve"),
+        "artifact.allocation.allocated_bytes"
     );
 }
 
@@ -787,7 +766,7 @@ fn bytes_stamped_with_the_previous_schema_are_refused() {
     Artifact::from_bytes(&framed.bytes).expect("the current schema decodes");
 
     let mut stale = framed.bytes.clone();
-    stale[4..6].copy_from_slice(&(17u16).to_le_bytes());
+    stale[4..6].copy_from_slice(&(18u16).to_le_bytes());
     let error = Artifact::from_bytes(&stale).expect_err("a stale schema must not decode");
     assert_eq!(
         error.diagnostic.code.as_str(),
@@ -795,7 +774,7 @@ fn bytes_stamped_with_the_previous_schema_are_refused() {
     );
     assert!(error
         .to_string()
-        .contains("schema 17 is unsupported; expected 18"));
+        .contains("schema 18 is unsupported; expected 19"));
 }
 
 #[test]

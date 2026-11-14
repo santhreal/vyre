@@ -73,6 +73,12 @@ impl BindingSet {
     pub const fn resources(&self) -> &BTreeMap<ArtifactValueId, BoundResource> {
         &self.resources
     }
+
+    /// Consume the set and return its bindings.
+    #[must_use]
+    pub fn into_resources(self) -> BTreeMap<ArtifactValueId, BoundResource> {
+        self.resources
+    }
 }
 
 /// Completed typed submission result.

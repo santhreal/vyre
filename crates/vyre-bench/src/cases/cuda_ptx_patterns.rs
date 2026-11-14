@@ -6,7 +6,7 @@ use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
 use std::collections::HashMap;
 use std::time::Instant;
-use vyre_emit_ptx::{patterns, ComputeCapability};
+use vyre_emit::ptx::{patterns, ComputeCapability};
 use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::descriptor_builder::{effect, op};
 use vyre_lower::{
@@ -65,7 +65,7 @@ impl BenchCase for CudaPtxPatterns {
             layer: BenchLayer::Backend,
             workload: WorkloadClass::Micro,
             determinism: DeterminismClass::Deterministic,
-            owner_crate: "vyre-emit-ptx".to_string(),
+            owner_crate: "vyre-emit".to_string(),
         }
     }
 
@@ -307,7 +307,7 @@ fn measure_corpus(corpus: &[KernelDescriptor]) -> Result<PtxPatternTotals, Bench
             cached.clone()
         } else {
             totals.source_cache_misses = totals.source_cache_misses.saturating_add(1);
-            let lowered = vyre_emit_ptx::emit_with_target(desc, ComputeCapability::SM_90)
+            let lowered = vyre_emit::ptx::emit_with_target(desc, ComputeCapability::SM_90)
                 .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
             source_cache.insert(desc.id.clone(), lowered.clone());
             lowered
@@ -668,7 +668,7 @@ mod tests {
         let case = CudaPtxPatterns;
         assert_eq!(case.id().0, "cuda.ptx.patterns.release.corpus");
         let metadata = case.metadata();
-        assert_eq!(metadata.owner_crate, "vyre-emit-ptx");
+        assert_eq!(metadata.owner_crate, "vyre-emit");
         assert_eq!(metadata.name, "CUDA PTX Pattern Release Corpus");
         let requirements = case.requirements();
         assert!(

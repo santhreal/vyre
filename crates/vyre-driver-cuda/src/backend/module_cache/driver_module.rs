@@ -6,13 +6,13 @@ use std::ffi::CStr;
 use cudarc::driver::sys::{CUfunction, CUfunction_attribute, CUmodule, CUresult};
 
 /// Module-scope cooperative grid-barrier counter symbol, emitted by
-/// `vyre-emit-ptx` as `.global .align 4 .u32 _vyre_grid_barrier[1];`.
+/// `vyre_emit::ptx` as `.global .align 4 .u32 _vyre_grid_barrier[1];`.
 pub(crate) const GRID_BARRIER_SYMBOL_NAME: &str = "_vyre_grid_barrier";
 pub(super) const GRID_BARRIER_SYMBOL_CSTR: &[u8] = b"_vyre_grid_barrier\0";
 
 /// Module-scope trap record symbol, emitted by the primary text emitter as
 /// `.global .align 4 .u32 _vyre_trap_sidecar[N];`. The name is owned by
-/// [`vyre_emit_ptx::TRAP_SIDECAR_SYMBOL`]; the NUL-terminated form is spelled
+/// [`vyre_emit::ptx::TRAP_SIDECAR_SYMBOL`]; the NUL-terminated form is spelled
 /// here because a `CStr` cannot be built from a `&str` constant at compile time,
 /// and a mismatch between the two is caught by `trap_sidecar_symbol_names_agree`.
 pub(super) const TRAP_SIDECAR_SYMBOL_CSTR: &[u8] = b"_vyre_trap_sidecar\0";
@@ -191,7 +191,7 @@ mod module_lifecycle_tests {
         assert_eq!(
             cstr.to_str()
                 .expect("Fix: the trap sidecar symbol must be UTF-8."),
-            vyre_emit_ptx::TRAP_SIDECAR_SYMBOL,
+            vyre_emit::ptx::TRAP_SIDECAR_SYMBOL,
             "Fix: the driver's NUL-terminated trap sidecar symbol drifted from the \
              emitter's. Set it to the emitter's name plus a trailing NUL."
         );
