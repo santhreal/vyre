@@ -1,6 +1,5 @@
 //! Scheduling, fusion, batching, and dispatch-strategy compositions.
 
-pub mod frontier_typed_ir;
 pub mod planar_rewrite_pass_scheduler;
 pub mod spectral_schedule;
 pub mod submodular_cache_eviction;
