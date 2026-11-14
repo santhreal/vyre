@@ -1,127 +1,97 @@
-//! # vyre-libs: curated consumer facade for the composition library family
+//! GPU composition library for vyre IR.
 //!
-//! Each public function returns a [`vyre_foundation::ir::Program`] built from
-//! existing IR. Compositions are partitioned into substantive domain packages
-//! under the `vyre-libs` ownership family.
+//! Public entry points build validated [`vyre_foundation::ir::Program`] and
+//! [`vyre_foundation::ir::ProgramGraph`] compositions across graph, pattern,
+//! parsing, text, math, neural, hash, decode, bitset, reduction, fixpoint,
+//! visual, device, encoding, analysis, reasoning, scheduling, and solver
+//! operations.
 
-pub use vyre_libs_builder::builder;
-pub use vyre_libs_builder::plumbing;
-pub use vyre_libs_builder::plumbing::host::dispatch_buffers;
-pub use vyre_libs_builder::plumbing::operand::buffer_names;
-pub use vyre_libs_builder::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
-pub use vyre_libs_builder::prelude;
+pub mod builder;
+pub mod plumbing;
+pub mod prelude;
+
+pub use plumbing::host::dispatch_buffers;
+pub use plumbing::operand::buffer_names;
+pub use plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
 
 #[cfg(feature = "telemetry")]
-pub use vyre_libs_builder::plumbing::host::telemetry;
-pub use vyre_libs_builder::plumbing::registration::{contracts, operation_catalog};
+pub use plumbing::host::telemetry;
+pub use plumbing::registration::{contracts, operation_catalog};
 
-/// Reference every feature-selected domain crate so the linker retains its
-/// operation registrations, and report how many library operations the active
-/// feature set registers.
-///
-/// A domain crate's anchor returns nothing. Registrations are link-time records
-/// in one process-wide registry, so the count is read from that registry once.
+/// Reference the operation catalog so the linker retains every active domain's
+/// `inventory` registrations, and return the count of registered library
+/// operations.
+#[inline(never)]
 #[must_use]
 pub fn link_anchor() -> usize {
-    vyre_libs_builder::link_anchor();
-    #[cfg(feature = "bitset")]
-    vyre_libs_bitset::link_anchor();
-    #[cfg(feature = "reduce")]
-    vyre_libs_reduce::link_anchor();
-    #[cfg(feature = "fixpoint")]
-    vyre_libs_fixpoint::link_anchor();
-    #[cfg(any(feature = "math", feature = "math-kernels", feature = "math-dialect"))]
-    vyre_libs_math::link_anchor();
-    #[cfg(any(feature = "nn", feature = "nn-kernels"))]
-    vyre_libs_nn::link_anchor();
-    #[cfg(feature = "graph")]
-    vyre_libs_graph::link_anchor();
-    #[cfg(any(feature = "pattern", feature = "pattern-kernels"))]
-    vyre_libs_pattern::link_anchor();
-    #[cfg(feature = "hash")]
-    vyre_libs_hash::link_anchor();
-    #[cfg(feature = "text")]
-    vyre_libs_text::link_anchor();
-    #[cfg(feature = "decode")]
-    vyre_libs_decode::link_anchor();
-    #[cfg(any(feature = "parsing", feature = "parsing-kernels"))]
-    vyre_libs_parsing::link_anchor();
-    #[cfg(feature = "visual")]
-    vyre_libs_visual::link_anchor();
-    #[cfg(any(feature = "device", feature = "vfs"))]
-    vyre_libs_device::link_anchor();
-    #[cfg(feature = "solvers")]
-    vyre_libs_solvers::link_anchor();
-    #[cfg(feature = "encoding")]
-    vyre_libs_encoding::link_anchor();
-    #[cfg(feature = "analysis")]
-    vyre_libs_analysis::link_anchor();
-    #[cfg(feature = "reasoning")]
-    vyre_libs_reasoning::link_anchor();
-    #[cfg(feature = "scheduling")]
-    vyre_libs_scheduling::link_anchor();
+    let _ = plumbing::registration::operation_catalog::link_anchor();
     operation_catalog::library_entries().count()
 }
 
 #[cfg(feature = "geom")]
-pub use vyre_libs_math::geom;
+pub mod geom;
 #[cfg(any(feature = "math", feature = "math-kernels", feature = "math-dialect"))]
-pub use vyre_libs_math::math;
+pub mod math;
 #[cfg(feature = "opt")]
-pub use vyre_libs_math::opt;
+pub mod opt;
 #[cfg(feature = "representation")]
-pub use vyre_libs_math::representation;
+pub mod representation;
 
 #[cfg(feature = "llm")]
-pub use vyre_libs_nn::llm;
-#[cfg(any(feature = "nn", feature = "nn-kernels"))]
-pub use vyre_libs_nn::nn;
+pub mod llm;
+#[cfg(any(feature = "nn", feature = "nn-kernels", feature = "safetensors"))]
+pub mod nn;
 
 #[cfg(feature = "graph")]
-pub use vyre_libs_graph::graph;
+pub mod graph;
 #[cfg(feature = "graph")]
-pub use vyre_libs_graph::graph_compositions;
+pub mod graph_compositions;
 #[cfg(feature = "topology")]
-pub use vyre_libs_graph::topology;
+pub mod topology;
 
 #[cfg(feature = "nfa")]
-pub use vyre_libs_pattern::nfa;
+pub mod nfa;
 #[cfg(any(feature = "pattern", feature = "pattern-kernels"))]
-pub use vyre_libs_pattern::pattern;
+pub mod pattern;
 
 #[cfg(feature = "decode")]
-pub use vyre_libs_decode::decode;
+pub mod decode;
 #[cfg(feature = "hash")]
-pub use vyre_libs_hash::hash;
+pub mod hash;
 #[cfg(feature = "text")]
-pub use vyre_libs_text::text;
+pub mod text;
 
-#[cfg(any(feature = "parsing", feature = "parsing-kernels"))]
-pub use vyre_libs_parsing::parsing;
+#[cfg(any(
+    feature = "parsing",
+    feature = "parsing-kernels",
+    feature = "go-parser",
+    feature = "python-parser"
+))]
+pub mod parsing;
 
 #[cfg(feature = "vfs")]
-pub use vyre_libs_device::vfs;
+pub mod vfs;
 #[cfg(feature = "visual")]
-pub use vyre_libs_visual::visual;
+pub mod visual;
 
 #[cfg(feature = "bitset")]
-pub use vyre_libs_bitset::bitset;
-#[cfg(feature = "logical")]
-pub use vyre_libs_bitset::logical;
+pub mod bitset;
 #[cfg(feature = "fixpoint")]
-pub use vyre_libs_fixpoint::fixpoint;
+pub mod fixpoint;
+#[cfg(feature = "logical")]
+pub mod logical;
 #[cfg(feature = "reduce")]
-pub use vyre_libs_reduce::reduce;
+pub mod reduce;
 
 #[cfg(feature = "analysis")]
-pub use vyre_libs_analysis::analysis;
+pub mod analysis;
 #[cfg(feature = "device")]
-pub use vyre_libs_device::device;
+pub mod device;
 #[cfg(feature = "encoding")]
-pub use vyre_libs_encoding::encoding;
+pub mod encoding;
 #[cfg(feature = "reasoning")]
-pub use vyre_libs_reasoning::reasoning;
+pub mod reasoning;
 #[cfg(feature = "scheduling")]
-pub use vyre_libs_scheduling::scheduling;
+pub mod scheduling;
 #[cfg(feature = "solvers")]
-pub use vyre_libs_solvers::solvers;
+pub mod solvers;

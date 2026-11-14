@@ -6,10 +6,9 @@
 //! `OperationTier::Intrinsic` and `vyre_libs::operation_catalog` selects
 //! `OperationTier::Library`, so a caller that filters the intrinsic reader for a
 //! `vyre-libs::` id iterates an empty set and every assertion under that filter
-//! passes without checking anything. `vyre-libs-bitset` shipped exactly that:
-//! its bitset coverage loop read the intrinsic catalog, so the loop body never
-//! ran and the only reachable assertion failed on a registration that was
-//! present.
+//! passes without checking anything. An earlier bitset coverage loop read the
+//! intrinsic catalog, so the loop body never ran and the only reachable
+//! assertion failed on a registration that was present.
 //!
 //! The tier space is [`OperationTier::ALL`], which `vyre-foundation` closes at
 //! compile time: a new variant stops that roster compiling until it is listed.

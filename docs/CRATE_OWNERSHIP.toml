@@ -184,7 +184,6 @@ purpose = "Domain-neutral compositions built from existing IR."
 consumed_by = [
     "backend-neutral",
     "conformance",
-    "libraries",
     "pass-engine",
     "registry-link",
     "runtime",
@@ -417,14 +416,6 @@ interface = "Typed IR, memory model, zero-copy wire format, validation, intrinsi
 responsibility = "Define the backend-neutral IR, wire encoding, validation rules, execution trait, and lowered kernel descriptor."
 
 [[crate]]
-package = "vyre-compiler"
-path = "crates/vyre-compiler"
-layer = "compiler-boundary"
-seam = "megakernel-compiler"
-interface = "Optimizer passes, lowering, megakernel task-graph fusion and scheduling, and AOT packaging."
-responsibility = "Optimize, fuse, schedule, lower, and package vyre programs into static or persistent megakernel plans."
-
-[[crate]]
 package = "vyre-foundation"
 path = "crates/vyre-foundation"
 layer = "foundation"
@@ -438,160 +429,8 @@ package = "vyre-libs"
 path = "crates/vyre-libs"
 layer = "libraries"
 seam = "semantic-library"
-interface = "Every composition in the workspace, re-exported from the domain crates behind one feature set. Returns Programs."
-responsibility = "Own every composition in the workspace: consumer dialects and compiler-internal solvers, encoding, analysis, scheduling, and reasoning. Returns Programs. No backend, no emitter, no host rewrite of IR."
-
-[[crate]]
-package = "vyre-libs-analysis"
-path = "crates/vyre-libs-analysis"
-layer = "libraries"
-seam = "libs-analysis"
-interface = "Static analysis, cost model, dataflow fixpoint and diagnostic compositions."
-responsibility = "Own compiler-internal static analysis, cost models, dataflow fixpoint routines, and diagnostic aggregation. Does not own pass engine scheduling, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-bitset"
-path = "crates/vyre-libs-bitset"
-layer = "libraries"
-seam = "libs-bitset"
-interface = "Packed bitset word operations and logical bitwise compositions."
-responsibility = "Own packed u32 bitset operations, word utilities, and logical bitwise IR compositions. Does not own reduction tree implementations, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-builder"
-path = "crates/vyre-libs-builder"
-layer = "libraries"
-seam = "libs-builder"
-interface = "Shared IR composition infrastructure, child region skeletons, operands and registration link anchors."
-responsibility = "Own shared IR composition infrastructure, child region skeletons, operand wrappers, and registration link anchors for library builders. Does not own concrete domain operations, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-decode"
-path = "crates/vyre-libs-decode"
-layer = "libraries"
-seam = "libs-decode"
-interface = "Base64, hex, DEFLATE and encodex decoding compositions."
-responsibility = "Own Base64, hex, DEFLATE, and encodex data decoding and decompression IR compositions. Does not own parsing drivers, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-device"
-path = "crates/vyre-libs-device"
-layer = "libraries"
-seam = "libs-device"
-interface = "Device boundary contracts, memory ownership, resident graph layout and virtual filesystem block load compositions."
-responsibility = "Own compiler-internal device boundary contracts, memory ownership models, resident graph layout, and the virtual filesystem DMA block load and asset resolution compositions that fill device arenas. Does not own concrete backend implementations, driver dispatch, host file IO or runtime storage drivers."
-
-[[crate]]
-package = "vyre-libs-encoding"
-path = "crates/vyre-libs-encoding"
-layer = "libraries"
-seam = "libs-encoding"
-interface = "Provenance, matroid and fingerprint encoding compositions."
-responsibility = "Own compiler-internal bitset, provenance, matroid, and fingerprint encoding compositions. Does not own consumer decoding algorithms, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-fixpoint"
-path = "crates/vyre-libs-fixpoint"
-layer = "libraries"
-seam = "libs-fixpoint"
-interface = "Deterministic fixpoint iteration and grid synchronization compositions."
-responsibility = "Own deterministic fixpoint iteration kernels, routing contracts, and grid synchronization barriers. Does not own domain dataflow analysis, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-graph"
-path = "crates/vyre-libs-graph"
-layer = "libraries"
-seam = "libs-graph"
-interface = "Graph algorithm compositions: CSR traversal, AST walks, dominator trees and topological sort."
-responsibility = "Own graph algorithms, CSR traversal, AST walks, dominator trees, and topological sorting IR compositions. Does not own pattern matching engines, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-hash"
-path = "crates/vyre-libs-hash"
-layer = "libraries"
-seam = "libs-hash"
-interface = "Hash and checksum compositions."
-responsibility = "Own hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3 IR builders. Does not own security taint logic, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-math"
-path = "crates/vyre-libs-math"
-layer = "libraries"
-seam = "libs-math"
-interface = "Linear algebra, matrix, scan, broadcasting, algebra and succinct structure compositions."
-responsibility = "Own linear algebra, matrix operations, broadcasting, scans, optimization builders, and geometric algebra IR compositions. Does not own neural network layers, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-nn"
-path = "crates/vyre-libs-nn"
-layer = "libraries"
-seam = "libs-nn"
-interface = "Neural network activation, linear, normalization, attention and mixture-of-experts compositions."
-responsibility = "Own neural network activations, linear transformations, normalization, attention, mixture-of-experts, and language model inference IR compositions. Does not own general matrix kernels, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-parsing"
-path = "crates/vyre-libs-parsing"
-layer = "libraries"
-seam = "libs-parsing"
-interface = "Lexer driver, LR(1) table walker and AST construction compositions."
-responsibility = "Own lexer drivers, LR(1) table walkers, and language-specific AST construction IR compositions. Does not own semantic analysis passes, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-pattern"
-path = "crates/vyre-libs-pattern"
-layer = "libraries"
-seam = "libs-pattern"
-interface = "Substring, DFA, NFA, regular expression and bracket matching compositions."
-responsibility = "Own substring matching, DFA, NFA, bracket matching, and regular expression scanning pipeline IR compositions. Does not own token lexing or parser tables, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-reasoning"
-path = "crates/vyre-libs-reasoning"
-layer = "libraries"
-seam = "libs-reasoning"
-interface = "Logic, causal reasoning and knowledge compilation compositions."
-responsibility = "Own compiler-internal logic, causal reasoning, categorical rewrites, and knowledge compilation compositions. Does not own cost model evaluation, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-reduce"
-path = "crates/vyre-libs-reduce"
-layer = "libraries"
-seam = "libs-reduce"
-interface = "Workgroup reduction tree, atomic scalar reduction and prefix scan compositions."
-responsibility = "Own workgroup reduction trees, atomic scalar reductions, and prefix scan IR compositions. Does not own domain-specific algorithms, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-scheduling"
-path = "crates/vyre-libs-scheduling"
-layer = "libraries"
-seam = "libs-scheduling"
-interface = "Scheduling, fusion and batching compositions."
-responsibility = "Own compiler-internal scheduling, fusion, batching, and dispatch strategy compositions. Does not own physical lowering, device execution, or runtime lifecycle policy."
-
-[[crate]]
-package = "vyre-libs-solvers"
-path = "crates/vyre-libs-solvers"
-layer = "libraries"
-seam = "libs-solvers"
-interface = "Numerical solver and autotuning compositions."
-responsibility = "Own compiler-internal numerical solvers, autotuning routines, and spectral schedule analysis compositions. Does not own schedule search ranking, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-text"
-path = "crates/vyre-libs-text"
-layer = "libraries"
-seam = "libs-text"
-interface = "Text classification, UTF-8 validation and line indexing compositions."
-responsibility = "Own text processing, byte classification, UTF-8 validation, and line indexing IR compositions. Does not own decoding decompression algorithms, backend lowering, or runtime execution."
-
-[[crate]]
-package = "vyre-libs-visual"
-path = "crates/vyre-libs-visual"
-layer = "libraries"
-seam = "libs-visual"
-interface = "Visual rendering and compositing effect compositions."
-responsibility = "Own visual rendering and compositing effects including blur, shadow, blend modes, gradients, and color conversions. Does not own display presentation, backend lowering, or runtime execution."
+interface = "Generic GPU Program compositions across graph, pattern, parsing, text, math, neural, safetensors, hash, decode, bitset, reduction, fixpoint, visual, builder, and compiler-analysis modules."
+responsibility = "Define every generic IR Program composition in one feature-partitioned crate. Emits no target code and performs no device execution."
 
 [[crate]]
 package = "vyre-macros"
@@ -641,14 +480,6 @@ seam = "runtime"
 interface = "Backend-neutral target, materialization, submission and completion contracts, the backend registry, and artifact admission, residency, recovery and readback."
 responsibility = "Define the device, target compiler registration, artifact materialization, binding, submission, completion, capability and dispatch contracts every backend registers into, and execute the artifact's selected persistence: sessions, recovery, residency, scheduling, caches, readback, and IO."
 facade_exported = true
-
-[[crate]]
-package = "vyre-safetensors"
-path = "crates/vyre-safetensors"
-layer = "runtime"
-seam = "safetensors-adapter"
-interface = "Container-format mapping into typed transfer descriptors."
-responsibility = "Validate safetensors metadata, shard indexes, compiler requirements, trusted shard digests, and immutable checkpoint identities without owning runtime residency."
 
 [[crate]]
 package = "vyre-spec"

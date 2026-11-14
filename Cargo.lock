@@ -192,12 +192,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
-name = "base64ct"
-version = "1.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
-
-[[package]]
 name = "bincode"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -258,7 +252,7 @@ dependencies = [
  "cc",
  "cfg-if",
  "constant_time_eq",
- "cpufeatures 0.3.0",
+ "cpufeatures",
 ]
 
 [[package]]
@@ -266,15 +260,6 @@ name = "block"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a"
-
-[[package]]
-name = "block-buffer"
-version = "0.10.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
-dependencies = [
- "generic-array",
-]
 
 [[package]]
 name = "block-buffer"
@@ -392,7 +377,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06"
 dependencies = [
  "cfg-if",
- "cpufeatures 0.3.0",
+ "cpufeatures",
  "rand_core 0.10.1",
 ]
 
@@ -482,12 +467,6 @@ checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 
 [[package]]
 name = "const-oid"
-version = "0.9.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8"
-
-[[package]]
-name = "const-oid"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
@@ -534,15 +513,6 @@ dependencies = [
  "libc",
  "num_cpus",
  "winapi",
-]
-
-[[package]]
-name = "cpufeatures"
-version = "0.2.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280"
-dependencies = [
- "libc",
 ]
 
 [[package]]
@@ -677,16 +647,6 @@ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
 name = "crypto-common"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a"
-dependencies = [
- "generic-array",
- "typenum",
-]
-
-[[package]]
-name = "crypto-common"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453"
@@ -701,33 +661,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4d5be1e9776a20360ca270df637b391c85d48ea57508140f30a4e8f6da91884a"
 dependencies = [
  "libloading",
-]
-
-[[package]]
-name = "curve25519-dalek"
-version = "4.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97fb8b7c4503de7d6ae7b42ab72a5a59857b4c937ec27a3d4539dba95b5ab2be"
-dependencies = [
- "cfg-if",
- "cpufeatures 0.2.17",
- "curve25519-dalek-derive",
- "digest 0.10.7",
- "fiat-crypto",
- "rustc_version",
- "subtle",
- "zeroize",
-]
-
-[[package]]
-name = "curve25519-dalek-derive"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f46882e17999c6cc590af592290432be3bce0428cb0d5f8b6715e4dc7b383eb3"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.117",
 ]
 
 [[package]]
@@ -751,16 +684,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "930c7171c8df9fb1782bdf9b918ed9ed2d33d1d22300abb754f9085bc48bf8e8"
 
 [[package]]
-name = "der"
-version = "0.7.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7c1832837b905bbfb5101e07cc24c8deddf52f93225eee6ead5f4d63d53ddcb"
-dependencies = [
- "const-oid 0.9.6",
- "zeroize",
-]
-
-[[package]]
 name = "difflib"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -768,23 +691,13 @@ checksum = "6184e33543162437515c2e2b48714794e37845ec9851711914eec9d308f6ebe8"
 
 [[package]]
 name = "digest"
-version = "0.10.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
-dependencies = [
- "block-buffer 0.10.4",
- "crypto-common 0.1.7",
-]
-
-[[package]]
-name = "digest"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2"
 dependencies = [
- "block-buffer 0.12.0",
- "const-oid 0.10.2",
- "crypto-common 0.2.2",
+ "block-buffer",
+ "const-oid",
+ "crypto-common",
 ]
 
 [[package]]
@@ -811,30 +724,6 @@ name = "dyn-stack-macros"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1d926b4d407d372f141f93bb444696142c29d32962ccbd3531117cf3aa0bfa9"
-
-[[package]]
-name = "ed25519"
-version = "2.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "115531babc129696a58c64a4fef0a8bf9e9698629fb97e9e40767d235cfbcd53"
-dependencies = [
- "pkcs8",
- "signature",
-]
-
-[[package]]
-name = "ed25519-dalek"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70e796c081cee67dc755e1a36a0a172b897fab85fc3f6bc48307991f64e4eca9"
-dependencies = [
- "curve25519-dalek",
- "ed25519",
- "serde",
- "sha2 0.10.9",
- "subtle",
- "zeroize",
-]
 
 [[package]]
 name = "either"
@@ -993,12 +882,6 @@ name = "fastrand"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f1f227452a390804cdb637b74a86990f2a7d7ba4b7d5693aac9b4dd6defd8d6"
-
-[[package]]
-name = "fiat-crypto"
-version = "0.2.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
 
 [[package]]
 name = "find-msvc-tools"
@@ -1257,16 +1140,6 @@ dependencies = [
  "rustversion",
  "windows-link",
  "windows-result 0.4.1",
-]
-
-[[package]]
-name = "generic-array"
-version = "0.14.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
-dependencies = [
- "typenum",
- "version_check",
 ]
 
 [[package]]
@@ -2093,16 +1966,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
-name = "pkcs8"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f950b2377845cebe5cf8b5165cb3cc1a5e0fa5cfa3e1f7f55707d8fd82e0a7b7"
-dependencies = [
- "der",
- "spki",
-]
-
-[[package]]
 name = "pkg-config"
 version = "0.3.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2351,15 +2214,6 @@ dependencies = [
 
 [[package]]
 name = "rand_core"
-version = "0.6.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
-dependencies = [
- "getrandom 0.2.17",
-]
-
-[[package]]
-name = "rand_core"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76afc826de14238e6e8c374ddcc1fa19e374fd8dd986b0d2af0d02377261d83c"
@@ -2507,15 +2361,6 @@ name = "rustc-hash"
 version = "2.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b1e7f9a428571be2dc5bc0505c13fb6bf936822b894ec87abf8a08a4e51742d"
-
-[[package]]
-name = "rustc_version"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
-dependencies = [
- "semver",
-]
 
 [[package]]
 name = "rustix"
@@ -2680,24 +2525,13 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.10.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
-dependencies = [
- "cfg-if",
- "cpufeatures 0.2.17",
- "digest 0.10.7",
-]
-
-[[package]]
-name = "sha2"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "446ba717509524cb3f22f17ecc096f10f4822d76ab5c0b9822c5f9c284e825f4"
 dependencies = [
  "cfg-if",
- "cpufeatures 0.3.0",
- "digest 0.11.3",
+ "cpufeatures",
+ "digest",
 ]
 
 [[package]]
@@ -2714,15 +2548,6 @@ name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
-
-[[package]]
-name = "signature"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77549399552de45a898a580c1b41d445bf730df867cc44e6c0233bbc4b8329de"
-dependencies = [
- "rand_core 0.6.4",
-]
 
 [[package]]
 name = "simd-adler32"
@@ -2774,16 +2599,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eda41003dc44290527a59b13432d4a0379379fa074b70174882adfbdfd917844"
 dependencies = [
  "bitflags 2.11.1",
-]
-
-[[package]]
-name = "spki"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d91ed6c858b01f942cd56b37a94b3e0a1798290327d1236e4d9cf4eaca44d29d"
-dependencies = [
- "base64ct",
- "der",
 ]
 
 [[package]]
@@ -3245,6 +3060,9 @@ dependencies = [
 [[package]]
 name = "vyre-alloc-probe"
 version = "0.8.0"
+dependencies = [
+ "vyre-test-support",
+]
 
 [[package]]
 name = "vyre-aot"
@@ -3256,13 +3074,13 @@ dependencies = [
  "lzma-rs",
  "serde",
  "serde_json",
- "sha2 0.11.0",
+ "sha2",
  "tempfile",
  "thiserror 2.0.19",
  "vyre-compiler",
  "vyre-foundation",
+ "vyre-libs",
  "vyre-runtime",
- "vyre-safetensors",
  "vyre-test-support",
  "xtask",
 ]
@@ -3290,13 +3108,12 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
- "sha2 0.11.0",
+ "sha2",
  "syn 2.0.117",
  "tempfile",
  "thiserror 2.0.19",
  "toml",
  "vyre",
- "vyre-alloc-probe",
  "vyre-compiler",
  "vyre-driver-cuda",
  "vyre-driver-wgpu",
@@ -3337,30 +3154,6 @@ dependencies = [
 name = "vyre-conform"
 version = "0.8.0"
 dependencies = [
- "blake3",
- "ed25519-dalek",
- "hex",
- "inventory",
- "rand_core 0.6.4",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.19",
- "toml",
- "vyre",
- "vyre-compiler",
- "vyre-conform-spec",
- "vyre-driver-cuda",
- "vyre-driver-reference",
- "vyre-driver-spirv",
- "vyre-driver-wgpu",
- "vyre-foundation",
- "vyre-libs",
- "vyre-primitives",
- "vyre-reference",
- "vyre-registry-link",
- "vyre-runtime",
- "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -3368,11 +3161,7 @@ dependencies = [
 name = "vyre-conform-spec"
 version = "0.8.0"
 dependencies = [
- "blake3",
- "serde",
- "serde_json",
- "vyre-foundation",
- "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -3543,336 +3332,30 @@ version = "0.8.0"
 dependencies = [
  "blake3",
  "inventory",
+ "libm",
  "naga",
  "proptest",
+ "rayon",
+ "regex-syntax",
+ "rustc-hash 2.1.3",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.19",
  "toml",
+ "tracing",
  "tree-sitter",
  "tree-sitter-go",
  "vyre",
  "vyre-compiler",
+ "vyre-driver-reference",
  "vyre-emit",
  "vyre-foundation",
- "vyre-libs-analysis",
- "vyre-libs-bitset",
- "vyre-libs-builder",
- "vyre-libs-decode",
- "vyre-libs-device",
- "vyre-libs-encoding",
- "vyre-libs-fixpoint",
- "vyre-libs-graph",
- "vyre-libs-hash",
- "vyre-libs-math",
- "vyre-libs-nn",
- "vyre-libs-parsing",
- "vyre-libs-pattern",
- "vyre-libs-reasoning",
- "vyre-libs-reduce",
- "vyre-libs-scheduling",
- "vyre-libs-solvers",
- "vyre-libs-text",
- "vyre-libs-visual",
  "vyre-primitives",
  "vyre-reference",
  "vyre-runtime",
  "vyre-spec",
  "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-analysis"
-version = "0.8.0"
-dependencies = [
- "tracing",
- "vyre-compiler",
- "vyre-driver-reference",
- "vyre-foundation",
- "vyre-libs-builder",
- "vyre-libs-encoding",
- "vyre-libs-fixpoint",
- "vyre-libs-graph",
- "vyre-libs-math",
- "vyre-primitives",
- "vyre-reference",
- "vyre-spec",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-bitset"
-version = "0.8.0"
-dependencies = [
- "inventory",
- "proptest",
- "vyre-foundation",
- "vyre-libs-builder",
- "vyre-libs-reduce",
- "vyre-primitives",
- "vyre-reference",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-builder"
-version = "0.8.0"
-dependencies = [
- "inventory",
- "thiserror 2.0.19",
- "vyre-compiler",
- "vyre-foundation",
- "vyre-primitives",
- "vyre-spec",
-]
-
-[[package]]
-name = "vyre-libs-decode"
-version = "0.8.0"
-dependencies = [
- "inventory",
- "proptest",
- "thiserror 2.0.19",
- "vyre-foundation",
- "vyre-libs-builder",
- "vyre-libs-parsing",
- "vyre-libs-pattern",
- "vyre-libs-text",
- "vyre-primitives",
- "vyre-reference",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-device"
-version = "0.8.0"
-dependencies = [
- "inventory",
- "vyre-foundation",
- "vyre-libs-builder",
-]
-
-[[package]]
-name = "vyre-libs-encoding"
-version = "0.8.0"
-dependencies = [
- "vyre-compiler",
- "vyre-driver-reference",
- "vyre-foundation",
- "vyre-libs-bitset",
- "vyre-libs-builder",
- "vyre-libs-graph",
- "vyre-libs-hash",
- "vyre-libs-math",
- "vyre-libs-nn",
- "vyre-libs-parsing",
- "vyre-libs-pattern",
- "vyre-libs-reduce",
- "vyre-primitives",
- "vyre-reference",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-fixpoint"
-version = "0.8.0"
-dependencies = [
- "inventory",
- "vyre-foundation",
- "vyre-libs-builder",
- "vyre-primitives",
- "vyre-reference",
- "vyre-runtime",
-]
-
-[[package]]
-name = "vyre-libs-graph"
-version = "0.8.0"
-dependencies = [
- "inventory",
- "proptest",
- "vyre-compiler",
- "vyre-driver-reference",
- "vyre-foundation",
- "vyre-libs-bitset",
- "vyre-libs-builder",
- "vyre-libs-fixpoint",
- "vyre-libs-hash",
- "vyre-libs-math",
- "vyre-libs-reduce",
- "vyre-libs-visual",
- "vyre-primitives",
- "vyre-reference",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-hash"
-version = "0.8.0"
-dependencies = [
- "inventory",
- "proptest",
- "vyre-foundation",
- "vyre-libs-builder",
- "vyre-primitives",
- "vyre-reference",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-math"
-version = "0.8.0"
-dependencies = [
- "inventory",
- "proptest",
- "vyre-foundation",
- "vyre-libs-builder",
- "vyre-libs-fixpoint",
- "vyre-libs-reduce",
- "vyre-primitives",
- "vyre-reference",
- "vyre-spec",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-nn"
-version = "0.8.0"
-dependencies = [
- "inventory",
- "libm",
- "proptest",
- "thiserror 2.0.19",
- "vyre-compiler",
- "vyre-foundation",
- "vyre-libs-builder",
- "vyre-libs-math",
- "vyre-libs-reduce",
- "vyre-primitives",
- "vyre-reference",
- "vyre-spec",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-parsing"
-version = "0.8.0"
-dependencies = [
- "blake3",
- "inventory",
- "proptest",
- "rayon",
- "rustc-hash 2.1.3",
- "vyre-foundation",
- "vyre-libs-builder",
- "vyre-libs-hash",
- "vyre-libs-reduce",
- "vyre-libs-text",
- "vyre-primitives",
- "vyre-reference",
- "vyre-spec",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-pattern"
-version = "0.8.0"
-dependencies = [
- "inventory",
- "proptest",
- "regex-syntax",
- "vyre-foundation",
- "vyre-libs-builder",
- "vyre-libs-math",
- "vyre-primitives",
- "vyre-reference",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-reasoning"
-version = "0.8.0"
-dependencies = [
- "proptest",
- "vyre-compiler",
- "vyre-driver-reference",
- "vyre-foundation",
- "vyre-libs-analysis",
- "vyre-libs-builder",
- "vyre-libs-graph",
- "vyre-reference",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-reduce"
-version = "0.8.0"
-dependencies = [
- "inventory",
- "proptest",
- "vyre-compiler",
- "vyre-driver-reference",
- "vyre-foundation",
- "vyre-libs-builder",
- "vyre-primitives",
- "vyre-reference",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-scheduling"
-version = "0.8.0"
-dependencies = [
- "vyre-compiler",
- "vyre-driver-reference",
- "vyre-foundation",
- "vyre-libs-builder",
- "vyre-libs-graph",
- "vyre-libs-math",
- "vyre-libs-parsing",
- "vyre-primitives",
- "vyre-reference",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-solvers"
-version = "0.8.0"
-dependencies = [
- "vyre-compiler",
- "vyre-driver-reference",
- "vyre-foundation",
- "vyre-libs-bitset",
- "vyre-libs-builder",
- "vyre-libs-fixpoint",
- "vyre-libs-graph",
- "vyre-libs-math",
- "vyre-primitives",
- "vyre-reference",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-text"
-version = "0.8.0"
-dependencies = [
- "inventory",
- "proptest",
- "vyre-foundation",
- "vyre-libs-builder",
- "vyre-libs-reduce",
- "vyre-primitives",
- "vyre-reference",
- "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-libs-visual"
-version = "0.8.0"
-dependencies = [
- "inventory",
- "vyre-foundation",
- "vyre-libs-builder",
- "vyre-libs-math",
- "vyre-primitives",
- "vyre-reference",
 ]
 
 [[package]]
@@ -3981,17 +3464,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "vyre-safetensors"
-version = "0.8.0"
-dependencies = [
- "blake3",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.19",
-]
-
-[[package]]
 name = "vyre-spec"
 version = "0.8.0"
 dependencies = [
@@ -4009,17 +3481,26 @@ name = "vyre-test-support"
 version = "0.8.0"
 dependencies = [
  "blake3",
+ "hex",
  "inventory",
  "proptest",
  "serde",
  "serde_json",
  "smallvec",
  "tempfile",
+ "thiserror 2.0.19",
  "toml",
+ "vyre",
  "vyre-compiler",
+ "vyre-driver-cuda",
+ "vyre-driver-reference",
+ "vyre-driver-spirv",
+ "vyre-driver-wgpu",
  "vyre-foundation",
+ "vyre-libs",
  "vyre-primitives",
  "vyre-reference",
+ "vyre-registry-link",
  "vyre-runtime",
  "vyre-spec",
 ]
@@ -4700,7 +4181,7 @@ dependencies = [
  "proc-macro2",
  "serde",
  "serde_json",
- "sha2 0.11.0",
+ "sha2",
  "syn 2.0.117",
  "tempfile",
  "toml",

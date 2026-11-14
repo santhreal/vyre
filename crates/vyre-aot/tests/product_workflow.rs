@@ -1,9 +1,8 @@
 //! The checkpoint-to-package-to-inspection workflow across three crates.
 //!
-//! `vyre-safetensors` verifies checkpoint bytes, `vyre-aot` compiles a program
-//! and packages those bytes beside the artifact, and `vyre-debug` projects the
-//! installed envelope for inspection. Nothing in the workspace depends on the
-//! three together, so the seams between them are only exercised here.
+//! `vyre_libs::nn::safetensors` verifies checkpoint bytes, `vyre-aot` compiles a
+//! program and packages those bytes beside the artifact, and `xtask::debug`
+//! projects the installed envelope for inspection.
 
 use crate::fixture_target;
 
@@ -15,13 +14,13 @@ use vyre_aot::{
     compile, install_package, load_installed_package, package_artifact, TargetId,
     ValidatedCompileRequest,
 };
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
+use vyre_foundation::validate::BackendCapabilities;
+use vyre_libs::nn::safetensors::{ExpectedShardDigest, SafetensorError, ShardedSafetensorIndex};
 use vyre_compiler::{
     ArtifactEnvelope, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
     ObjectiveMetric, SearchBudget,
 };
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
-use vyre_foundation::validate::BackendCapabilities;
-use vyre_safetensors::{ExpectedShardDigest, SafetensorError, ShardedSafetensorIndex};
 use xtask::debug::ArtifactReport;
 
 /// Elements in the `params` resource the checkpoint supplies.
@@ -126,7 +125,7 @@ fn package_install_and_load(
         target,
         weights,
         artifact_name,
-        "checkpoint weights verified by vyre-safetensors",
+        "checkpoint weights verified by vyre_libs::nn::safetensors",
     )
     .expect("the compiled artifact must package");
     install_package(&archive, &install).expect("the package must install");
@@ -235,7 +234,7 @@ fn the_debug_report_separates_artifact_identity_from_the_packaged_checkpoint() {
 
 /// WHY: the packaged weights are authenticated against the manifest, so an
 /// edit to the installed file has to be refused rather than served. Without
-/// this the checkpoint verification `vyre-safetensors` performs is undone the
+/// this the checkpoint verification `vyre_libs::nn::safetensors` performs is undone the
 /// moment the bytes land on disk, and the workflow above proves nothing.
 #[test]
 fn an_edited_installed_weights_file_is_refused_by_the_loader() {
@@ -255,7 +254,7 @@ fn an_edited_installed_weights_file_is_refused_by_the_loader() {
         target,
         &params,
         "tamper-package",
-        "checkpoint weights verified by vyre-safetensors",
+        "checkpoint weights verified by vyre_libs::nn::safetensors",
     )
     .expect("the compiled artifact must package");
     install_package(&archive, &install).expect("the package must install");

@@ -11,7 +11,7 @@ use vyre_foundation::operation::{OperationRegistry, OperationTier, SemanticOpera
 /// Selects on [`OperationTier::Intrinsic`], so a library composition
 /// registered through `OperationRegistration::library_unconstrained` is not
 /// returned here. Library-tier readers use
-/// `vyre_libs_builder::plumbing::registration::operation_catalog::library_entries`.
+/// `vyre_libs::plumbing::registration::operation_catalog::library_entries`.
 pub fn intrinsic_entries() -> impl Iterator<Item = SemanticOperation> {
     OperationRegistry::global()
         .iter()

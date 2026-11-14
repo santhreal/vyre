@@ -24,26 +24,11 @@ pub(crate) fn crate_dir() -> PathBuf {
     vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"))
 }
 
-/// Resolve a source path across the workspace domain crates.
-///
-/// A path under `src/<domain>` resolves in the `vyre-libs-<domain>` partition
-/// crate when the roster declares that crate and it holds the path, and in
-/// this crate otherwise. The partition directory comes from the roster: a
-/// package name is not a directory.
+/// Resolve a source path relative to the workspace root or this crate root.
 pub(crate) fn resolve_source_path(path: &str) -> PathBuf {
     let workspace = vyre_test_support::monorepo::vyre_workspace_root();
     if workspace.join(path).exists() {
         return workspace.join(path);
-    }
-    if let Some(rest) = path.strip_prefix("src/") {
-        let domain = rest.split_once('/').map_or(rest, |(domain, _)| domain);
-        let members = vyre_test_support::monorepo::vyre_member_directories();
-        if let Some(partition) = members.get(&format!("vyre-libs-{domain}")) {
-            let candidate = partition.join(path);
-            if candidate.exists() {
-                return candidate;
-            }
-        }
     }
     crate_dir().join(path)
 }

@@ -104,22 +104,10 @@ fn every_library_operation_stamps_its_own_id_on_its_entry_region() {
 /// id is read out of the crate source, which covers every feature at once.
 #[test]
 fn every_exemption_names_an_operation_this_crate_registers() {
-    let workspace_root = vyre_test_support::monorepo::vyre_workspace_root();
-    let domain_crates: Vec<std::path::PathBuf> =
-        vyre_test_support::monorepo::vyre_workspace_members(&workspace_root)
-            .into_iter()
-            .filter(|member| {
-                let name = member.rsplit('/').next().unwrap_or(member.as_str());
-                name == "vyre-libs" || name.starts_with("vyre-libs-")
-            })
-            .map(|member| workspace_root.join(member))
-            .collect();
+    let src = vyre_test_support::monorepo::vyre_crate_directory("vyre-libs").join("src");
     let mut sources = Vec::new();
-    for crate_dir in &domain_crates {
-        let src = crate_dir.join("src");
-        if src.is_dir() {
-            vyre_test_support::collect_rust_files(src.as_path(), &mut sources);
-        }
+    if src.is_dir() {
+        vyre_test_support::collect_rust_files(src.as_path(), &mut sources);
     }
     let text: String = sources
         .iter()

@@ -45,27 +45,7 @@ pub(crate) const EXPECTED_PUBLISHABLE_PACKAGES: &[&str] = &[
     "vyre-macros",
     "vyre-primitives",
     "vyre-runtime",
-    "vyre-safetensors",
     "vyre-libs",
-    "vyre-libs-builder",
-    "vyre-libs-bitset",
-    "vyre-libs-reduce",
-    "vyre-libs-fixpoint",
-    "vyre-libs-math",
-    "vyre-libs-nn",
-    "vyre-libs-graph",
-    "vyre-libs-pattern",
-    "vyre-libs-hash",
-    "vyre-libs-text",
-    "vyre-libs-decode",
-    "vyre-libs-parsing",
-    "vyre-libs-visual",
-    "vyre-libs-device",
-    "vyre-libs-solvers",
-    "vyre-libs-encoding",
-    "vyre-libs-analysis",
-    "vyre-libs-reasoning",
-    "vyre-libs-scheduling",
     "vyre-emit",
 ];
 
@@ -434,8 +414,8 @@ fn every_workspace_member_declares_explicit_valid_publication_class() {
     let ownership_classes = load_ownership_classes(&root);
 
     assert!(
-        members.len() >= 30,
-        "expected at least 30 workspace members, found {}",
+        members.len() >= 10,
+        "expected at least 10 workspace members, found {}",
         members.len()
     );
 

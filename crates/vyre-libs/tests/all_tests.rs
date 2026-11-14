@@ -500,6 +500,86 @@ pub mod multi_domain_production_graph_compilation;
 #[path = "facade_feature_closure.rs"]
 pub mod facade_feature_closure;
 
-/// The facade re-export surface, against the partition crates that own it.
-#[path = "facade_reexport_closure.rs"]
-pub mod facade_reexport_closure;
+/// Domain integration test suites absorbed from per-domain library crates.
+#[path = "domains/mod.rs"]
+pub mod domains;
+
+/// Integration tests from `tests/adversarial_graph_reachability_fixpoint/mod.rs`.
+#[cfg(all(feature = "fixpoint", feature = "graph", feature = "math-kernels"))]
+#[path = "adversarial_graph_reachability_fixpoint/mod.rs"]
+pub mod adversarial_graph_reachability_fixpoint;
+
+/// Integration tests from `tests/loop_back_edge_audit.rs`.
+#[cfg(all(
+    feature = "fixpoint",
+    feature = "graph",
+    feature = "math-kernels",
+    feature = "parsing-kernels"
+))]
+#[path = "loop_back_edge_audit.rs"]
+pub mod loop_back_edge_audit;
+
+/// Integration tests from `tests/loop_unroll_trip1_idempotence.rs`.
+#[cfg(all(feature = "math-kernels", feature = "fixpoint"))]
+#[path = "loop_unroll_trip1_idempotence.rs"]
+pub mod loop_unroll_trip1_idempotence;
+
+/// Integration tests from `tests/scallop_join_grid_contract.rs`.
+#[cfg(all(feature = "math-kernels", feature = "fixpoint"))]
+#[path = "scallop_join_grid_contract.rs"]
+pub mod scallop_join_grid_contract;
+
+/// Integration tests from `tests/hash_registration_witnesses.rs`.
+#[cfg(feature = "hash")]
+#[path = "hash_registration_witnesses.rs"]
+pub mod hash_registration_witnesses;
+
+/// Integration tests from `tests/integration.rs`.
+#[cfg(all(
+    feature = "hash",
+    feature = "math",
+    feature = "nn-activation",
+    feature = "nn-linear",
+    feature = "pattern"
+))]
+#[path = "integration.rs"]
+pub mod integration;
+
+/// Integration tests from `tests/fingerprint_lock.rs`.
+#[cfg(all(
+    feature = "hash",
+    feature = "nn-activation",
+    feature = "nn-attention",
+    feature = "nn-linear",
+    feature = "nn-norm"
+))]
+#[path = "fingerprint_lock.rs"]
+pub mod fingerprint_lock;
+
+/// Integration tests from `tests/surface_contracts.rs`.
+#[cfg(all(feature = "hash", feature = "nn-attention", feature = "nn-norm"))]
+#[allow(deprecated)]
+#[path = "surface_contracts.rs"]
+pub mod surface_contracts;
+
+/// Integration tests from `tests/operation_registry.rs`.
+#[cfg(all(
+    feature = "math",
+    feature = "math-linalg",
+    feature = "nn-activation",
+    feature = "nn-attention",
+    feature = "nn-linear",
+    feature = "nn-norm"
+))]
+#[path = "operation_registry.rs"]
+pub mod operation_registry;
+
+/// Integration tests from `tests/name_collision.rs`.
+#[cfg(all(
+    feature = "math",
+    feature = "math-linalg",
+    feature = "nn-attention",
+    feature = "nn-norm"
+))]
+#[path = "name_collision.rs"]
+pub mod name_collision;

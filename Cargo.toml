@@ -37,27 +37,7 @@ members = [
     # Workspace structural gate. Depends on no vyre crate on purpose: it reads
     # source text so it still runs while the workspace does not compile.
     "crates/vyre-runtime",
-    "crates/vyre-safetensors",
     "crates/vyre-libs",
-    "crates/vyre-libs-builder",
-    "crates/vyre-libs-bitset",
-    "crates/vyre-libs-reduce",
-    "crates/vyre-libs-fixpoint",
-    "crates/vyre-libs-math",
-    "crates/vyre-libs-nn",
-    "crates/vyre-libs-graph",
-    "crates/vyre-libs-pattern",
-    "crates/vyre-libs-hash",
-    "crates/vyre-libs-text",
-    "crates/vyre-libs-decode",
-    "crates/vyre-libs-parsing",
-    "crates/vyre-libs-visual",
-    "crates/vyre-libs-device",
-    "crates/vyre-libs-solvers",
-    "crates/vyre-libs-encoding",
-    "crates/vyre-libs-analysis",
-    "crates/vyre-libs-reasoning",
-    "crates/vyre-libs-scheduling",
     "crates/vyre-aot",
     # Per-thread heap counters behind a GlobalAlloc wrapper. Depends on no vyre
     # crate so a harness binary links it at run time and a driver test links it
@@ -272,27 +252,7 @@ vyre-test-support = { path = "crates/vyre-test-support" }
 # would have to resolve for a crate that never reaches one.
 vyre-alloc-probe = { path = "crates/vyre-alloc-probe" }
 vyre-runtime = { version = "0.8.0", path = "crates/vyre-runtime" }
-vyre-safetensors = { version = "0.8.0", path = "crates/vyre-safetensors" }
 vyre-libs = { version = "0.8.0", path = "crates/vyre-libs" }
-vyre-libs-builder = { version = "0.8.0", path = "crates/vyre-libs-builder" }
-vyre-libs-bitset = { version = "0.8.0", path = "crates/vyre-libs-bitset" }
-vyre-libs-reduce = { version = "0.8.0", path = "crates/vyre-libs-reduce" }
-vyre-libs-fixpoint = { version = "0.8.0", path = "crates/vyre-libs-fixpoint" }
-vyre-libs-math = { version = "0.8.0", path = "crates/vyre-libs-math" }
-vyre-libs-nn = { version = "0.8.0", path = "crates/vyre-libs-nn" }
-vyre-libs-graph = { version = "0.8.0", path = "crates/vyre-libs-graph" }
-vyre-libs-pattern = { version = "0.8.0", path = "crates/vyre-libs-pattern" }
-vyre-libs-hash = { version = "0.8.0", path = "crates/vyre-libs-hash" }
-vyre-libs-text = { version = "0.8.0", path = "crates/vyre-libs-text" }
-vyre-libs-decode = { version = "0.8.0", path = "crates/vyre-libs-decode" }
-vyre-libs-parsing = { version = "0.8.0", path = "crates/vyre-libs-parsing" }
-vyre-libs-visual = { version = "0.8.0", path = "crates/vyre-libs-visual" }
-vyre-libs-device = { version = "0.8.0", path = "crates/vyre-libs-device" }
-vyre-libs-solvers = { version = "0.8.0", path = "crates/vyre-libs-solvers" }
-vyre-libs-encoding = { version = "0.8.0", path = "crates/vyre-libs-encoding" }
-vyre-libs-analysis = { version = "0.8.0", path = "crates/vyre-libs-analysis" }
-vyre-libs-reasoning = { version = "0.8.0", path = "crates/vyre-libs-reasoning" }
-vyre-libs-scheduling = { version = "0.8.0", path = "crates/vyre-libs-scheduling" }
 # publish = false, so no version: a version requirement here is one a registry
 # can never satisfy, and any member writing `workspace = true` inherits it.
 vyre-pass-engine = { path = "crates/vyre-pass-engine" }

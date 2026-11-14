@@ -1,7 +1,7 @@
 //! Cross-file duplication budget for the two operation families that were
-//! de-duplicated together: the neural-network dialect under `crates/vyre-libs-nn/src/nn`
+//! de-duplicated together: the neural-network dialect under `crates/vyre-libs/src/nn`
 //! (attention, norm, linear, activation) and the classic Aho-Corasick dialect under
-//! `crates/vyre-libs-pattern/src/pattern/classic_ac`.
+//! `crates/vyre-libs/src/pattern/classic_ac`.
 //!
 //! # What this gate owns
 //!
@@ -37,8 +37,8 @@ const SHINGLE: usize = 8;
 /// Directory roots, relative to the workspace root, whose files are compared
 /// against each other.
 const ROOTS: [&str; 2] = [
-    "crates/vyre-libs-nn/src/nn",
-    "crates/vyre-libs-pattern/src/pattern/classic_ac",
+    "crates/vyre-libs/src/nn",
+    "crates/vyre-libs/src/pattern/classic_ac",
 ];
 /// Anti-vacuity floor on files discovered by the walk. Well below the current
 /// count so ordinary growth or a merged deletion does not trip it, and far

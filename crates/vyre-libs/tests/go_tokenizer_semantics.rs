@@ -529,7 +529,7 @@ fn a_channel_arrow_is_a_single_token() {
 // Buffer bounds
 // ---------------------------------------------------------------------------
 
-/// Every extractor built from `vyre-libs-parsing`'s Go `parse` module.
+/// Every extractor built from `vyre_libs::parsing::go_parse`.
 ///
 /// The name is the tail of the operation id each extractor stamps on its
 /// program, which is what [`declared_go_extractor_op_ids`] reads back out of the
@@ -667,8 +667,8 @@ fn declared_go_extractor_op_ids() -> Vec<String> {
         }
     }
 
-    let parse_dir = vyre_test_support::monorepo::vyre_crate_directory("vyre-libs-parsing")
-        .join("src/parsing/go/parse");
+    let parse_dir =
+        vyre_test_support::monorepo::vyre_crate_directory("vyre-libs").join("src/parsing/go/parse");
     let mut sources = Vec::new();
     read_module_sources(&parse_dir, &mut sources);
     assert!(

@@ -852,6 +852,11 @@ publication_class = "stable-consumer-sdk"
 
 [[package_features]]
 package = "vyre-libs"
+feature = "dense-reachability"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
 feature = "device"
 publication_class = "stable-consumer-sdk"
 
@@ -897,633 +902,223 @@ publication_class = "stable-consumer-sdk"
 
 [[package_features]]
 package = "vyre-libs"
-feature = "interactive-graphics"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "label"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "llm"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "logical"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "math"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "math-algebra"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "math-broadcast"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "math-dialect"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "math-kernels"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "math-linalg"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "math-scan"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "math-succinct"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "nfa"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "nn"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "nn-activation"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "nn-attention"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "nn-inference"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "nn-kernels"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "nn-linear"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "nn-linear-4bit"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "nn-moe"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "nn-norm"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "opt"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "parsing"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "parsing-kernels"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "pattern"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "pattern-dfa"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "pattern-kernels"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "pattern-nfa"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "pattern-regex"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "pattern-substring"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "predicate"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "python-parser"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "reasoning"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "reduce"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "representation"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "rule"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "scheduling"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "security"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "solvers"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "telemetry"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "test-fixtures"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "text"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "topology"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "vfs"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs"
-feature = "visual"
-publication_class = "stable-consumer-sdk"
-
-[[package_features]]
-package = "vyre-libs-analysis"
-feature = "analysis"
-publication_class = "internal-engine"
-
-[[package_features]]
-package = "vyre-libs-analysis"
-feature = "default"
-publication_class = "internal-engine"
-
-[[package_features]]
-package = "vyre-libs-bitset"
-feature = "bitset"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-bitset"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-bitset"
-feature = "logical"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-bitset"
-feature = "test-fixtures"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-builder"
-feature = "builder"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-builder"
-feature = "builder-ops"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-builder"
-feature = "cat-a-builder-options"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-builder"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-builder"
-feature = "telemetry"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-decode"
-feature = "decode"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-decode"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-device"
-feature = "default"
-publication_class = "internal-engine"
-
-[[package_features]]
-package = "vyre-libs-device"
-feature = "device"
-publication_class = "internal-engine"
-
-[[package_features]]
-package = "vyre-libs-device"
-feature = "vfs"
-publication_class = "internal-engine"
-
-[[package_features]]
-package = "vyre-libs-encoding"
-feature = "default"
-publication_class = "internal-engine"
-
-[[package_features]]
-package = "vyre-libs-encoding"
-feature = "encoding"
-publication_class = "internal-engine"
-
-[[package_features]]
-package = "vyre-libs-encoding"
-feature = "nn-paging"
-publication_class = "internal-engine"
-
-[[package_features]]
-package = "vyre-libs-fixpoint"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-fixpoint"
-feature = "fixpoint"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-fixpoint"
-feature = "test-fixtures"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-graph"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-graph"
-feature = "dense-reachability"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-graph"
-feature = "graph"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-graph"
-feature = "graph-dispatch"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-graph"
 feature = "impact-mask"
-publication_class = "extension-sdk"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-graph"
+package = "vyre-libs"
 feature = "interactive-graphics"
-publication_class = "extension-sdk"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-graph"
-feature = "topology"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-hash"
-feature = "crypto-blake3"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-hash"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-hash"
-feature = "hash"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-math"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-math"
-feature = "geom"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-math"
-feature = "math"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-math"
-feature = "math-algebra"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-math"
-feature = "math-broadcast"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-math"
-feature = "math-dialect"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-math"
-feature = "math-kernels"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-math"
-feature = "math-linalg"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-math"
-feature = "math-scan"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-math"
-feature = "math-succinct"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-math"
-feature = "opt"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-math"
-feature = "representation"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-nn"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-nn"
+package = "vyre-libs"
 feature = "llm"
-publication_class = "extension-sdk"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-nn"
-feature = "nn"
-publication_class = "extension-sdk"
+package = "vyre-libs"
+feature = "logical"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-nn"
-feature = "nn-activation"
-publication_class = "extension-sdk"
+package = "vyre-libs"
+feature = "math"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-nn"
-feature = "nn-attention"
-publication_class = "extension-sdk"
+package = "vyre-libs"
+feature = "math-algebra"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-nn"
-feature = "nn-inference"
-publication_class = "extension-sdk"
+package = "vyre-libs"
+feature = "math-broadcast"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-nn"
-feature = "nn-kernels"
-publication_class = "extension-sdk"
+package = "vyre-libs"
+feature = "math-dialect"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-nn"
-feature = "nn-linear"
-publication_class = "extension-sdk"
+package = "vyre-libs"
+feature = "math-kernels"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-nn"
-feature = "nn-linear-4bit"
-publication_class = "extension-sdk"
+package = "vyre-libs"
+feature = "math-linalg"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-nn"
-feature = "nn-moe"
-publication_class = "extension-sdk"
+package = "vyre-libs"
+feature = "math-scan"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-nn"
-feature = "nn-norm"
-publication_class = "extension-sdk"
+package = "vyre-libs"
+feature = "math-succinct"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-parsing"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-parsing"
-feature = "go-parser"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-parsing"
-feature = "parsing"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-parsing"
-feature = "parsing-kernels"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-parsing"
-feature = "python-parser"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-pattern"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-pattern"
+package = "vyre-libs"
 feature = "nfa"
-publication_class = "extension-sdk"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-pattern"
+package = "vyre-libs"
+feature = "nn"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
+feature = "nn-activation"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
+feature = "nn-attention"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
+feature = "nn-inference"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
+feature = "nn-kernels"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
+feature = "nn-linear"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
+feature = "nn-linear-4bit"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
+feature = "nn-moe"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
+feature = "nn-norm"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
+feature = "opt"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
+feature = "parsing"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
+feature = "parsing-kernels"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
 feature = "pattern"
-publication_class = "extension-sdk"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-pattern"
+package = "vyre-libs"
 feature = "pattern-dfa"
-publication_class = "extension-sdk"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-pattern"
+package = "vyre-libs"
 feature = "pattern-kernels"
-publication_class = "extension-sdk"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-pattern"
+package = "vyre-libs"
 feature = "pattern-nfa"
-publication_class = "extension-sdk"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-pattern"
+package = "vyre-libs"
 feature = "pattern-regex"
-publication_class = "extension-sdk"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-pattern"
+package = "vyre-libs"
 feature = "pattern-substring"
-publication_class = "extension-sdk"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-reasoning"
-feature = "default"
-publication_class = "internal-engine"
+package = "vyre-libs"
+feature = "python-parser"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-reasoning"
+package = "vyre-libs"
 feature = "reasoning"
-publication_class = "internal-engine"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-reduce"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-reduce"
+package = "vyre-libs"
 feature = "reduce"
-publication_class = "extension-sdk"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-scheduling"
-feature = "default"
-publication_class = "internal-engine"
+package = "vyre-libs"
+feature = "representation"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-scheduling"
+package = "vyre-libs"
+feature = "safetensors"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
 feature = "scheduling"
-publication_class = "internal-engine"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-solvers"
-feature = "default"
-publication_class = "internal-engine"
-
-[[package_features]]
-package = "vyre-libs-solvers"
+package = "vyre-libs"
 feature = "solvers"
-publication_class = "internal-engine"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-text"
-feature = "default"
-publication_class = "extension-sdk"
+package = "vyre-libs"
+feature = "telemetry"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-text"
+package = "vyre-libs"
+feature = "test-fixtures"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
 feature = "text"
-publication_class = "extension-sdk"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-visual"
-feature = "default"
-publication_class = "extension-sdk"
+package = "vyre-libs"
+feature = "topology"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
-package = "vyre-libs-visual"
+package = "vyre-libs"
+feature = "vfs"
+publication_class = "stable-consumer-sdk"
+
+[[package_features]]
+package = "vyre-libs"
 feature = "visual"
-publication_class = "extension-sdk"
+publication_class = "stable-consumer-sdk"
 
 [[package_features]]
 package = "vyre-macros"
@@ -1654,11 +1249,6 @@ publication_class = "internal-engine"
 package = "vyre-runtime"
 feature = "uring-cmd-nvme"
 publication_class = "internal-engine"
-
-[[package_features]]
-package = "vyre-safetensors"
-feature = "default"
-publication_class = "stable-consumer-sdk"
 
 [[package_features]]
 package = "vyre-spec"
