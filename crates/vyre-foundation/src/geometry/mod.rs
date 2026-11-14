@@ -479,13 +479,6 @@ impl LaunchGeometry {
         (self.workgroup_invocations() as u64).saturating_mul(self.grid_total() as u64)
     }
 
-    /// Total logical data elements covered by the dispatch.
-    #[must_use]
-    pub const fn total_elements_covered(&self) -> u64 {
-        self.total_invocations()
-            .saturating_mul(self.elements_per_invocation as u64)
-    }
-
     /// Whether this launch geometry contains non-zero dimensions.
     #[must_use]
     pub const fn is_valid(&self) -> bool {

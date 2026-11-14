@@ -145,38 +145,6 @@ impl ReferenceBudget {
             Self::DEFAULT_MAX_RECURSION_DEPTH,
         )
     }
-
-    /// The standard budget with an explicit frame depth ceiling.
-    #[must_use]
-    pub const fn with_max_recursion_depth(depth: usize) -> Self {
-        Self::new(
-            Self::DEFAULT_WORK_CEILING,
-            Self::DEFAULT_MAX_MEMORY_BYTES,
-            depth,
-        )
-    }
-
-    /// The standard budget with an explicit program-size ceiling.
-    ///
-    /// Compose it with another ceiling through struct update syntax, which
-    /// keeps both explicit:
-    ///
-    /// ```
-    /// use vyre_reference::ReferenceBudget;
-    ///
-    /// let budget = ReferenceBudget {
-    ///     max_program_nodes: 2_000_000,
-    ///     ..ReferenceBudget::with_work_ceiling(64_000_000)
-    /// };
-    /// assert_eq!(budget.max_program_nodes, 2_000_000);
-    /// ```
-    #[must_use]
-    pub const fn with_max_program_nodes(nodes: usize) -> Self {
-        Self {
-            max_program_nodes: nodes,
-            ..Self::standard()
-        }
-    }
 }
 
 /// Workload envelope defining workgroup extents and dispatch grid floors.
@@ -344,13 +312,6 @@ impl<'a> ReferenceRequest<'a> {
     #[must_use]
     pub const fn with_schedule_policy(mut self, policy: DeterministicSchedulePolicy) -> Self {
         self.schedule_policy = policy;
-        self
-    }
-
-    /// Set an explicit numerical contract.
-    #[must_use]
-    pub fn with_numerical_contract(mut self, contract: NumericSemantics) -> Self {
-        self.numerical_contract = contract;
         self
     }
 

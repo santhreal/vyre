@@ -34,12 +34,6 @@ impl HandoffLocation {
         matches!(self, Self::WorkgroupShared)
     }
 
-    /// Whether this handoff location requires a device-wide grid sync or dispatch cut.
-    #[must_use]
-    pub const fn requires_dispatch_cut(self) -> bool {
-        matches!(self, Self::DispatchCut)
-    }
-
     /// Whether this handoff executes purely in registers with zero memory barriers.
     #[must_use]
     pub const fn is_register_or_independent(self) -> bool {

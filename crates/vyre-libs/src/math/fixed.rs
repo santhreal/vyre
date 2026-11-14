@@ -11,28 +11,9 @@ use vyre_foundation::ir::Expr;
 
 /// Return `(left * right) >> 16` for signed 16.16 fixed-point lanes without
 /// losing the high half of the product to 32-bit overflow.
+#[inline]
 pub fn fixed_mul_16_16_expr(left: Expr, right: Expr) -> Expr {
-    // Extracting the 16.16 product as `(low >> 16) | (high << 16)` requires the
-    // SIGNED 64-bit high word. `Expr::mulhi` is UNSIGNED, so reconstruct the
-    // signed high word with the standard correction:
-    //   signed_high = unsigned_high - (left < 0 ? right : 0) - (right < 0 ? left : 0)
-    // An all-unsigned `mulhi` treats a negative operand as ~2^32 and produces a
-    // garbage giant product, which is what made the fixed-point AMG V-cycle
-    // diverge from its f64 reference the moment a residual `b - A*x` went
-    // negative. For non-negative operands (|v| < 2^31, every legitimate 16.16
-    // magnitude) both corrections are zero.
-    let low = Expr::mul(left.clone(), right.clone());
-    let unsigned_high = Expr::mulhi(left.clone(), right.clone());
-    // `0 - (x >> 31)` is an all-ones mask when `x`'s sign bit is set, else zero (logical u32 shift).
-    let left_sign_mask = Expr::sub(Expr::u32(0), Expr::shr(left.clone(), Expr::u32(31)));
-    let right_sign_mask = Expr::sub(Expr::u32(0), Expr::shr(right.clone(), Expr::u32(31)));
-    let correction_left = Expr::bitand(left_sign_mask, right);
-    let correction_right = Expr::bitand(right_sign_mask, left);
-    let signed_high = Expr::sub(Expr::sub(unsigned_high, correction_left), correction_right);
-    Expr::bitor(
-        Expr::shr(low, Expr::u32(16)),
-        Expr::shl(signed_high, Expr::u32(16)),
-    )
+    crate::builder::gemm::fixed_mul_16_16_signed_expr(left, right)
 }
 
 /// Signed integer division of a two's-complement `numerator` by a

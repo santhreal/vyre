@@ -276,11 +276,4 @@ pub const fn bitset_words(n: u32) -> u32 {
 }
 
 #[cfg(test)]
-#[must_use]
-pub(crate) const fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
-    value ^ (value >> 16)
-}
+pub(crate) use vyre_test_support::scalar_corpora::mix32;

@@ -161,18 +161,6 @@ pub fn trap_program(
     )
 }
 
-/// Clone a program's entry regions and attach them to a composing parent.
-#[must_use]
-pub fn reparent_program_children(program: &Program, parent_op_id: &str) -> Vec<Node> {
-    let parent = Ident::from(parent_op_id);
-    program
-        .entry()
-        .iter()
-        .cloned()
-        .map(|node| reparent_entry_node(node, &parent))
-        .collect()
-}
-
 /// Wrap an existing program under one canonical parent composition boundary.
 #[must_use]
 pub fn tag_program(parent_op_id: &str, program: Program) -> Program {

@@ -97,11 +97,6 @@ const CATCH_ALL_ALLOWANCE: &[(&str, usize, &str)] = &[
         "Node is #[non_exhaustive] in vyre-foundation",
     ),
     (
-        "execution/step_budget.rs",
-        1,
-        "Expr is #[non_exhaustive] in vyre-foundation",
-    ),
-    (
         "execution/typed_ops/float_ops.rs",
         2,
         "BinOp and UnOp are #[non_exhaustive] in vyre-spec",

@@ -33,18 +33,6 @@ impl OperationTier {
         Self::External,
         Self::Unknown,
     ];
-
-    /// Stable operation-matrix spelling.
-    #[must_use]
-    pub const fn matrix_value(self) -> &'static str {
-        match self {
-            Self::Foundation => "foundation_ir",
-            Self::Intrinsic => "intrinsic",
-            Self::Library => "libs",
-            Self::External => "external",
-            Self::Unknown => "unknown",
-        }
-    }
 }
 
 /// Which crate minted one operation identity.

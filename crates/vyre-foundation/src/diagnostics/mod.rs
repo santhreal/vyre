@@ -502,13 +502,6 @@ impl Diagnostic {
         self
     }
 
-    /// Set the severity.
-    #[must_use]
-    pub const fn with_severity(mut self, severity: Severity) -> Self {
-        self.severity = severity;
-        self
-    }
-
     /// Attach an artifact identifier.
     #[must_use]
     pub fn with_artifact_id(mut self, artifact_id: impl Into<String>) -> Self {
@@ -604,30 +597,6 @@ impl Diagnostic {
         self
     }
 
-    /// Adopt `source` as the cause of this diagnostic.
-    ///
-    /// The source's own classified chain is appended after this diagnostic's
-    /// links, so a chain that crosses three owners still reads root-ward from
-    /// the boundary that reported it. This is how a crate preserves a cause it
-    /// cannot name the type of: the owning crate projects its error into a
-    /// record, and every crate above it keeps every link.
-    #[must_use]
-    pub fn caused_by(mut self, source: &Self) -> Self {
-        let boundary = DiagnosticCause {
-            kind: source
-                .cause_chain
-                .first()
-                .map_or(CauseKind::InternalInvariant, |first| first.kind),
-            subject: Cow::Owned(source.code.as_str().to_owned()),
-            detail: bound_value(source.message.to_string(), CAUSE_DETAIL_MAX_BYTES),
-        };
-        self = self.with_cause_link(boundary);
-        for link in &source.cause_chain {
-            self = self.with_cause_link(link.clone());
-        }
-        self
-    }
-
     /// Set the retry policy.
     #[must_use]
     pub const fn with_retry(mut self, retry: RetryClass) -> Self {
@@ -651,36 +620,10 @@ impl Diagnostic {
         self
     }
 
-    /// Attach multiple informational notes.
-    #[must_use]
-    pub fn with_notes(
-        mut self,
-        notes: impl IntoIterator<Item = impl Into<Cow<'static, str>>>,
-    ) -> Self {
-        for note in notes {
-            self = self.with_note(note);
-        }
-        self
-    }
-
     /// Primary structured cause, the link closest to the reporting boundary.
     #[must_use]
     pub fn cause(&self) -> Option<&DiagnosticCause> {
         self.cause_chain.first()
-    }
-
-    /// Root structured cause, the deepest preserved link.
-    #[must_use]
-    pub fn root_cause(&self) -> Option<&DiagnosticCause> {
-        self.cause_chain.last()
-    }
-
-    /// Whether any preserved link carries `kind`.
-    ///
-    /// This is the typed replacement for searching rendered text.
-    #[must_use]
-    pub fn caused_by_kind(&self, kind: CauseKind) -> bool {
-        self.cause_chain.iter().any(|cause| cause.kind == kind)
     }
 
     /// Render a deterministic rustc-style diagnostic.
@@ -806,16 +749,6 @@ impl Diagnostic {
         hasher.update(b"\0");
         hasher.update(&self.canonical_bytes());
         *hasher.finalize().as_bytes()
-    }
-
-    /// Lowercase hexadecimal [`Self::record_digest`].
-    #[must_use]
-    pub fn record_digest_hex(&self) -> String {
-        let mut out = String::with_capacity(64);
-        for byte in self.record_digest() {
-            let _ = write!(out, "{byte:02x}");
-        }
-        out
     }
 
     /// Decode a record, refusing a stale version or an oversized payload.

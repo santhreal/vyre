@@ -103,7 +103,7 @@ pub(crate) const PASS_RESEARCH_TRACE_SCHEMA_VERSION: u32 = 1;
 /// an improvement that no artifact backs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PassResearchTrace {
-    /// Schema version of this trace, checked by [`PassResearchTrace::is_complete`].
+    /// Schema version of this trace.
     pub schema_version: u32,
     /// Key of the research result the pass implements.
     pub research_basis_key: &'static str,
@@ -143,18 +143,6 @@ impl PassResearchTrace {
             baseline_id,
             proof_artifact_id,
         })
-    }
-
-    /// True when the schema version matches and no identifier is blank.
-    ///
-    /// A trace built by [`PassResearchTrace::try_new`] is always complete; this
-    /// check exists for traces that arrive from serialized evidence.
-    #[must_use]
-    pub fn is_complete(&self) -> bool {
-        self.schema_version == PASS_RESEARCH_TRACE_SCHEMA_VERSION
-            && !self.research_basis_key.trim().is_empty()
-            && !self.baseline_id.trim().is_empty()
-            && !self.proof_artifact_id.trim().is_empty()
     }
 }
 

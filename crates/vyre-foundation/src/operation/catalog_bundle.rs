@@ -107,53 +107,6 @@ impl OperationCatalogBundle {
         }
     }
 
-    /// Add a semantic descriptor and recompute the digest.
-    #[must_use]
-    pub fn with_descriptor(mut self, descriptor: SemanticDescriptor) -> Self {
-        self.descriptors.insert(descriptor.id, descriptor);
-        self.digest = Self::compute_digest(
-            self.version,
-            &self.descriptors,
-            &self.lowering_providers,
-            &self.extensions,
-        );
-        self
-    }
-
-    /// Add a lowering provider and recompute the digest.
-    #[must_use]
-    pub fn with_lowering(mut self, lowering: LoweringProvider) -> Self {
-        self.lowering_providers.insert(lowering.id, lowering);
-        self.digest = Self::compute_digest(
-            self.version,
-            &self.descriptors,
-            &self.lowering_providers,
-            &self.extensions,
-        );
-        self
-    }
-
-    /// Add both a semantic descriptor and an optional lowering provider.
-    #[must_use]
-    pub fn with_operation(
-        mut self,
-        descriptor: SemanticDescriptor,
-        lowering: Option<LoweringProvider>,
-    ) -> Self {
-        let id = descriptor.id;
-        self.descriptors.insert(id, descriptor);
-        if let Some(lowering) = lowering {
-            self.lowering_providers.insert(id, lowering);
-        }
-        self.digest = Self::compute_digest(
-            self.version,
-            &self.descriptors,
-            &self.lowering_providers,
-            &self.extensions,
-        );
-        self
-    }
-
     /// Incorporate an independently versioned dialect extension into this closed catalog bundle.
     #[must_use]
     pub fn with_extension(

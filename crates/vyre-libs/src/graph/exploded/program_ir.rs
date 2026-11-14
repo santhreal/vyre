@@ -27,27 +27,20 @@ pub fn build_ifds_csr_program(
     kill_count: u32,
     max_col_count: u32,
 ) -> Program {
+    let trap = |msg: String| trap_program(OP_ID, Some(("row_ptr", DataType::U32)), msg);
     if num_procs == 0 || blocks_per_proc == 0 || facts_per_proc == 0 {
-        return trap_program(OP_ID, Some(("row_ptr", DataType::U32)), format!(
+        return trap(format!(
             "Fix: exploded IFDS dimensions must be nonzero, got procs={num_procs}, blocks={blocks_per_proc}, facts={facts_per_proc}."
         ));
     }
     let Some(slots_per_proc) = blocks_per_proc.checked_mul(facts_per_proc) else {
-        return trap_program(
-            OP_ID,
-            Some(("row_ptr", DataType::U32)),
-            "Fix: exploded IFDS slots_per_proc overflowed u32.".to_string(),
-        );
+        return trap("Fix: exploded IFDS slots_per_proc overflowed u32.".into());
     };
     let Some(total_nodes) = num_procs.checked_mul(slots_per_proc) else {
-        return trap_program(
-            OP_ID,
-            Some(("row_ptr", DataType::U32)),
-            "Fix: exploded IFDS total node count overflowed u32.".to_string(),
-        );
+        return trap("Fix: exploded IFDS total node count overflowed u32.".into());
     };
     let Some(row_ptr_count) = total_nodes.checked_add(1) else {
-        return trap_program(OP_ID, Some(("row_ptr", DataType::U32)), format!(
+        return trap(format!(
             "Fix: exploded IFDS total_nodes={total_nodes} overflows row_ptr count. Shard the IFDS graph before GPU dispatch."
         ));
     };
@@ -67,15 +60,6 @@ pub fn build_ifds_csr_program(
             Expr::lt(b, Expr::u32(blocks_per_proc)),
         )
     };
-    let valid_intra = Expr::and(
-        in_proc_block(Expr::var("intra_p"), Expr::var("intra_src_b")),
-        Expr::lt(Expr::var("intra_dst_b"), Expr::u32(blocks_per_proc)),
-    );
-    let valid_inter = Expr::and(
-        in_proc_block(Expr::var("inter_sp"), Expr::var("inter_sb")),
-        in_proc_block(Expr::var("inter_dp"), Expr::var("inter_db")),
-    );
-
     let count_row = |src: Expr| {
         Node::store(
             "row_ptr",
@@ -86,16 +70,86 @@ pub fn build_ifds_csr_program(
             ),
         )
     };
-    let fill_col = |src: Expr, dst: Expr| {
+    let fill_pair = |src_expr: Expr, dst_expr: Expr| {
         vec![
-            Node::let_bind("emit_slot", Expr::load("row_cursor", src.clone())),
-            Node::store("col_idx", Expr::var("emit_slot"), dst),
+            Node::let_bind("src_dense", src_expr),
+            Node::let_bind("dst_dense", dst_expr),
+            Node::let_bind(
+                "emit_slot",
+                Expr::load("row_cursor", Expr::var("src_dense")),
+            ),
+            Node::store("col_idx", Expr::var("emit_slot"), Expr::var("dst_dense")),
             Node::store(
                 "row_cursor",
-                src,
+                Expr::var("src_dense"),
                 Expr::add(Expr::var("emit_slot"), Expr::u32(1)),
             ),
         ]
+    };
+    let intra_loop = |fact_body: Vec<Node>, gen_body: Vec<Node>| {
+        Node::loop_for(
+            "intra_i",
+            Expr::u32(0),
+            Expr::u32(intra_count),
+            vec![
+                Node::let_bind("intra_p", Expr::load("intra_proc", Expr::var("intra_i"))),
+                Node::let_bind(
+                    "intra_src_b",
+                    Expr::load("intra_src_block", Expr::var("intra_i")),
+                ),
+                Node::let_bind(
+                    "intra_dst_b",
+                    Expr::load("intra_dst_block", Expr::var("intra_i")),
+                ),
+                Node::if_then(
+                    Expr::and(
+                        in_proc_block(Expr::var("intra_p"), Expr::var("intra_src_b")),
+                        Expr::lt(Expr::var("intra_dst_b"), Expr::u32(blocks_per_proc)),
+                    ),
+                    vec![
+                        Node::loop_for("fact", Expr::u32(0), Expr::u32(facts_per_proc), fact_body),
+                        Node::loop_for("gen_i", Expr::u32(0), Expr::u32(gen_count), gen_body),
+                    ],
+                ),
+            ],
+        )
+    };
+    let inter_loop = |fact_body: Vec<Node>| {
+        Node::loop_for(
+            "inter_i",
+            Expr::u32(0),
+            Expr::u32(inter_count),
+            vec![
+                Node::let_bind(
+                    "inter_sp",
+                    Expr::load("inter_src_proc", Expr::var("inter_i")),
+                ),
+                Node::let_bind(
+                    "inter_sb",
+                    Expr::load("inter_src_block", Expr::var("inter_i")),
+                ),
+                Node::let_bind(
+                    "inter_dp",
+                    Expr::load("inter_dst_proc", Expr::var("inter_i")),
+                ),
+                Node::let_bind(
+                    "inter_db",
+                    Expr::load("inter_dst_block", Expr::var("inter_i")),
+                ),
+                Node::if_then(
+                    Expr::and(
+                        in_proc_block(Expr::var("inter_sp"), Expr::var("inter_sb")),
+                        in_proc_block(Expr::var("inter_dp"), Expr::var("inter_db")),
+                    ),
+                    vec![Node::loop_for(
+                        "fact",
+                        Expr::u32(0),
+                        Expr::u32(facts_per_proc),
+                        fact_body,
+                    )],
+                ),
+            ],
+        )
     };
 
     // Dense kill bitmap: O(total_nodes + kill_count) setup, O(1) lookup per fact.
@@ -160,87 +214,55 @@ pub fn build_ifds_csr_program(
         ],
     ));
 
-    let count_gen = vec![
-        Node::let_bind("gen_p", Expr::load("gen_proc", Expr::var("gen_i"))),
-        Node::let_bind("gen_b", Expr::load("gen_block", Expr::var("gen_i"))),
-        Node::let_bind("gen_f", Expr::load("gen_fact", Expr::var("gen_i"))),
-        Node::if_then(
-            Expr::and(
+    let gen_step = |on_valid: Vec<Node>| {
+        vec![
+            Node::let_bind("gen_p", Expr::load("gen_proc", Expr::var("gen_i"))),
+            Node::let_bind("gen_b", Expr::load("gen_block", Expr::var("gen_i"))),
+            Node::let_bind("gen_f", Expr::load("gen_fact", Expr::var("gen_i"))),
+            Node::if_then(
                 Expr::and(
-                    Expr::eq(Expr::var("gen_p"), Expr::var("intra_p")),
-                    Expr::eq(Expr::var("gen_b"), Expr::var("intra_src_b")),
+                    Expr::and(
+                        Expr::eq(Expr::var("gen_p"), Expr::var("intra_p")),
+                        Expr::eq(Expr::var("gen_b"), Expr::var("intra_src_b")),
+                    ),
+                    Expr::lt(Expr::var("gen_f"), Expr::u32(facts_per_proc)),
                 ),
-                Expr::lt(Expr::var("gen_f"), Expr::u32(facts_per_proc)),
+                on_valid,
             ),
-            vec![
-                Node::let_bind(
-                    "src_dense",
-                    idx_expr(Expr::var("intra_p"), Expr::var("intra_src_b"), Expr::u32(0)),
-                ),
-                count_row(Expr::var("src_dense")),
-            ],
+        ]
+    };
+    let count_gen = gen_step(vec![
+        Node::let_bind(
+            "src_dense",
+            idx_expr(Expr::var("intra_p"), Expr::var("intra_src_b"), Expr::u32(0)),
         ),
-    ];
+        count_row(Expr::var("src_dense")),
+    ]);
 
     let mut fill_intra_fact = kill_lookup;
     fill_intra_fact.push(Node::if_then(
         Expr::eq(Expr::var("is_killed"), Expr::u32(0)),
-        {
-            let mut nodes = vec![
-                Node::let_bind(
-                    "src_dense",
-                    idx_expr(
-                        Expr::var("intra_p"),
-                        Expr::var("intra_src_b"),
-                        Expr::var("fact"),
-                    ),
-                ),
-                Node::let_bind(
-                    "dst_dense",
-                    idx_expr(
-                        Expr::var("intra_p"),
-                        Expr::var("intra_dst_b"),
-                        Expr::var("fact"),
-                    ),
-                ),
-            ];
-            nodes.extend(fill_col(Expr::var("src_dense"), Expr::var("dst_dense")));
-            nodes
-        },
-    ));
-
-    let fill_gen = vec![
-        Node::let_bind("gen_p", Expr::load("gen_proc", Expr::var("gen_i"))),
-        Node::let_bind("gen_b", Expr::load("gen_block", Expr::var("gen_i"))),
-        Node::let_bind("gen_f", Expr::load("gen_fact", Expr::var("gen_i"))),
-        Node::if_then(
-            Expr::and(
-                Expr::and(
-                    Expr::eq(Expr::var("gen_p"), Expr::var("intra_p")),
-                    Expr::eq(Expr::var("gen_b"), Expr::var("intra_src_b")),
-                ),
-                Expr::lt(Expr::var("gen_f"), Expr::u32(facts_per_proc)),
+        fill_pair(
+            idx_expr(
+                Expr::var("intra_p"),
+                Expr::var("intra_src_b"),
+                Expr::var("fact"),
             ),
-            {
-                let mut nodes = vec![
-                    Node::let_bind(
-                        "src_dense",
-                        idx_expr(Expr::var("intra_p"), Expr::var("intra_src_b"), Expr::u32(0)),
-                    ),
-                    Node::let_bind(
-                        "dst_dense",
-                        idx_expr(
-                            Expr::var("intra_p"),
-                            Expr::var("intra_dst_b"),
-                            Expr::var("gen_f"),
-                        ),
-                    ),
-                ];
-                nodes.extend(fill_col(Expr::var("src_dense"), Expr::var("dst_dense")));
-                nodes
-            },
+            idx_expr(
+                Expr::var("intra_p"),
+                Expr::var("intra_dst_b"),
+                Expr::var("fact"),
+            ),
         ),
-    ];
+    ));
+    let fill_gen = gen_step(fill_pair(
+        idx_expr(Expr::var("intra_p"), Expr::var("intra_src_b"), Expr::u32(0)),
+        idx_expr(
+            Expr::var("intra_p"),
+            Expr::var("intra_dst_b"),
+            Expr::var("gen_f"),
+        ),
+    ));
 
     let mut entry = build_kill_bitmap;
     entry.extend([
@@ -251,78 +273,19 @@ pub fn build_ifds_csr_program(
             vec![Node::store("row_ptr", Expr::var("row_i"), Expr::u32(0))],
         ),
         Node::store("col_len", Expr::u32(0), Expr::u32(0)),
+        intra_loop(count_intra_fact, count_gen),
+        inter_loop(vec![
+            Node::let_bind(
+                "src_dense",
+                idx_expr(
+                    Expr::var("inter_sp"),
+                    Expr::var("inter_sb"),
+                    Expr::var("fact"),
+                ),
+            ),
+            count_row(Expr::var("src_dense")),
+        ]),
     ]);
-
-    entry.push(Node::loop_for(
-        "intra_i",
-        Expr::u32(0),
-        Expr::u32(intra_count),
-        vec![
-            Node::let_bind("intra_p", Expr::load("intra_proc", Expr::var("intra_i"))),
-            Node::let_bind(
-                "intra_src_b",
-                Expr::load("intra_src_block", Expr::var("intra_i")),
-            ),
-            Node::let_bind(
-                "intra_dst_b",
-                Expr::load("intra_dst_block", Expr::var("intra_i")),
-            ),
-            Node::if_then(
-                valid_intra.clone(),
-                vec![
-                    Node::loop_for(
-                        "fact",
-                        Expr::u32(0),
-                        Expr::u32(facts_per_proc),
-                        count_intra_fact,
-                    ),
-                    Node::loop_for("gen_i", Expr::u32(0), Expr::u32(gen_count), count_gen),
-                ],
-            ),
-        ],
-    ));
-    entry.push(Node::loop_for(
-        "inter_i",
-        Expr::u32(0),
-        Expr::u32(inter_count),
-        vec![
-            Node::let_bind(
-                "inter_sp",
-                Expr::load("inter_src_proc", Expr::var("inter_i")),
-            ),
-            Node::let_bind(
-                "inter_sb",
-                Expr::load("inter_src_block", Expr::var("inter_i")),
-            ),
-            Node::let_bind(
-                "inter_dp",
-                Expr::load("inter_dst_proc", Expr::var("inter_i")),
-            ),
-            Node::let_bind(
-                "inter_db",
-                Expr::load("inter_dst_block", Expr::var("inter_i")),
-            ),
-            Node::if_then(
-                valid_inter.clone(),
-                vec![Node::loop_for(
-                    "fact",
-                    Expr::u32(0),
-                    Expr::u32(facts_per_proc),
-                    vec![
-                        Node::let_bind(
-                            "src_dense",
-                            idx_expr(
-                                Expr::var("inter_sp"),
-                                Expr::var("inter_sb"),
-                                Expr::var("fact"),
-                            ),
-                        ),
-                        count_row(Expr::var("src_dense")),
-                    ],
-                )],
-            ),
-        ],
-    ));
     entry.extend([
         Node::let_bind("prefix_sum", Expr::u32(0)),
         Node::loop_for(
@@ -357,126 +320,47 @@ pub fn build_ifds_csr_program(
             )],
         ),
     ]);
-    entry.push(Node::loop_for(
-        "intra_i",
-        Expr::u32(0),
-        Expr::u32(intra_count),
-        vec![
-            Node::let_bind("intra_p", Expr::load("intra_proc", Expr::var("intra_i"))),
-            Node::let_bind(
-                "intra_src_b",
-                Expr::load("intra_src_block", Expr::var("intra_i")),
-            ),
-            Node::let_bind(
-                "intra_dst_b",
-                Expr::load("intra_dst_block", Expr::var("intra_i")),
-            ),
-            Node::if_then(
-                valid_intra,
-                vec![
-                    Node::loop_for(
-                        "fact",
-                        Expr::u32(0),
-                        Expr::u32(facts_per_proc),
-                        fill_intra_fact,
-                    ),
-                    Node::loop_for("gen_i", Expr::u32(0), Expr::u32(gen_count), fill_gen),
-                ],
-            ),
-        ],
-    ));
-    entry.push(Node::loop_for(
-        "inter_i",
-        Expr::u32(0),
-        Expr::u32(inter_count),
-        vec![
-            Node::let_bind(
-                "inter_sp",
-                Expr::load("inter_src_proc", Expr::var("inter_i")),
-            ),
-            Node::let_bind(
-                "inter_sb",
-                Expr::load("inter_src_block", Expr::var("inter_i")),
-            ),
-            Node::let_bind(
-                "inter_dp",
-                Expr::load("inter_dst_proc", Expr::var("inter_i")),
-            ),
-            Node::let_bind(
-                "inter_db",
-                Expr::load("inter_dst_block", Expr::var("inter_i")),
-            ),
-            Node::if_then(
-                valid_inter,
-                vec![Node::loop_for(
-                    "fact",
-                    Expr::u32(0),
-                    Expr::u32(facts_per_proc),
-                    {
-                        let mut nodes = vec![
-                            Node::let_bind(
-                                "src_dense",
-                                idx_expr(
-                                    Expr::var("inter_sp"),
-                                    Expr::var("inter_sb"),
-                                    Expr::var("fact"),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "dst_dense",
-                                idx_expr(
-                                    Expr::var("inter_dp"),
-                                    Expr::var("inter_db"),
-                                    Expr::var("fact"),
-                                ),
-                            ),
-                        ];
-                        nodes.extend(fill_col(Expr::var("src_dense"), Expr::var("dst_dense")));
-                        nodes
-                    },
-                )],
-            ),
-        ],
-    ));
+    entry.push(intra_loop(fill_intra_fact, fill_gen));
+    entry.push(inter_loop(fill_pair(
+        idx_expr(
+            Expr::var("inter_sp"),
+            Expr::var("inter_sb"),
+            Expr::var("fact"),
+        ),
+        idx_expr(
+            Expr::var("inter_dp"),
+            Expr::var("inter_db"),
+            Expr::var("fact"),
+        ),
+    )));
 
+    let ro = |name: &str, slot: u32, count: u32| {
+        BufferDecl::storage(name, slot, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(count.max(1))
+    };
+    let rw = |name: &str, slot: u32, count: u32| {
+        BufferDecl::storage(name, slot, BufferAccess::ReadWrite, DataType::U32).with_count(count)
+    };
     Program::wrapped(
         vec![
-            BufferDecl::storage("intra_proc", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(intra_count.max(1)),
-            BufferDecl::storage("intra_src_block", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(intra_count.max(1)),
-            BufferDecl::storage("intra_dst_block", 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(intra_count.max(1)),
-            BufferDecl::storage("inter_src_proc", 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(inter_count.max(1)),
-            BufferDecl::storage("inter_src_block", 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(inter_count.max(1)),
-            BufferDecl::storage("inter_dst_proc", 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(inter_count.max(1)),
-            BufferDecl::storage("inter_dst_block", 6, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(inter_count.max(1)),
-            BufferDecl::storage("gen_proc", 7, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(gen_count.max(1)),
-            BufferDecl::storage("gen_block", 8, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(gen_count.max(1)),
-            BufferDecl::storage("gen_fact", 9, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(gen_count.max(1)),
-            BufferDecl::storage("kill_proc", 10, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(kill_count.max(1)),
-            BufferDecl::storage("kill_block", 11, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(kill_count.max(1)),
-            BufferDecl::storage("kill_fact", 12, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(kill_count.max(1)),
-            BufferDecl::storage("killed", 13, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(total_nodes.max(1)),
-            BufferDecl::storage("row_ptr", 14, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(row_ptr_count),
-            BufferDecl::storage("row_cursor", 15, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(total_nodes.max(1)),
-            BufferDecl::storage("col_idx", 16, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(max_col_count.max(1)),
-            BufferDecl::storage("col_len", 17, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
+            ro("intra_proc", 0, intra_count),
+            ro("intra_src_block", 1, intra_count),
+            ro("intra_dst_block", 2, intra_count),
+            ro("inter_src_proc", 3, inter_count),
+            ro("inter_src_block", 4, inter_count),
+            ro("inter_dst_proc", 5, inter_count),
+            ro("inter_dst_block", 6, inter_count),
+            ro("gen_proc", 7, gen_count),
+            ro("gen_block", 8, gen_count),
+            ro("gen_fact", 9, gen_count),
+            ro("kill_proc", 10, kill_count),
+            ro("kill_block", 11, kill_count),
+            ro("kill_fact", 12, kill_count),
+            rw("killed", 13, total_nodes.max(1)),
+            rw("row_ptr", 14, row_ptr_count),
+            rw("row_cursor", 15, total_nodes.max(1)),
+            rw("col_idx", 16, max_col_count.max(1)),
+            rw("col_len", 17, 1),
         ],
         IFDS_CSR_WORKGROUP_SIZE,
         vec![wrap_anonymous_region(

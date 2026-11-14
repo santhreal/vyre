@@ -323,11 +323,6 @@ impl ObligationTracker {
         self.current_epoch
     }
 
-    /// Advance epoch.
-    pub fn advance_epoch(&mut self) -> StateEpoch {
-        self.current_epoch.advance()
-    }
-
     /// Produce an explicit obligation.
     pub fn produce(
         &mut self,
@@ -413,12 +408,6 @@ impl ObligationTracker {
             }
         }
         Ok(())
-    }
-
-    /// Return all currently unconsumed obligations.
-    #[must_use]
-    pub fn unconsumed_obligations(&self) -> Vec<&Obligation> {
-        self.obligations.iter().filter(|o| !o.consumed).collect()
     }
 }
 

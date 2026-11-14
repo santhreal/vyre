@@ -277,50 +277,11 @@ impl Expr {
         Self::LocalId { axis: 2 }
     }
 
-    /// Substrate-neutral alias for [`workgroup_x`](Self::workgroup_x).
-    ///
-    /// "Parallel region" is the vocabulary used in the public `vyre` facade.
-    /// Concrete drivers translate this concept into target vocabulary at the
-    /// lowering boundary.
-    #[must_use]
-    #[inline]
-    pub fn parallel_region_x() -> Self {
-        Self::WorkgroupId { axis: 0 }
-    }
-
-    /// Substrate-neutral alias for [`workgroup_y`](Self::workgroup_y).
-    #[must_use]
-    #[inline]
-    pub fn parallel_region_y() -> Self {
-        Self::WorkgroupId { axis: 1 }
-    }
-
-    /// Substrate-neutral alias for [`workgroup_z`](Self::workgroup_z).
-    #[must_use]
-    #[inline]
-    pub fn parallel_region_z() -> Self {
-        Self::WorkgroupId { axis: 2 }
-    }
-
     /// Substrate-neutral alias for [`local_x`](Self::local_x).
     #[must_use]
     #[inline]
     pub fn invocation_local_x() -> Self {
         Self::LocalId { axis: 0 }
-    }
-
-    /// Substrate-neutral alias for [`local_y`](Self::local_y).
-    #[must_use]
-    #[inline]
-    pub fn invocation_local_y() -> Self {
-        Self::LocalId { axis: 1 }
-    }
-
-    /// Substrate-neutral alias for [`local_z`](Self::local_z).
-    #[must_use]
-    #[inline]
-    pub fn invocation_local_z() -> Self {
-        Self::LocalId { axis: 2 }
     }
 
     /// Conditional select.
@@ -331,6 +292,17 @@ impl Expr {
             cond: Box::new(cond),
             true_val: Box::new(true_val),
             false_val: Box::new(false_val),
+        }
+    }
+
+    /// Return the `u32` value when `self` is a `LitU32` or non-negative `LitI32`.
+    #[must_use]
+    #[inline]
+    pub fn literal_u32(&self) -> Option<u32> {
+        match self {
+            Self::LitU32(value) => Some(*value),
+            Self::LitI32(value) => u32::try_from(*value).ok(),
+            _ => None,
         }
     }
 

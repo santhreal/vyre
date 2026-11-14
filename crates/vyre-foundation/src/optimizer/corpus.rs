@@ -4,10 +4,7 @@
 //! registered release scheduler, and summarized for release tooling. Descriptor
 //! analyses remain in `vyre-compiler` and are not optimization passes.
 
-use std::collections::BTreeMap;
-
 use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use crate::optimizer::{registered_passes_for_profile, OptimizerProfile, PassScheduler};
 
 /// Minimum generated cases required by the release optimization gate.
 pub const RELEASE_MIN_OPTIMIZATION_CASES: usize = 4_096;
@@ -40,44 +37,6 @@ pub struct OptimizationCorpusCase {
     pub program: Program,
 }
 
-/// Generated case count for one semantic family.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct OptimizationFamilyCount {
-    /// Stable semantic family identifier.
-    pub family: String,
-    /// Number of generated cases.
-    pub cases: usize,
-}
-
-/// Machine-readable validation summary for the semantic corpus.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct OptimizationCorpusManifest {
-    /// Artifact schema version.
-    pub schema_version: u32,
-    /// Minimum required case count.
-    pub required_min_cases: usize,
-    /// Number of generated programs.
-    pub generated_cases: usize,
-    /// Number of programs accepted by the canonical optimizer.
-    pub verified_cases: usize,
-    /// Number of programs changed by at least one registered pass.
-    pub optimized_cases: usize,
-    /// Number of programs that exhausted scheduler convergence.
-    pub non_converged_cases: usize,
-    /// Total semantic node count before optimization.
-    pub total_nodes_before: usize,
-    /// Total semantic node count after optimization.
-    pub total_nodes_after: usize,
-    /// Number of considered pass instances.
-    pub pass_instance_count: usize,
-    /// Number of pass instances that changed their program.
-    pub changed_pass_instances: usize,
-    /// Per-family case counts.
-    pub families: Vec<OptimizationFamilyCount>,
-    /// Release blockers found while validating the corpus.
-    pub blockers: Vec<String>,
-}
-
 /// Generate the deterministic semantic release corpus.
 #[must_use]
 pub fn generate_release_corpus() -> Vec<OptimizationCorpusCase> {
@@ -92,123 +51,6 @@ pub fn generate_release_corpus() -> Vec<OptimizationCorpusCase> {
         }
     }
     cases
-}
-
-/// Run every generated program through the canonical release scheduler.
-#[must_use]
-pub fn manifest_for(cases: &[OptimizationCorpusCase]) -> OptimizationCorpusManifest {
-    let passes = match registered_passes_for_profile(OptimizerProfile::Release) {
-        Ok(passes) => passes,
-        Err(error) => {
-            return OptimizationCorpusManifest {
-                schema_version: vyre_spec::schema_registry::SchemaId::ConformanceCertificate
-                    .version_u32(),
-                required_min_cases: RELEASE_MIN_OPTIMIZATION_CASES,
-                generated_cases: cases.len(),
-                verified_cases: 0,
-                optimized_cases: 0,
-                non_converged_cases: cases.len(),
-                total_nodes_before: 0,
-                total_nodes_after: 0,
-                pass_instance_count: 0,
-                changed_pass_instances: 0,
-                families: family_counts(cases),
-                blockers: vec![format!(
-                    "registered release pass scheduling failed: {error}"
-                )],
-            };
-        }
-    };
-    let scheduler = match PassScheduler::try_with_passes(passes) {
-        Ok(scheduler) => scheduler
-            .with_cost_monotone_enforcement(true)
-            .with_effect_handler_enforcement(true)
-            .with_linear_type_enforcement(true)
-            .with_shape_predicate_enforcement(true),
-        Err(error) => {
-            return OptimizationCorpusManifest {
-                schema_version: vyre_spec::schema_registry::SchemaId::ConformanceCertificate
-                    .version_u32(),
-                required_min_cases: RELEASE_MIN_OPTIMIZATION_CASES,
-                generated_cases: cases.len(),
-                verified_cases: 0,
-                optimized_cases: 0,
-                non_converged_cases: cases.len(),
-                total_nodes_before: 0,
-                total_nodes_after: 0,
-                pass_instance_count: 0,
-                changed_pass_instances: 0,
-                families: family_counts(cases),
-                blockers: vec![format!("release optimizer construction failed: {error}")],
-            };
-        }
-    };
-
-    let mut verified_cases = 0usize;
-    let mut optimized_cases = 0usize;
-    let mut non_converged_cases = 0usize;
-    let mut total_nodes_before = 0usize;
-    let mut total_nodes_after = 0usize;
-    let mut pass_instance_count = 0usize;
-    let mut changed_pass_instances = 0usize;
-    let mut blockers = Vec::new();
-
-    for case in cases {
-        let nodes_before = case.program.stats().node_count;
-        total_nodes_before = total_nodes_before.saturating_add(nodes_before);
-        match scheduler.run_with_metrics(case.program.clone()) {
-            Ok(report) => {
-                verified_cases += 1;
-                let changed = report.passes.iter().filter(|metric| metric.changed).count();
-                if changed != 0 {
-                    optimized_cases += 1;
-                }
-                pass_instance_count = pass_instance_count.saturating_add(report.passes.len());
-                changed_pass_instances = changed_pass_instances.saturating_add(changed);
-                total_nodes_after =
-                    total_nodes_after.saturating_add(report.program.stats().node_count);
-                if let Err(error) = report.program.validate() {
-                    blockers.push(format!(
-                        "case `{}` produced invalid optimized Program: {error}",
-                        case.id
-                    ));
-                }
-            }
-            Err(error) => {
-                non_converged_cases += 1;
-                blockers.push(format!(
-                    "case `{}` failed canonical semantic optimization: {error}",
-                    case.id
-                ));
-            }
-        }
-    }
-
-    OptimizationCorpusManifest {
-        schema_version: vyre_spec::schema_registry::SchemaId::ConformanceCertificate.version_u32(),
-        required_min_cases: RELEASE_MIN_OPTIMIZATION_CASES,
-        generated_cases: cases.len(),
-        verified_cases,
-        optimized_cases,
-        non_converged_cases,
-        total_nodes_before,
-        total_nodes_after,
-        pass_instance_count,
-        changed_pass_instances,
-        families: family_counts(cases),
-        blockers,
-    }
-}
-
-fn family_counts(cases: &[OptimizationCorpusCase]) -> Vec<OptimizationFamilyCount> {
-    let mut counts = BTreeMap::<String, usize>::new();
-    for case in cases {
-        *counts.entry(case.family.clone()).or_default() += 1;
-    }
-    counts
-        .into_iter()
-        .map(|(family, cases)| OptimizationFamilyCount { family, cases })
-        .collect()
 }
 
 fn program_for(family: &str, seed: u32) -> Program {

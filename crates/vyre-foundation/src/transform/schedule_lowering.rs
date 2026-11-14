@@ -168,16 +168,19 @@ pub fn distribute_scan(program: &Program, distribution: &ScheduleDistribution) -
     Program::wrapped(buffers, workgroup_size, lowered.entry().to_vec())
 }
 
+fn distribute_tiled(program: &Program, distribution: &ScheduleDistribution) -> Program {
+    let (lowered, _) = lower_logical_schedule(program.clone());
+    Program::wrapped(
+        lowered.buffers().to_vec(),
+        [distribution.tile_size.max(1), 1, 1],
+        lowered.entry().to_vec(),
+    )
+}
+
 /// Lower a segmented map into a distributed partition schedule.
 #[must_use]
 pub fn distribute_segmented_map(program: &Program, distribution: &ScheduleDistribution) -> Program {
-    let (lowered, _) = lower_logical_schedule(program.clone());
-    let workgroup_size = [distribution.tile_size.max(1), 1, 1];
-    Program::wrapped(
-        lowered.buffers().to_vec(),
-        workgroup_size,
-        lowered.entry().to_vec(),
-    )
+    distribute_tiled(program, distribution)
 }
 
 /// Lower a recurrent state region into a tiled sequential recurrence schedule.
@@ -186,37 +189,19 @@ pub fn distribute_recurrent_state(
     program: &Program,
     distribution: &ScheduleDistribution,
 ) -> Program {
-    let (lowered, _) = lower_logical_schedule(program.clone());
-    let workgroup_size = [distribution.tile_size.max(1), 1, 1];
-    Program::wrapped(
-        lowered.buffers().to_vec(),
-        workgroup_size,
-        lowered.entry().to_vec(),
-    )
+    distribute_tiled(program, distribution)
 }
 
 /// Lower a windowed stenciled region into a distributed schedule with halo loading.
 #[must_use]
 pub fn distribute_window(program: &Program, distribution: &ScheduleDistribution) -> Program {
-    let (lowered, _) = lower_logical_schedule(program.clone());
-    let workgroup_size = [distribution.tile_size.max(1), 1, 1];
-    Program::wrapped(
-        lowered.buffers().to_vec(),
-        workgroup_size,
-        lowered.entry().to_vec(),
-    )
+    distribute_tiled(program, distribution)
 }
 
 /// Lower a ragged extent region into a distributed schedule with segment offset indirection.
 #[must_use]
 pub fn distribute_ragged_extent(program: &Program, distribution: &ScheduleDistribution) -> Program {
-    let (lowered, _) = lower_logical_schedule(program.clone());
-    let workgroup_size = [distribution.tile_size.max(1), 1, 1];
-    Program::wrapped(
-        lowered.buffers().to_vec(),
-        workgroup_size,
-        lowered.entry().to_vec(),
-    )
+    distribute_tiled(program, distribution)
 }
 
 /// Lower a partial-result join into a distributed combine schedule across partitions.
@@ -225,11 +210,5 @@ pub fn distribute_partial_result_join(
     program: &Program,
     distribution: &ScheduleDistribution,
 ) -> Program {
-    let (lowered, _) = lower_logical_schedule(program.clone());
-    let workgroup_size = [distribution.tile_size.max(1), 1, 1];
-    Program::wrapped(
-        lowered.buffers().to_vec(),
-        workgroup_size,
-        lowered.entry().to_vec(),
-    )
+    distribute_tiled(program, distribution)
 }

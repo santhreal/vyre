@@ -834,13 +834,6 @@ impl GuardedLaw {
         self
     }
 
-    /// Attach canonical form.
-    #[must_use]
-    pub fn with_canonical_form(mut self, canonical_form: impl Into<String>) -> Self {
-        self.canonical_form = Some(canonical_form.into());
-        self
-    }
-
     /// Validate the record's shape: guard bounds and affected compiler levels.
     ///
     /// Says nothing about whether the law is proven. A declaration carrying a

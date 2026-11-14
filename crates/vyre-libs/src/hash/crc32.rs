@@ -28,20 +28,13 @@ pub const CRC32_PAIR_REDUCE_OP_ID: &str = "vyre-libs::hash::crc32_pair_reduce";
 #[cfg(test)]
 static CRC32_TABLE: std::sync::LazyLock<[u32; 256]> = std::sync::LazyLock::new(build_table);
 
-/// Self-contained CRC-32 chunk summary for associative reductions.
-///
-/// The `crc` field is the normal finalized CRC-32 value for the chunk. Adjacent
-/// chunks can be combined with `crc32_combine_chunks` without reading the
-/// original bytes, which is the algebra needed by GPU block scans and resident
-/// streaming pipelines.
 #[cfg(test)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Crc32Chunk {
-    /// Exact chunk length in bytes.
-    pub len: u64,
-    /// Finalized CRC-32 for this chunk.
-    pub crc: u32,
-}
+pub use vyre_reference::composition_witness::{
+    crc32_combine_chunks_witness as crc32_combine_chunks, crc32_combine_witness as crc32_combine,
+    crc32_pack_chunks_witness as crc32_pack_chunks_u32,
+    crc32_pair_reduce_chunks_witness as crc32_pair_reduce_chunks,
+    crc32_unpack_chunks_witness as crc32_unpack_chunks_u32, Crc32ChunkWitness as Crc32Chunk,
+};
 
 /// Kind of executable step in a CRC-32 GPU map-reduce plan.
 #[cfg(test)]
@@ -95,74 +88,6 @@ pub(crate) fn crc32_chunk(bytes: &[u8]) -> Crc32Chunk {
         len: bytes.len() as u64,
         crc: crc32(bytes),
     }
-}
-
-/// Combine two finalized CRC-32 values.
-///
-/// `right_len` is the exact byte length of the right-hand input. The result is
-/// `crc32(left_bytes || right_bytes)` when `left_crc == crc32(left_bytes)` and
-/// `right_crc == crc32(right_bytes)`.
-#[cfg(test)]
-#[must_use]
-pub fn crc32_combine(left_crc: u32, right_crc: u32, right_len: u64) -> u32 {
-    vyre_reference::composition_witness::crc32_combine_witness(left_crc, right_crc, right_len)
-}
-
-/// Combine adjacent CRC-32 chunk summaries without reading source bytes.
-#[cfg(test)]
-#[must_use]
-pub fn crc32_combine_chunks(left: Crc32Chunk, right: Crc32Chunk) -> Option<Crc32Chunk> {
-    Some(Crc32Chunk {
-        len: left.len.checked_add(right.len)?,
-        crc: crc32_combine(left.crc, right.crc, right.len),
-    })
-}
-
-/// Pair-reduce adjacent CRC-32 chunks. Odd tails are carried forward.
-#[cfg(test)]
-#[must_use]
-pub fn crc32_pair_reduce_chunks(chunks: &[Crc32Chunk]) -> Option<Vec<Crc32Chunk>> {
-    let mut reduced = Vec::with_capacity(chunks.len().div_ceil(2));
-    for pair in chunks.chunks(2) {
-        let chunk = match pair {
-            [left, right] => crc32_combine_chunks(*left, *right)?,
-            [tail] => *tail,
-            [] => continue,
-            _ => unreachable!("slice chunks of two contain at most two items"),
-        };
-        reduced.push(chunk);
-    }
-    Some(reduced)
-}
-
-/// Pack CRC-32 chunk summaries into the executable `[crc, len]` u32 ABI.
-#[cfg(test)]
-#[must_use]
-pub fn crc32_pack_chunks_u32(chunks: &[Crc32Chunk]) -> Option<Vec<u32>> {
-    let mut words = Vec::with_capacity(chunks.len().checked_mul(2)?);
-    for chunk in chunks {
-        words.push(chunk.crc);
-        words.push(u32::try_from(chunk.len).ok()?);
-    }
-    Some(words)
-}
-
-/// Unpack executable `[crc, len]` u32 words into CRC-32 chunk summaries.
-#[cfg(test)]
-#[must_use]
-pub fn crc32_unpack_chunks_u32(words: &[u32]) -> Option<Vec<Crc32Chunk>> {
-    let pairs = words.chunks_exact(2);
-    if !pairs.remainder().is_empty() {
-        return None;
-    }
-    Some(
-        pairs
-            .map(|pair| Crc32Chunk {
-                crc: pair[0],
-                len: u64::from(pair[1]),
-            })
-            .collect(),
-    )
 }
 
 /// Pair-reduce packed executable `[crc, len]` u32 words.

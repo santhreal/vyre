@@ -70,28 +70,4 @@ impl SemanticType {
     pub const fn vector(element: ScalarType, lanes: u32) -> Self {
         Self::Vector(VectorType::new(element, lanes))
     }
-
-    /// Construct a dense tensor semantic type.
-    #[must_use]
-    pub fn dense_tensor(element: ScalarType, shape: ShapeId) -> Self {
-        Self::Tensor(TensorType::dense_row_major(element, shape))
-    }
-
-    /// Whether this type is a scalar.
-    #[must_use]
-    pub const fn is_scalar(&self) -> bool {
-        matches!(self, Self::Scalar(_))
-    }
-
-    /// Whether this type is a tensor.
-    #[must_use]
-    pub const fn is_tensor(&self) -> bool {
-        matches!(self, Self::Tensor(_))
-    }
-
-    /// Whether this type is a resource buffer.
-    #[must_use]
-    pub const fn is_resource(&self) -> bool {
-        matches!(self, Self::Resource { .. })
-    }
 }

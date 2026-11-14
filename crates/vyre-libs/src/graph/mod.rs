@@ -75,16 +75,8 @@ pub(crate) fn padded_u32_slice_fingerprint(values: &[u32], padded_words: usize) 
     hash
 }
 
-// Test-only seed mixer for the generated graph cases; no production caller.
 #[cfg(all(test, feature = "graph"))]
-#[inline]
-pub(crate) const fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7feb_352d);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846c_a68b);
-    value ^ (value >> 16)
-}
+pub(crate) use vyre_test_support::scalar_corpora::mix32;
 
 #[cfg(test)]
 pub(crate) fn panic_payload_message(payload: Box<dyn std::any::Any + Send>) -> String {

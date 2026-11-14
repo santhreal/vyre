@@ -381,14 +381,9 @@ fn declared_statements_of(node: &Node) -> Option<u64> {
 /// Only a literal counts. A constant-folded arithmetic expression would need
 /// the optimizer's evaluator, and a program that reaches the interpreter with a
 /// foldable bound has already declared its extent to the pass that folds it.
+#[inline]
 fn constant_u32(expr: &Expr) -> Option<u32> {
-    match expr {
-        Expr::LitU32(value) => Some(*value),
-        Expr::LitI32(value) => u32::try_from(*value).ok(),
-        // `Expr` is `#[non_exhaustive]`, so a match in this crate cannot be exhaustive;
-        // oracle_matches_are_exhaustive holds the named set to the declaration.
-        _ => None,
-    }
+    expr.literal_u32()
 }
 
 /// Charge one interpreter step against the armed budget.

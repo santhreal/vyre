@@ -158,13 +158,4 @@ impl ScalarType {
     pub const fn is_float(&self) -> bool {
         matches!(self, Self::Float { .. })
     }
-
-    /// Whether this is a signed integer.
-    #[must_use]
-    pub const fn is_signed_integer(&self) -> bool {
-        match self {
-            Self::Int { signed, .. } => *signed,
-            _ => false,
-        }
-    }
 }

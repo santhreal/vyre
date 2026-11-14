@@ -70,11 +70,4 @@ impl TensorType {
         self.quantization = Some(quantization);
         self
     }
-
-    /// Set an explicit memory layout.
-    #[must_use]
-    pub fn with_layout(mut self, layout: TensorLayout) -> Self {
-        self.layout = layout;
-        self
-    }
 }

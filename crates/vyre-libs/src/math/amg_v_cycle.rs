@@ -39,68 +39,104 @@ pub fn amg_v_cycle(
     n_fine: u32,
     n_coarse: u32,
 ) -> Program {
+    let trap = |msg: String| trap_program(OP_ID, Some((x, DataType::U32)), msg);
     if n_fine == 0 {
-        return trap_program(
-            OP_ID,
-            Some((x, DataType::U32)),
-            "Fix: amg_v_cycle requires n_fine > 0, got 0.".to_string(),
-        );
+        return trap("Fix: amg_v_cycle requires n_fine > 0, got 0.".into());
     }
     if n_coarse == 0 {
-        return trap_program(
-            OP_ID,
-            Some((x, DataType::U32)),
-            "Fix: amg_v_cycle requires n_coarse > 0, got 0.".to_string(),
-        );
+        return trap("Fix: amg_v_cycle requires n_coarse > 0, got 0.".into());
     }
     if n_coarse >= n_fine {
-        return trap_program(OP_ID, Some((x, DataType::U32)), format!("Fix: amg_v_cycle requires n_coarse < n_fine, got n_coarse={n_coarse}, n_fine={n_fine}."));
+        return trap(format!(
+            "Fix: amg_v_cycle requires n_coarse < n_fine, got n_coarse={n_coarse}, n_fine={n_fine}."
+        ));
     }
     let Some(fine_cells) = n_fine.checked_mul(n_fine) else {
-        return trap_program(
-            OP_ID,
-            Some((x, DataType::U32)),
-            format!("Fix: amg_v_cycle fine matrix cells overflow u32: n_fine={n_fine}."),
-        );
+        return trap(format!(
+            "Fix: amg_v_cycle fine matrix cells overflow u32: n_fine={n_fine}."
+        ));
     };
     let Some(transfer_cells) = n_fine.checked_mul(n_coarse) else {
-        return trap_program(OP_ID, Some((x, DataType::U32)), format!(
+        return trap(format!(
             "Fix: amg_v_cycle transfer matrix cells overflow u32: n_fine={n_fine}, n_coarse={n_coarse}."
         ));
     };
     let Some(coarse_cells) = n_coarse.checked_mul(n_coarse) else {
-        return trap_program(
-            OP_ID,
-            Some((x, DataType::U32)),
-            format!("Fix: amg_v_cycle coarse matrix cells overflow u32: n_coarse={n_coarse}."),
-        );
+        return trap(format!(
+            "Fix: amg_v_cycle coarse matrix cells overflow u32: n_coarse={n_coarse}."
+        ));
     };
 
     let mut nodes = Vec::new();
+    let smooth_into = |nodes: &mut Vec<Node>,
+                       mat: &str,
+                       rhs: &str,
+                       sol: &str,
+                       tmp: &str,
+                       n: u32,
+                       tag: &str,
+                       copy_var: &str| {
+        nodes.extend(jacobi_smooth_step_serial_body(
+            mat, rhs, sol, omega, tmp, n, tag,
+        ));
+        nodes.push(Node::loop_for(
+            copy_var,
+            Expr::u32(0),
+            Expr::u32(n),
+            vec![Node::store(
+                sol,
+                Expr::var(copy_var),
+                Expr::load(tmp, Expr::var(copy_var)),
+            )],
+        ));
+    };
+    let matvec_loop = |row_var: &str,
+                       rows: u32,
+                       col_var: &str,
+                       cols: u32,
+                       acc_var: &str,
+                       mat: &str,
+                       vec_buf: &str,
+                       out_buf: &str,
+                       finish: fn(Expr, Expr) -> Expr| {
+        Node::loop_for(
+            row_var,
+            Expr::u32(0),
+            Expr::u32(rows),
+            vec![
+                Node::let_bind(acc_var, Expr::u32(0)),
+                Node::loop_for(
+                    col_var,
+                    Expr::u32(0),
+                    Expr::u32(cols),
+                    vec![Node::assign(
+                        acc_var,
+                        Expr::add(
+                            Expr::var(acc_var),
+                            crate::math::fixed::fixed_mul_16_16_expr(
+                                Expr::load(
+                                    mat,
+                                    Expr::add(
+                                        Expr::mul(Expr::var(row_var), Expr::u32(cols)),
+                                        Expr::var(col_var),
+                                    ),
+                                ),
+                                Expr::load(vec_buf, Expr::var(col_var)),
+                            ),
+                        ),
+                    )],
+                ),
+                Node::store(
+                    out_buf,
+                    Expr::var(row_var),
+                    finish(Expr::var(row_var), Expr::var(acc_var)),
+                ),
+            ],
+        )
+    };
 
-    // 1. Pre-smooth (serial: the whole V-cycle runs on one lane, see the region-body guard)
-    nodes.extend(jacobi_smooth_step_serial_body(
-        a,
-        b,
-        x,
-        omega,
-        scratch_fine,
-        n_fine,
-        "pre",
-    ));
-    // Copy scratch_fine back to x
-    nodes.push(Node::loop_for(
-        "__i",
-        Expr::u32(0),
-        Expr::u32(n_fine),
-        vec![Node::store(
-            x,
-            Expr::var("__i"),
-            Expr::load(scratch_fine, Expr::var("__i")),
-        )],
-    ));
-
-    // 2. Restrict: r = b - Ax; b_c = R r
+    smooth_into(&mut nodes, a, b, x, scratch_fine, n_fine, "pre", "__i");
+    let b_name = b;
     nodes.push(Node::loop_for(
         "i",
         Expr::u32(0),
@@ -131,68 +167,35 @@ pub fn amg_v_cycle(
             Node::store(
                 scratch_fine,
                 Expr::var("i"),
-                Expr::sub(Expr::load(b, Expr::var("i")), Expr::var("ax_i")),
+                Expr::sub(Expr::load(b_name, Expr::var("i")), Expr::var("ax_i")),
             ),
         ],
     ));
-
-    // b_c = R * r
-    nodes.push(Node::loop_for(
+    nodes.push(matvec_loop(
         "ic",
-        Expr::u32(0),
-        Expr::u32(n_coarse),
-        vec![
-            Node::let_bind("bc_i", Expr::u32(0)),
-            Node::loop_for(
-                "jf",
-                Expr::u32(0),
-                Expr::u32(n_fine),
-                vec![Node::assign(
-                    "bc_i",
-                    Expr::add(
-                        Expr::var("bc_i"),
-                        crate::math::fixed::fixed_mul_16_16_expr(
-                            Expr::load(
-                                r_mat,
-                                Expr::add(
-                                    Expr::mul(Expr::var("ic"), Expr::u32(n_fine)),
-                                    Expr::var("jf"),
-                                ),
-                            ),
-                            Expr::load(scratch_fine, Expr::var("jf")),
-                        ),
-                    ),
-                )],
-            ),
-            Node::store(scratch_coarse_b, Expr::var("ic"), Expr::var("bc_i")),
-        ],
+        n_coarse,
+        "jf",
+        n_fine,
+        "bc_i",
+        r_mat,
+        scratch_fine,
+        scratch_coarse_b,
+        |_, acc| acc,
     ));
-
-    // 3. Coarse solve
     nodes.push(Node::store(scratch_coarse_x, Expr::u32(0), Expr::u32(0)));
     for k in 0..4 {
-        nodes.extend(jacobi_smooth_step_serial_body(
+        smooth_into(
+            &mut nodes,
             a_c,
             scratch_coarse_b,
             scratch_coarse_x,
-            omega,
             "temp_coarse",
             n_coarse,
             &format!("coarse{k}"),
-        ));
-        nodes.push(Node::loop_for(
             "__k",
-            Expr::u32(0),
-            Expr::u32(n_coarse),
-            vec![Node::store(
-                scratch_coarse_x,
-                Expr::var("__k"),
-                Expr::load("temp_coarse", Expr::var("__k")),
-            )],
-        ));
+        );
     }
-
-    // 4. Prolong: x = x + P * x_c
+    let x_name = x;
     nodes.push(Node::loop_for(
         "if",
         Expr::u32(0),
@@ -221,54 +224,33 @@ pub fn amg_v_cycle(
                 )],
             ),
             Node::store(
-                x,
+                x_name,
                 Expr::var("if"),
-                Expr::add(Expr::load(x, Expr::var("if")), Expr::var("px_i")),
+                Expr::add(Expr::load(x_name, Expr::var("if")), Expr::var("px_i")),
             ),
         ],
     ));
+    smooth_into(&mut nodes, a, b, x, scratch_fine, n_fine, "post", "__m");
 
-    // 5. Post-smooth (serial, single lane)
-    nodes.extend(jacobi_smooth_step_serial_body(
-        a,
-        b,
-        x,
-        omega,
-        scratch_fine,
-        n_fine,
-        "post",
-    ));
-    nodes.push(Node::loop_for(
-        "__m",
-        Expr::u32(0),
-        Expr::u32(n_fine),
-        vec![Node::store(
-            x,
-            Expr::var("__m"),
-            Expr::load(scratch_fine, Expr::var("__m")),
-        )],
-    ));
-
+    let ro = |name: &str, slot: u32, count: u32| {
+        BufferDecl::storage(name, slot, BufferAccess::ReadOnly, DataType::U32).with_count(count)
+    };
+    let rw = |name: &str, slot: u32, count: u32| {
+        BufferDecl::storage(name, slot, BufferAccess::ReadWrite, DataType::U32).with_count(count)
+    };
     Program::wrapped(
         vec![
-            BufferDecl::storage(a, 0, BufferAccess::ReadOnly, DataType::U32).with_count(fine_cells),
-            BufferDecl::storage(b, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n_fine),
-            BufferDecl::storage(x, 2, BufferAccess::ReadWrite, DataType::U32).with_count(n_fine),
-            BufferDecl::storage(r_mat, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(transfer_cells),
-            BufferDecl::storage(p_mat, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(transfer_cells),
-            BufferDecl::storage(a_c, 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(coarse_cells),
-            BufferDecl::storage(omega, 6, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage(scratch_fine, 7, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(n_fine),
-            BufferDecl::storage(scratch_coarse_b, 8, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(n_coarse),
-            BufferDecl::storage(scratch_coarse_x, 9, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(n_coarse),
-            BufferDecl::storage("temp_coarse", 10, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(n_coarse),
+            ro(a, 0, fine_cells),
+            ro(b, 1, n_fine),
+            rw(x, 2, n_fine),
+            ro(r_mat, 3, transfer_cells),
+            ro(p_mat, 4, transfer_cells),
+            ro(a_c, 5, coarse_cells),
+            ro(omega, 6, 1),
+            rw(scratch_fine, 7, n_fine),
+            rw(scratch_coarse_b, 8, n_coarse),
+            rw(scratch_coarse_x, 9, n_coarse),
+            rw("temp_coarse", 10, n_coarse),
         ],
         [1, 1, 1],
         vec![wrap_anonymous_region(
@@ -368,7 +350,7 @@ inventory::submit! {
             let to_bytes = |words: &[u32]| vyre_primitives::wire::pack_u32_slice(words);
             vec![vec![to_bytes(&[1, 2, 3, 4])]]
         }),
-        Some(|| vec![vec![EXPECTED_V_CYCLE_PHASE_BYTES.to_vec()]]),
+        Some(|| vec![vec![EXPECTED_V_CYCLE_PHASE_BYTES.into()]]),
     )
     .with_no_legal_rewrite()
 }
@@ -458,37 +440,39 @@ mod tests {
         )
     }
 
+    fn fixture_4x2() -> (
+        [f64; 16],
+        [f64; 4],
+        [f64; 4],
+        [f64; 8],
+        [f64; 8],
+        [f64; 4],
+        f64,
+    ) {
+        (
+            [
+                2.0, -1.0, 0.0, 0.0, -1.0, 2.0, -1.0, 0.0, 0.0, -1.0, 2.0, -1.0, 0.0, 0.0, -1.0,
+                2.0,
+            ],
+            [1.0, 0.0, 0.0, 1.0],
+            [0.0; 4],
+            [1.0, 0.5, 0.0, 0.0, 0.0, 0.5, 1.0, 0.5],
+            [1.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.0, 0.5],
+            [2.0, -0.5, -0.5, 2.0],
+            2.0 / 3.0,
+        )
+    }
+
     #[test]
     fn cpu_ref_identity_holds() {
-        let n_fine = 4;
-        let n_coarse = 2;
-        let a = vec![
-            2.0, -1.0, 0.0, 0.0, -1.0, 2.0, -1.0, 0.0, 0.0, -1.0, 2.0, -1.0, 0.0, 0.0, -1.0, 2.0,
-        ];
-        let b = vec![1.0, 0.0, 0.0, 1.0];
-        let x = vec![0.0; 4];
-        let r_mat = vec![1.0, 0.5, 0.0, 0.0, 0.0, 0.5, 1.0, 0.5];
-        let p_mat = vec![1.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.0, 0.5];
-        let a_c = vec![2.0, -0.5, -0.5, 2.0];
-        let omega = 2.0 / 3.0;
-
-        let x_out = cpu_ref(&a, &b, &x, &r_mat, &p_mat, &a_c, omega, n_fine, n_coarse);
+        let (a, b, x, r_mat, p_mat, a_c, omega) = fixture_4x2();
+        let x_out = cpu_ref(&a, &b, &x, &r_mat, &p_mat, &a_c, omega, 4, 2);
         assert_eq!(x_out.len(), 4);
     }
 
     #[test]
     fn cpu_ref_into_reuses_output_and_scratch_storage() {
-        let n_fine = 4;
-        let n_coarse = 2;
-        let a = vec![
-            2.0, -1.0, 0.0, 0.0, -1.0, 2.0, -1.0, 0.0, 0.0, -1.0, 2.0, -1.0, 0.0, 0.0, -1.0, 2.0,
-        ];
-        let b = vec![1.0, 0.0, 0.0, 1.0];
-        let x = vec![0.0; 4];
-        let r_mat = vec![1.0, 0.5, 0.0, 0.0, 0.0, 0.5, 1.0, 0.5];
-        let p_mat = vec![1.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.0, 0.5];
-        let a_c = vec![2.0, -0.5, -0.5, 2.0];
-        let omega = 2.0 / 3.0;
+        let (a, b, x, r_mat, p_mat, a_c, omega) = fixture_4x2();
         let mut scratch = AmgVcycleScratch::default();
         let mut out = Vec::with_capacity(8);
 
@@ -500,8 +484,8 @@ mod tests {
             &p_mat,
             &a_c,
             omega,
-            n_fine,
-            n_coarse,
+            4,
+            2,
             &mut scratch,
             &mut out,
         )
@@ -518,8 +502,8 @@ mod tests {
             &p_mat,
             &a_c,
             omega,
-            n_fine,
-            n_coarse,
+            4,
+            2,
             &mut scratch,
             &mut out,
         )

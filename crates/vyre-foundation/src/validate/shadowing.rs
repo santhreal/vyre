@@ -18,26 +18,12 @@ pub(crate) fn check_local(
 
 #[cfg(test)]
 mod tests {
+    use super::super::uniformity::tests::scope_with_binding;
     use super::*;
-    use crate::ir::DataType;
-
-    fn scope_with(name: &str) -> FxHashMap<crate::ir::Ident, Binding> {
-        let mut scope = FxHashMap::default();
-        scope.insert(
-            crate::ir::Ident::from(name),
-            Binding {
-                ty: DataType::U32,
-                ty_known: true,
-                mutable: true,
-                uniform: true,
-            },
-        );
-        scope
-    }
 
     #[test]
     fn shadowing_detected_by_default() {
-        let scope = scope_with("x");
+        let scope = scope_with_binding("x", true);
         let mut errors = Vec::new();
         check_local("x", &scope, ValidationOptions::default(), &mut errors);
         assert_eq!(errors.len(), 1);
@@ -46,7 +32,7 @@ mod tests {
 
     #[test]
     fn shadowing_allowed_with_opt_in() {
-        let scope = scope_with("x");
+        let scope = scope_with_binding("x", true);
         let mut errors = Vec::new();
         let options = ValidationOptions::default().with_shadowing(true);
         check_local("x", &scope, options, &mut errors);
@@ -55,7 +41,7 @@ mod tests {
 
     #[test]
     fn new_name_never_errors() {
-        let scope = scope_with("x");
+        let scope = scope_with_binding("x", true);
         let mut errors = Vec::new();
         check_local("y", &scope, ValidationOptions::default(), &mut errors);
         assert!(errors.is_empty());

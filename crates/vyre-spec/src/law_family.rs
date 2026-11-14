@@ -561,12 +561,6 @@ impl LawFamily {
             },
         }
     }
-
-    /// Whether a bare declaration of this family carries executable evidence.
-    #[must_use]
-    pub const fn is_provable_from_name(self) -> bool {
-        self.obligation().evidence.is_executable()
-    }
 }
 
 /// Every family carries a distinct index, and the indices cover the whole

@@ -48,33 +48,10 @@ impl IterationSpace {
         Self::new(extents, region.kind)
     }
 
-    /// Total number of logical points in the iteration space.
-    #[must_use]
-    pub fn total_points(&self) -> u64 {
-        if self.extents.is_empty() {
-            1
-        } else {
-            self.extents.iter().copied().product()
-        }
-    }
     /// Check whether two iteration spaces are point-to-point congruent (same rank and extents).
     #[must_use]
     pub fn is_congruent_with(&self, other: &Self) -> bool {
         self.extents == other.extents
-    }
-
-    /// Check whether this iteration space can be partitioned into tiles of shape `tile_shape`.
-    #[must_use]
-    pub fn is_tile_compatible(&self, tile_shape: &[u32]) -> bool {
-        if tile_shape.len() > self.extents.len() {
-            return false;
-        }
-        tile_shape
-            .iter()
-            .zip(&self.extents)
-            .all(|(&tile_dim, &extent)| {
-                tile_dim > 0 && (extent == 0 || extent >= u64::from(tile_dim))
-            })
     }
 }
 

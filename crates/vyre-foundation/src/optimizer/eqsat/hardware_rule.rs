@@ -218,14 +218,6 @@ impl<L: ENodeLang> Rule<L> for HardwarePropertyRule<L> {
         self.inner.proof_term()
     }
 
-    fn cache_key(&self) -> RuleCacheKey {
-        RuleCacheKey::from_components(
-            self.name(),
-            &self.fact_identity(),
-            &self.proof_term().obligation_digest,
-        )
-    }
-
     fn matches(&self, egraph: &EGraph<L>) -> Vec<(EClassId, EClassId)> {
         if self.is_satisfied() {
             self.inner.matches(egraph)

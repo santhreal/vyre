@@ -9,7 +9,7 @@ use super::layout::{
     PersistentBfsBatchLayout, PersistentBfsFrontierLayout, PersistentBfsPlanCacheKey,
     PersistentBfsPlanCacheKind,
 };
-use super::program::{persistent_bfs, persistent_bfs_batch};
+use super::program::{persistent_bfs_batch, persistent_bfs_for_extents};
 use crate::graph::program_graph::ProgramGraphShape;
 use vyre_foundation::ir::Program;
 
@@ -66,8 +66,9 @@ impl PersistentBfsResidentDispatchPlan {
     /// Build the canonical primitive program for this resident plan.
     #[must_use]
     pub fn program(&self, frontier_in: &str, frontier_out: &str) -> Program {
-        persistent_bfs(
-            self.program_shape(),
+        persistent_bfs_for_extents(
+            self.node_count,
+            self.edge_count,
             frontier_in,
             frontier_out,
             self.allow_mask,

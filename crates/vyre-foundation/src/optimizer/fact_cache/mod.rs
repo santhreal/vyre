@@ -285,14 +285,6 @@ impl FactCache {
         self.has_fresh_partition_for(program, FactPartition::Use)
     }
 
-    /// True when cached shape and use facts match `program`.
-    #[must_use]
-    pub fn has_fresh_shape_and_use_for(&self, program: &Program) -> bool {
-        self.fingerprint == program.fingerprint()
-            && self.has_partition(FactPartition::Shape)
-            && self.has_partition(FactPartition::Use)
-    }
-
     /// True when a typed fact partition is present, independent of fingerprint.
     #[must_use]
     pub(crate) fn has_partition(&self, partition: FactPartition) -> bool {

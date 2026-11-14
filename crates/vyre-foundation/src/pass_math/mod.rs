@@ -14,7 +14,5 @@ pub mod polyhedral_fusion;
 /// Region-graph reachability, lineage and shortest-path closures over a
 /// semiring, plus the lattice joins a fixpoint iteration needs.
 pub mod semiring_closure;
-/// String-diagram composition checks for IR rewrite arrows.
-pub mod string_diagram_ir_rewrite;
 /// Tensor-network contraction ordering for fusion planning.
 pub mod tensor_network_fusion_order;

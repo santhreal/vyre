@@ -2,13 +2,12 @@
 //! Audit cleanup A21 (2026-04-30): split from monolithic scheduler.rs.
 
 use rustc_hash::{FxHashMap, FxHashSet};
-use smallvec::SmallVec;
 
 use super::topo::{
     reserve_hash_map_capacity, reserve_vec_capacity, schedule_pass_metadata_indices,
 };
 use super::{PassResearchTrace, PassScheduler, PassSchedulingError};
-use crate::optimizer::{AdapterCaps, ProgramPassKind, ProgramPassRegistration};
+use crate::optimizer::{AdapterCaps, ProgramPassKind};
 
 impl PassScheduler {
     /// Create a new `PassScheduler` from an explicit list of passes.
@@ -111,22 +110,6 @@ impl PassScheduler {
         self.max_iterations
     }
 
-    /// Attach reproducibility metadata to pass metrics for one optimizer pass.
-    ///
-    /// This keeps innovation/audit evidence at the scheduler boundary instead
-    /// of hardcoding VX rows or research claims into pass definitions.
-    #[must_use]
-    pub fn with_research_trace(
-        mut self,
-        pass_name: &'static str,
-        trace: PassResearchTrace,
-    ) -> Self {
-        if trace.is_complete() {
-            self.research_traces.insert(pass_name, trace);
-        }
-        self
-    }
-
     /// Returns the recorded research trace for `pass_name`, if one was registered.
     #[must_use]
     pub fn research_trace_for(&self, pass_name: &str) -> Option<PassResearchTrace> {
@@ -214,140 +197,6 @@ impl PassScheduler {
         dense
     }
 
-    /// Verify the pass-composition arrows associate over a triple of
-    /// passes. Routes through the substrate
-    /// `string_diagram_ir_rewrite::composition_associates`  -  checks
-    /// that `(p_a ; p_b) ; p_c == p_a ; (p_b ; p_c)` as IR-rewrite
-    /// arrows, materializing the pass effects as dense matrices in
-    /// the capability column space.
-    ///
-    /// Returns `Some(true)` if associativity holds, `Some(false)`
-    /// if the triple is non-associative (a real bug in the
-    /// pass framework  -  passes should always associate under
-    /// rewrite composition), or `None` if any pass is unknown.
-    ///
-    /// # Why this matters
-    ///
-    /// String-diagram associativity is the categorical foundation
-    /// for the optimizer's right to coalesce / re-bracket pass runs.
-    /// If this returns `Some(false)`, the scheduler cannot freely
-    /// reorder pass groupings without changing semantics.
-    #[must_use]
-    pub fn triple_associates(&self, pass_a: &str, pass_b: &str, pass_c: &str) -> Option<bool> {
-        self.pass_index.get(pass_a)?;
-        self.pass_index.get(pass_b)?;
-        self.pass_index.get(pass_c)?;
-        // Each pass's effect on the capability column space is the
-        // identity matrix in the simplest model  -  passes don't
-        // semantically rewrite the capability vector, only mark
-        // capabilities valid/invalid. So associativity holds
-        // trivially via I·I·I = I, but the substrate call is the
-        // structural witness.
-        let n_caps = self.cap_count();
-        if n_caps == 0 {
-            return Some(true);
-        }
-        let n_u32 = u32::try_from(n_caps).unwrap_or(u32::MAX);
-        let f = crate::pass_math::string_diagram_ir_rewrite::identity_arrow(n_u32);
-        let g = f.clone();
-        let h = f.clone();
-        Some(
-            crate::pass_math::string_diagram_ir_rewrite::composition_associates(
-                &f, &g, &h, n_u32, n_u32, n_u32, n_u32,
-            ),
-        )
-    }
-
-    fn cap_count(&self) -> usize {
-        let mut caps = FxHashSet::default();
-        for pass in &self.passes {
-            let m = pass.metadata();
-            for &c in m.requires.iter().chain(m.invalidates.iter()) {
-                caps.insert(c);
-            }
-        }
-        caps.len()
-    }
-
-    /// Recommend a fusion-friendly run order for a candidate batch
-    /// of passes by treating their per-pass affected-capability count
-    /// as a tensor-network contraction dimension. Passes that touch
-    /// the largest set of capabilities are scheduled first, mirroring
-    /// the "contract largest dimension first" heuristic from
-    /// tensor-network ordering  -  this minimizes the size of
-    /// intermediate "stale capability" sets the optimizer must track.
-    ///
-    /// Routes through `pass_math::tensor_network_fusion_order::`
-    /// `optimal_fusion_order`. Returns indices into the input slice
-    /// in recommended run order.
-    #[must_use]
-    pub fn fusion_friendly_order(passes: &[&'static ProgramPassRegistration]) -> Vec<usize> {
-        let dimensions: SmallVec<[u32; 32]> = passes
-            .iter()
-            .map(|pass| {
-                let m = &pass.metadata;
-                let n = m.requires.len() + m.invalidates.len();
-                u32::try_from(n).unwrap_or(u32::MAX)
-            })
-            .collect();
-        crate::pass_math::tensor_network_fusion_order::optimal_fusion_order(&dimensions)
-    }
-
-    /// Estimate the contraction cost of running a candidate pass
-    /// ordering. Routes through `pass_math::`
-    /// `tensor_network_fusion_order::fusion_order_cost`. Lower is
-    /// better; callers can use this to compare two orderings (e.g.
-    /// the topological order from `schedule_passes` vs the
-    /// fusion-friendly order from [`Self::fusion_friendly_order`]).
-    #[must_use]
-    pub fn ordering_cost(passes: &[&'static ProgramPassRegistration], order: &[usize]) -> u64 {
-        let dimensions: SmallVec<[u32; 32]> = passes
-            .iter()
-            .map(|pass| {
-                let m = &pass.metadata;
-                let n = m.requires.len() + m.invalidates.len();
-                u32::try_from(n).unwrap_or(u32::MAX)
-            })
-            .collect();
-        crate::pass_math::tensor_network_fusion_order::fusion_order_cost(&dimensions, order)
-    }
-
-    /// Pairs of registered passes that are independent (neither
-    /// reaches the other in the transitive invalidation closure)
-    /// and therefore safe to fuse / parallelize. Computed via
-    /// `pass_math::polyhedral_fusion::fusable_pairs` over the
-    /// scheduler's invalidation adjacency.
-    ///
-    /// Returns a flat `Vec<(name_a, name_b)>` of fusable name pairs;
-    /// each pair is reported once with `name_a < name_b` to avoid
-    /// duplicate orientations.
-    #[must_use]
-    pub fn fusable_pass_pairs(&self) -> Vec<(&'static str, &'static str)> {
-        let n = self.passes.len();
-        if n == 0 {
-            return Vec::new();
-        }
-        let adj = self.cached_adjacency_or_init();
-        let n_u32 = u32::try_from(n).unwrap_or(u32::MAX);
-        let mask = crate::pass_math::polyhedral_fusion::fusable_pairs(adj, n_u32, n_u32);
-
-        let mut out = Vec::with_capacity(n);
-        for i in 0..n {
-            for j in (i + 1)..n {
-                if mask[i * n + j] != 0 {
-                    if let (Some(a), Some(b)) = (self.passes.get(i), self.passes.get(j)) {
-                        out.push((a.metadata().name, b.metadata().name));
-                    }
-                }
-            }
-        }
-        out
-    }
-
-    fn cached_adjacency_or_init(&self) -> &[u32] {
-        self.invalidation_adjacency()
-    }
-
     /// Continuous fusion-priority indicator per pass via homotopy
     /// continuation on the relaxed pass-fusion ILP. Each entry is in
     /// `[0, 1]`; higher = more pressure to fuse this pass with
@@ -386,30 +235,6 @@ impl PassScheduler {
         }
         let adj = self.invalidation_adjacency();
         crate::optimizer::megakernel::matroid_subset::max_fusion_subset(seed, adj, n, max_iters)
-    }
-
-    /// Multigrid Jacobi smoothing step on the pass-influence linear
-    /// system. Routes through
-    /// `pass_math::multigrid_matroid_solver::matroid_solve_step`.
-    /// Lets analyses (cost-prediction, scheduling-bound estimation)
-    /// solve `A·x ≈ b` over the n-dimensional pass space using the
-    /// substrate's relaxed solver.
-    #[must_use]
-    pub fn smooth_pass_system(&self, b: &[f64], x_in: &[f64], weight: f64) -> Vec<f64> {
-        let n = self.passes.len();
-        if n == 0 || b.len() != n || x_in.len() != n {
-            return Vec::new();
-        }
-        let adjacency_words = self.invalidation_adjacency();
-        let adjacency_weights: Vec<f64> = adjacency_words.iter().map(|&v| f64::from(v)).collect();
-        let n_u32 = u32::try_from(n).unwrap_or(u32::MAX);
-        crate::pass_math::multigrid_matroid_solver::matroid_solve_step(
-            &adjacency_weights,
-            b,
-            x_in,
-            weight,
-            n_u32,
-        )
     }
 
     /// Test whether two passes produce semantically identical capability

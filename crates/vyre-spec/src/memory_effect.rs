@@ -33,29 +33,4 @@ impl MemoryEffect {
         Self::Collective,
         Self::Fault,
     ];
-
-    /// Whether this effect mutates memory.
-    #[must_use]
-    #[inline]
-    pub const fn is_mutating(self) -> bool {
-        match self {
-            Self::Write | Self::Atomic | Self::AsyncTransfer => true,
-            Self::Pure | Self::Read | Self::Synchronizing | Self::Collective | Self::Fault => false,
-        }
-    }
-
-    /// Whether this effect synchronizes participant execution.
-    #[must_use]
-    #[inline]
-    pub const fn is_synchronizing(self) -> bool {
-        match self {
-            Self::Synchronizing | Self::Collective => true,
-            Self::Pure
-            | Self::Read
-            | Self::Write
-            | Self::Atomic
-            | Self::AsyncTransfer
-            | Self::Fault => false,
-        }
-    }
 }

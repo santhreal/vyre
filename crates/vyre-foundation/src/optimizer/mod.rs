@@ -556,25 +556,6 @@ pub fn registered_passes_for_profile(
     Ok(passes)
 }
 
-/// Return scheduled metadata for passes accepted by `profile`.
-///
-/// This is the lightweight inventory/reporting surface used by release gates
-/// and docs generators. It does not instantiate pass objects beyond the
-/// already-registered static metadata.
-///
-/// # Errors
-/// Returns [`OptimizerError::Scheduling`] when the global pass inventory is
-/// invalid.
-pub fn registered_pass_metadata_for_profile(
-    profile: OptimizerProfile,
-) -> Result<Vec<PassMetadata>, OptimizerError> {
-    Ok(registered_pass_registrations()?
-        .iter()
-        .map(|registration| registration.metadata)
-        .filter(|&metadata| profile.accepts(metadata))
-        .collect())
-}
-
 /// Return registered pass metadata in scheduled execution order.
 ///
 /// # Errors

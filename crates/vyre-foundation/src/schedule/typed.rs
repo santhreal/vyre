@@ -96,15 +96,6 @@ impl TypedScheduleStage<DeviceScope> {
             certificate: self.certificate,
         }
     }
-
-    /// Synchronize all workgroups at device scope.
-    #[must_use]
-    pub fn synchronize_device(mut self) -> Self {
-        self.ops.push(ScheduleOp::Synchronize {
-            scope: SynchronizationScope::Device,
-        });
-        self
-    }
 }
 
 impl TypedScheduleStage<WorkgroupScope> {

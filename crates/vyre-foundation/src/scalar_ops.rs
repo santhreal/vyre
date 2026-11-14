@@ -210,20 +210,6 @@ fn shift_count_i32(count: i32) -> u32 {
     u32::from_ne_bytes(count.to_ne_bytes()) & 31
 }
 
-/// `(shift, mask)` for the bit-unpack unary ops, identical to the emit
-/// lowering and to the CPU oracle: the trailing mask makes the operand's
-/// signedness irrelevant, so u32 and i32 words extract the same bits into a
-/// u32 result.
-fn unpack_shift_mask(op: &UnOp) -> Option<(u32, u32)> {
-    match op {
-        UnOp::Unpack4Low => Some((0, 0x0F)),
-        UnOp::Unpack4High => Some((4, 0x0F)),
-        UnOp::Unpack8Low => Some((0, 0xFF)),
-        UnOp::Unpack8High => Some((24, 0xFF)),
-        _ => None,
-    }
-}
-
 /// Apply `op` to one scalar.
 ///
 /// # Errors
@@ -231,21 +217,25 @@ fn unpack_shift_mask(op: &UnOp) -> Option<(u32, u32)> {
 /// Returns [`EvalError`] when `op` has no defined meaning at the operand's
 /// width.
 pub(crate) fn apply_unary(op: &UnOp, operand: Value) -> Result<Value, EvalError> {
-    if let Some((shift, mask)) = unpack_shift_mask(op) {
-        let bits = match operand {
-            Value::U32(value) => value,
-            Value::I32(value) => u32::from_ne_bytes(value.to_ne_bytes()),
-            Value::U64(_) => return Err(unsupported_unary(op, "u64")),
-            Value::F32(_) => return Err(unsupported_unary(op, "f32")),
-            Value::Bool(_) => return Err(unsupported_unary(op, "bool")),
-        };
-        return Ok(Value::U32((bits >> shift) & mask));
-    }
-    // Bitcast is bit reinterpretation, not arithmetic: it has no rounding and
-    // no canonicalization step. It is handled ahead of the per-width dispatch
-    // because that dispatch canonicalizes an f32 operand and an f32 result,
-    // and a subnormal or NaN word must survive a reinterpretation unchanged.
+    // Unpack and bitcast operate on raw words before per-width canonicalization.
     match op {
+        UnOp::Unpack4Low | UnOp::Unpack4High | UnOp::Unpack8Low | UnOp::Unpack8High => {
+            let (shift, mask) = match op {
+                UnOp::Unpack4Low => (0, 0x0F),
+                UnOp::Unpack4High => (4, 0x0F),
+                UnOp::Unpack8Low => (0, 0xFF),
+                UnOp::Unpack8High => (24, 0xFF),
+                _ => unreachable!(),
+            };
+            let bits = match operand {
+                Value::U32(value) => value,
+                Value::I32(value) => u32::from_ne_bytes(value.to_ne_bytes()),
+                Value::U64(_) => return Err(unsupported_unary(op, "u64")),
+                Value::F32(_) => return Err(unsupported_unary(op, "f32")),
+                Value::Bool(_) => return Err(unsupported_unary(op, "bool")),
+            };
+            return Ok(Value::U32((bits >> shift) & mask));
+        }
         UnOp::BitcastF32ToU32 => {
             return match operand {
                 Value::F32(value) => Ok(Value::U32(value.to_bits())),

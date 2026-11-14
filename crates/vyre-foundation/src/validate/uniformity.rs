@@ -98,7 +98,7 @@ pub(crate) fn is_uniform_with_load_policy(
 }
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use super::*;
     use crate::ir::{DataType, Expr, Ident};
 
@@ -106,7 +106,10 @@ mod tests {
         FxHashMap::default()
     }
 
-    fn scope_with_uniform(name: &str) -> FxHashMap<crate::ir::Ident, Binding> {
+    pub(in crate::validate) fn scope_with_binding(
+        name: &str,
+        uniform: bool,
+    ) -> FxHashMap<crate::ir::Ident, Binding> {
         let mut scope = FxHashMap::default();
         scope.insert(
             crate::ir::Ident::from(name),
@@ -114,21 +117,7 @@ mod tests {
                 ty: DataType::U32,
                 ty_known: true,
                 mutable: true,
-                uniform: true,
-            },
-        );
-        scope
-    }
-
-    fn scope_with_divergent(name: &str) -> FxHashMap<crate::ir::Ident, Binding> {
-        let mut scope = FxHashMap::default();
-        scope.insert(
-            crate::ir::Ident::from(name),
-            Binding {
-                ty: DataType::U32,
-                ty_known: true,
-                mutable: true,
-                uniform: false,
+                uniform,
             },
         );
         scope
@@ -157,13 +146,13 @@ mod tests {
 
     #[test]
     fn uniform_var_is_uniform() {
-        let scope = scope_with_uniform("x");
+        let scope = scope_with_binding("x", true);
         assert!(is_uniform(&Expr::Var(Ident::from("x")), &scope));
     }
 
     #[test]
     fn divergent_var_is_divergent() {
-        let scope = scope_with_divergent("x");
+        let scope = scope_with_binding("x", false);
         assert!(!is_uniform(&Expr::Var(Ident::from("x")), &scope));
     }
 

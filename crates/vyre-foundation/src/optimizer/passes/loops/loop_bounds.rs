@@ -40,10 +40,7 @@ pub(crate) fn literal_bounds(from: &Expr, to: &Expr) -> Option<(u32, u32)> {
 
 /// Extract a `u32` value from a `LitU32` or non-negative `LitI32`.
 #[must_use]
+#[inline]
 pub(crate) fn literal_u32(expr: &Expr) -> Option<u32> {
-    match expr {
-        Expr::LitU32(value) => Some(*value),
-        Expr::LitI32(value) => u32::try_from(*value).ok(),
-        _ => None,
-    }
+    expr.literal_u32()
 }

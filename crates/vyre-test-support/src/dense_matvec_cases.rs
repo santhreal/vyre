@@ -373,11 +373,4 @@ pub fn arm_coverage() -> ArmCoverage {
     )
 }
 
-/// Deterministic 32-bit mix, the corpus generator both arms draw from.
-fn mix(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
-    value ^ (value >> 16)
-}
+use crate::scalar_corpora::mix32 as mix;

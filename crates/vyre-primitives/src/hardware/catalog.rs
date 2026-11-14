@@ -133,12 +133,6 @@ impl OpShape {
             semantic,
         }
     }
-
-    /// Return total input and output buffer arity.
-    #[must_use]
-    pub const fn total_buffers(self) -> u8 {
-        self.input_buffers + self.output_buffers
-    }
 }
 
 /// Intrinsic-specific conformance geometry keyed by canonical operation identity.

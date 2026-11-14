@@ -408,14 +408,6 @@ mod tests {
         BufferDecl::storage("buf", 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)
     }
 
-    fn region(generator: &str, body: Vec<Node>) -> Node {
-        Node::Region {
-            generator: Ident::from(generator),
-            source_region: None,
-            body: Arc::new(body),
-        }
-    }
-
     fn store(index: u32, value: u32) -> Node {
         Node::store("buf", Expr::u32(index), Expr::u32(value))
     }
@@ -429,7 +421,7 @@ mod tests {
         let program = Program::wrapped(
             vec![buffer()],
             [1, 1, 1],
-            vec![region("a", vec![store(0, 1)])],
+            vec![Node::region("a", vec![store(0, 1)])],
         );
         assert!(!contains_grid_sync(&program));
         let split = segments(&program);
@@ -443,9 +435,9 @@ mod tests {
             vec![buffer()],
             [1, 1, 1],
             vec![
-                region("a", vec![store(0, 1)]),
+                Node::region("a", vec![store(0, 1)]),
                 Node::barrier_with_ordering(MemoryOrdering::SeqCst),
-                region("b", vec![store(1, 2)]),
+                Node::region("b", vec![store(1, 2)]),
             ],
         );
         assert!(!contains_grid_sync(&program));
@@ -468,9 +460,9 @@ mod tests {
             vec![buffer()],
             [1, 1, 1],
             vec![Node::Block(vec![
-                region("a", vec![store(0, 1)]),
+                Node::region("a", vec![store(0, 1)]),
                 Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![store(1, 2)]),
+                Node::region("b", vec![store(1, 2)]),
             ])],
         );
         assert!(contains_grid_sync(&program));
@@ -487,10 +479,10 @@ mod tests {
     #[test]
     fn every_fence_adds_one_segment() {
         for fences in 0..5_u32 {
-            let mut nodes = vec![region("head", vec![store(0, 1)])];
+            let mut nodes = vec![Node::region("head", vec![store(0, 1)])];
             for index in 0..fences {
                 nodes.push(Node::barrier_with_ordering(MemoryOrdering::GridSync));
-                nodes.push(region("tail", vec![store(1, index)]));
+                nodes.push(Node::region("tail", vec![store(1, index)]));
             }
             let program = Program::wrapped(vec![buffer()], [1, 1, 1], nodes);
             assert_eq!(
@@ -507,9 +499,9 @@ mod tests {
             vec![buffer()],
             [256, 1, 1],
             vec![
-                region("a", vec![store(0, 1)]),
+                Node::region("a", vec![store(0, 1)]),
                 Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![store(1, 2)]),
+                Node::region("b", vec![store(1, 2)]),
             ],
         );
         for segment in segments(&program) {
@@ -551,9 +543,9 @@ mod tests {
             vec![buffer()],
             [1, 1, 1],
             vec![
-                region("a", vec![store(0, 1)]),
+                Node::region("a", vec![store(0, 1)]),
                 Node::barrier_with_ordering(MemoryOrdering::GridSync),
-                region("b", vec![store(1, 2)]),
+                Node::region("b", vec![store(1, 2)]),
             ],
         );
         assert_eq!(loop_nested_grid_sync(&program), None);

@@ -441,43 +441,6 @@ const NTT_GENERATOR_G: u32 = 3;
 /// Maximum NTT length (2^23).
 const NTT_MAX_LEN: u32 = 1 << 23;
 
-#[inline]
-fn ntt_mod_add(a: u32, b: u32) -> u32 {
-    let s = (a as u64) + (b as u64);
-    (if s >= NTT_PRIME_P as u64 {
-        s - NTT_PRIME_P as u64
-    } else {
-        s
-    }) as u32
-}
-
-#[inline]
-fn ntt_mod_sub(a: u32, b: u32) -> u32 {
-    if a >= b {
-        a - b
-    } else {
-        NTT_PRIME_P - (b - a)
-    }
-}
-
-#[inline]
-fn ntt_mod_mul(a: u32, b: u32) -> u32 {
-    ((a as u64 * b as u64) % NTT_PRIME_P as u64) as u32
-}
-
-fn ntt_mod_pow(mut base: u32, mut exp: u32) -> u32 {
-    let mut result: u32 = 1;
-    base %= NTT_PRIME_P;
-    while exp > 0 {
-        if exp & 1 == 1 {
-            result = ntt_mod_mul(result, base);
-        }
-        exp >>= 1;
-        base = ntt_mod_mul(base, base);
-    }
-    result
-}
-
 fn ntt_bit_reverse<T: Copy>(a: &mut [T]) {
     let n = a.len();
     let shift = usize::BITS - n.trailing_zeros();
@@ -501,17 +464,17 @@ pub fn ntt_forward_witness(a: &mut [u32]) {
 
     let mut len = 2u32;
     while len <= n {
-        let w_n = ntt_mod_pow(NTT_GENERATOR_G, (NTT_PRIME_P - 1) / len);
+        let w_n = ntt_mod_pow_witness(NTT_GENERATOR_G, (NTT_PRIME_P - 1) / len);
         let half = len / 2;
         let mut i = 0;
         while i < n as usize {
             let mut w: u32 = 1;
             for j in 0..half as usize {
                 let u = a[i + j];
-                let v = ntt_mod_mul(a[i + j + half as usize], w);
-                a[i + j] = ntt_mod_add(u, v);
-                a[i + j + half as usize] = ntt_mod_sub(u, v);
-                w = ntt_mod_mul(w, w_n);
+                let v = ntt_mod_mul_witness(a[i + j + half as usize], w);
+                a[i + j] = ntt_mod_add_witness(u, v);
+                a[i + j + half as usize] = ntt_mod_sub_witness(u, v);
+                w = ntt_mod_mul_witness(w, w_n);
             }
             i += len as usize;
         }
@@ -531,8 +494,8 @@ pub fn ntt_inverse_witness(a: &mut [u32]) {
 
     let mut len = 2u32;
     while len <= n {
-        let w_n_inv = ntt_mod_pow(
-            ntt_mod_pow(NTT_GENERATOR_G, (NTT_PRIME_P - 1) / len),
+        let w_n_inv = ntt_mod_pow_witness(
+            ntt_mod_pow_witness(NTT_GENERATOR_G, (NTT_PRIME_P - 1) / len),
             NTT_PRIME_P - 2,
         );
         let half = len / 2;
@@ -541,18 +504,18 @@ pub fn ntt_inverse_witness(a: &mut [u32]) {
             let mut w: u32 = 1;
             for j in 0..half as usize {
                 let u = a[i + j];
-                let v = ntt_mod_mul(a[i + j + half as usize], w);
-                a[i + j] = ntt_mod_add(u, v);
-                a[i + j + half as usize] = ntt_mod_sub(u, v);
-                w = ntt_mod_mul(w, w_n_inv);
+                let v = ntt_mod_mul_witness(a[i + j + half as usize], w);
+                a[i + j] = ntt_mod_add_witness(u, v);
+                a[i + j + half as usize] = ntt_mod_sub_witness(u, v);
+                w = ntt_mod_mul_witness(w, w_n_inv);
             }
             i += len as usize;
         }
         len <<= 1;
     }
 
-    let n_inv = ntt_mod_pow(n, NTT_PRIME_P - 2);
+    let n_inv = ntt_mod_pow_witness(n, NTT_PRIME_P - 2);
     for x in a.iter_mut() {
-        *x = ntt_mod_mul(*x, n_inv);
+        *x = ntt_mod_mul_witness(*x, n_inv);
     }
 }

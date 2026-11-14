@@ -22,9 +22,6 @@ pub mod adler32;
 /// Fused CRC-32 + FNV-1a32 + Adler-32 one-pass primitive.
 pub mod multi_hash;
 
-/// Hash table primitives.
-pub mod table;
-
 /// Vector Symbolic Architecture (VSA) primitives  -  bind + bundle on
 /// 10K-dim binary hypervectors. The same Programs serve retrieval,
 /// reasoning, and content-addressable Program fingerprint compositions.

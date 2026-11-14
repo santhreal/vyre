@@ -46,10 +46,4 @@ impl QuantizationMeaning {
             Self::BlockScaled { scale_type, .. } => scale_type.bit_width() as u8,
         }
     }
-
-    /// Whether this is symmetric zero-centered quantization.
-    #[must_use]
-    pub const fn is_symmetric(&self) -> bool {
-        matches!(self, Self::Symmetric { .. } | Self::Microscaling { .. })
-    }
 }

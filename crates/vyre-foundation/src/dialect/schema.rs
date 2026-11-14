@@ -132,39 +132,6 @@ impl ResourceAbi {
         layouts: &[],
     };
 
-    /// Construct a resource ABI with resources only.
-    #[must_use]
-    pub const fn with_resources(resources: &'static [ResourceBinding]) -> Self {
-        Self {
-            resources,
-            layouts: &[],
-        }
-    }
-
-    /// Construct a resource ABI with resources and layout bindings.
-    #[must_use]
-    pub const fn with_resources_and_layouts(
-        resources: &'static [ResourceBinding],
-        layouts: &'static [LayoutBinding],
-    ) -> Self {
-        Self { resources, layouts }
-    }
-
-    /// Find a resource binding by name.
-    #[must_use]
-    pub fn find_resource(&self, name: &str) -> Option<&'static ResourceBinding> {
-        self.resources.iter().find(|res| res.name == name)
-    }
-
-    /// Find a layout contract for a resource by name.
-    #[must_use]
-    pub fn find_layout(&self, resource_name: &str) -> Option<&'static LayoutContract> {
-        self.layouts
-            .iter()
-            .find(|b| b.resource_name == resource_name)
-            .map(|b| &b.layout)
-    }
-
     /// Check if all required resources are present in the provided bound names.
     ///
     /// # Errors

@@ -98,19 +98,6 @@ impl AsyncTransactionLifecycle {
     pub const fn is_in_flight(self) -> bool {
         matches!(self, Self::Submitted | Self::InFlight | Self::Arrived)
     }
-
-    /// Whether this lifecycle state can legally transition to `next`.
-    #[must_use]
-    pub const fn can_transition_to(self, next: Self) -> bool {
-        match (self, next) {
-            (Self::Submitted, Self::InFlight | Self::Failed | Self::Aborted) => true,
-            (Self::InFlight, Self::Arrived | Self::Committed | Self::Failed | Self::Aborted) => {
-                true
-            }
-            (Self::Arrived, Self::Committed | Self::Failed | Self::Aborted) => true,
-            _ => false,
-        }
-    }
 }
 
 /// Exhaustive compile-time check for [`AsyncTransactionLifecycle`].

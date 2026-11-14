@@ -221,7 +221,13 @@ pub trait Rule<L: ENodeLang> {
     fn proof_term(&self) -> ProofTerm;
 
     /// Deterministic cache key for memoization and invalidation.
-    fn cache_key(&self) -> RuleCacheKey;
+    fn cache_key(&self) -> RuleCacheKey {
+        RuleCacheKey::from_components(
+            self.name(),
+            &self.fact_identity(),
+            &self.proof_term().obligation_digest,
+        )
+    }
 
     /// Find every match of this rule's LHS pattern in `egraph` and return
     /// the (a, b) pairs that should be equated.

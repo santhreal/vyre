@@ -210,7 +210,7 @@ pub fn u32_evaluator_corpus() -> Vec<u32> {
 /// Avalanches every input bit, so consecutive seeds produce unrelated words and
 /// a sweep over a seed range covers the width rather than a neighbourhood.
 #[must_use]
-pub fn mix32(mut value: u32) -> u32 {
+pub const fn mix32(mut value: u32) -> u32 {
     value ^= value >> 16;
     value = value.wrapping_mul(0x7FEB_352D);
     value ^= value >> 15;

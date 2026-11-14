@@ -387,14 +387,7 @@ mod tests {
         regions.sort();
     }
 
-    fn reference_dedup_regions(regions: Vec<RegionTriple>) -> Vec<RegionTriple> {
-        let input: Vec<(u32, u32, u32)> = regions.iter().map(|r| (r.pid, r.start, r.end)).collect();
-        let deduped = vyre_reference::composition_witness::dedup_regions_witness(input);
-        deduped
-            .into_iter()
-            .map(|(pid, start, end)| RegionTriple::new(pid, start, end))
-            .collect()
-    }
+    use crate::pattern::region::reference_dedup_regions;
 
     fn reference_dedup_regions_inplace(regions: &mut Vec<RegionTriple>) {
         let deduped = reference_dedup_regions(std::mem::take(regions));

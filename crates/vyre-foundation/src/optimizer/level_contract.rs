@@ -40,12 +40,6 @@ pub enum LevelVerdict {
 }
 
 impl LevelVerdict {
-    /// Whether the subject was verified.
-    #[must_use]
-    pub const fn is_verified(&self) -> bool {
-        matches!(self, Self::Verified)
-    }
-
     /// One rejection carrying `reason`.
     #[must_use]
     pub fn rejected(reason: impl Into<String>) -> Self {
@@ -136,15 +130,6 @@ pub fn stage_for_level(level: IrLevel) -> Option<&'static (dyn LevelStage + Sync
         }
     }
     found
-}
-
-/// Verify `subject` at `level` through the stage that owns it.
-///
-/// A level with no registered stage cannot verify anything, which the closure
-/// test reports as a missing stage rather than as a verified subject.
-#[must_use]
-pub fn verify_at_level(level: IrLevel, subject: &dyn Any) -> Option<LevelVerdict> {
-    stage_for_level(level).map(|stage| stage.verify(subject))
 }
 
 /// Every analysis name paired with the level that owns it.

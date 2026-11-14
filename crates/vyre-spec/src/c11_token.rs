@@ -230,13 +230,3 @@ pub const TOK_PP_ELIFDEF: u32 = 235;
 pub const TOK_PP_ELIFNDEF: u32 = 236;
 /// `#import` (clang/Objective-C): include-once form.
 pub const TOK_PP_IMPORT: u32 = 237;
-
-pub fn is_c_lexer_error_token(token: u32) -> bool {
-    matches!(
-        token,
-        TOK_ERR_UNTERMINATED_STRING
-            | TOK_ERR_UNTERMINATED_CHAR
-            | TOK_ERR_UNTERMINATED_COMMENT
-            | TOK_ERR_INVALID_ESCAPE
-    )
-}

@@ -101,15 +101,6 @@ impl InterpCtx {
         })
     }
 
-    /// Set the node operands visible to the primitive currently being interpreted.
-    pub fn set_operands<I>(&mut self, operands: I)
-    where
-        I: IntoIterator<Item = NodeId>,
-    {
-        self.operands.clear();
-        self.operands.extend(operands);
-    }
-
     /// Return the operand ids visible to the primitive currently being interpreted.
     #[must_use]
     pub fn operands(&self) -> &[NodeId] {
@@ -131,11 +122,6 @@ impl InterpCtx {
         self.get(id)
     }
 
-    /// Store a byte region used by region-oriented primitives.
-    pub fn set_region(&mut self, id: ByteRegionId, bytes: Vec<u8>) {
-        self.regions.insert(id, bytes);
-    }
-
     /// Read a byte region used by region-oriented primitives.
     ///
     /// # Errors
@@ -145,20 +131,6 @@ impl InterpCtx {
         self.regions.get(&id).map(Vec::as_slice).ok_or_else(|| {
             EvalError::new(format!(
                 "missing interpreter region {}. Fix: initialize every primitive input region before reference execution.",
-                id.0
-            ))
-        })
-    }
-
-    /// Mutably read a byte region used by region-oriented primitives.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`EvalError`] when `id` has no initialized mutable byte region.
-    pub fn region_mut(&mut self, id: ByteRegionId) -> Result<&mut Vec<u8>, EvalError> {
-        self.regions.get_mut(&id).ok_or_else(|| {
-            EvalError::new(format!(
-                "missing mutable interpreter region {}. Fix: allocate primitive output regions before reference execution.",
                 id.0
             ))
         })
@@ -206,21 +178,6 @@ pub enum NodeStorage {
 }
 
 impl NodeStorage {
-    /// Return node dependencies in storage order.
-    #[must_use]
-    pub fn input_ids(&self) -> Vec<NodeId> {
-        match self {
-            Self::BinOp { left, right, .. } => vec![*left, *right],
-            Self::UnOp { operand, .. } => vec![*operand],
-            Self::Extern { operands, .. } => operands.iter().copied().collect(),
-            Self::LitU32(_)
-            | Self::LitU64(_)
-            | Self::LitI32(_)
-            | Self::LitF32(_)
-            | Self::LitBool(_) => Vec::new(),
-        }
-    }
-
     /// Interpret this storage node without side effects.
     ///
     /// # Errors

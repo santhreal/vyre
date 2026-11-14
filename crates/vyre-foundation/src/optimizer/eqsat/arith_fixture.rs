@@ -68,13 +68,6 @@ impl Rule<Arith> for UnionEqualConstsRule {
         )
     }
 
-    fn cache_key(&self) -> super::RuleCacheKey {
-        super::RuleCacheKey::from_components(
-            self.name(),
-            &self.fact_identity(),
-            &self.proof_term().obligation_digest,
-        )
-    }
     fn matches(&self, egraph: &EGraph<Arith>) -> Vec<(EClassId, EClassId)> {
         let mut by_value: FxHashMap<u32, Vec<EClassId>> = FxHashMap::default();
         for (cid, node) in egraph.iter_nodes() {
@@ -120,13 +113,6 @@ impl Rule<Arith> for PairConstSelfRule {
         )
     }
 
-    fn cache_key(&self) -> super::RuleCacheKey {
-        super::RuleCacheKey::from_components(
-            self.name(),
-            &self.fact_identity(),
-            &self.proof_term().obligation_digest,
-        )
-    }
     fn matches(&self, egraph: &EGraph<Arith>) -> Vec<(EClassId, EClassId)> {
         let mut out = Vec::new();
         for (cid, node) in egraph.iter_nodes() {
@@ -162,13 +148,6 @@ impl Rule<Arith> for ForeignClassRule {
         )
     }
 
-    fn cache_key(&self) -> super::RuleCacheKey {
-        super::RuleCacheKey::from_components(
-            self.name(),
-            &self.fact_identity(),
-            &self.proof_term().obligation_digest,
-        )
-    }
     fn matches(&self, _egraph: &EGraph<Arith>) -> Vec<(EClassId, EClassId)> {
         vec![(EClassId(999), EClassId(999))]
     }

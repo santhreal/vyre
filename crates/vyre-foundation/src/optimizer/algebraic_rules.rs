@@ -146,22 +146,6 @@ impl ScalarLiteral {
         }
     }
 
-    /// Return true for a FINITE numeric literal: integers are always finite;
-    /// floats exclude NaN and ±inf; Bool is not numeric.
-    ///
-    /// Used by the `fma(0, x, c) → c` absorber, which is only sound when the
-    /// non-zero factor cannot be inf/NaN: `0.0 * inf = 0.0 * NaN = NaN`, not 0,
-    /// so the addend `c` is not the result when the other factor is non-finite.
-    #[must_use]
-    pub fn is_finite_numeric(self) -> bool {
-        match self {
-            Self::U32(_) | Self::U64(_) | Self::I32(_) | Self::I64(_) => true,
-            Self::F32(value) => value.is_finite(),
-            Self::F64(value) => value.is_finite(),
-            Self::Bool(_) => false,
-        }
-    }
-
     /// Return true for numeric one. Bool is deliberately excluded.
     #[must_use]
     pub fn is_numeric_one(self) -> bool {

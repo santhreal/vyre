@@ -42,10 +42,12 @@ struct ReleaseEdge {
 /// accepted was to insert a barrier the algorithm did not need.
 #[derive(Clone, Debug, Default)]
 pub struct ShadowMemory {
-    /// Per `(buffer_name, index)` list of access records.
-    accesses: FxHashMap<(String, u64), Vec<MemoryAccessRecord>>,
-    /// Per `(buffer_name, index)` releases published by an atomic there.
-    releases: FxHashMap<(String, u64), Vec<ReleaseEdge>>,
+    /// Interned id per buffer name seen in this tracker.
+    buffer_ids: FxHashMap<Box<str>, u32>,
+    /// Per `(buffer_id, index)` list of access records.
+    accesses: FxHashMap<(u32, u64), Vec<MemoryAccessRecord>>,
+    /// Per `(buffer_id, index)` releases published by an atomic there.
+    releases: FxHashMap<(u32, u64), Vec<ReleaseEdge>>,
     /// For each `(publisher, acquirer)` pair, the highest access sequence the
     /// acquirer has synchronized with. Everything the publisher recorded at or
     /// below it happens before everything the acquirer records afterwards.
@@ -65,6 +67,7 @@ impl ShadowMemory {
     #[must_use]
     pub fn new() -> Self {
         Self {
+            buffer_ids: FxHashMap::default(),
             accesses: FxHashMap::default(),
             releases: FxHashMap::default(),
             happens_before: FxHashMap::default(),
@@ -98,18 +101,6 @@ impl ShadowMemory {
         self.barrier_phase = 0;
     }
 
-    /// Current barrier generation.
-    #[must_use]
-    pub const fn current_barrier_phase(&self) -> u64 {
-        self.barrier_phase
-    }
-
-    /// Current whole-grid fence generation.
-    #[must_use]
-    pub const fn current_grid_phase(&self) -> u64 {
-        self.grid_phase
-    }
-
     /// Record a memory access and return the hazard it conflicts with, if any.
     ///
     /// The access is recorded either way, so one conflicting location reports
@@ -131,7 +122,7 @@ impl ShadowMemory {
         let me: Participant = (invocation, workgroup);
         self.observe_acquire(buffer, index, me, kind);
 
-        let key = (buffer.to_string(), index);
+        let key = (self.intern_buffer(buffer), index);
         let mut finding = None;
         if let Some(history) = self.accesses.get(&key) {
             for prior in history {
@@ -206,8 +197,9 @@ impl ShadowMemory {
         if !ordering.is_release() {
             return;
         }
+        let buf_id = self.intern_buffer(buffer);
         self.releases
-            .entry((buffer.to_string(), index))
+            .entry((buf_id, index))
             .or_default()
             .push(ReleaseEdge {
                 publisher,
@@ -236,30 +228,41 @@ impl ShadowMemory {
         if !ordering.is_acquire() {
             return;
         }
-        let Some(edges) = self.releases.get(&(buffer.to_string(), index)) else {
+        let Some(&buf_id) = self.buffer_ids.get(buffer) else {
             return;
         };
-        let observed: Vec<(Participant, u64)> = edges
-            .iter()
+        let Some(edges) = self.releases.get(&(buf_id, index)) else {
+            return;
+        };
+        for edge in edges {
             // A self-edge is never consulted, because a prior access by the
             // same lane is sequenced and skipped before the check. Dropping it
             // here keeps the map to pairs that can decide something; no test
             // can distinguish its presence.
-            .filter(|edge| edge.publisher != acquirer)
-            .filter(|edge| {
-                let same_workgroup = edge.publisher.1 == acquirer.1;
-                synchronization_reaches(edge.scope, same_workgroup)
-                    && synchronization_reaches(scope, same_workgroup)
-            })
-            .map(|edge| (edge.publisher, edge.seq))
-            .collect();
-        for (publisher, through) in observed {
+            if edge.publisher == acquirer {
+                continue;
+            }
+            let same_workgroup = edge.publisher.1 == acquirer.1;
+            if !(synchronization_reaches(edge.scope, same_workgroup)
+                && synchronization_reaches(scope, same_workgroup))
+            {
+                continue;
+            }
             let entry = self
                 .happens_before
-                .entry((publisher, acquirer))
+                .entry((edge.publisher, acquirer))
                 .or_default();
-            *entry = (*entry).max(through);
+            *entry = (*entry).max(edge.seq);
         }
+    }
+
+    fn intern_buffer(&mut self, buffer: &str) -> u32 {
+        if let Some(&id) = self.buffer_ids.get(buffer) {
+            return id;
+        }
+        let id = self.buffer_ids.len() as u32;
+        self.buffer_ids.insert(buffer.into(), id);
+        id
     }
 
     /// Record a memory access and check for data races.

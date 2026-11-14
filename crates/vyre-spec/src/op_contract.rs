@@ -125,12 +125,6 @@ impl AliasingContract {
     pub const fn is_disjoint(&self) -> bool {
         matches!(self, Self::Disjoint)
     }
-
-    /// Whether this contract permits in-place mutation or write aliasing.
-    #[must_use]
-    pub const fn allows_write_aliasing(&self) -> bool {
-        matches!(self, Self::MayAlias | Self::MustAlias)
-    }
 }
 
 impl Default for AliasingContract {
@@ -381,17 +375,6 @@ impl AbsenceClass {
             Self::GuardedOnly => "guarded-only",
             Self::Uncharacterized => "uncharacterized",
             Self::LawUnrecorded => "law-unrecorded",
-        }
-    }
-
-    /// Whether this class is a recorded decision rather than a missing one.
-    ///
-    /// `LawUnrecorded` is the only defect state: the other three are answers.
-    #[must_use]
-    pub const fn is_recorded(self) -> bool {
-        match self {
-            Self::NoLegalRewrite | Self::GuardedOnly | Self::Uncharacterized => true,
-            Self::LawUnrecorded => false,
         }
     }
 

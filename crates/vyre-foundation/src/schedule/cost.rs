@@ -18,22 +18,6 @@ pub struct ScheduleCostRecord {
     pub estimated_cycles: u64,
 }
 
-impl ScheduleCostRecord {
-    /// Return true if this cost record Pareto-dominates `other` (i.e. is <= on all metrics and < on at least one).
-    #[must_use]
-    pub fn pareto_dominates(&self, other: &Self) -> bool {
-        let le = self.memory_traffic_bytes <= other.memory_traffic_bytes
-            && self.register_pressure_score <= other.register_pressure_score
-            && self.estimated_cycles <= other.estimated_cycles;
-
-        let lt = self.memory_traffic_bytes < other.memory_traffic_bytes
-            || self.register_pressure_score < other.register_pressure_score
-            || self.estimated_cycles < other.estimated_cycles;
-
-        le && lt
-    }
-}
-
 /// Cost evaluator for schedule plans.
 #[derive(Clone, Debug, Default)]
 pub struct ScheduleCostModel {

@@ -248,14 +248,6 @@ mod tests {
     /// The dispatch wrapper's own names, for the tests that compare against it.
     const VERBOSE_FIXTURE: BellmanBuffers<'static> = DISPATCH_BINDINGS;
 
-    fn extents(n_nodes: u32, n_edges: u32, max_iterations: u32) -> BellmanExtents {
-        BellmanExtents {
-            n_nodes,
-            n_edges,
-            max_iterations,
-        }
-    }
-
     /// One refinement stage over the shared edge buffers.
     ///
     /// The stages differ only in their per-stage state buffers. Sharing the edge
@@ -281,7 +273,7 @@ mod tests {
     #[test]
     fn composition_emits_the_primitive_program_unchanged() {
         for (n_nodes, n_edges, max_iterations) in [(4, 4, 10), (300, 4, 6), (8, 12, 5)] {
-            let extents = extents(n_nodes, n_edges, max_iterations);
+            let extents = BellmanExtents::new(n_nodes, n_edges, max_iterations);
             let wire = |program: &Program| {
                 vyre_foundation::serial::wire::encode::to_wire(program)
                     .expect("Fix: a bellman program must encode to the wire form.")
@@ -343,7 +335,7 @@ mod tests {
     /// being forwarded fails here.
     #[test]
     fn every_supplied_binding_name_is_declared() {
-        let program = bellman_tn_order_program(FIXTURE, extents(8, 12, 5));
+        let program = bellman_tn_order_program(FIXTURE, BellmanExtents::new(8, 12, 5));
         let declared: Vec<&str> = program.buffers().iter().map(|b| b.name()).collect();
 
         for name in [
@@ -411,8 +403,10 @@ mod tests {
         let mut dist_init = vec![u32::MAX; n_nodes as usize];
         dist_init[0] = 0;
 
-        let declared =
-            bellman_tn_order_program(VERBOSE_FIXTURE, extents(n_nodes, 4, max_iterations));
+        let declared = bellman_tn_order_program(
+            VERBOSE_FIXTURE,
+            BellmanExtents::new(n_nodes, 4, max_iterations),
+        );
         let declared_changed = declared
             .buffers()
             .iter()
@@ -447,9 +441,12 @@ mod tests {
     #[test]
     fn test_multi_stage_order_refining() {
         // Build a Program with 3 separate Bellman regions.
-        let p1 = bellman_tn_order_program(stage("dist1", "nd1", "c1"), extents(4, 4, 5));
-        let p2 = bellman_tn_order_program(stage("dist2", "nd2", "c2"), extents(4, 4, 5));
-        let p3 = bellman_tn_order_program(stage("dist3", "nd3", "c3"), extents(4, 4, 5));
+        let p1 =
+            bellman_tn_order_program(stage("dist1", "nd1", "c1"), BellmanExtents::new(4, 4, 5));
+        let p2 =
+            bellman_tn_order_program(stage("dist2", "nd2", "c2"), BellmanExtents::new(4, 4, 5));
+        let p3 =
+            bellman_tn_order_program(stage("dist3", "nd3", "c3"), BellmanExtents::new(4, 4, 5));
 
         let final_p = vyre_test_support::test_parity_oracles::wrap_program_sequence(
             &[&p1, &p2, &p3],

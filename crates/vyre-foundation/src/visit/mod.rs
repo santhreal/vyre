@@ -54,11 +54,6 @@ pub(crate) mod walk;
 /// Descendant search lives in [`any_descendant`].
 pub mod node_map;
 
-/// The contract an evaluator implements to execute IR against an environment.
-pub(crate) mod evaluatable;
-/// The contract a backend implements to lower IR into its own representation.
-pub(crate) mod lowerable;
-
 #[cfg(test)]
 pub(crate) mod fixtures;
 
@@ -71,7 +66,6 @@ pub enum VisitOrder {
     Postorder,
 }
 
-pub use evaluatable::Evaluatable;
 pub use expr_parts::{
     any_subexpr, bin_op_magnitude, expr_buffer_name_mut, expr_buffer_ref, expr_children,
     expr_combine, expr_is_leaf, expr_magnitude, for_each_subexpr, push_expr_children,
@@ -82,7 +76,6 @@ pub use expr_visitor::{
     visit_expr, visit_expr_buffer_accesses, visit_postorder, visit_preorder,
     walk_expr_children_default, ExprBufferAccess, ExprVisitor,
 };
-pub use lowerable::Lowerable;
 pub(crate) use node_parts::map_bodies_cow;
 pub use node_parts::{
     child_bodies, child_bodies_mut, node_bound_name, node_buffer_names_mut, node_buffer_refs,

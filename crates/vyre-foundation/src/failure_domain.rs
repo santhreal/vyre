@@ -9,7 +9,6 @@ use std::string::String;
 use std::sync::{
     Condvar, Mutex, MutexGuard, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard,
 };
-use std::time::Duration;
 /// Explicit failure domain identifying which subsystem boundary failed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FailureDomain {
@@ -142,15 +141,6 @@ impl RecoveryClass {
             Self::DeviceContextFatal => "device_context_fatal",
             Self::ProcessFatal => "process_fatal",
             Self::InvariantViolation => "invariant_violation",
-        }
-    }
-
-    /// Whether this recovery class allows retry without process/device restart.
-    #[must_use]
-    pub const fn allows_inline_recovery(self) -> bool {
-        match self {
-            Self::TransactionallyRecoverable | Self::RestartableFromCanonicalInput => true,
-            Self::DeviceContextFatal | Self::ProcessFatal | Self::InvariantViolation => false,
         }
     }
 }
@@ -294,41 +284,6 @@ where
     }
 }
 
-/// Take a write guard over state that is rebuildable from canonical input.
-///
-/// WHY: the `RwLock` counterpart of [`govern_mutex_restartable`], so a
-/// restartable owner picks its lock kind without picking a different recovery.
-/// A poisoned lock here means a panic left the guarded state partly written.
-/// `reset_on_restart` returns it to an empty valid state, the poison flag is
-/// cleared so the next acquisition is an ordinary one, and the guard is handed
-/// back. Every entry discarded this way is derivable again from the input the
-/// owner already holds, which is what makes discarding it correct rather than
-/// lossy.
-pub fn govern_rwlock_write_restartable<'a, T, F>(
-    rwlock: &'a RwLock<T>,
-    owner: &'static str,
-    state: &'static str,
-    reset_on_restart: F,
-) -> RwLockWriteGuard<'a, T>
-where
-    F: FnOnce(&mut T),
-{
-    match rwlock.write() {
-        Ok(guard) => guard,
-        Err(poison) => {
-            eprintln!(
-                "vyre: {owner} recovered a poisoned lock over {state} by discarding it. A thread \
-                 panicked while that lock was held, so the state behind it is half written and is \
-                 rebuilt from canonical input on demand. Fix: report the earlier panic."
-            );
-            rwlock.clear_poison();
-            let mut guard = poison.into_inner();
-            reset_on_restart(&mut guard);
-            guard
-        }
-    }
-}
-
 /// Take poisoned state during teardown so the handles it holds are released.
 ///
 /// A destructor is the last owner of whatever a panic left behind. Refusing that
@@ -420,44 +375,6 @@ pub fn reclaim_poisoned_mutex<'a, T>(
     reclaim_poisoned_mutex_observed(mutex, owner, state).0
 }
 
-/// Take a read guard over state no owner can rebuild.
-///
-/// The `RwLock` read counterpart of [`reclaim_poisoned_mutex`], so an owner
-/// picks its lock kind without picking a different recovery.
-pub fn reclaim_poisoned_read<'a, T>(
-    rwlock: &'a RwLock<T>,
-    owner: &str,
-    state: &str,
-) -> RwLockReadGuard<'a, T> {
-    match rwlock.read() {
-        Ok(guard) => guard,
-        Err(poison) => {
-            report_reclaimed(owner, state);
-            rwlock.clear_poison();
-            poison.into_inner()
-        }
-    }
-}
-
-/// Take a write guard over state no owner can rebuild.
-///
-/// The `RwLock` write counterpart of [`reclaim_poisoned_mutex`], so an owner
-/// picks its lock kind without picking a different recovery.
-pub fn reclaim_poisoned_write<'a, T>(
-    rwlock: &'a RwLock<T>,
-    owner: &str,
-    state: &str,
-) -> RwLockWriteGuard<'a, T> {
-    match rwlock.write() {
-        Ok(guard) => guard,
-        Err(poison) => {
-            report_reclaimed(owner, state);
-            rwlock.clear_poison();
-            poison.into_inner()
-        }
-    }
-}
-
 /// Wait on a condition variable over state no owner can rebuild.
 ///
 /// A wait releases the mutex and takes it again, so it observes a panic in
@@ -476,35 +393,6 @@ pub fn reclaim_poisoned_condvar_wait<'a, T>(
             report_reclaimed(owner, state);
             mutex.clear_poison();
             poison.into_inner()
-        }
-    }
-}
-
-/// Wait on a condition variable with a deadline over state no owner can rebuild.
-///
-/// WHY: an unbounded wait turns one stalled holder into a stalled caller with
-/// no report. The returned flag states whether the wait ended on `timeout`
-/// rather than on a notification, so a stand-down terminates and the caller
-/// names the bound it waited out instead of blocking forever.
-///
-/// A wait releases the mutex and takes it again, so it observes a panic in
-/// another waiter exactly as an acquisition does. `mutex` is the lock `guard`
-/// came from, which is what the flag is cleared on.
-pub fn reclaim_poisoned_condvar_wait_timeout<'a, T>(
-    condvar: &Condvar,
-    mutex: &'a Mutex<T>,
-    guard: MutexGuard<'a, T>,
-    timeout: Duration,
-    owner: &str,
-    state: &str,
-) -> (MutexGuard<'a, T>, bool) {
-    match condvar.wait_timeout(guard, timeout) {
-        Ok((reacquired, result)) => (reacquired, result.timed_out()),
-        Err(poison) => {
-            report_reclaimed(owner, state);
-            mutex.clear_poison();
-            let (reacquired, result) = poison.into_inner();
-            (reacquired, result.timed_out())
         }
     }
 }

@@ -29,20 +29,4 @@ impl CausalTraceMode {
     pub const fn is_off(self) -> bool {
         matches!(self, Self::Off)
     }
-
-    /// Returns true if tracing is active for a given monotonic sequence counter.
-    #[inline]
-    pub fn should_trace(self, sequence: u64) -> bool {
-        match self {
-            Self::Off => false,
-            Self::Sampled { sample_every } => {
-                if sample_every == 0 {
-                    false
-                } else {
-                    sequence % (sample_every as u64) == 0
-                }
-            }
-            Self::Full => true,
-        }
-    }
 }

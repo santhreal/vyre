@@ -225,22 +225,4 @@ impl CausalReceipt {
         }
         Ok(receipt)
     }
-
-    /// Serialize to canonical bytes (JSON bytes representation).
-    pub fn to_canonical_bytes(&self) -> Vec<u8> {
-        serde_json::to_vec(self).unwrap_or_default()
-    }
-
-    /// Deserialize from canonical bytes with fail-closed schema check.
-    pub fn from_canonical_bytes(bytes: &[u8]) -> Result<Self, CausalError> {
-        let receipt: Self =
-            serde_json::from_slice(bytes).map_err(|e| CausalError::Json(e.to_string()))?;
-        if receipt.schema_version != CAUSAL_RECEIPT_SCHEMA_VERSION {
-            return Err(CausalError::StaleSchemaVersion {
-                expected: CAUSAL_RECEIPT_SCHEMA_VERSION,
-                found: receipt.schema_version,
-            });
-        }
-        Ok(receipt)
-    }
 }

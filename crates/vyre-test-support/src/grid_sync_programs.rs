@@ -8,18 +8,13 @@
 //! boundary is, and a copy that changes a buffer or an index makes the two
 //! suites judge different programs under the same name.
 
-use std::sync::Arc;
-
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Ident, MemoryOrdering, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryOrdering, Node, Program};
 
 /// A returning region named `generator` around `body`.
 #[must_use]
+#[inline]
 pub fn region(generator: &str, body: Vec<Node>) -> Node {
-    Node::Region {
-        generator: Ident::from(generator),
-        source_region: None,
-        body: Arc::new(body),
-    }
+    Node::region(generator, body)
 }
 
 /// Two grid-sync segments writing different slots of one four-element output.

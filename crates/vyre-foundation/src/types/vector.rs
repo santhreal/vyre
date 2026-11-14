@@ -30,18 +30,6 @@ impl VectorType {
         Self::new(element, 4)
     }
 
-    /// Vec8 vector.
-    #[must_use]
-    pub const fn vec8(element: ScalarType) -> Self {
-        Self::new(element, 8)
-    }
-
-    /// Vec16 vector.
-    #[must_use]
-    pub const fn vec16(element: ScalarType) -> Self {
-        Self::new(element, 16)
-    }
-
     /// Total bits occupied by the vector.
     #[must_use]
     pub const fn total_bits(&self) -> u32 {

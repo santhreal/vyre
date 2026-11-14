@@ -76,7 +76,7 @@ fn is_reflexive_cmp_safe(expr: &Expr) -> bool {
 ///
 /// Critical for GPU kernels where loop unrolling and index arithmetic
 /// generate patterns like `base + 0`, `stride * 1`, or `mask & 0`.
-#[expect(
+#[allow(
     clippy::too_many_lines,
     clippy::match_same_arms,
     reason = "binary identity table intentionally groups algebraic laws by operator family"
@@ -110,289 +110,59 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
     }
 
     match op {
-        BinOp::Add => {
-            // ─── Algebraic Reassociation ─────────────────────────
-            // (a + K1) + K2 → a + (K1 + K2)
-            if let Expr::BinOp {
-                op: BinOp::Add,
-                left: inner_a,
-                right: inner_k1,
-            } = left
-            {
-                match (inner_k1.as_ref(), right) {
-                    (Expr::LitU32(k1), Expr::LitU32(k2)) => {
-                        if let Some(sum) = k1.checked_add(*k2) {
-                            return Some(Expr::add(inner_a.as_ref().clone(), Expr::u32(sum)));
-                        }
-                    }
-                    (Expr::LitI32(k1), Expr::LitI32(k2)) => {
-                        if let Some(sum) = k1.checked_add(*k2) {
-                            return Some(Expr::add(inner_a.as_ref().clone(), Expr::i32(sum)));
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            // (K1 + a) + K2 → a + (K1 + K2)
-            if let Expr::BinOp {
-                op: BinOp::Add,
-                left: inner_k1,
-                right: inner_a,
-            } = left
-            {
-                match (inner_k1.as_ref(), right) {
-                    (Expr::LitU32(k1), Expr::LitU32(k2)) => {
-                        if let Some(sum) = k1.checked_add(*k2) {
-                            return Some(Expr::add(inner_a.as_ref().clone(), Expr::u32(sum)));
-                        }
-                    }
-                    (Expr::LitI32(k1), Expr::LitI32(k2)) => {
-                        if let Some(sum) = k1.checked_add(*k2) {
-                            return Some(Expr::add(inner_a.as_ref().clone(), Expr::i32(sum)));
-                        }
-                    }
-                    _ => {}
-                }
-            }
-
-            // ─── Distributive Law ──────────────────────────────────────────
-            // (x * K1) + (x * K2) → x * (K1 + K2)
-            if let (
-                Expr::BinOp {
-                    op: BinOp::Mul,
-                    left: l_inner_a,
-                    right: l_inner_k,
-                },
-                Expr::BinOp {
-                    op: BinOp::Mul,
-                    left: r_inner_a,
-                    right: r_inner_k,
-                },
-            ) = (left, right)
-            {
-                if l_inner_a == r_inner_a {
-                    match (l_inner_k.as_ref(), r_inner_k.as_ref()) {
-                        (Expr::LitU32(k1), Expr::LitU32(k2)) => {
-                            if let Some(sum) = k1.checked_add(*k2) {
-                                return Some(Expr::mul(l_inner_a.as_ref().clone(), Expr::u32(sum)));
-                            }
-                        }
-                        (Expr::LitI32(k1), Expr::LitI32(k2)) => {
-                            if let Some(sum) = k1.checked_add(*k2) {
-                                return Some(Expr::mul(l_inner_a.as_ref().clone(), Expr::i32(sum)));
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-            }
-
-            None
-        }
+        BinOp::Add => reassociate_int_lit(
+            BinOp::Add,
+            left,
+            right,
+            u32::checked_add,
+            i32::checked_add,
+            Expr::add,
+        )
+        .or_else(|| factor_common_mul(left, right, u32::checked_add, i32::checked_add)),
 
         BinOp::Sub => {
             if left == right && is_reflexive_cmp_safe(left) {
                 return Some(Expr::u32(0));
             }
-
-            // ─── Distributive Law ──────────────────────────────────────────
-            // (x * K1) - (x * K2) → x * (K1 - K2)
-            if let (
-                Expr::BinOp {
-                    op: BinOp::Mul,
-                    left: l_inner_a,
-                    right: l_inner_k,
-                },
-                Expr::BinOp {
-                    op: BinOp::Mul,
-                    left: r_inner_a,
-                    right: r_inner_k,
-                },
-            ) = (left, right)
-            {
-                if l_inner_a == r_inner_a {
-                    match (l_inner_k.as_ref(), r_inner_k.as_ref()) {
-                        (Expr::LitU32(k1), Expr::LitU32(k2)) => {
-                            if let Some(diff) = k1.checked_sub(*k2) {
-                                return Some(Expr::mul(
-                                    l_inner_a.as_ref().clone(),
-                                    Expr::u32(diff),
-                                ));
-                            }
-                        }
-                        (Expr::LitI32(k1), Expr::LitI32(k2)) => {
-                            if let Some(diff) = k1.checked_sub(*k2) {
-                                return Some(Expr::mul(
-                                    l_inner_a.as_ref().clone(),
-                                    Expr::i32(diff),
-                                ));
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-            }
-
-            None
+            factor_common_mul(left, right, u32::checked_sub, i32::checked_sub)
         }
 
         BinOp::Mul => {
-            // ─── Algebraic Reassociation ─────────────────────────
-            // (a * K1) * K2 → a * (K1 * K2)
-            if let Expr::BinOp {
-                op: BinOp::Mul,
-                left: inner_a,
-                right: inner_k1,
-            } = left
+            if let Some(folded) = reassociate_int_lit(
+                BinOp::Mul,
+                left,
+                right,
+                u32::checked_mul,
+                i32::checked_mul,
+                Expr::mul,
+            )
+            .or_else(|| distribute_mul_int(left, right))
             {
-                match (inner_k1.as_ref(), right) {
-                    (Expr::LitU32(k1), Expr::LitU32(k2)) => {
-                        if let Some(prod) = k1.checked_mul(*k2) {
-                            return Some(Expr::mul(inner_a.as_ref().clone(), Expr::u32(prod)));
-                        }
-                    }
-                    (Expr::LitI32(k1), Expr::LitI32(k2)) => {
-                        if let Some(prod) = k1.checked_mul(*k2) {
-                            return Some(Expr::mul(inner_a.as_ref().clone(), Expr::i32(prod)));
-                        }
-                    }
-                    _ => {}
-                }
+                return Some(folded);
             }
-            // (K1 * a) * K2 → a * (K1 * K2)
-            if let Expr::BinOp {
-                op: BinOp::Mul,
-                left: inner_k1,
-                right: inner_a,
-            } = left
-            {
-                match (inner_k1.as_ref(), right) {
-                    (Expr::LitU32(k1), Expr::LitU32(k2)) => {
-                        if let Some(prod) = k1.checked_mul(*k2) {
-                            return Some(Expr::mul(inner_a.as_ref().clone(), Expr::u32(prod)));
-                        }
-                    }
-                    (Expr::LitI32(k1), Expr::LitI32(k2)) => {
-                        if let Some(prod) = k1.checked_mul(*k2) {
-                            return Some(Expr::mul(inner_a.as_ref().clone(), Expr::i32(prod)));
-                        }
-                    }
-                    _ => {}
-                }
-            }
-
-            // ─── Distributive expansion ────────────
-            // Mul(c, Add(a, b)) → Add(Mul(c, a), Mul(c, b)) when `c` is
-            // a literal and at least one of `a`/`b` is also a literal.
-            // The "at least one literal sibling" guard guarantees at
-            // least one of the new Muls folds in the next pass, so the
-            // rewrite is monotone-down on instruction count for the
-            // post-fold IR. Wrapping integer arithmetic preserves
-            // equality (a + b)·c == a·c + b·c under u32/i32 overflow,
-            // so the rewrite is `Exact` for integer types only;
-            // floating point is rejected because the rounding of
-            // separate multiplications differs from one fused
-            // multiply.
-            if let (
-                Some(()),
-                Expr::BinOp {
-                    op: BinOp::Add,
-                    left: a,
-                    right: b,
-                },
-            ) = (lit_int(left), right)
-            {
-                if lit_int(a).is_some() || lit_int(b).is_some() {
-                    return Some(Expr::add(
-                        Expr::mul(left.clone(), a.as_ref().clone()),
-                        Expr::mul(left.clone(), b.as_ref().clone()),
-                    ));
-                }
-            }
-            if let (
-                Expr::BinOp {
-                    op: BinOp::Add,
-                    left: a,
-                    right: b,
-                },
-                Some(()),
-            ) = (left, lit_int(right))
-            {
-                if lit_int(a).is_some() || lit_int(b).is_some() {
-                    return Some(Expr::add(
-                        Expr::mul(a.as_ref().clone(), right.clone()),
-                        Expr::mul(b.as_ref().clone(), right.clone()),
-                    ));
-                }
-            }
-
-            // ─── Sign-preserving distributive expansion for subtraction ───
-            if let (
-                Some(()),
-                Expr::BinOp {
-                    op: BinOp::Sub,
-                    left: a,
-                    right: b,
-                },
-            ) = (lit_int(left), right)
-            {
-                if lit_int(a).is_some() || lit_int(b).is_some() {
-                    return Some(Expr::BinOp {
-                        op: BinOp::Sub,
-                        left: Box::new(Expr::mul(left.clone(), a.as_ref().clone())),
-                        right: Box::new(Expr::mul(left.clone(), b.as_ref().clone())),
-                    });
-                }
-            }
-            if let (
-                Expr::BinOp {
-                    op: BinOp::Sub,
-                    left: a,
-                    right: b,
-                },
-                Some(()),
-            ) = (left, lit_int(right))
-            {
-                if lit_int(a).is_some() || lit_int(b).is_some() {
-                    return Some(Expr::BinOp {
-                        op: BinOp::Sub,
-                        left: Box::new(Expr::mul(a.as_ref().clone(), right.clone())),
-                        right: Box::new(Expr::mul(b.as_ref().clone(), right.clone())),
-                    });
-                }
-            }
-
-            // x * 1 → x,  1 * x → x
             if is_one(right) {
                 return Some(left.clone());
             }
             if is_one(left) {
                 return Some(right.clone());
             }
-
-            // x * (-1) → Negate(x),  (-1) * x → Negate(x)
-            // GPU neg is 1 cycle; imul is 4-8 cycles.
-            if matches!(right, Expr::LitI32(-1)) {
+            let is_neg_one = |e: &Expr| match e {
+                Expr::LitI32(-1) => true,
+                Expr::LitF32(v) => lit_f32_eq(*v, -1.0),
+                _ => false,
+            };
+            if is_neg_one(right) {
                 return Some(Expr::negate(left.clone()));
             }
-            if matches!(left, Expr::LitI32(-1)) {
+            if is_neg_one(left) {
                 return Some(Expr::negate(right.clone()));
             }
-            if matches!(right, Expr::LitF32(v) if lit_f32_eq(*v, -1.0)) {
-                return Some(Expr::negate(left.clone()));
-            }
-            if matches!(left, Expr::LitF32(v) if lit_f32_eq(*v, -1.0)) {
-                return Some(Expr::negate(right.clone()));
-            }
-
-            // x * 0 → 0,  0 * x → 0  (for integer types only)
             if matches!(right, Expr::LitU32(0) | Expr::LitI32(0)) {
                 return Some(right.clone());
             }
             if matches!(left, Expr::LitU32(0) | Expr::LitI32(0)) {
                 return Some(left.clone());
             }
-
             None
         }
 
@@ -500,146 +270,85 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
         // the u32 builtins, it EXCLUDES `Var` (unknown type, may be a
         // float NaN) and `LitF32`. See its doc for how a provably-integer
         // `Var` could be recovered via the type-fact cache.
-        BinOp::Eq if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(true)),
-        BinOp::Ne if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(false)),
-        // x < x → false,  x > x → false   -  same guards apply.
-        BinOp::Lt if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(false)),
-        BinOp::Gt if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(false)),
-        // x <= x → true,  x >= x → true
-        BinOp::Le if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(true)),
-        BinOp::Ge if left == right && is_reflexive_cmp_safe(left) => Some(Expr::bool(true)),
+        BinOp::Eq | BinOp::Le | BinOp::Ge if left == right && is_reflexive_cmp_safe(left) => {
+            Some(Expr::bool(true))
+        }
+        BinOp::Ne | BinOp::Lt | BinOp::Gt if left == right && is_reflexive_cmp_safe(left) => {
+            Some(Expr::bool(false))
+        }
 
-        // ─── Modulo identities ───────────────────────────────
-        // x % 1 → 0  (any integer mod 1 is zero)
         BinOp::Mod if is_one(right) => Some(Expr::u32(0)),
-        // x % x is NOT folded to 0: it is unsound when x can be 0.
-        // Unsigned `0 % 0` is defined as 0 by the oracle (`rem_u32`) and
-        // would agree, BUT signed `0 % 0` *errors* in the oracle
-        // (`rem_i32`), so a type-blind fold to 0 fabricates a value where
-        // the i32 program is undefined, the same divergence the i32
-        // literal div/mod fix declines. const_fold cannot prove x is
-        // unsigned or non-zero here, so it declines. Literal `k % k`
-        // still folds via the typed literal evaluator.
 
-        // ─── Min/Max absorption ──────────────────────────────
-        // min(x, x) → x,  max(x, x) → x
-        BinOp::Min if left == right => Some(left.clone()),
-        BinOp::Max if left == right => Some(left.clone()),
-
-        // ─── range-based fold identities ────────
-        // For unsigned u32, every value lies in [0, u32::MAX], so:
-        //   min(x, u32::MAX) → x  /  min(u32::MAX, x) → x
-        //   max(x, 0)        → x  /  max(0, x) → x
-        //   min(x, 0)        → 0  /  min(0, x) → 0
-        //   max(x, u32::MAX) → u32::MAX
-        // These need only the static type bounds, not full range
-        // analysis; full range-fact-driven folds will land beside the
-        // downstream range pass (A16 / A35 stronger variant) when that
-        // substrate is wired into the optimizer.
+        BinOp::Min | BinOp::Max if left == right => Some(left.clone()),
         BinOp::Min if matches!(right, Expr::LitU32(u32::MAX)) => Some(left.clone()),
         BinOp::Min if matches!(left, Expr::LitU32(u32::MAX)) => Some(right.clone()),
         BinOp::Max if matches!(right, Expr::LitU32(0)) => Some(left.clone()),
         BinOp::Max if matches!(left, Expr::LitU32(0)) => Some(right.clone()),
-        BinOp::Min if matches!(right, Expr::LitU32(0)) => Some(Expr::u32(0)),
-        BinOp::Min if matches!(left, Expr::LitU32(0)) => Some(Expr::u32(0)),
-        BinOp::Max if matches!(right, Expr::LitU32(u32::MAX)) => Some(Expr::u32(u32::MAX)),
-        BinOp::Max if matches!(left, Expr::LitU32(u32::MAX)) => Some(Expr::u32(u32::MAX)),
+        BinOp::Min if matches!(left, Expr::LitU32(0)) || matches!(right, Expr::LitU32(0)) => {
+            Some(Expr::u32(0))
+        }
+        BinOp::Max
+            if matches!(left, Expr::LitU32(u32::MAX))
+                || matches!(right, Expr::LitU32(u32::MAX)) =>
+        {
+            Some(Expr::u32(u32::MAX))
+        }
 
-        // Comparison with extremes: x < 0 → false, 0 <= x → true,
-        // x <= u32::MAX → true, u32::MAX < x → false. These come up
-        // after const-fold normalises a runtime check that always
-        // succeeds (e.g. `if (lane >= 0)`  -  true for u32 by type).
-        BinOp::Lt if matches!(right, Expr::LitU32(0)) => Some(Expr::bool(false)),
-        BinOp::Ge if matches!(right, Expr::LitU32(0)) => Some(Expr::bool(true)),
-        BinOp::Le if matches!(right, Expr::LitU32(u32::MAX)) => Some(Expr::bool(true)),
-        BinOp::Gt if matches!(right, Expr::LitU32(u32::MAX)) => Some(Expr::bool(false)),
-        // Symmetric forms (literal on the left):
-        BinOp::Gt if matches!(left, Expr::LitU32(0)) => Some(Expr::bool(false)),
-        BinOp::Le if matches!(left, Expr::LitU32(0)) => Some(Expr::bool(true)),
-        BinOp::Ge if matches!(left, Expr::LitU32(u32::MAX)) => Some(Expr::bool(true)),
-        BinOp::Lt if matches!(left, Expr::LitU32(u32::MAX)) => Some(Expr::bool(false)),
+        BinOp::Lt if matches!(right, Expr::LitU32(0)) || matches!(left, Expr::LitU32(u32::MAX)) => {
+            Some(Expr::bool(false))
+        }
+        BinOp::Gt if matches!(right, Expr::LitU32(u32::MAX)) || matches!(left, Expr::LitU32(0)) => {
+            Some(Expr::bool(false))
+        }
+        BinOp::Ge if matches!(right, Expr::LitU32(0)) || matches!(left, Expr::LitU32(u32::MAX)) => {
+            Some(Expr::bool(true))
+        }
+        BinOp::Le if matches!(right, Expr::LitU32(u32::MAX)) || matches!(left, Expr::LitU32(0)) => {
+            Some(Expr::bool(true))
+        }
 
-        // u32 modulo by `u32::MAX + 1` (which is just `0` literal in
-        // u32) is undefined; mod by 1 already handled above; mod by
-        // 2^32 is unrepresentable as a literal  -  no extra rule needed.
-
-        // ─── Wrapping arithmetic identities ──────────────────
-        // wrapping_add(x, 0) → x,  wrapping_sub(x, 0) → x
-        BinOp::WrappingAdd if is_zero(right) => Some(left.clone()),
-        BinOp::WrappingAdd if is_zero(left) => Some(right.clone()),
-        BinOp::WrappingSub if is_zero(right) => Some(left.clone()),
-        // wrapping_sub(x, x) → 0
-        BinOp::WrappingSub if left == right => Some(Expr::u32(0)),
-
-        // ─── Saturating arithmetic identities ────────────────
-        BinOp::SaturatingAdd if is_zero(right) => Some(left.clone()),
-        BinOp::SaturatingAdd if is_zero(left) => Some(right.clone()),
-        BinOp::SaturatingSub if is_zero(right) => Some(left.clone()),
-        BinOp::SaturatingSub if left == right => Some(Expr::u32(0)),
+        BinOp::WrappingAdd | BinOp::SaturatingAdd | BinOp::WrappingSub | BinOp::SaturatingSub
+            if is_zero(right) =>
+        {
+            Some(left.clone())
+        }
+        BinOp::WrappingAdd | BinOp::SaturatingAdd if is_zero(left) => Some(right.clone()),
+        BinOp::WrappingSub | BinOp::SaturatingSub if left == right => Some(Expr::u32(0)),
         BinOp::SaturatingMul if is_one(right) => Some(left.clone()),
         BinOp::SaturatingMul if is_one(left) => Some(right.clone()),
-        BinOp::SaturatingMul if is_zero(right) => Some(Expr::u32(0)),
-        BinOp::SaturatingMul if is_zero(left) => Some(Expr::u32(0)),
+        BinOp::SaturatingMul if is_zero(left) || is_zero(right) => Some(Expr::u32(0)),
 
-        // ─── Logical identities ──────────────────────────────
-        // true && x → x,  x && true → x
         BinOp::And if matches!(left, Expr::LitBool(true)) => Some(right.clone()),
         BinOp::And if matches!(right, Expr::LitBool(true)) => Some(left.clone()),
-        // false && x → false,  x && false → false
-        BinOp::And if matches!(left, Expr::LitBool(false)) => Some(Expr::bool(false)),
-        BinOp::And if matches!(right, Expr::LitBool(false)) => Some(Expr::bool(false)),
-        // true || x → true,  x || true → true
-        BinOp::Or if matches!(left, Expr::LitBool(true)) => Some(Expr::bool(true)),
-        BinOp::Or if matches!(right, Expr::LitBool(true)) => Some(Expr::bool(true)),
-        // false || x → x,  x || false → x
+        BinOp::And
+            if matches!(left, Expr::LitBool(false)) || matches!(right, Expr::LitBool(false)) =>
+        {
+            Some(Expr::bool(false))
+        }
+        BinOp::Or
+            if matches!(left, Expr::LitBool(true)) || matches!(right, Expr::LitBool(true)) =>
+        {
+            Some(Expr::bool(true))
+        }
         BinOp::Or if matches!(left, Expr::LitBool(false)) => Some(right.clone()),
         BinOp::Or if matches!(right, Expr::LitBool(false)) => Some(left.clone()),
-        // x && x → x,  x || x → x  (idempotent)
-        BinOp::And if left == right => Some(left.clone()),
-        BinOp::Or if left == right => Some(left.clone()),
+        BinOp::And | BinOp::Or if left == right => Some(left.clone()),
 
-        // ─── chained-predicate boolean simplification ──
-        // x && !x → false  (contradiction)
-        BinOp::And if matches!(right, Expr::UnOp { op: crate::ir::UnOp::LogicalNot, operand } if operand.as_ref() == left) => {
-            Some(Expr::bool(false))
-        }
-        BinOp::And if matches!(left, Expr::UnOp { op: crate::ir::UnOp::LogicalNot, operand } if operand.as_ref() == right) => {
-            Some(Expr::bool(false))
-        }
-        // x || !x → true  (tautology)
-        BinOp::Or if matches!(right, Expr::UnOp { op: crate::ir::UnOp::LogicalNot, operand } if operand.as_ref() == left) => {
-            Some(Expr::bool(true))
-        }
-        BinOp::Or if matches!(left, Expr::UnOp { op: crate::ir::UnOp::LogicalNot, operand } if operand.as_ref() == right) => {
-            Some(Expr::bool(true))
-        }
-        // Absorption: x && (x || y) → x ; (x || y) && x → x
-        BinOp::And if matches!(right, Expr::BinOp { op: BinOp::Or, left: l, right: r } if l.as_ref() == left || r.as_ref() == left) => {
-            Some(left.clone())
-        }
-        BinOp::And if matches!(left, Expr::BinOp { op: BinOp::Or, left: l, right: r } if l.as_ref() == right || r.as_ref() == right) => {
-            Some(right.clone())
-        }
-        // Absorption: x || (x && y) → x ; (x && y) || x → x
-        BinOp::Or if matches!(right, Expr::BinOp { op: BinOp::And, left: l, right: r } if l.as_ref() == left || r.as_ref() == left) => {
-            Some(left.clone())
-        }
-        BinOp::Or if matches!(left, Expr::BinOp { op: BinOp::And, left: l, right: r } if l.as_ref() == right || r.as_ref() == right) => {
-            Some(right.clone())
-        }
-        // (Reflexive Eq/Ne handled in the comparison-self-identities
-        // section above  -  guarded by `is_reflexive_cmp_safe` for
-        // soundness under relaxed memory ordering and IEEE-754 NaN.)
+        BinOp::And if is_not_of(right, left) || is_not_of(left, right) => Some(Expr::bool(false)),
+        BinOp::Or if is_not_of(right, left) || is_not_of(left, right) => Some(Expr::bool(true)),
+        BinOp::And if absorbs_binop(BinOp::Or, right, left) => Some(left.clone()),
+        BinOp::And if absorbs_binop(BinOp::Or, left, right) => Some(right.clone()),
+        BinOp::Or if absorbs_binop(BinOp::And, right, left) => Some(left.clone()),
+        BinOp::Or if absorbs_binop(BinOp::And, left, right) => Some(right.clone()),
 
-        // ─── BitAnd with all-ones mask → identity ────────────
         BinOp::BitAnd if matches!(right, Expr::LitU32(u32::MAX)) => Some(left.clone()),
         BinOp::BitAnd if matches!(left, Expr::LitU32(u32::MAX)) => Some(right.clone()),
-        // BitOr with all-ones → all-ones
-        BinOp::BitOr if matches!(right, Expr::LitU32(u32::MAX)) => Some(Expr::u32(u32::MAX)),
-        BinOp::BitOr if matches!(left, Expr::LitU32(u32::MAX)) => Some(Expr::u32(u32::MAX)),
-
-        // ─── BitXor with all-ones → BitNot ───────────────────
-        // x ^ 0xFFFFFFFF → ~x  (common mask pattern)
+        BinOp::BitOr
+            if matches!(left, Expr::LitU32(u32::MAX))
+                || matches!(right, Expr::LitU32(u32::MAX)) =>
+        {
+            Some(Expr::u32(u32::MAX))
+        }
         BinOp::BitXor if matches!(right, Expr::LitU32(u32::MAX)) => Some(Expr::UnOp {
             op: crate::ir::UnOp::BitNot,
             operand: Box::new(left.clone()),
@@ -651,6 +360,131 @@ pub(super) fn simplify_binop(op: crate::ir::BinOp, left: &Expr, right: &Expr) ->
 
         _ => None,
     }
+}
+
+fn is_not_of(candidate: &Expr, target: &Expr) -> bool {
+    matches!(
+        candidate,
+        Expr::UnOp {
+            op: crate::ir::UnOp::LogicalNot,
+            operand,
+        } if operand.as_ref() == target
+    )
+}
+
+fn absorbs_binop(inner: crate::ir::BinOp, candidate: &Expr, target: &Expr) -> bool {
+    matches!(
+        candidate,
+        Expr::BinOp { op, left, right } if *op == inner && (left.as_ref() == target || right.as_ref() == target)
+    )
+}
+
+fn fold_int_pair(
+    k1: &Expr,
+    k2: &Expr,
+    u32_op: fn(u32, u32) -> Option<u32>,
+    i32_op: fn(i32, i32) -> Option<i32>,
+) -> Option<Expr> {
+    match (k1, k2) {
+        (Expr::LitU32(a), Expr::LitU32(b)) => u32_op(*a, *b).map(Expr::u32),
+        (Expr::LitI32(a), Expr::LitI32(b)) => i32_op(*a, *b).map(Expr::i32),
+        _ => None,
+    }
+}
+
+fn reassociate_int_lit(
+    op: crate::ir::BinOp,
+    left: &Expr,
+    right: &Expr,
+    u32_op: fn(u32, u32) -> Option<u32>,
+    i32_op: fn(i32, i32) -> Option<i32>,
+    build: fn(Expr, Expr) -> Expr,
+) -> Option<Expr> {
+    let Expr::BinOp {
+        op: inner_op,
+        left: l,
+        right: r,
+    } = left
+    else {
+        return None;
+    };
+    if *inner_op != op {
+        return None;
+    }
+    fold_int_pair(r, right, u32_op, i32_op)
+        .map(|k| build((**l).clone(), k))
+        .or_else(|| fold_int_pair(l, right, u32_op, i32_op).map(|k| build((**r).clone(), k)))
+}
+
+fn factor_common_mul(
+    left: &Expr,
+    right: &Expr,
+    u32_op: fn(u32, u32) -> Option<u32>,
+    i32_op: fn(i32, i32) -> Option<i32>,
+) -> Option<Expr> {
+    let (
+        Expr::BinOp {
+            op: crate::ir::BinOp::Mul,
+            left: la,
+            right: lk,
+        },
+        Expr::BinOp {
+            op: crate::ir::BinOp::Mul,
+            left: ra,
+            right: rk,
+        },
+    ) = (left, right)
+    else {
+        return None;
+    };
+    (la == ra)
+        .then(|| fold_int_pair(lk, rk, u32_op, i32_op).map(|k| Expr::mul((**la).clone(), k)))
+        .flatten()
+}
+
+fn distribute_mul_int(left: &Expr, right: &Expr) -> Option<Expr> {
+    use crate::ir::BinOp;
+    let build_add_sub = |op: BinOp, l: Expr, r: Expr| match op {
+        BinOp::Add => Expr::add(l, r),
+        _ => Expr::BinOp {
+            op,
+            left: Box::new(l),
+            right: Box::new(r),
+        },
+    };
+    if lit_int(left).is_some() {
+        if let Expr::BinOp {
+            op: op @ (BinOp::Add | BinOp::Sub),
+            left: a,
+            right: b,
+        } = right
+        {
+            if lit_int(a).is_some() || lit_int(b).is_some() {
+                return Some(build_add_sub(
+                    *op,
+                    Expr::mul(left.clone(), (**a).clone()),
+                    Expr::mul(left.clone(), (**b).clone()),
+                ));
+            }
+        }
+    }
+    if lit_int(right).is_some() {
+        if let Expr::BinOp {
+            op: op @ (BinOp::Add | BinOp::Sub),
+            left: a,
+            right: b,
+        } = left
+        {
+            if lit_int(a).is_some() || lit_int(b).is_some() {
+                return Some(build_add_sub(
+                    *op,
+                    Expr::mul((**a).clone(), right.clone()),
+                    Expr::mul((**b).clone(), right.clone()),
+                ));
+            }
+        }
+    }
+    None
 }
 
 fn expr_scalar_literal(expr: &Expr) -> Option<ScalarLiteral> {

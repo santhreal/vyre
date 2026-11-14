@@ -1,8 +1,7 @@
 use super::{
     ProgramStats, CAP_ASYNC_DISPATCH, CAP_BF16, CAP_DISTRIBUTED_COLLECTIVES, CAP_F16, CAP_F64,
     CAP_GRID_SYNC, CAP_INDIRECT_DISPATCH, CAP_SUBGROUP_OPS, CAP_TENSOR_OPS, CAP_TRAP,
-    CAP_WORKGROUP_GEOMETRY, NODE_KIND_ASSIGN, NODE_KIND_BARRIER, NODE_KIND_IF, NODE_KIND_LET,
-    NODE_KIND_LOOP, NODE_KIND_REGION, NODE_KIND_STORE,
+    CAP_WORKGROUP_GEOMETRY, NODE_KIND_BARRIER, NODE_KIND_IF, NODE_KIND_LET, NODE_KIND_LOOP,
 };
 
 impl ProgramStats {
@@ -118,28 +117,10 @@ impl ProgramStats {
     pub fn has_node_if(&self) -> bool {
         self.has_any_node_kind(NODE_KIND_IF)
     }
-    /// True when the program contains at least one `Node::Store`.
-    #[inline]
-    #[must_use]
-    pub fn has_node_store(&self) -> bool {
-        self.has_any_node_kind(NODE_KIND_STORE)
-    }
     /// True when the program contains at least one physical or logical barrier.
     #[inline]
     #[must_use]
     pub fn has_node_barrier(&self) -> bool {
         self.has_any_node_kind(NODE_KIND_BARRIER)
-    }
-    /// True when the program contains at least one `Node::Assign`.
-    #[inline]
-    #[must_use]
-    pub fn has_node_assign(&self) -> bool {
-        self.has_any_node_kind(NODE_KIND_ASSIGN)
-    }
-    /// True when the program contains at least one `Node::Region`.
-    #[inline]
-    #[must_use]
-    pub fn has_node_region(&self) -> bool {
-        self.has_any_node_kind(NODE_KIND_REGION)
     }
 }

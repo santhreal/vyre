@@ -1,8 +1,6 @@
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering};
 use std::sync::{Arc, OnceLock};
 
-use vyre_spec::OpIntensity;
-
 use crate::ir::Node;
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::op_signature::BufferAccess;
@@ -419,13 +417,6 @@ impl Program {
         })
     }
 
-    /// Check whether a named buffer exists.
-    #[must_use]
-    #[inline]
-    pub fn has_buffer(&self, name: &str) -> bool {
-        self.buffer_index.contains_key(name)
-    }
-
     /// Number of declared buffers.
     #[must_use]
     #[inline]
@@ -542,63 +533,6 @@ impl Program {
     /// Estimate the peak VRAM byte size of this Program.
     ///
     /// Static VRAM Pressure Analysis.
-    /// Returns the total bytes required by all storage and uniform buffers
-    /// declared in the Program. Optimizer passes use this to automatically
-    /// partition workloads if they would exceed a backend-specific safety
-    /// margin.
-    #[must_use]
-    pub fn estimate_peak_vram_bytes(&self) -> u64 {
-        self.buffers
-            .iter()
-            .map(|buffer| {
-                let Some(element_size) = buffer.element.size_bytes() else {
-                    return u64::MAX;
-                };
-                u64::from(buffer.count)
-                    .saturating_mul(u64::try_from(element_size).unwrap_or(u64::MAX))
-            })
-            .fold(0u64, u64::saturating_add)
-    }
-
-    /// Return the peak computational intensity found in any instruction.
-    ///
-    /// Two hand-written descents used to stand here, `node_intensity` over
-    /// `Node` and `expr_intensity` over `Expr`, each naming the positions it
-    /// recursed into and each ending in `_ => OpIntensity::Free`. The node one
-    /// named neither async copy nor `Trap`, so the expressions in an async
-    /// copy's `offset` and `size` and in a trap address were scored `Free` no
-    /// matter what they contained, and a program whose only heavy work sat there
-    /// reported as free. The expression one had the same hole for any variant it
-    /// had not been told about.
-    ///
-    /// Descent belongs to
-    /// [`for_each_expr`](crate::visit::for_each_expr), the one walk
-    /// that reaches every operand of every node and every sub-expression of
-    /// every operand. What is left here is the scoring rule, which is per
-    /// expression and does not need to see its children: the walk offers the
-    /// children separately and `max` over the whole visit is the same answer the
-    /// recursive `max` produced, in one pass rather than one pass per depth.
-    #[must_use]
-    pub fn peak_intensity(&self) -> OpIntensity {
-        let mut peak = OpIntensity::Free;
-        crate::visit::for_each_expr(self.entry(), |expr| {
-            peak = peak.max(Self::expr_intensity(expr));
-        });
-        peak
-    }
-
-    /// Intensity of `expr` itself, ignoring its children.
-    fn expr_intensity(expr: &crate::ir::Expr) -> OpIntensity {
-        use crate::ir::Expr;
-        match expr {
-            Expr::BinOp { op, .. } => op.intensity(),
-            Expr::Atomic { .. }
-            | Expr::SubgroupBallot { .. }
-            | Expr::SubgroupShuffle { .. }
-            | Expr::SubgroupReduce { .. } => OpIntensity::Heavy,
-            _ => OpIntensity::Free,
-        }
-    }
 
     fn compute_wire_hash(&self) -> blake3::Hash {
         match self.canonical_wire_hash() {

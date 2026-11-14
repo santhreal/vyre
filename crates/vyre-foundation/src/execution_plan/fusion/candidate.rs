@@ -170,17 +170,6 @@ impl FusionCandidate {
             regions: vec![producer, consumer],
         }
     }
-
-    /// Construct a shared-memory forwarding candidate.
-    #[must_use]
-    pub fn shared_forwarding(producer: usize, consumer: usize, tile: ScheduleTile) -> Self {
-        Self {
-            kind: FusionCandidateKind::SharedMemoryForwarding,
-            handoff: HandoffLocation::WorkgroupShared,
-            tile: Some(tile),
-            regions: vec![producer, consumer],
-        }
-    }
 }
 
 /// Set of fusion candidates generated for a domain or graph, guaranteeing baseline presence.

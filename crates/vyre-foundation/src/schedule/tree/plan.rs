@@ -112,11 +112,6 @@ impl SchedulePlan {
         }
     }
 
-    /// Add a transformation record to the history.
-    pub fn record_transform(&mut self, record: ScheduleTransformRecord) {
-        self.history.push(record);
-    }
-
     /// Validate the entire schedule plan.
     pub fn validate(&self) -> Result<(), ScheduleLegalityError> {
         self.root.validate()?;

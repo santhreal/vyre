@@ -47,18 +47,4 @@ impl LinearState {
         Self::Borrowed,
         Self::Poisoned,
     ];
-
-    /// Whether this state represents an active unconsumed obligation.
-    #[must_use]
-    #[inline]
-    pub const fn is_unconsumed(self) -> bool {
-        matches!(self, Self::Unconsumed)
-    }
-
-    /// Whether this state represents a consumed/discharged obligation.
-    #[must_use]
-    #[inline]
-    pub const fn is_consumed(self) -> bool {
-        matches!(self, Self::Consumed)
-    }
 }

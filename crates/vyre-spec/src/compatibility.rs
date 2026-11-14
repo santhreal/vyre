@@ -131,11 +131,3 @@ pub enum CompatibilityDisposition {
         upgrade_action: &'static str,
     },
 }
-
-impl CompatibilityDisposition {
-    /// True when the disposition allows active communication or processing.
-    #[must_use]
-    pub const fn is_compatible(self) -> bool {
-        matches!(self, Self::Supported | Self::Deprecated { .. })
-    }
-}

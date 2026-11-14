@@ -168,13 +168,6 @@ impl OperationRegistration {
         !self.laws.is_empty() || self.absence.is_some()
     }
 
-    /// Attach the source file that owns this registration.
-    #[must_use]
-    pub const fn with_source_file(mut self, source_file: &'static str) -> Self {
-        self.source_file = source_file;
-        self
-    }
-
     /// Return the coarse category.
     #[must_use]
     pub const fn category(&self) -> Option<&'static str> {
@@ -213,12 +206,6 @@ impl OperationRegistration {
     pub const fn with_explicit_capabilities(mut self, capabilities: RequiredCapabilities) -> Self {
         self.explicit_capabilities = Some(capabilities);
         self
-    }
-
-    /// Return the recorded schedule-constraint decision.
-    #[must_use]
-    pub const fn declared_schedule_constraints(&self) -> GeometryRequirements {
-        self.geometry_requirements
     }
 
     /// Build the canonical program and stamp its stable operation identity.

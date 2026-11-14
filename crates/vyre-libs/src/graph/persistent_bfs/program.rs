@@ -61,6 +61,24 @@ pub fn persistent_bfs(
     )
 }
 
+#[must_use]
+pub(super) fn persistent_bfs_for_extents(
+    node_count: u32,
+    edge_count: u32,
+    frontier_in: &str,
+    frontier_out: &str,
+    allow_mask: u32,
+    max_iters: u32,
+) -> Program {
+    persistent_bfs(
+        super::layout::persistent_bfs_program_shape(node_count, edge_count),
+        frontier_in,
+        frontier_out,
+        allow_mask,
+        max_iters,
+    )
+}
+
 /// Build a density-instrumented persistent-BFS `Program`.
 ///
 /// Identical to [`persistent_bfs`] but declares one extra `max_iters`-length u32

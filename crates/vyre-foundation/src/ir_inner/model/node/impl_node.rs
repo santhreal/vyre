@@ -239,6 +239,17 @@ impl Node {
         }
     }
 
+    /// Construct a named returning [`Node::Region`] around `body`.
+    #[must_use]
+    #[inline]
+    pub fn region(generator: impl Into<Ident>, body: Vec<Self>) -> Self {
+        Self::Region {
+            generator: generator.into(),
+            source_region: None,
+            body: Arc::new(body),
+        }
+    }
+
     /// Command-level indirect dispatch metadata.
     ///
     /// # Examples

@@ -39,11 +39,6 @@ impl TraceId {
     pub const fn new(id: u128) -> Self {
         Self(id)
     }
-
-    /// Return the raw 128-bit integer.
-    pub const fn as_u128(self) -> u128 {
-        self.0
-    }
 }
 
 impl fmt::Display for TraceId {

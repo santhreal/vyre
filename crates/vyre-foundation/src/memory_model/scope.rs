@@ -101,7 +101,7 @@ impl MemoryScope {
     /// Widen two memory scopes to the minimum scope enclosing both.
     #[must_use]
     pub const fn widen(self, other: Self) -> Self {
-        if self.wire_tag() >= other.wire_tag() {
+        if self.includes(other) {
             self
         } else {
             other
@@ -216,7 +216,7 @@ impl ExecutionScope {
     /// Widen two execution scopes to the minimum scope enclosing both.
     #[must_use]
     pub const fn widen(self, other: Self) -> Self {
-        if self.wire_tag() >= other.wire_tag() {
+        if self.includes(other) {
             self
         } else {
             other

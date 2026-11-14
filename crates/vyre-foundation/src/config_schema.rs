@@ -128,18 +128,6 @@ impl ConfigValue {
             Self::String(s) => s.clone(),
         }
     }
-
-    /// Render unredacted raw value as string.
-    #[must_use]
-    pub fn display_raw(&self) -> String {
-        match self {
-            Self::Bool(b) => format!("{b}"),
-            Self::U32(v) => format!("{v}"),
-            Self::U64(v) => format!("{v}"),
-            Self::F64(v) => format!("{v}"),
-            Self::String(s) => s.clone(),
-        }
-    }
 }
 
 /// Declarative schema entry for one configuration option.

@@ -96,22 +96,6 @@ pub enum FusionLegalityVerdict {
     Rejected(FusionRejectionReason),
 }
 
-impl FusionLegalityVerdict {
-    /// Return whether this verdict is legal.
-    #[must_use]
-    pub const fn is_legal(&self) -> bool {
-        matches!(self, Self::Legal(_))
-    }
-
-    /// Convert to a Result<(), FusionRejectionReason>.
-    pub fn into_result(self) -> Result<HandoffLocation, FusionRejectionReason> {
-        match self {
-            Self::Legal(handoff) => Ok(handoff),
-            Self::Rejected(reason) => Err(reason),
-        }
-    }
-}
-
 /// Analyze legality of fusing two logical regions.
 #[must_use]
 pub fn analyze_region_fusion_legality(

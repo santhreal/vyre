@@ -85,13 +85,6 @@ impl CompileBudget {
         self
     }
 
-    /// Builder: set maximum measurement steps.
-    #[must_use]
-    pub const fn with_max_measurement_steps(mut self, steps: u64) -> Self {
-        self.max_measurement_steps = steps;
-        self
-    }
-
     /// Charge CPU work steps.
     pub fn charge_cpu_steps(&mut self, steps: u64) -> Result<(), RefusalReason> {
         self.consumed_cpu_steps = self.consumed_cpu_steps.saturating_add(steps);
@@ -141,19 +134,6 @@ impl CompileBudget {
                 resource: "code_size",
                 budget: self.max_code_size,
                 consumed: size,
-            });
-        }
-        Ok(())
-    }
-
-    /// Charge measurement steps.
-    pub fn charge_measurement_steps(&mut self, steps: u64) -> Result<(), RefusalReason> {
-        self.consumed_measurement_steps = self.consumed_measurement_steps.saturating_add(steps);
-        if self.consumed_measurement_steps > self.max_measurement_steps {
-            return Err(RefusalReason::BudgetExceeded {
-                resource: "measurement_steps",
-                budget: self.max_measurement_steps,
-                consumed: self.consumed_measurement_steps,
             });
         }
         Ok(())

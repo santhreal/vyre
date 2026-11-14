@@ -47,13 +47,6 @@ impl WireEncodeErr {
         WireEncodeErr::Dynamic(Box::new(buf))
     }
 
-    /// Build a dynamic error from prefix + formatted u64 + suffix.
-    #[inline]
-    #[must_use]
-    pub fn fmt_u64(prefix: &str, value: u64, suffix: &str) -> Self {
-        Self::fmt_integer(prefix, value, suffix)
-    }
-
     fn fmt_integer<T: itoa::Integer>(prefix: &str, value: T, suffix: &str) -> Self {
         let mut buf = ArrayString::<256>::new();
         buf.push_str(prefix);

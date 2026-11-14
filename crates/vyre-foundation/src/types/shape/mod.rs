@@ -232,21 +232,6 @@ impl ShapeInterner {
         self.intern_expr_raw(SymbolicDim::Mul(canonical_lhs, canonical_rhs))
     }
 
-    /// Intern a floor division expression.
-    pub fn div_floor(&self, lhs: ShapeExprId, rhs: ShapeExprId) -> ShapeExprId {
-        if let (Some(SymbolicDim::Constant(a)), Some(SymbolicDim::Constant(b))) =
-            (self.get_expr(lhs), self.get_expr(rhs))
-        {
-            if b != 0 {
-                return self.constant(a.div_euclid(b));
-            }
-        }
-        if let Some(SymbolicDim::Constant(1)) = self.get_expr(rhs) {
-            return lhs;
-        }
-        self.intern_expr_raw(SymbolicDim::DivFloor(lhs, rhs))
-    }
-
     /// Intern a ceiling division expression.
     pub fn div_ceil(&self, lhs: ShapeExprId, rhs: ShapeExprId) -> ShapeExprId {
         if let (Some(SymbolicDim::Constant(a)), Some(SymbolicDim::Constant(b))) =
@@ -308,21 +293,6 @@ impl ShapeInterner {
             (rhs, lhs)
         };
         self.intern_expr_raw(SymbolicDim::Max(canonical_lhs, canonical_rhs))
-    }
-
-    /// Intern an alignment expression.
-    pub fn align_to(&self, expr: ShapeExprId, alignment: u64) -> ShapeExprId {
-        if alignment <= 1 {
-            return expr;
-        }
-        if let Some(SymbolicDim::Constant(val)) = self.get_expr(expr) {
-            if val >= 0 {
-                let align = alignment as i128;
-                let aligned = ((val + align - 1) / align) * align;
-                return self.constant(aligned);
-            }
-        }
-        self.intern_expr_raw(SymbolicDim::AlignTo { expr, alignment })
     }
 
     /// Intern a full multi-dimensional shape (list of dimension expressions).

@@ -63,12 +63,6 @@ impl ScheduleTile {
         }
     }
 
-    /// Construct a register-level 1D tile.
-    #[must_use]
-    pub fn register_1d(size: u32) -> Self {
-        Self::new(vec![size], 1, TileResidency::Register)
-    }
-
     /// Construct a workgroup shared memory tile.
     #[must_use]
     pub fn shared_tile(dimensions: Vec<u32>) -> Self {

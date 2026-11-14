@@ -29,39 +29,6 @@ pub enum ShapeDim {
 }
 
 impl ShapeDim {
-    /// Whether this dimension is statically known.
-    #[must_use]
-    pub const fn is_known(&self) -> bool {
-        matches!(self, Self::Known(_))
-    }
-
-    /// Whether this dimension is an explicit unresolved extent.
-    #[must_use]
-    pub const fn is_unresolved(&self) -> bool {
-        matches!(self, Self::Unresolved)
-    }
-
-    /// Whether this dimension is a symbol.
-    #[must_use]
-    pub const fn is_symbol(&self) -> bool {
-        matches!(self, Self::Symbol(_))
-    }
-
-    /// Whether this dimension is an interned symbolic expression.
-    #[must_use]
-    pub const fn is_expr(&self) -> bool {
-        matches!(self, Self::Expr(_))
-    }
-
-    /// Extract the known extent value if known.
-    #[must_use]
-    pub const fn known_extent(&self) -> Option<u64> {
-        match self {
-            Self::Known(extent) => Some(*extent),
-            _ => None,
-        }
-    }
-
     /// Extract the symbol name if symbolic.
     #[must_use]
     pub fn symbol(&self) -> Option<&str> {

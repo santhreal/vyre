@@ -84,6 +84,19 @@ pub struct BellmanExtents {
     pub max_iterations: u32,
 }
 
+impl BellmanExtents {
+    /// Construct Bellman-Ford graph extents and iteration cap.
+    #[must_use]
+    #[inline]
+    pub const fn new(n_nodes: u32, n_edges: u32, max_iterations: u32) -> Self {
+        Self {
+            n_nodes,
+            n_edges,
+            max_iterations,
+        }
+    }
+}
+
 /// Build a fused Bellman-Ford shortest-path Program: relax edges
 /// until convergence, all inside ONE GPU dispatch.
 ///
@@ -396,15 +409,6 @@ mod tests {
     /// cannot pass by matching the short set above.
     const VERBOSE_FIXTURE: BellmanBuffers<'static> = BellmanBuffers::CANONICAL;
 
-    /// `BellmanExtents` for `n_nodes` nodes and `n_edges` edges under a cap.
-    fn extents(n_nodes: u32, n_edges: u32, max_iterations: u32) -> BellmanExtents {
-        BellmanExtents {
-            n_nodes,
-            n_edges,
-            max_iterations,
-        }
-    }
-
     /// The emitted binding at `index`, as `(name, count)`.
     fn binding(program: &Program, index: usize) -> (&str, u32) {
         let buffer = &program.buffers()[index];
@@ -424,7 +428,7 @@ mod tests {
     /// so the node-length and edge-length roles cannot be confused by count.
     #[test]
     fn every_named_binding_reaches_the_role_it_names() {
-        let program = bellman_shortest_path(FIXTURE, extents(3, 5, 1));
+        let program = bellman_shortest_path(FIXTURE, BellmanExtents::new(3, 5, 1));
 
         assert_eq!(binding(&program, 0), (FIXTURE.dist, 3));
         assert_eq!(binding(&program, 1), (FIXTURE.next_dist, 3));
@@ -442,7 +446,7 @@ mod tests {
     /// with the scratch half; both must be visible in the emission.
     #[test]
     fn transposing_two_binding_names_changes_the_wire_encoding() {
-        let extents = extents(3, 5, 1);
+        let extents = BellmanExtents::new(3, 5, 1);
         let canonical = to_wire(&bellman_shortest_path(FIXTURE, extents));
 
         for (label, transposed) in [
@@ -495,7 +499,7 @@ mod tests {
             (width + 1, width, 8),
             (4, width + 1, 8),
         ] {
-            let extents = extents(n_nodes, n_edges, max_iterations);
+            let extents = BellmanExtents::new(n_nodes, n_edges, max_iterations);
             let route = fixpoint_route(n_nodes.max(n_edges), max_iterations);
             let program = bellman_shortest_path(FIXTURE, extents);
 
@@ -633,7 +637,7 @@ mod tests {
         let weight = vec![10, 20, 30, 100];
         let dist_init = vec![0, u32::MAX, u32::MAX, u32::MAX];
 
-        let p = bellman_shortest_path(VERBOSE_FIXTURE, extents(4, 4, 10));
+        let p = bellman_shortest_path(VERBOSE_FIXTURE, BellmanExtents::new(4, 4, 10));
 
         let (expected_dist, _) = cpu_ref(&src, &dst, &weight, &dist_init, 4, 10);
 
@@ -660,19 +664,19 @@ mod tests {
 
     #[test]
     fn program_declares_six_buffers() {
-        let p = bellman_shortest_path(FIXTURE, extents(4, 4, 10));
+        let p = bellman_shortest_path(FIXTURE, BellmanExtents::new(4, 4, 10));
         assert_eq!(p.buffers().len(), 6);
     }
 
     #[test]
     fn rejects_zero_nodes_with_trap() {
-        let p = bellman_shortest_path(FIXTURE, extents(0, 4, 10));
+        let p = bellman_shortest_path(FIXTURE, BellmanExtents::new(0, 4, 10));
         assert!(p.stats().trap());
     }
 
     #[test]
     fn rejects_zero_max_iterations_with_trap() {
-        let p = bellman_shortest_path(FIXTURE, extents(4, 4, 0));
+        let p = bellman_shortest_path(FIXTURE, BellmanExtents::new(4, 4, 0));
         assert!(p.stats().trap());
     }
 
@@ -701,10 +705,16 @@ mod tests {
                     name,
                     changed: FIXTURE.changed,
                     at_one_workgroup: &|max_iterations| {
-                        bellman_shortest_path(FIXTURE, extents(width, width, max_iterations))
+                        bellman_shortest_path(
+                            FIXTURE,
+                            BellmanExtents::new(width, width, max_iterations),
+                        )
                     },
                     past_one_workgroup: &|max_iterations| {
-                        bellman_shortest_path(FIXTURE, extents(n_nodes, n_edges, max_iterations))
+                        bellman_shortest_path(
+                            FIXTURE,
+                            BellmanExtents::new(n_nodes, n_edges, max_iterations),
+                        )
                     },
                     grid_harness: &|max_iterations| {
                         crate::fixpoint::routing_contract::bare_grid_harness(
@@ -769,109 +779,29 @@ mod tests {
     /// written: the dispatch reports convergence and yields `u32::MAX` where the
     /// answer is 5. Step group 0 first and the same program is correct, which is
     /// the definition of the race.
-    #[test]
-    fn single_word_harness_returns_wrong_distances_above_one_workgroup() {
-        let n_nodes = 257_u32;
-        let n_edges = 1_u32;
-        let src = vec![0_u32];
-        let dst = vec![256_u32];
-        let weight = vec![5_u32];
-        let mut dist = vec![u32::MAX; n_nodes as usize];
-        dist[0] = 0;
-        let max_iterations = 4_u32;
-
-        let (expected, _) = cpu_ref(&src, &dst, &weight, &dist, n_nodes, max_iterations);
-        assert_eq!(
-            expected[256], 5,
-            "Fix: the CPU oracle must relax node 256 to 5 over the single edge."
+    fn assert_grid_routed_matches_both_orders(
+        n_nodes: u32,
+        n_edges: u32,
+        max_iterations: u32,
+        dist: &[u32],
+        src: &[u32],
+        dst: &[u32],
+        weight: &[u32],
+    ) {
+        let (expected, _) = cpu_ref(src, dst, weight, dist, n_nodes, max_iterations);
+        let routed = bellman_shortest_path(
+            FIXTURE,
+            BellmanExtents::new(n_nodes, n_edges, max_iterations),
         );
-
-        let unsound =
-            bellman_single_word_harness(FIXTURE, extents(n_nodes, n_edges, max_iterations));
-        let (reversed, reversed_flag) = run_bellman(&unsound, true, &dist, &src, &dst, &weight, 1);
-        assert_eq!(
-            reversed[256],
-            u32::MAX,
-            "Fix: this test exists to record the OBSERVED wrong value the racing shared flag produces; if the single-word harness stops diverging here, re-derive the defect before deleting this test."
-        );
-        assert_ne!(
-            reversed[256], expected[256],
-            "Fix: the pre-routing single-word harness diverges from the CPU oracle at node 256."
-        );
-        // The verdict the host reads back is a LIE, not merely a miss: the flag says
-        // converged while node 256 is still unrelaxed. A test that checked only the
-        // flag would pass here, which is why the assertion above is on the output.
-        assert_eq!(
-            reversed_flag[0], 0,
-            "Fix: the shared flag must be observed claiming convergence while the state is unconverged, which is what makes the wrong answer silent."
-        );
-
-        // Same program, opposite workgroup order: correct. The output depends on
-        // the schedule, which is exactly what makes the shared flag a race and not
-        // a deterministic bug.
-        let (forward, _) = run_bellman(&unsound, false, &dist, &src, &dst, &weight, 1);
-        assert_eq!(
-            forward[256], 5,
-            "Fix: stepping group 0 first must expose the SAME program as correct, proving the divergence is cross-workgroup ordering."
-        );
-    }
-
-    /// The routed program is correct under BOTH workgroup orders at the size where
-    /// the single-word harness diverges, which is the fix working end to end.
-    #[test]
-    fn grid_routed_bellman_is_order_independent_where_single_word_diverges() {
-        let n_nodes = 257_u32;
-        let n_edges = 1_u32;
-        let src = vec![0_u32];
-        let dst = vec![256_u32];
-        let weight = vec![5_u32];
-        let mut dist = vec![u32::MAX; n_nodes as usize];
-        dist[0] = 0;
-        let max_iterations = 4_u32;
-
-        let (expected, _) = cpu_ref(&src, &dst, &weight, &dist, n_nodes, max_iterations);
-        let routed = bellman_shortest_path(FIXTURE, extents(n_nodes, n_edges, max_iterations));
-        assert_eq!(
-            declared_words(&routed, FIXTURE.changed),
-            max_iterations,
-            "Fix: this size must route to the grid harness."
-        );
-
+        assert_eq!(declared_words(&routed, FIXTURE.changed), max_iterations);
         for reversed in [false, true] {
-            let (actual, _) = run_bellman(
-                &routed,
-                reversed,
-                &dist,
-                &src,
-                &dst,
-                &weight,
-                max_iterations,
-            );
-            assert_eq!(
-                actual, expected,
-                "Fix: the grid-routed bellman program must match the CPU oracle in both workgroup orders (reversed={reversed})."
-            );
+            let (actual, _) =
+                run_bellman(&routed, reversed, dist, src, dst, weight, max_iterations);
+            assert_eq!(actual, expected, "reversed={reversed}");
         }
     }
 
-    /// OBSERVED divergence in the CANONICAL forward workgroup order, at only FOUR
-    /// nodes. This is the case a node-count-only threshold would have missed.
-    ///
-    /// 4 nodes but 257 edges, so the launch is still two workgroups: `vyre-runtime`
-    /// spans the largest declared binding, and the edge arrays are the largest here.
-    /// Lane 256, in group 1, owns edge 256, the ONLY edge that reaches node 3. It
-    /// relaxes `next_dist[3] = 7` correctly. But its compare is gated `t < n_nodes`,
-    /// which is `256 < 4`, false: group 1 has no lane that publishes ANY node, so it
-    /// cannot set the convergence flag and cannot copy `next_dist` into `dist`.
-    ///
-    /// So group 1's relaxation is only ever published if some group-0 lane runs a
-    /// compare AFTER group 1 relaxed. In forward order group 0 finishes first, sees
-    /// `next_dist[3]` still unrelaxed, reads a zero flag and retires; node 3 stays
-    /// `u32::MAX` instead of 7 and the flag reports convergence. Reverse the order
-    /// and group 0's compare runs after the relaxation and the answer is right.
-    /// A threshold keyed on `n_nodes` alone leaves exactly this broken.
-    #[test]
-    fn single_word_harness_loses_far_edge_relaxations_when_edges_exceed_one_workgroup() {
+    fn wide_edge_fixture() -> (u32, u32, u32, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>) {
         let n_nodes = 4_u32;
         let n_edges = 257_u32;
         let mut src = vec![0_u32; n_edges as usize];
@@ -882,79 +812,70 @@ mod tests {
         weight[256] = 7;
         let mut dist = vec![u32::MAX; n_nodes as usize];
         dist[0] = 0;
-        let max_iterations = 4_u32;
+        (n_nodes, n_edges, 4_u32, dist, src, dst, weight)
+    }
+
+    #[test]
+    fn single_word_harness_returns_wrong_distances_above_one_workgroup() {
+        let (n_nodes, n_edges, max_iterations) = (257_u32, 1_u32, 4_u32);
+        let (src, dst, weight) = ([0_u32], [256_u32], [5_u32]);
+        let mut dist = vec![u32::MAX; n_nodes as usize];
+        dist[0] = 0;
 
         let (expected, _) = cpu_ref(&src, &dst, &weight, &dist, n_nodes, max_iterations);
-        assert_eq!(
-            expected,
-            vec![0, 1, u32::MAX, 7],
-            "Fix: the CPU oracle must reach node 3 at cost 7 through edge 256 and leave node 2 unreachable."
-        );
+        assert_eq!(expected[256], 5);
 
-        let unsound =
-            bellman_single_word_harness(FIXTURE, extents(n_nodes, n_edges, max_iterations));
-        assert_eq!(
-            required_workgroups(&unsound),
-            2,
-            "Fix: 257 edges must still span two workgroups even though there are only 4 nodes."
+        let unsound = bellman_single_word_harness(
+            FIXTURE,
+            BellmanExtents::new(n_nodes, n_edges, max_iterations),
         );
+        let (reversed, reversed_flag) = run_bellman(&unsound, true, &dist, &src, &dst, &weight, 1);
+        assert_eq!(reversed[256], u32::MAX);
+        assert_ne!(reversed[256], expected[256]);
+        assert_eq!(reversed_flag[0], 0);
+
+        let (forward, _) = run_bellman(&unsound, false, &dist, &src, &dst, &weight, 1);
+        assert_eq!(forward[256], 5);
+    }
+
+    #[test]
+    fn grid_routed_bellman_is_order_independent_where_single_word_diverges() {
+        let mut dist = vec![u32::MAX; 257];
+        dist[0] = 0;
+        assert_grid_routed_matches_both_orders(257, 1, 4, &dist, &[0], &[256], &[5]);
+    }
+
+    #[test]
+    fn single_word_harness_loses_far_edge_relaxations_when_edges_exceed_one_workgroup() {
+        let (n_nodes, n_edges, max_iterations, dist, src, dst, weight) = wide_edge_fixture();
+        let (expected, _) = cpu_ref(&src, &dst, &weight, &dist, n_nodes, max_iterations);
+        assert_eq!(expected, vec![0, 1, u32::MAX, 7]);
+
+        let unsound = bellman_single_word_harness(
+            FIXTURE,
+            BellmanExtents::new(n_nodes, n_edges, max_iterations),
+        );
+        assert_eq!(required_workgroups(&unsound), 2);
 
         let (forward, forward_flag) = run_bellman(&unsound, false, &dist, &src, &dst, &weight, 1);
         let (reversed, _) = run_bellman(&unsound, true, &dist, &src, &dst, &weight, 1);
 
-        assert_eq!(
-            forward,
-            vec![0, 1, u32::MAX, u32::MAX],
-            "Fix: this test records the OBSERVED wrong distances the racing shared flag produces in the canonical order; if the single-word harness stops diverging here, re-derive the defect before deleting this test."
-        );
-        assert_eq!(
-            forward_flag[0], 0,
-            "Fix: the shared flag must be observed claiming convergence while node 3 is unreachable, which is what makes the wrong answer silent."
-        );
-        assert_eq!(
-            reversed, expected,
-            "Fix: stepping group 1 first must match the oracle, proving the forward-order divergence is cross-workgroup ordering and not a wrong fixture."
-        );
+        assert_eq!(forward, vec![0, 1, u32::MAX, u32::MAX]);
+        assert_eq!(forward_flag[0], 0);
+        assert_eq!(reversed, expected);
     }
 
-    /// The routed program is correct under BOTH workgroup orders at the 4-node,
-    /// 257-edge shape where the single-word harness diverges in forward order.
     #[test]
     fn grid_routed_bellman_publishes_far_edge_relaxations_in_both_orders() {
-        let n_nodes = 4_u32;
-        let n_edges = 257_u32;
-        let mut src = vec![0_u32; n_edges as usize];
-        let mut dst = vec![1_u32; n_edges as usize];
-        let mut weight = vec![1_u32; n_edges as usize];
-        src[256] = 0;
-        dst[256] = 3;
-        weight[256] = 7;
-        let mut dist = vec![u32::MAX; n_nodes as usize];
-        dist[0] = 0;
-        let max_iterations = 4_u32;
-
-        let (expected, _) = cpu_ref(&src, &dst, &weight, &dist, n_nodes, max_iterations);
-        let routed = bellman_shortest_path(FIXTURE, extents(n_nodes, n_edges, max_iterations));
-        assert_eq!(
-            declared_words(&routed, FIXTURE.changed),
+        let (n_nodes, n_edges, max_iterations, dist, src, dst, weight) = wide_edge_fixture();
+        assert_grid_routed_matches_both_orders(
+            n_nodes,
+            n_edges,
             max_iterations,
-            "Fix: 257 edges must route to the grid harness even at 4 nodes."
+            &dist,
+            &src,
+            &dst,
+            &weight,
         );
-
-        for reversed in [false, true] {
-            let (actual, _) = run_bellman(
-                &routed,
-                reversed,
-                &dist,
-                &src,
-                &dst,
-                &weight,
-                max_iterations,
-            );
-            assert_eq!(
-                actual, expected,
-                "Fix: the grid-routed program must publish edge 256's relaxation in both workgroup orders (reversed={reversed})."
-            );
-        }
     }
 }
