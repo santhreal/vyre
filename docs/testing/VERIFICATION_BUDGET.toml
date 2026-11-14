@@ -92,7 +92,7 @@ disk_use_bytes = 82268
 compile_units = 2
 link_units = 3
 duplicate_source_bytes = 0
-disk_use_bytes = 74890
+disk_use_bytes = 75747
 
 [tier.registry-link]
 compile_units = 3

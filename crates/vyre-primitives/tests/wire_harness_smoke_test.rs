@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::LazyLock;
 
-/// The example binary, built on demand when the selected targets did not build it.
+/// The example binary, built by this test in every lane.
 ///
 /// Cargo only builds examples as plain binaries under its default target
 /// selection. `--tests`, `--examples` and `--all-targets` all compile an
@@ -19,36 +19,50 @@ use std::sync::LazyLock;
 /// this test fail on a flag rather than on a defect.
 ///
 /// Building it here inherits the invoking cargo's environment, including the
-/// instrumentation and target directory a coverage run exports, so the binary
-/// lands beside this test in every lane.
+/// instrumentation a coverage run exports, so the binary lands beside this
+/// test in every lane. The build runs even when an example binary already
+/// exists: a `--tests` run never refreshes that binary, so a leftover from an
+/// earlier commit would otherwise stand in for the code under test, and cargo's
+/// own freshness check makes the build a no-op when it is current.
 /// Built once per test process; five tests share one binary.
 static EXAMPLE: LazyLock<PathBuf> = LazyLock::new(build_example);
 
 fn build_example() -> PathBuf {
-    let exe = std::env::current_exe().expect("current_exe");
-    // current_exe is <target>/<profile>/deps/<testname>-<hash>.
-    let profile = exe
-        .parent()
-        .and_then(std::path::Path::parent)
-        .expect("a test binary lives under <target>/<profile>/deps");
-    // The suffix is part of the name cargo writes: on Windows the example is
-    // `wire_harness_smoke.exe`, and a bare stem never exists there.
-    let path = profile.join("examples").join(format!(
-        "wire_harness_smoke{}",
-        std::env::consts::EXE_SUFFIX
-    ));
-    if path.exists() {
-        return path;
-    }
-    // The target directory is derived from where this test is running, not
+    // The target directory is resolved from the running test binary, not
     // inherited: cargo-llvm-cov passes --target-dir on its own command line
     // rather than exporting it, so a child cargo that reads only the
     // environment writes the example into the default directory and the
     // coverage run never sees it. RUSTFLAGS is exported, so the example is
     // built with the same instrumentation as everything beside it.
-    let target = profile
-        .parent()
-        .expect("<target>/<profile> has a target directory above it");
+    //
+    // The test binary's depth under the target directory depends on the cargo
+    // release (`<profile>/deps/` before the build-dir layout,
+    // `<profile>/build/<package>/<hash>/out/` after it), so it is located by
+    // the target directory's cache marker, and the profile is the first path
+    // component below it. The example is always written to
+    // `<target>/<profile>/examples/`.
+    let target = vyre_test_support::monorepo::cargo_target_directory();
+    let exe = std::env::current_exe().expect("current_exe");
+    let profile_dir = exe
+        .strip_prefix(&target)
+        .ok()
+        .and_then(|relative| relative.components().next())
+        .expect("a test binary lives under <target>/<profile>/")
+        .as_os_str()
+        .to_owned();
+    // The suffix is part of the name cargo writes: on Windows the example is
+    // `wire_harness_smoke.exe`, and a bare stem never exists there.
+    let path = target.join(&profile_dir).join("examples").join(format!(
+        "wire_harness_smoke{}",
+        std::env::consts::EXE_SUFFIX
+    ));
+    // Cargo writes the `dev` profile into `debug/`; every other profile
+    // writes into a directory of its own name.
+    let profile = if profile_dir == "debug" {
+        "dev".into()
+    } else {
+        profile_dir
+    };
     let built = Command::new(env!("CARGO"))
         .args([
             "build",
@@ -56,9 +70,11 @@ fn build_example() -> PathBuf {
             "wire_harness_smoke",
             "-p",
             "vyre-primitives",
-            "--target-dir",
+            "--profile",
         ])
-        .arg(target)
+        .arg(&profile)
+        .arg("--target-dir")
+        .arg(&target)
         .status()
         .expect("cargo must be invocable to build the example under test");
     assert!(built.success(), "building wire_harness_smoke failed");
