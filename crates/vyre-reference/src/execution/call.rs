@@ -33,7 +33,7 @@ pub(crate) struct ResolvedCall {
 ///
 /// The address is stable for the lifetime of the `Program` an invocation walks,
 /// so it identifies a call site without re-hashing its operation id per step.
-pub(crate) type OpCache = FxHashMap<*const Expr, ResolvedCall>;
+pub(crate) type OpCache = FxHashMap<usize, ResolvedCall>;
 
 /// Resolve `op_id` against the global registry, caching the result per call site.
 pub(crate) fn resolve_call(
@@ -41,7 +41,8 @@ pub(crate) fn resolve_call(
     op_id: &str,
     cache: &mut OpCache,
 ) -> Result<ResolvedCall, ReferenceError> {
-    if let Some(resolved) = cache.get(&call_expr).copied() {
+    let key = call_expr.addr();
+    if let Some(resolved) = cache.get(&key).copied() {
         return Ok(resolved);
     }
     let operation = OperationRegistry::global().get(op_id).ok_or_else(|| {
@@ -50,7 +51,7 @@ pub(crate) fn resolve_call(
         ))
     })?;
     let resolved = ResolvedCall { operation };
-    cache.insert(call_expr, resolved);
+    cache.insert(key, resolved);
     Ok(resolved)
 }
 

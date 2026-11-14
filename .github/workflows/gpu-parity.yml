@@ -40,15 +40,10 @@ jobs:
         run: |
           set -euo pipefail
           meta="$(./cargo_full metadata --format-version 1 --no-deps)"
-          device_pkgs="$(printf '%s' "$meta" | python3 -c '
-          import json, sys
-          for pkg in json.load(sys.stdin)["packages"]:
-              if "device-tests" in pkg.get("features", {}) and pkg["name"] != "vyre-bench":
-                  print(pkg["name"])
-          ')"
-          for pkg in $device_pkgs; do
-            echo "::group::device-tests $pkg"
-            ./cargo_full test --release -p "$pkg" --features device-tests -- --test-threads=1
+          printf '%s' "$meta" | python3 -c 'import json,sys; [print(p["name"], "device-tests" if "device-tests" in p.get("features",{}) else "conform-device-tests") for p in json.load(sys.stdin)["packages"] if p["name"]!="vyre-bench" and ("device-tests" in p.get("features",{}) or "conform-device-tests" in p.get("features",{}))]' | while read -r pkg feat; do
+            [ -n "$pkg" ] || continue
+            echo "::group::$feat $pkg"
+            ./cargo_full test --release -p "$pkg" --features "$feat" -- --test-threads=1
             echo "::endgroup::"
           done
 
@@ -56,3 +51,4 @@ jobs:
         shell: bash
         run: |
           ./cargo_full test --release -p vyre-bench --lib
+          ./cargo_full run --release -p vyre-bench --features cuda -- --suite megakernel --backend cuda --samples 5

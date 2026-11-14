@@ -156,12 +156,6 @@ impl HashmapLocals {
         self.locals.get(name).map(|local| local.value.clone())
     }
 
-    #[cfg(feature = "subgroup-ops")]
-    pub(crate) fn snapshot(&self) -> HashmapLocalSnapshot {
-        HashmapLocalSnapshot {
-            locals: self.locals.clone(),
-        }
-    }
     pub(crate) fn bind(&mut self, name: &str, value: Value) -> Result<Arc<str>, ReferenceError> {
         self.insert_binding(name, value, false)
     }
@@ -215,15 +209,39 @@ impl HashmapLocals {
 
 #[cfg(feature = "subgroup-ops")]
 /// Local values of one lane, as they stood when a collective was reached.
-#[derive(Clone)]
 pub(crate) struct HashmapLocalSnapshot {
     pub(crate) locals: FxHashMap<Arc<str>, Local>,
 }
 
 #[cfg(feature = "subgroup-ops")]
 impl HashmapLocalSnapshot {
+    pub(crate) fn empty() -> Self {
+        Self {
+            locals: FxHashMap::default(),
+        }
+    }
+
+    pub(crate) fn clone_from_locals(&mut self, src: &HashmapLocals) {
+        self.locals.clone_from(&src.locals);
+    }
+
     #[cfg(test)]
     pub(crate) fn local(&self, name: &str) -> Option<Value> {
+        self.locals.get(name).map(|local| local.value.clone())
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct InvocationView<'a> {
+    pub(crate) ids: InvocationIds,
+    #[cfg(feature = "subgroup-ops")]
+    pub(crate) linear_local_index: u32,
+    locals: &'a FxHashMap<Arc<str>, Local>,
+}
+
+impl<'a> InvocationView<'a> {
+    #[inline]
+    pub(crate) fn local(self, name: &str) -> Option<Value> {
         self.locals.get(name).map(|local| local.value.clone())
     }
 }
@@ -269,7 +287,6 @@ pub(crate) struct HashmapInvocation<'a> {
     pub(crate) collective_peers_arrived: bool,
     pub(crate) frames: Vec<Frame<'a>>,
     pub(crate) pending_async: PendingAsyncTransfers,
-    pub(crate) op_cache: crate::execution::call::OpCache,
     /// The declared [`Tile`] of every tile this lane has bound, by name.
     ///
     /// `Node::TileMatmul` and `Node::TileReduce` name their operands and carry
@@ -293,13 +310,22 @@ impl<'a> HashmapInvocation<'a> {
             waiting_for_collective_peers: false,
             collective_peers_arrived: false,
             pending_async: PendingAsyncTransfers::new(),
-            op_cache: FxHashMap::default(),
             tile_shapes: FxHashMap::default(),
             frames: vec![Frame::Nodes {
                 nodes: entry,
                 index: 0,
                 scoped: false,
             }],
+        }
+    }
+
+    #[inline]
+    pub(crate) fn view(&self) -> InvocationView<'_> {
+        InvocationView {
+            ids: self.ids,
+            #[cfg(feature = "subgroup-ops")]
+            linear_local_index: self.linear_local_index,
+            locals: &self.locals.locals,
         }
     }
     pub(crate) fn done(&self) -> bool {
@@ -341,11 +367,22 @@ impl<'a> HashmapInvocation<'a> {
 }
 
 #[cfg(feature = "subgroup-ops")]
-#[derive(Clone)]
 pub(crate) struct HashmapInvocationSnapshot {
     pub(crate) ids: InvocationIds,
     pub(crate) linear_local_index: u32,
     pub(crate) locals: HashmapLocalSnapshot,
+}
+
+#[cfg(feature = "subgroup-ops")]
+impl HashmapInvocationSnapshot {
+    #[inline]
+    pub(crate) fn view(&self) -> InvocationView<'_> {
+        InvocationView {
+            ids: self.ids,
+            linear_local_index: self.linear_local_index,
+            locals: &self.locals.locals,
+        }
+    }
 }
 
 /// Invocations one workgroup of `program` runs.

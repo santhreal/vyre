@@ -12,7 +12,7 @@ pub(crate) mod sync;
 
 #[cfg(feature = "subgroup-ops")]
 use invocation::HashmapInvocationSnapshot;
-use invocation::{create_invocations, run_invocations, HashmapInvocation};
+use invocation::{create_invocations, run_invocations, HashmapInvocation, InvocationView};
 use memory::{atomic_buffer_mut, output_value, resolve_buffer, HashmapMemory};
 use step::{axis_value, eval_call, eval_to_index};
 #[cfg(feature = "subgroup-ops")]
@@ -129,10 +129,10 @@ pub(crate) fn note_buffer_access(
     memory: &HashmapMemory,
     buffer: &str,
     index: u32,
-    invocation: &HashmapInvocation<'_>,
+    global_id: [u32; 3],
     kind: crate::interleaving::MemoryAccessKind,
 ) {
-    let (scope, domain) = if memory.workgroup.contains_key(buffer) {
+    let (scope, domain) = if !memory.workgroup.is_empty() && memory.workgroup.contains_key(buffer) {
         (
             vyre_foundation::ir::MemoryScope::Workgroup,
             vyre_foundation::ir::StorageDomain::WorkgroupLocal,
@@ -143,14 +143,7 @@ pub(crate) fn note_buffer_access(
             vyre_foundation::ir::StorageDomain::DeviceGlobal,
         )
     };
-    crate::interleaving::note_access(
-        buffer,
-        u64::from(index),
-        invocation.ids.global,
-        kind,
-        scope,
-        domain,
-    );
+    crate::interleaving::note_access(buffer, u64::from(index), global_id, kind, scope, domain);
 }
 
 /// True when the oracle RETURNS this buffer among its outputs. This is the SINGLE
@@ -214,10 +207,10 @@ pub(crate) fn eval_expr_public(
     entry: &[vyre_foundation::ir::Node],
     memory: &mut HashmapMemory,
 ) -> Result<Value, ReferenceError> {
-    let mut invocation = HashmapInvocation::new(ids, 0, entry);
+    let invocation = HashmapInvocation::new(ids, 0, entry);
     eval_expr(
         expr,
-        &mut invocation,
+        invocation.view(),
         memory,
         #[cfg(feature = "subgroup-ops")]
         &[],
@@ -569,7 +562,7 @@ fn declared_min_byte_len(decl: &vyre_foundation::ir::BufferDecl) -> Result<usize
 
 fn eval_expr(
     expr: &Expr,
-    invocation: &mut HashmapInvocation<'_>,
+    invocation: InvocationView<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<Value, ReferenceError> {
@@ -580,7 +573,7 @@ fn eval_expr(
             *value,
         )))),
         Expr::LitBool(value) => Ok(Value::Bool(*value)),
-        Expr::Var(name) => invocation.locals.local(name).ok_or_else(|| {
+        Expr::Var(name) => invocation.local(name).ok_or_else(|| {
             ReferenceError::new(format!(
                 "reference to undeclared variable `{name}`. Fix: add a Let before this use."
             ))
@@ -598,7 +591,7 @@ fn eval_expr(
                 memory,
                 buffer.as_str(),
                 idx,
-                invocation,
+                invocation.ids.global,
                 crate::interleaving::MemoryAccessKind::Read,
             );
             oob::load(resolve_buffer(memory, buffer)?, idx)
@@ -777,19 +770,19 @@ fn eval_expr(
         ))),
         #[cfg(feature = "subgroup-ops")]
         Expr::SubgroupBallot { cond } => {
-            eval_subgroup_ballot(cond, invocation, snapshots, memory)
+            eval_subgroup_ballot(cond, invocation.linear_local_index, snapshots, memory)
         }
         #[cfg(not(feature = "subgroup-ops"))]
         Expr::SubgroupBallot { .. } => Err(no_subgroup_model("subgroup_ballot")),
         #[cfg(feature = "subgroup-ops")]
         Expr::SubgroupShuffle { value, lane } => {
-            eval_subgroup_shuffle(value, lane, invocation, snapshots, memory)
+            eval_subgroup_shuffle(value, lane, invocation.linear_local_index, snapshots, memory)
         }
         #[cfg(not(feature = "subgroup-ops"))]
         Expr::SubgroupShuffle { .. } => Err(no_subgroup_model("subgroup_shuffle")),
         #[cfg(feature = "subgroup-ops")]
         Expr::SubgroupReduce { op, value } => {
-            eval_subgroup_reduce(*op, value, invocation, snapshots, memory)
+            eval_subgroup_reduce(*op, value, invocation.linear_local_index, snapshots, memory)
         }
         #[cfg(not(feature = "subgroup-ops"))]
         Expr::SubgroupReduce { op: _, value: _ } => Err(no_subgroup_model("subgroup_reduce")),
@@ -806,7 +799,7 @@ fn eval_atomic(
     expected: Option<&Expr>,
     value: &Expr,
     ordering: vyre_foundation::ir::MemoryOrdering,
-    invocation: &mut HashmapInvocation<'_>,
+    invocation: InvocationView<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<Value, ReferenceError> {
@@ -841,7 +834,7 @@ fn eval_atomic(
         memory,
         buffer,
         idx,
-        invocation,
+        invocation.ids.global,
         crate::interleaving::MemoryAccessKind::Atomic {
             // `GridSync` is barrier-only and not a valid atomic ordering, so an
             // atomic that states it is recorded at the strongest ordering the

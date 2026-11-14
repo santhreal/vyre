@@ -25,7 +25,6 @@ jobs:
     timeout-minutes: 90
     env:
       RUSTUP_TOOLCHAIN: stable
-      RUST_TEST_THREADS: "1"
       VYRE_FUSED_CASES: "100"
       VYRE_PRESENCE_CASES: "500"
       VYRE_PRESENCE_GROUND_TRUTH_CASES: "200"
@@ -38,24 +37,19 @@ jobs:
 
       - uses: taiki-e/install-action@cargo-llvm-cov
 
+      - uses: taiki-e/install-action@nextest
+
       - name: Measure workspace coverage and enforce 85% line floor
         shell: bash
         run: |
           set -euo pipefail
           ./cargo_full llvm-cov clean --workspace --profraw-only
-          packages="$(./cargo_full metadata --no-deps --format-version 1 \
-            | python3 -c '
-          import json, sys
-          skip = {"xtask", "vyre-bench", "vyre-test-support"}
-          for p in json.load(sys.stdin)["packages"]:
-              if p["name"] not in skip:
-                  print(p["name"])
-          ')"
-          for package in $packages; do
-            echo "::group::coverage $package"
-            ./cargo_full llvm-cov --no-report --locked --all-features -p "$package"
-            echo "::endgroup::"
-          done
+          gpu_expr="$(./cargo_full metadata --no-deps --format-version 1 \
+            | python3 -c 'import json,sys; pkgs=["package(" + p["name"] + ")" for p in json.load(sys.stdin)["packages"] if p["name"] in {"vyre","vyre-runtime"} or p["name"].startswith("vyre-driver-")]; print(" | ".join(pkgs) if pkgs else "none()")')"
+          ./cargo_full llvm-cov nextest --no-report --locked --workspace --all-features \
+            --exclude vyre-bench --no-tests=pass --test-threads 16 -E "not ($gpu_expr)"
+          ./cargo_full llvm-cov nextest --no-report --locked --workspace --all-features \
+            --exclude vyre-bench --no-tests=pass --test-threads 1 -E "$gpu_expr"
           ./cargo_full run -q --locked -p xtask -- prune-coverage-objects
           ./cargo_full llvm-cov report --lcov --output-path lcov.info \
             --fail-under-lines "$COVERAGE_FLOOR_LINES"

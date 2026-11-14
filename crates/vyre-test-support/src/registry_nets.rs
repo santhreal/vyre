@@ -20,6 +20,9 @@
 //! fixture leaves its composition unjudged, and reporting the remainder as
 //! clean is the exact failure these nets exist to remove.
 
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+
 use vyre_foundation::ir::{BufferAccess, Program};
 use vyre_foundation::operation::SemanticOperation;
 use vyre_reference::value::Value;
@@ -35,7 +38,7 @@ pub struct SweepCase {
     /// How a finding names this case, normally `<op-id> (case N)`.
     label: String,
     /// The program the entry builds.
-    program: Program,
+    program: Arc<Program>,
     /// The input values the fixture supplies.
     inputs: Vec<Value>,
 }
@@ -44,6 +47,14 @@ impl SweepCase {
     /// One case of one registered entry.
     #[must_use]
     pub fn new(label: String, program: Program, inputs: Vec<Value>) -> Self {
+        Self {
+            label,
+            program: Arc::new(program),
+            inputs,
+        }
+    }
+
+    fn new_shared(label: String, program: Arc<Program>, inputs: Vec<Value>) -> Self {
         Self {
             label,
             program,
@@ -94,16 +105,16 @@ impl RegistrySweep {
                 continue;
             };
             fixtured += 1;
-            let program = entry.program().unwrap_or_else(|| {
+            let program = Arc::new(entry.program().unwrap_or_else(|| {
                 panic!(
                     "Fix: registered operation `{}` carries a fixture but builds no program",
                     entry.id
                 )
-            });
+            }));
             for (index, case) in inputs_fn().into_iter().enumerate() {
-                cases.push(SweepCase::new(
+                cases.push(SweepCase::new_shared(
                     format!("{} (fixture case {index})", entry.id),
-                    program.clone(),
+                    Arc::clone(&program),
                     case.into_iter().map(Value::from).collect(),
                 ));
             }
@@ -128,22 +139,19 @@ impl RegistrySweep {
     /// Panics when a case accesses a buffer out of bounds, when a case cannot
     /// be evaluated, or when the population is empty.
     pub fn assert_oob_clean(&self) {
-        let mut offenders = Vec::new();
-        let mut skipped = Vec::new();
-        let mut checked = 0usize;
-
-        for case in &self.cases {
-            match vyre_reference::ReferenceRequest::standard(&case.program, &case.inputs).outputs()
-            {
-                Ok(_out) => checked += 1,
-                Err(err) if err.error_class() == OUT_OF_BOUNDS => {
-                    checked += 1;
-                    offenders.push(format!("{}: {err}", case.label));
-                }
-                Err(err) => skipped.push(format!("{}: {err}", case.label)),
-            }
-        }
-
+        let (checked, offenders, skipped) =
+            run_cases_parallel(
+                &self.cases,
+                |case| match vyre_reference::ReferenceRequest::standard(&case.program, &case.inputs)
+                    .outputs()
+                {
+                    Ok(_out) => CaseOutcome::Checked,
+                    Err(err) if err.error_class() == OUT_OF_BOUNDS => {
+                        CaseOutcome::Offender(format!("{}: {err}", case.label))
+                    }
+                    Err(err) => CaseOutcome::Skipped(format!("{}: {err}", case.label)),
+                },
+            );
         self.refuse_skips("the fixture out-of-bounds sweep", checked, &skipped);
         assert!(
             offenders.is_empty(),
@@ -164,25 +172,19 @@ impl RegistrySweep {
     /// Panics when an over-fired lane accesses a buffer out of bounds, when a
     /// case cannot be evaluated, or when the population is empty.
     pub fn assert_oob_clean_under_overfire(&self) {
-        let mut offenders = Vec::new();
-        let mut skipped = Vec::new();
-        let mut checked = 0usize;
-
-        for case in &self.cases {
+        let (checked, offenders, skipped) = run_cases_parallel(&self.cases, |case| {
             let grid = overfire_grid(&case.program);
             match vyre_reference::ReferenceRequest::standard(&case.program, &case.inputs)
                 .with_min_dispatch_elements(grid)
                 .outputs()
             {
-                Ok(_out) => checked += 1,
+                Ok(_out) => CaseOutcome::Checked,
                 Err(err) if err.error_class() == OUT_OF_BOUNDS => {
-                    checked += 1;
-                    offenders.push(format!("{} (grid>={grid}): {err}", case.label));
+                    CaseOutcome::Offender(format!("{} (grid>={grid}): {err}", case.label))
                 }
-                Err(err) => skipped.push(format!("{} (over-fired): {err}", case.label)),
+                Err(err) => CaseOutcome::Skipped(format!("{} (over-fired): {err}", case.label)),
             }
-        }
-
+        });
         self.refuse_skips("the over-fired out-of-bounds sweep", checked, &skipped);
         assert!(
             offenders.is_empty(),
@@ -206,21 +208,14 @@ impl RegistrySweep {
     /// Panics when an over-fired grid changes any output byte, when a case
     /// cannot be evaluated, or when the population is empty.
     pub fn assert_output_invariant_under_overfire(&self) {
-        let mut offenders = Vec::new();
-        let mut skipped = Vec::new();
-        let mut checked = 0usize;
-
-        for case in &self.cases {
+        let (checked, offenders, skipped) = run_cases_parallel(&self.cases, |case| {
             let grid = overfire_grid(&case.program);
             let baseline =
                 match vyre_reference::ReferenceRequest::standard(&case.program, &case.inputs)
                     .outputs()
                 {
                     Ok(baseline) => baseline,
-                    Err(err) => {
-                        skipped.push(format!("{}: {err}", case.label));
-                        continue;
-                    }
+                    Err(err) => return CaseOutcome::Skipped(format!("{}: {err}", case.label)),
                 };
             let overfired =
                 match vyre_reference::ReferenceRequest::standard(&case.program, &case.inputs)
@@ -229,26 +224,23 @@ impl RegistrySweep {
                 {
                     Ok(overfired) => overfired,
                     Err(err) => {
-                        skipped.push(format!("{} (over-fired): {err}", case.label));
-                        continue;
+                        return CaseOutcome::Skipped(format!("{} (over-fired): {err}", case.label));
                     }
                 };
-            checked += 1;
-            let base_bytes: Vec<Vec<u8>> = baseline.iter().map(Value::to_bytes).collect();
-            let over_bytes: Vec<Vec<u8>> = overfired.iter().map(Value::to_bytes).collect();
-            if base_bytes != over_bytes {
-                let where_ = base_bytes
+            if !outputs_bytes_eq(&baseline, &overfired) {
+                let where_ = baseline
                     .iter()
-                    .zip(over_bytes.iter())
-                    .position(|(left, right)| left != right)
+                    .zip(overfired.iter())
+                    .position(|(left, right)| !value_bytes_eq(left, right))
                     .map_or_else(
-                        || format!("output count {} vs {}", base_bytes.len(), over_bytes.len()),
+                        || format!("output count {} vs {}", baseline.len(), overfired.len()),
                         |index| format!("output #{index} differs"),
                     );
-                offenders.push(format!("{} (grid>={grid}): {where_}", case.label));
+                CaseOutcome::Offender(format!("{} (grid>={grid}): {where_}", case.label))
+            } else {
+                CaseOutcome::Checked
             }
-        }
-
+        });
         self.refuse_skips("the over-fire invariance sweep", checked, &skipped);
         assert!(
             offenders.is_empty(),
@@ -268,20 +260,13 @@ impl RegistrySweep {
     /// Panics when reversing the step order changes any output byte, when a
     /// case cannot be evaluated, or when the population is empty.
     pub fn assert_race_free_under_lane_reversal(&self) {
-        let mut offenders = Vec::new();
-        let mut skipped = Vec::new();
-        let mut checked = 0usize;
-
-        for case in &self.cases {
+        let (checked, offenders, skipped) = run_cases_parallel(&self.cases, |case| {
             let forward =
                 match vyre_reference::ReferenceRequest::standard(&case.program, &case.inputs)
                     .outputs()
                 {
                     Ok(forward) => forward,
-                    Err(err) => {
-                        skipped.push(format!("{}: {err}", case.label));
-                        continue;
-                    }
+                    Err(err) => return CaseOutcome::Skipped(format!("{}: {err}", case.label)),
                 };
             let reversed =
                 match vyre_reference::ReferenceRequest::standard(&case.program, &case.inputs)
@@ -290,18 +275,15 @@ impl RegistrySweep {
                 {
                     Ok(reversed) => reversed,
                     Err(err) => {
-                        skipped.push(format!("{} (reversed): {err}", case.label));
-                        continue;
+                        return CaseOutcome::Skipped(format!("{} (reversed): {err}", case.label));
                     }
                 };
-            checked += 1;
-            let forward_bytes: Vec<Vec<u8>> = forward.iter().map(Value::to_bytes).collect();
-            let reversed_bytes: Vec<Vec<u8>> = reversed.iter().map(Value::to_bytes).collect();
-            if forward_bytes != reversed_bytes {
-                offenders.push(case.label.clone());
+            if !outputs_bytes_eq(&forward, &reversed) {
+                CaseOutcome::Offender(case.label.clone())
+            } else {
+                CaseOutcome::Checked
             }
-        }
-
+        });
         self.refuse_skips("the lane-reversal sweep", checked, &skipped);
         assert!(
             offenders.is_empty(),
@@ -345,27 +327,21 @@ impl RegistrySweep {
     /// Panics when a case accesses a buffer out of bounds on hostile contents,
     /// when a case cannot be evaluated, or when the population is empty.
     pub fn assert_oob_clean_under_hostile_contents(&self) {
-        let mut offenders = Vec::new();
-        let mut skipped = Vec::new();
-        let mut checked = 0usize;
-
-        for case in &self.cases {
+        let (checked, offenders, skipped) = run_cases_parallel(&self.cases, |case| {
             let index = first_out_of_range_index(&case.program, &case.inputs);
             let inputs = hostile_contents(&case.inputs, index);
             match vyre_reference::ReferenceRequest::standard(&case.program, &inputs).outputs() {
-                Ok(_out) => checked += 1,
-                Err(err) if err.error_class() == OUT_OF_BOUNDS => {
-                    checked += 1;
-                    offenders.push(format!(
-                        "{} (every input word = {index}): {err}",
-                        case.label
-                    ));
+                Ok(_out) => CaseOutcome::Checked,
+                Err(err) if err.error_class() == OUT_OF_BOUNDS => CaseOutcome::Offender(format!(
+                    "{} (every input word = {index}): {err}",
+                    case.label
+                )),
+                Err(err) if err.is_program_trap() => CaseOutcome::Checked,
+                Err(err) => {
+                    CaseOutcome::Skipped(format!("{} (hostile contents): {err}", case.label))
                 }
-                Err(err) if err.is_program_trap() => checked += 1,
-                Err(err) => skipped.push(format!("{} (hostile contents): {err}", case.label)),
             }
-        }
-
+        });
         self.refuse_skips(
             "the hostile-contents out-of-bounds sweep",
             checked,
@@ -409,23 +385,18 @@ impl RegistrySweep {
     /// Panics when a case accesses a buffer out of bounds on a longer input,
     /// when a case cannot be evaluated, or when the population is empty.
     pub fn assert_oob_clean_under_over_provisioned_inputs(&self) {
-        let mut offenders = Vec::new();
-        let mut skipped = Vec::new();
-        let mut checked = 0usize;
-
-        for case in &self.cases {
+        let (checked, offenders, skipped) = run_cases_parallel(&self.cases, |case| {
             let inputs = extended_inputs(&case.program, &case.inputs, 1);
             match vyre_reference::ReferenceRequest::standard(&case.program, &inputs).outputs() {
-                Ok(_out) => checked += 1,
-                Err(err) if err.error_class() == OUT_OF_BOUNDS => {
-                    checked += 1;
-                    offenders.push(format!("{} (inputs one element longer): {err}", case.label));
-                }
-                Err(err) if err.is_program_trap() => checked += 1,
-                Err(err) => skipped.push(format!("{} (longer inputs): {err}", case.label)),
+                Ok(_out) => CaseOutcome::Checked,
+                Err(err) if err.error_class() == OUT_OF_BOUNDS => CaseOutcome::Offender(format!(
+                    "{} (inputs one element longer): {err}",
+                    case.label
+                )),
+                Err(err) if err.is_program_trap() => CaseOutcome::Checked,
+                Err(err) => CaseOutcome::Skipped(format!("{} (longer inputs): {err}", case.label)),
             }
-        }
-
+        });
         self.refuse_skips(
             "the over-provisioned-input out-of-bounds sweep",
             checked,
@@ -466,6 +437,106 @@ impl RegistrySweep {
             self.surface
         );
     }
+}
+
+enum CaseOutcome {
+    Checked,
+    Offender(String),
+    Skipped(String),
+}
+
+fn value_bytes_eq(left: &Value, right: &Value) -> bool {
+    match (left, right) {
+        (Value::Bytes(a), Value::Bytes(b)) => a == b,
+        _ => left.to_bytes() == right.to_bytes(),
+    }
+}
+
+fn outputs_bytes_eq(left: &[Value], right: &[Value]) -> bool {
+    left.len() == right.len()
+        && left
+            .iter()
+            .zip(right.iter())
+            .all(|(l, r)| value_bytes_eq(l, r))
+}
+
+fn run_cases_parallel(
+    cases: &[SweepCase],
+    eval: impl Fn(&SweepCase) -> CaseOutcome + Sync,
+) -> (usize, Vec<String>, Vec<String>) {
+    if cases.len() <= 1 {
+        let mut checked = 0usize;
+        let mut offenders = Vec::new();
+        let mut skipped = Vec::new();
+        for case in cases {
+            match eval(case) {
+                CaseOutcome::Checked => checked += 1,
+                CaseOutcome::Offender(msg) => {
+                    checked += 1;
+                    offenders.push(msg);
+                }
+                CaseOutcome::Skipped(msg) => skipped.push(msg),
+            }
+        }
+        return (checked, offenders, skipped);
+    }
+
+    let workers = std::thread::available_parallelism()
+        .map_or(4, usize::from)
+        .min(cases.len());
+    let next = AtomicUsize::new(0);
+    let eval_ref = &eval;
+
+    let parts: Vec<(usize, Vec<(usize, String)>, Vec<(usize, String)>)> =
+        std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..workers)
+                .map(|_| {
+                    let next_ref = &next;
+                    scope.spawn(move || {
+                        let mut local_checked = 0usize;
+                        let mut local_offenders = Vec::new();
+                        let mut local_skipped = Vec::new();
+                        loop {
+                            let idx = next_ref.fetch_add(1, Ordering::Relaxed);
+                            let Some(case) = cases.get(idx) else {
+                                break;
+                            };
+                            match eval_ref(case) {
+                                CaseOutcome::Checked => local_checked += 1,
+                                CaseOutcome::Offender(msg) => {
+                                    local_checked += 1;
+                                    local_offenders.push((idx, msg));
+                                }
+                                CaseOutcome::Skipped(msg) => {
+                                    local_skipped.push((idx, msg));
+                                }
+                            }
+                        }
+                        (local_checked, local_offenders, local_skipped)
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|handle| handle.join().expect("registry sweep worker panicked"))
+                .collect()
+        });
+
+    let mut checked = 0usize;
+    let mut indexed_offenders = Vec::new();
+    let mut indexed_skipped = Vec::new();
+    for (c, o, s) in parts {
+        checked += c;
+        indexed_offenders.extend(o);
+        indexed_skipped.extend(s);
+    }
+    indexed_offenders.sort_unstable_by_key(|(idx, _)| *idx);
+    indexed_skipped.sort_unstable_by_key(|(idx, _)| *idx);
+    (
+        checked,
+        indexed_offenders.into_iter().map(|(_, msg)| msg).collect(),
+        indexed_skipped.into_iter().map(|(_, msg)| msg).collect(),
+    )
 }
 
 /// The first element index neither the program's declared extents nor the
@@ -588,11 +659,7 @@ pub fn declared_witness_bytes<'a>(
         .into_iter()
         .enumerate()
         .map(move |(case, input_set)| {
-            let values = input_set
-                .iter()
-                .cloned()
-                .map(Value::from)
-                .collect::<Vec<_>>();
+            let values = input_set.into_iter().map(Value::from).collect::<Vec<_>>();
             vyre_reference::ReferenceRequest::standard(&build(), &values)
                 .outputs()
                 .unwrap_or_else(|error| {

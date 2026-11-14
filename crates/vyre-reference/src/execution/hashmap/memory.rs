@@ -4,15 +4,24 @@
 //! each workgroup dispatch. The helpers here centralize that distinction so the
 //! executor does not duplicate storage/workgroup lookup plumbing.
 
+#[cfg(feature = "subgroup-ops")]
+use crate::execution::node_tree::node_id;
+use crate::execution::node_tree::{contains_rendezvous, RendezvousKind};
 use crate::ReferenceError;
 use crate::{oob::Buffer, value::Value, workgroup::MAX_WORKGROUP_BYTES};
 use rustc_hash::FxHashMap;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, Node, Program};
 
 pub(crate) struct HashmapMemory {
     pub(crate) storage: FxHashMap<String, Buffer>,
     pub(crate) workgroup: FxHashMap<String, Buffer>,
-    /// Order the explored schedule folds subgroup reduction lanes in.
+    rendezvous_cache: FxHashMap<(usize, usize), Option<RendezvousKind>>,
+    pub(crate) op_cache: crate::execution::call::OpCache,
+    #[cfg(feature = "subgroup-ops")]
+    pub(crate) snapshot_scratch: Vec<super::invocation::HashmapInvocationSnapshot>,
+    #[cfg(feature = "subgroup-ops")]
+    peer_lane_nodes: FxHashMap<usize, bool>,
+    /// Lane fold order for subgroup reductions.
     ///
     /// A subgroup reduction states no lane order, so the order the lanes are
     /// combined in is part of the schedule rather than part of the program.
@@ -37,6 +46,12 @@ impl HashmapMemory {
         Self {
             storage,
             workgroup: FxHashMap::default(),
+            rendezvous_cache: FxHashMap::default(),
+            op_cache: FxHashMap::default(),
+            #[cfg(feature = "subgroup-ops")]
+            snapshot_scratch: Vec::new(),
+            #[cfg(feature = "subgroup-ops")]
+            peer_lane_nodes: FxHashMap::default(),
             #[cfg(feature = "subgroup-ops")]
             collective_fold_order,
         }
@@ -53,6 +68,30 @@ impl HashmapMemory {
     /// Consume this memory and return its storage buffers.
     pub(crate) fn into_storage(self) -> FxHashMap<String, Buffer> {
         self.storage
+    }
+
+    pub(crate) fn cached_contains_rendezvous(&mut self, nodes: &[Node]) -> Option<RendezvousKind> {
+        if nodes.is_empty() {
+            return None;
+        }
+        let key = (nodes.as_ptr().addr(), nodes.len());
+        if let Some(&cached) = self.rendezvous_cache.get(&key) {
+            return cached;
+        }
+        let result = contains_rendezvous(nodes);
+        self.rendezvous_cache.insert(key, result);
+        result
+    }
+
+    #[cfg(feature = "subgroup-ops")]
+    pub(crate) fn cached_node_reads_peer_lanes(&mut self, node: &Node) -> bool {
+        let key = node_id(node);
+        if let Some(&cached) = self.peer_lane_nodes.get(&key) {
+            return cached;
+        }
+        let result = crate::execution::node_tree::node_reads_peer_lanes(node);
+        self.peer_lane_nodes.insert(key, result);
+        result
     }
 }
 

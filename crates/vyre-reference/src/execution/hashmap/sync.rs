@@ -8,9 +8,7 @@ use crate::ReferenceError;
 use smallvec::SmallVec;
 use vyre_foundation::ir::BufferDecl;
 
-#[cfg(feature = "subgroup-ops")]
-pub(crate) use crate::execution::node_tree::node_reads_peer_lanes;
-pub(crate) use crate::execution::node_tree::{contains_rendezvous, node_id, RendezvousKind};
+pub(crate) use crate::execution::node_tree::{node_id, RendezvousKind};
 
 pub(crate) fn release_barrier_if_ready(invocations: &mut [HashmapInvocation<'_>]) -> bool {
     let active = invocations.iter().filter(|inv| !inv.done()).count();

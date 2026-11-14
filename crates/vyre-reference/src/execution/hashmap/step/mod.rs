@@ -5,7 +5,10 @@ pub(crate) use node_step::{eval_call, step_loop_frame, step_nodes_frame};
 
 #[cfg(feature = "subgroup-ops")]
 use super::invocation::HashmapInvocationSnapshot;
-use super::{invocation::HashmapInvocation, memory::HashmapMemory};
+use super::{
+    invocation::{HashmapInvocation, InvocationView},
+    memory::HashmapMemory,
+};
 #[cfg(feature = "subgroup-ops")]
 use crate::value::Value;
 use crate::workgroup::Frame;
@@ -16,13 +19,35 @@ pub(crate) fn step_round_robin(
     invocations: &mut [HashmapInvocation<'_>],
     #[cfg(feature = "subgroup-ops")] uses_subgroup_ops: bool,
 ) -> Result<bool, ReferenceError> {
-    let mut made_progress = false;
     #[cfg(feature = "subgroup-ops")]
-    let snapshots = if uses_subgroup_ops {
-        capture_invocation_snapshots(invocations)
-    } else {
-        Vec::new()
-    };
+    if uses_subgroup_ops
+        && invocations
+            .iter()
+            .any(|inv| !inv.done() && inv.collective_peers_arrived)
+    {
+        let mut snapshots = std::mem::take(&mut memory.snapshot_scratch);
+        capture_invocation_snapshots_into(invocations, &mut snapshots);
+        let res = step_active_lanes(memory, invocations, true, &snapshots);
+        memory.snapshot_scratch = snapshots;
+        return res;
+    }
+    step_active_lanes(
+        memory,
+        invocations,
+        #[cfg(feature = "subgroup-ops")]
+        uses_subgroup_ops,
+        #[cfg(feature = "subgroup-ops")]
+        &[],
+    )
+}
+
+fn step_active_lanes(
+    memory: &mut HashmapMemory,
+    invocations: &mut [HashmapInvocation<'_>],
+    #[cfg(feature = "subgroup-ops")] uses_subgroup_ops: bool,
+    #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
+) -> Result<bool, ReferenceError> {
+    let mut made_progress = false;
     for index in 0..invocations.len() {
         if invocations[index].done()
             || invocations[index].waiting_at_barrier
@@ -36,7 +61,9 @@ pub(crate) fn step_round_robin(
             memory,
             invocations,
             #[cfg(feature = "subgroup-ops")]
-            &snapshots,
+            uses_subgroup_ops,
+            #[cfg(feature = "subgroup-ops")]
+            snapshots,
         )?;
         made_progress = true;
     }
@@ -47,6 +74,7 @@ fn step(
     index: usize,
     memory: &mut HashmapMemory,
     invocations: &mut [HashmapInvocation<'_>],
+    #[cfg(feature = "subgroup-ops")] uses_subgroup_ops: bool,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<(), ReferenceError> {
     let invocation = &mut invocations[index];
@@ -74,6 +102,8 @@ fn step(
                     index,
                     scoped,
                     #[cfg(feature = "subgroup-ops")]
+                    uses_subgroup_ops,
+                    #[cfg(feature = "subgroup-ops")]
                     snapshots,
                 )? {
                     return Ok(());
@@ -95,7 +125,7 @@ fn step(
 pub(crate) fn eval_to_index(
     expr: &vyre_foundation::ir::Expr,
     label: &str,
-    invocation: &mut HashmapInvocation<'_>,
+    invocation: InvocationView<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<u32, ReferenceError> {
@@ -171,18 +201,7 @@ pub(crate) fn eval_expr_snapshot(
     snapshots: &[HashmapInvocationSnapshot],
     memory: &mut HashmapMemory,
 ) -> Result<Value, ReferenceError> {
-    let empty_entry: &[vyre_foundation::ir::Node] = &[];
-    let mut invocation =
-        HashmapInvocation::new(snapshot.ids, snapshot.linear_local_index, empty_entry);
-    invocation.locals.locals = snapshot.locals.locals.clone();
-    // A multi-lane window refused an argument that writes before reaching
-    // here, and a single-lane window commits once against the live memory
-    // exactly as the device does, so evaluating against live memory is
-    // byte-identical to the device in both cases. The copy this used to take
-    // allocated both buffer maps once per lane per collective and isolated
-    // nothing: buffer bytes sit behind a shared handle, so every write
-    // reached the original anyway.
-    super::eval_expr(expr, &mut invocation, memory, snapshots)
+    super::eval_expr(expr, snapshot.view(), memory, snapshots)
 }
 
 /// Capture every lane's locals for cross-lane collective evaluation, INDEXED BY LANE.
@@ -196,18 +215,37 @@ pub(crate) fn eval_expr_snapshot(
 /// shuffle sourced a different lane, which is a change in RESULT, not in scheduling.
 /// Sorting by lane index restores the invariant the readers assume for every schedule.
 #[cfg(feature = "subgroup-ops")]
+fn capture_invocation_snapshots_into(
+    invocations: &[HashmapInvocation<'_>],
+    snapshots: &mut Vec<HashmapInvocationSnapshot>,
+) {
+    if snapshots.len() > invocations.len() {
+        snapshots.truncate(invocations.len());
+    }
+    for (idx, invocation) in invocations.iter().enumerate() {
+        if let Some(slot) = snapshots.get_mut(idx) {
+            slot.ids = invocation.ids;
+            slot.linear_local_index = invocation.linear_local_index;
+            slot.locals.clone_from_locals(&invocation.locals);
+        } else {
+            let mut locals = super::invocation::HashmapLocalSnapshot::empty();
+            locals.clone_from_locals(&invocation.locals);
+            snapshots.push(HashmapInvocationSnapshot {
+                ids: invocation.ids,
+                linear_local_index: invocation.linear_local_index,
+                locals,
+            });
+        }
+    }
+    snapshots.sort_unstable_by_key(|snapshot| snapshot.linear_local_index);
+}
+
+#[cfg(all(test, feature = "subgroup-ops"))]
 fn capture_invocation_snapshots(
     invocations: &[HashmapInvocation<'_>],
 ) -> Vec<HashmapInvocationSnapshot> {
-    let mut snapshots: Vec<HashmapInvocationSnapshot> = invocations
-        .iter()
-        .map(|invocation| HashmapInvocationSnapshot {
-            ids: invocation.ids,
-            linear_local_index: invocation.linear_local_index,
-            locals: invocation.locals.snapshot(),
-        })
-        .collect();
-    snapshots.sort_unstable_by_key(|snapshot| snapshot.linear_local_index);
+    let mut snapshots = Vec::with_capacity(invocations.len());
+    capture_invocation_snapshots_into(invocations, &mut snapshots);
     snapshots
 }
 

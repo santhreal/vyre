@@ -2,10 +2,10 @@
 use super::super::invocation::HashmapInvocationSnapshot;
 use super::super::{
     eval_expr,
-    invocation::HashmapInvocation,
+    invocation::{HashmapInvocation, InvocationView},
     memory::{buffer_mut, HashmapMemory},
     note_buffer_access,
-    sync::{contains_rendezvous, node_id},
+    sync::node_id,
 };
 use super::eval_to_index;
 use crate::execution::async_transfer::{self, AsyncTransfer};
@@ -20,6 +20,7 @@ pub(crate) fn step_nodes_frame<'a>(
     nodes: &'a [Node],
     index: usize,
     scoped: bool,
+    #[cfg(feature = "subgroup-ops")] uses_subgroup_ops: bool,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<bool, ReferenceError> {
     if index >= nodes.len() {
@@ -34,9 +35,9 @@ pub(crate) fn step_nodes_frame<'a>(
     // unless the program uses a collective at all, so a program without one
     // never reaches this.
     #[cfg(feature = "subgroup-ops")]
-    if !snapshots.is_empty()
+    if uses_subgroup_ops
         && !invocation.collective_peers_arrived
-        && super::super::sync::node_reads_peer_lanes(&nodes[index])
+        && memory.cached_node_reads_peer_lanes(&nodes[index])
     {
         invocation.waiting_for_collective_peers = true;
         invocation.push_frame(Frame::Nodes {
@@ -61,7 +62,7 @@ pub(crate) fn step_nodes_frame<'a>(
         Node::Let { name, value } => {
             let v = eval_expr(
                 value,
-                invocation,
+                invocation.view(),
                 memory,
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
@@ -71,7 +72,7 @@ pub(crate) fn step_nodes_frame<'a>(
         Node::Assign { name, value } => {
             let v = eval_expr(
                 value,
-                invocation,
+                invocation.view(),
                 memory,
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
@@ -83,10 +84,20 @@ pub(crate) fn step_nodes_frame<'a>(
             index,
             value,
         } => {
-            let idx = eval_expr (index , invocation , memory , #[cfg (feature = "subgroup-ops")] snapshots ,) ? . try_as_u32 () . ok_or_else (| | { ReferenceError::new("store index cannot be represented as u32. Fix: use a non-negative scalar index within u32.") }) ? ;
+            let idx = eval_expr(
+                index,
+                invocation.view(),
+                memory,
+                #[cfg(feature = "subgroup-ops")]
+                snapshots,
+            )?
+            .try_as_u32()
+            .ok_or_else(|| {
+                ReferenceError::new("store index cannot be represented as u32. Fix: use a non-negative scalar index within u32.")
+            })?;
             let v = eval_expr(
                 value,
-                invocation,
+                invocation.view(),
                 memory,
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
@@ -95,7 +106,7 @@ pub(crate) fn step_nodes_frame<'a>(
                 memory,
                 buffer.as_str(),
                 idx,
-                invocation,
+                invocation.ids.global,
                 crate::interleaving::MemoryAccessKind::Write,
             );
             let target = buffer_mut(memory, buffer)?;
@@ -108,14 +119,15 @@ pub(crate) fn step_nodes_frame<'a>(
         } => {
             let cond_value = eval_expr(
                 cond,
-                invocation,
+                invocation.view(),
                 memory,
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
             )?
             .truthy();
-            if let Some(rendezvous) =
-                contains_rendezvous(then).or_else(|| contains_rendezvous(otherwise))
+            if let Some(rendezvous) = memory
+                .cached_contains_rendezvous(then)
+                .or_else(|| memory.cached_contains_rendezvous(otherwise))
             {
                 invocation
                     .uniform_checks
@@ -138,7 +150,7 @@ pub(crate) fn step_nodes_frame<'a>(
             let from_value = eval_to_index(
                 from,
                 "loop lower bound",
-                invocation,
+                invocation.view(),
                 memory,
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
@@ -146,7 +158,7 @@ pub(crate) fn step_nodes_frame<'a>(
             let to_value = eval_to_index(
                 to,
                 "loop upper bound",
-                invocation,
+                invocation.view(),
                 memory,
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
@@ -206,7 +218,7 @@ pub(crate) fn step_nodes_frame<'a>(
                     destination,
                     offset,
                     size,
-                    invocation,
+                    invocation.view(),
                     memory,
                     #[cfg(feature = "subgroup-ops")]
                     snapshots,
@@ -227,7 +239,7 @@ pub(crate) fn step_nodes_frame<'a>(
                     destination,
                     offset,
                     size,
-                    invocation,
+                    invocation.view(),
                     memory,
                     #[cfg(feature = "subgroup-ops")]
                     snapshots,
@@ -244,7 +256,7 @@ pub(crate) fn step_nodes_frame<'a>(
         Node::Trap { address, tag } => {
             let addr_val = eval_expr(
                 address,
-                invocation,
+                invocation.view(),
                 memory,
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
@@ -322,7 +334,7 @@ pub(crate) fn step_nodes_frame<'a>(
             let origin_coords = eval_origin_coords(
                 origin,
                 "tile load origin coord must be u32",
-                invocation,
+                invocation.view(),
                 memory,
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
@@ -345,7 +357,7 @@ pub(crate) fn step_nodes_frame<'a>(
             let origin_coords = eval_origin_coords(
                 origin,
                 "tile store origin coord must be u32",
-                invocation,
+                invocation.view(),
                 memory,
                 #[cfg(feature = "subgroup-ops")]
                 snapshots,
@@ -445,7 +457,7 @@ pub(crate) fn step_nodes_frame<'a>(
                         Node::Let { name, value } => {
                             let v = eval_expr(
                                 value,
-                                invocation,
+                                invocation.view(),
                                 memory,
                                 #[cfg(feature = "subgroup-ops")]
                                 snapshots,
@@ -455,7 +467,7 @@ pub(crate) fn step_nodes_frame<'a>(
                         Node::Assign { name, value } => {
                             let v = eval_expr(
                                 value,
-                                invocation,
+                                invocation.view(),
                                 memory,
                                 #[cfg(feature = "subgroup-ops")]
                                 snapshots,
@@ -574,7 +586,7 @@ fn copy_whole_buffer(
 fn eval_origin_coords(
     origin: &[Expr],
     err_msg: &'static str,
-    invocation: &mut HashmapInvocation<'_>,
+    invocation: InvocationView<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<Vec<u32>, ReferenceError> {
@@ -625,11 +637,11 @@ pub(crate) fn eval_call(
     expr: *const Expr,
     op_id: &str,
     inputs: &[Expr],
-    invocation: &mut HashmapInvocation<'_>,
+    invocation: InvocationView<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<Value, ReferenceError> {
-    let resolved = resolve_call(expr, op_id, &mut invocation.op_cache)?;
+    let resolved = resolve_call(expr, op_id, &mut memory.op_cache)?;
     let signature = callable_signature(op_id, &resolved.operation)?;
     invoke_signature(op_id, signature, inputs, |arg| {
         eval_expr(
@@ -657,7 +669,7 @@ fn eval_async_load(
     destination: &str,
     offset: &Expr,
     size: &Expr,
-    invocation: &mut HashmapInvocation<'_>,
+    invocation: InvocationView<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<AsyncTransfer, ReferenceError> {
@@ -687,7 +699,7 @@ fn eval_async_store(
     destination: &str,
     offset: &Expr,
     size: &Expr,
-    invocation: &mut HashmapInvocation<'_>,
+    invocation: InvocationView<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<AsyncTransfer, ReferenceError> {
@@ -715,7 +727,7 @@ fn eval_async_store(
 fn eval_byte_count(
     expr: &Expr,
     label: &str,
-    invocation: &mut HashmapInvocation<'_>,
+    invocation: InvocationView<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<usize, ReferenceError> {

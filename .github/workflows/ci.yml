@@ -59,9 +59,17 @@ jobs:
           manifest-path: Cargo.toml
 
   test:
-    name: Workspace Tests (Linux)
+    name: Workspace Tests (${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      VYRE_FUSED_CASES: "100"
+      VYRE_PRESENCE_CASES: "500"
+      VYRE_PRESENCE_GROUND_TRUTH_CASES: "200"
     steps:
       - uses: actions/checkout@v4
 
@@ -80,10 +88,10 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          key: test-linux
+          shared-key: test-linux
 
-      - name: Run workspace test suite
-        run: ./cargo_full nextest run --workspace --exclude vyre-bench --no-fail-fast
+      - name: Run workspace test shard
+        run: ./cargo_full nextest run --workspace --exclude vyre-bench --no-fail-fast --no-tests=pass --partition hash:${{ matrix.shard }}/4
 
   platform:
     name: Cross-Platform Check (${{ matrix.os }})

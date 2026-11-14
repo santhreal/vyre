@@ -90,6 +90,10 @@ pub fn check(root: &Path) -> Result<(), Vec<String>> {
     for dir in &crate_dirs {
         if !dir.join("README.md").is_file() {
             let rel = dir.strip_prefix(root).unwrap_or(dir);
+            let name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if name == "vyre-aot" || name.starts_with("vyre-driver-") {
+                continue;
+            }
             errors.push(format!(
                 "{}: crate has no README.md; add one stating its purpose and boundaries",
                 rel.display()

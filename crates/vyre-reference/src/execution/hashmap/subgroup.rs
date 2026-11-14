@@ -8,7 +8,7 @@
 
 #[cfg(feature = "subgroup-ops")]
 use super::{
-    invocation::{HashmapInvocation, HashmapInvocationSnapshot},
+    invocation::HashmapInvocationSnapshot,
     memory::HashmapMemory,
     step::{eval_expr_snapshot, refuse_effectful_collective_argument},
 };
@@ -49,11 +49,11 @@ pub(crate) fn subgroup_slice(
 #[cfg(feature = "subgroup-ops")]
 pub(crate) fn eval_subgroup_ballot(
     cond: &Expr,
-    invocation: &HashmapInvocation<'_>,
+    linear_local_index: u32,
     snapshots: &[HashmapInvocationSnapshot],
     memory: &mut HashmapMemory,
 ) -> Result<Value, ReferenceError> {
-    let mask = collect_lane_bools(cond, invocation.linear_local_index, snapshots, memory)?;
+    let mask = collect_lane_bools(cond, linear_local_index, snapshots, memory)?;
     Ok(Value::U32(subgroup_simulator().ballot_slice(&mask)))
 }
 
@@ -61,19 +61,19 @@ pub(crate) fn eval_subgroup_ballot(
 pub(crate) fn eval_subgroup_shuffle(
     value: &Expr,
     lane: &Expr,
-    invocation: &HashmapInvocation<'_>,
+    linear_local_index: u32,
     snapshots: &[HashmapInvocationSnapshot],
     memory: &mut HashmapMemory,
 ) -> Result<Value, ReferenceError> {
-    let values = collect_lane_values(value, invocation.linear_local_index, snapshots, memory)?;
+    let values = collect_lane_values(value, linear_local_index, snapshots, memory)?;
     let src_lanes = collect_lane_u32s(
         lane,
-        invocation.linear_local_index,
+        linear_local_index,
         snapshots,
         memory,
         "subgroup_shuffle lane index is not a u32. Fix: use a scalar u32 lane argument.",
     )?;
-    let local_offset = (invocation.linear_local_index as usize) % subgroup_simulator().width();
+    let local_offset = (linear_local_index as usize) % subgroup_simulator().width();
     // One validation for both value paths. A lane index outside the active
     // subgroup used to become `u32::MAX`, miss the lookup, and be absorbed as
     // `0.0` on the float path and `0` on the u32 path, so a program that
@@ -123,11 +123,11 @@ pub(crate) fn eval_subgroup_shuffle(
 pub(crate) fn eval_subgroup_reduce(
     op: SubgroupReduceOp,
     value: &Expr,
-    invocation: &HashmapInvocation<'_>,
+    linear_local_index: u32,
     snapshots: &[HashmapInvocationSnapshot],
     memory: &mut HashmapMemory,
 ) -> Result<Value, ReferenceError> {
-    let mut values = collect_lane_values(value, invocation.linear_local_index, snapshots, memory)?;
+    let mut values = collect_lane_values(value, linear_local_index, snapshots, memory)?;
     let width = subgroup_simulator().width();
     // A reduction states no lane order, so the order its lanes combine in is
     // the explored schedule's to choose. `Add` and `Mul` are not associative
@@ -220,6 +220,7 @@ fn collect_lane_values(
 
 #[cfg(all(test, feature = "subgroup-ops"))]
 mod tests {
+    use super::super::invocation::{HashmapInvocation, HashmapLocalSnapshot};
     use super::*;
     use crate::workgroup::InvocationIds;
     use rustc_hash::FxHashMap;
@@ -239,10 +240,12 @@ mod tests {
                 .is_ok(),
             "Fix: source_lane binding must be unique."
         );
+        let mut locals = HashmapLocalSnapshot::empty();
+        locals.clone_from_locals(&invocation.locals);
         HashmapInvocationSnapshot {
             ids: invocation.ids,
             linear_local_index: invocation.linear_local_index,
-            locals: invocation.locals.snapshot(),
+            locals,
         }
     }
 
@@ -253,8 +256,6 @@ mod tests {
             snapshot_lane(1, Value::Float(2.5), 0),
             snapshot_lane(2, Value::Float(3.75), 1),
         ];
-        let entry: &[Node] = &[];
-        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
         let mut memory = HashmapMemory::new(
             FxHashMap::default(),
             crate::execution::hashmap::LaneOrder::Forward,
@@ -263,7 +264,7 @@ mod tests {
         let value = eval_subgroup_shuffle(
             &Expr::var("lane_value"),
             &Expr::var("source_lane"),
-            &invocation,
+            0,
             &snapshots,
             &mut memory,
         )
@@ -279,8 +280,6 @@ mod tests {
     /// invented and then certified. Both value paths now refuse.
     #[test]
     fn shuffle_refuses_an_out_of_range_source_lane_on_both_value_paths() {
-        let entry: &[Node] = &[];
-        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
         let mut memory = HashmapMemory::new(
             FxHashMap::default(),
             crate::execution::hashmap::LaneOrder::Forward,
@@ -295,7 +294,7 @@ mod tests {
             let error = eval_subgroup_shuffle(
                 &Expr::var("lane_value"),
                 &Expr::var("source_lane"),
-                &invocation,
+                0,
                 &snapshots,
                 &mut memory,
             )
@@ -320,8 +319,6 @@ mod tests {
     #[test]
     fn u32_max_reduces_across_lanes() {
         let snapshots = reduce_snapshots(&[Value::U32(3), Value::U32(9), Value::U32(1)]);
-        let entry: &[Node] = &[];
-        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
         let mut memory = HashmapMemory::new(
             FxHashMap::default(),
             crate::execution::hashmap::LaneOrder::Forward,
@@ -330,7 +327,7 @@ mod tests {
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Max,
             &Expr::var("lane_value"),
-            &invocation,
+            0,
             &snapshots,
             &mut memory,
         )
@@ -342,8 +339,6 @@ mod tests {
     #[test]
     fn u32_xor_reduces_across_lanes() {
         let snapshots = reduce_snapshots(&[Value::U32(0b1100), Value::U32(0b1010)]);
-        let entry: &[Node] = &[];
-        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
         let mut memory = HashmapMemory::new(
             FxHashMap::default(),
             crate::execution::hashmap::LaneOrder::Forward,
@@ -352,7 +347,7 @@ mod tests {
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Xor,
             &Expr::var("lane_value"),
-            &invocation,
+            0,
             &snapshots,
             &mut memory,
         )
@@ -367,8 +362,6 @@ mod tests {
         // shfl-butterfly path (which has no `redux.sync`): 2*3*5*7 = 210.
         let snapshots =
             reduce_snapshots(&[Value::U32(2), Value::U32(3), Value::U32(5), Value::U32(7)]);
-        let entry: &[Node] = &[];
-        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
         let mut memory = HashmapMemory::new(
             FxHashMap::default(),
             crate::execution::hashmap::LaneOrder::Forward,
@@ -377,7 +370,7 @@ mod tests {
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Mul,
             &Expr::var("lane_value"),
-            &invocation,
+            0,
             &snapshots,
             &mut memory,
         )
@@ -391,8 +384,6 @@ mod tests {
         // The -inf identity is load-bearing: a 0 identity would wrongly win
         // when every lane is negative.
         let snapshots = reduce_snapshots(&[Value::Float(-5.0), Value::Float(-2.0)]);
-        let entry: &[Node] = &[];
-        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
         let mut memory = HashmapMemory::new(
             FxHashMap::default(),
             crate::execution::hashmap::LaneOrder::Forward,
@@ -401,7 +392,7 @@ mod tests {
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Max,
             &Expr::var("lane_value"),
-            &invocation,
+            0,
             &snapshots,
             &mut memory,
         )
@@ -413,8 +404,6 @@ mod tests {
     #[test]
     fn f32_bitwise_reduce_fails_loud() {
         let snapshots = reduce_snapshots(&[Value::Float(1.0)]);
-        let entry: &[Node] = &[];
-        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
         let mut memory = HashmapMemory::new(
             FxHashMap::default(),
             crate::execution::hashmap::LaneOrder::Forward,
@@ -423,7 +412,7 @@ mod tests {
         let error = eval_subgroup_reduce(
             SubgroupReduceOp::And,
             &Expr::var("lane_value"),
-            &invocation,
+            0,
             &snapshots,
             &mut memory,
         )
@@ -447,8 +436,6 @@ mod tests {
             Value::Float(0.5),
             Value::Float(4.0),
         ]);
-        let entry: &[Node] = &[];
-        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
         let mut memory = HashmapMemory::new(
             FxHashMap::default(),
             crate::execution::hashmap::LaneOrder::Forward,
@@ -457,7 +444,7 @@ mod tests {
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Mul,
             &Expr::var("lane_value"),
-            &invocation,
+            0,
             &snapshots,
             &mut memory,
         )
@@ -471,8 +458,6 @@ mod tests {
         // The 0.0 additive identity fold: 1.0 + 2.5 + 3.5 = 7.0.
         let snapshots =
             reduce_snapshots(&[Value::Float(1.0), Value::Float(2.5), Value::Float(3.5)]);
-        let entry: &[Node] = &[];
-        let invocation = HashmapInvocation::new(InvocationIds::ZERO, 0, entry);
         let mut memory = HashmapMemory::new(
             FxHashMap::default(),
             crate::execution::hashmap::LaneOrder::Forward,
@@ -481,7 +466,7 @@ mod tests {
         let value = eval_subgroup_reduce(
             SubgroupReduceOp::Add,
             &Expr::var("lane_value"),
-            &invocation,
+            0,
             &snapshots,
             &mut memory,
         )
