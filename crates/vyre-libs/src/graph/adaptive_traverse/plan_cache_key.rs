@@ -103,7 +103,7 @@ impl AdaptiveTraversalPlanCacheKey {
         queue_capacity: u32,
         allow_mask: u32,
         dense_threshold_pct: u32,
-        device_features: u32_or_u64::U64,
+        device_features: u64,
         kind: AdaptiveTraversalProgramKind,
     ) -> Self {
         let layout_hash = adaptive_traversal_program_layout_hash(
