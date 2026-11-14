@@ -14,12 +14,14 @@
 
 use std::collections::BTreeSet;
 
+use vyre_compiler::lower::{
+    lower_physical, lower_scheduled, PhysicalSchedule, PHYSICAL_SCHEDULE_VERSION,
+};
 use vyre_foundation::ir::Program;
 use vyre_foundation::schedule::{
     MappingLevel, PipelineRole, SchedulePhaseId, SelectedSchedule, SynchronizationScope,
     SCHEDULE_IR_VERSION,
 };
-use vyre_compiler::lower::{lower_physical, lower_scheduled, PhysicalSchedule, PHYSICAL_SCHEDULE_VERSION};
 
 /// Two-phase schedule whose first phase carries every projectable fact: an
 /// exact shape, a mapped axis, a pipeline it produces into, two synchronization

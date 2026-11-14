@@ -1,6 +1,6 @@
-use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::Program;
 use vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION;
+use vyre_runtime::DispatchConfig;
 
 pub(super) const NAGA_VERSION: &str = env!("VYRE_NAGA_VERSION");
 pub(super) const WGSL_LOWERING_CONTRACT: &str =

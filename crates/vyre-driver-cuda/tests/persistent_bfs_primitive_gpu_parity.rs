@@ -5,13 +5,13 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::BufferAccess;
 use vyre_libs::graph::persistent_bfs::{
     persistent_bfs, persistent_bfs_batch, validate_persistent_bfs_converged_flag,
 };
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_reference::composition_witness::csr_persistent_closure_detailed_witness;
+use vyre_runtime::DispatchConfig;
 
 fn run(
     node_count: u32,

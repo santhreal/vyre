@@ -6,8 +6,8 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_runtime::VyreBackend;
 
 #[test]
 fn device_lost_recovery_round_trip() {

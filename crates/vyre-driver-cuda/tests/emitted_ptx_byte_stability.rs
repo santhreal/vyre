@@ -22,9 +22,6 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
-use vyre_runtime::materialize::{self, MaterializerTarget};
-use vyre_foundation::ir::{BufferAccess, Program, ProgramGraph};
-use vyre_foundation::validate::BackendCapabilities;
 use vyre_compiler::lower::artifact_golden::{
     assert_matches_golden, contains_case, render_sections, write_golden,
 };
@@ -33,6 +30,9 @@ use vyre_compiler::{
     Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
     ObjectiveMetric, SearchBudget, TargetCompiler, TargetPayload,
 };
+use vyre_foundation::ir::{BufferAccess, Program, ProgramGraph};
+use vyre_foundation::validate::BackendCapabilities;
+use vyre_runtime::materialize::{self, MaterializerTarget};
 
 fn golden_path() -> PathBuf {
     vyre_test_support::monorepo::vyre_workspace_root()

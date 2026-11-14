@@ -26,12 +26,12 @@
 //! Returns the smoothed flow vector. Used by callers that want
 //! provably-tight bounds on the matroid LP relaxation residual.
 
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     checked_product_count, checked_square_cells, decode_u32_output_exact, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_libs_math::math::amg_v_cycle::amg_v_cycle;
-use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned dispatch scratch for fixed-point AMG V-cycle execution.
 #[derive(Debug, Default)]

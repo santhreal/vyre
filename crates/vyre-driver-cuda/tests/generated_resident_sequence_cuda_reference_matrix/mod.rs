@@ -13,10 +13,10 @@ use harness::{
     reference_outputs, u32_bytes, GENERATED_LANE_COUNT as LANE_COUNT,
     GENERATED_WORKGROUP_SIZE_X as WORKGROUP_SIZE_X,
 };
-use vyre_runtime::VyreBackend;
-use vyre_runtime::{ResidentDispatchStep, ResidentReadRange};
 use vyre_driver_cuda::CudaBackendRegistration;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::VyreBackend;
+use vyre_runtime::{ResidentDispatchStep, ResidentReadRange};
 
 const OUTPUT_BYTES: usize = LANE_COUNT * std::mem::size_of::<u32>();
 const MAX_F32_ULP: u32 = 1;

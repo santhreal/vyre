@@ -5,9 +5,9 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_libs::graph::scc_decompose::scc_decompose;
 use vyre_reference::composition_witness::scc_decompose_witness;
+use vyre_runtime::DispatchConfig;
 
 fn run(
     node_count: u32,

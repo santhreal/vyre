@@ -21,9 +21,9 @@
 
 use std::env;
 
+use vyre_foundation::ir::Program;
 use vyre_runtime::{backend_dispatches, registered_backends_by_precedence_slice};
 use vyre_runtime::{BackendError, BackendRegistration};
-use vyre_foundation::ir::Program;
 
 /// How to source the forced-backend override.
 #[derive(Debug, Clone, Copy)]

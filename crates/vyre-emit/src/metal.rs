@@ -18,9 +18,9 @@ use naga::back::msl::{BindTarget, EntryPointResources, Options, PipelineOptions}
 use naga::valid::{Capabilities, ValidationFlags, Validator};
 use naga::{AddressSpace, StorageAccess};
 use thiserror::Error;
+use vyre_compiler::lower::{BindingSlot, BindingVisibility, KernelDescriptor, MemoryClass};
 use vyre_foundation::diagnostics::{CauseKind, CompilerLevel, Diagnostic, DiagnosticStage};
 use vyre_foundation::ir::DataType;
-use vyre_compiler::lower::{BindingSlot, BindingVisibility, KernelDescriptor, MemoryClass};
 
 /// Target identity every diagnostic this emitter raises carries.
 const TARGET: &str = "metal";

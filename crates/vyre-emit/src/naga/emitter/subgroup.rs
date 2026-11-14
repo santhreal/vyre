@@ -1,8 +1,8 @@
 //! Subgroup operation lowering.
 
 use naga::{Expression, Span, Statement};
-use vyre_foundation::ir::SubgroupReduceOp;
 use vyre_compiler::lower::{KernelOp, KernelOpKind};
+use vyre_foundation::ir::SubgroupReduceOp;
 
 use super::BodyBuilder;
 use crate::naga::EmitError;

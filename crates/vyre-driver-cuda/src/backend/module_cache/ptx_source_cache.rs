@@ -8,9 +8,9 @@ use dashmap::mapref::entry::Entry;
 use dashmap::DashMap;
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
+use vyre_foundation::ir::Program;
 use vyre_runtime::accounting::checked_add_usize_lazy;
 use vyre_runtime::{BackendError, DispatchConfig};
-use vyre_foundation::ir::Program;
 
 use super::cache_key::{ptx_source_cache_key_from_program_identity, PtxSourceCacheKey};
 use super::capacity_accounting::{

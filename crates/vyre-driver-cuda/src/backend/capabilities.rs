@@ -1,10 +1,10 @@
 //! CUDA capability, feature-flag, and validation policy.
 
 use std::sync::Arc;
-use vyre_runtime::validation::{LaunchGeometryLimits, ProgramValidationCaps};
-use vyre_runtime::{BackendError, DispatchConfig, LaunchPlan};
 use vyre_foundation::ir::Program;
 use vyre_foundation::validate::ValidationOptions;
+use vyre_runtime::validation::{LaunchGeometryLimits, ProgramValidationCaps};
+use vyre_runtime::{BackendError, DispatchConfig, LaunchPlan};
 
 use super::dispatch::CudaBackend;
 use super::module_cache::PtxSourceCacheKey;

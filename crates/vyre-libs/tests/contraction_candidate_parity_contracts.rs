@@ -171,8 +171,8 @@ fn contraction_f32_matches_reference_oracle_across_shapes() {
 /// here is a movement or predication defect, not rounding.
 #[test]
 fn the_register_tiled_row_batched_candidate_matches_the_oracle() {
-    use vyre_foundation::validate::BackendCapabilities;
     use vyre_compiler::DeviceFacts;
+    use vyre_foundation::validate::BackendCapabilities;
     use vyre_spec::DataType;
 
     // Extents that do not divide the tile, so the overhanging rows and columns

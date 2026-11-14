@@ -7,9 +7,9 @@
 #![cfg(feature = "device-tests")]
 
 use vyre::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
-use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::emit;
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_runtime::VyreBackend;
 
 fn lower_wgsl(program: &Program) -> String {
     emit::lower(program).expect("Fix: test program must lower to WGSL")

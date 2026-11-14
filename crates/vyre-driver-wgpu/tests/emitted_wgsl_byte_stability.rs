@@ -31,9 +31,9 @@
 
 use std::path::PathBuf;
 
-use vyre_runtime::DispatchConfig;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_compiler::lower::artifact_golden;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::DispatchConfig;
 
 fn golden_path() -> PathBuf {
     vyre_test_support::monorepo::vyre_workspace_root()

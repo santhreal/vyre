@@ -14,11 +14,11 @@
 //!
 //! Source:
 
-use vyre_foundation::ir::{BinOp, DataType};
 use vyre_compiler::lower::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
     KernelOp, KernelOpKind, LiteralValue, MemoryClass,
 };
+use vyre_foundation::ir::{BinOp, DataType};
 
 /// Tiny deterministic LCG. Avoids pulling in `rand` for one test file.
 struct Rng(u64);

@@ -46,14 +46,14 @@
 //! by the pass framework that supplies the `nodes`, `children`, and
 //! topological order buffers.
 
+use vyre_compiler::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
 use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_libs_graph::graph::knowledge_compile::ddnnf_evaluate;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
 
 /// Caller-owned scratch for pass-precondition d-DNNF dispatch.
 #[derive(Debug, Default)]

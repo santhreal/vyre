@@ -38,12 +38,12 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
 use vyre_libs::fixpoint::persistent_fixpoint::{
     persistent_fixpoint, PERSISTENT_FIXPOINT_WORKGROUP_SIZE,
 };
+use vyre_runtime::DispatchConfig;
 
 /// One full workgroup of state: eight warps, so seven can lag invocation 0.
 const WORDS: u32 = PERSISTENT_FIXPOINT_WORKGROUP_SIZE[0];

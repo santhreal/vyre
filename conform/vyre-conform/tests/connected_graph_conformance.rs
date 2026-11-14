@@ -11,17 +11,17 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_runtime::{BackendRegistration, BoundResource};
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
-    ValueContract, ValueLifetime,
-};
 use vyre_compiler::{
     attach_target, compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
     ObjectiveMetric, SearchBudget,
 };
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
+    ValueContract, ValueLifetime,
+};
 use vyre_registry_link::backend::live_backend_registry;
 use vyre_runtime::artifact_admission::ArtifactSession;
+use vyre_runtime::{BackendRegistration, BoundResource};
 use vyre_test_support::graph_fixtures as fixtures;
 
 /// The four required connected graph classes.

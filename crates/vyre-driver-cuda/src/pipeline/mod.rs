@@ -3,11 +3,11 @@
 use std::sync::{Arc, Mutex};
 
 use smallvec::SmallVec;
+use vyre_foundation::ir::Program;
 use vyre_runtime::input_identity::{domain_separated_exact_input_key, ExactInputKey};
 use vyre_runtime::{
     dispatch_configs_share_launch_shape, sealed, BackendError, DispatchConfig, LaunchPlan,
 };
-use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::DeviceAllocation;
 use crate::backend::{CachedCudaGraph, CudaBackend, CudaDispatchPlan, ModuleCacheKey};

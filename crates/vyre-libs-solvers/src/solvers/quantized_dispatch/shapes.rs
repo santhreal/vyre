@@ -5,15 +5,15 @@
 //! a single wrong `ceil_div` is the difference between a short readback and a
 //! silent truncation.
 
+use vyre_compiler::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 use vyre_foundation::ir::Program;
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_u32_slice_le_bytes,
 };
 use vyre_libs_builder::plumbing::host::program_cache::ProgramCache;
 use vyre_libs_math::math::quantized::i4_packed_words;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct PackedI4BatchedMatmulShape {
     pub(super) output_words: usize,

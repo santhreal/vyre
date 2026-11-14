@@ -46,13 +46,13 @@
 //! composition step. The full ZX-calculus rewrite engine ships in
 //! 1.0.
 
+use vyre_compiler::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     checked_product_count, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
 use vyre_libs_graph::graph::string_diagram::monoidal_compose;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
 
 /// Reusable buffers for string-diagram IR rewrites.
 #[derive(Debug, Default)]

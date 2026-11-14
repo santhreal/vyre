@@ -12,10 +12,10 @@
 //! constructor authenticates, and `TargetPayload::from_bytes` refuses a
 //! tampered encoding, so no such payload can be handed to the stage from here.
 
-use vyre_foundation::optimizer::level_contract::{stage_for_level, LevelVerdict};
 use vyre_compiler::{
     Artifact, PayloadAttachment, TargetPayload, TargetPayloadFormat, TargetProfile,
 };
+use vyre_foundation::optimizer::level_contract::{stage_for_level, LevelVerdict};
 use vyre_spec::IrLevel;
 
 use vyre_test_support::artifact_fixtures::{self, entry_point, neutral_artifact};

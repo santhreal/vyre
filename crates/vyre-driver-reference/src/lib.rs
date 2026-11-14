@@ -4,9 +4,9 @@ mod program_dispatch;
 
 pub use program_dispatch::{target_profile, ReferenceSemanticExecutor};
 
-pub use vyre_runtime::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
+pub use vyre_runtime::{BackendError, DispatchConfig};
 
 /// Lane count the interpreter's subgroup simulator models.
 ///

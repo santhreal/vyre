@@ -12,11 +12,11 @@ use std::sync::Arc;
 
 use vyre_runtime::{BackendRegistration, BoundResource};
 
+use vyre_compiler::{Artifact, ArtifactEnvelope, ArtifactValueId};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_compiler::{Artifact, ArtifactEnvelope, ArtifactValueId};
 use vyre_runtime::artifact_admission::{ArtifactSession, TypedResource, TypedResourceDataset};
 
 use vyre_test_support::artifact_fixtures;

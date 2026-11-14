@@ -7,9 +7,9 @@ mod tests;
 
 use std::path::Path;
 
-use vyre_runtime::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 use vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION;
+use vyre_runtime::{BackendError, DispatchConfig};
 
 pub(crate) use self::io::flush_disk_pipeline_cache;
 use self::io::{

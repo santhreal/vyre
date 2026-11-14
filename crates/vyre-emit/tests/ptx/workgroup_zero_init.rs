@@ -17,9 +17,9 @@
 //! another lane without a barrier between the write and the read. That is a
 //! data race, and the reference reports it through race exploration.
 
-use vyre_foundation::ir::DataType;
 use vyre_compiler::lower::descriptor_builder::{body, descriptor, shared_rw};
 use vyre_compiler::lower::{emit_adversarial_corpus, KernelDescriptor};
+use vyre_foundation::ir::DataType;
 
 #[path = "ptx_text/text.rs"]
 mod ptx_text;

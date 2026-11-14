@@ -5,6 +5,8 @@ use vyre_runtime::{ArtifactMaterializer, BackendError};
 mod native {
     use std::sync::Arc;
 
+    use vyre_compiler::{Artifact, TargetPayload};
+    use vyre_foundation::ir::Program;
     use vyre_runtime::materialize::{
         self, DeviceSpec, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerDevice,
         ResidentInstance,
@@ -13,8 +15,6 @@ mod native {
         ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, DispatchConfig, Resource,
         Submission, TimedDispatchResult, VyreBackend,
     };
-    use vyre_foundation::ir::Program;
-    use vyre_compiler::{Artifact, TargetPayload};
 
     use crate::runtime::{MetalBackend, MetalTargetModule};
     use crate::target_compiler::METAL_TARGET_FORMAT_VERSION;

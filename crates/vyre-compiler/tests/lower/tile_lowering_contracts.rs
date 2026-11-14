@@ -7,12 +7,14 @@
 //! programs and the same expected values.
 
 use std::collections::HashMap;
+use vyre_compiler::lower::{
+    lower, verify, KernelBody, KernelDescriptor, KernelOpKind, LiteralValue,
+};
 use vyre_foundation::ir::stats::{
     NODE_KIND_TILE_DECL, NODE_KIND_TILE_ELEMENTWISE, NODE_KIND_TILE_LOAD, NODE_KIND_TILE_MATMUL,
     NODE_KIND_TILE_REDUCE, NODE_KIND_TILE_STORE,
 };
 use vyre_foundation::ir::{BinOp, UnOp};
-use vyre_compiler::lower::{lower, verify, KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
 use vyre_test_support::tile_programs::tile_cases;
 
 fn simulate_descriptor(

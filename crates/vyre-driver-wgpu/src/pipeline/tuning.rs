@@ -1,7 +1,7 @@
+use vyre_foundation::ir::Program;
 use vyre_runtime::validation::LaunchGeometryLimits;
 use vyre_runtime::{resolve_launch_workgroup_for_geometry, LaunchGeometry};
 use vyre_runtime::{BackendError, DispatchConfig};
-use vyre_foundation::ir::Program;
 
 pub(super) fn wgpu_effective_dispatch_config(
     program: &Program,

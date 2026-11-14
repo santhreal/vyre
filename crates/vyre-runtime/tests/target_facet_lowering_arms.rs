@@ -29,9 +29,9 @@
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
-use vyre_runtime::{BackendError, BackendRegistration, VyreBackend};
 use vyre_foundation::ir::OpId;
 use vyre_foundation::operation::{OperationRegistry, TargetId};
+use vyre_runtime::{BackendError, BackendRegistration, VyreBackend};
 // The node walk, the published pair set, the pair row and the disagreement
 // wording are the second opinion both facet contracts judge the registry with,
 // so they have one owner rather than one copy per suite.

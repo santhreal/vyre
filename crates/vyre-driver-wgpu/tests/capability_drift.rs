@@ -10,9 +10,9 @@
 use crate::harness;
 use harness::shared_live_backend as live_backend;
 
-use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
+use vyre_runtime::VyreBackend;
 
 #[test]
 fn backend_validation_capabilities_do_not_drift_from_vyre_backend() {

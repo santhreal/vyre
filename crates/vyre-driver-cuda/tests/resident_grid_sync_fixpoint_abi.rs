@@ -21,10 +21,10 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::grid_sync::dispatch_resident_grid_sync_fixpoint_into;
-use vyre_runtime::{BindingPlan, BindingRole, DispatchConfig};
 use vyre_driver_cuda::cuda_factory;
 use vyre_libs::reduce::grid_stride_tree;
+use vyre_runtime::grid_sync::dispatch_resident_grid_sync_fixpoint_into;
+use vyre_runtime::{BindingPlan, BindingRole, DispatchConfig};
 
 /// Elements reduced. One Mi u32 elements is the size the adaptive-routing
 /// release case reduces, and it is past the single-tile form of the builder, so

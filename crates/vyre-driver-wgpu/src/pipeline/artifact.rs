@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use vyre_runtime::OutputBindingLayout;
-use vyre_runtime::{IndirectDispatch, OutputLayout};
 use vyre_emit::naga::program::TrapTag;
 use vyre_foundation::execution_plan::ExecutionPlan;
+use vyre_runtime::OutputBindingLayout;
+use vyre_runtime::{IndirectDispatch, OutputLayout};
 
 use super::descriptor_metadata::BufferBindingInfo;
 use crate::buffer::{BindGroupCache, StagingBufferPool};

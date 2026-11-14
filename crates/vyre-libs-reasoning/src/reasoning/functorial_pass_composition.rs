@@ -39,13 +39,13 @@
 //! Whole-pass migrations compose this primitive with the tree topology
 //! helpers instead of changing this row-level contract.
 
+use vyre_compiler::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, u32_slice_to_le_bytes,
 };
 use vyre_libs_graph::graph::functorial::functor_apply_sized;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
 
 /// Dispatcher-backed functor application for IR-view rows.
 ///

@@ -103,7 +103,8 @@ fn validate_module(module: &naga::Module, label: &str) {
 fn hostile_success_corpus_emits_structured_naga_modules() {
     for case in &emit_adversarial_corpus::success_cases() {
         let module = vyre_emit::naga::emit(
-            &vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
+            &vyre_compiler::lower::verify_descriptor(&case.descriptor)
+                .expect("descriptor verification"),
         )
         .unwrap_or_else(|err| {
             panic!(
@@ -120,7 +121,8 @@ fn hostile_success_corpus_emits_structured_naga_modules() {
 fn rejection_corpus_fails_without_panic() {
     for case in emit_adversarial_corpus::rejection_cases() {
         let err = vyre_emit::naga::emit(
-            &vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
+            &vyre_compiler::lower::verify_descriptor(&case.descriptor)
+                .expect("descriptor verification"),
         )
         .expect_err("Fix: rejection corpus case must be rejected by naga emit");
         let msg = format!("{err:?}");
@@ -136,8 +138,8 @@ fn rejection_corpus_fails_without_panic() {
 fn dead_identity_chain_verifies_before_emit() {
     let case = emit_adversarial_corpus::case_by_id("adv_dead_identity")
         .expect("corpus must include adv_dead_identity");
-    let descriptor =
-        vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor must pass verification");
+    let descriptor = vyre_compiler::lower::verify_descriptor(&case.descriptor)
+        .expect("descriptor must pass verification");
     let module = vyre_emit::naga::emit(&descriptor).expect("verified emit");
     assert_eq!(module.entry_points[0].name, "main");
 }
@@ -146,7 +148,8 @@ fn dead_identity_chain_verifies_before_emit() {
 fn multi_binding_preserves_distinct_global_types() {
     let case = emit_adversarial_corpus::case_by_id("adv_multi_binding").unwrap();
     let module = vyre_emit::naga::emit(
-        &vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
+        &vyre_compiler::lower::verify_descriptor(&case.descriptor)
+            .expect("descriptor verification"),
     )
     .unwrap();
     let mut scalar_kinds = std::collections::BTreeSet::new();

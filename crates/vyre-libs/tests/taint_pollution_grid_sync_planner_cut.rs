@@ -22,15 +22,15 @@
 
 use std::collections::BTreeMap;
 
+use vyre_compiler::{
+    CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
+    SearchBudget, ValidatedCompileRequest,
+};
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_foundation::transform::grid_sync_split::contains_grid_sync;
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_libs::reduce::grid_stride_tree::grid_stride_tree_sum_u32;
-use vyre_compiler::{
-    CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
-    SearchBudget, ValidatedCompileRequest,
-};
 
 /// 128 elements across 32-lane tiles forces the two-pass fused reduction shape,
 /// which inserts a `MemoryOrdering::GridSync` between the block-partial pass

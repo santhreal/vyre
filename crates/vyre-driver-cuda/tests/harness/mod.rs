@@ -7,14 +7,14 @@ pub(crate) mod self_optimizer;
 use std::{collections::BTreeMap, sync::Arc};
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_runtime::DispatchConfig;
-pub(crate) use vyre_driver_cuda::CudaBackend;
-use vyre_foundation::ir::MemoryOrdering;
 use vyre_compiler::{
     CompileObjective, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
     SemanticExecutionPolicy, SemanticExecutor,
 };
+pub(crate) use vyre_driver_cuda::CudaBackend;
+use vyre_foundation::ir::MemoryOrdering;
 use vyre_reference::value::Value;
+use vyre_runtime::DispatchConfig;
 use vyre_runtime::RegisteredSemanticExecutor;
 
 /// Default generated-matrix lane count for live CUDA/reference differential tests.

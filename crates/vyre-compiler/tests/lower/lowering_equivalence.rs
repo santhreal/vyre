@@ -9,8 +9,6 @@
 //! storage has no semantic counterpart, and a dead read may legitimately
 //! disappear.
 
-use vyre_foundation::ir::MemoryOrdering;
-use vyre_foundation::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, effect, global_ro, global_rw, lit, op, shared_rw,
 };
@@ -19,6 +17,8 @@ use vyre_compiler::lower::{
     EquivalenceError, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
     TransactionScope, TRAP_SIDECAR_NAME, WORKGROUP_SLOT_BASE,
 };
+use vyre_foundation::ir::MemoryOrdering;
+use vyre_foundation::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use vyre_test_support::elementwise_programs::single_element_copy_program as copy_program;
 

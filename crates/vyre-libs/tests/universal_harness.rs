@@ -6,12 +6,12 @@
 #![allow(deprecated)]
 use blake3::Hash;
 use vyre::ir::Program;
-use vyre_runtime::{backend_dispatches, registered_backends, BackendRegistration, DispatchConfig};
 use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::optimizer::optimize;
 use vyre_foundation::validate::ValidationOptions;
 use vyre_libs::operation_catalog::fixture_entries;
 use vyre_reference::value::Value;
+use vyre_runtime::{backend_dispatches, registered_backends, BackendRegistration, DispatchConfig};
 
 #[test]
 fn universal_cat_a_harness() {

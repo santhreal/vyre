@@ -1,6 +1,8 @@
 //! Operand classification contracts.
 
-use vyre_compiler::lower::operand_class::{classify_operand, operand_is_result_reference, OperandClass};
+use vyre_compiler::lower::operand_class::{
+    classify_operand, operand_is_result_reference, OperandClass,
+};
 use vyre_compiler::lower::KernelOpKind;
 
 #[test]

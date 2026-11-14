@@ -35,11 +35,11 @@ pub const WGPU_TARGET_ID: TargetId = TargetId::expect_valid(WGPU_BACKEND_ID);
 pub use stats::WgpuBackendStats;
 use std::hash::BuildHasherDefault;
 use std::sync::{atomic::AtomicBool, Arc};
-use vyre_runtime::shape_prediction::{ShapeFingerprint, ShapeHistory};
-use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::DataType;
 use vyre_foundation::ir::Program;
 use vyre_foundation::validate::BackendValidationCapabilities;
+use vyre_runtime::shape_prediction::{ShapeFingerprint, ShapeHistory};
+use vyre_runtime::DispatchConfig;
 
 #[derive(Clone, Debug)]
 pub(crate) enum AdapterRecoveryTarget {

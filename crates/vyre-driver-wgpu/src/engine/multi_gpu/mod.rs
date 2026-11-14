@@ -31,8 +31,10 @@ pub type StreamShardError = stream_shard::StreamShardError;
 
 fn empty_gpu_work_result_slots(
     len: usize,
-) -> Result<Vec<Option<Result<GpuWorkOutput, vyre_runtime::BackendError>>>, vyre_runtime::BackendError>
-{
+) -> Result<
+    Vec<Option<Result<GpuWorkOutput, vyre_runtime::BackendError>>>,
+    vyre_runtime::BackendError,
+> {
     let mut slots = Vec::new();
     reserve_vec(
         &mut slots,

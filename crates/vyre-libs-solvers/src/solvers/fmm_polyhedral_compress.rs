@@ -41,12 +41,12 @@
 //! Higher-moment FMM compression belongs in distinct registered ops so
 //! each multipole order has an explicit schema and test oracle.
 
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_f32_output_exact, ensure_input_slots, require_exactly_one_output,
     write_f32_slice_le_bytes, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_libs_math::math::fmm::{l2p_zeroth_f32_step, m2l_zeroth_f32_step, p2m_zeroth_f32_step};
-use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     try_l2p_zeroth_all_witness_into, try_m2l_zeroth_all_witness_into,

@@ -9,9 +9,9 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::DispatchConfig;
 
 /// A parallel Program: 256 threads each storing their index. A real grid/block
 /// so the occupancy query returns a meaningful active-block count (a single-thread

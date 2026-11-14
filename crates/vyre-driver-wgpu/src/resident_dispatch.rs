@@ -2,8 +2,8 @@
 
 use crate::WgpuBackend;
 use std::time::Instant;
-use vyre_runtime::CompiledPipeline;
 use vyre_foundation::ir::Program;
+use vyre_runtime::CompiledPipeline;
 
 /// Dispatch a program with backend-resident resources and return timing.
 pub(crate) fn dispatch_resident_timed(

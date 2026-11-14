@@ -6,7 +6,6 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_libs::graph::knowledge_compile::{
     ddnnf_evaluate, DDNNF_EVALUATE_WORKGROUP_SIZE, LITERAL_FALSE, LITERAL_TRUE,
@@ -14,6 +13,7 @@ use vyre_libs::graph::knowledge_compile::{
 use vyre_libs::math::scallop_join::scallop_join;
 use vyre_libs::math::scallop_join::SCALLOP_JOIN_WORKGROUP_SIZE;
 use vyre_reference::composition_witness::{ddnnf_evaluate_witness, scallop_join_fixpoint_witness};
+use vyre_runtime::DispatchConfig;
 
 // ---------------------------------------------------------------------
 // scallop_join. Iterates the Datalog fixpoint inside one dispatch via

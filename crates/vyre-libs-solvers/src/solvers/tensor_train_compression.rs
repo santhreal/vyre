@@ -15,13 +15,13 @@
 //! - The cost-model self-consumer: TT-compressed cost lookup is O(1)
 //!   per query vs O(n) for raw tensor traversal.
 
+use vyre_compiler::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_libs_math::math::tensor_train_decompose::tensor_train_decompose_step;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
 
 /// Compressed cost tensor in tensor-train form.
 ///

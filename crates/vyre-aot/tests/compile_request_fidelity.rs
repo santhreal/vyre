@@ -19,11 +19,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use vyre_aot::{compile, ValidatedCompileRequest};
-use vyre_foundation::validate::BackendCapabilities;
 use vyre_compiler::{
     CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     SearchBudget,
 };
+use vyre_foundation::validate::BackendCapabilities;
 use vyre_test_support::artifact_fixtures::params_and_out_graph;
 
 use crate::fixture_target;
@@ -99,9 +99,8 @@ fn the_external_facts_digest_the_caller_states_reaches_the_artifact() {
         "an artifact compiled under stated facts must not carry the identity of one compiled under a zero digest"
     );
 
-    let direct =
-        vyre_compiler::compile(&request(STATED_FACTS, live_device_facts(), RANKED_BUDGET))
-            .expect("the same request must compile directly");
+    let direct = vyre_compiler::compile(&request(STATED_FACTS, live_device_facts(), RANKED_BUDGET))
+        .expect("the same request must compile directly");
     assert_eq!(
         stated,
         direct.provenance().request,
@@ -138,9 +137,8 @@ fn the_device_facts_the_caller_names_reach_the_artifact() {
         "a recalibrated device prices every candidate differently, so it must not share an artifact identity with the calibration it replaced"
     );
 
-    let direct =
-        vyre_compiler::compile(&request(STATED_FACTS, live_device_facts(), RANKED_BUDGET))
-            .expect("the same request must compile directly");
+    let direct = vyre_compiler::compile(&request(STATED_FACTS, live_device_facts(), RANKED_BUDGET))
+        .expect("the same request must compile directly");
     assert_eq!(
         live,
         direct.provenance().request,

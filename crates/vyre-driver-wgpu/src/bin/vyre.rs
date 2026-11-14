@@ -11,8 +11,8 @@
 
 use std::process::ExitCode;
 
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 fn main() -> ExitCode {
     match run() {

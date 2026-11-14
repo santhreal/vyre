@@ -36,8 +36,8 @@ pub use backend::SpirvBackend;
 
 use std::sync::Arc;
 
-use vyre_runtime::{BackendError, DispatchConfig, VyreBackend};
 use vyre_foundation::ir::Program;
+use vyre_runtime::{BackendError, DispatchConfig, VyreBackend};
 
 /// Stable backend identifier for conform certificates.
 pub const SPIRV_BACKEND_ID: &str = "spirv";

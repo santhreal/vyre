@@ -11,8 +11,8 @@ use std::sync::{
     Arc,
 };
 use std::time::{Duration, Instant};
-use vyre_runtime::BackendError;
 use vyre_emit::naga::program::TrapTag;
+use vyre_runtime::BackendError;
 
 pub(super) type PendingMap = (Option<usize>, PendingReadback);
 pub(super) type SubmittedMap = (Option<usize>, SubmittedReadback);

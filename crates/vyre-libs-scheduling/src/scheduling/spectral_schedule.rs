@@ -8,14 +8,14 @@
 //! scheduler consume as fusion hints.
 
 use super::{checked_square_cells, decode_u32_output_exact};
+use vyre_compiler::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_libs_graph::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
 use vyre_libs_math::math::spectral_shape::mp_edge_clip;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
 
 /// Caller-owned semantic execution scratch for spectral scheduling primitives.
 #[derive(Debug, Default)]

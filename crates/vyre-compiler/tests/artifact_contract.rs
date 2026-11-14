@@ -8,16 +8,16 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::execution_plan::fusion::FusionRejectionReason;
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
-    ShapeDim, ValueContract, ValueLifetime,
-};
 use vyre_compiler::{
     compile,
     legality::{analyze_fusion_pair, FusionDecision},
     Artifact, ArtifactNodeId, ArtifactValueId, CompileError, CompileObjective, CompileRequest,
     DependencyKind, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
+};
+use vyre_foundation::execution_plan::fusion::FusionRejectionReason;
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
+    ShapeDim, ValueContract, ValueLifetime,
 };
 
 use vyre_test_support::graph_values::{graph_output, u32_symbolic};

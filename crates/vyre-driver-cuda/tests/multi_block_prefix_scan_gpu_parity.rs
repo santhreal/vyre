@@ -7,11 +7,11 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_libs::reduce::multi_block_prefix_scan::{
     multi_block_prefix_scan_sum_u32, pass_c_broadcast_offsets,
 };
 use vyre_reference::composition_witness::inclusive_prefix_sum_witness;
+use vyre_runtime::DispatchConfig;
 
 const BLOCK_LANES: u32 = vyre_foundation::ir::PORTABLE_WORKGROUP_INVOCATIONS;
 

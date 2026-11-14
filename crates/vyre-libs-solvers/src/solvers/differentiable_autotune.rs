@@ -8,13 +8,13 @@
 use super::natural_gradient_autotuner::{
     precondition_autotune_gradient_fixed_via_with_scratch_into, NaturalGradientGpuScratch,
 };
+use vyre_compiler::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_libs_math::math::differentiable::softmax_step;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     argmin_cost_witness, differentiable_autotune_gradient_witness_into,

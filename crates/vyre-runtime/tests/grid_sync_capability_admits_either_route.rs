@@ -21,9 +21,9 @@
 //! is legal. A fence with no correct cut is refused by the planner, which
 //! `grid_sync_nested_fence_survives_split.rs` covers.
 
-use vyre_runtime::validation::{validate_program_contract, ProgramValidationCaps};
 use vyre_foundation::ir::{MemoryOrdering, Node, Program};
 use vyre_foundation::validate::ValidationOptions;
+use vyre_runtime::validation::{validate_program_contract, ProgramValidationCaps};
 
 fn fenced_program() -> Program {
     Program::wrapped(

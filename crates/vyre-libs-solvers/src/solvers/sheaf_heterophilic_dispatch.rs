@@ -55,12 +55,12 @@
 //! substrate to model dispatch graphs as the heterophilic
 //! structures they actually are. Paradigm shift, not optimization.
 
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     checked_product_count, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
 use vyre_libs_graph::graph::sheaf::sheaf_diffusion_step;
-use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned dispatch scratch for fixed-point sheaf diffusion.
 #[derive(Debug, Default)]

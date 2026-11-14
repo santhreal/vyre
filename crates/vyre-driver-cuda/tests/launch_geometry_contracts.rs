@@ -4,9 +4,9 @@
 
 use crate::harness;
 use harness::u32_bytes;
-use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::DispatchConfig;
 
 fn program() -> Program {
     Program::wrapped(

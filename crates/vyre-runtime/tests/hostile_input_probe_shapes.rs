@@ -17,10 +17,10 @@
 #![cfg(feature = "test-fixtures")]
 #![forbid(unsafe_code)]
 
+use vyre_foundation::ir::BufferAccess;
 use vyre_runtime::hostile_input_closure::{
     read_one_write_one_program, single_output_program, zero_workgroup_program,
 };
-use vyre_foundation::ir::BufferAccess;
 
 #[test]
 fn single_output_program_declares_one_caller_supplied_slot() {

@@ -32,9 +32,9 @@
 use crate::harness;
 use harness::live_backend;
 
+use vyre_driver_cuda::CudaBackend;
 use vyre_runtime::parity_harness::u32_binop_parity;
 use vyre_runtime::DispatchConfig;
-use vyre_driver_cuda::CudaBackend;
 use vyre_test_support::binop_parity::{
     assert_covers_every_total_op, total_u32_reference_ops, total_u32_reference_values,
     TotalU32Case, TOTAL_U32_CASES,

@@ -5,8 +5,8 @@
 use crate::harness;
 
 use harness::with_live_backend;
-use vyre_runtime::DispatchConfig;
 use vyre_libs::nn::attention::gqa_attention;
+use vyre_runtime::DispatchConfig;
 
 fn f32_bytes(values: &[f32]) -> Vec<u8> {
     values

@@ -1,9 +1,9 @@
 //! Convergence lens: dispatch until the read-write state stabilises.
 
-use vyre_runtime::{BackendError, BackendRegistration};
 use vyre_foundation::ir::Program;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_libs::operation_catalog::convergence_contract;
+use vyre_runtime::{BackendError, BackendRegistration};
 
 use crate::lens::buffer_state::{index_of_buffer, merge_rw};
 use crate::lens::execution::{production_session, run_cpu, LoopError};

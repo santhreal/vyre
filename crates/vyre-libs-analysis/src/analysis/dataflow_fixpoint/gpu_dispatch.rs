@@ -5,14 +5,14 @@ use vyre_foundation::pass_math::semiring_closure as foundation_dataflow;
 
 use super::scc_decomposition::write_pivot_bitsets;
 use super::{SccComponentsGpuScratch, Semiring, SemiringGemmGpuScratch};
+use vyre_compiler::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_libs_graph::graph::scc_decompose::dense_reachability_bitsets;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
 
 /// GPU dispatch wrapper around the primitive semiring GEMM program for an
 /// arbitrary semiring.
@@ -626,8 +626,8 @@ mod tests {
         forward_backward_bitsets_for_pivot_via, scc_components_via_substrate_with_scratch_into,
         semiring_gemm_via, semiring_gemm_via_into,
     };
-    use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_compiler::{SemanticExecutionError, SemanticExecutor};
+    use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_test_support::test_parity_oracles::StaticOutputs;
 
     struct SequenceDispatcher {

@@ -4,10 +4,10 @@ use std::ffi::c_void;
 
 use cudarc::driver::sys::{CUfunction, CUresult, CUstream};
 use smallvec::SmallVec;
+use vyre_foundation::ir::Program;
 use vyre_runtime::validation::validate_launch_geometry;
 use vyre_runtime::BindingPlan;
 use vyre_runtime::{BackendError, DispatchConfig, LaunchPlan};
-use vyre_foundation::ir::Program;
 
 use super::allocations::cuda_check;
 use super::dispatch::CudaBackend;

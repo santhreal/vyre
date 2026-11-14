@@ -13,6 +13,7 @@ use std::sync::{
 };
 
 use metal::Device;
+use vyre_foundation::ir::Program;
 use vyre_runtime::resident_transfer_fusion::fuse_resident_transfer_intervals;
 use vyre_runtime::resident_transfer_fusion::ResidentTransferInterval;
 use vyre_runtime::{
@@ -21,7 +22,6 @@ use vyre_runtime::{
     VyreBackend,
 };
 use vyre_runtime::{sealed, BackendError, PendingDispatch};
-use vyre_foundation::ir::Program;
 
 use self::buffer_plan::{
     metal_slot_map, output_layout_map, plan_resident_buffers, resident_input_lengths, PlannedBuffer,

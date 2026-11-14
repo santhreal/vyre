@@ -21,12 +21,12 @@
 //! order disagrees with the emitted target module's own parameter order, which
 //! is the emitter's contract and is proved by conformance execution.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use vyre_compiler::lower::{BindingSlot, BindingVisibility, KernelDescriptor, MemoryClass};
 use vyre_compiler::{
     staged_input_slots, ArtifactInputSlot, ArtifactValueId, TargetCompileError,
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
 /// Element count of the value the fused program carries between its modules.
 const CARRIED_ELEMENTS: u32 = 4;

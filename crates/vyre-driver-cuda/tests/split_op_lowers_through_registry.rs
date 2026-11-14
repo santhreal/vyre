@@ -7,10 +7,10 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::DispatchConfig;
 use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::operation::{OperationRegistration, OperationTier};
+use vyre_runtime::DispatchConfig;
 
 const CALLEE_OP_ID: &str = "test::split_lowering::row_pair_sum";
 const CALLER_OP_ID: &str = "test::split_lowering::caller";

@@ -5,6 +5,9 @@
 //! compile the DFA once, match brackets on-device, sort region triples, then
 //! emit dedup survivor flags for stream compaction.
 
+use vyre_compiler::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
@@ -12,9 +15,6 @@ use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_libs_pattern::pattern::{
     bracket_match, dedup_regions_flag_program, region_sort_program, RegionTriple,
     BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_OTHER,
-};
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 
 /// Caller-owned dispatch scratch for matching diagnostic compaction.

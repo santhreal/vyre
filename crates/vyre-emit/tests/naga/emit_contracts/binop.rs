@@ -2,8 +2,8 @@
 //! extended-width type handles (VYRE-NAGA-001 regression).
 use super::*;
 use naga::{Expression, Literal};
-use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_compiler::lower::descriptor_builder::{body, descriptor, lit, op};
+use vyre_foundation::fp_parity::FloatLoweringMode;
 
 /// BinOp::WrappingSub of two u32 literals must fold to wrapping_sub, not
 /// saturating_sub. 0u32 WrappingSub 1u32 must produce 0xFFFF_FFFFu32, the

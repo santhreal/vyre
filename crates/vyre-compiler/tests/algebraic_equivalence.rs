@@ -16,8 +16,8 @@
 
 use crate::search_fixtures::{numerically_pruned, reducing_artifact, REORDERING_PRODUCTIONS};
 
-use vyre_foundation::ir::DataType;
 use vyre_compiler::{ScheduleProduction, SearchCertificate};
+use vyre_foundation::ir::DataType;
 
 /// Productions that move work without changing which invocations combine.
 const ORDER_PRESERVING: [ScheduleProduction; 4] = [

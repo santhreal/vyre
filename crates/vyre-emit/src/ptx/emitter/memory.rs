@@ -1,7 +1,7 @@
 use std::fmt::Write as _;
 
-use vyre_foundation::ir::DataType;
 use vyre_compiler::lower::MemoryClass;
+use vyre_foundation::ir::DataType;
 
 use super::BodyCtx;
 use crate::ptx::reg::{PtxType, Reg};

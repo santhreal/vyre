@@ -6,8 +6,8 @@
 //! `vyre-compiler`.
 
 use std::sync::mpsc;
-use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_compiler::lower::KernelDescriptor;
+use vyre_foundation::fp_parity::FloatLoweringMode;
 
 mod emitter;
 mod error;
@@ -97,10 +97,12 @@ pub fn emit_with_capabilities(
     if let Some(capability) = target.subgroup.first_missing(required) {
         return Err(EmitError::UnsupportedCapability(capability));
     }
-    if let Some(violation) =
-        vyre_compiler::lower::validate_workgroup_size(desc.dispatch.workgroup_size, target.workgroup)
-            .into_iter()
-            .next()
+    if let Some(violation) = vyre_compiler::lower::validate_workgroup_size(
+        desc.dispatch.workgroup_size,
+        target.workgroup,
+    )
+    .into_iter()
+    .next()
     {
         return Err(EmitError::UnsupportedWorkgroup(violation));
     }

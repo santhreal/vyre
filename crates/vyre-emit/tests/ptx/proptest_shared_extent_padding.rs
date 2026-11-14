@@ -17,8 +17,8 @@
 //! `workgroup_zero_init.rs`.
 
 use proptest::prelude::*;
-use vyre_foundation::ir::DataType;
 use vyre_compiler::lower::descriptor_builder::{body, descriptor, shared_rw};
+use vyre_foundation::ir::DataType;
 
 #[path = "ptx_text/text.rs"]
 mod ptx_text;

@@ -1,7 +1,7 @@
 //! Contract test for `vyre_compiler::lower::lower` and `vyre_compiler::lower::WORKGROUP_SLOT_BASE` public visibility.
 
-use vyre_foundation::ir::Program;
 use vyre_compiler::lower::{lower, WORKGROUP_SLOT_BASE};
+use vyre_foundation::ir::Program;
 
 #[test]
 fn lower_function_is_publicly_callable() {

@@ -4,14 +4,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_conform::{
-    check_family_outputs, check_schedule_agreement, submit_under_every_schedule, ProductionSession,
-    ScheduleAgreement, ScheduleDisagreement, ScheduleOutcome, CONFORMANCE_SCHEDULES,
-};
 use vyre_compiler::{
     writable_graph_values, CompileObjective, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     RequiredSchedule, ScheduleProduction, SearchBudget, SemanticExecutionError,
     SemanticExecutionOutput, SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
+};
+use vyre_conform::{
+    check_family_outputs, check_schedule_agreement, submit_under_every_schedule, ProductionSession,
+    ScheduleAgreement, ScheduleDisagreement, ScheduleOutcome, CONFORMANCE_SCHEDULES,
 };
 use vyre_test_support::elementwise_programs::single_element_copy_program;
 

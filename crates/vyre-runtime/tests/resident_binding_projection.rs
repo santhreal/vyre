@@ -7,16 +7,16 @@
 
 use std::collections::BTreeMap;
 
-use vyre_runtime::materialize::{project_resources, resident_buffer_names};
-use vyre_runtime::BindingPlan;
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
-    ShapeDim, ValueContract, ValueLifetime,
-};
 use vyre_compiler::{
     compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     SearchBudget,
 };
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
+    ShapeDim, ValueContract, ValueLifetime,
+};
+use vyre_runtime::materialize::{project_resources, resident_buffer_names};
+use vyre_runtime::BindingPlan;
 
 /// WHY: workgroup scratch is module-internal memory, not an artifact value. A
 /// resident launch must bind every host-visible role and no shared scratch, or

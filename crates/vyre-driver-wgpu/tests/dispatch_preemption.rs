@@ -6,8 +6,8 @@ use crate::harness;
 use harness::long_running_program;
 
 use std::time::{Duration, Instant};
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_runtime::{DispatchConfig, VyreBackend};
 #[test]
 fn dispatch_cancels_within_deadline() {
     let backend = WgpuBackend::acquire().expect("Fix: GPU required for pre-emption test");

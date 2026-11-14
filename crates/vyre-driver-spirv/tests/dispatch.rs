@@ -7,10 +7,10 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_spirv::SpirvBackendRegistration;
 use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 use vyre_test_support::elementwise_programs::{
     elementwise_add_program, elementwise_fma_program, output_first_elementwise_add_program,

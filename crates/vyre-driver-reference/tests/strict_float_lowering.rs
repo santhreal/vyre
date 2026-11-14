@@ -19,7 +19,6 @@
 //! that gains or loses an expansion moves between these two cases without
 //! either being edited.
 
-use vyre_runtime::DispatchConfig;
 use vyre_driver_reference::CpuRefEvaluator;
 use vyre_foundation::fp_expansion::{
     expand_strict_transcendentals, is_strict_expandable, strict_unexpandable_unary_ops,
@@ -28,6 +27,7 @@ use vyre_foundation::fp_parity::{
     approximable_operations, approximable_unary_ops, FloatLoweringMode,
 };
 use vyre_foundation::ir::UnOp;
+use vyre_runtime::DispatchConfig;
 use vyre_test_support::strict_float_programs::f32_multiply_add_program;
 
 /// Lanes the witness programs run over.

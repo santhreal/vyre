@@ -5,13 +5,13 @@
 //! returns the same fingerprint for two semantically-equivalent
 //! Region trees with reordered children  -  beats byte-equal hashing.
 
+use vyre_compiler::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
 use vyre_libs_hash::hash::hypervector::hypervector_xor_bind;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
 #[cfg(test)]
 use vyre_reference::composition_witness::hamming_similarity_witness as hamming_similarity;
 

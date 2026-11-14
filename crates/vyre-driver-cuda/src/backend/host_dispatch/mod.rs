@@ -3,11 +3,11 @@
 use std::sync::Arc;
 
 use smallvec::SmallVec;
+use vyre_foundation::ir::Program;
 use vyre_runtime::BindingRole;
 use vyre_runtime::{
     BackendError, DispatchConfig, OutputBuffers, PendingDispatch, Resource, VyreBackend,
 };
-use vyre_foundation::ir::Program;
 
 use crate::numeric::CUDA_NUMERIC;
 use crate::CUDA_BACKEND_ID;

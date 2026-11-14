@@ -316,8 +316,8 @@ fn result_ids_span_the_accumulator_fragment() {
 }
 #[test]
 fn tile_matmul_lowering_packs_fragment_operands_as_distinct_words() {
-    use vyre_foundation::ir::{Layout, Residency};
     use vyre_compiler::lower::lower;
+    use vyre_foundation::ir::{Layout, Residency};
     use vyre_test_support::tile_programs::fragment_matmul_program;
 
     let prog = fragment_matmul_program(Residency::Subgroup, Layout::RowMajor);
@@ -369,8 +369,8 @@ fn tile_matmul_lowering_packs_fragment_operands_as_distinct_words() {
 
 #[test]
 fn tile_matmul_lowering_proves_bitwise_fragment_packing() {
-    use vyre_foundation::ir::{BinOp, Layout, Residency};
     use vyre_compiler::lower::lower;
+    use vyre_foundation::ir::{BinOp, Layout, Residency};
     use vyre_test_support::tile_programs::fragment_matmul_program;
 
     let prog = fragment_matmul_program(Residency::Subgroup, Layout::RowMajor);
@@ -400,8 +400,8 @@ fn tile_matmul_lowering_proves_bitwise_fragment_packing() {
 
 #[test]
 fn a_tile_matmul_lowers_and_verifies_for_every_supported_element_type() {
-    use vyre_foundation::ir::{DataType, Layout, Residency};
     use vyre_compiler::lower::{lower, verify};
+    use vyre_foundation::ir::{DataType, Layout, Residency};
     use vyre_test_support::tile_programs::{tile_matmul_program, TileOperand};
 
     let dtypes = [

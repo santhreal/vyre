@@ -45,8 +45,8 @@ use std::sync::{Arc, LazyLock};
 use std::time::Instant;
 
 use cudarc::driver::sys::CUstream;
-use vyre_runtime::BackendError;
 use vyre_foundation::ir::Program;
+use vyre_runtime::BackendError;
 
 use crate::stream::{CudaEvent, CudaLaunchResourcePool, CudaTimingEventPairLease};
 

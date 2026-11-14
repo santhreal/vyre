@@ -11,15 +11,15 @@ use crate::graph::csr_forward_or_changed::{
 use crate::graph::dispatch::dispatch_bridge::{
     refresh_keyed_dispatch_inputs, CachedProgram, DispatchInput, ProgramCache,
 };
+use vyre_compiler::{
+    returned_graph_values, SemanticExecutionError, SemanticExecutionPolicy,
+    SemanticExecutionRequest, SemanticExecutor,
+};
 use vyre_foundation::ir::{
     GraphInput, GraphOutput, GraphValueId, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_libs_builder::plumbing::host::scratch::reserve_vec as reserve_graph_vec;
-use vyre_compiler::{
-    returned_graph_values, SemanticExecutionError, SemanticExecutionPolicy,
-    SemanticExecutionRequest, SemanticExecutor,
-};
 
 /// Caller-owned GPU dispatch scratch for `csr_forward_or_changed` fixpoint loops.
 #[derive(Debug, Default)]
@@ -534,8 +534,8 @@ mod semantic_tests {
     use std::collections::BTreeMap;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use vyre_foundation::ir::{ShapeDim, ValueLifetime};
     use vyre_compiler::{Digest, SearchBudget, SemanticExecutionOutput};
+    use vyre_foundation::ir::{ShapeDim, ValueLifetime};
 
     use super::*;
 

@@ -4,11 +4,11 @@
 //! Primitive traversal semantics stay in `vyre-primitives`.
 
 #[cfg(test)]
+use vyre_compiler::SemanticExecutionError;
+#[cfg(test)]
 use vyre_libs_bitset::bitset::bitset_words;
 #[cfg(test)]
 pub(crate) use vyre_libs_bitset::bitset::frontier::frontier_tail_mask;
-#[cfg(test)]
-use vyre_compiler::SemanticExecutionError;
 
 #[cfg(test)]
 pub(crate) fn mask_frontier_tail_bits(node_count: u32, frontier: &mut [u32]) {

@@ -10,10 +10,10 @@
 #![cfg(feature = "device-tests")]
 #![forbid(unsafe_code)]
 
+use vyre_driver_spirv::SpirvBackendRegistration;
 use vyre_runtime::hostile_input_closure::{
     assert_trailing_inputs_rejected, assert_zero_workgroup_rejected,
 };
-use vyre_driver_spirv::SpirvBackendRegistration;
 
 #[test]
 fn adversarial_registry_closure_hostile_inputs() {

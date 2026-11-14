@@ -37,9 +37,9 @@
 use crate::harness;
 
 use harness::{live_dispatcher, reference_outputs};
-use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::Program;
 use vyre_libs::nn::attention::mla_decode;
+use vyre_runtime::DispatchConfig;
 
 /// Lane count pinned inside `mla_decode`, mirrored here so the byte
 /// arithmetic below is checked against the value the builder actually uses.

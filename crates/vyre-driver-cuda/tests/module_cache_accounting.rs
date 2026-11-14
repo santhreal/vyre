@@ -23,8 +23,8 @@
 
 use crate::harness;
 use harness::{add_one_program, u32_bytes};
-use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
+use vyre_runtime::DispatchConfig;
 
 /// Repeated dispatches measured after the cache is warm.
 const LAUNCHES: u64 = 4;

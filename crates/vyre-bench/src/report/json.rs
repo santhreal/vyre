@@ -700,7 +700,8 @@ mod tests {
 
     #[test]
     fn benchmark_device_signature_changes_with_profile_facts() {
-        let baseline = benchmark_device_signature(vyre_runtime::DeviceProfile::conservative("test"));
+        let baseline =
+            benchmark_device_signature(vyre_runtime::DeviceProfile::conservative("test"));
         let mut tensor = vyre_runtime::DeviceProfile::conservative("test");
         tensor.supports_tensor_cores = true;
         assert_ne!(

@@ -203,8 +203,9 @@ fn backend_names() -> BTreeSet<String> {
 
 #[test]
 fn no_physical_kernel_ir_type_names_a_schedule_owner_type() {
-    let mut semantic =
-        declared_public_types(&vyre_crate_directory("vyre-foundation").join("src/lower/execution_plan"));
+    let mut semantic = declared_public_types(
+        &vyre_crate_directory("vyre-foundation").join("src/lower/execution_plan"),
+    );
     semantic.extend(declared_public_types(
         &vyre_crate_directory("vyre-compiler").join("src/lower"),
     ));

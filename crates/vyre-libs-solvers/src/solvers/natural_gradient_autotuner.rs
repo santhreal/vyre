@@ -38,12 +38,12 @@
 //! the Fisher block they want to use, whether estimated on the host,
 //! read from telemetry, or produced by another registered primitive.
 
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     checked_square_cells, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
 use vyre_libs_math::math::natural_gradient::natural_gradient_block_apply;
-use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     identity_matrix_witness_into, natural_gradient_autotune_step_witness_into,

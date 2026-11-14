@@ -21,10 +21,10 @@
 //! marker reaching an emitter is tolerable. `reject_logical_markers` in
 //! `vyre-compiler` owns that property and refuses it by name.
 
-use vyre_runtime::validation::{validate_program_contract, ProgramValidationCaps};
 use vyre_foundation::ir::{MemoryOrdering, Node, Program};
 use vyre_foundation::transform::schedule_lowering::lower_logical_schedule_borrowed;
 use vyre_foundation::validate::ValidationOptions;
+use vyre_runtime::validation::{validate_program_contract, ProgramValidationCaps};
 use vyre_test_support::logical_markers::{census, logical_marker_sum};
 
 /// Every logical marker form in one body: all three position markers and the

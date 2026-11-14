@@ -2,9 +2,9 @@ use std::ffi::c_void;
 use std::sync::Arc;
 
 use smallvec::SmallVec;
+use vyre_foundation::ir::Program;
 use vyre_runtime::BindingRole;
 use vyre_runtime::{BackendError, DispatchConfig, PendingDispatch};
-use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::DispatchAllocations;
 use crate::backend::copy::aligned_async_copy_len;

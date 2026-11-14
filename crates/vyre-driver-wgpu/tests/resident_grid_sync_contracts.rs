@@ -3,9 +3,9 @@
 #![cfg(feature = "device-tests")]
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::MemoryOrdering;
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 fn ordered_grid_sync_program() -> Program {
     Program::wrapped(

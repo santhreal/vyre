@@ -21,13 +21,13 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::ProgramGraph;
-use vyre_foundation::validate::BackendCapabilities;
 use vyre_compiler::cost::{CostBreakdown, CostTermRole};
 use vyre_compiler::{
     compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     SearchBudget,
 };
+use vyre_foundation::ir::ProgramGraph;
+use vyre_foundation::validate::BackendCapabilities;
 
 use vyre_test_support::graph_fixtures::producer_consumer_pair;
 use vyre_test_support::pass_programs::copy_program;

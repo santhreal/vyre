@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use std::time::Instant;
 
+use vyre_compiler::{Artifact, ArtifactInputSlot, TargetPayload};
+use vyre_foundation::ir::Program;
 use vyre_runtime::materialize::{
     self, DeviceSpec, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerDevice,
 };
@@ -8,8 +10,6 @@ use vyre_runtime::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, DispatchConfig, Submission,
     TimedDispatchResult,
 };
-use vyre_foundation::ir::Program;
-use vyre_compiler::{Artifact, ArtifactInputSlot, TargetPayload};
 
 use crate::{vulkan, SPIRV_BACKEND_ID};
 

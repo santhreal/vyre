@@ -10,13 +10,13 @@
 //! own. These tests pin that the verifier now rejects each shape of
 //! cross-body reuse rather than leaving it to a backend to miscompile.
 
-use vyre_foundation::ir::DataType;
 use vyre_compiler::lower::descriptor_builder::{
     descriptor, effect, global_rw, lit, op, store_global, SlotCount,
 };
 use vyre_compiler::lower::{
     verify, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, VerifyErrorKind,
 };
+use vyre_foundation::ir::DataType;
 
 fn invocation_id(result: u32) -> KernelOp {
     op(KernelOpKind::GlobalInvocationId, [0], result)

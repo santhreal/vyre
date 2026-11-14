@@ -4,8 +4,8 @@
 use super::*;
 
 use super::fixtures::word_to_word;
-use vyre_runtime::{DispatchConfig, ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::{DispatchConfig, ResidentDispatchStep, ResidentReadRange};
 
 #[test]
 fn apple_resident_transfers_cover_full_range_batch_and_stale_handles() {

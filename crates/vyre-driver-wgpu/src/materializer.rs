@@ -2,6 +2,11 @@ use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use vyre_compiler::lower::TRAP_SIDECAR_NAME;
+use vyre_compiler::{
+    Artifact, ArtifactInputSlot, ArtifactValueId, TargetPayload, TargetResourceAccess,
+};
+use vyre_foundation::ir::Program;
 use vyre_runtime::materialize::{
     self, DeviceSpec, ExecutableModule, InstanceCore, InstanceMessages, MaterializedInstance,
     MaterializerDevice, ResidentInstance,
@@ -10,11 +15,6 @@ use vyre_runtime::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet,
     CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig, Resource, Submission,
     TimedDispatchResult,
-};
-use vyre_foundation::ir::Program;
-use vyre_compiler::lower::TRAP_SIDECAR_NAME;
-use vyre_compiler::{
-    Artifact, ArtifactInputSlot, ArtifactValueId, TargetPayload, TargetResourceAccess,
 };
 
 use crate::descriptor_mapping::descriptor_bind_group;

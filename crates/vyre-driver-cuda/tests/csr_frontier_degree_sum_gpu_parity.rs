@@ -6,12 +6,12 @@ use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::Program;
-use vyre_runtime::DispatchConfig;
 use vyre_libs::graph::csr_frontier_degree_sum::{
     csr_frontier_degree_sum, CSR_FRONTIER_DEGREE_SUM_WORKGROUP_SIZE,
 };
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_reference::composition_witness::csr_frontier_degree_sum_witness as csr_frontier_degree_sum_cpu;
+use vyre_runtime::DispatchConfig;
 
 fn run(
     program: &Program,

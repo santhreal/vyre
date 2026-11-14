@@ -27,15 +27,15 @@ use vyre_test_support::semantic_requests;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Mutex;
 
+use vyre_compiler::{
+    writable_graph_values, Digest, SemanticExecutionError, SemanticExecutionOutput,
+    SemanticExecutionRequest, SemanticExecutor,
+};
 use vyre_foundation::ir::GraphValueId;
 use vyre_libs_solvers::solvers::quantized_dispatch::{
     i4x8_batched_matmul_f32_scaled_via, i4x8_batched_matmul_top1_f32_scaled_via,
     i4x8_batched_matvec_f32_scaled_via, i4x8_dot_f32_scaled_via, i4x8_matvec_f32_scaled_via,
     unpack_i4x8_via, PackedI4BatchedMatmul,
-};
-use vyre_compiler::{
-    writable_graph_values, Digest, SemanticExecutionError, SemanticExecutionOutput,
-    SemanticExecutionRequest, SemanticExecutor,
 };
 
 /// A dispatcher that returns exactly the output buffers it was handed, so the

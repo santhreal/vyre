@@ -8,8 +8,8 @@ use crate::pipeline::{BufferBindingInfo, OutputBindingLayout};
 use smallvec::SmallVec;
 use std::sync::Arc;
 use std::time::Instant;
-use vyre_runtime::BackendError;
 use vyre_emit::naga::program::{TrapTag, TRAP_SIDECAR_WORDS};
+use vyre_runtime::BackendError;
 
 mod bind_groups;
 pub(super) mod binding_lookup;

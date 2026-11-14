@@ -19,9 +19,9 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_libs::math::scan::scan_prefix_sum;
+use vyre_runtime::DispatchConfig;
 
 /// The same deterministic fill the CUB baseline benchmark uses: every value is
 /// nonzero, so a dropped element changes the sum, and the pattern repeats with a

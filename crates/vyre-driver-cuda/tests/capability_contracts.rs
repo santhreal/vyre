@@ -2,11 +2,11 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::DispatchConfig;
-use vyre_runtime::PipelineFeatureFlags;
 use vyre_driver_cuda::{cuda_factory, CudaBackend, CudaDeviceCaps};
 use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::DispatchConfig;
+use vyre_runtime::PipelineFeatureFlags;
 
 #[test]
 fn cuda_device_probe_must_succeed_on_gpu_fleet() {

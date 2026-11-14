@@ -4,10 +4,10 @@
 //! builder that drifts from the struct literal it replaces moves every suite
 //! that uses it at once.
 
-use vyre_foundation::ir::DataType;
 use vyre_compiler::lower::analyses::child_body_operands;
 use vyre_compiler::lower::descriptor_builder::*;
 use vyre_compiler::lower::*;
+use vyre_foundation::ir::DataType;
 
 #[test]
 fn builder_output_matches_the_struct_literal_it_replaces() {

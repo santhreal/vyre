@@ -12,9 +12,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
-use vyre_runtime::BackendError;
 use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_registry_link::backend::{linked_backend_sources, live_backend_registry};
+use vyre_runtime::BackendError;
 
 /// What a row claims a backend does with one mode.
 ///

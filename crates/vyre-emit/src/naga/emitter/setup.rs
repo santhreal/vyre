@@ -14,12 +14,12 @@ use naga::{
     GlobalVariable, Module, ResourceBinding, Scalar, ScalarKind, ShaderStage, Span, StorageAccess,
     Type, TypeInner, VectorSize,
 };
-use vyre_foundation::fp_parity::FloatLoweringMode;
-use vyre_foundation::ir::DataType;
 use vyre_compiler::lower::{
     BindingSlot, BindingVisibility, GridIndexSpace, KernelBody, KernelDescriptor, KernelOpKind,
     MemoryClass, TRAP_SIDECAR_NAME,
 };
+use vyre_foundation::fp_parity::FloatLoweringMode;
+use vyre_foundation::ir::DataType;
 
 use super::BodyBuilder;
 use crate::naga::EmitError;

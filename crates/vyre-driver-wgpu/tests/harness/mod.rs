@@ -7,10 +7,10 @@ pub(crate) mod self_optimizer;
 
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_runtime::PendingDispatch;
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_emit::naga::program::emit_module;
+use vyre_runtime::PendingDispatch;
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 const LIVE_GPU_REQUIRED: &str =
     "WgpuBackend acquisition failed on a machine that must have a GPU. \

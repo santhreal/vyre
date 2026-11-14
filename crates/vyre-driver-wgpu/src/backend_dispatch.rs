@@ -8,9 +8,9 @@ use std::sync::{
     Arc,
 };
 use std::time::Instant;
+use vyre_foundation::ir::Program;
 use vyre_runtime::persistent::PersistentThreadMode;
 use vyre_runtime::SpeculationMode;
-use vyre_foundation::ir::Program;
 
 fn empty_batch_result_slots<T>(
     len: usize,

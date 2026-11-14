@@ -10,10 +10,10 @@ use std::io::Write;
 use std::process::Command;
 
 use tempfile::NamedTempFile;
-use vyre_runtime::BindingSet;
+use vyre_compiler::{TargetModuleBundle, TargetPayload, TargetPayloadFormat};
 use vyre_driver_spirv::SpirvBackend;
 use vyre_foundation::ir::Program;
-use vyre_compiler::{TargetModuleBundle, TargetPayload, TargetPayloadFormat};
+use vyre_runtime::BindingSet;
 
 use crate::target_artifacts;
 use target_artifacts::spirv;

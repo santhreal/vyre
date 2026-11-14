@@ -2,8 +2,8 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 #[test]
 fn timed_dispatch_reports_structured_gpu_device_ns() {

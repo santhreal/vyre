@@ -6,8 +6,8 @@
 //! When the feature is off, the mock gate validates PTX string
 //! structure and instruction presence.
 
-use vyre_foundation::ir::BinOp;
 use vyre_compiler::lower::KernelOpKind;
+use vyre_foundation::ir::BinOp;
 
 mod fixtures;
 use fixtures::{

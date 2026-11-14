@@ -19,8 +19,8 @@
 //! resident record for that reason. This suite covers the neutral record, which
 //! is every backend that does not override one.
 
-use vyre_runtime::materialize::{InstanceMessages, NEUTRAL_MESSAGES};
 use vyre_compiler::ArtifactValueId;
+use vyre_runtime::materialize::{InstanceMessages, NEUTRAL_MESSAGES};
 
 /// Render every rejection in `messages` as (field, text) for one value.
 fn rendered(messages: InstanceMessages, value: ArtifactValueId) -> Vec<(&'static str, String)> {

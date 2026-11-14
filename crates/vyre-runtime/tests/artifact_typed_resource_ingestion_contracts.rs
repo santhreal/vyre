@@ -8,16 +8,16 @@
 
 use std::sync::Arc;
 
-use vyre_runtime::BackendRegistration;
+use vyre_compiler::{AbiAccess, Artifact, ArtifactEnvelope, Digest, ResourceLifetime};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_compiler::{AbiAccess, Artifact, ArtifactEnvelope, Digest, ResourceLifetime};
 use vyre_runtime::artifact_admission::{
     ArtifactSession, ArtifactSessionError, ResourceIngestionError, ResourceManifest,
     ResourceManifestEntry, ResourceManifestSource, TypedResource, TypedResourceDataset,
 };
+use vyre_runtime::BackendRegistration;
 
 use vyre_test_support::artifact_fixtures;
 

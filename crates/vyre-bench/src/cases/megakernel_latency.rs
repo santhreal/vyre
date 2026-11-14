@@ -10,14 +10,14 @@ use crate::cases::resident_queue::{
     account, accounted_metrics, queue_buffers, resident_pool_sets_metric,
 };
 use vyre_runtime::autotune_store::{AutotuneRecord, AutotuneStore};
-use vyre_runtime::speculation_verdict::SpeculationVerdict;
-use vyre_runtime::SpecCacheKey;
-use vyre_runtime::SpeculativeVariantKeys;
 use vyre_runtime::resident_work_queue::protocol::{control, slot, SLOT_WORDS, STATUS_WORD};
 use vyre_runtime::resident_work_queue::speculation::{
     PairedSpeculationSample, PairedSpeculationWindow,
 };
 use vyre_runtime::resident_work_queue::{self};
+use vyre_runtime::speculation_verdict::SpeculationVerdict;
+use vyre_runtime::SpecCacheKey;
+use vyre_runtime::SpeculativeVariantKeys;
 
 /// Names this case's buffers in word codec errors.
 const WORD_CONTEXT: &str = "megakernel latency output";

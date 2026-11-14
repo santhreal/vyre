@@ -21,8 +21,8 @@ use crate::api::metric::BenchMetrics;
 use crate::api::resident::{
     dispatch_program_timed, stated_launch, transfer_accounting, ResidentInputSet,
 };
-use vyre_runtime::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_runtime::{ResidentDispatchStep, ResidentReadRange};
 
 /// Output slot of the atomic fired counter.
 const FIRED_COUNT_OUTPUT: usize = 0;

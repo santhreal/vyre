@@ -2,9 +2,6 @@
 //!
 //! Every descriptor fixture in this file is shared by the submodules below,
 //! which reach it through `use super::*`.
-use vyre_emit::ptx::*;
-use vyre_foundation::ir::MemoryOrdering;
-use vyre_foundation::ir::{AtomicOp, BinOp, DataType, UnOp};
 use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, global_ro, global_wo, lit, mma_f16_m16n8k16, op, store_literal_kernel,
     SlotCount,
@@ -15,6 +12,9 @@ use vyre_compiler::lower::{
     MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixTileShape, MemoryClass,
     MemoryProxyFence, StageSlot, TensorAccessMap, TransactionScope,
 };
+use vyre_emit::ptx::*;
+use vyre_foundation::ir::MemoryOrdering;
+use vyre_foundation::ir::{AtomicOp, BinOp, DataType, UnOp};
 
 fn one_store_kernel() -> KernelDescriptor {
     store_literal_kernel(

@@ -12,13 +12,13 @@
 
 use std::collections::HashSet;
 
-#[cfg(feature = "driver-contracts")]
-use vyre_runtime::BackendRegistration;
 use vyre_foundation::ir::{node_op_id, Node, Program};
 #[cfg(feature = "driver-contracts")]
 use vyre_foundation::operation::OperationRegistry;
 use vyre_foundation::transform::schedule_lowering::lower_logical_schedule_borrowed;
 use vyre_foundation::visit::child_bodies;
+#[cfg(feature = "driver-contracts")]
+use vyre_runtime::BackendRegistration;
 
 /// Every language-level operation the program's nodes name, at every nesting
 /// depth, after schedule lowering resolves the logical execution markers.

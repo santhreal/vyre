@@ -4,8 +4,8 @@
 //! compare-exchange retry loop.
 
 use naga::{BinaryOperator, Block, Expression, LocalVariable, Span, Statement, UnaryOperator};
-use vyre_foundation::ir::AtomicOp;
 use vyre_compiler::lower::{KernelOp, TRAP_SIDECAR_NAME};
+use vyre_foundation::ir::AtomicOp;
 
 use super::BodyBuilder;
 use crate::naga::EmitError;

@@ -20,11 +20,8 @@ use std::fs;
 /// harness drives, the conformance harness itself, the parity fixtures, the
 /// benchmark comparator, and the registry inspector. None of them is on a
 /// routing, artifact, or autoroute path.
-const RECORDED_ORACLE_LINKERS: &[&str] = &[
-    "vyre-driver-reference",
-    "vyre-test-support",
-    "vyre-bench",
-];
+const RECORDED_ORACLE_LINKERS: &[&str] =
+    &["vyre-driver-reference", "vyre-test-support", "vyre-bench"];
 
 /// Crates that decide where work runs or what a device is handed.
 ///

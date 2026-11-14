@@ -39,11 +39,11 @@ use harness::{cat_a_dispatch_config, f32_to_ordered, u32_bytes};
 use proptest::prelude::*;
 use std::sync::LazyLock;
 
-use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity::effective_tolerance;
 use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
+use vyre_runtime::VyreBackend;
 
 fn backend() -> &'static WgpuBackend {
     static BACKEND: LazyLock<WgpuBackend> = LazyLock::new(|| {

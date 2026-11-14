@@ -9,8 +9,8 @@
 //! It does not catch aliasing produced below the handle, such as two distinct
 //! resident allocations a backend later maps onto one device address range.
 
-use vyre_runtime::{ReadOnlyAliasCheck, ResidentHandle, ResidentOwner};
 use vyre_foundation::ir::BufferAccess;
+use vyre_runtime::{ReadOnlyAliasCheck, ResidentHandle, ResidentOwner};
 
 fn owner() -> ResidentOwner {
     ResidentOwner::new().expect("Fix: resident owner minting must succeed.")

@@ -4,9 +4,9 @@
 
 use crate::naga::EmitError;
 use naga::{BinaryOperator, Literal, ScalarKind, UnaryOperator};
+use vyre_compiler::lower::{KernelBody, KernelOpKind, LiteralValue};
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
-use vyre_compiler::lower::{KernelBody, KernelOpKind, LiteralValue};
 
 pub(super) fn naga_literal(literal: &LiteralValue) -> Result<Literal, EmitError> {
     match literal {

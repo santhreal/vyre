@@ -12,9 +12,9 @@
 //! The population is the shared adversarial success corpus, read at run time,
 //! so a corpus case added later is checked here without being named.
 
-use vyre_emit::ptx::TRAP_SIDECAR_SYMBOL;
 use vyre_compiler::lower::descriptor_builder::{body, descriptor, effect, lit};
 use vyre_compiler::lower::{KernelOpKind, LiteralValue};
+use vyre_emit::ptx::TRAP_SIDECAR_SYMBOL;
 
 /// Registers holding the trap sidecar base, as `mov.u64 %rdN, <symbol>;`.
 ///

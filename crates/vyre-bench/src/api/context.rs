@@ -405,7 +405,8 @@ impl BenchContext {
     fn submit_resident_step(
         &self,
         step: &vyre_runtime::ResidentDispatchStep<'_>,
-    ) -> Result<(vyre_runtime::BindingSet, vyre_runtime::Completion), vyre_runtime::BackendError> {
+    ) -> Result<(vyre_runtime::BindingSet, vyre_runtime::Completion), vyre_runtime::BackendError>
+    {
         if let Some(workgroup) = step.launch.map(|launch| launch.workgroup()) {
             if workgroup != step.program.workgroup_size {
                 return Err(vyre_runtime::BackendError::new(format!(

@@ -9,9 +9,9 @@
 //! Does NOT catch a wrong derived extent: `logical_span_contracts` owns which span
 //! a guard admits, and this file owns that the span reaches the launch.
 
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_runtime::validation::LaunchGeometryLimits;
 use vyre_runtime::{BindingPlan, DispatchConfig, LaunchPlan};
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 /// Limits wide enough that nothing here fails on a backend ceiling.
 const LIMITS: LaunchGeometryLimits = LaunchGeometryLimits {

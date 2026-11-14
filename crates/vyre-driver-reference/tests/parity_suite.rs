@@ -5,9 +5,9 @@
 //! and multi-buffer programs. Each test constructs a `Program`, dispatches
 //! through the `VyreBackend` trait surface, and asserts byte-exact output.
 
-use vyre_runtime::DispatchConfig;
 use vyre_driver_reference::CpuRefEvaluator;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::DispatchConfig;
 
 use crate::dispatch_fixtures;
 use dispatch_fixtures::{binary_program, dispatch_no_input, dispatch_with_inputs, u32_out_buffer};

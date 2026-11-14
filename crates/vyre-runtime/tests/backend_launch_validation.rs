@@ -1,7 +1,7 @@
 //! Shared backend launch validation contracts.
 
-use vyre_runtime::{BackendError, DispatchConfig, VyreBackend};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::{BackendError, DispatchConfig, VyreBackend};
 
 struct GridLimitBackend;
 

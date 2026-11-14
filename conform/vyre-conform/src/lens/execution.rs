@@ -1,9 +1,9 @@
 //! How a lens executes one program: on the reference interpreter, on a
 //! registered backend, and the dispatch shape both sides agree on.
 
-use vyre_runtime::{BackendError, BackendRegistration};
 use vyre_foundation::ir::Program;
 use vyre_reference::ReferenceError;
+use vyre_runtime::{BackendError, BackendRegistration};
 
 use crate::production::ProductionSession;
 

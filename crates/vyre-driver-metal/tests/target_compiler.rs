@@ -6,13 +6,13 @@
 // only the Apple-gated tests do. The non-Apple test asserts the absence of a
 // registration and reaches for none of it.
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-use vyre_runtime::BindingSet;
+use vyre_compiler::{SearchBudget, TargetModuleBundle};
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ValueLifetime,
 };
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-use vyre_compiler::{SearchBudget, TargetModuleBundle};
+use vyre_runtime::BindingSet;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 use vyre_test_support::graph_values::{graph_output, u32_scalar};
 #[cfg(any(target_os = "macos", target_os = "ios"))]

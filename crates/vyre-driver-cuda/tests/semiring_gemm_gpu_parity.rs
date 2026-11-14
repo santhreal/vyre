@@ -132,10 +132,10 @@ fn cuda_semiring_gemm_bool_or_random_8x8() {
 }
 #[test]
 fn cuda_fused_tile_attention_matches_reference() {
-    use vyre_runtime::DispatchConfig;
     use vyre_driver_cuda::CudaBackend;
     use vyre_libs::nn::attention::fused_tile_attention;
     use vyre_reference::value::Value;
+    use vyre_runtime::DispatchConfig;
 
     let seq_len = 2u32;
     let head_dim = 2u32;

@@ -13,8 +13,8 @@
 use vyre_bench::cases::release_workloads::{
     build_release_macro_case_for_records, release_macro_program_specs_for_records,
 };
-use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
+use vyre_runtime::DispatchConfig;
 
 const REDUCED_RECORDS: u32 = 512;
 const RELEASE_MACRO_CASES: usize = 10;

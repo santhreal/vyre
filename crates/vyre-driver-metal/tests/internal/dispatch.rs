@@ -4,8 +4,8 @@
 use super::*;
 
 use super::fixtures::{one_word_output, stores_word};
-use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::DispatchConfig;
 
 #[test]
 fn apple_dispatches_store_literal_program() {

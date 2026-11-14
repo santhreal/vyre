@@ -12,9 +12,9 @@
 //! A private copy of either table drifted out of agreement once already.
 
 use rustc_hash::FxHashMap;
-use vyre_foundation::ir::BinOp;
 use vyre_compiler::lower::operand_class::operand_is_result_reference;
 use vyre_compiler::lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
+use vyre_foundation::ir::BinOp;
 
 pub(crate) struct IndexFacts {
     producer: FxHashMap<u32, usize>,

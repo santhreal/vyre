@@ -22,9 +22,9 @@
 
 use std::collections::BTreeSet;
 
-use vyre_runtime::DispatchConfig;
 use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_registry_link::backend::{linked_backend_sources, DECLARED_SOURCES};
+use vyre_runtime::DispatchConfig;
 
 use vyre_foundation::ir::UnOp;
 use vyre_test_support::strict_float_programs::f32_multiply_add_program;

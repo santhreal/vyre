@@ -5,8 +5,8 @@
 use crate::harness;
 use harness::u32_bytes;
 
-use vyre_runtime::VyreBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::VyreBackend;
 
 #[test]
 fn u32_mul_accumulate_wraps_to_low_32_bits() {

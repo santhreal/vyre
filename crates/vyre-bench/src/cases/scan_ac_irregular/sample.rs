@@ -10,8 +10,8 @@
 
 use std::time::Instant;
 
-use vyre_runtime::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::Program;
+use vyre_runtime::{ResidentDispatchStep, ResidentReadRange};
 
 use crate::api::case::{BenchContext, BenchError, BenchRun};
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};

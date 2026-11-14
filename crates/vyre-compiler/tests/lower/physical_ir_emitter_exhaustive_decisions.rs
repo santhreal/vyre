@@ -8,13 +8,13 @@
 //! 3. All target dialects (naga/wgsl, ptx, spirv, metal) must have explicit coverage.
 
 use std::collections::BTreeSet;
-use vyre_foundation::ir::{AtomicOp, BinOp, DataType, MemoryOrdering, SubgroupReduceOp, UnOp};
 use vyre_compiler::lower::variant_space::kernel_op_kind_variants;
 use vyre_compiler::lower::{
     AsyncTransaction, AsyncWaitSpec, FragmentValue, KernelOpKind, MatrixMmaElement,
     MatrixMmaLayout, MatrixMmaSpec, MatrixTileShape, MemoryProxyFence, Name, OpaqueExprData,
     OpaqueNodeData, TransactionScope,
 };
+use vyre_foundation::ir::{AtomicOp, BinOp, DataType, MemoryOrdering, SubgroupReduceOp, UnOp};
 /// Target emitter decision category.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EmitterDecision {

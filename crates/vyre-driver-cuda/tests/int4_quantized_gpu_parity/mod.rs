@@ -11,7 +11,6 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::wire::{
     decode_f32_le_bytes_all, decode_i32_le_bytes_all, pack_f32_slice, pack_u32_slice,
@@ -25,6 +24,7 @@ use vyre_reference::composition_witness::{
     i4x8_matvec_f32_scaled_witness as i4x8_matvec_f32_scaled_cpu,
     pack_i4x8_witness as pack_i4x8_cpu,
 };
+use vyre_runtime::DispatchConfig;
 
 /// Signed INT4 lane pattern the fixed-shape contracts cycle for weights and for
 /// the left dot operand. Spans both nibble extremes so a sign-extension defect

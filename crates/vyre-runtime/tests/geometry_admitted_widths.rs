@@ -6,9 +6,9 @@
 //! class closed here is a profile admitting a width its own limits reject, and
 //! a preference order creeping back into the fact.
 
-use vyre_runtime::{DeviceProfile, DeviceTimingQuality};
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::{CooperativeWidth, ElementPolicy, GeometryRequirements, Uniformity};
+use vyre_runtime::{DeviceProfile, DeviceTimingQuality};
 
 fn test_profile_1024() -> DeviceProfile {
     DeviceProfile {

@@ -23,10 +23,10 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use vyre_compiler::{ArtifactInputSlot, ArtifactValueId, Digest};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use vyre_runtime::materialize::{gather_artifact_inputs, InstanceCore, NEUTRAL_MESSAGES};
 use vyre_runtime::{BindingPlan, DeviceIdentity};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
-use vyre_compiler::{ArtifactInputSlot, ArtifactValueId, Digest};
 
 /// Canonical identity of the value the seed input binds.
 const SEED: ArtifactValueId = ArtifactValueId(7);

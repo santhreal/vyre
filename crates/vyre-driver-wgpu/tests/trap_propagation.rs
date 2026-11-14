@@ -2,9 +2,9 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 #[test]
 fn dispatch_reports_node_trap_tag_and_address() {

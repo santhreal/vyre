@@ -18,9 +18,9 @@ use std::collections::HashSet;
 use std::sync::{Arc, LazyLock};
 
 use vyre::ir::{BufferAccess, BufferDecl, Expr, Node, Program};
-use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::execution_plan::fusion::fuse_programs;
+use vyre_runtime::VyreBackend;
 
 // ------------------------------------------------------------------
 // Catalog

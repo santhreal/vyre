@@ -118,10 +118,7 @@ fn members_submitting(registration_type: &str) -> Vec<String> {
     let mut submitters = Vec::new();
     for member in workspace_members(&root) {
         let name = crate_name(&member);
-        if registration_type == "BackendRegistration"
-            && (name == "vyre-runtime"
-                || name == "xtask"
-)
+        if registration_type == "BackendRegistration" && (name == "vyre-runtime" || name == "xtask")
         {
             continue;
         }

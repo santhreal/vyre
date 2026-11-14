@@ -28,9 +28,9 @@
 use crate::harness;
 use harness::u32_bytes;
 
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 /// `out[i] = build(load(a, i))` over single-input buffers of element `elem`.
 fn unary_program(elem: DataType, n: u32, build: fn(Expr) -> Expr) -> Program {

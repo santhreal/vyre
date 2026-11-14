@@ -7,7 +7,6 @@
 //! lifetime is not a smaller pool, it is a miscompile, so the cases below pin
 //! the loop and nesting spans as hard as they pin the offsets.
 
-use vyre_foundation::ir::DataType;
 use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, effect, for_loop, global_rw, if_then, lit, op, shared_rw, slot, SlotCount,
 };
@@ -16,6 +15,7 @@ use vyre_compiler::lower::{
     MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixTileShape, MemoryClass, StorageLayout,
     StorageLayoutError, StorageLifetime, VerifyErrorKind, WORKGROUP_SLOT_BASE,
 };
+use vyre_foundation::ir::DataType;
 
 /// First workgroup-class slot a hand-built descriptor may use.
 const A: u32 = WORKGROUP_SLOT_BASE;

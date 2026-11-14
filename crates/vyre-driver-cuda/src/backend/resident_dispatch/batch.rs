@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use rustc_hash::FxHashSet;
 use smallvec::SmallVec;
+use vyre_foundation::ir::Program;
 use vyre_runtime::BindingRole;
 use vyre_runtime::{BackendError, DispatchConfig, ResidentHandle};
-use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::DispatchAllocations;
 use crate::backend::dispatch::CudaBackend;

@@ -7,8 +7,8 @@
 //! replacing the target and appending one note, for every variant, so a variant
 //! added here cannot reach a downstream emitter unprojected.
 
-use vyre_emit::naga::EmitError;
 use vyre_compiler::lower::{KernelOp, KernelOpKind, WorkgroupLimitViolation};
+use vyre_emit::naga::EmitError;
 
 /// One value per `EmitError` variant.
 ///

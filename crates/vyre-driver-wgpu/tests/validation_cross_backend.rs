@@ -20,8 +20,8 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_runtime::VyreBackend;
 
 /// Stand-in for a reduced-capability future backend. Refuses every
 /// dispatch so the test cannot accidentally exercise its engine; the

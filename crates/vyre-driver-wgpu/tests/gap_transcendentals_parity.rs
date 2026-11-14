@@ -59,13 +59,13 @@ use crate::harness::{bytes_f32, f32_bytes};
 use proptest::prelude::*;
 use std::sync::LazyLock;
 use vyre::ir::{Expr, Program, UnOp};
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_expansion::expand_strict_transcendentals;
 use vyre_foundation::fp_parity::{
     canonical_f32, FloatLoweringMode, BACKEND_TRANSCENDENTAL_ULP_BUDGET,
     REFERENCE_TRANSCENDENTAL_ULP_BUDGET,
 };
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_test_support::strict_float_programs::f32_lane_program;
 
 static BACKEND: LazyLock<WgpuBackend> = LazyLock::new(|| {

@@ -3,12 +3,12 @@
 //! Each test asserts the exact PTX instruction suffix/mnemonic that the
 //! fix introduced, confirming the pre-fix behaviour is gone.
 
-use vyre_foundation::ir::{AtomicOp, BinOp, DataType, MemoryOrdering};
 use vyre_compiler::lower::descriptor_builder::{
     binop, body, column_walk_tile, descriptor, effect, global_rw, lit, load_global, op,
     store_global, strided_tile_program,
 };
 use vyre_compiler::lower::{KernelDescriptor, KernelOpKind, LiteralValue, WORKGROUP_SLOT_BASE};
+use vyre_foundation::ir::{AtomicOp, BinOp, DataType, MemoryOrdering};
 
 /// Verify then emit, reporting `what` if either step rejects the descriptor.
 fn emit(desc: &KernelDescriptor, what: &str) -> String {

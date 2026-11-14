@@ -14,10 +14,10 @@
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use vyre_foundation::ir::Program;
 use vyre_runtime::{
     BackendError, DispatchConfig, PendingDispatch, Resource, TimedDispatchResult, VyreBackend,
 };
-use vyre_foundation::ir::Program;
 
 /// Echoes its inputs and counts how many times `dispatch` ran.
 struct CountingBackend {

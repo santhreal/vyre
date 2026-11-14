@@ -11,11 +11,11 @@ use crate::reduce::{
     histogram::histogram_atomic_scatter, max::reduce_max, min::reduce_min,
     segment_reduce::segment_reduce_sum, sum::reduce_sum,
 };
-use vyre_libs_builder::plumbing::host::dispatch_buffers::{
-    ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
-};
 use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
+use vyre_libs_builder::plumbing::host::dispatch_buffers::{
+    ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 
 /// Caller-owned scratch for reduction metric dispatches.
@@ -379,8 +379,8 @@ fn decode_scalar(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_compiler::{SemanticExecutionOutput, SemanticExecutionRequest};
+    use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_reference::composition_witness::{
         histogram_witness as reference_histogram_atomic_scatter,
         reduce_all_witness as reference_reduce_all_u32,

@@ -17,9 +17,9 @@
 use crate::harness;
 use harness::u32_bytes;
 
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 /// `out[i] = a[i] - b[i]` where a/b are I32 and out is U32, an I32-typed value
 /// (Sub goes through Frame::Bin, preserving the I32 operand type) stored into a

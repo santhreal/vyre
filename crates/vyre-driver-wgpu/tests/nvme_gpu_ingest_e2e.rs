@@ -11,7 +11,6 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 
 use tempfile::tempdir;
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_runtime::resident_work_queue::io::ResidentIoQueue;
@@ -19,6 +18,7 @@ use vyre_runtime::uring::{
     AsyncUringStream, GpuMappedBuffer, IoUringState, NativeReadPath, NvmeGpuIngestDriver,
 };
 use vyre_runtime::PipelineError;
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 const FILE_BYTES: usize = 4 * 1024 * 1024;
 const HASH_WORDS: u32 = 8;

@@ -21,11 +21,11 @@
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_libs_builder::plumbing::host::dispatch_buffers::{
-    decode_u32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
-};
 use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
+use vyre_libs_builder::plumbing::host::dispatch_buffers::{
+    decode_u32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
 };
 
 /// Op id for the Sinkhorn dispatch clustering primitive.

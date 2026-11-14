@@ -6,13 +6,13 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_libs::graph::adjustment_set::backdoor_descendants_check;
 use vyre_libs::graph::do_calculus::intervention_delete_incoming;
 use vyre_reference::composition_witness::{
     backdoor_descendants_check_witness as backdoor_descendants_check_cpu,
     do_intervention_delete_incoming_witness as do_intervention_delete_incoming_cpu,
 };
+use vyre_runtime::DispatchConfig;
 
 fn run_backdoor_check(candidate_z: &[u32], descendants_of_x: &[u32], n: u32) -> u32 {
     let program = backdoor_descendants_check("z", "dx", "out", n);

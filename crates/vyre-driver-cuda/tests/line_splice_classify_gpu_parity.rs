@@ -9,9 +9,9 @@ use crate::harness;
 mod line_splice_generated_corpus;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_libs::parsing::line_splice_classify::{line_splice_classify, line_splice_classify_u8};
 use vyre_reference::composition_witness::line_splice_classify_witness as reference_line_splice_classify;
+use vyre_runtime::DispatchConfig;
 
 fn pack_bytes(bytes: &[u8]) -> Vec<u32> {
     let mut padded = bytes.to_vec();

@@ -2,8 +2,8 @@
 //! single operator for.
 
 use naga::{BinaryOperator, Expression, Literal};
-use vyre_foundation::ir::BinOp;
 use vyre_compiler::lower::KernelOp;
+use vyre_foundation::ir::BinOp;
 
 use super::super::op_lookup::{binary_math_function, binary_operator};
 use super::super::BodyBuilder;

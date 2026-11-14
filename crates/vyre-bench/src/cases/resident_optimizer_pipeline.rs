@@ -20,12 +20,12 @@ use crate::cases::harness::{
 };
 use std::collections::BTreeMap;
 use std::time::Instant;
-use vyre_runtime::self_optimizer_bench::{timed_cpu_pipeline_on_oracle_stack, wide_program};
-use vyre_foundation::ir::Program;
 use vyre_compiler::{
     CompileObjective, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, SemanticExecutionPolicy,
 };
+use vyre_foundation::ir::Program;
 use vyre_pass_engine::optimizer::pipeline::gpu_optimize;
+use vyre_runtime::self_optimizer_bench::{timed_cpu_pipeline_on_oracle_stack, wide_program};
 use vyre_runtime::RegisteredSemanticExecutor;
 
 /// Independent `let` bindings in the fixture.

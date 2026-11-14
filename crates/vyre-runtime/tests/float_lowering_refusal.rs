@@ -31,12 +31,12 @@ use std::collections::{BTreeSet, HashSet};
 use std::fs;
 use std::sync::LazyLock;
 
-use vyre_runtime::{BackendError, BackendRegistration, DispatchConfig, VyreBackend};
 use vyre_foundation::fp_parity::{
     approximable_operations, blocked_contraction_feature, FloatLoweringMode,
 };
 use vyre_foundation::ir::{OpId, Program, UnOp};
 use vyre_foundation::operation::TargetId;
+use vyre_runtime::{BackendError, BackendRegistration, DispatchConfig, VyreBackend};
 use vyre_test_support::strict_float_programs::f32_multiply_add_program;
 
 /// The backend that takes the trait default, so it lowers what the default

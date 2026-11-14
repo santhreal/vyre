@@ -28,13 +28,13 @@
 //! over the exchange graph, repeating until no augmenting path
 //! exists. Each augmentation strictly grows the independent set.
 
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 #[cfg(test)]
 use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_libs_graph::graph::matroid_intersection_full::matroid_intersection_full;
-use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned dispatch scratch for exact megakernel matroid certification.
 #[derive(Debug, Default)]

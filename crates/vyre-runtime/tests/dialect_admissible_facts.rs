@@ -8,8 +8,8 @@
 //! caused it. These tests pin the intersection every driver crate uses to
 //! report an admissible fact.
 
-use vyre_runtime::target_dialect::{EmittedDialectModule, TargetDialect};
 use vyre_compiler::{SelectedLowering, TargetCompileError, TargetProfile};
+use vyre_runtime::target_dialect::{EmittedDialectModule, TargetDialect};
 
 fn unused_emit(
     _selected: &SelectedLowering,

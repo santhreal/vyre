@@ -1,8 +1,8 @@
 //! Cast operation emission and narrow-scalar truncation.
 
 use naga::{BinaryOperator, Expression, Literal, ScalarKind};
-use vyre_foundation::ir::DataType;
 use vyre_compiler::lower::KernelOp;
+use vyre_foundation::ir::DataType;
 
 use super::super::op_lookup::scalar_cast_target;
 use super::super::BodyBuilder;

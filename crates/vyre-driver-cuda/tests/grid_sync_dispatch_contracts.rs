@@ -12,9 +12,9 @@ use harness::{
     cross_block_grid_sync_program, CROSS_BLOCK_GRID_SYNC_WORKGROUP,
 };
 use std::sync::LazyLock;
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_cuda::occupancy::cooperative_thread_residency_block_limit;
 use vyre_driver_cuda::{cuda_factory, CudaBackend, CudaDeviceCaps};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 /// Blocks the fixture wants. 512 blocks of 256 threads spreads block start
 /// times widely enough that segment 1's read of the LAST lane's slot genuinely

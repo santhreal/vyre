@@ -6,10 +6,10 @@ use std::collections::BTreeMap;
 use std::sync::LazyLock;
 use vyre::ir::DataType;
 use vyre::ir::{BufferAccess, BufferDecl, Program};
-use vyre_runtime::DispatchConfig;
-use vyre_runtime::VyreBackend;
 use vyre_foundation::fp_parity;
 use vyre_reference::value::Value;
+use vyre_runtime::DispatchConfig;
+use vyre_runtime::VyreBackend;
 
 fn entry_cases(entry: &UnifiedEntry) -> Vec<Vec<Vec<u8>>> {
     let cases = entry.test_inputs.map(|f| f()).unwrap_or_default();

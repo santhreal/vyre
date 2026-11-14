@@ -1,13 +1,13 @@
 //! Tests defending search budget bounds and dependency endpoint classification contracts.
 
 use std::collections::BTreeMap;
-use vyre_foundation::ir::ProgramGraph;
-use vyre_foundation::validate::BackendCapabilities;
 use vyre_compiler::{
     compile, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest, DependencyEdge,
     DependencyEndpoint, DependencyKind, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     SearchBudget,
 };
+use vyre_foundation::ir::ProgramGraph;
+use vyre_foundation::validate::BackendCapabilities;
 
 use vyre_test_support::graph_fixtures::producer_consumer_pair;
 use vyre_test_support::pass_programs::copy_program;

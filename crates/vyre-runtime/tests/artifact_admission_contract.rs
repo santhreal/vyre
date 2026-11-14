@@ -4,17 +4,6 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
 use crate::artifact_session_fixtures::{fixture_backend_factory, fixture_supported_ops};
-use vyre_runtime::materialize::{DeviceSpec, MaterializerDevice};
-use vyre_runtime::BackendRegistration;
-use vyre_runtime::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource, Completion,
-    Device, ResidentOwner, Resource,
-};
-use vyre_foundation::diagnostics::{DiagnosticStage, RetryClass};
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,
-    ValueContract, ValueLifetime,
-};
 use vyre_compiler::{
     Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest,
     DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetCompileError,
@@ -22,15 +11,26 @@ use vyre_compiler::{
     TargetResourceBinding, TargetResourceMemory, ARTIFACT_ENVELOPE_SCHEMA_VERSION,
     TARGET_PAYLOAD_SCHEMA_VERSION,
 };
+use vyre_foundation::diagnostics::{DiagnosticStage, RetryClass};
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,
+    ValueContract, ValueLifetime,
+};
 use vyre_runtime::artifact_admission::{
     admit_artifact, admit_cached_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession,
     RetainedArtifactSession, TypedResource, TypedResourceDataset,
 };
+use vyre_runtime::materialize::{DeviceSpec, MaterializerDevice};
 use vyre_runtime::persistent_executor::{PersistentExecutor, ResidentQueueState};
 use vyre_runtime::pipeline_cache::{
     InMemoryPipelineCache, PipelineCacheStore, PipelineFingerprint,
 };
 use vyre_runtime::recovery::{classify_backend_error, recover_artifact_session};
+use vyre_runtime::BackendRegistration;
+use vyre_runtime::{
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource, Completion,
+    Device, ResidentOwner, Resource,
+};
 
 use vyre_test_support::fixture_instance::{completion, FixtureInstance};
 

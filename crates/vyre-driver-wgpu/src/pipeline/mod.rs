@@ -27,19 +27,19 @@ use std::time::Instant;
 
 use rustc_hash::FxHashSet;
 use smallvec::SmallVec;
+use vyre_compiler::lower::{TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
+use vyre_emit::naga::program::TrapTag;
+use vyre_foundation::execution_plan::{self, ExecutionPlan};
+use vyre_foundation::ir::Program;
+use vyre_foundation::validate::ValidationOptions;
 use vyre_runtime::allocation::reserve_hash_set_to_capacity;
 #[cfg(test)]
 pub(crate) use vyre_runtime::enforce_actual_output_budget;
 use vyre_runtime::BackendLayoutFingerprint;
 use vyre_runtime::{admit_dispatch_grid, find_indirect_dispatch, infer_launch_grid};
 pub(crate) use vyre_runtime::{element_size_bytes, OutputBindingLayout};
-pub use vyre_runtime::{IndirectDispatch, OutputLayout};
 use vyre_runtime::{BackendError, DispatchConfig, LaunchGeometry};
-use vyre_emit::naga::program::TrapTag;
-use vyre_foundation::execution_plan::{self, ExecutionPlan};
-use vyre_foundation::ir::Program;
-use vyre_foundation::validate::ValidationOptions;
-use vyre_compiler::lower::{TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
+pub use vyre_runtime::{IndirectDispatch, OutputLayout};
 
 pub(crate) use self::artifact::AuthenticatedTarget;
 use self::artifact::CachedPipelineArtifact;
@@ -643,9 +643,7 @@ pub fn host_input_slots(
         Some(resource_bindings) => slots.extend(
             resource_bindings
                 .iter()
-                .filter(|binding| {
-                    binding.access != vyre_compiler::TargetResourceAccess::WriteOnly
-                })
+                .filter(|binding| binding.access != vyre_compiler::TargetResourceAccess::WriteOnly)
                 .map(|binding| (binding.group, binding.slot)),
         ),
         None => {

@@ -21,12 +21,12 @@
 
 use std::fmt::Write as _;
 
-use vyre_foundation::ir::DataType;
 use vyre_compiler::lower::KernelOp;
 use vyre_compiler::lower::MemoryClass;
 use vyre_compiler::lower::MemoryProxyFence;
 use vyre_compiler::lower::Name;
 use vyre_compiler::lower::TransactionScope;
+use vyre_foundation::ir::DataType;
 
 use super::memory::AsyncCopyDirection;
 use super::BodyCtx;

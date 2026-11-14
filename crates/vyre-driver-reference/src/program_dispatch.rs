@@ -2,13 +2,13 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_runtime::target_dialect::{EmittedDialectModule, TargetDialect};
-use vyre_foundation::ir::GraphValueId;
 use vyre_compiler::{
     ObjectiveMetric, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest,
     SemanticExecutor, TargetCompileError, TargetCompiler, TargetProfile,
 };
+use vyre_foundation::ir::GraphValueId;
 use vyre_reference::value::Value;
+use vyre_runtime::target_dialect::{EmittedDialectModule, TargetDialect};
 
 pub(crate) const REFERENCE_TARGET_FORMAT: &str = "reference-graph";
 /// Payload format version the reference dialect emits and admits.
@@ -45,8 +45,8 @@ fn emit_reference_module(
     })
 }
 
-pub(crate) fn target_compiler_factory() -> Result<Box<dyn TargetCompiler>, vyre_runtime::BackendError>
-{
+pub(crate) fn target_compiler_factory(
+) -> Result<Box<dyn TargetCompiler>, vyre_runtime::BackendError> {
     REFERENCE_DIALECT.compiler()
 }
 /// Compilation profile of the reference target.

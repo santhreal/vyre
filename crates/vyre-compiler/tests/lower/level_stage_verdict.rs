@@ -11,12 +11,12 @@
 //! emitter-ready canonicalization rewrites is not canonical, and one it leaves
 //! alone is.
 
-use vyre_foundation::ir::{BinOp, DataType};
-use vyre_foundation::optimizer::level_contract::{stage_for_level, LevelVerdict};
 use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, global_rw, lit, op, store_global, SlotCount,
 };
 use vyre_compiler::lower::{KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
+use vyre_foundation::ir::{BinOp, DataType};
+use vyre_foundation::optimizer::level_contract::{stage_for_level, LevelVerdict};
 use vyre_spec::IrLevel;
 
 fn invocation_id(result: u32) -> KernelOp {

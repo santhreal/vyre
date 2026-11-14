@@ -22,9 +22,9 @@ use harness::{add_one_program, bool_bytes, bytes_u32, u32_bytes};
 use std::sync::Arc;
 use std::time::Instant;
 
-use vyre_runtime::{BackendError, DispatchConfig};
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::{BackendError, DispatchConfig};
 
 fn bool_not_program() -> Program {
     Program::wrapped(

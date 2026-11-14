@@ -8,9 +8,9 @@
 //! builder, stated here, so a backend suite states which backend it runs and
 //! nothing else.
 
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 use vyre_reference::value::Value;
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 /// Element count every host-fed buffer in this set declares.
 const ELEMENTS: u32 = 4;

@@ -6,7 +6,6 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_libs::reduce::all::reduce_all;
 use vyre_libs::reduce::any::reduce_any;
 use vyre_libs::reduce::count::reduce_count;
@@ -20,6 +19,7 @@ use vyre_reference::composition_witness::{
     range_counts_witness, reduce_all_witness, reduce_any_witness, reduce_count_non_zero_witness,
     reduce_count_witness, reduce_max_witness, reduce_min_witness, wrapping_sum_witness,
 };
+use vyre_runtime::DispatchConfig;
 
 fn run_scalar_reduce<B>(builder: B, values: &[u32]) -> u32
 where

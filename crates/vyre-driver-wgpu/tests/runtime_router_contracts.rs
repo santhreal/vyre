@@ -5,9 +5,9 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::backend_precedence;
 use vyre_driver_wgpu::runtime::router::{BackendRouter, Override, Reason};
 use vyre_foundation::ir::Program;
+use vyre_runtime::backend_precedence;
 
 fn noop_program() -> Program {
     // Programs built without any buffers / nodes are valid for

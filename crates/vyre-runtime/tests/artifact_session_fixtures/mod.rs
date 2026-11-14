@@ -7,14 +7,14 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
+use vyre_compiler::{
+    AbiAccess, Artifact, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,
+    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+};
 use vyre_runtime::materialize::{DeviceSpec, MaterializerDevice};
 use vyre_runtime::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, Device,
     ResidentOwner, Resource, VyreBackend,
-};
-use vyre_compiler::{
-    AbiAccess, Artifact, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,
-    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 use vyre_test_support::fixture_instance::FixtureInstance;
 

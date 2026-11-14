@@ -17,17 +17,17 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ShapeDim, ValueContract,
-    ValueLifetime,
-};
-use vyre_foundation::validate::BackendCapabilities;
 use vyre_compiler::{
     compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest,
     DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetEntryPoint,
     TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
     TargetResourceMemory, ValidatedCompileRequest,
 };
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ShapeDim, ValueContract,
+    ValueLifetime,
+};
+use vyre_foundation::validate::BackendCapabilities;
 
 /// A single-dimension external value contract.
 pub fn contract(

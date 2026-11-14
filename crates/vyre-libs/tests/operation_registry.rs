@@ -2,6 +2,7 @@
 
 use std::collections::BTreeMap;
 
+use vyre_compiler::lower::lower_scheduled;
 use vyre_foundation::ir::{
     BufferDecl, DataType, Expr, MemoryOrdering, Node, Program, ProgramGraph,
 };
@@ -9,7 +10,6 @@ use vyre_foundation::logical::{LogicalProgramGraph, LOGICAL_ALGORITHM_VERSION};
 use vyre_foundation::operation::{OperationRegistration, OperationRegistry, OperationTier};
 use vyre_foundation::schedule::SchedulePhaseId;
 use vyre_foundation::visit::{for_each_expr, for_each_node};
-use vyre_compiler::lower::lower_scheduled;
 use vyre_test_support::logical_markers::{census, logical_marker_sum};
 
 const LOGICAL_EXPANSION_OP_ID: &str = "test::operation_registry::logical_expansion";

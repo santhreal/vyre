@@ -7,8 +7,8 @@
 
 use super::*;
 
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 /// Acquire the WGPU backend on this Apple device.
 ///

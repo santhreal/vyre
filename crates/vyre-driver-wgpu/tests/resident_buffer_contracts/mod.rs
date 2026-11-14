@@ -2,8 +2,8 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::{Resource, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_runtime::{Resource, VyreBackend};
 
 fn backend() -> WgpuBackend {
     WgpuBackend::new().expect(

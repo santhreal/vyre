@@ -2,11 +2,11 @@ use std::sync::atomic::Ordering;
 use std::time::Instant;
 
 use metal::Device;
+use vyre_foundation::ir::Program;
 use vyre_runtime::{
     output_binding_layouts, BackendError, BindingPlan, DispatchConfig, PipelineCacheIdentity,
     PipelineCacheMissReason, TimedDispatchResult,
 };
-use vyre_foundation::ir::Program;
 
 use super::buffer_plan::{metal_slot_map, output_layout_map, plan_buffers};
 use super::dispatch::{start_validated_dispatch, MetalDispatchLabels, AUTHENTICATED_DISPATCH};

@@ -12,9 +12,9 @@
 
 use proptest::prelude::*;
 use std::sync::LazyLock;
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, UnOp};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 fn backend() -> &'static WgpuBackend {
     static BACKEND: LazyLock<WgpuBackend> =

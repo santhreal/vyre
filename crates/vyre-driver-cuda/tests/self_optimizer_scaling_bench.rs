@@ -10,13 +10,13 @@ use std::collections::BTreeMap;
 use std::thread;
 
 use vyre::ir::Program;
-use vyre_runtime::self_optimizer_bench::report_scaling;
-use vyre_driver_cuda::{registered_backend_id, CUDA_BACKEND_ID};
 use vyre_compiler::{
     CompileObjective, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
     SemanticExecutionPolicy, SemanticExecutor,
 };
+use vyre_driver_cuda::{registered_backend_id, CUDA_BACKEND_ID};
 use vyre_pass_engine::optimizer::pipeline::gpu_optimize;
+use vyre_runtime::self_optimizer_bench::report_scaling;
 use vyre_runtime::RegisteredSemanticExecutor;
 
 fn semantic_gpu_pipeline(

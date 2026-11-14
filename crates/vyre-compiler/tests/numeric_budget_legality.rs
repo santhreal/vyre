@@ -14,11 +14,11 @@
 
 use crate::search_fixtures::{numerically_pruned, reducing_artifact, REORDERING_PRODUCTIONS};
 
+use vyre_compiler::{Artifact, ExecutionMode, SearchCertificate};
 use vyre_foundation::ir::DataType;
 use vyre_foundation::numeric::{
     ErrorMeasure, NumericContract, Reassociation, ScalarFormat, NUMERIC_CONTRACT_VERSION,
 };
-use vyre_compiler::{Artifact, ExecutionMode, SearchCertificate};
 
 fn artifact(element: DataType, budget: Option<NumericContract>) -> Artifact {
     reducing_artifact(&element, budget)

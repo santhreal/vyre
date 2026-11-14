@@ -1,6 +1,6 @@
 use smallvec::SmallVec;
-use vyre_runtime::{BackendError, DispatchConfig, Resource, VyreBackend};
 use vyre_foundation::ir::Program;
+use vyre_runtime::{BackendError, DispatchConfig, Resource, VyreBackend};
 
 use crate::aot_launcher;
 use crate::backend::staging_reserve::reserve_smallvec;

@@ -18,8 +18,8 @@ pub(crate) use descriptor_cursor::next_dispatch_binding;
 use std::sync::Arc;
 
 use smallvec::SmallVec;
-use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::Program;
+use vyre_runtime::DispatchConfig;
 
 use crate::backend::plan::CudaDispatchPlan;
 use crate::backend::resident::CudaResidentBuffer;

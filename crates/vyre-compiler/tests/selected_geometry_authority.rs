@@ -8,10 +8,6 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_foundation::ir::{
-    BufferAccess, GraphInput, GraphOutput, Program, ProgramGraph, ValueContract, ValueLifetime,
-};
-use vyre_foundation::schedule::ScheduleTransform;
 use vyre_compiler::allocation::{
     AddressSpace, AllocationPlan, AllocationRegion, RegionOwner, REGION_ALIGNMENT,
 };
@@ -21,6 +17,10 @@ use vyre_compiler::{
     ExecutionMode, ExternalFacts, GeometryRecord, ObjectiveMetric, ResourceLifetime,
     ResourceRecord, SearchBudget, TargetEntryPoint, TargetModuleBundle, TargetPayload,
 };
+use vyre_foundation::ir::{
+    BufferAccess, GraphInput, GraphOutput, Program, ProgramGraph, ValueContract, ValueLifetime,
+};
+use vyre_foundation::schedule::ScheduleTransform;
 
 use vyre_test_support::graph_values::{graph_output, u32_symbolic};
 

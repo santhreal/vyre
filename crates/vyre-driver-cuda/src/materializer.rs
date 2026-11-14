@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use vyre_compiler::{Artifact, EmittedResources, TargetPayload};
+use vyre_foundation::ir::Program;
 use vyre_runtime::materialize::{
     self, DeviceSpec, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerDevice,
     ResidentInstance,
@@ -8,8 +10,6 @@ use vyre_runtime::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, CompiledPipeline, Completion,
     DispatchConfig, Submission, TimedDispatchResult,
 };
-use vyre_foundation::ir::Program;
-use vyre_compiler::{Artifact, EmittedResources, TargetPayload};
 
 use crate::backend::CudaBackend;
 use crate::pipeline::CudaCompiledPipeline;

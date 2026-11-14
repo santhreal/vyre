@@ -5,9 +5,9 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_libs::graph::csr_backward_or_changed::csr_backward_or_changed_parallel;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
+use vyre_runtime::DispatchConfig;
 
 fn set_bit(words: &mut [u32], node: u32) {
     words[(node / 32) as usize] |= 1 << (node & 31);

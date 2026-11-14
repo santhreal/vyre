@@ -5,8 +5,8 @@
 use crate::harness;
 use harness::u32_bytes;
 
-use vyre_runtime::VyreBackend;
 use vyre_libs::math::sinkhorn_iterate::{sinkhorn_iterate, SinkhornBuffers, SinkhornExtents};
+use vyre_runtime::VyreBackend;
 
 #[test]
 fn sinkhorn_iterate_matches_registered_fixture() {
@@ -34,7 +34,11 @@ fn sinkhorn_iterate_matches_registered_fixture() {
     ];
     let borrowed = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
     let outputs = backend
-        .dispatch_borrowed(&program, &borrowed, &vyre_runtime::DispatchConfig::default())
+        .dispatch_borrowed(
+            &program,
+            &borrowed,
+            &vyre_runtime::DispatchConfig::default(),
+        )
         .expect("Fix: WGPU must dispatch persistent sinkhorn.");
     assert_eq!(
         outputs,

@@ -7,17 +7,17 @@
 #![forbid(unsafe_code)]
 
 use std::collections::BTreeMap;
-use vyre_runtime::{BackendError, BackendRegistration, ErrorCode};
+use vyre_compiler::{Artifact, ArtifactEnvelope, ArtifactValueId};
 use vyre_foundation::diagnostics::RetryClass;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_compiler::{Artifact, ArtifactEnvelope, ArtifactValueId};
 use vyre_runtime::artifact_admission::{
     ArtifactSession, RetainedArtifactSession, RetainedSessionPhase, RetainedSessionTransition,
 };
 use vyre_runtime::recovery::classify_backend_error;
+use vyre_runtime::{BackendError, BackendRegistration, ErrorCode};
 
 use vyre_test_support::artifact_fixtures;
 

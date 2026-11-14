@@ -3,9 +3,9 @@
 #![cfg(feature = "device-tests")]
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_driver_wgpu::WgpuBackend;
 use vyre_runtime::Resource;
 use vyre_runtime::{DispatchConfig, VyreBackend};
-use vyre_driver_wgpu::WgpuBackend;
 
 #[test]
 fn resident_output_counter_matches_borrowed_dispatch() {

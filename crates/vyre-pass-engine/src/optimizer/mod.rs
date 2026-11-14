@@ -52,13 +52,13 @@ fn execute_retained_program(
     input_bytes: &[Vec<u8>],
 ) -> Result<Vec<Vec<u8>>, vyre_compiler::SemanticExecutionError> {
     use std::collections::BTreeMap;
+    use vyre_compiler::{
+        SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest,
+    };
     use vyre_foundation::ir::{
         BufferAccess, GraphInput, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
     };
     use vyre_foundation::logical::LogicalProgramGraph;
-    use vyre_compiler::{
-        SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest,
-    };
 
     let mut graph = ProgramGraph::new();
     let mut ports = Vec::new();

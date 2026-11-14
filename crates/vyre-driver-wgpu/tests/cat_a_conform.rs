@@ -7,11 +7,11 @@ use harness::cat_a_dispatch_config;
 
 use std::sync::LazyLock;
 
-use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_libs::operation_catalog::library_entries;
+use vyre_runtime::VyreBackend;
 fn backend() -> &'static WgpuBackend {
     static BACKEND: LazyLock<WgpuBackend> = LazyLock::new(|| {
         let adapters = vyre_driver_wgpu::runtime::enumerate_adapters();

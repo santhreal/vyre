@@ -2,10 +2,12 @@
 //! module header words, byte emission and the errors a rejected
 //! descriptor produces.
 
+use vyre_compiler::lower::descriptor_builder::{
+    body, descriptor, global_rw, lit, op, store_literal_kernel,
+};
+use vyre_compiler::lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 use vyre_emit::spirv::*;
 use vyre_foundation::ir::DataType;
-use vyre_compiler::lower::descriptor_builder::{body, descriptor, global_rw, lit, op, store_literal_kernel};
-use vyre_compiler::lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
 fn one_store_kernel() -> KernelDescriptor {
     store_literal_kernel("store_one", global_rw(0, DataType::U32, "out"), [64, 1, 1])

@@ -441,7 +441,9 @@ pub(crate) fn write_wgsl(module: &naga::Module) -> Result<String, LoweringError>
     Ok(wgsl)
 }
 
-fn binding_assignments(descriptor: &vyre_compiler::lower::KernelDescriptor) -> Vec<WgpuBindingAssignment> {
+fn binding_assignments(
+    descriptor: &vyre_compiler::lower::KernelDescriptor,
+) -> Vec<WgpuBindingAssignment> {
     let mut assignments = Vec::with_capacity(descriptor.bindings.slots.len());
     for slot in &descriptor.bindings.slots {
         let Some(group) = descriptor_bind_group(slot.memory_class) else {
@@ -493,8 +495,8 @@ fn static_workgroups(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
     use vyre_compiler::lower::emit_adversarial_corpus;
+    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
     #[test]
     fn wgpu_program_lowers_through_kernel_descriptor() {

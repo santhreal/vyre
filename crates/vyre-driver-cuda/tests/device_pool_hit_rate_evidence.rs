@@ -12,8 +12,8 @@
 
 use crate::harness;
 use harness::no_op_program;
-use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
+use vyre_runtime::DispatchConfig;
 
 #[test]
 fn steady_state_redispatch_loop_reports_high_device_pool_hit_rate() {

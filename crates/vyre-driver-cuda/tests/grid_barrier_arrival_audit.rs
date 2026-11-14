@@ -26,8 +26,8 @@ use harness::{
     bytes_u32, cross_block_grid_sync_expected, cross_block_grid_sync_inputs,
     cross_block_grid_sync_program, CROSS_BLOCK_GRID_SYNC_WORKGROUP,
 };
-use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
+use vyre_runtime::DispatchConfig;
 
 /// Lanes for the cross-block fixture: four blocks, so a barrier that no-ops is
 /// observable as a wrong value rather than as a coincidence.

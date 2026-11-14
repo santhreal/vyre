@@ -8,17 +8,17 @@
 
 use std::collections::BTreeMap;
 
+use vyre_compiler::{
+    compile, Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
+    ObjectiveMetric, PruneReason, ScheduleProduction, SearchBudget, SearchCertificate,
+    ValidatedCompileRequest,
+};
 use vyre_foundation::ir::{
     BinOp, BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, GraphValueId, Node,
     Program, ProgramGraph, ShapeDim, SubgroupReduceOp, ValueContract, ValueLifetime,
 };
 use vyre_foundation::numeric::NumericContract;
 use vyre_foundation::validate::BackendCapabilities;
-use vyre_compiler::{
-    compile, Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
-    ObjectiveMetric, PruneReason, ScheduleProduction, SearchBudget, SearchCertificate,
-    ValidatedCompileRequest,
-};
 use vyre_test_support::pass_programs::{add_program, copy_program};
 
 pub(crate) fn contract(

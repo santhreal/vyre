@@ -4,9 +4,9 @@
 //! ordinary kernels with varied dispatch geometry and arithmetic chain depth,
 //! pinning verification, word emission, and byte emission contracts.
 
-use vyre_foundation::ir::{BinOp, DataType};
 use vyre_compiler::lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
 use vyre_compiler::lower::{KernelDescriptor, KernelOpKind, LiteralValue};
+use vyre_foundation::ir::{BinOp, DataType};
 
 fn generated_descriptor(seed: u32) -> KernelDescriptor {
     let chain_len = 1 + (seed as usize % 12);

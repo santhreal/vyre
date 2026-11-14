@@ -92,7 +92,8 @@ fn find_dangling_refs_matches_verifier_verdict() {
     let verify_dangling_ids: Vec<u32> = verify_errs
         .iter()
         .filter_map(|e| {
-            if let vyre_compiler::lower::VerifyErrorKind::DanglingResultRef { ref_id, .. } = &e.kind {
+            if let vyre_compiler::lower::VerifyErrorKind::DanglingResultRef { ref_id, .. } = &e.kind
+            {
                 Some(*ref_id)
             } else {
                 None

@@ -11,8 +11,8 @@ use harness::{
     bytes_u32, find_output_buffer_index, is_required_input_buffer, u32_bytes, with_live_backend,
 };
 use vyre::ir::Program;
-use vyre_runtime::DispatchConfig;
 use vyre_libs::math::scan::scan_prefix_sum;
+use vyre_runtime::DispatchConfig;
 
 fn scan_inputs_for_program(program: &Program, input: &[u32]) -> Vec<Vec<u8>> {
     program

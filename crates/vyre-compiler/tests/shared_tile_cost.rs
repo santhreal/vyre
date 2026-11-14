@@ -20,12 +20,12 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
-use vyre_foundation::validate::BackendCapabilities;
 use vyre_compiler::{
     compile, ArtifactNodeId, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
     ObjectiveMetric, SearchBudget,
 };
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
+use vyre_foundation::validate::BackendCapabilities;
 
 use vyre_test_support::graph_fixtures::producer_consumer_pair;
 

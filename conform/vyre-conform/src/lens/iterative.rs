@@ -1,10 +1,10 @@
 //! The shape every iterative lens shares: prepare a fixture, then run the
 //! reference and the backend loop over each case and compare the final states.
 
-use vyre_runtime::BackendRegistration;
 use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
 use vyre_foundation::ir::Program;
 use vyre_foundation::operation::SemanticOperation;
+use vyre_runtime::BackendRegistration;
 
 use crate::lens::buffer_state::project_output_buffers;
 use crate::lens::execution::LoopError;

@@ -5,14 +5,14 @@
 //! severity, compiler level, structured cause chain, retry class, corrective action).
 
 use vyre_aot::CompileError;
-use vyre_runtime::BackendError;
+use vyre_compiler::lower::LowerError;
+use vyre_compiler::TargetCompileError;
 use vyre_foundation::diagnostics::{
     CauseKind, CompilerLevel, DiagnosticStage, RetryClass, Severity, ToDiagnostic,
 };
 use vyre_foundation::validate::ValidationError;
 use vyre_foundation::IrError;
-use vyre_compiler::lower::LowerError;
-use vyre_compiler::TargetCompileError;
+use vyre_runtime::BackendError;
 
 #[test]
 fn validation_error_maps_to_diagnostic_schema() {

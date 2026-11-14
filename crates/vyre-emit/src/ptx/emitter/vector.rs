@@ -1,8 +1,8 @@
 use std::fmt::Write as _;
 
 use smallvec::SmallVec;
-use vyre_foundation::ir::DataType;
 use vyre_compiler::lower::{KernelBody, KernelOpKind};
+use vyre_foundation::ir::DataType;
 
 use super::operand_decode::{read_store_operands, read_two_operands};
 use super::operand_use_scan::body_descendants_read_operand;

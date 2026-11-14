@@ -16,9 +16,11 @@
 //! hardware. That is the address-space analysis contract, pinned here only by
 //! the three body shapes below, and by the golden corpora in each emitter.
 
-use vyre_foundation::ir::{DataType, MemoryOrdering};
-use vyre_compiler::lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op, shared_rw};
+use vyre_compiler::lower::descriptor_builder::{
+    body, descriptor, effect, global_rw, lit, op, shared_rw,
+};
 use vyre_compiler::lower::{KernelDescriptor, KernelOpKind, LiteralValue};
+use vyre_foundation::ir::{DataType, MemoryOrdering};
 
 /// Workgroup scratch bindings live above the host-visible slot range, which
 /// `vyre_compiler::lower::verify` enforces. Read from the lowering constant rather than

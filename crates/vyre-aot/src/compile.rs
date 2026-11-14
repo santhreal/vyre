@@ -1,11 +1,11 @@
 //! Program to canonical neutral artifact plus attached target payload.
 
 use thiserror::Error;
-use vyre_foundation::diagnostics::{
-    CauseKind, CompilerLevel, Diagnostic, DiagnosticStage, RetryClass,
-};
 use vyre_compiler::{
     ArtifactEnvelope, TargetCompileError, TargetCompiler, ValidatedCompileRequest,
+};
+use vyre_foundation::diagnostics::{
+    CauseKind, CompilerLevel, Diagnostic, DiagnosticStage, RetryClass,
 };
 
 use crate::artifact::{registration, TargetId};

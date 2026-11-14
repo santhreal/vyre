@@ -1,9 +1,9 @@
 use std::ffi::c_void;
 
 use smallvec::SmallVec;
+use vyre_foundation::ir::Program;
 use vyre_runtime::BindingRole;
 use vyre_runtime::{BackendError, BindingPlan, DispatchConfig};
-use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::DispatchAllocations;
 use crate::backend::dispatch::CudaBackend;

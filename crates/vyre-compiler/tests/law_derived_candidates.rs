@@ -21,6 +21,7 @@
 
 use std::collections::BTreeSet;
 
+use vyre_compiler::{Artifact, SearchBudget, SearchCertificate};
 use vyre_foundation::algebraic_reordering::every_declared_type_is_exact;
 use vyre_foundation::ir::{
     BinOp, BufferAccess, DataType, Expr, Program, ProgramGraph, ValueLifetime,
@@ -31,7 +32,6 @@ use vyre_foundation::optimizer::region_law::{
     derive_region_alternatives, law_numerical_contract, RegionDerivationBudget, REGION_LAWS,
 };
 use vyre_foundation::optimizer::rewrite_contract::RewriteNumericalContract;
-use vyre_compiler::{Artifact, SearchBudget, SearchCertificate};
 
 use crate::search_fixtures::{
     artifact_of, artifact_of_within, contract, invocation, reduce_program, reduction_over, stage,

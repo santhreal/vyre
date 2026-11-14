@@ -27,12 +27,12 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_emit::ptx::{emit_with_options, ComputeCapability, PtxEmitOptions};
-use vyre_foundation::ir::{DataType, UnOp};
 use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, effect, global_ro, global_wo, lit, op, SlotCount,
 };
 use vyre_compiler::lower::{KernelDescriptor, KernelOpKind, LiteralValue};
+use vyre_emit::ptx::{emit_with_options, ComputeCapability, PtxEmitOptions};
+use vyre_foundation::ir::{DataType, UnOp};
 use vyre_test_support::spec_variant_tables::builtin_un_ops;
 
 fn options(ulp_budget: Option<u32>) -> PtxEmitOptions {

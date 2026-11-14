@@ -29,8 +29,8 @@
 
 use std::collections::BTreeSet;
 
-use vyre_runtime::{acquire, registered_backends, registered_backends_by_precedence_slice};
 use vyre_registry_link::backend::{live_backend_registry, DECLARED_SOURCES};
+use vyre_runtime::{acquire, registered_backends, registered_backends_by_precedence_slice};
 use vyre_test_support::backend_execution_domain::{
     assert_dispatch_leaves_the_host, decision_for, ExecutionDomain, ProductionBackend,
 };

@@ -6,11 +6,11 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_libs::math::prefix_scan::{prefix_scan, ScanKind};
 use vyre_libs::math::scan::scan_prefix_sum;
 use vyre_libs::math::stream_compact::stream_compact;
 use vyre_reference::composition_witness::{prefix_scan_witness, stream_compact_witness};
+use vyre_runtime::DispatchConfig;
 const SINGLE_BLOCK_SCAN_LIMIT: u32 = vyre_libs::math::prefix_scan::MAX_SINGLE_BLOCK_SCAN;
 
 fn expected_prefix_scan(input: &[u32], kind: ScanKind) -> Vec<u32> {

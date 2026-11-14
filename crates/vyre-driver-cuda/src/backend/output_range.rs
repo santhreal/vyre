@@ -1,5 +1,5 @@
-use vyre_runtime::BackendError;
 use vyre_foundation::ir::BufferDecl;
+use vyre_runtime::BackendError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct CudaOutputReadback {

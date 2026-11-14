@@ -5,11 +5,11 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_libs::bitset::four_russians::{
     binary_byte_lut, four_russians_apply_byte_lut, BooleanTileOp,
 };
 use vyre_reference::composition_witness::four_russians_binary_witness;
+use vyre_runtime::DispatchConfig;
 
 fn run(lhs: &[u32], rhs: &[u32], lut: &[u32]) -> Vec<u32> {
     let words = lhs.len().min(rhs.len()) as u32;

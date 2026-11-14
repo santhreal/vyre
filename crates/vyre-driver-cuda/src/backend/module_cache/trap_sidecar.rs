@@ -9,9 +9,9 @@
 
 use std::sync::Arc;
 
+use vyre_emit::ptx::{TRAP_SIDECAR_SYMBOL, TRAP_TAG_PTX_MARKER};
 use vyre_runtime::trap_record::TRAP_RECORD_BYTES;
 use vyre_runtime::BackendError;
-use vyre_emit::ptx::{TRAP_SIDECAR_SYMBOL, TRAP_TAG_PTX_MARKER};
 
 /// One loaded module's trap record and its tag table.
 #[derive(Debug)]
@@ -129,8 +129,8 @@ fn malformed(line: &str) -> BackendError {
 #[cfg(test)]
 mod tests {
     use super::{declares_trap_sidecar, trap_sidecar_from_module};
-    use vyre_runtime::trap_record::TRAP_RECORD_BYTES;
     use vyre_emit::ptx::{TRAP_SIDECAR_SYMBOL, TRAP_TAG_PTX_MARKER};
+    use vyre_runtime::trap_record::TRAP_RECORD_BYTES;
 
     fn module_text(markers: &str) -> String {
         format!(".global .align 4 .u32 {TRAP_SIDECAR_SYMBOL}[4];\n{markers}")

@@ -2,11 +2,11 @@
 
 use std::collections::HashSet;
 
-use vyre_runtime::{validate_program, BackendError, VyreBackend};
 use vyre_foundation::ir::{Node, OpId, Program};
 use vyre_foundation::program_caps::{
     check_backend_capabilities, BackendSupport, RequiredCapabilities,
 };
+use vyre_runtime::{validate_program, BackendError, VyreBackend};
 
 // ---------------------------------------------------------------------------
 // Public validation errors remain actionable with Fix guidance

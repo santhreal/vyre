@@ -6,11 +6,11 @@ use crate::harness;
 use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 use harness::{bytes_u32, u32_bytes, with_cuda_optimizer_dispatcher, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_libs::graph::csr_forward_or_changed::{
     csr_forward_or_changed_parallel, csr_forward_or_changed_parallel_batch,
 };
 use vyre_libs::graph::dispatch::csr_forward_or_changed::forward_closure_via_change_flag_gpu;
+use vyre_runtime::DispatchConfig;
 
 /// Grid a node-parallel pass needs, derived from the program's own declared
 /// workgroup rather than a library-published launch helper.

@@ -10,10 +10,10 @@ use crate::harness;
 use harness::self_optimizer::semantic_execution;
 
 use vyre::ir::Program;
-use vyre_runtime::self_optimizer_bench::report_scaling;
-use vyre_driver_wgpu::WgpuBackend;
 use vyre_compiler::{SemanticExecutionPolicy, SemanticExecutor};
+use vyre_driver_wgpu::WgpuBackend;
 use vyre_pass_engine::optimizer::pipeline::gpu_optimize;
+use vyre_runtime::self_optimizer_bench::report_scaling;
 
 fn semantic_gpu_pipeline(
     program: Program,

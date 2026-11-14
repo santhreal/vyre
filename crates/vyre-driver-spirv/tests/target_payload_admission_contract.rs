@@ -13,12 +13,12 @@
 //!
 //! Not covered here: native module loading, which needs a device.
 
-use vyre_runtime::materialize::{self, MaterializerTarget};
-use vyre_runtime::BackendError;
 use vyre_compiler::{
     Artifact, TargetEntryPoint, TargetModuleBundle, TargetPayload, TargetPayloadFormat,
     TargetProfile,
 };
+use vyre_runtime::materialize::{self, MaterializerTarget};
+use vyre_runtime::BackendError;
 
 use crate::target_artifacts;
 use target_artifacts::spirv;

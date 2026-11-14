@@ -158,8 +158,8 @@ impl StreamShardAllocator {
         let mut per_device_cost = Vec::new();
         vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut per_device_cost, gpu_capacity)
             .map_err(|_| StreamShardError::AllocationFailed {
-                label: "per-device cost vector",
-            })?;
+            label: "per-device cost vector",
+        })?;
         per_device_cost.resize(gpu_capacity, 0);
         Ok(Self {
             per_device_cost,

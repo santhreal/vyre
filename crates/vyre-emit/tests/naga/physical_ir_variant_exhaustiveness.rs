@@ -9,9 +9,9 @@
 //! declares the enum. What stays here is the Naga answer for each refused
 //! variant, which is this crate's alone.
 
-use vyre_emit::naga::emit;
 use vyre_compiler::lower::descriptor_builder::{mma_f16_m16n8k16, probe_kernel};
 use vyre_compiler::lower::{KernelOpKind, OpaqueNodeData};
+use vyre_emit::naga::emit;
 
 #[test]
 fn unsupported_variants_are_refused_by_name_on_naga() {

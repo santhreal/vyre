@@ -10,7 +10,6 @@ use harness::{
     u32_bytes, with_live_backend,
 };
 use vyre::ir::{DataType, Program};
-use vyre_runtime::DispatchConfig;
 use vyre_libs::pattern::{
     bracket_match, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_OTHER, BRACKET_MATCH_NONE,
     BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE,
@@ -19,6 +18,7 @@ use vyre_libs::text::{build_char_class_table, char_class, char_class_u8};
 use vyre_reference::composition_witness::{
     bracket_match_witness as reference_bracket_match, char_class_witness as reference_char_class,
 };
+use vyre_runtime::DispatchConfig;
 
 fn inputs_for_char_class_program(
     program: &Program,

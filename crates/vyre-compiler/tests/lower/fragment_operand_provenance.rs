@@ -15,8 +15,8 @@
 
 use std::collections::HashMap;
 
-use vyre_foundation::ir::{Layout, Residency};
 use vyre_compiler::lower::{lower, KernelOpKind};
+use vyre_foundation::ir::{Layout, Residency};
 use vyre_test_support::tile_programs::fragment_matmul_program;
 
 /// `c[16,8] = a[16,16] x b[16,8]` with the stated residency on both inputs.

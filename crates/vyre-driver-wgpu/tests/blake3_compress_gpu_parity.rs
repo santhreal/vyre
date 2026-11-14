@@ -18,9 +18,9 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::hash::blake3_compress;
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 /// BLAKE3 IV (matches `vyre-libs::hash::blake3` by spec).
 const IV: [u32; 8] = [

@@ -2,13 +2,15 @@
 //! MSL text shape, artifact binding metadata, threadgroup memory placement
 //! and the errors a rejected descriptor produces.
 
-use vyre_emit::metal::*;
-use vyre_foundation::ir::{DataType, Expr, Node, Program};
 use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, effect, global_ro, global_rw, lit, load_store_copy, shared_rw,
     store_literal_kernel, SlotCount,
 };
-use vyre_compiler::lower::{BindingVisibility, KernelDescriptor, KernelOpKind, LiteralValue, MemoryClass};
+use vyre_compiler::lower::{
+    BindingVisibility, KernelDescriptor, KernelOpKind, LiteralValue, MemoryClass,
+};
+use vyre_emit::metal::*;
+use vyre_foundation::ir::{DataType, Expr, Node, Program};
 
 fn empty_kernel() -> KernelDescriptor {
     descriptor("empty").dispatch(64, 1, 1).build()

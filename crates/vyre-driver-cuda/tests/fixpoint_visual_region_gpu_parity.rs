@@ -6,11 +6,11 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_libs::fixpoint::bitset_fixpoint::bitset_fixpoint;
 use vyre_libs::pattern::REGION_DEDUP_WORKGROUP_SIZE;
 use vyre_libs::pattern::{dedup_regions_cluster_program, dedup_regions_flag_program};
 use vyre_libs::visual::packed_rgba_map::packed_rgba_map;
+use vyre_runtime::DispatchConfig;
 
 // ---------------------------------------------------------------------
 // bitset_fixpoint: changed=1 iff current[w] != next[w] for any w.

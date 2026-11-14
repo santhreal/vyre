@@ -11,10 +11,10 @@
 use vyre_foundation::ir::Program;
 use vyre_libs_math::math::kfac_block_inverse::kfac_block_inverse;
 
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Canonical op ID for the autotune step.
 pub const OP_ID: &str = "vyre-libs::self_substrate::kfac_autotune_step";

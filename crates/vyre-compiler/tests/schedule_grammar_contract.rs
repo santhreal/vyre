@@ -11,15 +11,15 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_foundation::schedule::{
-    MappingLevel, MemoryPlacement, PipelineRole, PipelineRoleGroup, ScheduleAxis, SchedulePhaseId,
-    ScheduleTransform, SynchronizationScope,
-};
 use vyre_compiler::{
     compile, is_required_schedule_unreachable, is_semantic_version_skew, CompileObjective,
     CompileRequest, DeclaredConstraints, ObjectiveMetric, PruneReason, RequiredSchedule,
     ScheduleProduction, SearchBudget, REQUIRED_SCHEDULE_UNREACHABLE, SCHEDULE_GRAMMAR_VERSION,
     SEMANTIC_VERSION_SKEW,
+};
+use vyre_foundation::schedule::{
+    MappingLevel, MemoryPlacement, PipelineRole, PipelineRoleGroup, ScheduleAxis, SchedulePhaseId,
+    ScheduleTransform, SynchronizationScope,
 };
 
 use crate::search_fixtures::{

@@ -16,9 +16,9 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
+use vyre_foundation::ir::Program;
 use vyre_runtime::Backend;
 use vyre_runtime::{BackendError, CompiledPipeline, DispatchConfig, VyreBackend};
-use vyre_foundation::ir::Program;
 
 /// Overrides nothing beyond the two required methods.
 struct MinimalBackend;

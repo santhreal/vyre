@@ -12,10 +12,10 @@
 
 use std::collections::BTreeSet;
 
+use vyre_compiler::{returned_graph_values, writable_graph_values};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ValueLifetime,
 };
-use vyre_compiler::{returned_graph_values, writable_graph_values};
 
 /// Path of the frozen access enum this suite claims to cover.
 const ACCESS_SOURCE: &str = "crates/vyre-spec/src/buffer_access.rs";

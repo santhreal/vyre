@@ -17,6 +17,8 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use vyre_compiler::{Artifact, ArtifactValueId, TargetPayload};
+use vyre_foundation::ir::Program;
 use vyre_runtime::materialize::{
     self, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerTarget,
     ResidentInstance, NEUTRAL_MESSAGES,
@@ -25,8 +27,6 @@ use vyre_runtime::{
     BackendError, DeviceIdentity, DispatchConfig, LaunchDirective, ResidentOwner, Resource,
     TimedDispatchResult,
 };
-use vyre_foundation::ir::Program;
-use vyre_compiler::{Artifact, ArtifactValueId, TargetPayload};
 
 use crate::target_artifacts;
 use target_artifacts::spirv;

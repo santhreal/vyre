@@ -1,5 +1,7 @@
 use super::*;
-use vyre_compiler::lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op, SlotCount};
+use vyre_compiler::lower::descriptor_builder::{
+    body, descriptor, effect, global_rw, lit, op, SlotCount,
+};
 
 #[test]
 fn emit_uniform_load_uses_readonly_global_addressing() {

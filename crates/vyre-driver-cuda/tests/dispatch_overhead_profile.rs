@@ -10,8 +10,8 @@
 
 use crate::harness;
 use harness::no_op_program;
-use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
+use vyre_runtime::DispatchConfig;
 
 #[test]
 fn cuda_steady_state_phase_attribution() {

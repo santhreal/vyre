@@ -4,8 +4,8 @@
 
 use crate::harness;
 use harness::u32_bytes;
-use vyre_runtime::{BindingPlan, BindingRole};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::{BindingPlan, BindingRole};
 
 #[test]
 fn binding_plan_orders_by_binding_and_tracks_roles() {

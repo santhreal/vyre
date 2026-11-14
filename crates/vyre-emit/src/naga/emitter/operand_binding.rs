@@ -14,8 +14,8 @@
 //!   IR-type → naga-type lookups.
 
 use naga::{BinaryOperator, Expression, Span, Statement, Type};
-use vyre_foundation::ir::{BinOp, DataType};
 use vyre_compiler::lower::{KernelBody, KernelOp, LiteralValue};
+use vyre_foundation::ir::{BinOp, DataType};
 
 use super::carrier_scope::LocalPool;
 use super::BodyBuilder;

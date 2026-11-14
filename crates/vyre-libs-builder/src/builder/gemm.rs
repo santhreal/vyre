@@ -5,8 +5,8 @@
 //! tiled GEMM, and fused epilogues (bias, activation, scaling).
 
 use std::sync::Arc;
-use vyre_foundation::ir::{DataType, Expr, Program};
 use vyre_compiler::DeviceFacts;
+use vyre_foundation::ir::{DataType, Expr, Program};
 use vyre_spec::Semiring;
 
 #[path = "contraction_buffers.rs"]

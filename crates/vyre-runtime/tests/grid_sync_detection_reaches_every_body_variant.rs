@@ -35,10 +35,10 @@
 //! division is pinned by `grid_sync_nested_fence_survives_split.rs`. Here the
 //! claim is narrower and load-bearing: the fence is never reported as absent.
 
-use vyre_runtime::grid_sync::{contains_grid_sync, try_split_on_grid_sync};
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
 use vyre_foundation::visit::child_bodies;
+use vyre_runtime::grid_sync::{contains_grid_sync, try_split_on_grid_sync};
 use vyre_test_support::ir_variants::{
     assert_covers_every_node_variant, node_body_slot_samples, node_variant_samples,
 };

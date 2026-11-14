@@ -6,7 +6,6 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_libs::reduce::gather::gather;
 use vyre_libs::reduce::histogram::histogram;
 use vyre_libs::reduce::radix_sort::radix_sort;
@@ -16,6 +15,7 @@ use vyre_reference::composition_witness::{
     gather_witness, histogram_witness, radix_sort_masked_witness, scatter_witness,
     segment_reduce_sum_witness,
 };
+use vyre_runtime::DispatchConfig;
 
 // ---------------------------------------------------------------------
 // gather

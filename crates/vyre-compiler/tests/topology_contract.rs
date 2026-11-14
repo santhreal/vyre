@@ -16,13 +16,13 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::validate::BackendCapabilities;
 use vyre_compiler::{
     compile, compile_selected_modules, Artifact, CompileObjective, CompileRequest, DeviceFacts,
     Digest, EmittedTargetModule, ExecutionTopology, ExternalFacts, ObjectiveMetric,
     ResidentPartitionMode, SearchBudget, TargetModuleBundle, TargetPayloadFormat, TargetProfile,
     ARTIFACT_SCHEMA_VERSION,
 };
+use vyre_foundation::validate::BackendCapabilities;
 
 use vyre_test_support::graph_fixtures::{
     asymmetric_join_graph, independent_two_arm_graph, raw_conflict_two_arm_graph,

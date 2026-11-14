@@ -13,8 +13,8 @@
 //! variants here would go stale in silence, which is the same failure as having
 //! no test.
 
-use vyre_runtime::{BindingPlan, BindingRole};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, MemoryKind, Program};
+use vyre_runtime::{BindingPlan, BindingRole};
 
 /// Every declaration the two enums can describe, at both settings of the two
 /// flags that suppress host input.

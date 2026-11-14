@@ -1,6 +1,6 @@
 use crate::api::case::{BenchContext, BenchError};
-use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::Program;
+use vyre_runtime::DispatchConfig;
 
 /// Result of a dispatch that includes backend device timing when available.
 pub struct CudaEventResult {

@@ -150,9 +150,10 @@ impl ModuleBuilder {
         // One walk for the whole emission: the sidecar declaration below and the
         // body's per-trap store both need the same code-to-tag table, and a second
         // walk could disagree with the first only by being a different function.
-        let trap_tags = vyre_compiler::lower::descriptor_trap_tags(&desc.body).map_err(|source| {
-            EmitError::InvalidDescriptor(format!("trap tag codes unavailable: {source}"))
-        })?;
+        let trap_tags =
+            vyre_compiler::lower::descriptor_trap_tags(&desc.body).map_err(|source| {
+                EmitError::InvalidDescriptor(format!("trap tag codes unavailable: {source}"))
+            })?;
         if self.options.cooperative_grid_sync && descriptor_grid_sync_barrier_count(desc) > 0 {
             // Module-scope arrival counter for the cooperative grid barrier. A
             // single u32, zeroed by the host before each cooperative launch; each

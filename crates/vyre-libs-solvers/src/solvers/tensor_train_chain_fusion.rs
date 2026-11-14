@@ -10,14 +10,14 @@
 //! This module uses `vyre-libs::math::tensor_train::tt_contract_step`
 //! (the same Program shipped to users) to analyze Vyre's own IR.
 
+use vyre_compiler::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_libs_math::math::tensor_train::tt_contract_step;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     should_fuse_chain_witness,

@@ -7,13 +7,13 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, GraphValueId, Node, Program, ProgramGraph};
-use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_compiler::{
     CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     SearchBudget, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
     SemanticExecutionRequest, SemanticExecutor, ValidatedCompileRequest,
 };
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, GraphValueId, Node, Program, ProgramGraph};
+use vyre_foundation::logical::LogicalProgramGraph;
 
 /// A policy targeting an unknown device under the latency objective.
 ///

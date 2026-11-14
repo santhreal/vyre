@@ -5,9 +5,9 @@
 use crate::harness;
 use harness::add_one_program;
 
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 fn mul_two_program(words: u32) -> Program {
     let idx = Expr::gid_x();

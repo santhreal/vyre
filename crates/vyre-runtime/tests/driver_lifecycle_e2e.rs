@@ -9,10 +9,10 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_runtime::persistent::{PersistentEngine, PersistentWorkItem};
 use vyre_runtime::validation::LaunchGeometryLimits;
 use vyre_runtime::{BindingPlan, DispatchConfig, LaunchPlan};
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 const PERSISTENT_PRODUCERS: usize = 16;
 const PERSISTENT_CONSUMERS: usize = 16;

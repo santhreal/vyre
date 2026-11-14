@@ -2,10 +2,10 @@ use std::ffi::c_void;
 use std::fmt::Write as _;
 
 use cudarc::driver::sys::CUstream;
+use vyre_foundation::ir::Program;
 use vyre_runtime::accounting::checked_add_usize_lazy;
 use vyre_runtime::transfer_accounting::TransferAccountingPolicy;
 use vyre_runtime::{BackendError, PendingDispatch};
-use vyre_foundation::ir::Program;
 
 use super::super::plan::CudaDispatchPlan;
 

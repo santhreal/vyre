@@ -9,8 +9,8 @@ use std::sync::{Arc, Barrier};
 
 use crate::harness;
 use harness::selected_adapter;
-use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_runtime::VyreBackend;
 
 #[test]
 fn shared_backend_reuses_single_backend_instance() {

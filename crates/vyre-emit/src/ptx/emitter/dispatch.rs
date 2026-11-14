@@ -7,8 +7,8 @@
 
 use std::fmt::Write as _;
 
-use vyre_foundation::ir::{DataType, MemoryOrdering};
 use vyre_compiler::lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
+use vyre_foundation::ir::{DataType, MemoryOrdering};
 
 use super::memory::AsyncCopyDirection;
 use super::operand_decode::{read_store_operands, read_two_operands};

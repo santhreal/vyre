@@ -1,11 +1,5 @@
 //! Regression contracts for canonical neutral artifacts with attached target payloads.
 
-use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
-    ValueLifetime,
-};
-use vyre_foundation::numeric::ScalarFormat;
-use vyre_foundation::schedule::{SchedulePhase, SchedulePhaseId, ScheduleResourceBounds};
 use vyre_compiler::{
     attach_target, compile_selected_modules, Artifact, ArtifactEnvelope, ArtifactNodeId,
     ArtifactValueId, CompileError, EmittedTargetModule, FusionGroupId, ModuleNumericRecord,
@@ -13,6 +7,12 @@ use vyre_compiler::{
     TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
     TargetResourceMemory, TARGET_PAYLOAD_SCHEMA_VERSION,
 };
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
+    ValueLifetime,
+};
+use vyre_foundation::numeric::ScalarFormat;
+use vyre_foundation::schedule::{SchedulePhase, SchedulePhaseId, ScheduleResourceBounds};
 
 use vyre_test_support::artifact_fixtures;
 

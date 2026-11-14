@@ -7,11 +7,11 @@ use harness::acquire_live_backend as live_backend;
 use harness::bytes_u32;
 use harness::u32_bytes;
 
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_libs::decode::hex::{
     hex_decode, hex_decode_table, hex_decoded_capacity, HEX_WORKGROUP_SIZE,
 };
 use vyre_reference::composition_witness::hex_decode_packed_witness as hex_decode_reference_packed;
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 fn hex_lanes() -> u32 {
     HEX_WORKGROUP_SIZE[0]

@@ -27,11 +27,11 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::VyreBackend;
+use vyre_compiler::lower::TRAP_SIDECAR_NAME;
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_compiler::lower::TRAP_SIDECAR_NAME;
+use vyre_runtime::VyreBackend;
 
 const OP_ID: &str = "test::trap_propagation_capability";
 

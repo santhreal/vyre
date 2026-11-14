@@ -15,9 +15,9 @@ use harness::{
     shared_live_backend as live_backend,
 };
 use std::time::Instant;
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 // ------------------------------------------------------------------
 // 1. subgroup_ops must match enabled_features/live BackendValidationCapabilities

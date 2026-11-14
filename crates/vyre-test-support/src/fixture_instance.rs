@@ -6,10 +6,10 @@
 //! That difference is a closure here, so a method added to `ArtifactInstance`
 //! is answered once instead of in every suite that fakes a device.
 
+use vyre_compiler::{Artifact, Digest, EmittedResources, TargetPayload};
 use vyre_runtime::{
     ArtifactInstance, BackendError, BindingSet, Completion, DeviceIdentity, Submission,
 };
-use vyre_compiler::{Artifact, Digest, EmittedResources, TargetPayload};
 
 /// What a fixture instance does with one submission's bindings.
 type SubmitFn = dyn Fn(Digest, BindingSet) -> Result<Completion, BackendError> + Send + Sync;

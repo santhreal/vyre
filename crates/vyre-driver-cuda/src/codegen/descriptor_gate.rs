@@ -36,8 +36,8 @@ pub(crate) fn compute_capability(target_sm: u32) -> vyre_emit::ptx::ComputeCapab
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Ident, Node, Program};
     use vyre_compiler::lower::emit_adversarial_corpus;
+    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Ident, Node, Program};
 
     #[test]
     fn validates_simple_store_program() {
@@ -73,8 +73,8 @@ mod tests {
     #[test]
     fn adversarial_success_corpus_passes_verification_and_ptx_emit() {
         for case in emit_adversarial_corpus::success_cases() {
-            let descriptor =
-                vyre_compiler::lower::verify_descriptor(&case.descriptor).unwrap_or_else(|error| {
+            let descriptor = vyre_compiler::lower::verify_descriptor(&case.descriptor)
+                .unwrap_or_else(|error| {
                     panic!(
                         "Fix: `{}` ({:?}) must pass shared descriptor verification: {error:?}",
                         case.id, case.family

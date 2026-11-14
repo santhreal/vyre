@@ -54,15 +54,15 @@
 //! ```
 
 use super::decode_u32_output_exact;
+use vyre_compiler::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 #[cfg(test)]
 use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_libs_math::math::submodular_greedy::{argmax_of_marginals, NO_WINNER};
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
 
 /// Caller-owned semantic execution scratch for submodular cache eviction.
 #[derive(Debug, Default)]
@@ -239,8 +239,8 @@ pub fn greedy_quality_bound(optimum: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_compiler::{SemanticExecutionOutput, SemanticExecutionRequest};
+    use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
     use vyre_reference::composition_witness::argmax_of_marginals_witness;
     use vyre_test_support::test_parity_oracles::{
         canonical_inputs, policy, semantic_output, StaticOutputs,

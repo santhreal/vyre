@@ -18,14 +18,14 @@ use crate::harness;
 use harness::f32_to_ordered;
 use std::collections::BTreeMap;
 use tempfile::TempDir;
-use vyre_runtime::{DispatchConfig, VyreBackend};
+use vyre_compiler::{
+    CompileObjective, CompileRequest, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
+};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
 use vyre_foundation::ir::ProgramGraph;
 use vyre_foundation::operation::SemanticOperation;
-use vyre_compiler::{
-    CompileObjective, CompileRequest, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
-};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 const HELPER_FLAG: &str = "VYRE_PIPELINE_CACHE_HELPER_OUT";
 const HELPER_CASE_ID: &str = "VYRE_PIPELINE_CACHE_HELPER_CASE";

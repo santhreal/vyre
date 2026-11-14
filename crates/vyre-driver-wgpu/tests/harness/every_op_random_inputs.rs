@@ -4,9 +4,9 @@ use proptest::prelude::*;
 use proptest::strategy::ValueTree;
 use proptest::test_runner::TestRunner;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::visit::{expr_children, walk_nodes};
+use vyre_runtime::VyreBackend;
 
 /// The read-only ProgramGraph buffer names, in binding order.
 ///

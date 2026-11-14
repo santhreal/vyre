@@ -21,9 +21,9 @@
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use vyre_foundation::ir::Program;
 use vyre_runtime::grid_sync::dispatch_with_grid_sync_split_timed;
 use vyre_runtime::{BackendError, DispatchConfig, TimedDispatchResult, VyreBackend};
-use vyre_foundation::ir::Program;
 use vyre_test_support::grid_sync_programs::cross_segment_store_program;
 
 /// Per-segment nanoseconds the fake device reports, distinct per field so a sum

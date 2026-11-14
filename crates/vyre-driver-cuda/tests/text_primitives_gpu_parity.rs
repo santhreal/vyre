@@ -10,7 +10,6 @@ use harness::{
     u32_bytes, with_live_backend,
 };
 use vyre::ir::{DataType, Program};
-use vyre_runtime::DispatchConfig;
 use vyre_libs::text::{line_index, line_index_u8};
 use vyre_libs::text::{
     utf8_validate, utf8_validate_u8, UTF8_CONT, UTF8_INVALID, UTF8_LEAD_3, UTF8_LEAD_4,
@@ -18,6 +17,7 @@ use vyre_libs::text::{
 use vyre_reference::composition_witness::{
     line_index_witness as reference_line_index, utf8_validate_witness as reference_utf8_validate,
 };
+use vyre_runtime::DispatchConfig;
 
 fn inputs_for_program(program: &Program, source: &[u8]) -> Vec<Vec<u8>> {
     program

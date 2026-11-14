@@ -12,8 +12,6 @@
 //! and a wait form for a declared transaction. That is the target's own
 //! rejection, checked in the emitter crates.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
-use vyre_foundation::schedule::{SchedulePhaseId, SelectedSchedule};
 use vyre_compiler::lower::descriptor_builder::{effect, lit};
 use vyre_compiler::lower::{
     lower_physical, lower_scheduled, verify, AsyncTransaction, AsyncTransactionError,
@@ -21,6 +19,8 @@ use vyre_compiler::lower::{
     KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MemoryClass, MemoryProxyFence,
     StageSlot, TransactionScope, VerifyErrorKind,
 };
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
+use vyre_foundation::schedule::{SchedulePhaseId, SelectedSchedule};
 
 /// Every scope a transfer can be observed at, listed once so a new scope turns
 /// the fence rules red until someone states the fence it needs.

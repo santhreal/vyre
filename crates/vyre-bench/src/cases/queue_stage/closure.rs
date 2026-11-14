@@ -10,8 +10,8 @@ use std::time::Instant;
 use crate::api::case::{BenchContext, BenchError};
 use crate::api::metric::elapsed_ns;
 use crate::api::resident::{stated_launch, ResidentInputSet};
-use vyre_runtime::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::{ResidentDispatchStep, ResidentReadRange};
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn build_queue_closure_inputs(

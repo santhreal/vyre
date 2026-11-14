@@ -26,9 +26,9 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_runtime::resident_work_queue::{self, ResidentWorkQueue};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 /// Megakernel's control word index for the SHUTDOWN flag.
 const SHUTDOWN_WORD_INDEX: usize = 0;

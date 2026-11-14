@@ -3,9 +3,9 @@
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
-use vyre_runtime::{BackendError, BackendRegistration, VyreBackend};
 use vyre_foundation::ir::OpId;
 use vyre_foundation::operation::TargetId;
+use vyre_runtime::{BackendError, BackendRegistration, VyreBackend};
 
 const TARGET_ID: TargetId = TargetId::expect_valid("duplicate-provider-target");
 

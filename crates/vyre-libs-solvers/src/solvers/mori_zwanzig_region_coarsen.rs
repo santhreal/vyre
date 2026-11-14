@@ -46,12 +46,12 @@
 //! kernel. Combined with FMM hierarchical compression on the
 //! coarse system, full workspace analysis stays tractable.
 
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     checked_square_cells, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     write_zero_bytes,
 };
 use vyre_libs_math::math::mori_zwanzig::mz_project_step;
-use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     cluster_projection_matrix_witness_into, mori_zwanzig_coarsen_via_clustering_witness_into,

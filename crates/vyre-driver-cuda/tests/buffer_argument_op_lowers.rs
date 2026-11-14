@@ -11,10 +11,10 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::DispatchConfig;
 use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::operation::{OperationRegistration, OperationTier};
+use vyre_runtime::DispatchConfig;
 
 const LOOKUP_OP_ID: &str = "test::buffer_arg::table_lookup";
 const CALLER_OP_ID: &str = "test::buffer_arg::caller";

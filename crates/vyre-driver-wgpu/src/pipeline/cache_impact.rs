@@ -6,8 +6,8 @@
 //! error mapping around the shared reachability walk, so the two could disagree
 //! about which entries a change touched.
 
-use vyre_runtime::BackendError;
 use vyre_compiler::{SemanticExecutionPolicy, SemanticExecutor};
+use vyre_runtime::BackendError;
 
 /// The rule-graph state one invalidation is evaluated against.
 pub(crate) struct RuleImpactQuery<'a> {

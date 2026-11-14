@@ -21,13 +21,13 @@
 
 use std::collections::BTreeMap;
 
-use vyre_runtime::BackendRegistration;
-use vyre_runtime::{BindingSet, BoundResource, Resource};
+use vyre_compiler::{Artifact, ArtifactValueId, TargetModuleBundle, TargetPayload};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_compiler::{Artifact, ArtifactValueId, TargetModuleBundle, TargetPayload};
+use vyre_runtime::BackendRegistration;
+use vyre_runtime::{BindingSet, BoundResource, Resource};
 
 /// Value the fixture program stores into lane zero.
 ///

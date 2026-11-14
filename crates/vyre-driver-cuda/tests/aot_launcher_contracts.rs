@@ -4,8 +4,8 @@
 
 use std::path::PathBuf;
 
-use vyre_runtime::{emit_aot_launcher_target, AotLauncherRequest};
 use vyre_driver_cuda::{self as _, CUDA_TARGET_ID};
+use vyre_runtime::{emit_aot_launcher_target, AotLauncherRequest};
 
 fn request(include_collectives: bool) -> AotLauncherRequest<'static> {
     request_with_ttt(include_collectives, false)

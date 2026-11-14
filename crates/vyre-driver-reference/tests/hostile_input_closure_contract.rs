@@ -7,8 +7,8 @@
 //! which backend owes them.
 
 #![forbid(unsafe_code)]
-use vyre_runtime::DispatchConfig;
 use vyre_driver_reference::CpuRefEvaluator;
+use vyre_runtime::DispatchConfig;
 use vyre_test_support::pass_programs::single_input_copy_program;
 
 #[test]

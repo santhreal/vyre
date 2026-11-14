@@ -155,8 +155,7 @@ impl vyre_compiler::SemanticExecutor for FixedOutputExecutor {
     fn execute(
         &self,
         request: &vyre_compiler::SemanticExecutionRequest<'_>,
-    ) -> Result<vyre_compiler::SemanticExecutionOutput, vyre_compiler::SemanticExecutionError>
-    {
+    ) -> Result<vyre_compiler::SemanticExecutionOutput, vyre_compiler::SemanticExecutionError> {
         assert_eq!(request.logical().regions().len(), 1);
         assert_eq!(request.logical().regions()[0].name, self.pass);
         if request.inputs().len() != self.expected_inputs {
@@ -247,8 +246,7 @@ impl vyre_compiler::SemanticExecutor for ScriptedExecutor {
     fn execute(
         &self,
         request: &vyre_compiler::SemanticExecutionRequest<'_>,
-    ) -> Result<vyre_compiler::SemanticExecutionOutput, vyre_compiler::SemanticExecutionError>
-    {
+    ) -> Result<vyre_compiler::SemanticExecutionOutput, vyre_compiler::SemanticExecutionError> {
         let stage = request.logical().regions()[0].name.as_str();
         let scripted = self
             .stages

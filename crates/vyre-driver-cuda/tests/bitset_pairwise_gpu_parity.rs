@@ -6,7 +6,6 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_libs::bitset::and::bitset_and;
 use vyre_libs::bitset::and_not::bitset_and_not;
@@ -17,6 +16,7 @@ use vyre_reference::composition_witness::{
     bitset_and_not_witness, bitset_and_witness, bitset_set_bit_inplace_witness, bitset_xor_witness,
     reduce_any_witness,
 };
+use vyre_runtime::DispatchConfig;
 
 fn run_pairwise<F>(backend: &CudaBackend, program_builder: F, lhs: &[u32], rhs: &[u32]) -> Vec<u32>
 where

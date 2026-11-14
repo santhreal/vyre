@@ -17,10 +17,10 @@
 #![cfg(feature = "device-tests")]
 #![forbid(unsafe_code)]
 
-use vyre_runtime::DispatchConfig;
 use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_foundation::ir::UnOp;
 use vyre_registry_link::backend::live_backend_registry;
+use vyre_runtime::DispatchConfig;
 use vyre_test_support::strict_float_programs::f32_multiply_add_program;
 
 use crate::float_lowering::{

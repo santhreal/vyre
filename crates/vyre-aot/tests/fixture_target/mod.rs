@@ -5,12 +5,12 @@ use vyre_aot::{
     ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
-use vyre_runtime::Device;
-use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_compiler::{
     compile_selected_modules, EmittedTargetModule, TargetModuleBundle, TargetModuleImage,
 };
 use vyre_compiler::{TargetCompileError, TargetCompiler};
+use vyre_foundation::ir::{Program, ProgramGraph};
+use vyre_runtime::Device;
 
 use vyre_test_support::artifact_fixtures::{compile_graph, params_and_out_graph};
 

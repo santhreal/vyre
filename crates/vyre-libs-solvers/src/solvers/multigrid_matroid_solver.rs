@@ -45,6 +45,7 @@
 //! full V-cycle composes this step with explicit restriction and
 //! prolongation primitives.
 
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 #[cfg(test)]
 use vyre_foundation::pass_math::multigrid_matroid_solver as foundation_multigrid;
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
@@ -52,7 +53,6 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     write_zero_bytes,
 };
 use vyre_libs_math::math::multigrid::jacobi_smooth_step;
-use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned dispatch scratch for fixed-point multigrid Jacobi smoothing.
 #[derive(Debug, Default)]

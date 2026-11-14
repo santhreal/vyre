@@ -15,11 +15,11 @@ use std::collections::BTreeMap;
 
 use crate::harness;
 use harness::add_one_program;
-use vyre_driver_cuda::cuda_factory;
-use vyre_foundation::ir::ProgramGraph;
 use vyre_compiler::{
     compile, CompileObjective, CompileRequest, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
 };
+use vyre_driver_cuda::cuda_factory;
+use vyre_foundation::ir::ProgramGraph;
 
 /// Registers a `main` entry point cannot allocate fewer than: the driver
 /// assigns at least the ones a store and an add need.

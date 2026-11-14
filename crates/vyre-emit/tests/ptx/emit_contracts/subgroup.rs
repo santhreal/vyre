@@ -1,6 +1,8 @@
 //! Test: subgroup.
 use super::*;
-use vyre_compiler::lower::descriptor_builder::{body, counted_loop_head, descriptor, global_rw, lit, op};
+use vyre_compiler::lower::descriptor_builder::{
+    body, counted_loop_head, descriptor, global_rw, lit, op,
+};
 
 /// Single-seed subgroup reduction kernel: one literal reduced across the
 /// subgroup by `reduce_op`.

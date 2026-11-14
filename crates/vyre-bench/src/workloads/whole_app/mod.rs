@@ -28,12 +28,12 @@ use vyre::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, GraphValueId, Node, Program,
     ProgramGraph, ValueContract, ValueLifetime,
 };
+use vyre_reference::value::Value;
+use vyre_runtime::artifact_admission::{ArtifactSession, TypedResource, TypedResourceDataset};
 use vyre_runtime::{
     acquire, acquire_preferred_dispatch_backend, backend_registration, ArtifactMaterializer,
     BackendRegistration, BoundResource, Completion,
 };
-use vyre_reference::value::Value;
-use vyre_runtime::artifact_admission::{ArtifactSession, TypedResource, TypedResourceDataset};
 
 use super::equality::{validate_equality_conditions, NativeComparisonConditions, WorkloadFacts};
 use super::native_baseline::{whole_application_native_baselines, VersionPinnedNativeBaseline};

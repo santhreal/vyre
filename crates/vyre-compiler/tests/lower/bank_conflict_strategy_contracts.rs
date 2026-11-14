@@ -8,15 +8,17 @@
 
 use std::num::NonZeroU32;
 
-use vyre_foundation::ir::{AtomicOp, MemoryOrdering};
 use vyre_compiler::lower::analyses::{
     derive_shared_access_profiles, evaluate_mitigation_candidate, select_bank_conflict_strategy,
     AccessPhase, AccessPhaseProfile, BankConflictMitigation, ConflictSeverity,
     SharedBindingAccessProfile, SharedPermutationBlock, TargetBankGeometry,
 };
-use vyre_compiler::lower::descriptor_builder::{column_walk_tile, effect, op, strided_tile_program};
+use vyre_compiler::lower::descriptor_builder::{
+    column_walk_tile, effect, op, strided_tile_program,
+};
 use vyre_compiler::lower::lower;
 use vyre_compiler::lower::{KernelDescriptor, KernelOp, KernelOpKind, WORKGROUP_SLOT_BASE};
+use vyre_foundation::ir::{AtomicOp, MemoryOrdering};
 
 /// Bank geometry a case states. Every field is a device fact, so a case names
 /// all four rather than inheriting them.

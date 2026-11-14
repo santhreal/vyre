@@ -8,7 +8,6 @@
 #[path = "collected_errors.rs"]
 pub mod collected_errors;
 
-
 #[path = "program_fixtures/mod.rs"]
 pub mod program_fixtures;
 

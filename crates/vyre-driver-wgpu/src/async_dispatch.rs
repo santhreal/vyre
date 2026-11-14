@@ -2,8 +2,8 @@ use crate::dispatch_timeout::{deadline, enforce_budget, reject_unserviceable};
 use crate::pipeline::tuning::wgpu_launch_limits;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use vyre_runtime::validation::LaunchGeometryLimits;
 use vyre_foundation::ir::Program;
+use vyre_runtime::validation::LaunchGeometryLimits;
 
 use crate::{PredictedProgram, WgpuBackend};
 

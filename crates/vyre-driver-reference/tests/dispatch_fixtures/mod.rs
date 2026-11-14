@@ -1,6 +1,6 @@
-use vyre_runtime::DispatchConfig;
 use vyre_driver_reference::CpuRefEvaluator;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::DispatchConfig;
 
 /// A buffer the backend allocates and writes, so it takes no host input slot.
 pub(crate) fn u32_out_buffer(name: &'static str, binding: u32) -> BufferDecl {

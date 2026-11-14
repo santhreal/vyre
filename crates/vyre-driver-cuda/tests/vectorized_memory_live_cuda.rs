@@ -10,8 +10,8 @@ use harness::{
     assert_f32_output_lanes, assert_u32_output_lanes, bool_bytes, cuda_reference_outputs,
     f32_bytes, i32_bytes, live_backend, u32_bytes,
 };
-use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::DispatchConfig;
 
 const VECTOR_LANE_COUNT: usize = 2048;
 const VECTOR_GROUP_COUNT: usize = VECTOR_LANE_COUNT / 4;

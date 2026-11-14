@@ -2,9 +2,9 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 pub(crate) fn program(length: u32, build: fn(Expr, Expr) -> Expr) -> Program {
     let mut body = Vec::new();

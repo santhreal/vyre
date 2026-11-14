@@ -17,8 +17,6 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use naga::{Literal, Statement};
-use vyre_emit::naga::{emit, grid_segment_entry_points, EmitError, GRID_SEGMENT_ENTRY_PREFIX};
-use vyre_foundation::ir::{DataType, MemoryOrdering};
 use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, effect, for_loop, global_rw, if_then, lit, store_global,
 };
@@ -26,6 +24,8 @@ use vyre_compiler::lower::{
     dispatch_segments, DispatchSplitError, KernelDescriptor, KernelOpKind, LiteralValue,
     NestedBodyControl,
 };
+use vyre_emit::naga::{emit, grid_segment_entry_points, EmitError, GRID_SEGMENT_ENTRY_PREFIX};
+use vyre_foundation::ir::{DataType, MemoryOrdering};
 use vyre_test_support::monorepo::vyre_workspace_root;
 
 use crate::naga::naga_probe::count_statements;

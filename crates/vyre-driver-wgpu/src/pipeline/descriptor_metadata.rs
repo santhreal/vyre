@@ -8,9 +8,9 @@
 use std::sync::Arc;
 
 use rustc_hash::FxHashSet;
-use vyre_runtime::{BackendError, BackendLayoutClass, BackendLayoutFingerprint, BackendLayoutSlot};
-use vyre_emit::naga::program::TrapTag;
 use vyre_compiler::lower::TRAP_SIDECAR_NAME;
+use vyre_emit::naga::program::TrapTag;
+use vyre_runtime::{BackendError, BackendLayoutClass, BackendLayoutFingerprint, BackendLayoutSlot};
 
 use crate::descriptor_mapping::{
     descriptor_binding_key, descriptor_buffer_access, descriptor_memory_kind,

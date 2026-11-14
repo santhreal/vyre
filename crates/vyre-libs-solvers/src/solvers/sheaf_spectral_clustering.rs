@@ -19,6 +19,9 @@
 //! produces ambiguous results (many tied gain values)  -  falls back
 //! to spectral cluster suggestions for tie-breaking.
 
+use vyre_compiler::{
+    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+};
 #[cfg(test)]
 use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
@@ -26,9 +29,6 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     write_zero_bytes,
 };
 use vyre_libs_math::math::sheaf_laplacian_eigenvalue::sheaf_laplacian_eigenvalue;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
 
 /// Default value for the retained (interface-stability) `iterations` parameter.
 ///

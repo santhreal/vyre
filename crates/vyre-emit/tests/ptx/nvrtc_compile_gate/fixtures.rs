@@ -4,12 +4,12 @@
 //! stays here is the one thing every fixture in this gate shares: verify, then
 //! emit PTX, and treat either failing as a fixture defect.
 
-use vyre_foundation::ir::{BinOp, DataType};
 use vyre_compiler::lower::descriptor_builder::{
     binop, body, descriptor, folded_literal_vector_store, global_ro, global_rw, global_wo, lit,
     load_global, op, store_global,
 };
 use vyre_compiler::lower::{KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
+use vyre_foundation::ir::{BinOp, DataType};
 
 /// `LocalInvocationId` gives a fixture a value constant folding cannot
 /// eliminate, so the emitted PTX still contains the op under test.

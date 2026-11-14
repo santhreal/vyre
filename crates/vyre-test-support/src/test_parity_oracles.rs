@@ -5,11 +5,11 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::Program;
 use vyre_compiler::{
     Digest, SearchBudget, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
     SemanticExecutionRequest, SemanticExecutor,
 };
+use vyre_foundation::ir::Program;
 
 /// Project `ordered` after padding it to the node's declared output count.
 ///

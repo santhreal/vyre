@@ -5,12 +5,12 @@ use metal::{
     Buffer, CommandBuffer, ComputePipelineState, Device, MTLCommandBufferStatus, MTLSize,
     NSUInteger,
 };
+use vyre_foundation::ir::Program;
 use vyre_runtime::{
     dispatch_element_count_for_program, enforce_actual_output_budget,
     infer_dispatch_grid_for_count, output_binding_layouts, sealed, BackendError, BindingPlan,
     DispatchConfig, OutputBindingLayout, PendingDispatch, TimedDispatchResult,
 };
-use vyre_foundation::ir::Program;
 
 use super::buffer_plan::{allocation_len_for_output, output_layout_map, PlannedBuffer};
 use super::metrics::{elapsed_ns, record_output_readback_metrics, MetalMetricCounters};

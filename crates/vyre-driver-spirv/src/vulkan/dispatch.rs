@@ -2,8 +2,8 @@
 
 use ash::vk;
 
-use vyre_runtime::{BackendError, BindingPlan};
 use vyre_foundation::ir::{BufferAccess, Program};
+use vyre_runtime::{BackendError, BindingPlan};
 
 use super::bindings::{
     bind_trap_sidecar, fill_host_buffer, output_readback, read_output_slots, read_trap_record,

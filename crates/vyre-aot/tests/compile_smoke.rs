@@ -9,12 +9,12 @@ use vyre_aot::{
     registration, rollback_package, update_package, CompileError, LauncherError, LauncherOpts,
     TargetId, ValidatedCompileRequest,
 };
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
-use vyre_foundation::validate::BackendCapabilities;
 use vyre_compiler::{
     CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     SearchBudget,
 };
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
+use vyre_foundation::validate::BackendCapabilities;
 use vyre_test_support::pass_programs::workgroup_scratch_program;
 
 fn trivial_xor_program() -> Program {

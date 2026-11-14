@@ -10,7 +10,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_cuda_optimizer_dispatcher, with_live_backend};
-use vyre_runtime::DispatchConfig;
+use vyre_compiler::SemanticExecutionError;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_libs::graph::dispatch::toposort::{
@@ -18,11 +18,11 @@ use vyre_libs::graph::dispatch::toposort::{
 };
 use vyre_libs::graph::level_wave::level_wave_program;
 use vyre_libs::graph::reachable::reachable_program;
-use vyre_compiler::SemanticExecutionError;
 use vyre_reference::composition_witness::{
     level_wave_witness as level_wave_cpu, reachable_witness as reachable,
     toposort_witness as toposort,
 };
+use vyre_runtime::DispatchConfig;
 
 /// Build the toposort CSR: offsets indexed by `to`, targets listing
 /// `from`-nodes. An edge `(from, to)` states that `from` depends on `to`, so

@@ -5,11 +5,17 @@
 //! prevents the two paths from drifting under new memory classes.
 
 /// Return the WGPU bind group used for a lowered memory class.
-pub(crate) fn descriptor_bind_group(memory_class: vyre_compiler::lower::MemoryClass) -> Option<u32> {
+pub(crate) fn descriptor_bind_group(
+    memory_class: vyre_compiler::lower::MemoryClass,
+) -> Option<u32> {
     match memory_class {
-        vyre_compiler::lower::MemoryClass::Shared | vyre_compiler::lower::MemoryClass::Scratch => None,
+        vyre_compiler::lower::MemoryClass::Shared | vyre_compiler::lower::MemoryClass::Scratch => {
+            None
+        }
         vyre_compiler::lower::MemoryClass::Uniform => Some(1),
-        vyre_compiler::lower::MemoryClass::Global | vyre_compiler::lower::MemoryClass::Constant => Some(0),
+        vyre_compiler::lower::MemoryClass::Global | vyre_compiler::lower::MemoryClass::Constant => {
+            Some(0)
+        }
     }
 }
 
@@ -26,9 +32,15 @@ pub(crate) fn descriptor_buffer_access(
     visibility: vyre_compiler::lower::BindingVisibility,
 ) -> vyre_foundation::ir::BufferAccess {
     match visibility {
-        vyre_compiler::lower::BindingVisibility::ReadOnly => vyre_foundation::ir::BufferAccess::ReadOnly,
-        vyre_compiler::lower::BindingVisibility::WriteOnly => vyre_foundation::ir::BufferAccess::WriteOnly,
-        vyre_compiler::lower::BindingVisibility::ReadWrite => vyre_foundation::ir::BufferAccess::ReadWrite,
+        vyre_compiler::lower::BindingVisibility::ReadOnly => {
+            vyre_foundation::ir::BufferAccess::ReadOnly
+        }
+        vyre_compiler::lower::BindingVisibility::WriteOnly => {
+            vyre_foundation::ir::BufferAccess::WriteOnly
+        }
+        vyre_compiler::lower::BindingVisibility::ReadWrite => {
+            vyre_foundation::ir::BufferAccess::ReadWrite
+        }
     }
 }
 

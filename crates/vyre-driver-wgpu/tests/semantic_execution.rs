@@ -5,8 +5,8 @@
 use crate::harness;
 
 use harness::acquire_live_backend;
-use vyre_driver_wgpu::{registered_backend_id, WGPU_BACKEND_ID};
 use vyre_compiler::DeviceFacts;
+use vyre_driver_wgpu::{registered_backend_id, WGPU_BACKEND_ID};
 use vyre_runtime::RegisteredSemanticExecutor;
 use vyre_test_support::semantic_requests::{
     assert_executes_add, assert_executes_retained_accumulate, assert_refuses_zero_artifact_limit,

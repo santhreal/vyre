@@ -20,17 +20,17 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_runtime::{BackendRegistration, BoundResource, Completion, DeviceIdentity};
+use vyre_compiler::{
+    attach_target, compile, ArtifactValueId, CompileObjective, CompileRequest, Digest,
+    ExternalFacts, ObjectiveMetric, SearchBudget,
+};
 use vyre_driver_cuda::{registered_backend_id, CUDA_BACKEND_ID};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ValueContract, ValueLifetime,
 };
-use vyre_compiler::{
-    attach_target, compile, ArtifactValueId, CompileObjective, CompileRequest, Digest,
-    ExternalFacts, ObjectiveMetric, SearchBudget,
-};
 use vyre_runtime::artifact_admission::ArtifactSession;
+use vyre_runtime::{BackendRegistration, BoundResource, Completion, DeviceIdentity};
 use vyre_test_support::backend_execution_domain::assert_dispatch_leaves_the_host;
 // The pure-dataflow graph and its host oracle: every concrete driver is asked
 // the same question, so an answer that differs by which suite built the graph

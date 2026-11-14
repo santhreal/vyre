@@ -20,9 +20,9 @@
 #![cfg(feature = "device-tests")]
 
 use crate::harness;
-use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::DispatchConfig;
 
 /// A 1D program that stores its own element index at that index, over `words` elements.
 fn identity_program(words: u32) -> Program {

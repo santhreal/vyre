@@ -5,8 +5,8 @@
 use crate::harness;
 
 use harness::{bytes_u32, cuda_reference_outputs, live_backend, u32_bytes};
-use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::DispatchConfig;
 
 #[test]
 fn cuda_dynamic_buffer_lengths_are_indexed_by_binding_slot_not_buffer_index() {

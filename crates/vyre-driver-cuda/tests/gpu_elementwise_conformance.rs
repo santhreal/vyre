@@ -4,9 +4,9 @@
 
 use crate::harness;
 use harness::{bytes_u32, u32_bytes};
-use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferDecl, CommGroup, DataType, Expr, Node, Program};
+use vyre_runtime::DispatchConfig;
 
 #[test]
 fn cuda_runs_u32_add_one_program_end_to_end() {

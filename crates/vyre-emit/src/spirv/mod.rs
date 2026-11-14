@@ -23,8 +23,8 @@
 //! sits in the integration-test surface (added when CI has spirv-tools).
 
 use thiserror::Error;
-use vyre_foundation::diagnostics::{CauseKind, Diagnostic};
 use vyre_compiler::lower::KernelDescriptor;
+use vyre_foundation::diagnostics::{CauseKind, Diagnostic};
 
 /// Target identity every diagnostic this emitter raises carries.
 const TARGET: &str = "spirv";

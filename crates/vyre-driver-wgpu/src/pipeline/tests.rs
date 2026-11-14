@@ -3,13 +3,13 @@ use std::hash::BuildHasherDefault;
 #[cfg(feature = "device-tests")]
 use std::sync::Arc;
 
+use vyre_foundation::execution_plan;
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 use vyre_runtime::validation::LaunchGeometryLimits;
 #[cfg(feature = "device-tests")]
 use vyre_runtime::BackendError;
 #[cfg(feature = "device-tests")]
 use vyre_runtime::{DEFAULT_PIPELINE_CACHE_BYTES, DEFAULT_PIPELINE_CACHE_ENTRIES};
-use vyre_foundation::execution_plan;
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 
 use super::tuning::wgpu_effective_dispatch_config_for_limits;
 use super::{enforce_actual_output_budget, DispatchConfig};
@@ -601,8 +601,8 @@ mod layout_config_contracts {
 
 mod host_input_classification_contracts {
     use rustc_hash::FxHashSet;
-    use vyre_foundation::ir::BufferAccess;
     use vyre_compiler::lower::{BindingVisibility, MemoryClass};
+    use vyre_foundation::ir::BufferAccess;
 
     use super::*;
     use crate::pipeline::descriptor_fixture::{descriptor_of, slot};

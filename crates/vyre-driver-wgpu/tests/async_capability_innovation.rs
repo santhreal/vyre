@@ -18,9 +18,9 @@ use harness::{
 
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 // ------------------------------------------------------------------
 // 1. Live GPU required; never silently CPU-fallback

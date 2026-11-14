@@ -46,11 +46,11 @@
 use std::sync::Arc;
 
 use smallvec::SmallVec;
+use vyre_foundation::ir::Program;
 use vyre_runtime::graph_capture::plan_graph_capture_bindings;
 use vyre_runtime::input_identity::exact_input_key;
 use vyre_runtime::BindingRole;
 use vyre_runtime::{BackendError, DispatchConfig};
-use vyre_foundation::ir::Program;
 
 use super::allocations::alloc_cuda_ptr;
 use super::cuda_graph_lifecycle::*;

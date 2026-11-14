@@ -6,9 +6,9 @@ use crate::harness;
 use harness::{selected_adapter, shared_live_backend as live_backend, SUBGROUP_PROBE_WGSL};
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::{BackendValidationCapabilities, ValidationOptions};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 fn subgroup_pipeline_compiles(backend: &WgpuBackend) -> bool {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {

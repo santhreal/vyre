@@ -2,11 +2,11 @@
 //! through Naga, PTX, and SPIR-V. A failure in any target breaks the
 //! substrate-neutral `KernelDescriptor` contract for that shape.
 
-use vyre_foundation::ir::{BinOp, DataType};
 use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, effect, global_rw, lit, op, store_literal_kernel,
 };
 use vyre_compiler::lower::{KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
+use vyre_foundation::ir::{BinOp, DataType};
 
 fn out_slot(ty: DataType) -> vyre_compiler::lower::BindingSlot {
     global_rw(0, ty, "out")
@@ -198,7 +198,8 @@ fn ptx_contains_the_instruction_for_each_live_op() {
         (mul_store(), "mul.lo"),
         (fma_store(), "fma.rn"),
     ] {
-        let verified = vyre_compiler::lower::verify_descriptor(&desc).expect("descriptor verification");
+        let verified =
+            vyre_compiler::lower::verify_descriptor(&desc).expect("descriptor verification");
         let ptx = vyre_emit::ptx::emit(&verified).expect("PTX emit");
         assert!(
             ptx.contains(instruction),

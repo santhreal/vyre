@@ -2,9 +2,9 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_cuda::{codegen::program_to_ptx, CudaBackend, CudaBackendRegistration};
 use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 fn indirect_dispatch_program() -> Program {
     Program::wrapped(

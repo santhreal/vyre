@@ -1,10 +1,14 @@
 //! Nested-body descent contracts for the analysis walk.
 
-use vyre_foundation::ir::DataType;
-use vyre_compiler::lower::analyses::structured_walk::{walk_structured, ArmDescent, StructuredVisitor};
+use vyre_compiler::lower::analyses::structured_walk::{
+    walk_structured, ArmDescent, StructuredVisitor,
+};
 use vyre_compiler::lower::analyses::ProducerMap;
-use vyre_compiler::lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, load_global};
+use vyre_compiler::lower::descriptor_builder::{
+    body, descriptor, effect, global_rw, lit, load_global,
+};
 use vyre_compiler::lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
+use vyre_foundation::ir::DataType;
 
 /// Every op kind that carries a nested body, with the operand layout its
 /// variant documents and the child indices that layout names.

@@ -1,5 +1,7 @@
 use super::*;
-use vyre_compiler::lower::descriptor_builder::{body, descriptor, effect, global_wo, lit, SlotCount};
+use vyre_compiler::lower::descriptor_builder::{
+    body, descriptor, effect, global_wo, lit, SlotCount,
+};
 
 #[test]
 fn matrix_mma_emits_real_mma_sync_and_binds_all_four_results() {

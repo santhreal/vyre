@@ -1,9 +1,9 @@
 //! Cross-scope CSE hoists a repeated top-level expression after semantic
 //! execution of the two CSE analysis graphs.
 
+use vyre_compiler::{Digest, SearchBudget, SemanticExecutionPolicy};
 use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_compiler::{Digest, SearchBudget, SemanticExecutionPolicy};
 use vyre_pass_engine::optimizer::cse_via_encoded::{apply_cross_scope_cse, gpu_cse_canonicals};
 
 /// `src[0] + src[1]`, the repeated operand the hoist is supposed to find.

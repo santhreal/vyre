@@ -173,7 +173,8 @@ fn main() {
                     exit(3);
                 }
             };
-            let desc = match vyre_compiler::lower::lower_physical(&p).map(|lowered| lowered.into_descriptor())
+            let desc = match vyre_compiler::lower::lower_physical(&p)
+                .map(|lowered| lowered.into_descriptor())
             {
                 Ok(d) => d,
                 Err(e) => {
@@ -227,7 +228,8 @@ fn main() {
                     exit(3);
                 }
             };
-            let desc = match vyre_compiler::lower::lower_physical(&p).map(|lowered| lowered.into_descriptor())
+            let desc = match vyre_compiler::lower::lower_physical(&p)
+                .map(|lowered| lowered.into_descriptor())
             {
                 Ok(d) => d,
                 Err(e) => {
@@ -262,7 +264,8 @@ fn main() {
                     exit(3);
                 }
             };
-            let desc = match vyre_compiler::lower::lower_physical(&p).map(|lowered| lowered.into_descriptor())
+            let desc = match vyre_compiler::lower::lower_physical(&p)
+                .map(|lowered| lowered.into_descriptor())
             {
                 Ok(d) => d,
                 Err(e) => {
@@ -297,7 +300,8 @@ fn main() {
                     exit(3);
                 }
             };
-            let desc = match vyre_compiler::lower::lower_physical(&p).map(|lowered| lowered.into_descriptor())
+            let desc = match vyre_compiler::lower::lower_physical(&p)
+                .map(|lowered| lowered.into_descriptor())
             {
                 Ok(d) => d,
                 Err(e) => {
@@ -328,22 +332,24 @@ fn main() {
                     exit(3);
                 }
             };
-            let desc_a =
-                match vyre_compiler::lower::lower_physical(&p_a).map(|lowered| lowered.into_descriptor()) {
-                    Ok(d) => d,
-                    Err(e) => {
-                        eprintln!("Lowering failed: {:?}", e);
-                        exit(2);
-                    }
-                };
-            let desc_b =
-                match vyre_compiler::lower::lower_physical(&p_b).map(|lowered| lowered.into_descriptor()) {
-                    Ok(d) => d,
-                    Err(e) => {
-                        eprintln!("Lowering failed: {:?}", e);
-                        exit(2);
-                    }
-                };
+            let desc_a = match vyre_compiler::lower::lower_physical(&p_a)
+                .map(|lowered| lowered.into_descriptor())
+            {
+                Ok(d) => d,
+                Err(e) => {
+                    eprintln!("Lowering failed: {:?}", e);
+                    exit(2);
+                }
+            };
+            let desc_b = match vyre_compiler::lower::lower_physical(&p_b)
+                .map(|lowered| lowered.into_descriptor())
+            {
+                Ok(d) => d,
+                Err(e) => {
+                    eprintln!("Lowering failed: {:?}", e);
+                    exit(2);
+                }
+            };
             let diff = diff_descriptors(&desc_a, &desc_b);
             println!("Bindings dropped: {:?}", diff.bindings_dropped);
             println!("Bindings added: {:?}", diff.bindings_added);

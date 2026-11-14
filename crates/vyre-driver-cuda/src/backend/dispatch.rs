@@ -6,12 +6,12 @@ use dashmap::DashMap;
 
 use cudarc::driver::CudaContext;
 use smallvec::SmallVec;
+use vyre_compiler::EmittedResources;
+use vyre_foundation::ir::Program;
 use vyre_runtime::validation::ValidationCache;
 use vyre_runtime::SpeculationMode;
 use vyre_runtime::{resolve_fixpoint_iterations, BackendError, DispatchConfig, LaunchPlan};
 use vyre_runtime::{BindingPlan, BindingRole, ReadOnlyAliasCheck};
-use vyre_foundation::ir::Program;
-use vyre_compiler::EmittedResources;
 
 use super::allocations::DeviceAllocationPool;
 use super::module_cache::{

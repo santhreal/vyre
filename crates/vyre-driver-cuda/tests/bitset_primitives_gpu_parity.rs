@@ -7,7 +7,6 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_runtime::DispatchConfig;
 use vyre_libs::bitset::and_into::bitset_and_into;
 use vyre_libs::bitset::and_not_into::bitset_and_not_into;
 use vyre_libs::bitset::clear_bit::bitset_clear_bit;
@@ -29,6 +28,7 @@ use vyre_reference::composition_witness::{
     bitset_test_bit_witness, bitset_xor_inplace_witness, bitset_zero_inplace_witness,
     try_frontier_absorb_witness_into,
 };
+use vyre_runtime::DispatchConfig;
 
 fn dispatch_grid(program: &vyre::ir::Program, inputs: &[Vec<u8>], grid_x: u32) -> Vec<Vec<u8>> {
     let mut config = DispatchConfig::default();

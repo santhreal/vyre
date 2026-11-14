@@ -3,9 +3,6 @@
 //! The descriptor fixtures in this file are the ones every submodule below
 //! reaches through `use super::*`.
 use naga::{Binding, BuiltIn, Statement, TypeInner};
-use vyre_emit::naga::*;
-use vyre_foundation::ir::MemoryOrdering;
-use vyre_foundation::ir::{BinOp, DataType, UnOp};
 use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, effect, global_rw, lit, store_literal_kernel, SlotCount,
 };
@@ -13,6 +10,9 @@ use vyre_compiler::lower::{
     AsyncTransaction, AsyncWaitSpec, BindingSlot, BindingVisibility, KernelDescriptor,
     KernelOpKind, LiteralValue, MemoryClass, MemoryProxyFence, TransactionScope,
 };
+use vyre_emit::naga::*;
+use vyre_foundation::ir::MemoryOrdering;
+use vyre_foundation::ir::{BinOp, DataType, UnOp};
 
 /// Hold `module` to naga's own validator, naming `what` when it is rejected.
 ///

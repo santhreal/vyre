@@ -6,8 +6,8 @@ use crate::api::case::{
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::resident::ResidentInputSet;
 use vyre::ir::{BufferAccess, Program};
-use vyre_runtime::TimedDispatchResult;
 use vyre_libs::reduce::{grid_stride_tree, sum};
+use vyre_runtime::TimedDispatchResult;
 
 pub struct ReduceSumBench;
 

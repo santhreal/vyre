@@ -7,10 +7,10 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     checked_square_cells, decode_u32_output_exact, u32_slice_to_le_bytes,
 };
 
-use vyre_libs_graph::topology::vietoris_rips::vietoris_rips_edge_filter;
 use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
+use vyre_libs_graph::topology::vietoris_rips::vietoris_rips_edge_filter;
 
 /// Compute the Vietoris-Rips 1-skeleton through the dispatcher using
 /// fixed-point 16.16 distances. This is the production path for callers

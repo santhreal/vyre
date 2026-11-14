@@ -31,11 +31,11 @@
 //! upload, not a wrong answer. Nor does it prove the split point is legal; that
 //! is `grid_sync_nested_fence_survives_split.rs`.
 
-use vyre_runtime::grid_sync::plan_host_grid_sync_segment_programs;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Ident, MemoryOrdering, Node, Program,
 };
 use vyre_foundation::visit::referenced_buffers;
+use vyre_runtime::grid_sync::plan_host_grid_sync_segment_programs;
 use vyre_test_support::ir_variants::{assert_covers_every_node_variant, node_variant_samples};
 
 fn grid_fence() -> Node {

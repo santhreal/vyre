@@ -1,8 +1,8 @@
 //! Domain-separated cache identity for PTX source and loaded CUDA modules.
 
+use vyre_foundation::ir::Program;
 use vyre_runtime::input_identity::domain_separated_exact_input_key;
 use vyre_runtime::{BackendError, DispatchConfig};
-use vyre_foundation::ir::Program;
 
 use crate::backend::dispatch_phase_probe as probe;
 

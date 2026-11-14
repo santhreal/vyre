@@ -18,11 +18,11 @@
 
 use crate::harness;
 use harness::{add_one_program, bytes_u32, u32_bytes};
-use vyre_runtime::{grid_sync, BackendError, DispatchConfig};
 use vyre_driver_cuda::occupancy::cooperative_thread_residency_block_limit;
 use vyre_driver_cuda::{cuda_factory, CudaBackend};
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_runtime::{grid_sync, BackendError, DispatchConfig};
 
 #[test]
 fn cooperative_dispatch_matches_regular_dispatch_on_supported_hardware() {

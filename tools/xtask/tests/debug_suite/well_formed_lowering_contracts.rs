@@ -18,7 +18,10 @@ use xtask::debug::{
     DescriptorDumpOptions,
 };
 
-fn lowered_smoke() -> (vyre_foundation::ir::Program, vyre_compiler::lower::KernelDescriptor) {
+fn lowered_smoke() -> (
+    vyre_foundation::ir::Program,
+    vyre_compiler::lower::KernelDescriptor,
+) {
     let program = loop_carry_smoke();
     let desc = lower_physical(&program)
         .map(|lowered| lowered.into_descriptor())

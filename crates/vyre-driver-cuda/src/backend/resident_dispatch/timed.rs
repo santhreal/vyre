@@ -1,5 +1,5 @@
-use vyre_runtime::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
+use vyre_runtime::{BackendError, DispatchConfig};
 
 use crate::backend::dispatch::CudaBackend;
 use crate::backend::dispatch_phase_probe as probe;

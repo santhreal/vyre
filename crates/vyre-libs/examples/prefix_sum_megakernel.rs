@@ -5,14 +5,14 @@
 //! backend-neutral artifact, and the checks below are on that artifact.
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::{
-    BufferAccess, Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
-};
-use vyre_libs::math::scan::scan_prefix_sum;
 use vyre_compiler::{
     compile, Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
     ObjectiveMetric, SearchBudget,
 };
+use vyre_foundation::ir::{
+    BufferAccess, Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
+};
+use vyre_libs::math::scan::scan_prefix_sum;
 
 const ELEMENTS: u32 = 256;
 

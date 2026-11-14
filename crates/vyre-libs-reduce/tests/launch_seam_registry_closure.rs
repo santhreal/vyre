@@ -14,13 +14,13 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_foundation::ir::{ProgramGraph, ShapeDim, ValueLifetime};
-use vyre_foundation::operation::OperationRegistry;
-use vyre_foundation::validate::BackendCapabilities;
 use vyre_compiler::{
     compile, Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExecutionMode,
     ExecutionTopology, ExternalFacts, ObjectiveMetric, SearchBudget,
 };
+use vyre_foundation::ir::{ProgramGraph, ShapeDim, ValueLifetime};
+use vyre_foundation::operation::OperationRegistry;
+use vyre_foundation::validate::BackendCapabilities;
 
 /// Exact extent bound to every symbolic graph dimension.
 const SYMBOLIC_EXTENT: u64 = 64;

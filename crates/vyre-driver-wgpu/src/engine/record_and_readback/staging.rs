@@ -5,8 +5,8 @@ use crate::allocation::reserve_smallvec_to_capacity;
 use crate::numeric::WGPU_NUMERIC;
 use smallvec::SmallVec;
 use std::sync::Arc;
-use vyre_runtime::BackendError;
 use vyre_emit::naga::program::TRAP_SIDECAR_WORDS;
+use vyre_runtime::BackendError;
 
 pub(super) fn record_readback_copies(
     device: &wgpu::Device,

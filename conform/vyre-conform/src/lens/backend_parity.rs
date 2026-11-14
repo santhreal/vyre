@@ -1,9 +1,9 @@
 //! CPU-vs-backend byte-identity lens.
 
-use vyre_runtime::BackendRegistration;
 use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
 use vyre_foundation::operation::SemanticOperation;
 use vyre_libs::operation_catalog::convergence_contract;
+use vyre_runtime::BackendRegistration;
 
 use crate::lens::convergence;
 use crate::lens::execution::run_cpu;
