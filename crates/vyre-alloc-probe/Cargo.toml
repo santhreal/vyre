@@ -8,24 +8,15 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Per-thread heap traffic counters behind a GlobalAlloc wrapper. Measures allocation budgets in a harness binary or a test binary."
-# Internal measurement harness, never published.
+description = "Compatibility re-export shim for vyre_test_support::alloc_probe."
+readme = "README.md"
 publish = false
 
-# This crate depends on no vyre crate. It wraps `std::alloc::System`, so any
-# binary that installs a global allocator can link it: the benchmark harness at
-# run time, a driver dispatch budget under `cargo test`.
 [dependencies]
+vyre-test-support = { workspace = true }
 
 [package.metadata.vyre]
 publication_class = "conformance-tooling"
 
 [lints]
 workspace = true
-
-[lib]
-path = "src/lib.rs"
-
-[[test]]
-name = "all_tests"
-path = "tests/all_tests.rs"

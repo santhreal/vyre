@@ -1,0 +1,36 @@
+//! Conformance parity engine, witness planning, minimizer, and algebraic-law proofs.
+
+pub mod backend_selection;
+pub mod coordinator;
+pub mod law_proof;
+pub mod law_survey;
+pub mod lens;
+pub mod minimizer;
+pub mod oracle;
+pub mod panic_payload;
+pub mod production;
+#[doc(hidden)]
+pub mod witness_plan;
+pub mod worker;
+
+pub use backend_selection::{
+    backend_registration, registered_target_facts, select_backends, semantic_execution_backends,
+    target_facts_digest,
+};
+pub use coordinator::{DeviceLeaseManager, WorkerCoordinator};
+pub use law_proof::{
+    prove_declared_laws, prove_law, LawProof, LawVerdict, LawWitness, UnprovenKind,
+};
+pub use law_survey::{judge, survey_operation, Disposition, DispositionDefect, OperationSurvey};
+pub use minimizer::{CounterexampleMinimizer, MinimizationBudget, MinimizerReport};
+pub use oracle::{OracleError, OracleSession};
+pub use panic_payload::panic_message;
+pub use production::{
+    check_family_outputs, check_schedule_agreement, submit_under_every_schedule, ProductionError,
+    ProductionExecution, ProductionSession, ReplayCapsule, ScheduleAgreement,
+    ScheduleAgreementReport, ScheduleDisagreement, ScheduleOutcome, CONFORMANCE_SCHEDULES,
+};
+pub use worker::{
+    current_binary_digest, current_environment_digest, execute_worker_request,
+    run_worker_from_env_or_exit, run_worker_stdio, DEFAULT_WORKER_SECRET,
+};

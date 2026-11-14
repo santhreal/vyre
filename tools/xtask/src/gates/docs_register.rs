@@ -1,4 +1,5 @@
-//! Verify prose document count, competitor-name absence, and register rules.
+//! Verify prose document count, one README per crate, competitor-name absence,
+//! and register rules.
 
 use std::fs;
 use std::path::Path;
@@ -22,6 +23,7 @@ const BANNED_DOC_TOKENS: &[&str] = &[
 pub fn check(root: &Path) -> Result<(), Vec<String>> {
     let mut errors = Vec::new();
     let mut prose_docs = Vec::new();
+    let mut crate_dirs = Vec::new();
 
     for entry in WalkDir::new(root)
         .into_iter()
@@ -32,6 +34,10 @@ pub fn check(root: &Path) -> Result<(), Vec<String>> {
         let path = entry.path();
         let rel = path.strip_prefix(root).unwrap_or(path).to_string_lossy();
         let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+        let parent = path.parent().unwrap_or(root);
+        if path.file_name().is_some_and(|name| name == "Cargo.toml") && parent != root {
+            crate_dirs.push(parent.to_path_buf());
+        }
         if matches!(ext, "md" | "adoc" | "rst") {
             // Transient in-flight deleted crate directories without Cargo.toml are ignored.
             if rel.starts_with("crates/") {
@@ -46,7 +52,13 @@ pub fn check(root: &Path) -> Result<(), Vec<String>> {
                     continue;
                 }
             }
-            prose_docs.push(rel.into_owned());
+            // A crate's own README is required, so it is outside the ceiling.
+            let crate_readme = path.file_name().is_some_and(|name| name == "README.md")
+                && parent != root
+                && parent.join("Cargo.toml").is_file();
+            if !crate_readme {
+                prose_docs.push(rel.into_owned());
+            }
             if let Ok(text) = fs::read_to_string(path) {
                 for token in BANNED_DOC_TOKENS {
                     if text.contains(token) {
@@ -73,6 +85,17 @@ pub fn check(root: &Path) -> Result<(), Vec<String>> {
                     }
                 }
             }
+        }
+    }
+
+    crate_dirs.sort();
+    for dir in &crate_dirs {
+        if !dir.join("README.md").is_file() {
+            let rel = dir.strip_prefix(root).unwrap_or(dir);
+            errors.push(format!(
+                "{}: crate has no README.md; add one stating its purpose and boundaries",
+                rel.display()
+            ));
         }
     }
 

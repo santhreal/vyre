@@ -119,12 +119,12 @@ pub fn buffer_data_types(element_size: usize) -> Vec<DataType> {
 /// source declaration, `Opaque` excluded.
 pub fn public_api_variant_names(enum_name: &str) -> BTreeSet<String> {
     let root = crate::monorepo::vyre_workspace_root();
-    let decl = format!("pub enum {enum_name} {{");
     let mut names = BTreeSet::new();
     for candidate_dir in [
         root.join("crates/vyre-ir/src"),
         root.join("crates/vyre-spec/src"),
     ] {
+        let mut sources = Vec::new();
         let mut pending = vec![candidate_dir];
         while let Some(dir) = pending.pop() {
             let Ok(entries) = std::fs::read_dir(&dir) else {
@@ -136,15 +136,14 @@ pub fn public_api_variant_names(enum_name: &str) -> BTreeSet<String> {
                     pending.push(path);
                 } else if path.extension().is_some_and(|ext| ext == "rs") {
                     if let Ok(source) = crate::read_source_file_bounded(&path) {
-                        if let Some(body) = crate::braced_body(&source, &decl) {
-                            for variant in crate::top_level_variant_names(body) {
-                                if variant != "Opaque" {
-                                    names.insert(variant);
-                                }
-                            }
-                        }
+                        sources.push(source);
                     }
                 }
+            }
+        }
+        for variant in crate::enum_variant_names_in_sources(enum_name, &sources) {
+            if variant != "Opaque" {
+                names.insert(variant);
             }
         }
         if !names.is_empty() {

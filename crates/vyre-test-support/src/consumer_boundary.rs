@@ -118,7 +118,7 @@ impl ConsumerBoundaryScan {
 /// and the scan is covering nothing.
 pub fn assert_source_does_not_name_downstream_consumers(scan: ConsumerBoundaryScan) {
     let mut source_files = Vec::new();
-    collect_source_files(&scan, &scan.source_root.clone(), &mut source_files);
+    collect_source_files(&scan, &scan.source_root, &mut source_files);
     source_files.sort();
 
     assert!(

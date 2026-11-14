@@ -8,7 +8,7 @@
 
 #![allow(missing_docs)]
 
-use vyre_test_support::{braced_body, top_level_variant_names};
+use vyre_test_support::{braced_body, enum_variant_names_in_sources, top_level_variant_names};
 
 /// An attribute belongs to the variant after it.
 ///
@@ -131,5 +131,106 @@ pub enum Sample {
         top_level_variant_names(body),
         ["First", "Second"].into_iter().map(String::from).collect(),
         "Fix: a body scan and a variant scan must report the same members"
+    );
+}
+
+/// X-macro callback tables resolve across files and ignore commas or uppercase
+/// words inside string literals.
+#[test]
+fn xmacro_callback_table_variants_resolve_across_files_and_quoted_commas() {
+    let table_file = r#"
+macro_rules! for_each_sample_op {
+    ($emit:ident) => {
+        $emit! {
+            Alpha "alpha, FakeVariant" 0x01,
+            Beta "beta { Inner }" 0x02,
+            Gamma "gamma \"quoted, FakeTwo\"" 0x03,
+        }
+    };
+}
+"#;
+    let enum_file = r#"
+macro_rules! define_sample_op {
+    ($($variant:ident $label:literal $tag:literal,)+) => {
+        pub enum SampleOp {
+            $(
+                #[doc = $label]
+                $variant,
+            )+
+        }
+    };
+}
+for_each_sample_op!(define_sample_op);
+"#;
+    let sources = vec![table_file.to_string(), enum_file.to_string()];
+    assert_eq!(
+        enum_variant_names_in_sources("SampleOp", &sources),
+        ["Alpha", "Beta", "Gamma"]
+            .into_iter()
+            .map(String::from)
+            .collect()
+    );
+}
+
+/// Every `pub enum` declared in `crates/vyre-spec/src` or `crates/vyre-ir/src`
+/// resolves a non-empty variant set through `public_api_variant_names`.
+#[test]
+fn every_spec_enum_resolves_through_public_api_variant_names() {
+    let root = vyre_test_support::monorepo::vyre_workspace_root();
+    let mut enum_names = std::collections::BTreeSet::new();
+    for candidate_dir in [
+        root.join("crates/vyre-ir/src"),
+        root.join("crates/vyre-spec/src"),
+    ] {
+        let mut pending = vec![candidate_dir];
+        while let Some(dir) = pending.pop() {
+            let Ok(entries) = std::fs::read_dir(&dir) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    pending.push(path);
+                } else if path.extension().is_some_and(|ext| ext == "rs") {
+                    let source = vyre_test_support::read_source_file_bounded(&path)
+                        .expect("Fix: spec source file must be readable");
+                    for (pos, _) in source.match_indices("pub enum ") {
+                        let line_start = source[..pos].rfind('\n').map_or(0, |idx| idx + 1);
+                        if source[line_start..pos].trim_start().starts_with("//") {
+                            continue;
+                        }
+                        let rest = &source[pos + "pub enum ".len()..];
+                        let len = rest
+                            .find(|c: char| !c.is_ascii_alphanumeric() && c != '_')
+                            .unwrap_or(rest.len());
+                        if len > 0 && rest[len..].trim_start().starts_with('{') {
+                            enum_names.insert(rest[..len].to_string());
+                        }
+                    }
+                }
+            }
+        }
+        if !enum_names.is_empty() {
+            break;
+        }
+    }
+    assert!(
+        enum_names.len() >= 50,
+        "Fix: expected to discover the full spec enum set, found {}",
+        enum_names.len()
+    );
+    for enum_name in &enum_names {
+        let variants = vyre_test_support::spec_variant_tables::public_api_variant_names(enum_name);
+        assert!(
+            !variants.is_empty(),
+            "Fix: public_api_variant_names({enum_name:?}) returned empty"
+        );
+    }
+    assert_eq!(
+        vyre_test_support::spec_variant_tables::public_api_variant_names("SubgroupReduceOp"),
+        ["Add", "And", "Max", "Min", "Mul", "Or", "Xor"]
+            .into_iter()
+            .map(String::from)
+            .collect()
     );
 }

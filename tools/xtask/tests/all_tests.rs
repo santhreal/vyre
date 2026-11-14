@@ -71,6 +71,35 @@ fn docs_register_rejects_competitor_names_and_excess_prose_docs() {
     assert!(errs.iter().any(|e| e.contains("/tmp/")));
 }
 
+/// WHY: every crate carries exactly one README stating its purpose and
+/// boundaries, and those READMEs do not count against the repository prose
+/// ceiling. Catches a crate added without a README and a crate README counted
+/// as repository prose. Does not judge README content beyond the banned tokens.
+#[test]
+fn docs_register_requires_one_readme_per_crate_outside_the_prose_ceiling() {
+    let tmp = TempDir::new().unwrap();
+    for name in ["a", "b", "c", "d", "e", "f"] {
+        let dir = tmp.path().join("crates").join(name);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("Cargo.toml"), "[package]\n").unwrap();
+        if name != "f" {
+            fs::write(dir.join("README.md"), "# crate\n").unwrap();
+        }
+    }
+    fs::write(tmp.path().join("README.md"), "# root\n").unwrap();
+    let errs = xtask::gates::docs_register::check(tmp.path()).unwrap_err();
+    assert_eq!(
+        errs,
+        vec![
+            "crates/f: crate has no README.md; add one stating its purpose and boundaries"
+                .to_owned()
+        ]
+    );
+
+    fs::write(tmp.path().join("crates/f/README.md"), "# crate\n").unwrap();
+    assert_eq!(xtask::gates::docs_register::check(tmp.path()), Ok(()));
+}
+
 #[test]
 fn workspace_membership_and_layering_reject_undeclared_or_reversed_crates() {
     let tmp = TempDir::new().unwrap();

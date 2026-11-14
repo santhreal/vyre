@@ -8,9 +8,8 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Witness sets and composition laws for vyre conformance testing."
-keywords = ["vyre", "conformance", "spec", "witness"]
-categories = ["development-tools::testing"]
+description = "Compatibility re-export shim for vyre_test_support::conform_spec."
+readme = "README.md"
 publish = false
 
 [package.metadata.vyre]
@@ -20,14 +19,4 @@ publication_class = "conformance-tooling"
 workspace = true
 
 [dependencies]
-blake3 = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-vyre-spec = { workspace = true }
-
-[dev-dependencies]
-vyre-foundation = { workspace = true }
-
-[[test]]
-name = "all_tests"
-path = "tests/all_tests.rs"
+vyre-test-support = { workspace = true, features = ["conform-spec"] }

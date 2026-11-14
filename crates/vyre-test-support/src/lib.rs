@@ -289,6 +289,11 @@ macro_rules! u32_signature {
 pub mod adversarial_cases;
 #[cfg(feature = "ir-fixtures")]
 pub mod adversarial_generators;
+pub mod alloc_probe;
+#[cfg(feature = "conform")]
+pub mod conform;
+#[cfg(feature = "conform-spec")]
+pub mod conform_spec;
 mod registry_closure;
 pub use registry_closure::{
     assert_registry_closure, assert_registry_closure_crates, collect_rust_files,
@@ -481,19 +486,43 @@ pub fn top_level_variant_names(body: &str) -> BTreeSet<String> {
     let mut chars = body.char_indices().peekable();
     while let Some((offset, ch)) = chars.next() {
         match ch {
-            '{' | '(' | '[' => {
-                depth += 1;
-                at_item_start = false;
-            }
-            '}' | ')' | ']' => depth = depth.saturating_sub(1),
-            ',' if depth == 0 => at_item_start = true,
-            '/' if depth == 0 && body[offset..].starts_with("//") => {
+            '/' if body[offset..].starts_with("//") => {
                 for (_, skipped) in chars.by_ref() {
                     if skipped == '\n' {
                         break;
                     }
                 }
             }
+            '/' if body[offset..].starts_with("/*") => {
+                let mut prev = '\0';
+                for (_, skipped) in chars.by_ref() {
+                    if prev == '*' && skipped == '/' {
+                        break;
+                    }
+                    prev = skipped;
+                }
+            }
+            '"' => {
+                at_item_start = false;
+                let mut escaped = false;
+                for (_, skipped) in chars.by_ref() {
+                    if escaped {
+                        escaped = false;
+                        continue;
+                    }
+                    match skipped {
+                        '\\' => escaped = true,
+                        '"' => break,
+                        _ => {}
+                    }
+                }
+            }
+            '{' | '(' | '[' => {
+                depth += 1;
+                at_item_start = false;
+            }
+            '}' | ')' | ']' => depth = depth.saturating_sub(1),
+            ',' if depth == 0 => at_item_start = true,
             // An attribute belongs to the item after it, so skipping one must
             // leave the item-start state alone. Clearing it made every variant
             // of an enum whose variants carry `#[error(..)]` invisible, and an
@@ -536,6 +565,203 @@ pub fn top_level_variant_names(body: &str) -> BTreeSet<String> {
         }
     }
     names
+}
+
+/// Variant names of `pub enum <enum_name>` across crate `sources`, resolving
+/// both direct enum declarations and x-macro callback tables (`for_each_*!`).
+#[must_use]
+pub fn enum_variant_names_in_sources(enum_name: &str, sources: &[String]) -> BTreeSet<String> {
+    let decl = format!("pub enum {enum_name} {{");
+    let mut names = BTreeSet::new();
+    for source in sources {
+        for (decl_pos, _) in source.match_indices(&decl) {
+            let line_start = source[..decl_pos].rfind('\n').map_or(0, |idx| idx + 1);
+            if source[line_start..decl_pos].trim_start().starts_with("//") {
+                continue;
+            }
+            let Some(body) = braced_body(&source[decl_pos..], &decl) else {
+                continue;
+            };
+            let direct = top_level_variant_names(body);
+            if !direct.is_empty() {
+                names.extend(direct);
+            } else if body.contains('$') {
+                names.extend(resolve_xmacro_enum_variants(source, decl_pos, sources));
+            }
+        }
+    }
+    names
+}
+
+fn balanced_delimited(source: &str, open_index: usize) -> Option<&str> {
+    let mut chars = source[open_index..].char_indices();
+    let (_, open_ch) = chars.next()?;
+    let close_ch = match open_ch {
+        '{' => '}',
+        '(' => ')',
+        '[' => ']',
+        _ => return None,
+    };
+    let body_start = open_index + open_ch.len_utf8();
+    let mut depth = 1usize;
+    let mut in_string = false;
+    let mut escaped = false;
+    while let Some((offset, ch)) = chars.next() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
+            continue;
+        }
+        if ch == '/' && source[open_index + offset..].starts_with("//") {
+            for (_, skipped) in chars.by_ref() {
+                if skipped == '\n' {
+                    break;
+                }
+            }
+            continue;
+        }
+        if ch == '"' {
+            in_string = true;
+        } else if ch == open_ch {
+            depth += 1;
+        } else if ch == close_ch {
+            depth -= 1;
+            if depth == 0 {
+                return Some(&source[body_start..open_index + offset]);
+            }
+        }
+    }
+    None
+}
+
+fn macro_rules_body<'a>(
+    source: &'a str,
+    target_macro: Option<&str>,
+    must_enclose: Option<usize>,
+) -> Option<(&'a str, &'a str)> {
+    const KW: &str = "macro_rules!";
+    for (pos, _) in source.match_indices(KW) {
+        if pos > 0
+            && source[..pos]
+                .chars()
+                .next_back()
+                .is_some_and(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+        {
+            continue;
+        }
+        let line_start = source[..pos].rfind('\n').map_or(0, |idx| idx + 1);
+        if source[line_start..pos].trim_start().starts_with("//") {
+            continue;
+        }
+        let rest = &source[pos + KW.len()..];
+        let name_offset = rest.find(|ch: char| !ch.is_whitespace())?;
+        let after_ws = &rest[name_offset..];
+        let name_len = after_ws
+            .find(|ch: char| !ch.is_ascii_alphanumeric() && ch != '_')
+            .unwrap_or(after_ws.len());
+        if name_len == 0 {
+            continue;
+        }
+        let name = &after_ws[..name_len];
+        if target_macro.is_some_and(|want| want != name) {
+            continue;
+        }
+        let after_name = &after_ws[name_len..];
+        let Some(delim_rel) = after_name.find(|ch: char| !ch.is_whitespace()) else {
+            continue;
+        };
+        let open_index = pos + KW.len() + name_offset + name_len + delim_rel;
+        let Some(body) = balanced_delimited(source, open_index) else {
+            continue;
+        };
+        let body_end = body.as_ptr() as usize - source.as_ptr() as usize + body.len();
+        if must_enclose.is_some_and(|idx| idx < open_index || idx > body_end) {
+            continue;
+        }
+        return Some((name, body));
+    }
+    None
+}
+
+fn find_table_macro_for_def<'a>(
+    def_macro: &str,
+    local_source: &'a str,
+    sources: &'a [String],
+) -> Option<&'a str> {
+    for candidate in std::iter::once(local_source).chain(sources.iter().map(String::as_str)) {
+        for (pos, _) in candidate.match_indices(def_macro) {
+            let after = candidate[pos + def_macro.len()..].trim_start();
+            if !after.starts_with(')') && !after.starts_with('}') && !after.starts_with(']') {
+                continue;
+            }
+            let before_arg = candidate[..pos].trim_end();
+            let Some(before_open) = before_arg.strip_suffix(['(', '{', '[']) else {
+                continue;
+            };
+            let Some(before_bang) = before_open.trim_end().strip_suffix('!') else {
+                continue;
+            };
+            let trimmed = before_bang.trim_end();
+            let ident_start = trimmed
+                .rfind(|ch: char| !ch.is_ascii_alphanumeric() && ch != '_')
+                .map_or(0, |idx| idx + 1);
+            let table_macro = &trimmed[ident_start..];
+            if !table_macro.is_empty() {
+                return Some(table_macro);
+            }
+        }
+    }
+    None
+}
+
+fn resolve_xmacro_enum_variants(
+    source: &str,
+    decl_pos: usize,
+    sources: &[String],
+) -> BTreeSet<String> {
+    let Some((def_macro, _)) = macro_rules_body(source, None, Some(decl_pos)) else {
+        return BTreeSet::new();
+    };
+    let Some(table_macro) = find_table_macro_for_def(def_macro, source, sources) else {
+        return BTreeSet::new();
+    };
+    for candidate in std::iter::once(source).chain(sources.iter().map(String::as_str)) {
+        let Some((_, macro_body)) = macro_rules_body(candidate, Some(table_macro), None) else {
+            continue;
+        };
+        for (pos, ch) in macro_body.char_indices() {
+            if ch != '$' {
+                continue;
+            }
+            let after_dollar = &macro_body[pos + 1..];
+            let cb_len = after_dollar
+                .find(|c: char| !c.is_ascii_alphanumeric() && c != '_')
+                .unwrap_or(after_dollar.len());
+            if cb_len == 0 {
+                continue;
+            }
+            let after_cb = after_dollar[cb_len..].trim_start();
+            let Some(after_bang) = after_cb.strip_prefix('!') else {
+                continue;
+            };
+            let Some(delim_rel) = after_bang.find(|c: char| !c.is_whitespace()) else {
+                continue;
+            };
+            let open_ptr = after_bang[delim_rel..].as_ptr() as usize - macro_body.as_ptr() as usize;
+            if let Some(table_body) = balanced_delimited(macro_body, open_ptr) {
+                let names = top_level_variant_names(table_body);
+                if !names.is_empty() {
+                    return names;
+                }
+            }
+        }
+    }
+    BTreeSet::new()
 }
 
 /// Every `IrLevel` variant declared in `vyre-spec`, read from source.
