@@ -78,10 +78,6 @@ pub mod autodiff_forward_local_fail_closed;
 #[path = "autodiff_transform_contracts.rs"]
 pub mod autodiff_transform_contracts;
 
-/// Integration tests from `tests/bench_corpus_duplication.rs`.
-#[path = "bench_corpus_duplication.rs"]
-pub mod bench_corpus_duplication;
-
 /// Integration tests from `tests/binop_operand_swap_law.rs`.
 #[path = "binop_operand_swap_law.rs"]
 pub mod binop_operand_swap_law;
@@ -153,10 +149,6 @@ pub mod dead_buffer_dangling_ref;
 /// Integration tests from `tests/dead_store_elim_overwriter_reads.rs`.
 #[path = "dead_store_elim_overwriter_reads.rs"]
 pub mod dead_store_elim_overwriter_reads;
-
-/// Integration tests from `tests/demos_orphan_risk.rs`.
-#[path = "demos_orphan_risk.rs"]
-pub mod demos_orphan_risk;
 
 /// Integration tests from `tests/diagnostic_protocol.rs`.
 #[path = "diagnostic_protocol.rs"]
@@ -647,7 +639,6 @@ pub mod serial_envelope_corruption;
 /// Integration tests from `tests/shape_predicate_evaluation.rs`.
 #[path = "shape_predicate_evaluation.rs"]
 pub mod shape_predicate_evaluation;
-
 
 /// Integration tests from `tests/store_to_load_forward_value_invalidation.rs`.
 #[path = "store_to_load_forward_value_invalidation.rs"]

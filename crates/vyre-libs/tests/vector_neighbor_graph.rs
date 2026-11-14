@@ -15,9 +15,6 @@ pub const VECTOR_GRAPH_FUSION_SCHEMA_VERSION: u32 = 1;
 pub const VECTOR_GRAPH_FUSION_COMPARATOR: &str = "vector-graph-fusion:v1";
 /// Metric family used by this first fusion contract.
 pub const VECTOR_GRAPH_FUSION_METRIC_FAMILY: &str = "l2-squared-top-k";
-/// Release leaderboard artifact this contract links to.
-pub const VECTOR_GRAPH_FUSION_FRONTIER_LEADERBOARD: &str =
-    "release/evidence/benchmarks/frontier-leaderboard.json";
 
 /// One deterministic top-k row.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -59,8 +56,6 @@ pub struct VectorGraphFusionEvidence {
     pub release_floor: String,
     /// Failure mode identity supplied by the caller.
     pub failure_mode: String,
-    /// Frontier leaderboard artifact linkage.
-    pub frontier_leaderboard_artifact: String,
     /// Number of vector rows / graph nodes.
     pub node_count: u32,
     /// Vector dimension.
@@ -158,7 +153,6 @@ pub fn try_vector_graph_fusion_evidence(
         metric_family: VECTOR_GRAPH_FUSION_METRIC_FAMILY.to_string(),
         release_floor,
         failure_mode,
-        frontier_leaderboard_artifact: VECTOR_GRAPH_FUSION_FRONTIER_LEADERBOARD.to_string(),
         node_count: node_count as u32,
         dimension: dimension as u32,
         neighbor_k: neighbor_k as u32,
@@ -271,10 +265,6 @@ mod tests {
         assert_eq!(evidence.direct_top_k, evidence.graph_traversal_top_k);
         assert_eq!(evidence.direct_top_k[0].node_id, 0);
         assert_eq!(evidence.csr_offsets, vec![0, 2, 4, 6, 8, 10]);
-        assert_eq!(
-            evidence.frontier_leaderboard_artifact,
-            VECTOR_GRAPH_FUSION_FRONTIER_LEADERBOARD
-        );
         assert_eq!(evidence.schema_version, VECTOR_GRAPH_FUSION_SCHEMA_VERSION);
         assert_eq!(evidence.comparator, VECTOR_GRAPH_FUSION_COMPARATOR);
         assert_eq!(evidence.metric_family, VECTOR_GRAPH_FUSION_METRIC_FAMILY);
